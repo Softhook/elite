@@ -6,47 +6,50 @@ let uiManager;
 let gameStateManager;
 
 const SAVE_KEY = 'eliteMVPSaveData';
-let loadGameWasSuccessful = false; // Moved flag to global scope
+let loadGameWasSuccessful = false; // Flag for load status
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
-    angleMode(DEGREES); // Use degrees for player rotation logic
+    angleMode(DEGREES); // IMPORTANT: Set angle mode for rotation logic
     textAlign(CENTER, CENTER);
     textSize(14);
-    console.log("Setting up Elite MVP...");
+    console.log("Setting up Elite MVP (Scrolling View)...");
 
     // Instantiate core components
     gameStateManager = new GameStateManager();
     galaxy = new Galaxy();
-    player = new Player(); // Create player BEFORE loadGame
+    player = new Player(); // Player created, starts at world (0,0) by default
     uiManager = new UIManager();
 
-    // Initialize systems and link player
-    galaxy.init(); // Create the systems
-    loadGameWasSuccessful = loadGame(); // Attempt to load saved state AFTER objects are created
+    // Initialize galaxy systems
+    galaxy.init();
+    // Attempt to load saved state AFTER objects are created
+    loadGameWasSuccessful = loadGame(); // loadGame now returns true/false
 
-    // Ensure player has a current system reference after potential load
-    // And ensure the system knows it's entered if loading failed
+    // Link player to the current system (determined by load or default)
     const systemToStartIn = galaxy.getCurrentSystem();
     if (systemToStartIn) {
-         player.currentSystem = systemToStartIn;
-         if (!loadGameWasSuccessful) { // If no save loaded, explicitly run enterSystem logic
-             console.log("No save found or load failed, initializing starting system.");
-             systemToStartIn.enterSystem();
-         }
-         console.log(`Player starting in system: ${player.currentSystem.name}`);
+        player.currentSystem = systemToStartIn;
+        // If no save loaded, explicitly run enterSystem logic for the starting system
+        if (!loadGameWasSuccessful) {
+            console.log("No save found or load failed, initializing starting system.");
+            systemToStartIn.enterSystem(); // Spawn initial enemies etc.
+        }
+        console.log(`Player starting/loaded in system: ${player.currentSystem.name}`);
+        // Player position is handled by loadSaveData or defaults to (0,0)
     } else {
-        console.error("Error: Could not assign a starting system to the player!");
-        gameStateManager.setState("LOADING"); // Keep loading state on error
-        return;
+        console.error("CRITICAL Error: Could not assign a starting system to the player!");
+        gameStateManager.setState("LOADING"); // Keep loading state on critical error
+        return; // Stop setup if system assignment failed
     }
 
-
-    // Set initial state AFTER potential load and system setup
-    if (gameStateManager.currentState === "LOADING") { // Only transition if still loading
-        // Determine start state (maybe loaded docked state later?)
-        // For now, always start in flight after load/init
-        gameStateManager.setState("IN_FLIGHT");
+    // Set initial game state AFTER loading and system setup
+    // The game state string itself isn't loaded anymore. Determine state based on context.
+    // For now, default to IN_FLIGHT. A more robust system might check if loaded position is dockable.
+    if (gameStateManager.currentState === "LOADING") {
+         console.log("Setup complete, setting initial state to IN_FLIGHT.");
+         gameStateManager.setState("IN_FLIGHT");
+         // Potential future enhancement: Check if player loaded inside docking radius -> setState("DOCKED")?
     }
 
     console.log("Setup complete.");
@@ -55,91 +58,98 @@ function setup() {
 function draw() {
     background(0); // Clear screen each frame
 
-    // Let the GameStateManager handle updates and drawing based on state
-    if (gameStateManager) { // Ensure manager exists
-        gameStateManager.update();
-        gameStateManager.draw();
+    // --- Game State Update and Draw ---
+    if (gameStateManager) {
+        // Pass player reference to manager methods
+        gameStateManager.update(player); // Pass player for update logic
+        gameStateManager.draw(player); // Pass player for drawing logic (translation)
+    } else {
+         // Handle case where manager failed to initialize
+         fill(255,0,0); textSize(20); textAlign(CENTER,CENTER);
+         text("Error: Game State Manager not initialized.", width/2, height/2);
+         return;
     }
 
-
-    // --- Add Firing Debug Line Here (when in flight) ---
-    if (gameStateManager && gameStateManager.currentState === "IN_FLIGHT" && player) {
-        push(); // Isolate debug drawing styles
-        stroke(255, 255, 0, 150); // Yellow, semi-transparent line
-        strokeWeight(1);
-        // Draw line from player's center position to current mouse position
-        line(player.pos.x, player.pos.y, mouseX, mouseY);
-        pop(); // Restore previous styles
-    }
+    // --- Player Aiming Debug Line (Screen Coordinates) ---
+    // Optional: Keep for debugging aiming issues
+    // if (gameStateManager && gameStateManager.currentState === "IN_FLIGHT" && player) {
+    //     push();
+    //     stroke(255, 255, 0, 100); // Yellow, semi-transparent
+    //     strokeWeight(1);
+    //     line(width / 2, height / 2, mouseX, mouseY); // Line from screen center to mouse
+    //     pop();
+    // }
     // --- End Debug Line ---
 
 } // End draw()
 
+
+// --- Input Handling ---
+
 function keyPressed() {
     if (!gameStateManager) return; // Safety check
 
-    // --- Input handled based on State ---
-
-    if (gameStateManager.currentState === "IN_FLIGHT") {
-        // Player movement keys are handled by Player.handleInput using keyIsDown()
-        // No specific actions needed here for continuous movement keys
-    }
+    // Keyboard input for movement is handled by Player.handleInput using keyIsDown()
+    // Only handle state change keys here
 
     // Toggle Galaxy Map (M key)
     if (key === 'm' || key === 'M') {
         if (gameStateManager.currentState === "IN_FLIGHT") {
             gameStateManager.setState("GALAXY_MAP");
-            if (uiManager) uiManager.selectedSystemIndex = -1; // Clear selection when opening map
+            if (uiManager) uiManager.selectedSystemIndex = -1; // Clear map selection
         } else if (gameStateManager.currentState === "GALAXY_MAP") {
             gameStateManager.setState("IN_FLIGHT");
         }
     }
     // Allow ESC to exit map/docked state
     if (keyCode === ESCAPE) {
-        if (gameStateManager.currentState === "GALAXY_MAP") {
-            gameStateManager.setState("IN_FLIGHT");
-        } else if (gameStateManager.currentState === "DOCKED") {
-            console.log("Undocking via ESC");
-            gameStateManager.setState("IN_FLIGHT");
+        if (gameStateManager.currentState === "GALAXY_MAP" || gameStateManager.currentState === "DOCKED") {
+            gameStateManager.setState("IN_FLIGHT"); // Go back to flight
         }
     }
-
-    // Prevent default browser behavior for arrow keys etc. if needed
-    // return false;
+    // return false; // Prevent default browser actions if needed
 }
 
 
 function mousePressed() {
-    if (!gameStateManager || !player || !uiManager || !galaxy) return; // Safety checks
+    // Ensure core objects exist before handling clicks
+    if (!gameStateManager || !player || !uiManager || !galaxy) {
+        console.warn("Mouse press ignored: Core objects not ready.");
+        return;
+    }
 
     let clickHandledByUI = false;
 
-    // Delegate click handling to UIManager first
+    // 1. Let UIManager try to handle the click based on current state
     clickHandledByUI = uiManager.handleMouseClicks(
         mouseX, mouseY,
         gameStateManager.currentState,
         player,
-        player.currentSystem?.station?.getMarket(), // Pass market only if valid
+        player.currentSystem?.station?.getMarket(), // Safely access market
         galaxy
     );
 
-    // If UI didn't handle it and we're in flight, trigger player fire
+    // 2. If UI didn't handle it AND we're in flight, assume it's a firing attempt
     if (!clickHandledByUI && gameStateManager.currentState === "IN_FLIGHT") {
-        player.handleFireInput(); // This now checks cooldown and calls fire()
+        player.handleFireInput(); // Player class handles cooldown check
     }
 }
 
 // --- Save/Load Functionality ---
-// (saveGame and loadGame functions remain the same as before)
 
 function saveGame() {
-    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) { // Add checks
+    // Ensure critical objects exist before trying to save
+    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
         try {
+            console.log("Saving game state...");
             const saveData = {
+                // SAVE player data (includes world pos, vel, angle, stats, cargo)
                 playerData: player.getSaveData(),
-                galaxyData: galaxy.getSaveData(), // Save visited status
-                // Optionally save gameState if needed (e.g., was player docked?)
-                // gameState: gameStateManager.currentState
+                // SAVE galaxy data (visited status)
+                galaxyData: galaxy.getSaveData(),
+                // SAVE current system index explicitly
+                currentSystemIndex: galaxy.currentSystemIndex,
+                // --- DO NOT SAVE gameState string ---
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
             console.log("Game Saved.");
@@ -152,53 +162,51 @@ function saveGame() {
 }
 
 function loadGame() {
-    // loadGameWasSuccessful is now global
     loadGameWasSuccessful = false; // Reset flag at start of load attempt
-    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) { // Add checks
+    // Ensure critical objects exist before trying to load into them
+    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
         const savedDataString = localStorage.getItem(SAVE_KEY);
         if (savedDataString) {
             try {
                 const saveData = JSON.parse(savedDataString);
                 console.log("Loading game data...");
 
-                // Load player data first
-                if (saveData.playerData) {
-                    player.loadSaveData(saveData.playerData);
+                // Load galaxy state first (needs to know current system BEFORE player load)
+                if (saveData.currentSystemIndex !== undefined) {
+                    galaxy.currentSystemIndex = saveData.currentSystemIndex;
+                    console.log(`Loaded current system index: ${galaxy.currentSystemIndex}`);
                 } else {
-                     console.warn("No player data found in save.");
+                     console.warn("No current system index found in save data. Defaulting to 0.");
+                     galaxy.currentSystemIndex = 0; // Default to first system if missing
                 }
-
-                 // Load galaxy data AFTER player data (as player load might affect system index)
-                 // Set current system index from saved player data first
-                 if (saveData.playerData && typeof saveData.playerData.currentSystemIndex !== 'undefined') {
-                     galaxy.currentSystemIndex = saveData.playerData.currentSystemIndex;
-                     // Ensure the player object also references the correct system object AFTER galaxy is init'd
-                     player.currentSystem = galaxy.getCurrentSystem();
-                      console.log(`Loaded player into system index: ${galaxy.currentSystemIndex}, Name: ${player.currentSystem?.name}`);
+                // Load visited status
+                 if (saveData.galaxyData) {
+                     galaxy.loadSaveData(saveData.galaxyData);
                  } else {
-                      console.warn("No current system index found in player save data.");
-                      // Default to system 0 if missing? Might be needed if save is partial
-                      galaxy.currentSystemIndex = 0;
-                      player.currentSystem = galaxy.getCurrentSystem();
+                      console.warn("No galaxy visited data found in save.");
                  }
 
-                // Load galaxy system properties (e.g., visited status)
-                if (saveData.galaxyData) {
-                     galaxy.loadSaveData(saveData.galaxyData);
+                 // Load player data (pos, vel, stats, cargo etc.)
+                if (saveData.playerData) {
+                    player.loadSaveData(saveData.playerData); // This loads position etc.
                 } else {
-                     console.warn("No galaxy data found in save.");
+                    console.warn("No player data found in save.");
+                    // If no player data, player keeps its default constructor values (e.g., pos 0,0)
                 }
 
+                // Link player to the loaded system object AFTER galaxy index is set
+                player.currentSystem = galaxy.getCurrentSystem();
+                if (!player.currentSystem) {
+                    console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                } else {
+                     console.log(`Player linked to loaded system: ${player.currentSystem.name}`);
+                }
 
-                // TODO: Optionally restore gameState (e.g., if saved while docked)
-                // if (saveData.gameState) {
-                //     gameStateManager.setState(saveData.gameState); // Be careful with this!
-                // }
+                // --- State Determination happens in setup() ---
+                // We don't load the state string directly anymore.
 
-
-                loadGameWasSuccessful = true; // Mark load as successful only if parsing worked
+                loadGameWasSuccessful = true;
                 console.log("Game Loaded Successfully.");
-
 
             } catch (e) {
                 console.error("Error parsing saved game data:", e);
@@ -220,6 +228,6 @@ function loadGame() {
 // Optional: Resize canvas dynamically
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
-    // May need to recalculate UI element positions if they depend on width/height
-     console.log("Window resized.");
+    console.log("Window resized.");
+    // UI element positions might need recalculation if based on width/height
 }

@@ -1,12 +1,14 @@
+// ****** enemy.js ******
+
 class Enemy {
     constructor(x, y, playerRef) {
-        this.pos = createVector(x, y);
-        this.vel = createVector(0, 0);
+        this.pos = createVector(x, y); // World coordinates
+        this.vel = createVector(random(-1, 1), random(-1, 1)).mult(0.5); // Start with slight random drift
         this.angle = 0;
         this.size = 25; // Diameter
         this.maxSpeed = 1.5;
         this.maxForce = 0.05; // Steering force
-        this.hull = 30; // Less health than player
+        this.hull = 30;
         this.maxHull = 30;
         this.color = color(255, 50, 50);
         this.strokeColor = color(255, 150, 150);
@@ -14,109 +16,118 @@ class Enemy {
         this.target = playerRef; // Reference to the player object
         this.detectionRange = 400;
         this.firingRange = 300;
-        this.fireCooldown = 0;
+        this.fireCooldown = random(0.5, 2.0); // Stagger initial firing
         this.fireRate = 1.5; // Seconds between shots
         this.destroyed = false;
     }
 
+    // Calculates steering force towards a target world position
     seek(targetPos) {
         let desired = p5.Vector.sub(targetPos, this.pos);
-        desired.setMag(this.maxSpeed);
+        // Don't normalize if already close to avoid jitter? Optional.
+        // let d = desired.mag();
+        // if (d < 10) { desired.setMag(map(d, 0, 10, 0, this.maxSpeed)); }
+        // else { desired.setMag(this.maxSpeed); }
+        desired.setMag(this.maxSpeed); // Simple version: always desire max speed towards target
+
         let steer = p5.Vector.sub(desired, this.vel);
         steer.limit(this.maxForce);
         return steer;
     }
 
-    update(system) { // Pass system to allow firing
+    // Update enemy state (AI, movement, firing)
+    update(system) { // Pass system reference for adding projectiles
         if (this.destroyed) return;
 
+        // Update cooldown timer
         this.fireCooldown -= deltaTime / 1000;
 
-        if (this.target) {
+        // Basic AI logic
+        if (this.target) { // Check if target (player) exists
             let distanceToTarget = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
 
+            // If player is within detection range, react
             if (distanceToTarget < this.detectionRange) {
-                // Seek the target
+                // Calculate steering force towards the player
                 let force = this.seek(this.target.pos);
                 this.vel.add(force);
-                this.vel.limit(this.maxSpeed);
+                this.vel.limit(this.maxSpeed); // Apply speed limit
 
-                 // Aim towards target
-                this.angle = this.vel.heading(); // Make enemy face direction of movement
+                // Aim towards target (or face direction of movement)
+                 this.angle = this.vel.heading(); // Point in direction of velocity (preferred)
+                 // let angleToPlayer = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
+                 // this.angle = degrees(angleToPlayer); // Alternative: always point directly at player
 
-                // Fire if in range and cooldown ready
+                // Fire weapon if in range and cooldown ready
                 if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-                     this.fire(system);
-                     this.fireCooldown = this.fireRate;
+                    this.fire(system); // Call fire method
+                    this.fireCooldown = this.fireRate; // Reset cooldown
                 }
             } else {
-                 // Simple wander or idle behavior (just slow down for MVP)
-                 this.vel.mult(0.95);
+                // If player is outside detection range, maybe wander or slow down
+                this.vel.mult(0.98); // Simple drag/slowdown
             }
         } else {
-             // No target? Slow down.
-             this.vel.mult(0.95);
+            // If no target (e.g., player destroyed?), just drift and slow down
+            this.vel.mult(0.98);
         }
 
-
+        // Update position based on velocity
         this.pos.add(this.vel);
-        // Basic screen wrapping (optional)
-        this.wrapAround();
+
+        // NO MORE SCREEN WRAPPING
+        // this.wrapAround();
     }
 
-     fire(system) {
-         // Calculate angle towards player
-         let angleToPlayer = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
-         // Add slight inaccuracy? (optional)
-         // angleToPlayer += random(-0.1, 0.1);
+    // Fire a projectile towards the current target (player)
+    fire(system) {
+        if (!this.target || !system) return; // Safety checks
 
-         // Create projectile slightly ahead of the enemy ship
-         let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size / 2 + 5);
-         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
+        // Calculate angle towards player's current world position
+        let angleToPlayer = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
+        // Note: Assuming atan2 returns radians here, which Projectile expects. If issues persist, might need radians() wrapper here too.
 
-         let proj = new Projectile(spawnPos.x, spawnPos.y, angleToPlayer, 'ENEMY', 5, 5); // Enemy shots slower/weaker
-         system.addProjectile(proj); // Add to the system's list
+        // Calculate spawn position slightly ahead of the enemy ship nose
+        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size / 2 + 5); // angle is likely radians from vel.heading()
+        let spawnPos = p5.Vector.add(this.pos, spawnOffset);
+
+        // Create enemy projectile (slower, less damage than player?)
+        let proj = new Projectile(spawnPos.x, spawnPos.y, angleToPlayer, 'ENEMY', 5, 5);
+        system.addProjectile(proj); // Add to the system's projectile list
     }
 
-
+    // Draw the enemy ship
     draw() {
-        if (this.destroyed) return;
+        if (this.destroyed) return; // Don't draw if destroyed
         push();
-        translate(this.pos.x, this.pos.y);
-        rotate(this.angle); // Use calculated angle
+        translate(this.pos.x, this.pos.y); // Move to enemy's world position
+        rotate(degrees(this.angle)); // Rotate (vel.heading() returns radians, rotate() needs degrees if angleMode is DEGREES)
         fill(this.color);
         stroke(this.strokeColor);
         strokeWeight(1);
-        // Simple triangle shape for enemy
-        triangle(-this.size / 2, -this.size / 3, -this.size / 2, this.size / 3, this.size / 2, 0);
+        // Simple triangle shape pointing right
+        let r = this.size / 2;
+        triangle(r, 0, -r, -r*0.7, -r, r*0.7);
         pop();
-
-        // Optional: Draw health bar
-        // fill(255,0,0);
-        // rect(this.pos.x - this.size/2, this.pos.y - this.size/2 - 10, this.size, 5);
-        // fill(0,255,0);
-        // let healthW = map(this.hull, 0, this.maxHull, 0, this.size);
-        // rect(this.pos.x - this.size/2, this.pos.y - this.size/2 - 10, healthW, 5);
     }
 
+    // Reduce hull on taking damage
     takeDamage(amount) {
+        if (this.destroyed || amount <= 0) return; // Ignore if already dead or no damage
         this.hull -= amount;
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
             console.log("Enemy destroyed!");
-            // Trigger explosion effect later
+            // Could trigger explosion effect here
         }
     }
 
+    // Check if enemy is destroyed
     isDestroyed() {
         return this.destroyed;
     }
 
-     wrapAround() {
-        if (this.pos.x < -this.size/2) this.pos.x = width + this.size/2;
-        if (this.pos.x > width + this.size/2) this.pos.x = -this.size/2;
-        if (this.pos.y < -this.size/2) this.pos.y = height + this.size/2;
-        if (this.pos.y > height + this.size/2) this.pos.y = -this.size/2;
-    }
-}
+    // --- NO wrapAround() method ---
+
+} // End of Enemy Class
