@@ -1,90 +1,162 @@
+// ****** Galaxy.js ******
+
 class Galaxy {
     constructor() {
-        this.systems = [];
-        this.currentSystemIndex = 0; // Start in the first system
+        this.systems = []; // Array holding StarSystem objects
+        this.currentSystemIndex = 0; // Index of the system the player is currently in
     }
 
+    /**
+     * Initializes the galaxy by creating StarSystem objects, passing each its index
+     * which the StarSystem constructor uses for deterministic, seeded generation.
+     */
     init() {
-        // Define the fixed systems for the MVP
-        // Positions are for the Galaxy Map screen
-        this.systems.push(new StarSystem("Solara", "Industrial", width * 0.2, height * 0.5));
-        this.systems.push(new StarSystem("AgriPrime", "Agricultural", width * 0.5, height * 0.3));
-        this.systems.push(new StarSystem("Cygnus Tech", "Tech", width * 0.8, height * 0.6));
-        this.systems.push(new StarSystem("Border Outpost", "Industrial", width * 0.5, height * 0.8));
+        console.log("Initializing Galaxy...");
+        this.systems = []; // Ensure systems array is clear before init
 
-        // Mark starting system as visited
-        if(this.systems.length > 0) {
-           this.systems[0].enterSystem(); // Call enterSystem on the initial system
+        // Define system data including map positions used on the Galaxy Map screen
+        const systemDefs = [
+            { name: "Solara", type: "Industrial", x: width * 0.2, y: height * 0.5 },
+            { name: "AgriPrime", type: "Agricultural", x: width * 0.5, y: height * 0.3 },
+            { name: "Cygnus Tech", type: "Tech", x: width * 0.8, y: height * 0.6 },
+            { name: "Border Outpost", type: "Industrial", x: width * 0.5, y: height * 0.8 }
+            // Add more system definitions here
+        ];
+
+        // Create StarSystem instances, crucially passing the 'index' for seeding
+        systemDefs.forEach((def, index) => {
+            console.log(`Creating StarSystem: ${def.name}, Index: ${index}`);
+            // The StarSystem constructor now uses 'index' to seed its random generation
+            this.systems.push(new StarSystem(def.name, def.type, def.x, def.y, index));
+        });
+
+
+        // Mark starting system as visited and run its entry logic AFTER all systems are created
+        if (this.systems.length > 0 && this.systems[0]) {
+            // Pass player reference if available (should be, if called in setup after player creation)
+             if (player) {
+                this.systems[0].enterSystem(player); // Call enterSystem for index 0
+             } else {
+                 // This case should ideally not happen if init order is correct
+                 console.warn("Galaxy.init: Player object not available for initial system entry logic.");
+                 this.systems[0].visited = true; // Still mark as visited as fallback
+             }
+        } else {
+             console.error("Galaxy.init: No valid starting system found after creation!");
         }
     }
 
+    /**
+     * Returns the StarSystem object the player is currently in.
+     * @returns {StarSystem|null} The current StarSystem object or null if invalid.
+     */
     getCurrentSystem() {
         if (this.currentSystemIndex >= 0 && this.currentSystemIndex < this.systems.length) {
             return this.systems[this.currentSystemIndex];
         }
-        return null; // Should not happen in normal flow
+        console.error(`getCurrentSystem: Invalid system index ${this.currentSystemIndex}`);
+        return null;
     }
 
+    /**
+     * Handles the jump process to a new star system.
+     * Changes current index, resets player position randomly, calls enterSystem for the new system.
+     * @param {number} targetIndex - The index of the target system.
+     */
     jumpToSystem(targetIndex) {
+        // Validate target index
         if (targetIndex >= 0 && targetIndex < this.systems.length && targetIndex !== this.currentSystemIndex) {
-            console.log(`Jumping from ${this.systems[this.currentSystemIndex].name} to ${this.systems[targetIndex].name}`);
-            this.currentSystemIndex = targetIndex;
-            const newSystem = this.getCurrentSystem();
-            newSystem.enterSystem(); // Prepare the new system
-            player.currentSystem = newSystem; // Update player's reference
-            // Reset player position to center-ish on jump arrival
-            player.pos = createVector(width / 2, height / 2);
-            player.vel = createVector(0, 0); // Stop the ship after jump
+            const oldSystemName = this.systems[this.currentSystemIndex]?.name || "Unknown";
+            const newSystemName = this.systems[targetIndex]?.name || "Unknown";
+            console.log(`Jumping from ${oldSystemName} to ${newSystemName}`);
+
+            this.currentSystemIndex = targetIndex; // Update the current index
+            const newSystem = this.getCurrentSystem(); // Get the new system object
+
+            // Ensure player and new system are valid
+            if (player && newSystem) {
+                // Set Player to Random World Position upon Arrival (using non-seeded random)
+                let arrivalAngle = random(TWO_PI);
+                let arrivalDist = random(500, 1500); // Arrive within this radius from center
+                player.pos.x = cos(arrivalAngle) * arrivalDist;
+                player.pos.y = sin(arrivalAngle) * arrivalDist;
+                player.vel = createVector(0, 0); // Reset velocity
+                console.log(`Player arrived at world position: (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
+
+                // Update player's system reference and run entry logic for the new system
+                player.currentSystem = newSystem;
+                newSystem.enterSystem(player); // Pass player ref
+
+            } else {
+                console.error(`Error during jump: Player (${!!player}) or new system (${!!newSystem}) invalid!`);
+            }
         } else {
-            console.error("Invalid jump index:", targetIndex);
+            console.error(`Invalid jump index requested: ${targetIndex} (Current: ${this.currentSystemIndex})`);
         }
-    }
+    } // --- End jumpToSystem ---
 
+
+    /**
+     * Retrieves data formatted for drawing the Galaxy Map UI.
+     * @returns {Array} Array of objects describing each system node for the map.
+     */
     getSystemDataForMap() {
-        return this.systems.map((sys, index) => ({
-            name: sys.name,
-            x: sys.galaxyPos.x,
-            y: sys.galaxyPos.y,
-            type: sys.economyType,
-            visited: sys.visited,
-            index: index
-        }));
+        if (!this.systems) return [];
+        return this.systems.map((sys, index) => {
+            if (!sys) return null;
+            return {
+                name: sys.name || "Unnamed",
+                x: sys.galaxyPos?.x || width * 0.5, // Map position X
+                y: sys.galaxyPos?.y || height * 0.5, // Map position Y
+                type: sys.economyType || "Unknown",
+                visited: sys.visited || false,
+                index: index
+            };
+        }).filter(Boolean); // Remove null entries
     }
 
-    // Get system indices reachable from the current system (simple adjacency for MVP)
+    /**
+     * Determines reachable systems from the current one (simple adjacency for MVP).
+     * @returns {Array<number>} Array of indices of reachable systems.
+     */
     getReachableSystems() {
         const reachable = [];
-        // Example: Allow jumping to +/- 1 index (wrap around for first/last)
         const numSystems = this.systems.length;
         if (numSystems <= 1) return [];
-
         const prevIndex = (this.currentSystemIndex - 1 + numSystems) % numSystems;
         const nextIndex = (this.currentSystemIndex + 1) % numSystems;
-
         if (prevIndex !== this.currentSystemIndex) reachable.push(prevIndex);
         if (nextIndex !== this.currentSystemIndex) reachable.push(nextIndex);
-
-        // Could add more complex logic (distance based, jump drive range etc.) later
         return reachable;
     }
 
-     getSaveData() {
-         // Save visited status for each system
-         return this.systems.map(sys => sys.getSaveData());
-     }
+    /**
+     * Gathers save data for all systems (minimal: 'visited' status).
+     * @returns {Array} Array of save data objects.
+     */
+    getSaveData() {
+        if (!this.systems) return [];
+        return this.systems.map(sys => sys?.getSaveData() || { visited: false }); // Safe access
+    }
 
-     loadSaveData(systemsData) {
-         if (systemsData && systemsData.length === this.systems.length) {
+    /**
+     * Loads saved data into the corresponding StarSystem objects.
+     * @param {Array} systemsData - Array of save data objects.
+     */
+    loadSaveData(systemsData) {
+        if (systemsData && Array.isArray(systemsData) && systemsData.length === this.systems.length) {
              for (let i = 0; i < this.systems.length; i++) {
-                 this.systems[i].loadSaveData(systemsData[i]);
+                 if (this.systems[i] && systemsData[i]) {
+                     this.systems[i].loadSaveData(systemsData[i]);
+                 }
              }
              console.log("Loaded system visited data.");
          } else {
-            console.log("No valid system visited data found or mismatch, using defaults.");
-            // Ensure starting system is marked visited if loading fails partially
-            if (this.systems.length > 0 && this.currentSystemIndex < this.systems.length) {
+            console.log("No valid system visited data found or length mismatch, using defaults.");
+            if (this.systems.length > 0 && this.currentSystemIndex < this.systems.length && this.systems[this.currentSystemIndex]) {
                  this.systems[this.currentSystemIndex].visited = true;
+                 console.log(`Defaulted system ${this.currentSystemIndex} to visited.`);
             }
          }
      }
-}
+} // End Galaxy Class
