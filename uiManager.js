@@ -250,44 +250,89 @@ class UIManager {
 
     // Draws the Minimap overlay
     drawMinimap(player, system) {
-        if (!player || !player.pos || !system || !Array.isArray(system.planets)) return; // Basic checks
+        // Safety checks
+        if (!player || !player.pos || !system || !Array.isArray(system.planets)) {
+            return;
+        }
 
+        // --- Calculate Minimap Position (Bottom Right) ---
         this.minimapX = width - this.minimapSize - this.minimapMargin;
+        this.minimapY = height - this.minimapSize - this.minimapMargin; // Position based on height
+        // -------------------------------------------------
+
+        // Calculate scaling factor: pixels per world unit
         this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+
+        // Center of the minimap rectangle on screen
         let mapCenterX = this.minimapX + this.minimapSize / 2;
         let mapCenterY = this.minimapY + this.minimapSize / 2;
 
-        push(); // Isolate minimap drawing
+        push(); // Isolate minimap drawing styles
 
-        // Draw background/border
-        fill(0, 0, 0, 180); stroke(0, 200, 0, 200); strokeWeight(1);
+        // Draw minimap background/border
+        fill(0, 0, 0, 180); // Semi-transparent black background
+        stroke(0, 200, 0, 200); // Green border
+        strokeWeight(1);
         rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
 
-        // Draw player (center)
-        fill(255); noStroke(); ellipse(mapCenterX, mapCenterY, 5, 5);
+        // --- Map World Objects to Minimap Coordinates ---
+        // Player is ALWAYS at the center of the minimap visual area
+        fill(255); // White for player
+        noStroke();
+        ellipse(mapCenterX, mapCenterY, 5, 5); // Draw player dot
 
         // Map and draw the station
         if (system.station && system.station.pos) {
-            let relX = system.station.pos.x - player.pos.x; let relY = system.station.pos.y - player.pos.y;
-            let mapX = mapCenterX + relX * this.minimapScale; let mapY = mapCenterY + relY * this.minimapScale;
-            if (mapX >= this.minimapX && mapX <= this.minimapX + this.minimapSize && mapY >= this.minimapY && mapY <= this.minimapY + this.minimapSize) {
-                fill(0, 0, 255); rect(mapX - 3, mapY - 3, 6, 6); // Station square
-            }
+            let relX = system.station.pos.x - player.pos.x; // Station position relative to player
+            let relY = system.station.pos.y - player.pos.y;
+            // Convert relative world coords to minimap screen coords
+            let mapX = mapCenterX + relX * this.minimapScale;
+            let mapY = mapCenterY + relY * this.minimapScale;
+
+            // Clamp coordinates to stay within minimap bounds (optional but cleaner)
+            mapX = constrain(mapX, this.minimapX, this.minimapX + this.minimapSize);
+            mapY = constrain(mapY, this.minimapY, this.minimapY + this.minimapSize);
+
+            fill(0, 0, 255); // Blue for station
+            rect(mapX - 3, mapY - 3, 6, 6); // Draw station square at mapped coords
         }
 
         // Map and draw planets
         fill(150, 100, 50); // Brownish for planets
         system.planets.forEach(planet => {
-            if (!planet || !planet.pos) return;
-            let relX = planet.pos.x - player.pos.x; let relY = planet.pos.y - player.pos.y;
-            let mapX = mapCenterX + relX * this.minimapScale; let mapY = mapCenterY + relY * this.minimapScale;
-            if (mapX >= this.minimapX && mapX <= this.minimapX + this.minimapSize && mapY >= this.minimapY && mapY <= this.minimapY + this.minimapSize) {
-                 ellipse(mapX, mapY, 4, 4); // Planet dot
+            if (!planet || !planet.pos) return; // Skip invalid planets
+            let relX = planet.pos.x - player.pos.x;
+            let relY = planet.pos.y - player.pos.y;
+            let mapX = mapCenterX + relX * this.minimapScale;
+            let mapY = mapCenterY + relY * this.minimapScale;
+
+            // Only draw if within view range (or clamp like station)
+            if (mapX >= this.minimapX && mapX <= this.minimapX + this.minimapSize &&
+                mapY >= this.minimapY && mapY <= this.minimapY + this.minimapSize)
+            {
+                 ellipse(mapX, mapY, 4, 4); // Draw planet dot
             }
         });
 
-        // Optional: Draw Enemies (can add clutter)
-        // fill(255, 0, 0); /* ... enemy mapping and drawing ... */
+         // Optional: Draw Enemies (can get cluttered)
+         fill(255, 0, 0); // Red for enemies
+         system.enemies.forEach(enemy => {
+             if (!enemy || !enemy.pos) return;
+             let relX = enemy.pos.x - player.pos.x;
+             let relY = enemy.pos.y - player.pos.y;
+             let mapX = mapCenterX + relX * this.minimapScale;
+             let mapY = mapCenterY + relY * this.minimapScale;
+             // Clamp or check bounds
+             if (mapX >= this.minimapX + 2 && mapX <= this.minimapX + this.minimapSize - 2 &&
+                 mapY >= this.minimapY + 2 && mapY <= this.minimapY + this.minimapSize - 2)
+             {
+                  triangle(mapX, mapY - 3, mapX - 2, mapY + 2, mapX + 2, mapY + 2); // Small triangle
+             }
+         });
+
+        // Optional: Draw Asteroids (likely too much clutter)
+        // fill(120); system.asteroids.forEach(a => { /* ... mapping & drawing ... */});
+
 
         pop(); // Restore drawing state
     } // End drawMinimap

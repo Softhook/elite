@@ -283,8 +283,10 @@ class Enemy {
         pop(); // Restore previous drawing state
 
         // --- DEBUG LINE from Enemy to Player ---
-        // Drawn in world space (relies on StarSystem's main translate)
-        if (this.target && this.target.pos) {
+        // Only draw if target exists AND enemy is in an attacking/approaching state
+        if (this.target && this.target.pos &&
+            (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS))
+        {
              push();
              stroke(255, 0, 0, 100); // Red, semi-transparent line
              strokeWeight(1);
@@ -293,6 +295,10 @@ class Enemy {
              pop();
         }
         // --- END DEBUG LINE ---
+
+        // --- Optional DEBUG STATE TEXT (remains commented out) ---
+        // ...
+        // --- END DEBUG ---
     }
 
     /**
