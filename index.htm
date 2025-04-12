@@ -4,33 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elite MVP (p5.js)</title>
-    <!-- Load p5.js library first -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 
-    <!-- Load Ship Definitions and Drawing Functions -->
-    <script src="ships.js"></script> <!-- MOVED & ADDED HERE -->
+    <!-- Load Data Definitions FIRST -->
+    <script src="ships.js"></script>
+    <script src="mission.js"></script> <!-- ADDED -->
 
-    <!-- Load Other Classes (Order matters if dependencies exist) -->
+    <!-- Load Generators/Managers NEXT -->
+    <script src="missionGenerator.js"></script> <!-- ADDED -->
     <script src="gameStateManager.js"></script>
+
+    <!-- Load Game World Classes -->
     <script src="market.js"></script>
-    <script src="station.js"></script>
+    <script src="station.js"></script> <!-- Uses Market -->
     <script src="planet.js"></script>
     <script src="asteroid.js"></script>
-    <script src="starSystem.js"></script> <!-- Uses Station, Planet, Asteroid -->
+    <script src="starSystem.js"></script> <!-- Uses Station, Planet, Asteroid, MissionGenerator -->
     <script src="galaxy.js"></script>     <!-- Uses StarSystem -->
-    <script src="projectile.js"></script>
-    <!-- Load Player and Enemy AFTER ships.js because they use SHIP_DEFINITIONS -->
-    <script src="player.js"></script>
-    <script src="enemy.js"></script>
-    <script src="uiManager.js"></script> <!-- Uses Player, Galaxy, Market -->
 
-    <!-- Load Main Sketch Last -->
+    <!-- Load Entity Classes -->
+    <script src="projectile.js"></script>
+    <script src="player.js"></script>     <!-- Uses Mission -->
+    <script src="enemy.js"></script>      <!-- Uses Mission constants? (Potentially later) -->
+
+    <!-- Load UI LAST (Depends on most others) -->
+    <script src="uiManager.js"></script>
+
+    <!-- Load Main Sketch Entry Point -->
     <script src="sketch.js"></script>
 
-    <style>
-        body { margin: 0; overflow: hidden; background-color: black; }
-        canvas { display: block; } /* Prevent scroll bars */
-    </style>
+    <style> /* CSS as before */ </style>
 </head>
 <body>
 </body>

@@ -16,6 +16,8 @@ class Player {
             shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         }
 
+        this.activeMission = null;  // Holds the currently accepted Mission object or null
+
         // --- Initialize Position & Basic Physics ---
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
@@ -40,6 +42,138 @@ class Player {
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
+
+
+    /** Accepts a mission if none is active and requirements are met. */
+    acceptMission(mission) {
+        console.log(`--- Attempting Player.acceptMission() for: ${mission?.title || 'Invalid Mission'}`);
+
+        if (this.activeMission) { console.warn("Accept Failed: Mission already active."); return false; }
+        if (!mission) { console.warn("Accept Failed: Invalid mission object provided."); return false; }
+        if (mission.status !== 'Available') { console.warn(`Accept Failed: Mission status is '${mission.status}'.`); return false; }
+        if (typeof mission.activate !== 'function') { console.warn("Accept Failed: Mission missing activate method."); return false; }
+
+        console.log(`   Mission "${mission.title}" checks passed (status: ${mission.status}).`);
+
+        // Check cargo space for delivery missions
+        if (mission.type === MISSION_TYPE.DELIVERY_LEGAL || mission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+             let spaceNeeded = mission.cargoQuantity || 0;
+             let currentCargo = this.getCargoAmount();
+             console.log(`   Delivery Check: Need=${spaceNeeded}, Have=${this.cargoCapacity - currentCargo} free.`);
+             if (currentCargo + spaceNeeded > this.cargoCapacity) {
+                  console.warn(`   Accept Failed: Not enough cargo space.`); return false;
+             }
+             // Add cargo if needed
+             if (mission.cargoType && spaceNeeded > 0) {
+                 console.log(`   Adding mission cargo: ${spaceNeeded}t ${mission.cargoType}`);
+                 this.addCargo(mission.cargoType, spaceNeeded);
+             }
+        }
+
+        // --- Assign and ACTIVATE ---
+        console.log(`   Assigning mission object to player.activeMission...`);
+        this.activeMission = mission; // Assign the reference
+        console.log(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
+
+        try {
+            console.log(`   >>> Calling this.activeMission.activate() <<<`);
+            this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
+            console.log(`   <<< Finished this.activeMission.activate() >>>`);
+        } catch(e) {
+            console.error("   !!! ERROR during mission.activate():", e);
+            this.activeMission = null; // Clear mission if activation failed critically
+            return false; // Indicate failure
+        }
+
+        console.log(`   AFTER activate() call: Mission Status = ${this.activeMission?.status}`); // Check status immediately after
+        // --- End Activation ---
+
+        if (this.activeMission.status === 'Active') {
+            console.log(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
+            saveGame();
+            return true; // Success
+        } else {
+            // This case should ideally not be reached if activate() works
+            console.error(`--- Mission "${this.activeMission?.title}" ACCEPTED but FAILED TO ACTIVATE (Status: ${this.activeMission?.status}). ---`);
+            this.activeMission = null; // Clear inconsistent mission
+            return false; // Indicate failure
+        }
+    } // --- End acceptMission method ---
+
+    abandonMission() {
+        if (this.activeMission) {
+            console.log("Abandoning mission:", this.activeMission.title);
+            // TODO: Apply penalties? Remove mission cargo?
+            if (this.activeMission.cargoType && this.activeMission.cargoQuantity > 0) {
+                 // Need to handle removal of cargo if mission abandoned
+                 console.warn(`Need to implement removal of ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType} on abandon!`);
+                 // this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity); // Be careful with quantities
+            }
+            this.activeMission.status = 'Failed'; // Mark as failed perhaps? Or just clear?
+            this.activeMission = null;
+             // TODO: UI Feedback
+            return true;
+        }
+        return false;
+    }
+
+    /** Completes the currently active mission, granting rewards. */
+    completeMission() {
+        console.log("--- Attempting Player.completeMission() ---"); // Log entry
+
+        // Check if there IS an active mission AND it's in a state that allows completion
+        // For auto-complete bounties, the status might still be 'Active' when called from StarSystem
+        if (this.activeMission && (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable')) {
+            console.log(`   Completing mission: ${this.activeMission.title}`);
+            console.log(`   Current Status: ${this.activeMission.status}`);
+            console.log(`   Reward to grant: ${this.activeMission.rewardCredits}`);
+
+            let reward = this.activeMission.rewardCredits; // Store reward value
+            let completedTitle = this.activeMission.title; // Store title for logging/alert
+
+            // --- Grant FULL Mission Reward ---
+            console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
+            this.addCredits(reward); // Call the credit adding function
+            console.log(`   Credits after addCredits call: ${this.credits}`);
+            // ---
+
+            // --- Mark internal status and clear ---
+            this.activeMission.status = 'Completed'; // Mark mission object itself (might be redundant if clearing)
+            console.log(`   Setting activeMission to null (was: ${this.activeMission.title})`);
+            this.activeMission = null; // Clear active mission reference from player
+            console.log(`   activeMission is now: ${this.activeMission}`);
+            // ---
+
+            // --- ADD USER FEEDBACK ---
+            // Using alert for testing - replace with UI message later
+            try {
+                 alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`);
+                 console.log("   Alert displayed.");
+            } catch (e) {
+                 console.error("Error displaying alert:", e);
+                 // Fallback log if alert fails (e.g., in some environments)
+                 console.log(`!!! Mission Complete! ${completedTitle} +${reward}cr !!!`);
+            }
+            // ---
+
+            console.log(`   Mission ${completedTitle} officially complete. Saving game...`);
+            saveGame(); // Auto-save progress after mission completion
+
+            return true; // Indicate success
+        } else {
+            // Log why completion failed
+            console.warn("Player.completeMission() called, but conditions not met.");
+            if (!this.activeMission) {
+                 console.warn("   Reason: No active mission.");
+            } else {
+                 console.warn(`   Reason: Active mission status is '${this.activeMission.status}', not 'Active' or 'Completable'.`);
+            }
+            return false; // Indicate failure
+        }
+    } // --- End completeMission Method ---
+
+
+
 
     /** Applies base stats and calculates Radian properties. */
     applyShipDefinition(typeName) {
@@ -165,24 +299,45 @@ class Player {
     }
     // --- END checkCollision Method ---
 
-    /** Gathers player data for saving. */
+    // --- Save/Load Functionality ---
     getSaveData() {
         let normalizedAngle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; if (isNaN(normalizedAngle)) normalizedAngle = 0;
-        return { shipTypeName: this.shipTypeName, pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle, hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)), isWanted: this.isWanted };
+        return {
+            shipTypeName: this.shipTypeName,
+            pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
+            hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
+            isWanted: this.isWanted,
+            // --- ADDED: Save active mission (if any) ---
+            // Note: Saving the whole object might save redundant data. Could save only essential IDs/progress.
+            activeMission: this.activeMission ? JSON.parse(JSON.stringify(this.activeMission)) : null
+            // -------------------------------------------
+        };
     }
 
-    /** Loads player state from saved data object. */
     loadSaveData(data) {
-        if (!data) return;
+        if (!data) { return; }
+        console.log("Player.loadSaveData: Loading data...");
         let typeToLoad = data.shipTypeName || "Sidewinder"; this.applyShipDefinition(typeToLoad);
         this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0);
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
-        let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; } // Load & normalize radians
+        let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; }
         this.hull = data.hull !== undefined ? constrain(data.hull, 0, this.maxHull) : this.maxHull;
         this.credits = data.credits ?? 1000;
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
-        console.log(`Player loaded: ${this.shipTypeName}, Wanted: ${this.isWanted}, Angle: ${this.angle.toFixed(3)} rad`);
+        // --- ADDED: Load active mission ---
+        if (data.activeMission) {
+             // Re-hydrate the mission object from saved data
+             // We need to be careful here - if the Mission class changes, old saves might break.
+             // A safer approach uses IDs and regenerates/looks up mission details.
+             // For now, simple rehydration:
+             this.activeMission = new Mission(data.activeMission); // Recreate object from saved data
+             console.log("   Loaded active mission:", this.activeMission.title);
+        } else {
+             this.activeMission = null;
+        }
+        // ----------------------------------
+        console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission: ${this.activeMission?.title || 'None'}`);
     }
 
 } // End of Player Class
