@@ -117,59 +117,106 @@ class Player {
         return false;
     }
 
-    /** Completes the currently active mission, granting rewards. */
-    completeMission() {
-        console.log("--- Attempting Player.completeMission() ---"); // Log entry
+ /** Checks if the player has a specific quantity of a commodity. */
+    hasCargo(cargoType, quantity) {
+        console.log(`--- Player.hasCargo Check --- Type: ${cargoType}, Qty Needed: ${quantity}`); // Log input
+        if (!cargoType || quantity <= 0) { console.log("   Result: false (Invalid input)"); return false; }
+        const item = this.cargo.find(i => i?.name === cargoType);
+        console.log(`   Found item in cargo:`, item); // Log the found item object (or undefined)
+        let result = item && item.quantity >= quantity;
+        console.log(`   Result: ${result}`); // Log the boolean result
+        return result;
+    }
 
-        // Check if there IS an active mission AND it's in a state that allows completion
-        // For auto-complete bounties, the status might still be 'Active' when called from StarSystem
-        if (this.activeMission && (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable')) {
-            console.log(`   Completing mission: ${this.activeMission.title}`);
-            console.log(`   Current Status: ${this.activeMission.status}`);
-            console.log(`   Reward to grant: ${this.activeMission.rewardCredits}`);
+    /** Completes the currently active mission if conditions are met. */
+    completeMission(currentSystem, currentStation) { // Added params for location check
+        console.log("--- Attempting Player.completeMission() ---");
+        if (!this.activeMission) { console.warn("Complete failed: No active mission."); return false; }
+        if (!currentSystem || !currentStation) { console.warn("Complete failed: Invalid system/station provided."); return false; }
 
-            let reward = this.activeMission.rewardCredits; // Store reward value
-            let completedTitle = this.activeMission.title; // Store title for logging/alert
+        console.log(`   Checking Mission: ${this.activeMission.title}, Status: ${this.activeMission.status}`);
+        console.log(`   Current Location: ${currentStation.name} (${currentSystem.name})`);
 
-            // --- Grant FULL Mission Reward ---
-            console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
-            this.addCredits(reward); // Call the credit adding function
-            console.log(`   Credits after addCredits call: ${this.credits}`);
-            // ---
-
-            // --- Mark internal status and clear ---
-            this.activeMission.status = 'Completed'; // Mark mission object itself (might be redundant if clearing)
-            console.log(`   Setting activeMission to null (was: ${this.activeMission.title})`);
-            this.activeMission = null; // Clear active mission reference from player
-            console.log(`   activeMission is now: ${this.activeMission}`);
-            // ---
-
-            // --- ADD USER FEEDBACK ---
-            // Using alert for testing - replace with UI message later
-            try {
-                 alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`);
-                 console.log("   Alert displayed.");
-            } catch (e) {
-                 console.error("Error displaying alert:", e);
-                 // Fallback log if alert fails (e.g., in some environments)
-                 console.log(`!!! Mission Complete! ${completedTitle} +${reward}cr !!!`);
+        // --- Condition Checks ---
+        let canComplete = false;
+        // Bounties might be completable anywhere once targets met (or require return to origin)
+        // For now, assume bounty auto-completed in space via StarSystem.update calling this simpler version.
+        // Let's refine this method primarily for DELIVERY completion at destination.
+        if (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable') { // Allow either status initially
+            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+                 // Check location
+                 let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem && currentStation.name === this.activeMission.destinationStation);
+                 console.log(`   Delivery Check: Is at destination? ${isAtDestination}`);
+                 if (!isAtDestination) {
+                      console.warn("   Complete failed: Not at destination station.");
+                      return false; // Cannot complete delivery elsewhere
+                 }
+                 // Check cargo
+                 let hasGoods = this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
+                 console.log(`   Delivery Check: Has required cargo (${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType})? ${hasGoods}`);
+                 if (!hasGoods) {
+                      console.warn("   Complete failed: Missing required cargo!");
+                       // TODO: Add UI message "You don't have the required cargo!"
+                      return false; // Cannot complete without goods
+                 }
+                 canComplete = true; // All delivery checks passed
             }
-            // ---
-
-            console.log(`   Mission ${completedTitle} officially complete. Saving game...`);
-            saveGame(); // Auto-save progress after mission completion
-
-            return true; // Indicate success
+            // --- Handle BOUNTY completion IF we require return to station ---
+            // else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
+            //     if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+            //         // Optional: Check if back at origin station
+            //         // let isAtOrigin = (currentSystem.name === this.activeMission.originSystem && currentStation.name === this.activeMission.originStation);
+            //         // if (!isAtOrigin) { console.warn("Bounty complete, but must return to origin station."); return false; }
+            //         console.log("   Bounty Check: Target count met. Allowing completion.");
+            //         canComplete = true; // Allow completion (assuming auto-complete for now)
+            //     } else {
+            //          console.warn("   Complete failed: Bounty target count not met."); return false;
+            //     }
+            // }
+            // --- For now, BOUNTY is handled by auto-complete in StarSystem ---
+             else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE && this.activeMission.progressCount >= this.activeMission.targetCount) {
+                 // This path shouldn't be reached if auto-complete works, but is a fallback.
+                 console.log("   Bounty Check (in completeMission): Target count met.");
+                 canComplete = true;
+             } else {
+                  console.warn(`   Complete failed: Mission type ${this.activeMission.type} or status ${this.activeMission.status} not handled here, or conditions not met.`);
+                  return false;
+             }
         } else {
-            // Log why completion failed
-            console.warn("Player.completeMission() called, but conditions not met.");
-            if (!this.activeMission) {
-                 console.warn("   Reason: No active mission.");
-            } else {
-                 console.warn(`   Reason: Active mission status is '${this.activeMission.status}', not 'Active' or 'Completable'.`);
-            }
-            return false; // Indicate failure
+             console.warn(`   Complete failed: Mission status is '${this.activeMission.status}'.`);
+             return false;
         }
+
+
+        // --- Proceed with Completion ---
+        if (canComplete) {
+            console.log(`   Completing mission: ${this.activeMission.title}`);
+            let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
+
+            // Remove cargo for delivery missions
+            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+                 console.log(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
+                 this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
+            }
+
+            console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
+            this.addCredits(reward);
+            console.log(`   Credits after addCredits call: ${this.credits}`);
+
+            this.activeMission.status = 'Completed'; // Mark internal status
+            this.activeMission = null; // Clear active mission from player
+            console.log(`   activeMission is now: ${this.activeMission}`);
+
+            // --- Provide feedback ---
+            alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with UI message
+            console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
+
+            saveGame(); // Save progress
+            return true; // Success
+        }
+
+        console.warn("Player.completeMission() reached end without completing.");
+        return false; // Indicate failure if somehow canComplete wasn't true
     } // --- End completeMission Method ---
 
 
@@ -302,21 +349,45 @@ class Player {
     // --- Save/Load Functionality ---
     getSaveData() {
         let normalizedAngle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; if (isNaN(normalizedAngle)) normalizedAngle = 0;
+
+        // --- Log Active Mission Status BEFORE Saving ---
+        let missionDataToSave = null;
+        if (this.activeMission) {
+            console.log(`SAVING DATA: Active Mission Title = ${this.activeMission.title}, Status = ${this.activeMission.status}`);
+            // Create a plain object copy for saving (prevents saving methods etc.)
+            missionDataToSave = { ...this.activeMission };
+            // Or be more explicit:
+            // missionDataToSave = {
+            //      id: this.activeMission.id, type: this.activeMission.type, title: this.activeMission.title,
+            //      description: this.activeMission.description, originSystem: this.activeMission.originSystem,
+            //      originStation: this.activeMission.originStation, destinationSystem: this.activeMission.destinationSystem,
+            //      destinationStation: this.activeMission.destinationStation, targetDesc: this.activeMission.targetDesc,
+            //      targetCount: this.activeMission.targetCount, cargoType: this.activeMission.cargoType,
+            //      cargoQuantity: this.activeMission.cargoQuantity, rewardCredits: this.activeMission.rewardCredits,
+            //      isIllegal: this.activeMission.isIllegal, requiredRep: this.activeMission.requiredRep,
+            //      timeLimit: this.activeMission.timeLimit, status: this.activeMission.status, // <= INCLUDE STATUS
+            //      progressCount: this.activeMission.progressCount // <= INCLUDE PROGRESS
+            // };
+        } else {
+            console.log("SAVING DATA: No active mission.");
+        }
+        // ---
+
         return {
             shipTypeName: this.shipTypeName,
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
-            // --- ADDED: Save active mission (if any) ---
-            // Note: Saving the whole object might save redundant data. Could save only essential IDs/progress.
-            activeMission: this.activeMission ? JSON.parse(JSON.stringify(this.activeMission)) : null
-            // -------------------------------------------
+            // --- Save the plain mission data object ---
+            activeMission: missionDataToSave
+            // -----------------------------------------
         };
     }
 
     loadSaveData(data) {
-        if (!data) { return; }
+        if (!data) { console.warn("Player.loadSaveData: No data provided."); return; }
         console.log("Player.loadSaveData: Loading data...");
+
         let typeToLoad = data.shipTypeName || "Sidewinder"; this.applyShipDefinition(typeToLoad);
         this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0);
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
@@ -325,19 +396,27 @@ class Player {
         this.credits = data.credits ?? 1000;
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
-        // --- ADDED: Load active mission ---
+
+        // --- Load active mission ---
+        this.activeMission = null; // Start fresh before loading
         if (data.activeMission) {
-             // Re-hydrate the mission object from saved data
-             // We need to be careful here - if the Mission class changes, old saves might break.
-             // A safer approach uses IDs and regenerates/looks up mission details.
-             // For now, simple rehydration:
-             this.activeMission = new Mission(data.activeMission); // Recreate object from saved data
-             console.log("   Loaded active mission:", this.activeMission.title);
+             console.log("   Found activeMission data in save:", data.activeMission);
+             // Re-hydrate using the Mission constructor, passing the saved plain object
+             try {
+                  this.activeMission = new Mission(data.activeMission); // Pass the loaded object to constructor
+                  // --- Log Status AFTER Re-hydration ---
+                  console.log(`   LOADED DATA: Active Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}, Progress = ${this.activeMission?.progressCount}`);
+                  // ---
+             } catch (e) {
+                  console.error("   Error re-creating Mission object from saved data:", e);
+                  this.activeMission = null; // Clear if creation failed
+             }
         } else {
-             this.activeMission = null;
+             console.log("   No active mission found in save data.");
         }
         // ----------------------------------
-        console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission: ${this.activeMission?.title || 'None'}`);
+
+        console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
 
 } // End of Player Class

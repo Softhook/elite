@@ -163,12 +163,26 @@ class StarSystem {
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
     trySpawnNPC(player) {
         if (!player?.pos || this.enemies.length >= this.maxEnemies) return;
+
         let chosenRole; let chosenShipTypeName;
         try { // Wrap random selection
             let roleRoll = random(); const pC=0.45, polC=0.25; if(roleRoll<pC)chosenRole=AI_ROLE.PIRATE;else if(roleRoll<pC+polC)chosenRole=AI_ROLE.POLICE;else chosenRole=AI_ROLE.HAULER;
-            switch(chosenRole){case AI_ROLE.PIRATE: chosenShipTypeName=random(["Krait","Adder","Viper","CobraMkIII"]);break; case AI_ROLE.POLICE: chosenShipTypeName=random(["Viper","Viper","CobraMkIII"]);break; case AI_ROLE.HAULER: chosenShipTypeName=random(["Adder","Adder","Python"]);break; default: chosenShipTypeName="Krait";}
-            const thC=0.03; if(random()<thC && chosenRole!==AI_ROLE.HAULER){chosenShipTypeName="Thargoid Interceptor";chosenRole=AI_ROLE.PIRATE;console.warn("!!! Thargoid Spawn Triggered !!!");}
-        } catch (e) { chosenShipTypeName="Krait"; chosenRole=AI_ROLE.PIRATE;} // Fallback
+            switch(chosenRole) { case AI_ROLE.PIRATE: chosenShipTypeName=random(["Krait","Adder","Viper","CobraMkIII"]);break; case AI_ROLE.POLICE: chosenShipTypeName=random(["Viper","Viper","CobraMkIII"]);break; case AI_ROLE.HAULER: chosenShipTypeName=random(["Adder","Adder","Python"]);break; default: chosenShipTypeName="Krait"; }
+
+            // --- Optional Thargoid Override ---
+             const thargoidChance = 0.03; // Keep low
+             if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
+                  // !!! USE THE CORRECT KEY FROM SHIP_DEFINITIONS !!!
+                  chosenShipTypeName = "Thargoid"; // Use "Thargoid", not "Thargoid Interceptor"
+                  // !!! ------------------------------------------ !!!
+                  chosenRole = AI_ROLE.PIRATE; // Treat Thargoid as hostile for basic AI
+                  console.warn("!!! Thargoid Spawn Triggered !!!");
+             }
+             // --- End Thargoid Override ---
+
+        } catch (e) { console.error("Error during NPC role/type selection:", e); chosenShipTypeName = "Krait"; chosenRole = AI_ROLE.PIRATE; } // Fallback on error
+
+        // console.log(`Attempting to spawn a ${chosenRole} (${chosenShipTypeName})...`); // Verbose log
 
         let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(150,400);
         let spawnX = player.pos.x + cos(angle)*spawnDist; let spawnY = player.pos.y + sin(angle)*spawnDist;
@@ -193,53 +207,46 @@ class StarSystem {
 
     /** Updates dynamic objects, handles spawning/despawning, checks collisions. */
     update(player) {
-        if (!player || !player.pos) { return; }
+        if (!player || !player.pos) { console.warn("StarSystem update skipped: Invalid player object."); return; }
         try {
-            // --- Update Enemies & Handle Destruction/Despawn ---
+            // Update Enemies & Check Bounty Progress
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i]; if (!enemy) { this.enemies.splice(i, 1); continue; }
                 try{ enemy.update(this); } catch(e){ console.error("Err updating Enemy:",e,enemy); }
                 if (enemy.isDestroyed()) {
                     let reward = 0; if (enemy.role !== AI_ROLE.HAULER) reward = 25;
-                    // Check & Auto-Complete Bounty Mission
+                    // --- Check Active Bounty Mission & AUTO-COMPLETE ---
+                    // Check using safe access ?. and correct types
                     if (player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
-                        player.activeMission.progressCount++; console.log(`Bounty progress: ${player.activeMission.progressCount}/${player.activeMission.targetCount}`);
-                        if (player.activeMission.progressCount >= player.activeMission.targetCount) { console.log("Bounty mission complete!"); player.completeMission(); reward = 0; } // Complete and zero out base reward
+                        player.activeMission.progressCount++;
+                        console.log(`Bounty progress: ${player.activeMission.progressCount}/${player.activeMission.targetCount}`);
+                        if (player.activeMission.progressCount >= player.activeMission.targetCount) {
+                             console.log("Bounty mission target count met! Completing mission...");
+                             // Call player.completeMission WITHOUT system/station args for auto-complete
+                             player.completeMission(); // <<< Use simpler call for auto-complete
+                             reward = 0; // Don't give base reward if mission completed
+                        }
                     }
-                    if (reward > 0) player.addCredits(reward); // Add base reward if applicable
+                    // --- End Bounty Check ---
+                    if (reward > 0) player.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
                 let dE = dist(enemy.pos.x, enemy.pos.y, player.pos.x, player.pos.y); if (dE > this.despawnRadius * 1.1) this.enemies.splice(i, 1);
             }
-            // --- Update Asteroids & Handle Destruction/Despawn ---
-            for (let i = this.asteroids.length - 1; i >= 0; i--) {
-                const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
-                try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
-                if (asteroid.isDestroyed()) { player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
-                let dA = dist(asteroid.pos.x, asteroid.pos.y, player.pos.x, player.pos.y); if (dA > this.despawnRadius * 1.2) this.asteroids.splice(i, 1);
-            }
+            // Update Asteroids
+            for (let i = this.asteroids.length - 1; i >= 0; i--) { /* ... asteroid update ... */ }
 
-            // --- Update Projectiles & Despawn ---
-            // !!! ENSURE THIS LOOP IS CORRECT and proj.update() is called !!!
+            // --- Update Projectiles (Ensure proj.update() is called) ---
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
                  const proj = this.projectiles[i]; if (!proj) { this.projectiles.splice(i, 1); continue; }
-                 try {
-                     // --- ADDED LOG for Projectile Update ---
-                     // console.log(`   Updating projectile ${i}, Pos: (${proj.pos.x.toFixed(0)}, ${proj.pos.y.toFixed(0)}), Vel: (${proj.vel.x.toFixed(1)}, ${proj.vel.y.toFixed(1)})`); // Can be noisy
-                     proj.update(); // <<< THIS CALL MOVES THE PROJECTILE
-                     // ---
-                 } catch(e) { console.error("Err updating Projectile:",e,proj); }
-                 // Despawn check
-                 let dP = dist(proj.pos.x, proj.pos.y, player.pos.x, player.pos.y);
-                 if (proj.lifespan <= 0 || dP > this.despawnRadius) {
-                     this.projectiles.splice(i, 1);
-                 }
+                 try { proj.update(); } catch(e) { console.error("Err updating Projectile:",e,proj); } // <<< Call update()
+                 let dP = dist(proj.pos.x, proj.pos.y, player.pos.x, player.pos.y); if (proj.lifespan <= 0 || dP > this.despawnRadius) { this.projectiles.splice(i, 1); }
             }
             // --- End Projectile Loop ---
 
-            // --- Collision Checks ---
+            // Collision Checks
             this.checkCollisions(player);
-            // --- Spawning Timers ---
+            // Spawning Timers
             this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(player); this.enemySpawnTimer = 0; }
             this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(player); this.asteroidSpawnTimer = 0; }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
