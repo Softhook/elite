@@ -6,20 +6,19 @@ class Galaxy {
      * System population moved to initGalaxySystems().
      */
     constructor() {
-        console.log(">>> Galaxy Constructor called."); // Log constructor start
+        console.log(">>> Galaxy Constructor called.");
         this.systems = []; // Initialize as empty array
         this.currentSystemIndex = 0; // Default starting index
-        // DO NOT call init() here anymore
-        console.log("<<< Galaxy Constructor finished (Systems array empty)."); // Log constructor end
+        console.log("<<< Galaxy Constructor finished (Systems array empty).");
     }
 
     /**
-     * Initializes the galaxy by creating StarSystem objects using provided definitions.
-     * This should be called from sketch.js setup() AFTER p5 is ready.
+     * Initializes the galaxy: Creates StarSystem objects, then calls their
+     * static element initialization. Should be called from sketch.js setup().
      */
     initGalaxySystems() {
-        console.log(">>> Galaxy.initGalaxySystems() called."); // Log init start
-        this.systems = []; // Ensure systems array is clear before population
+        console.log(">>> Galaxy.initGalaxySystems() called.");
+        this.systems = []; // Ensure clear array
 
         // Define data for the star systems in the galaxy
         const systemDefs = [
@@ -29,105 +28,91 @@ class Galaxy {
             { name: "Border Outpost", type: "Industrial", x: width * 0.5, y: height * 0.8 }
         ];
 
-        // Create StarSystem instances using the definitions, passing the index for seeding
+        // Step 1: Create StarSystem instances (minimal constructor)
         systemDefs.forEach((def, index) => {
-            console.log(`   Galaxy.initGalaxySystems: Creating StarSystem: ${def.name}, Index: ${index}`);
+            console.log(`   Galaxy.initGalaxySystems: Creating StarSystem Shell: ${def.name}, Index: ${index}`);
             try {
-                // Create the system - Its constructor handles seeded generation & logs internally
                 let newSystem = new StarSystem(def.name, def.type, def.x, def.y, index);
-                // If constructor completed without error, push the result
-                this.systems.push(newSystem);
-                console.log(`      -> StarSystem ${index} (${def.name}) pushed successfully.`);
+                this.systems.push(newSystem); // Add shell to array
             } catch (e) {
-                 // Log any errors during system creation (e.g., if StarSystem constructor fails)
-                 console.error(`      !!! ERROR creating StarSystem ${index} (${def.name}):`, e);
+                 console.error(`      !!! ERROR creating StarSystem SHELL ${index} (${def.name}):`, e);
             }
         });
+        console.log(`   Galaxy.initGalaxySystems: Finished creating system shells. Count: ${this.systems.length}`);
 
-        console.log(`   Galaxy.initGalaxySystems: Finished creating systems loop. Total systems pushed: ${this.systems.length}`); // Log final count
+        // Step 2: Initialize static elements for each created system (now p5 functions are ready)
+        console.log("   Galaxy.initGalaxySystems: Initializing static elements for each system...");
+        this.systems.forEach((system, index) => {
+             // Check if system object is valid and has the init method
+             if (system && typeof system.initStaticElements === 'function') {
+                 console.log(`      Calling initStaticElements for system ${index} (${system.name})...`);
+                 try {
+                     system.initStaticElements(); // Call the new method to generate planets, stars etc.
+                 } catch (e) {
+                     console.error(`      !!! ERROR during initStaticElements for system ${index} (${system.name}):`, e);
+                 }
+             } else {
+                  console.warn(`      Skipping initStaticElements for invalid system or missing method at index ${index}.`);
+             }
+        });
+        console.log("   Galaxy.initGalaxySystems: Finished initializing static elements.");
 
-        // Mark the starting system (index 0) as visited initially.
+        // Mark starting system visited (do this AFTER initStaticElements if needed)
         if (this.systems.length > 0 && this.systems[0]) {
-             this.systems[0].visited = true; // Mark as visited
+             this.systems[0].visited = true;
              console.log(`   Galaxy.initGalaxySystems: Marked system 0 (${this.systems[0].name}) as visited.`);
         } else {
-             // This indicates a problem with system creation if index 0 doesn't exist
-             console.error("   Galaxy.initGalaxySystems: No valid starting system [0] found in array!");
+             console.error("   Galaxy.initGalaxySystems: No valid starting system [0] found after initialization!");
         }
-         console.log("<<< Galaxy.initGalaxySystems() finished."); // Log init end
+         console.log("<<< Galaxy.initGalaxySystems() finished.");
     }
 
     /**
-     * Returns the StarSystem object the player is currently in based on currentSystemIndex.
-     * Includes detailed logging for debugging.
-     * @returns {StarSystem|null} The current StarSystem object or null if invalid.
+     * Returns the StarSystem object the player is currently in. Includes logging.
+     * @returns {StarSystem|null} The current StarSystem object or null.
      */
     getCurrentSystem() {
-        // Log input values for debugging
-        console.log(`>>> Galaxy.getCurrentSystem() called. Requesting Index: ${this.currentSystemIndex}, Total Systems in Array: ${this.systems.length}`);
-
-        // Check 1: Is the index within the valid bounds of the array?
+        // console.log(`>>> Galaxy.getCurrentSystem() called. Requesting Index: ${this.currentSystemIndex}, Total Systems: ${this.systems.length}`); // Verbose
         let indexIsValid = (this.currentSystemIndex >= 0 && this.currentSystemIndex < this.systems.length);
-        // console.log(`   getCurrentSystem: Is index within bounds? ${indexIsValid}`); // Verbose log
-
-        // Check 2: Does the systems array actually contain an object at that index?
         let systemExistsAtIndex = indexIsValid && this.systems[this.currentSystemIndex];
-        // console.log(`   getCurrentSystem: Does system object exist at index ${this.currentSystemIndex}? ${!!systemExistsAtIndex}`); // Verbose log
-
-        // Proceed only if both checks pass
         if (indexIsValid && systemExistsAtIndex) {
-            // console.log(`   getCurrentSystem: Success! Returning valid system: ${this.systems[this.currentSystemIndex].name}`); // Verbose log
-            return this.systems[this.currentSystemIndex]; // Return the actual system object
+            // console.log(`   getCurrentSystem: Success! Returning valid system: ${this.systems[this.currentSystemIndex].name}`); // Verbose
+            return this.systems[this.currentSystemIndex];
         } else {
-            // Log detailed failure information
-            console.error(`   getCurrentSystem: Failed to get system! Reason(s): IndexValid=${indexIsValid}, SystemExists=${!!systemExistsAtIndex}. Index=${this.currentSystemIndex}, ArrayLength=${this.systems.length}`);
-            return null; // Return null indicating failure
+            console.error(`   getCurrentSystem: Failed! IndexValid=${indexIsValid}, SystemExists=${!!systemExistsAtIndex}. Index=${this.currentSystemIndex}, ArrayLength=${this.systems.length}`);
+            return null;
         }
     }
 
     /** Handles the jump process to a new star system. */
     jumpToSystem(targetIndex) {
         if (targetIndex >= 0 && targetIndex < this.systems.length && targetIndex !== this.currentSystemIndex) {
-            const oldSystemName = this.systems[this.currentSystemIndex]?.name || "Unknown";
-            const newSystemName = this.systems[targetIndex]?.name || "Unknown";
+            const oldSystemName = this.systems[this.currentSystemIndex]?.name || "Unknown"; const newSystemName = this.systems[targetIndex]?.name || "Unknown";
             console.log(`Jumping from ${oldSystemName} to ${newSystemName}`);
-            this.currentSystemIndex = targetIndex;
-            const newSystem = this.getCurrentSystem(); // Get new system using updated index
+            this.currentSystemIndex = targetIndex; const newSystem = this.getCurrentSystem();
             if (player && newSystem) {
-                // Set Player to Random World Position upon Arrival
                 let arrivalAngle = random(TWO_PI); let arrivalDist = random(500, 1500);
                 player.pos.x = cos(arrivalAngle) * arrivalDist; player.pos.y = sin(arrivalAngle) * arrivalDist;
-                player.vel.set(0, 0); // Reset velocity
-                console.log(`Player arrived at world pos: (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
-                // Update player ref and call enterSystem
-                player.currentSystem = newSystem;
-                newSystem.enterSystem(player);
+                player.vel.set(0, 0); console.log(`Player arrived at world pos: (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
+                player.currentSystem = newSystem; newSystem.enterSystem(player);
             } else { console.error(`Error during jump completion: Player/NewSystem invalid!`); }
         } else { console.error(`Invalid jump index requested: ${targetIndex}`); }
-    } // --- End jumpToSystem ---
-
+    }
 
     /** Retrieves data formatted for drawing the Galaxy Map UI. */
     getSystemDataForMap() {
         if (!this.systems) return [];
-        return this.systems.map((sys, index) => {
-            if (!sys) { console.warn(`getSystemDataForMap: Found null system at index ${index}`); return null; }
-            return { name: sys.name || "Unnamed", x: sys.galaxyPos?.x ?? width * 0.5, y: sys.galaxyPos?.y ?? height * 0.5, type: sys.economyType || "Unknown", visited: sys.visited || false, index: index };
-        }).filter(Boolean);
+        return this.systems.map((sys, index) => { if (!sys) return null; return { name: sys.name || "Unnamed", x: sys.galaxyPos?.x ?? width * 0.5, y: sys.galaxyPos?.y ?? height * 0.5, type: sys.economyType || "Unknown", visited: sys.visited || false, index: index }; }).filter(Boolean);
     }
 
     /** Determines reachable systems from the current one (MVP: adjacency). */
     getReachableSystems() {
-        const reachable = []; const numSystems = this.systems.length; if (numSystems <= 1) return [];
-        const prevIndex = (this.currentSystemIndex - 1 + numSystems) % numSystems; const nextIndex = (this.currentSystemIndex + 1) % numSystems;
-        if (prevIndex !== this.currentSystemIndex) reachable.push(prevIndex); if (nextIndex !== this.currentSystemIndex) reachable.push(nextIndex);
-        return reachable;
+        const reachable = []; const numSystems = this.systems.length; if (numSystems <= 1) return []; const prevIndex = (this.currentSystemIndex - 1 + numSystems) % numSystems; const nextIndex = (this.currentSystemIndex + 1) % numSystems; if (prevIndex !== this.currentSystemIndex) reachable.push(prevIndex); if (nextIndex !== this.currentSystemIndex) reachable.push(nextIndex); return reachable;
     }
 
     /** Gathers save data for all systems (minimal: 'visited' status). */
     getSaveData() {
-        if (!this.systems) return [];
-        return this.systems.map(sys => sys?.getSaveData() || { visited: false });
+        if (!this.systems) return []; return this.systems.map(sys => sys?.getSaveData() || { visited: false });
     }
 
     /** Loads saved data into the corresponding StarSystem objects. */

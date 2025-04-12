@@ -1,99 +1,180 @@
 // ****** Enemy.js ******
 
-// Define AI Roles
-const AI_ROLE = { PIRATE: 'Pirate', POLICE: 'Police', HAULER: 'Hauler' };
-// Define AI States
-const AI_STATE = { IDLE: 0, APPROACHING: 1, ATTACK_PASS: 2, REPOSITIONING: 3, PATROLLING: 4, NEAR_STATION: 5, LEAVING_SYSTEM: 6 };
+// Define AI Roles using a constant object for readability and maintainability
+const AI_ROLE = {
+    PIRATE: 'Pirate',
+    POLICE: 'Police',
+    HAULER: 'Hauler'
+};
+
+// Define AI States (Shared across roles, but used differently)
+const AI_STATE = {
+    IDLE: 0,          // Doing nothing specific, often for Pirates or Police off-duty
+    APPROACHING: 1,   // Detected player, moving towards an intercept point (Pirate/Police when hostile)
+    ATTACK_PASS: 2,   // Flying past player while firing (Pirate/Police when hostile)
+    REPOSITIONING: 3, // Moving away after pass (Pirate/Police when hostile)
+    PATROLLING: 4,    // Moving towards a point (e.g., station or patrol route) - Police/Hauler
+    NEAR_STATION: 5,  // Paused near station - Hauler only
+    LEAVING_SYSTEM: 6 // Moving towards exit point - Hauler only
+};
 
 class Enemy {
-    // --- constructor (as before) ---
+    /**
+     * Creates an Enemy instance with role-specific behavior and ship type.
+     * Stores speeds/rates/colors initially as raw values.
+     * Radian properties and p5.Color objects MUST be calculated AFTER construction
+     * via calculateRadianProperties() and initializeColors().
+     * @param {number} x - Initial world X coordinate.
+     * @param {number} y - Initial world Y coordinate.
+     * @param {Player} playerRef - A reference to the player object.
+     * @param {string} shipTypeName - The type name of the ship (key in SHIP_DEFINITIONS).
+     * @param {string} role - The role of this NPC (e.g., AI_ROLE.PIRATE).
+     */
     constructor(x, y, playerRef, shipTypeName, role) {
-        const shipDef = SHIP_DEFINITIONS[shipTypeName] || SHIP_DEFINITIONS["Krait"];
-        if (shipDef.name !== shipTypeName) { shipTypeName = shipDef.name; }
-        this.shipTypeName = shipTypeName; this.role = role;
-        this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI);
+        // --- Robust Ship Definition Lookup ---
+        let actualShipTypeName = shipTypeName; // Store the name passed in
+        let shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Try to find definition
+
+        // Handle fallback if type not found
+        if (!shipDef) {
+            console.warn(`Enemy constructor: Ship type "${shipTypeName}" not found! Defaulting to Krait.`);
+            actualShipTypeName = "Krait"; // Use the KEY of the fallback
+            shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Get the default definition using the correct key
+            // Safety check for the default definition itself
+            if (!shipDef) {
+                 console.error("FATAL: Default ship definition 'Krait' is missing from SHIP_DEFINITIONS! Cannot create enemy properly.");
+                 // Make enemy unusable if Krait is also missing
+                 this.hull = 0; this.destroyed = true; shipTypeName="ErrorShip"; role="Error"; // Prevent further errors
+                 shipDef = { name: "ErrorShip", size: 10, baseMaxSpeed: 0, baseThrust: 0, baseTurnRateDegrees: 0, baseHull: 1, cargoCapacity: 0 }; // Minimal dummy values
+            }
+        }
+        // --- End Lookup ---
+
+        // --- Assign CORRECT Properties ---
+        this.shipTypeName = actualShipTypeName; // Store the ACTUAL KEY used to find the definition
+        this.role = role;
+        // ---
+
+        // --- Physics & Stats (using the final shipDef) ---
+        this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI); // Radians
         this.size = shipDef.size; this.baseMaxSpeed = shipDef.baseMaxSpeed; this.baseThrust = shipDef.baseThrust;
-        this.baseTurnRateDegrees = shipDef.baseTurnRateDegrees;
+        this.baseTurnRateDegrees = shipDef.baseTurnRateDegrees; // Store DEGREES from definition
+        // Apply NPC role modifiers (using degrees for turn rate calculation later)
         this.rotationSpeedDegrees = this.baseTurnRateDegrees * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
-        this.angleToleranceDegrees = 15; this.rotationSpeed = 0; this.angleTolerance = 0;
+        this.angleToleranceDegrees = 15; // Store tolerance in DEGREES
+        // Initialize radian properties - set by calculateRadianProperties() later
+        this.rotationSpeed = 0; // Radians / frame
+        this.angleTolerance = 0; // Radians
+        // Apply modifiers to final speed/thrust
         this.maxSpeed = this.baseMaxSpeed * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
         this.thrustForce = this.baseThrust * (this.role === AI_ROLE.HAULER ? 0.8 : 0.9);
         this.drag = 0.985; this.maxHull = shipDef.baseHull; this.hull = this.maxHull; this.destroyed = false;
-        this.color = color(random(80, 180), random(80, 180), random(80, 180));
-        switch(this.role) { case AI_ROLE.POLICE: this.strokeColor=color(100,150,255); break; case AI_ROLE.HAULER: this.strokeColor=color(200,200,100); break; case AI_ROLE.PIRATE: this.strokeColor=color(255,100,100); break; default: this.strokeColor=color(200); }
-        this.isThargoid = (this.shipTypeName === "Thargoid");
-        if (this.isThargoid) { this.rotationSpeedDegrees = this.baseTurnRateDegrees; this.angleToleranceDegrees = 5; /* ... other overrides ... */ this.strokeColor = color(0, 255, 150);}
-        this.target = playerRef; this.currentState = AI_STATE.IDLE;
-        this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null;
+
+        // --- Store Raw Color VALUES ---
+        this.baseColorValue = [random(80, 180), random(80, 180), random(80, 180)]; // Store as [R, G, B] array
+        this.strokeColorValue = [200, 200, 200]; // Default grey as [R, G, B]
+        switch(this.role) {
+            case AI_ROLE.POLICE: this.strokeColorValue = [100, 150, 255]; break; // Blue
+            case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
+            case AI_ROLE.PIRATE: this.strokeColorValue = [255, 100, 100]; break; // Red
+        }
+        this.isThargoid = (this.shipTypeName === "Thargoid Interceptor"); // Match exact name
+        if (this.isThargoid) { // Thargoid specific overrides
+            this.rotationSpeedDegrees = this.baseTurnRateDegrees; this.angleToleranceDegrees = 5;
+            this.maxSpeed = this.baseMaxSpeed; this.thrustForce = this.baseThrust; this.drag = 0.995;
+            this.strokeColorValue = [0, 255, 150]; // Thargoid Green
+        }
+        // Initialize p5.Color objects - set by initializeColors() later
+        this.p5FillColor = null;
+        this.p5StrokeColor = null;
+        // ---
+
+        // --- Targeting & AI ---
+        this.target = playerRef; this.currentState = AI_STATE.IDLE; // Default state
+        this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed
+        // AI Tuning Parameters
         this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
-        this.fireCooldown = random(1.0, 2.5); this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0);
-        switch(this.role) { case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break; case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break; case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break; default: this.currentState = AI_STATE.IDLE; }
-        if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
-        // Note: calculateRadianProperties() must be called externally after construction
+
+        // --- Weapon ---
+        this.fireCooldown = random(1.0, 2.5);
+        this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0); // Use degree speed for rough scaling
+
+        // --- Role-Specific Initial State ---
+        switch(this.role) {
+             case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break; // Start moving
+             case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break; // Start patrolling
+             case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break; // Start Idle
+             default: this.currentState = AI_STATE.IDLE;
+        }
+        if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; } // Thargoids start aggressive
+
+        console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
+        // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
     }
 
-    /** Calculates and sets radian-based properties. */
+    /** Calculates and sets radian-based properties using p5.radians(). */
     calculateRadianProperties() {
-         if (typeof radians !== 'function') { this.rotationSpeed = 0.06; this.angleTolerance = 0.26; return; } // Fallback if p5 not ready
+         if (typeof radians !== 'function') { this.rotationSpeed = 0.06; this.angleTolerance = 0.26; return; } // Fallback
          try {
-             this.rotationSpeed = radians(this.rotationSpeedDegrees); this.angleTolerance = radians(this.angleToleranceDegrees);
+             this.rotationSpeed = radians(this.rotationSpeedDegrees); // rad/frame
+             this.angleTolerance = radians(this.angleToleranceDegrees); // rad
              if (isNaN(this.rotationSpeed) || isNaN(this.angleTolerance)) throw new Error("NaN result");
-         } catch(e) { this.rotationSpeed = 0.06; this.angleTolerance = 0.26; } // Fallback values
+             // console.log(` Enemy ${this.shipTypeName} Radian Props Calculated.`); // Optional
+         } catch(e) { console.error(`Error calc radians for Enemy ${this.shipTypeName}:`, e); this.rotationSpeed = 0.06; this.angleTolerance = 0.26; } // Fallback
+    }
+
+    /** Creates p5.Color objects using stored values. Must be called after p5 is ready. */
+    initializeColors() {
+         if (typeof color !== 'function') { return; } // Skip if p5 not ready
+         try {
+             this.p5FillColor = color(this.baseColorValue[0], this.baseColorValue[1], this.baseColorValue[2]);
+             this.p5StrokeColor = color(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2]);
+             // console.log(` Enemy ${this.shipTypeName} Colors Initialized.`); // Optional
+         } catch(e) { console.error(`Error creating colors for Enemy ${this.shipTypeName}:`, e); this.p5FillColor = color(180); this.p5StrokeColor = color(255); } // Fallbacks
     }
 
     /** Predicts player's future position. */
     predictTargetPosition() {
         if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
-        let predictionFactor = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
-        return p5.Vector.add(this.target.pos, p5.Vector.mult(this.target.vel, predictionFactor));
+        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        return p5.Vector.add(this.target.pos, p5.Vector.mult(this.target.vel, pf));
     }
 
     /** Rotates towards target angle (radians). Returns remaining difference (radians). */
     rotateTowards(targetAngleRadians) {
-        let angleDiff = targetAngleRadians - this.angle;
-        while (angleDiff < -PI) angleDiff += TWO_PI; while (angleDiff > PI) angleDiff -= TWO_PI;
+        if (isNaN(targetAngleRadians)) return PI;
+        let diff = targetAngleRadians - this.angle; while (diff < -PI) diff += TWO_PI; while (diff > PI) diff -= TWO_PI;
         const rotationThreshold = 0.02;
-        if (abs(angleDiff) > rotationThreshold) {
-            let rotationStep = constrain(angleDiff, -this.rotationSpeed, this.rotationSpeed);
-            this.angle = (this.angle + rotationStep + TWO_PI) % TWO_PI;
-            return angleDiff - rotationStep;
-        }
-        return 0;
+        if (abs(diff) > rotationThreshold) { let step = constrain(diff, -this.rotationSpeed, this.rotationSpeed); this.angle = (this.angle + step + TWO_PI) % TWO_PI; return diff - step; }
+        return 0; // Aligned
     }
 
     /** Applies forward thrust. */
-    thrustForward() {
-        let force = p5.Vector.fromAngle(this.angle); force.mult(this.thrustForce); this.vel.add(force);
-    }
+    thrustForward() { if (isNaN(this.angle)) { this.angle = 0; return; } let f = p5.Vector.fromAngle(this.angle); f.mult(this.thrustForce); this.vel.add(f); }
 
-    /**
-     * Sets a target position far away for Haulers leaving the system.
-     * @param {StarSystem} system - The current star system to get despawn radius from.
-     */
-    setLeavingSystemTarget(system) { // <-- Added system parameter
-        let exitAngle = random(TWO_PI);
-        // --- Use passed system parameter ---
-        let exitDist = (system?.despawnRadius || 3000) * 1.5; // Use system's radius or fallback
-        // ----------------------------------
-        this.patrolTargetPos = createVector(cos(exitAngle) * exitDist, sin(exitAngle) * exitDist);
-        this.currentState = AI_STATE.LEAVING_SYSTEM;
-        this.hasPausedNearStation = false; // Reset flag
-        console.log(`Hauler ${this.shipTypeName} leaving towards (${this.patrolTargetPos.x.toFixed(0)}, ${this.patrolTargetPos.y.toFixed(0)})`);
+    /** Sets a target position far away for Haulers leaving the system. */
+    setLeavingSystemTarget(system) {
+        let angle = random(TWO_PI); let dist = (system?.despawnRadius ?? 3000) * 1.5;
+        this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
+        this.currentState = AI_STATE.LEAVING_SYSTEM; this.hasPausedNearStation = false;
+        // console.log(`Hauler ${this.shipTypeName} leaving towards target`); // Optional log
     }
 
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
-        if (this.destroyed) return;
+        if (this.destroyed || !system) return; // Skip if destroyed or system missing
         this.fireCooldown -= deltaTime / 1000;
-        // Delegate to role-specific update logic, passing system reference
-        switch (this.role) {
-            case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
-            case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
-            case AI_ROLE.HAULER: this.updateHaulerAI(system); break; // Pass system here
-            default: this.vel.mult(this.drag * 0.95); break;
-        }
-        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed); this.pos.add(this.vel); // Apply physics
-    }
+        try { // Wrap AI updates
+            switch (this.role) {
+                case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
+                case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
+                case AI_ROLE.HAULER: this.updateHaulerAI(system); break;
+                default: this.vel.mult(this.drag * 0.95); break;
+            }
+        } catch (e) { console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e); this.currentState = AI_STATE.IDLE; }
+        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed); // Apply physics
+        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); } else { this.vel.set(0,0); }
+    } // End update
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
@@ -101,92 +182,65 @@ class Enemy {
         let distanceToTarget = targetExists ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) : Infinity;
         let desiredMovementTargetPos = null; let shootingAngle = this.angle;
         if (targetExists) { shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x)); }
-        switch (this.currentState) { /* Pirate state machine logic */ }
-        let angleDifference = this.performRotationAndThrust(desiredMovementTargetPos);
+        let previousState = this.currentState;
+        // --- Combat State Machine ---
+        switch (this.currentState) {
+            case AI_STATE.IDLE: case AI_STATE.PATROLLING: this.vel.mult(this.drag * 0.95); if (targetExists && distanceToTarget < this.detectionRange) { this.currentState = AI_STATE.APPROACHING; } break;
+            case AI_STATE.APPROACHING: if (!targetExists || distanceToTarget > this.detectionRange * 1.1) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } desiredMovementTargetPos = this.predictTargetPosition() || this.target?.pos; if (distanceToTarget < this.engageDistance) { this.currentState = AI_STATE.ATTACK_PASS; this.passTimer = this.passDuration; } break;
+            case AI_STATE.ATTACK_PASS: if (!targetExists) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } this.passTimer -= deltaTime / 1000; if (this.target?.vel) { desiredMovementTargetPos = p5.Vector.add(this.target.pos, this.target.vel.copy().setMag(100)); } else { desiredMovementTargetPos = this.target?.pos; } if (this.passTimer <= 0 || !desiredMovementTargetPos) { this.currentState = AI_STATE.REPOSITIONING; if (targetExists) { let v=p5.Vector.sub(this.pos,this.target.pos); v.setMag(this.repositionDistance * 1.5); this.repositionTarget=p5.Vector.add(this.pos, v); } else { this.repositionTarget=null; } } break;
+            case AI_STATE.REPOSITIONING: if (!targetExists) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } desiredMovementTargetPos = this.repositionTarget; let distToRepo = this.repositionTarget ? dist(this.pos.x, this.pos.y, this.repositionTarget.x, this.repositionTarget.y) : Infinity; if (!desiredMovementTargetPos || distanceToTarget > this.repositionDistance || distToRepo < 50) { this.currentState = AI_STATE.APPROACHING; this.repositionTarget = null; } break;
+            default: this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break;
+        }
+        // if(this.currentState !== previousState) { console.log(` -> ${this.shipTypeName}(${this.role}) State: ${previousState}->${this.currentState}`); }
+        this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
-    }
+    } // End updateCombatAI
 
     /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
     updatePoliceAI(system) {
         let targetExists = this.target?.hull > 0;
-        let distanceToTarget = targetExists ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) : Infinity;
         let isAggressive = targetExists && this.target.isWanted === true;
-        let shootingAngle = this.angle; // Need to calculate if aggressive
-
-        if (isAggressive && this.currentState === AI_STATE.PATROLLING) { this.currentState = AI_STATE.APPROACHING; }
-        else if (!isAggressive && (this.currentState !== AI_STATE.PATROLLING && this.currentState !== AI_STATE.IDLE)) {
+        if (isAggressive && (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) { this.currentState = AI_STATE.APPROACHING; }
+        else if (!isAggressive && (this.currentState !== AI_STATE.PATROLLING && this.currentState !== AI_STATE.IDLE)) { this.currentState = AI_STATE.PATROLLING; this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500)); }
+        if (isAggressive && targetExists) { this.updateCombatAI(system); } // Use combat logic
+        else { // Patrolling logic
             this.currentState = AI_STATE.PATROLLING;
-            if (system?.station) this.patrolTargetPos = system.station.pos.copy();
-            else this.patrolTargetPos = createVector(random(-500, 500), random(-500, 500));
-        }
-
-        if (isAggressive) {
-            if (targetExists) shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x));
-             // --- Run Aggressive State Logic ---
-             let desiredMovementTargetPos_Aggro = null;
-             switch (this.currentState) { /* Attack Pass States */ }
-             this.performRotationAndThrust(desiredMovementTargetPos_Aggro);
-             this.performFiring(system, targetExists, distanceToTarget, shootingAngle); // Fire if aggressive state allows
-        } else {
-            // --- Run Patrolling Logic ---
-            this.currentState = AI_STATE.PATROLLING;
-            let desiredMovementTargetPos_Patrol = this.patrolTargetPos;
-             let distToPatrolTarget = desiredMovementTargetPos_Patrol ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos_Patrol.x, desiredMovementTargetPos_Patrol.y) : Infinity;
-             if (!desiredMovementTargetPos_Patrol || distToPatrolTarget < 50) {
-                 if(system?.station) this.patrolTargetPos = system.station.pos.copy();
-                 else this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000));
-                 desiredMovementTargetPos_Patrol = this.patrolTargetPos;
-             }
-             this.performRotationAndThrust(desiredMovementTargetPos_Patrol);
-             // Police do not fire when patrolling peacefully
+            if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500)); }
+            let desiredMovementTargetPos = this.patrolTargetPos;
+            let distToPatrolTarget = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
+            if (distToPatrolTarget < 50) { if(system?.station?.pos) this.patrolTargetPos = system.station.pos.copy(); else this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000)); desiredMovementTargetPos = this.patrolTargetPos; }
+            this.performRotationAndThrust(desiredMovementTargetPos);
         }
     } // End updatePoliceAI
 
     /** Hauler AI Logic - Moves between station and system edge. */
-    updateHaulerAI(system) { // <--- Takes system as argument
+    updateHaulerAI(system) {
          let desiredMovementTargetPos = null;
          switch (this.currentState) {
-             case AI_STATE.PATROLLING: // GOING_TO_STATION
-                 desiredMovementTargetPos = this.patrolTargetPos;
-                 if (!desiredMovementTargetPos && system?.station) { this.patrolTargetPos = system.station.pos.copy(); desiredMovementTargetPos = this.patrolTargetPos; }
-                 else if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } // Pass system here
-                 let distToStation = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
-                 if (distToStation < this.stationProximityThreshold) { this.currentState = AI_STATE.NEAR_STATION; this.nearStationTimer = this.stationPauseDuration; this.vel.mult(0.1); }
-                 break;
-             case AI_STATE.NEAR_STATION:
-                 this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000;
-                 if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } // Pass system here
-                 break;
-             case AI_STATE.LEAVING_SYSTEM:
-                 desiredMovementTargetPos = this.patrolTargetPos;
-                 if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } // Pass system here
-                 let distToExit = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
-                 if (distToExit < 150) { this.destroyed = true; }
-                 break;
-              default: if(system?.station) { this.patrolTargetPos = system.station.pos.copy(); this.currentState = AI_STATE.PATROLLING; } else { this.setLeavingSystemTarget(system); } break; // Pass system here
+             case AI_STATE.PATROLLING: if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy(); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dS < this.stationProximityThreshold) { this.currentState = AI_STATE.NEAR_STATION; this.nearStationTimer = this.stationPauseDuration; this.vel.mult(0.1); } break;
+             case AI_STATE.NEAR_STATION: this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000; if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } break;
+             case AI_STATE.LEAVING_SYSTEM: if (!this.patrolTargetPos) { this.setLeavingSystemTarget(system); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) break; let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dE < 150) { this.destroyed = true; } break;
+             default: if(system?.station?.pos) { this.patrolTargetPos = system.station.pos.copy(); this.currentState = AI_STATE.PATROLLING; } else { this.setLeavingSystemTarget(system); } break;
          }
-         this.performRotationAndThrust(desiredMovementTargetPos);
+         this.performRotationAndThrust(desiredMovementTargetPos); // Haulers just move
     } // End updateHaulerAI
 
-    /** Helper method for rotation and thrust logic. Uses internal radian properties. */
+    /** Helper: Rotates towards target, applies thrust if aligned. Returns angle difference. */
     performRotationAndThrust(desiredMovementTargetPos) {
          let angleDifference = PI;
-         if (desiredMovementTargetPos) {
+         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
              let targetMoveAngleRad = radians(atan2(desiredMovementTargetPos.y - this.pos.y, desiredMovementTargetPos.x - this.pos.x));
-             angleDifference = this.rotateTowards(targetMoveAngleRad); // Uses radians speed/tolerance
+             if (!isNaN(targetMoveAngleRad)) { angleDifference = this.rotateTowards(targetMoveAngleRad); } else { angleDifference = PI; }
          } else { angleDifference = 0; }
-         if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION && abs(angleDifference) < this.angleTolerance) { // Uses radians tolerance
-             this.thrustForward();
-         }
+         if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION && abs(angleDifference) < this.angleTolerance) { this.thrustForward(); }
          return angleDifference;
     }
 
-     /** Helper method for firing logic. Uses internal radian properties. */
+     /** Helper: Checks conditions and calls fire() if appropriate. */
      performFiring(system, canFire, distanceToTarget, shootingAngleRad) {
          if (canFire && distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
              if (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || (this.isThargoid && this.currentState !== AI_STATE.IDLE)) {
-                this.fire(system, shootingAngleRad); // Pass radians angle
-                this.fireCooldown = this.fireRate;
+                 this.fire(system, shootingAngleRad); this.fireCooldown = this.fireRate;
              }
          }
      }
@@ -194,31 +248,40 @@ class Enemy {
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
         if (this.role === AI_ROLE.HAULER) return;
-        // --- Added Check ---
-        if (!system || typeof system.addProjectile !== 'function') {
-            console.error(`Enemy ${this.shipTypeName} fire(): Invalid system object received! Cannot add projectile.`);
-            return;
-        }
-        // --- End Check ---
+        if (!system || typeof system.addProjectile !== 'function') { return; }
+        if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
         let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
         let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
-        system.addProjectile(proj); // Use validated system object
+        system.addProjectile(proj);
     }
 
     /** Draws the enemy ship using its defined draw function and role-based stroke. */
     draw() {
-        if (this.destroyed) return;
+        if (this.destroyed || isNaN(this.angle)) return;
+        if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); } // Attempt init if needed
+        if (!this.p5FillColor || !this.p5StrokeColor) { return; } // Skip draw if colors still bad
+
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; const drawFunc = shipDef?.drawFunction;
-        if (typeof drawFunc !== 'function') { /* Fallback */ return; }
+        // Use a more specific check for the function
+        if (typeof drawFunc !== 'function') {
+            console.error(`Enemy draw: No draw function for ${this.shipTypeName}`);
+            push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop(); // Draw fallback red circle
+            return;
+        }
+
         push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle));
-        stroke(this.strokeColor);
+        // Use initialized p5.Color objects
+        fill(this.p5FillColor); stroke(this.p5StrokeColor);
+        strokeWeight(1);
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        drawFunc(this.size, showThrust);
+        try { drawFunc(this.size, showThrust); } // Call specific draw function
+        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
         pop();
+
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
-             push(); stroke(this.strokeColor, 100); strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+             push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
         }
     }
 
