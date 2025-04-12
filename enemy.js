@@ -1,332 +1,230 @@
 // ****** Enemy.js ******
 
-// Define AI States using a constant object for readability and maintainability
-const AI_STATE = {
-    IDLE: 0,          // Doing nothing, player too far or non-existent
-    APPROACHING: 1,   // Detected player, moving towards an intercept point
-    ATTACK_PASS: 2,   // Close to player, performing a fly-by maneuver while firing
-    REPOSITIONING: 3  // Moving away after a pass to set up the next approach
-};
+// Define AI Roles
+const AI_ROLE = { PIRATE: 'Pirate', POLICE: 'Police', HAULER: 'Hauler' };
+// Define AI States
+const AI_STATE = { IDLE: 0, APPROACHING: 1, ATTACK_PASS: 2, REPOSITIONING: 3, PATROLLING: 4, NEAR_STATION: 5, LEAVING_SYSTEM: 6 };
 
 class Enemy {
-    /**
-     * Creates an Enemy instance with attack pass AI using realistic thrust/rotation.
-     * @param {number} x - Initial world X coordinate.
-     * @param {number} y - Initial world Y coordinate.
-     * @param {Player} playerRef - A reference to the player object for targeting.
-     */
-    constructor(x, y, playerRef) {
-        this.pos = createVector(x, y); // World coordinates
-        this.vel = createVector(0, 0); // Start with zero velocity for controlled movement
-        this.angle = random(TWO_PI);   // Initial random facing direction (Radians, 0 = right)
-        this.size = 25;                // Visual diameter and approx collision size
-
-        // --- Core Movement Properties ---
-        this.maxSpeed = 1.8;           // Maximum movement speed
-        this.thrustForce = 0.08;       // Force applied when thrusting forward (adjust for acceleration)
-        this.rotationSpeed = radians(3.5); // Max rotation per frame (RADIANS) - adjust for turn rate
-        this.drag = 0.985;             // Friction/drag factor (closer to 1 = less drag)
-        // Angle tolerance (RADIANS): Thrust is applied if angle difference is less than this
-        this.angleTolerance = radians(15); // e.g., Allow thrust if within 15 degrees of target
-
-        // --- Stats ---
-        this.hull = 30;
-        this.maxHull = 30;
-        this.destroyed = false; // Flag indicating if the enemy is destroyed
-
-        // --- Visuals ---
-        this.color = color(255, 50, 50); // Red body
-        this.strokeColor = color(255, 150, 150); // Lighter red outline
-
-        // --- Targeting ---
-        this.target = playerRef; // Reference to the player object (needs pos and vel)
-
-        // --- AI State & Variables ---
-        this.currentState = AI_STATE.IDLE;     // Initial state
-        this.repositionTarget = null;          // Target position vector for repositioning state
-        // Removed passTargetPoint, simplifying pass behavior
-        this.passTimer = 0;                    // Timer for duration of the ATTACK_PASS state
-
-        // --- AI Tuning Parameters (Adjust these to change behavior) ---
-        this.detectionRange = 450;         // Distance to notice player and switch to APPROACHING
-        this.engageDistance = 180;         // Distance to switch from APPROACHING to ATTACK_PASS
-        this.firingRange = 300;            // Maximum weapon range
-        this.repositionDistance = 350;     // Distance to move away during REPOSITIONING before turning back
-        this.predictionTime = 0.4;         // How far ahead (in seconds, approx) to predict player pos for intercept
-        // Removed passOffsetDistance
-        this.passDuration = 1.0;           // How long (seconds) the ATTACK_PASS state lasts before repositioning
-        // --- End Tuning ---
-
-        // --- Weapon ---
-        this.fireCooldown = random(0.5, 1.5); // Initial random firing delay
-        this.fireRate = 1.0;                  // Seconds between shots
+    // --- constructor (as before) ---
+    constructor(x, y, playerRef, shipTypeName, role) {
+        const shipDef = SHIP_DEFINITIONS[shipTypeName] || SHIP_DEFINITIONS["Krait"];
+        if (shipDef.name !== shipTypeName) { shipTypeName = shipDef.name; }
+        this.shipTypeName = shipTypeName; this.role = role;
+        this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI);
+        this.size = shipDef.size; this.baseMaxSpeed = shipDef.baseMaxSpeed; this.baseThrust = shipDef.baseThrust;
+        this.baseTurnRateDegrees = shipDef.baseTurnRateDegrees;
+        this.rotationSpeedDegrees = this.baseTurnRateDegrees * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
+        this.angleToleranceDegrees = 15; this.rotationSpeed = 0; this.angleTolerance = 0;
+        this.maxSpeed = this.baseMaxSpeed * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
+        this.thrustForce = this.baseThrust * (this.role === AI_ROLE.HAULER ? 0.8 : 0.9);
+        this.drag = 0.985; this.maxHull = shipDef.baseHull; this.hull = this.maxHull; this.destroyed = false;
+        this.color = color(random(80, 180), random(80, 180), random(80, 180));
+        switch(this.role) { case AI_ROLE.POLICE: this.strokeColor=color(100,150,255); break; case AI_ROLE.HAULER: this.strokeColor=color(200,200,100); break; case AI_ROLE.PIRATE: this.strokeColor=color(255,100,100); break; default: this.strokeColor=color(200); }
+        this.isThargoid = (this.shipTypeName === "Thargoid");
+        if (this.isThargoid) { this.rotationSpeedDegrees = this.baseTurnRateDegrees; this.angleToleranceDegrees = 5; /* ... other overrides ... */ this.strokeColor = color(0, 255, 150);}
+        this.target = playerRef; this.currentState = AI_STATE.IDLE;
+        this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null;
+        this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
+        this.fireCooldown = random(1.0, 2.5); this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0);
+        switch(this.role) { case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break; case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break; case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break; default: this.currentState = AI_STATE.IDLE; }
+        if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
+        // Note: calculateRadianProperties() must be called externally after construction
     }
 
-    /**
-     * Predicts the player's future position based on current position and velocity.
-     * Note: Simple linear prediction; accuracy depends on stable frame rate if player velocity isn't deltaTime adjusted.
-     * @returns {p5.Vector | null} Predicted position vector or null if target is invalid.
-     */
+    /** Calculates and sets radian-based properties. */
+    calculateRadianProperties() {
+         if (typeof radians !== 'function') { this.rotationSpeed = 0.06; this.angleTolerance = 0.26; return; } // Fallback if p5 not ready
+         try {
+             this.rotationSpeed = radians(this.rotationSpeedDegrees); this.angleTolerance = radians(this.angleToleranceDegrees);
+             if (isNaN(this.rotationSpeed) || isNaN(this.angleTolerance)) throw new Error("NaN result");
+         } catch(e) { this.rotationSpeed = 0.06; this.angleTolerance = 0.26; } // Fallback values
+    }
+
+    /** Predicts player's future position. */
     predictTargetPosition() {
-        if (!this.target || !this.target.pos || !this.target.vel) {
-            return this.target?.pos || null; // Return current pos or null
-        }
-        // Simple prediction: current_pos + velocity * prediction_time_scaled
-        // Scale predictionTime (seconds) by approx framerate (60 FPS baseline)
-        let predictionFactor = this.predictionTime * (deltaTime ? (60 / (1000 / deltaTime)) : 60);
-        let predictedPos = p5.Vector.add(this.target.pos, p5.Vector.mult(this.target.vel, predictionFactor));
-        return predictedPos;
+        if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
+        let predictionFactor = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        return p5.Vector.add(this.target.pos, p5.Vector.mult(this.target.vel, predictionFactor));
     }
 
-    /**
-     * Rotates the enemy towards a target angle, respecting max rotation speed.
-     * Stores angle internally in radians.
-     * @param {number} targetAngleRadians - The desired angle in radians.
-     * @returns {number} The actual angle difference remaining after rotation (in radians).
-     */
+    /** Rotates towards target angle (radians). Returns remaining difference (radians). */
     rotateTowards(targetAngleRadians) {
-        // Calculate the shortest angle difference (in radians) between current and target angle
         let angleDiff = targetAngleRadians - this.angle;
-        // Adjust difference to be in the range -PI to PI for accurate rotation direction
-        while (angleDiff < -PI) angleDiff += TWO_PI;
-        while (angleDiff > PI) angleDiff -= TWO_PI;
-
-        // Apply rotation only if the difference is larger than a small threshold (prevents wobbling)
-        const rotationThreshold = 0.02; // Approx 1 degree in radians
+        while (angleDiff < -PI) angleDiff += TWO_PI; while (angleDiff > PI) angleDiff -= TWO_PI;
+        const rotationThreshold = 0.02;
         if (abs(angleDiff) > rotationThreshold) {
-            // Determine the amount to rotate this frame, limited by max rotationSpeed
             let rotationStep = constrain(angleDiff, -this.rotationSpeed, this.rotationSpeed);
-            this.angle += rotationStep; // Update the facing angle
-            // Normalize angle to be within 0 to TWO_PI range (optional but good practice)
-            this.angle = (this.angle + TWO_PI) % TWO_PI;
-            // Return the difference *after* this rotation step
+            this.angle = (this.angle + rotationStep + TWO_PI) % TWO_PI;
             return angleDiff - rotationStep;
-        } else {
-             // If difference is within threshold, consider it aligned
-             // Optional: Snap perfectly? this.angle = targetAngleRadians;
-             return 0; // Report zero difference if aligned or nearly aligned
         }
+        return 0;
     }
 
-    /**
-     * Applies forward thrust force based on the ship's current facing angle.
-     * Modifies the velocity vector.
-     */
+    /** Applies forward thrust. */
     thrustForward() {
-        // Create a force vector pointing in the ship's current direction (this.angle is radians)
-        let force = p5.Vector.fromAngle(this.angle); // fromAngle expects radians
-        force.mult(this.thrustForce); // Scale by the thrust magnitude
-        this.vel.add(force); // Add force to the current velocity
+        let force = p5.Vector.fromAngle(this.angle); force.mult(this.thrustForce); this.vel.add(force);
     }
 
     /**
-     * Updates the enemy's state machine, rotation, thrust, and firing logic each frame.
-     * @param {StarSystem} system - Reference to the current star system (for adding projectiles).
+     * Sets a target position far away for Haulers leaving the system.
+     * @param {StarSystem} system - The current star system to get despawn radius from.
      */
+    setLeavingSystemTarget(system) { // <-- Added system parameter
+        let exitAngle = random(TWO_PI);
+        // --- Use passed system parameter ---
+        let exitDist = (system?.despawnRadius || 3000) * 1.5; // Use system's radius or fallback
+        // ----------------------------------
+        this.patrolTargetPos = createVector(cos(exitAngle) * exitDist, sin(exitAngle) * exitDist);
+        this.currentState = AI_STATE.LEAVING_SYSTEM;
+        this.hasPausedNearStation = false; // Reset flag
+        console.log(`Hauler ${this.shipTypeName} leaving towards (${this.patrolTargetPos.x.toFixed(0)}, ${this.patrolTargetPos.y.toFixed(0)})`);
+    }
+
+    /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
-        if (this.destroyed) return; // Do nothing if destroyed
-
-        // Update weapon cooldown
+        if (this.destroyed) return;
         this.fireCooldown -= deltaTime / 1000;
+        // Delegate to role-specific update logic, passing system reference
+        switch (this.role) {
+            case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
+            case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
+            case AI_ROLE.HAULER: this.updateHaulerAI(system); break; // Pass system here
+            default: this.vel.mult(this.drag * 0.95); break;
+        }
+        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed); this.pos.add(this.vel); // Apply physics
+    }
 
-        // --- State Determination ---
-        let targetExists = this.target && this.target.hull > 0;
+    /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
+    updateCombatAI(system) {
+        let targetExists = this.target?.hull > 0;
         let distanceToTarget = targetExists ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) : Infinity;
-        let desiredMovementTargetPos = null; // Position the ship WANTS to move towards
-        let finalShootingAngle = this.angle; // Angle to shoot towards (Radians), defaults to current facing
+        let desiredMovementTargetPos = null; let shootingAngle = this.angle;
+        if (targetExists) { shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x)); }
+        switch (this.currentState) { /* Pirate state machine logic */ }
+        let angleDifference = this.performRotationAndThrust(desiredMovementTargetPos);
+        this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
+    }
 
-        // --- Calculate Direct Angle to Player (if target exists) - DO THIS ONCE ---
-        // Explicitly convert the result of atan2 to radians, just in case angleMode interferes.
-        if (targetExists) {
-            let directAngleToPlayerDeg = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
-            finalShootingAngle = radians(directAngleToPlayerDeg); // Ensure radians for firing
+    /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
+    updatePoliceAI(system) {
+        let targetExists = this.target?.hull > 0;
+        let distanceToTarget = targetExists ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) : Infinity;
+        let isAggressive = targetExists && this.target.isWanted === true;
+        let shootingAngle = this.angle; // Need to calculate if aggressive
+
+        if (isAggressive && this.currentState === AI_STATE.PATROLLING) { this.currentState = AI_STATE.APPROACHING; }
+        else if (!isAggressive && (this.currentState !== AI_STATE.PATROLLING && this.currentState !== AI_STATE.IDLE)) {
+            this.currentState = AI_STATE.PATROLLING;
+            if (system?.station) this.patrolTargetPos = system.station.pos.copy();
+            else this.patrolTargetPos = createVector(random(-500, 500), random(-500, 500));
         }
-        // ---
 
-        // --- State Machine Logic ---
-        switch (this.currentState) {
-            case AI_STATE.IDLE:
-                this.vel.mult(this.drag * 0.95); // Slow down faster when idle
-                if (targetExists && distanceToTarget < this.detectionRange) {
-                    this.currentState = AI_STATE.APPROACHING;
-                }
-                // No movement target when idle
-                break;
+        if (isAggressive) {
+            if (targetExists) shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x));
+             // --- Run Aggressive State Logic ---
+             let desiredMovementTargetPos_Aggro = null;
+             switch (this.currentState) { /* Attack Pass States */ }
+             this.performRotationAndThrust(desiredMovementTargetPos_Aggro);
+             this.performFiring(system, targetExists, distanceToTarget, shootingAngle); // Fire if aggressive state allows
+        } else {
+            // --- Run Patrolling Logic ---
+            this.currentState = AI_STATE.PATROLLING;
+            let desiredMovementTargetPos_Patrol = this.patrolTargetPos;
+             let distToPatrolTarget = desiredMovementTargetPos_Patrol ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos_Patrol.x, desiredMovementTargetPos_Patrol.y) : Infinity;
+             if (!desiredMovementTargetPos_Patrol || distToPatrolTarget < 50) {
+                 if(system?.station) this.patrolTargetPos = system.station.pos.copy();
+                 else this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000));
+                 desiredMovementTargetPos_Patrol = this.patrolTargetPos;
+             }
+             this.performRotationAndThrust(desiredMovementTargetPos_Patrol);
+             // Police do not fire when patrolling peacefully
+        }
+    } // End updatePoliceAI
 
-            case AI_STATE.APPROACHING:
-                if (!targetExists || distanceToTarget > this.detectionRange * 1.1) { // Lose target check
-                    this.currentState = AI_STATE.IDLE; break;
-                }
-                // Target predicted player position for movement interception
-                desiredMovementTargetPos = this.predictTargetPosition();
-                // Shooting angle is already calculated (direct angle to player)
-
-                // Transition to attack pass if close enough
-                if (distanceToTarget < this.engageDistance) {
-                    this.currentState = AI_STATE.ATTACK_PASS;
-                    this.passTimer = this.passDuration;
-                    // Pass target logic removed for simplification
-                }
-                break;
-
-            case AI_STATE.ATTACK_PASS:
-                if (!targetExists) { this.currentState = AI_STATE.IDLE; break; } // Lose target check
-                this.passTimer -= deltaTime / 1000;
-
-                // Movement target during pass: Aim slightly ahead of player
-                 if (this.target?.vel) {
-                     let pointAhead = p5.Vector.add(this.target.pos, this.target.vel.copy().setMag(100)); // Aim 100 units ahead
-                     desiredMovementTargetPos = pointAhead;
-                 } else {
-                     desiredMovementTargetPos = this.target?.pos; // Fallback: aim at current pos
-                 }
-                // Shooting angle is already calculated (direct angle to player)
-
-                // Transition out of pass state when timer expires
-                if (this.passTimer <= 0) {
-                    this.currentState = AI_STATE.REPOSITIONING;
-                    if (targetExists) { // Calculate repo target only if player exists
-                        let vectorAway = p5.Vector.sub(this.pos, this.target.pos);
-                        vectorAway.setMag(this.repositionDistance * 1.5); // Aim further out
-                        this.repositionTarget = p5.Vector.add(this.pos, vectorAway);
-                    } else { this.repositionTarget = null; }
-                }
-                break;
-
-            case AI_STATE.REPOSITIONING:
-                 if (!targetExists) { this.currentState = AI_STATE.IDLE; break; } // Lose target check
-                 // Movement target is the reposition point
-                 desiredMovementTargetPos = this.repositionTarget;
-                 // Don't typically fire while repositioning
-
-                 // Check conditions to transition back to APPROACHING
-                 let distToRepoTarget = this.repositionTarget ? dist(this.pos.x, this.pos.y, this.repositionTarget.x, this.repositionTarget.y) : Infinity;
-                 // Transition if target point missing, or far enough from player, or near the repo target
-                 if (!desiredMovementTargetPos || distanceToTarget > this.repositionDistance || distToRepoTarget < 50) {
-                     this.currentState = AI_STATE.APPROACHING;
-                     this.repositionTarget = null; // Clear the reposition target
-                 }
+    /** Hauler AI Logic - Moves between station and system edge. */
+    updateHaulerAI(system) { // <--- Takes system as argument
+         let desiredMovementTargetPos = null;
+         switch (this.currentState) {
+             case AI_STATE.PATROLLING: // GOING_TO_STATION
+                 desiredMovementTargetPos = this.patrolTargetPos;
+                 if (!desiredMovementTargetPos && system?.station) { this.patrolTargetPos = system.station.pos.copy(); desiredMovementTargetPos = this.patrolTargetPos; }
+                 else if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } // Pass system here
+                 let distToStation = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
+                 if (distToStation < this.stationProximityThreshold) { this.currentState = AI_STATE.NEAR_STATION; this.nearStationTimer = this.stationPauseDuration; this.vel.mult(0.1); }
                  break;
-
-             default: // Fallback for unknown state
-                 console.error("Enemy in unknown AI state:", this.currentState);
-                 this.currentState = AI_STATE.IDLE;
+             case AI_STATE.NEAR_STATION:
+                 this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000;
+                 if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } // Pass system here
                  break;
-        } // End State Machine Switch
+             case AI_STATE.LEAVING_SYSTEM:
+                 desiredMovementTargetPos = this.patrolTargetPos;
+                 if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } // Pass system here
+                 let distToExit = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
+                 if (distToExit < 150) { this.destroyed = true; }
+                 break;
+              default: if(system?.station) { this.patrolTargetPos = system.station.pos.copy(); this.currentState = AI_STATE.PATROLLING; } else { this.setLeavingSystemTarget(system); } break; // Pass system here
+         }
+         this.performRotationAndThrust(desiredMovementTargetPos);
+    } // End updateHaulerAI
 
-        // --- Perform Rotation & Thrust ---
-        let angleDifference = PI; // Assume max difference if no target
-        if (desiredMovementTargetPos) {
-            // Calculate angle needed to face the desired movement target (assume degrees, convert)
-            let targetMoveAngleDeg = atan2(desiredMovementTargetPos.y - this.pos.y, desiredMovementTargetPos.x - this.pos.x);
-            let targetMoveAngleRad = radians(targetMoveAngleDeg); // Ensure Radians
-            // Rotate the ship towards that movement angle
-            angleDifference = this.rotateTowards(targetMoveAngleRad);
-        } else if (this.currentState === AI_STATE.IDLE) {
-             // If idle with no target, don't rotate, just drift
-             angleDifference = 0; // Allow drag only
-        }
+    /** Helper method for rotation and thrust logic. Uses internal radian properties. */
+    performRotationAndThrust(desiredMovementTargetPos) {
+         let angleDifference = PI;
+         if (desiredMovementTargetPos) {
+             let targetMoveAngleRad = radians(atan2(desiredMovementTargetPos.y - this.pos.y, desiredMovementTargetPos.x - this.pos.x));
+             angleDifference = this.rotateTowards(targetMoveAngleRad); // Uses radians speed/tolerance
+         } else { angleDifference = 0; }
+         if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION && abs(angleDifference) < this.angleTolerance) { // Uses radians tolerance
+             this.thrustForward();
+         }
+         return angleDifference;
+    }
 
-        // Apply forward thrust ONLY if facing roughly the correct direction for movement
-        if (this.currentState !== AI_STATE.IDLE && abs(angleDifference) < this.angleTolerance) {
-            this.thrustForward();
-        }
-
-        // --- Apply Physics ---
-        this.vel.mult(this.drag); // Apply drag
-        this.vel.limit(this.maxSpeed); // Clamp speed
-        this.pos.add(this.vel); // Update position
-
-        // --- Firing Logic ---
-        if (targetExists && distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-            // Only fire in attacking states
-            if (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS) {
-                // Use the finalShootingAngle (already calculated and verified as radians)
-                this.fire(system, finalShootingAngle);
+     /** Helper method for firing logic. Uses internal radian properties. */
+     performFiring(system, canFire, distanceToTarget, shootingAngleRad) {
+         if (canFire && distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
+             if (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || (this.isThargoid && this.currentState !== AI_STATE.IDLE)) {
+                this.fire(system, shootingAngleRad); // Pass radians angle
                 this.fireCooldown = this.fireRate;
-            }
-        }
+             }
+         }
+     }
 
-    } // End update method
-
-    /**
-     * Creates and adds a projectile aimed in the specified direction.
-     * @param {StarSystem} system - The system to add the projectile to.
-     * @param {number} fireAngleRadians - The angle (in radians) for the projectile's velocity.
-     */
+    /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
-        if (!system) { console.warn("Enemy.fire called without system."); return; }
-
-        // Calculate spawn position slightly ahead of the enemy ship's nose (using current FACING angle)
-        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7); // this.angle is radians
+        if (this.role === AI_ROLE.HAULER) return;
+        // --- Added Check ---
+        if (!system || typeof system.addProjectile !== 'function') {
+            console.error(`Enemy ${this.shipTypeName} fire(): Invalid system object received! Cannot add projectile.`);
+            return;
+        }
+        // --- End Check ---
+        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-
-        // Create projectile using the passed fireAngle (radians) for its direction
         let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
-        system.addProjectile(proj);
+        system.addProjectile(proj); // Use validated system object
     }
 
-    /**
-     * Draws the enemy ship and the debug line to the player.
-     */
+    /** Draws the enemy ship using its defined draw function and role-based stroke. */
     draw() {
-        if (this.destroyed) return; // Don't draw if destroyed
-
-        push(); // Isolate transformations for the ship body
-        translate(this.pos.x, this.pos.y); // Move origin to enemy's world position
-        rotate(degrees(this.angle)); // Apply rotation (convert internal radians angle to degrees)
-
-        // Draw ship body (triangle pointing right)
-        fill(this.color); stroke(this.strokeColor); strokeWeight(1);
-        let r = this.size / 2;
-        triangle(r, 0, -r, -r*0.7, -r, r*0.7); // Shape vertices
-        pop(); // Restore previous drawing state
-
-        // --- DEBUG LINE from Enemy to Player ---
-        // Only draw if target exists AND enemy is in an attacking/approaching state
-        if (this.target && this.target.pos &&
-            (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS))
-        {
-             push();
-             stroke(255, 0, 0, 100); // Red, semi-transparent line
-             strokeWeight(1);
-             // Line from enemy center (world coords) to player center (world coords)
-             line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-             pop();
-        }
-        // --- END DEBUG LINE ---
-
-        // --- Optional DEBUG STATE TEXT (remains commented out) ---
-        // ...
-        // --- END DEBUG ---
-    }
-
-    /**
-     * Applies damage to the enemy's hull.
-     * @param {number} amount - The amount of damage.
-     */
-    takeDamage(amount) {
-        if (this.destroyed || amount <= 0) return;
-        this.hull -= amount;
-        if (this.hull <= 0) {
-            this.hull = 0; this.destroyed = true;
-            console.log("Enemy destroyed!");
+        if (this.destroyed) return;
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; const drawFunc = shipDef?.drawFunction;
+        if (typeof drawFunc !== 'function') { /* Fallback */ return; }
+        push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle));
+        stroke(this.strokeColor);
+        let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
+        drawFunc(this.size, showThrust);
+        pop();
+        // --- DEBUG LINE ---
+        if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
+             push(); stroke(this.strokeColor, 100); strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
         }
     }
 
-    /** @returns {boolean} True if the enemy is destroyed. */
+    // --- Standard Methods ---
+    takeDamage(amount) { if(this.destroyed || amount<=0) return; this.hull-=amount; if(this.hull<=0){ this.hull=0; this.destroyed=true; }}
     isDestroyed() { return this.destroyed; }
-
-    /**
-     * Basic circle-based collision check.
-     * @param {object} target - Object with pos {x, y} and size properties.
-     * @returns {boolean} True if collision detected.
-     */
-    checkCollision(target) {
-        if (!target || !target.pos || target.size === undefined) return false;
-        let d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
-        let tr = target.size / 2; let mr = this.size / 2;
-        return d < tr + mr;
-    }
+    checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
 
 } // End of Enemy Class

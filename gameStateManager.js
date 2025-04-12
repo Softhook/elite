@@ -97,16 +97,31 @@ class GameStateManager {
      * @param {Player} player - Reference to the player object.
      */
     draw(player) {
+        // console.log(`GameStateManager.draw called, state: ${this.currentState}`);
         const currentSystem = galaxy?.getCurrentSystem();
 
         switch (this.currentState) {
             case "IN_FLIGHT":
-                if (currentSystem && player) { currentSystem.draw(player); } // Draw world centered on player
-                else { /* Draw error state */ }
+                console.log(">>> Drawing IN_FLIGHT state Start..."); // LOG START OF CASE
+                if (currentSystem && player) {
+                    console.log("      Calling currentSystem.draw()...");
+                    try { // Add try/catch around potentially complex calls
+                        currentSystem.draw(player);
+                    } catch(e) { console.error("ERROR in currentSystem.draw():", e); }
+                    console.log("      Finished currentSystem.draw().");
+                } else { /* Log warning */ }
+
                 if (uiManager && player) {
-                    uiManager.drawHUD(player); // Draw HUD
-                    if (currentSystem) uiManager.drawMinimap(player, currentSystem); // Draw Minimap
+                    console.log("      Calling uiManager.drawHUD()...");
+                    try { uiManager.drawHUD(player); } catch(e) { console.error("ERROR in uiManager.drawHUD():", e); }
+                    console.log("      Finished uiManager.drawHUD().");
+                    if (currentSystem) {
+                        console.log("      Calling uiManager.drawMinimap()...");
+                        try { uiManager.drawMinimap(player, currentSystem); } catch(e) { console.error("ERROR in uiManager.drawMinimap():", e); }
+                        console.log("      Finished uiManager.drawMinimap().");
+                    }
                 }
+                 console.log("<<< Finished drawing IN_FLIGHT state."); // LOG END OF CASE
                 break;
             case "DOCKED":
                  if (currentSystem) { // Draw static background

@@ -1,241 +1,188 @@
 // ****** player.js ******
 
 class Player {
-    constructor() {
-        // Start player at world origin (0,0) for simplicity, or load saved position
+    /**
+     * Creates a Player instance. Stores speeds/rates in degrees initially.
+     * Radian properties are calculated by applyShipDefinition.
+     * @param {string} [shipTypeName="Sidewinder"] - The type name of the ship to use.
+     */
+    constructor(shipTypeName = "Sidewinder") {
+        // console.log(`Creating Player instance with ship: ${shipTypeName}`); // Optional log
+        this.shipTypeName = shipTypeName; // Store the type name initially
+        let shipDef = SHIP_DEFINITIONS[this.shipTypeName]; // Get definition first
+        if (!shipDef) {
+            console.error(`FATAL: Ship definition "${shipTypeName}" not found! Defaulting to Sidewinder.`);
+            this.shipTypeName = "Sidewinder";
+            shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        }
+
+        // --- Initialize Position & Basic Physics ---
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
-        this.angle = 0; // Pointing RIGHT (0 degrees)
-        this.size = 20; // Diameter
-
-        // --- Movement Properties ---
-        this.rotationSpeed = 4;
-        this.thrustForce = 0.15;
+        this.angle = 0; // Current facing angle (RADIANS, 0 = right)
         this.drag = 0.985;
-        this.maxSpeed = 5;
 
-        // --- Stats ---
-        this.hull = 100;
-        this.maxHull = 100;
-        this.credits = 1000; // Starting credits
+        // --- Store Base Stats from Definition (Including Degrees) ---
+        this.size = shipDef.size;
+        this.maxSpeed = shipDef.baseMaxSpeed;
+        this.thrustForce = shipDef.baseThrust;
+        this.rotationSpeedDegrees = shipDef.baseTurnRateDegrees; // STORE DEGREES
+        this.maxHull = shipDef.baseHull;
+        this.cargoCapacity = shipDef.cargoCapacity;
 
-        // --- Cargo ---
-        this.cargo = []; // Array of { name: string, quantity: number }
-        this.cargoCapacity = 10; // Max total quantity of items
+        // --- Initialize Radian properties (calculated AFTER constructor) ---
+        this.rotationSpeed = 0; // RADIANS per frame
 
-        // --- System Link ---
-        this.currentSystem = null; // Reference set by sketch/galaxy logic
+        // --- Current State ---
+        this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
+        this.currentSystem = null; this.fireCooldown = 0; this.fireRate = 0.25;
+        this.isThrusting = false; this.isWanted = false;
 
-        // --- Weapon ---
-        this.fireCooldown = 0;
-        this.fireRate = 0.25;
+        // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
-    // Called from sketch.js mousePressed - Handles the action of attempting to fire
+    /** Applies base stats and calculates Radian properties. */
+    applyShipDefinition(typeName) {
+        // console.log(`Player applying definition for: ${typeName}`); // Optional log
+        const shipDef = SHIP_DEFINITIONS[typeName] || SHIP_DEFINITIONS[this.shipTypeName] || SHIP_DEFINITIONS["Sidewinder"];
+        typeName = shipDef.name; // Ensure typeName matches the actual definition used
+
+        this.shipTypeName = typeName; this.size = shipDef.size; this.maxSpeed = shipDef.baseMaxSpeed;
+        this.thrustForce = shipDef.baseThrust; this.rotationSpeedDegrees = shipDef.baseTurnRateDegrees;
+        this.maxHull = shipDef.baseHull; this.cargoCapacity = shipDef.cargoCapacity;
+
+        try {
+             this.rotationSpeed = radians(this.rotationSpeedDegrees); // Calculate radians/frame
+             if (isNaN(this.rotationSpeed)) throw new Error("radians() resulted in NaN");
+        } catch (e) {
+             console.error(`Error converting degrees to radians for Player ${this.shipTypeName}:`, e);
+             this.rotationSpeed = 0.06; // Fallback radians value
+        }
+        // console.log(` Applied definition: RotSpeed=${this.rotationSpeed.toFixed(4)} rad/f`); // Optional log
+    }
+
+    /** Handles mouse click for firing attempt. */
     handleFireInput() {
-        if (this.fireCooldown <= 0) {
-             this.fire(); // Call the fire method
-             this.fireCooldown = this.fireRate; // Reset cooldown
-        }
+        if (this.fireCooldown <= 0) { this.fire(); this.fireCooldown = this.fireRate; }
     }
 
-    // Handles continuous key presses for movement (called every frame in IN_FLIGHT state)
+    /** Handles continuous key presses for movement. Normalizes angle. */
     handleInput() {
-        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { this.angle -= this.rotationSpeed; }
-        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { this.angle += this.rotationSpeed; }
-        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { this.thrust(); }
+        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { this.angle -= this.rotationSpeed; } // Radians
+        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { this.angle += this.rotationSpeed; } // Radians
+        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { this.thrust(); this.isThrusting = true; }
+        else { this.isThrusting = false; }
         if (this.fireCooldown > 0) { this.fireCooldown -= deltaTime / 1000; }
+        this.angle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; // Normalize angle [0, 2PI)
     }
 
-    // Applies thrust force in the direction the ship is currently facing
+    /** Applies forward thrust force based on current facing angle (radians). */
     thrust() {
-        let force = p5.Vector.fromAngle(radians(this.angle)); // Convert angle to radians
-        force.mult(this.thrustForce);
-        this.vel.add(force);
+        if (isNaN(this.angle)) { this.angle = 0; } // Safety check
+        let force = p5.Vector.fromAngle(this.angle); force.mult(this.thrustForce); this.vel.add(force);
     }
 
-    // Fires a projectile towards the mouse cursor (using world coordinates)
+    /** Fires a projectile towards the mouse cursor (world coordinates). */
     fire() {
-        if (!this.currentSystem) {
-            console.warn("Player.fire: Attempting to fire but not in a valid system.");
-            return;
-        }
-
-        // Calculate World Mouse Coordinates relative to the current view translation
-        let translateX = width / 2 - this.pos.x;
-        let translateY = height / 2 - this.pos.y;
-        let worldMouseX = mouseX - translateX;
-        let worldMouseY = mouseY - translateY;
-
-        // Calculate angle from player's world position to mouse's world position
-        let angleToMouse_PossiblyDegrees = atan2(worldMouseY - this.pos.y, worldMouseX - this.pos.x);
-        let angleToMouse = radians(angleToMouse_PossiblyDegrees); // Explicitly ensure Radians
-
-        // Calculate spawn position slightly ahead of the ship's nose
-        let spawnOffset = p5.Vector.fromAngle(radians(this.angle)).mult(this.size * 0.7);
+        if (!this.currentSystem || isNaN(this.angle)) { return; } // Safety checks
+        let tx = width / 2 - this.pos.x; let ty = height / 2 - this.pos.y;
+        let worldMx = mouseX - tx; let worldMy = mouseY - ty;
+        let shootingAngleDeg = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
+        let shootingAngleRad = radians(shootingAngleDeg); // Ensure Radians
+        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-
-        // Create projectile
-        let proj = new Projectile(spawnPos.x, spawnPos.y, angleToMouse, 'PLAYER');
+        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngleRad, 'PLAYER');
         this.currentSystem.addProjectile(proj);
     }
 
-
-    // Updates player physics state (called every frame in IN_FLIGHT state)
+    /** Updates player physics state. */
     update() {
-        // Apply physics
-        this.vel.mult(this.drag);
-        this.vel.limit(this.maxSpeed);
-        this.pos.add(this.vel);
-
-        // No screen wrapping in scrolling view
+        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed);
+        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); }
+        else { this.vel.set(0, 0); } // Reset invalid velocity
     }
 
-    // Draws the player ship (handles its own local translation and rotation)
+    /** Draws the player ship using its specific draw function. */
     draw() {
-        push();
-        translate(this.pos.x, this.pos.y); // Move to player's world position
-        rotate(this.angle); // Rotate to player's angle (using degrees)
-
-        // Draw ship body (triangle pointing right)
-        fill(200); stroke(255); strokeWeight(1);
-        let r = this.size / 2;
-        triangle(r, 0, -r, -r * 0.7, -r, r * 0.7);
-
-        // Draw thrust flame if thrusting
-        if (keyIsDown(UP_ARROW) || keyIsDown(87)) {
-            fill(255, 150, 0); noStroke();
-            let flameLength = r * 1.8; let flameWidth = r * 0.6;
-            triangle(-r * 1.05, flameWidth / 2, -r * 1.05, -flameWidth / 2, -flameLength, 0);
-        }
-        pop();
+         if (isNaN(this.angle)) { /* Draw fallback */ return; } // Safety check
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; const drawFunc = shipDef?.drawFunction;
+        if (typeof drawFunc !== 'function') { /* Draw fallback */ return; }
+        push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle)); // Convert radians to degrees
+        drawFunc(this.size, this.isThrusting); pop();
     }
 
-    // Reduces player hull and checks for destruction
+    /** Applies damage to the player's hull. */
     takeDamage(amount) {
-        if (amount <= 0) return;
-        this.hull -= amount;
-        console.log(`Player took ${amount} damage, Hull: ${this.hull}`);
+        if (amount <= 0) return; this.hull -= amount;
         if (this.hull <= 0) {
-            this.hull = 0;
-            console.log("Player Destroyed! GAME OVER.");
-            if (gameStateManager) {
-                gameStateManager.setState("GAME_OVER");
-            } else { console.error("CRITICAL: gameStateManager not accessible from Player.takeDamage!"); }
+            this.hull = 0; console.log("Player Destroyed! GAME OVER.");
+            if (gameStateManager) gameStateManager.setState("GAME_OVER");
         }
     }
 
-    // Checks conditions for docking with a given station object
+    /** Checks if the player can dock with the station. */
     canDock(station) {
-        if (!station || !station.pos) { return false; }
-        let d = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
-        let speed = this.vel.mag();
-        let radius = station.dockingRadius !== undefined ? station.dockingRadius : 0;
-        let potentialDock = (d < radius && speed < 0.5);
-        // Optional logging (keep for debugging if needed)
-        // if (potentialDock && gameStateManager?.currentState === "IN_FLIGHT") {
-        //      console.log(`--- canDock Check --- D: ${d.toFixed(1)}, R: ${radius.toFixed(1)}, Spd: ${speed.toFixed(2)} -> ${potentialDock}`);
-        // }
-        return potentialDock;
+        if (!station?.pos) return false; let d = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
+        let speed = this.vel.mag(); let radius = station.dockingRadius ?? 0;
+        return (d < radius && speed < 0.5);
     }
 
-    // --- Credit Methods with Validation and Logging ---
-    addCredits(amount) {
-        // Ensure amount is a valid positive number
-        if (typeof amount === 'number' && amount > 0 && isFinite(amount)) {
-            this.credits += amount;
-            console.log(`Player.addCredits: Added ${amount}, New Total: ${this.credits}`);
-        } else {
-            console.warn(`Player.addCredits: Invalid amount skipped (${amount})`);
+    /** Adds credits. */
+    addCredits(amount) { if (typeof amount === 'number' && amount > 0 && isFinite(amount)) { this.credits += amount; } }
+
+    /** Subtracts credits. */
+    spendCredits(amount) { if (typeof amount === 'number' && amount > 0 && isFinite(amount) && amount <= this.credits) { this.credits -= amount; return true; } return false; }
+
+    /** Calculates total cargo quantity. */
+    getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
+
+    /** Adds cargo. */
+    addCargo(commodityName, quantity) { if (quantity <= 0) return; const existingItem = this.cargo.find(item => item?.name === commodityName); if (this.getCargoAmount() + quantity > this.cargoCapacity) { return; } if (existingItem) { existingItem.quantity += quantity; } else { this.cargo.push({ name: commodityName, quantity: quantity }); } }
+
+    /** Removes cargo. */
+    removeCargo(commodityName, quantity) { if (quantity <= 0) return; const itemIndex = this.cargo.findIndex(item => item?.name === commodityName); if (itemIndex > -1) { if (this.cargo[itemIndex].quantity < quantity) { return; } this.cargo[itemIndex].quantity -= quantity; if (this.cargo[itemIndex].quantity <= 0) { this.cargo.splice(itemIndex, 1); } } }
+
+    // --- ADDED checkCollision Method ---
+    /**
+     * Basic circle-based collision check against another object.
+     * @param {object} target - Object with pos {x, y} and size properties.
+     * @returns {boolean} True if collision detected based on overlapping circular bounds.
+     */
+    checkCollision(target) {
+        // Basic safety check for target validity
+        if (!target?.pos || target.size === undefined || typeof target.size !== 'number') {
+            // console.warn("Player checkCollision: Invalid target provided.", target); // Optional log
+            return false;
         }
+        // Calculate distance squared between centers
+        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
+        // Calculate sum of radii squared (using size as diameter)
+        let targetRadius = target.size / 2;
+        let myRadius = this.size / 2;
+        let sumRadiiSq = sq(targetRadius + myRadius);
+        // Collision occurs if distance squared is less than sum of radii squared
+        return dSq < sumRadiiSq;
     }
+    // --- END checkCollision Method ---
 
-    spendCredits(amount) {
-        console.log(`Player.spendCredits: Trying to spend ${amount}, Has ${this.credits}`);
-        // Check for valid positive amount and sufficient funds
-        if (typeof amount === 'number' && amount > 0 && isFinite(amount) && amount <= this.credits) {
-            this.credits -= amount;
-            console.log(`Player.spendCredits: Success. Remaining credits: ${this.credits}`);
-            return true; // Indicate successful transaction
-        }
-        // Log failure reason
-        if (amount <= 0 || !isFinite(amount) || typeof amount !== 'number') {
-            console.warn(`Player.spendCredits: Invalid amount (${amount})`);
-        } else if (amount > this.credits) {
-            console.warn(`Player.spendCredits: Insufficient funds.`);
-        }
-        return false; // Indicate failed transaction
-    }
-
-
-    // --- Cargo Methods (Mostly Unchanged, added validation) ---
-    getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item ? item.quantity : 0), 0); } // Added item check
-
-    addCargo(commodityName, quantity) {
-        if (quantity <= 0) { console.log("Player.addCargo: Quantity <= 0."); return; }
-        const existingItem = this.cargo.find(item => item && item.name === commodityName); // Added item check
-        const currentAmount = this.getCargoAmount();
-        if (currentAmount + quantity > this.cargoCapacity) {
-            console.log(`Player.addCargo: Not enough space for ${quantity} ${commodityName}.`);
-            return;
-        }
-        if (existingItem) {
-            existingItem.quantity += quantity;
-        } else {
-            this.cargo.push({ name: commodityName, quantity: quantity });
-        }
-        console.log("Player Cargo updated:", this.cargo);
-    }
-
-    removeCargo(commodityName, quantity) {
-        if (quantity <= 0) { console.log("Player.removeCargo: Quantity <= 0."); return; }
-        const itemIndex = this.cargo.findIndex(item => item && item.name === commodityName); // Added item check
-        if (itemIndex > -1) {
-            if (this.cargo[itemIndex].quantity < quantity) {
-                console.log(`Player.removeCargo: Cannot remove ${quantity} ${commodityName}, only have ${this.cargo[itemIndex].quantity}.`);
-                return;
-            }
-            this.cargo[itemIndex].quantity -= quantity;
-            if (this.cargo[itemIndex].quantity <= 0) {
-                this.cargo.splice(itemIndex, 1);
-            }
-            console.log("Player Cargo updated:", this.cargo);
-        } else {
-            console.log(`Player.removeCargo: Item ${commodityName} not found.`);
-        }
-    }
-
-    // --- Save/Load Functionality ---
+    /** Gathers player data for saving. */
     getSaveData() {
-         console.log(`Player.getSaveData: Saving Pos (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)})`);
-        return {
-            pos: { x: this.pos.x, y: this.pos.y },
-            vel: { x: this.vel.x, y: this.vel.y },
-            angle: this.angle,
-            hull: this.hull,
-            credits: this.credits,
-            cargo: JSON.parse(JSON.stringify(this.cargo)), // Deep copy is important
-            // currentSystemIndex is saved globally in sketch.js saveGame
-        };
+        let normalizedAngle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; if (isNaN(normalizedAngle)) normalizedAngle = 0;
+        return { shipTypeName: this.shipTypeName, pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle, hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)), isWanted: this.isWanted };
     }
 
+    /** Loads player state from saved data object. */
     loadSaveData(data) {
-        if (!data) { console.warn("Player.loadSaveData: No data provided."); return; }
-        console.log("Player.loadSaveData: Loading data...", data);
-
-        // Load Position, Velocity, Angle - use defaults if missing
-        this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0); // Default to world origin
+        if (!data) return;
+        let typeToLoad = data.shipTypeName || "Sidewinder"; this.applyShipDefinition(typeToLoad);
+        this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0);
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
-        this.angle = data.angle !== undefined ? data.angle : 0;
-        console.log(`Player.loadSaveData: Loaded Pos (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)}) Angle ${this.angle.toFixed(1)}`);
-
-        // Load Stats
-        this.hull = data.hull !== undefined ? data.hull : this.maxHull;
-        this.credits = data.credits !== undefined ? data.credits : 1000;
-        // Load Cargo
+        let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; } // Load & normalize radians
+        this.hull = data.hull !== undefined ? constrain(data.hull, 0, this.maxHull) : this.maxHull;
+        this.credits = data.credits ?? 1000;
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
-
-        console.log("Player data finished loading from save.");
+        this.isWanted = data.isWanted || false;
+        console.log(`Player loaded: ${this.shipTypeName}, Wanted: ${this.isWanted}, Angle: ${this.angle.toFixed(3)} rad`);
     }
 
 } // End of Player Class
