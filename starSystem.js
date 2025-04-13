@@ -167,7 +167,7 @@ class StarSystem {
         let chosenRole; let chosenShipTypeName;
         try { // Wrap random selection
             let roleRoll = random(); const pC=0.45, polC=0.25; if(roleRoll<pC)chosenRole=AI_ROLE.PIRATE;else if(roleRoll<pC+polC)chosenRole=AI_ROLE.POLICE;else chosenRole=AI_ROLE.HAULER;
-            switch(chosenRole) { case AI_ROLE.PIRATE: chosenShipTypeName=random(["Krait","Adder","Viper","CobraMkIII"]);break; case AI_ROLE.POLICE: chosenShipTypeName=random(["Viper","Viper","CobraMkIII"]);break; case AI_ROLE.HAULER: chosenShipTypeName=random(["Adder","Adder","Python"]);break; default: chosenShipTypeName="Krait"; }
+            switch(chosenRole) { case AI_ROLE.PIRATE: chosenShipTypeName=random(["Krait"]);break; case AI_ROLE.POLICE: chosenShipTypeName=random(["CobraMkIII"]);break; case AI_ROLE.HAULER: chosenShipTypeName=random(["Adder","Adder","Python"]);break; default: chosenShipTypeName="Krait"; }
 
             // --- Optional Thargoid Override ---
              const thargoidChance = 0.03; // Keep low
