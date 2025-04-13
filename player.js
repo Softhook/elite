@@ -128,96 +128,108 @@ class Player {
         return result;
     }
 
-    /** Completes the currently active mission if conditions are met. */
-    completeMission(currentSystem, currentStation) { // Added params for location check
-        console.log("--- Attempting Player.completeMission() ---");
-        if (!this.activeMission) { console.warn("Complete failed: No active mission."); return false; }
-        if (!currentSystem || !currentStation) { console.warn("Complete failed: Invalid system/station provided."); return false; }
+/**
+ * Completes the currently active mission.
+ * Checks location/cargo ONLY if required by the mission type (e.g., Delivery).
+ * Bounties can be completed anywhere once targets are met (if auto-complete is intended).
+ * @param {StarSystem} [currentSystem] - The system the player is currently in (required for station-based completion).
+ * @param {Station} [currentStation] - The station the player is docked at (required for station-based completion).
+ */
+completeMission(currentSystem, currentStation) { // Keep params for potential station use
+    console.log("--- Attempting Player.completeMission() ---");
+    if (!this.activeMission) { console.warn("Complete failed: No active mission."); return false; }
 
-        console.log(`   Checking Mission: ${this.activeMission.title}, Status: ${this.activeMission.status}`);
+    console.log(`   Checking Mission: ${this.activeMission.title}, Status: ${this.activeMission.status}`);
+    // Log location only if provided (it won't be for auto-complete)
+    if (currentSystem && currentStation) {
         console.log(`   Current Location: ${currentStation.name} (${currentSystem.name})`);
+    } else {
+         console.log(`   Completion triggered automatically (in space).`);
+    }
 
-        // --- Condition Checks ---
-        let canComplete = false;
-        // Bounties might be completable anywhere once targets met (or require return to origin)
-        // For now, assume bounty auto-completed in space via StarSystem.update calling this simpler version.
-        // Let's refine this method primarily for DELIVERY completion at destination.
-        if (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable') { // Allow either status initially
-            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
-                 // Check location
-                 let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem && currentStation.name === this.activeMission.destinationStation);
-                 console.log(`   Delivery Check: Is at destination? ${isAtDestination}`);
-                 if (!isAtDestination) {
-                      console.warn("   Complete failed: Not at destination station.");
-                      return false; // Cannot complete delivery elsewhere
-                 }
-                 // Check cargo
-                 let hasGoods = this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
-                 console.log(`   Delivery Check: Has required cargo (${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType})? ${hasGoods}`);
-                 if (!hasGoods) {
-                      console.warn("   Complete failed: Missing required cargo!");
-                       // TODO: Add UI message "You don't have the required cargo!"
-                      return false; // Cannot complete without goods
-                 }
-                 canComplete = true; // All delivery checks passed
-            }
-            // --- Handle BOUNTY completion IF we require return to station ---
-            // else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
-            //     if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-            //         // Optional: Check if back at origin station
-            //         // let isAtOrigin = (currentSystem.name === this.activeMission.originSystem && currentStation.name === this.activeMission.originStation);
-            //         // if (!isAtOrigin) { console.warn("Bounty complete, but must return to origin station."); return false; }
-            //         console.log("   Bounty Check: Target count met. Allowing completion.");
-            //         canComplete = true; // Allow completion (assuming auto-complete for now)
-            //     } else {
-            //          console.warn("   Complete failed: Bounty target count not met."); return false;
-            //     }
-            // }
-            // --- For now, BOUNTY is handled by auto-complete in StarSystem ---
-             else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE && this.activeMission.progressCount >= this.activeMission.targetCount) {
-                 // This path shouldn't be reached if auto-complete works, but is a fallback.
-                 console.log("   Bounty Check (in completeMission): Target count met.");
-                 canComplete = true;
-             } else {
-                  console.warn(`   Complete failed: Mission type ${this.activeMission.type} or status ${this.activeMission.status} not handled here, or conditions not met.`);
+
+    // --- Condition Checks ---
+    let canComplete = false;
+
+    if (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable') { // Allow either status initially
+
+        // --- DELIVERY MISSIONS (REQUIRE Location & Cargo) ---
+        if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+             // These *strictly* require the location context
+             if (!currentSystem || !currentStation) {
+                 console.warn("   Complete failed: Delivery missions require docking at the destination.");
+                 return false; // Cannot complete delivery without station context
+             }
+             // Check location
+             let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem && currentStation.name === this.activeMission.destinationStation);
+             console.log(`   Delivery Check: Is at destination? ${isAtDestination}`);
+             if (!isAtDestination) {
+                  console.warn("   Complete failed: Not at destination station.");
                   return false;
              }
-        } else {
-             console.warn(`   Complete failed: Mission status is '${this.activeMission.status}'.`);
+             // Check cargo
+             let hasGoods = this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
+             console.log(`   Delivery Check: Has required cargo (${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType})? ${hasGoods}`);
+             if (!hasGoods) {
+                  console.warn("   Complete failed: Missing required cargo!");
+                  return false;
+             }
+             canComplete = true; // All delivery checks passed
+        }
+
+        // --- BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
+        else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
+            console.log(`   Bounty Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+            if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+                console.log("   Bounty Check: Target count met. Allowing completion.");
+                canComplete = true; // Allow completion anywhere once count is met
+            } else {
+                 console.warn("   Complete failed: Bounty target count not met."); return false;
+            }
+        }
+
+        // --- Add other mission type checks here later ---
+        else {
+             console.warn(`   Complete failed: Mission type ${this.activeMission.type} conditions not handled.`);
              return false;
         }
 
+    } else { // End status check 'Active'/'Completable'
+         console.warn(`   Complete failed: Mission status is '${this.activeMission.status}'.`);
+         return false;
+    }
 
-        // --- Proceed with Completion ---
-        if (canComplete) {
-            console.log(`   Completing mission: ${this.activeMission.title}`);
-            let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
 
-            // Remove cargo for delivery missions
-            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
-                 console.log(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
-                 this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
-            }
+    // --- Proceed with Completion ---
+    if (canComplete) {
+        console.log(`   Completing mission: ${this.activeMission.title}`);
+        let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
 
-            console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
-            this.addCredits(reward);
-            console.log(`   Credits after addCredits call: ${this.credits}`);
-
-            this.activeMission.status = 'Completed'; // Mark internal status
-            this.activeMission = null; // Clear active mission from player
-            console.log(`   activeMission is now: ${this.activeMission}`);
-
-            // --- Provide feedback ---
-            alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with UI message
-            console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
-
-            saveGame(); // Save progress
-            return true; // Success
+        // Remove cargo ONLY for delivery missions
+        if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+             console.log(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
+             this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
         }
 
-        console.warn("Player.completeMission() reached end without completing.");
-        return false; // Indicate failure if somehow canComplete wasn't true
-    } // --- End completeMission Method ---
+        console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
+        this.addCredits(reward);
+        console.log(`   Credits after addCredits call: ${this.credits}`);
+
+        this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
+        this.activeMission = null; // Clear active mission from player
+        console.log(`   activeMission is now: ${this.activeMission}`);
+
+        // --- Provide feedback ---
+        alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
+        console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
+
+        saveGame(); // Save progress
+        return true; // Success
+    }
+
+    console.warn("Player.completeMission() reached end without completing.");
+    return false; // Indicate failure if somehow canComplete wasn't true
+} // --- End completeMission Method ---
 
 
 
