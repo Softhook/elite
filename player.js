@@ -161,7 +161,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                  return false; // Cannot complete delivery without station context
              }
              // Check location
-             let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem && currentStation.name === this.activeMission.destinationStation);
+             let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem);
              console.log(`   Delivery Check: Is at destination? ${isAtDestination}`);
              if (!isAtDestination) {
                   console.warn("   Complete failed: Not at destination station.");
@@ -175,6 +175,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                   return false;
              }
              canComplete = true; // All delivery checks passed
+             console.warn("   canComplete!");
         }
 
         // --- BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---

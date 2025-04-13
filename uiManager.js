@@ -4,7 +4,6 @@ class UIManager {
     constructor() {
         // --- Areas for clickable UI elements ---
         this.marketButtonAreas = []; // { x, y, w, h, action, commodity }
-        // this.undockButtonArea = {}; // Removed - Handled via stationMenuButtonAreas
         this.galaxyMapNodeAreas = [];// { x, y, radius, index }
         this.jumpButtonArea = {};    // { x, y, w, h }
         this.stationMenuButtonAreas = []; // { x, y, w, h, action, state, text }
@@ -36,7 +35,11 @@ class UIManager {
         fill(255); textSize(14); textAlign(LEFT, CENTER); text(`System: ${csName}`, 10, 20);
         textAlign(RIGHT, CENTER); text(`Hull: ${floor(hull)}/${maxHull}`, width-150, 20); text(`Credits: ${credits}`, width-280, 20); text(`Cargo: ${cargoAmt}/${cargoCap}`, width-10, 20);
         if (player.fireCooldown > 0 && player.fireRate > 0) { let c = constrain(map(player.fireCooldown,player.fireRate,0,0,1),0,1); fill(255,0,0,150); rect(width/2-50, 30, 100*c, 5); }
-        if (player.activeMission?.title) { fill(255, 180, 0); textAlign(CENTER, CENTER); textSize(12); text(`Mission: ${player.activeMission.title}`, width / 2, 15); }
+        // Display active mission title directly from player object
+        if (player.activeMission?.title) {
+             fill(255, 180, 0); textAlign(CENTER, CENTER); textSize(12);
+             text(`Mission: ${player.activeMission.title}`, width / 2, 15);
+        }
         pop();
     }
 
@@ -71,11 +74,24 @@ class UIManager {
     } // --- End drawMarketScreen ---
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
-    drawMissionBoard(missions, selectedIndex, player) {
+    drawMissionBoard(missions, selectedIndex, player) { // selectedIndex is still needed for list highlighting
          if (!player) { console.warn("drawMissionBoard missing player"); return; }
          this.missionListButtonAreas = []; this.missionDetailButtonAreas = {}; // Clear areas
-         const currentSystem = galaxy?.getCurrentSystem(); // Need current location context
+
+         // --- Get Context ---
+         const currentSystem = galaxy?.getCurrentSystem();
          const currentStation = currentSystem?.station;
+         const activeMission = player.activeMission; // Get the active mission directly
+         const selectedMissionFromList = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
+
+         // Determine which mission's details to display in the right panel
+         let missionToShowDetails = null;
+         if (activeMission) {
+             missionToShowDetails = activeMission; // Always prioritize showing the active mission
+         } else if (selectedMissionFromList) {
+             missionToShowDetails = selectedMissionFromList; // Show selected available mission if no active one
+         }
+         // --- End Context ---
 
          push(); // Isolate drawing
          // --- Panel & Title ---
@@ -83,64 +99,111 @@ class UIManager {
          fill(255); textSize(24); textAlign(CENTER,TOP); text("Station Mission Board", pX+pW/2, pY+20);
          // --- Layout ---
          let listW = pW*0.4, detailX = pX+listW+10, detailW = pW-listW-20; let cY = pY+60, cH = pH-110;
-         // --- List Section ---
+         let btnDetailW = 120; let btnDetailH = 30; let btnDetailY = pY + pH - btnDetailH - 15; // Button layout constants
+
+
+         // --- List Section (always shows available missions) ---
          fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
          let listSY = cY+10, entryH=35, spacing=5;
-         if (!Array.isArray(missions) || missions.length === 0) { fill(180); textSize(14); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
-         else { missions.forEach((m, i) => { if (!m?.getSummary) return; let mY=listSY+i*(entryH+spacing); if(mY+entryH > cY+cH) return; if(i===selectedIndex) {fill(80,100,80,200);stroke(150,255,150);strokeWeight(1);} else {fill(40,60,40,180); noStroke();} rect(pX+10, mY, listW-20, entryH, 3); fill(220); textSize(12); textAlign(LEFT,CENTER); noStroke(); text(m.getSummary(), pX+20, mY+entryH/2, listW-40); this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i}); }); }
+         if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(14); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
+         else {
+             missions.forEach((m, i) => {
+                 if (!m?.getSummary) return;
+                 let mY=listSY+i*(entryH+spacing);
+                 if(mY+entryH > cY+cH) return; // Don't draw off panel
+
+                 // Highlight based on selectedIndex, REGARDLESS of what's in detail panel
+                 if(i === selectedIndex) {
+                      fill(80,100,80,200);stroke(150,255,150);strokeWeight(1);
+                 } else {
+                      fill(40,60,40,180); noStroke();
+                 }
+                 rect(pX+10, mY, listW-20, entryH, 3);
+
+                 // Dim text if this mission is the active one (can't select it again)
+                 if (activeMission && activeMission.id === m.id) {
+                     fill(150); // Greyed out text
+                 } else {
+                     fill(220); // Normal text color
+                 }
+                 textSize(12); textAlign(LEFT,CENTER); noStroke();
+                 text(m.getSummary(), pX+20, mY+entryH/2, listW-40);
+                 // Store clickable area for list item (used for highlighting)
+                 this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i});
+             });
+         }
+         // --- End List Section ---
+
+
          // --- Detail Section ---
          fill(0,0,0,100); noStroke(); rect(detailX, cY, detailW-5, cH); // Detail BG
-         const selectedMission = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
-         const activeMission = player.activeMission;
-         let btnDetailW = 120; let btnDetailH = 30; let btnDetailY = pY + pH - btnDetailH - 15; // Button layout
 
-         if (selectedMission) { // If a mission IS selected from the list
-             fill(230); textSize(14); textAlign(LEFT,TOP); textLeading(18); text(selectedMission.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30); // Draw details
-             let actionBtnX = detailX + detailW / 2 - btnDetailW - 10; let backBtnX = detailX + detailW / 2 + 10; // Button positions
-             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }}; // Back always exists
+         if (missionToShowDetails) { // If we determined a mission to show details for...
+             // Draw the mission text details
+             fill(230); textSize(14); textAlign(LEFT,TOP); textLeading(18); text(missionToShowDetails.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30);
 
-             if (activeMission && activeMission.id === selectedMission.id) { // --- Options for the ACTIVE mission ---
-                 console.log("--- Checking Mission Completion Conditions ---"); // <<< DEBUG LOG START
-                 console.log(`  Current Location: ${currentStation?.name} (${currentSystem?.name})`);
-                 console.log(`  Mission Dest:   ${activeMission.destinationStation} (${activeMission.destinationSystem})`);
-                 console.log(`  Mission Cargo:  ${activeMission.cargoQuantity}t ${activeMission.cargoType}`);
-                 let checkHasCargo = player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity);
-                 console.log(`  Player Has Cargo Check: ${checkHasCargo}`);
-                 console.log(`  Mission Status: ${activeMission.status}`);
+             // --- Determine Detail Buttons ---
+             let actionBtnX = detailX + detailW / 2 - btnDetailW - 10; // Position for Accept/Complete/Abandon
+             let backBtnX = detailX + detailW / 2 + 10;                 // Position for Back
+             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }}; // Back button always available when details shown
+
+             if (activeMission && missionToShowDetails.id === activeMission.id) {
+                 // --- The mission shown IS the Player's ACTIVE Mission ---
                  let canCompleteHere = false;
-                 if (currentSystem && currentStation && (activeMission.status === 'Active' || activeMission.status === 'Completable')) {
-                     if (activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
-                         if (currentSystem.name === activeMission.destinationSystem && currentStation.name === activeMission.destinationStation && checkHasCargo) {
-                             canCompleteHere = true;
-                         }
-                     } // Add checks for other mission types (e.g., bounty return) here later
-                 }
-                 console.log(`  Result: canCompleteHere = ${canCompleteHere}`); // <<< DEBUG LOG END
-                 console.log("------------------------------------------");
+                 // Check delivery completion conditions
+                 if ((activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
+                     currentSystem && currentStation && activeMission.destinationSystem === currentSystem.name &&
+                     activeMission.destinationStation === currentStation.name &&
+                     player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity))
+                 { canCompleteHere = true; }
+                 // Add other station-based completion checks here (e.g., bounty turn-in if required)
 
-                 if (canCompleteHere) { // Show "Complete" button
-                     fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2); this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
-                 } else { // Show "Abandon" button
-                     fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2); this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                 // Show Complete or Abandon
+                 if (canCompleteHere) {
+                     fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                     fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                     this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                 } else {
+                     fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                     fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                     this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
                  }
-             } else { // --- Options for an AVAILABLE mission ---
-                 if (!activeMission) { // Show "Accept" button
-                     fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2); this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
-                 } else { // Show "Unavailable" button
-                      fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(150); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2); this.missionDetailButtonAreas['accept'] = null;
-                 }
+
+             } else if (!activeMission && missionToShowDetails) {
+                 // --- The mission shown is AVAILABLE (and player has no active mission) ---
+                 fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                 fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                 this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+             } else {
+                 // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission (selected from list)
+                 // Or, somehow missionToShowDetails is set but doesn't fit the above.
+                 // In this scenario, we shouldn't allow accepting. Show "Unavailable".
+                 fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                 fill(150); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                 this.missionDetailButtonAreas['accept'] = null; // Ensure accept is not clickable
+                 this.missionDetailButtonAreas['complete'] = null;
+                 this.missionDetailButtonAreas['abandon'] = null;
              }
-             // Draw Back button (common to both cases above)
-             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
 
-         } else { // No mission selected from the list
-             fill(180); textSize(14); textAlign(CENTER, CENTER); text("Select mission for details.", detailX+(detailW-5)/2, cY+cH/2);
+             // Draw Back button (common if any details are shown)
+             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+             fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+             // Area for 'back' button already stored
+
+         } else { // No mission active AND none selected from the list
+             fill(180); textSize(14); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
+             // Only show a Back button, centered
              let backBtnX = pX + pW / 2 - btnDetailW / 2; // Center the single back button
-             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3); fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
-             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null }; // Only back is active
+             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+             fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+             // Define button areas: only 'back' is active
+             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null };
          }
+         // --- End Detail Section Logic ---
 
-         // --- Draw Active Mission Info Bar ---
+
+         // --- Active Mission Info Bar at the very bottom ---
+         // This remains useful as a quick reminder, even if details are shown above
          if (player.activeMission?.title) { fill(0,0,0,180);stroke(255,150,0);strokeWeight(1); let ay=pY+pH+5, ah=30; rect(pX,ay,pW,ah); fill(255,180,0);noStroke();textSize(14);textAlign(LEFT,CENTER); text(`Active: ${player.activeMission.title}`, pX+15, ay+ah/2, pW-30); }
 
          pop(); // Restore drawing styles
@@ -182,9 +245,10 @@ class UIManager {
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
+
         // --- DOCKED State (Main Station Menu) ---
         if (currentState === "DOCKED") {
-            for (const btn of this.stationMenuButtonAreas) { if (this.isClickInArea(mx, my, btn)) { if (btn.action === "UNDOCK") { if(gameStateManager)gameStateManager.setState("IN_FLIGHT"); return true; } else if (btn.state === "VIEWING_MARKET") { if(gameStateManager)gameStateManager.setState(btn.state); return true; } else if (btn.state === "VIEWING_MISSIONS") { if (gameStateManager?.fetchStationMissions(player)) { gameStateManager.setState(btn.state); } return true; } else if (btn.state) { console.warn(`State ${btn.state} not handled.`); return true; } } } return false;
+            for (const btn of this.stationMenuButtonAreas) { if (this.isClickInArea(mx, my, btn)) { if (btn.action === "UNDOCK") { if(gameStateManager)gameStateManager.setState("IN_FLIGHT"); return true; } else if (btn.state === "VIEWING_MARKET") { if(gameStateManager)gameStateManager.setState(btn.state); return true; } else if (btn.state === "VIEWING_MISSIONS") { if (gameStateManager?.fetchStationMissions(player)) { gameStateManager.setState(btn.state); } else { /* Fetch failed? Stay docked */ } return true; } else if (btn.state) { console.warn(`State ${btn.state} not handled.`); return true; } } } return false;
         }
         // --- VIEWING_MARKET State ---
         else if (currentState === "VIEWING_MARKET") {
@@ -194,17 +258,71 @@ class UIManager {
         // --- VIEWING_MISSIONS State ---
         else if (currentState === "VIEWING_MISSIONS") {
             let handled = false;
-            if (this.missionDetailButtonAreas['back'] && this.isClickInArea(mx, my, this.missionDetailButtonAreas['back'])) { if(gameStateManager)gameStateManager.setState("DOCKED"); handled = true; }
-            else if (this.missionDetailButtonAreas['accept'] && !player.activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['accept'])) { if (gameStateManager?.selectedMissionIndex !== -1) { let m=gameStateManager.currentStationMissions[gameStateManager.selectedMissionIndex]; if(m && player.acceptMission(m)){if(gameStateManager)gameStateManager.setState("DOCKED");}} handled = true; }
-            else if (this.missionDetailButtonAreas['complete'] && player.activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['complete'])) { if (player && currentSystem && currentStation && player.completeMission(currentSystem, currentStation)) { if(gameStateManager){gameStateManager.fetchStationMissions(player); gameStateManager.selectedMissionIndex = -1;} } handled = true; }
-            else if (this.missionDetailButtonAreas['abandon'] && player.activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) { if (confirm("Abandon current mission?")) { player.abandonMission(); if(gameStateManager){gameStateManager.fetchStationMissions(player); gameStateManager.selectedMissionIndex = -1;} } handled = true; }
-            if (!handled) { for (const btn of this.missionListButtonAreas) { if (this.isClickInArea(mx, my, btn)) { if(gameStateManager)gameStateManager.selectedMissionIndex=btn.index; handled = true; break; } } } return handled;
+            const activeMission = player.activeMission; // Get active mission status
+
+            // Handle Detail Buttons FIRST (Complete, Abandon, Accept, Back)
+            // These depend on what was DRAWN by drawMissionBoard
+            if (this.missionDetailButtonAreas['back'] && this.isClickInArea(mx, my, this.missionDetailButtonAreas['back'])) {
+                if(gameStateManager) gameStateManager.setState("DOCKED");
+                handled = true;
+            }
+            else if (this.missionDetailButtonAreas['accept'] && !activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['accept'])) {
+                 // Accept logic: find the currently SELECTED mission from the list
+                 if (gameStateManager?.selectedMissionIndex !== -1) {
+                      let missionToAccept = gameStateManager.currentStationMissions[gameStateManager.selectedMissionIndex];
+                      if(missionToAccept && player.acceptMission(missionToAccept)){
+                           if(gameStateManager) gameStateManager.setState("DOCKED"); // Go back to main menu after accepting
+                      } else {
+                           // Accept failed (e.g., no cargo space) - stay on mission board
+                      }
+                 }
+                 handled = true;
+            }
+            else if (this.missionDetailButtonAreas['complete'] && activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['complete'])) {
+                 // Complete logic: attempt to complete the ACTIVE mission
+                 if (player && currentSystem && currentStation && player.completeMission(currentSystem, currentStation)) {
+                      if(gameStateManager){
+                           gameStateManager.fetchStationMissions(player); // Refresh list
+                           gameStateManager.selectedMissionIndex = -1; // Deselect list item
+                           // Stay on the mission board to see the updated list (or go back to DOCKED?)
+                           // Let's stay for now. User can click Back.
+                      }
+                 }
+                 handled = true;
+            }
+            else if (this.missionDetailButtonAreas['abandon'] && activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) {
+                 // Abandon logic: abandon the ACTIVE mission
+                 if (confirm("Abandon current mission?")) { // Add confirmation
+                      player.abandonMission();
+                      if(gameStateManager){
+                           gameStateManager.fetchStationMissions(player); // Refresh list
+                           gameStateManager.selectedMissionIndex = -1; // Deselect list item
+                      }
+                 }
+                 handled = true;
+            }
+
+            // Handle List Clicks (for highlighting) if no detail button was clicked
+            if (!handled) {
+                for (const btn of this.missionListButtonAreas) {
+                    if (this.isClickInArea(mx, my, btn)) {
+                        // Always update the selectedIndex for visual highlighting
+                        if(gameStateManager) gameStateManager.selectedMissionIndex = btn.index;
+                        // Clicking the list doesn't change the *detail view* if an active mission is present
+                        // It just updates the highlight
+                        handled = true;
+                        break;
+                    }
+                }
+            }
+            return handled; // Return true if any mission board interaction occurred
         }
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy); }
         // --- GAME_OVER State ---
         else if (currentState === "GAME_OVER") { window.location.reload(); return true; }
-        return false; // Click not handled
+
+        return false; // Click not handled by any relevant UI state
     } // End handleMouseClicks
 
     /** Helper to check if mouse coords are within a button area object {x,y,w,h} */
@@ -215,9 +333,33 @@ class UIManager {
     /** Helper function specifically for handling clicks on the Galaxy Map */
     handleGalaxyMapClicks(mx, my, galaxy){
         if (!galaxy) return false;
-        if (this.isClickInArea(mx, my, this.jumpButtonArea)) { if (this.selectedSystemIndex !== -1) { if (gameStateManager) gameStateManager.startJump(this.selectedSystemIndex); this.selectedSystemIndex = -1; } return true; }
-        for (const node of this.galaxyMapNodeAreas) { if (!node) continue; if (dist(mx, my, node.x, node.y) < node.radius) { const r=galaxy.getReachableSystems(), cI=galaxy.currentSystemIndex; if (node.index!==cI && r.includes(node.index)) { this.selectedSystemIndex=node.index; } else if (node.index===cI) { this.selectedSystemIndex = -1; } return true; } }
-        return false;
+        // Check Jump button first
+        if (this.isClickInArea(mx, my, this.jumpButtonArea)) {
+            if (this.selectedSystemIndex !== -1 && galaxy.getReachableSystems().includes(this.selectedSystemIndex)) { // Double check reachability
+                if (gameStateManager) gameStateManager.startJump(this.selectedSystemIndex);
+                this.selectedSystemIndex = -1; // Clear selection after initiating jump
+            }
+            return true; // Click was on the jump button area
+        }
+        // Check system nodes
+        for (const node of this.galaxyMapNodeAreas) {
+            if (!node) continue;
+            if (dist(mx, my, node.x, node.y) < node.radius) {
+                const reachableSystems = galaxy.getReachableSystems();
+                const currentIdx = galaxy.currentSystemIndex;
+                // Select if reachable and not current
+                if (node.index !== currentIdx && reachableSystems.includes(node.index)) {
+                    this.selectedSystemIndex = node.index;
+                } else {
+                    // Clicking current system or unreachable system clears selection
+                    this.selectedSystemIndex = -1;
+                }
+                return true; // Click was on a node
+            }
+        }
+        // Click was not on jump button or any node
+        this.selectedSystemIndex = -1; // Clear selection if clicking empty space
+        return false; // Allow click to pass through if needed elsewhere? For now, false.
     } // End handleGalaxyMapClicks
 
 } // End of UIManager Class
