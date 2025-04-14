@@ -221,7 +221,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         console.log(`   activeMission is now: ${this.activeMission}`);
 
         // --- Provide feedback ---
-        alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
+        //alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
         console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
 
         saveGame(); // Save progress
