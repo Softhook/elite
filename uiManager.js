@@ -226,22 +226,131 @@ class UIManager {
         push(); fill(0, 0, 0, 150); rect(0, 0, width, height); fill(255, 0, 0); textSize(48); textAlign(CENTER, CENTER); text("GAME OVER", width/2, height/2 - 30); fill(255); textSize(20); text("Click to Restart", width/2, height/2 + 30); pop();
     } // --- End drawGameOverScreen ---
 
-    /** Draws the Minimap overlay (bottom right) */
     drawMinimap(player, system) {
-        if (!player?.pos || !system) return;
-        this.minimapX = width - this.minimapSize - this.minimapMargin; this.minimapY = height - this.minimapSize - this.minimapMargin;
-        this.minimapScale = this.minimapSize / this.minimapWorldViewRange; if (isNaN(this.minimapScale)||!isFinite(this.minimapScale)||this.minimapScale<=0) this.minimapScale=0.01;
-        let mapCX = this.minimapX+this.minimapSize/2, mapCY = this.minimapY+this.minimapSize/2;
-        push(); fill(0,0,0,180); stroke(0,200,0,200); rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize); // BG
-        fill(255); noStroke(); ellipse(mapCX, mapCY, 5, 5); // Player
-        try { // Draw elements safely
-             if (system.station?.pos) { let rX=system.station.pos.x-player.pos.x, rY=system.station.pos.y-player.pos.y; let mX=mapCX+rX*this.minimapScale, mY=mapCY+rY*this.minimapScale; fill(0,0,255); rect(mX-3,mY-3,6,6); }
-             fill(150,100,50); (system.planets||[]).forEach(p => { if(!p?.pos) return; let rX=p.pos.x-player.pos.x, rY=p.pos.y-player.pos.y; let mX=mapCX+rX*this.minimapScale, mY=mapCY+rY*this.minimapScale; ellipse(mX, mY, 4, 4); });
-             fill(255,0,0); (system.enemies||[]).forEach(e => { if(!e?.pos) return; let rX=e.pos.x-player.pos.x, rY=e.pos.y-player.pos.y; let mX=mapCX+rX*this.minimapScale, mY=mapCY+rY*this.minimapScale; triangle(mX,mY-3,mX-2,mY+2,mX+2,mY+2); });
-        } catch(e) { console.error("Error drawing minimap elements:", e); }
-        pop();
-    } // End drawMinimap
+        if (!player?.pos || !system) { return; } // Basic checks
 
+        // --- Calculate Minimap Position and Scale ---
+        this.minimapX = width - this.minimapSize - this.minimapMargin;
+        this.minimapY = height - this.minimapSize - this.minimapMargin;
+        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+        if (isNaN(this.minimapScale) || this.minimapScale <= 0 || !isFinite(this.minimapScale)) {
+            this.minimapScale = 0.01; // Fallback scale
+        }
+
+        // --- Calculate Center and Boundaries ---
+        let mapCenterX = this.minimapX + this.minimapSize / 2;
+        let mapCenterY = this.minimapY + this.minimapSize / 2;
+        let mapLeft = this.minimapX;
+        let mapRight = this.minimapX + this.minimapSize;
+        let mapTop = this.minimapY;
+        let mapBottom = this.minimapY + this.minimapSize;
+        // ---
+
+        push(); // Isolate drawing settings for the minimap
+
+        // --- Draw Background/Border ---
+        try {
+            fill(0, 0, 0, 180);
+            stroke(0, 200, 0, 200);
+            strokeWeight(1);
+            rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+        } catch (e) {
+            console.error("Error drawing minimap rect:", e);
+            pop(); // Clean up push()
+            return; // Don't proceed if background fails
+        }
+        // ---
+
+        // --- Draw Player (Always at Center) ---
+        fill(255); // White
+        noStroke();
+        ellipse(mapCenterX, mapCenterY, 5, 5); // Small circle for player
+        // ---
+
+        // --- Helper function for strict boundary check ---
+        // Checks if the *entire* icon, defined by its center (x,y)
+        // and its half-width/half-height, fits within the map bounds.
+        const isFullyWithinBounds = (x, y, halfWidth, halfHeight) => {
+            return (
+                x - halfWidth >= mapLeft &&
+                x + halfWidth <= mapRight &&
+                y - halfHeight >= mapTop &&
+                y + halfHeight <= mapBottom
+            );
+        };
+        // ---
+
+        try { // Wrap drawing of other elements
+            // --- Map and Draw Station ---
+            if (system.station?.pos) {
+                let objX = system.station.pos.x;
+                let objY = system.station.pos.y;
+                let relX = objX - player.pos.x;
+                let relY = objY - player.pos.y;
+                let mapX = mapCenterX + relX * this.minimapScale;
+                let mapY = mapCenterY + relY * this.minimapScale;
+                const iconHalfSize = 3; // Station is 6x6 rect
+
+                // *** Strict Boundary Check ***
+                if (isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize)) {
+                    fill(0, 0, 255); // Blue square for station
+                    rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
+                }
+            }
+            // ---
+
+            // --- Map and Draw Planets ---
+            fill(150, 100, 50); // Brownish for planets
+            (system.planets || []).forEach(planet => {
+                if (!planet?.pos) return;
+                let objX = planet.pos.x;
+                let objY = planet.pos.y;
+                let relX = objX - player.pos.x;
+                let relY = objY - player.pos.y;
+                let mapX = mapCenterX + relX * this.minimapScale;
+                let mapY = mapCenterY + relY * this.minimapScale;
+                const iconRadius = 2; // Planet is 4x4 ellipse
+
+                // *** Strict Boundary Check ***
+                if (isFullyWithinBounds(mapX, mapY, iconRadius, iconRadius)) {
+                    ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2); // Small dot for planet
+                }
+            });
+            // ---
+
+            // --- Map and Draw Enemies ---
+            fill(255, 0, 0); // Red for enemies
+            (system.enemies || []).forEach(enemy => {
+                if (!enemy?.pos || enemy.isDestroyed()) return;
+                let objX = enemy.pos.x;
+                let objY = enemy.pos.y;
+                let relX = objX - player.pos.x;
+                let relY = objY - player.pos.y;
+                let mapX = mapCenterX + relX * this.minimapScale;
+                let mapY = mapCenterY + relY * this.minimapScale;
+                // Approximate bounding box half-size for the triangle (max extent is ~3 pixels from center)
+                const iconHalfExtent = 3;
+
+                // *** Strict Boundary Check ***
+                // Use the approximate half-extent for the check
+                if (isFullyWithinBounds(mapX, mapY, iconHalfExtent, iconHalfExtent)) {
+                    // Draw rotated triangle if fully within bounds
+                    push();
+                    translate(mapX, mapY);
+                    rotate(degrees(enemy.angle) - 90);
+                    triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8); // Triangle scaled roughly by half-extent
+                    pop();
+                }
+            });
+            // ---
+
+        } catch (e) {
+            console.error("Error during minimap element drawing:", e);
+        } finally {
+            pop(); // Restore drawing state from before minimap drawing push()
+        }
+    } // End drawMinimap
+    
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
