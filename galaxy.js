@@ -245,6 +245,71 @@ class Galaxy {
     } // --- End jumpToSystem ---
 
 
+   /**
+     * Calculates the minimum number of jumps between two systems using BFS.
+     * @param {number} startIndex - The index of the starting system.
+     * @param {number} endIndex - The index of the destination system.
+     * @returns {number} The minimum number of jumps, or Infinity if unreachable.
+     */
+    getJumpDistance(startIndex, endIndex) {
+        // Basic validation
+        if (startIndex < 0 || startIndex >= this.systems.length ||
+            endIndex < 0 || endIndex >= this.systems.length) {
+            console.warn(`getJumpDistance: Invalid start (${startIndex}) or end (${endIndex}) index.`);
+            return Infinity;
+        }
+        if (startIndex === endIndex) {
+            return 0; // No jumps needed for same system
+        }
+        if (!this.systems[startIndex] || !this.systems[endIndex]) {
+            console.warn(`getJumpDistance: Invalid system object at start (${startIndex}) or end (${endIndex}).`);
+            return Infinity; // Cannot calculate if systems don't exist
+        }
+
+        let queue = [];       // Queue stores arrays: [systemIndex, distance]
+        let visited = new Set(); // Keep track of visited system indices
+
+        // Start BFS from the startIndex
+        queue.push([startIndex, 0]);
+        visited.add(startIndex);
+
+        while (queue.length > 0) {
+            let [currentIndex, currentDistance] = queue.shift(); // Dequeue the next system
+
+            // Get neighbors (connected systems)
+            const currentSystem = this.systems[currentIndex];
+            if (!currentSystem || !Array.isArray(currentSystem.connectedSystemIndices)) {
+                console.warn(`getJumpDistance: Skipping invalid system or connections at index ${currentIndex} during BFS.`);
+                continue; // Skip this node if invalid
+            }
+            let neighbors = currentSystem.connectedSystemIndices;
+
+            for (let neighborIndex of neighbors) {
+                // Validate neighbor index
+                 if (neighborIndex < 0 || neighborIndex >= this.systems.length || !this.systems[neighborIndex]) {
+                     // console.warn(`getJumpDistance: Skipping invalid neighbor index ${neighborIndex} from system ${currentIndex}.`);
+                     continue;
+                 }
+
+                // Check if we reached the destination
+                if (neighborIndex === endIndex) {
+                    return currentDistance + 1; // Found the shortest path
+                }
+
+                // If neighbor hasn't been visited, add it to the queue
+                if (!visited.has(neighborIndex)) {
+                    visited.add(neighborIndex);
+                    queue.push([neighborIndex, currentDistance + 1]);
+                }
+            }
+        }
+
+        // If the queue becomes empty and we haven't found the end index, it's unreachable
+        console.warn(`getJumpDistance: Destination (${endIndex}) unreachable from start (${startIndex}).`);
+        return Infinity;
+    } // --- End getJumpDistance ---
+
+
     /** Retrieves data formatted for drawing the Galaxy Map UI. */
     getSystemDataForMap() {
         if (!this.systems) return [];
