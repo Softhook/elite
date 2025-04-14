@@ -211,14 +211,98 @@ class UIManager {
 
     /** Draws the Galaxy Map screen */
     drawGalaxyMap(galaxy, player) {
-        if (!galaxy || !player) return;
-        this.galaxyMapNodeAreas = []; const systems = galaxy.getSystemDataForMap(); const reachable = galaxy.getReachableSystems(); const currentIdx = galaxy.currentSystemIndex;
-        push(); background(10, 0, 20); stroke(100, 80, 150, 150); strokeWeight(1); // Connections
-        for (let i=0; i<systems.length; i++) { let cs=systems[i], ni=(i+1)%systems.length, ns=systems[ni]; if(cs?.x!==undefined && ns?.x!==undefined) line(cs.x,cs.y,ns.x,ns.y); }
-        const nodeR = 15; systems.forEach((sys, i) => { if (!sys) return; let isC=(i===currentIdx), isS=(i===this.selectedSystemIndex), isR=reachable.includes(i); if(isC)fill(0,255,0); else if(isS)fill(255,255,0); else if(sys.visited)fill(150,150,200); else fill(80,80,100); if(isR&&!isC){stroke(200,200,0); strokeWeight(2);} else {stroke(200); strokeWeight(1);} ellipse(sys.x,sys.y,nodeR*2,nodeR*2); this.galaxyMapNodeAreas.push({x:sys.x,y:sys.y,radius:nodeR,index:i}); fill(255); noStroke(); textAlign(CENTER,TOP); textSize(12); text(sys.name,sys.x,sys.y+nodeR+5); textSize(10); if(sys.visited||isC)text(`(${sys.type})`,sys.x,sys.y+nodeR+20); else text(`(Unknown)`,sys.x,sys.y+nodeR+20); }); // Nodes
-        if (this.selectedSystemIndex!==-1 && this.selectedSystemIndex!==currentIdx && reachable.includes(this.selectedSystemIndex)) { let btnW=150,btnH=40,btnX=width/2-btnW/2,btnY=height-btnH-20; fill(0,180,255); rect(btnX,btnY,btnW,btnH,5); fill(0); textSize(18); textAlign(CENTER,CENTER); text(`Jump`, btnX+btnW/2, btnY+btnH/2); this.jumpButtonArea={x:btnX,y:btnY,w:btnW,h:btnH}; } else { this.jumpButtonArea = {x:0,y:0,w:0,h:0}; } // Jump Button
-        fill(200); textAlign(CENTER,BOTTOM); textSize(14); text("Click reachable system (yellow outline) to select, then click JUMP.", width/2, height-70); text("Press 'M' or 'ESC' to return to flight.", width/2, height-5); // Instructions
-        pop();
+        if (!galaxy || !player) { console.warn("drawGalaxyMap missing galaxy or player"); return; }
+
+        this.galaxyMapNodeAreas = []; // Clear clickable areas for nodes
+        const systems = galaxy.getSystemDataForMap(); // Gets { name, x, y, type, visited, index }
+        const currentIdx = galaxy.currentSystemIndex;
+        const reachable = galaxy.getReachableSystems(); // Now gets indices based on actual connections
+
+        push(); // Isolate map drawing
+        background(10, 0, 20); // Dark space background
+
+        // --- Draw Connections (Lines) ---
+        stroke(100, 80, 150, 150); // Connection line color
+        strokeWeight(1);
+        // Iterate through each system to draw its connections
+        for (let i = 0; i < galaxy.systems.length; i++) {
+            const systemA = galaxy.systems[i];
+            if (!systemA?.galaxyPos || !systemA.connectedSystemIndices) continue; // Skip if invalid
+
+            // Draw lines to connected systems, ensuring each line is drawn only once
+            systemA.connectedSystemIndices.forEach(j => {
+                // Only draw if the target index 'j' is greater than the current index 'i'
+                // This prevents drawing lines twice (A->B and B->A)
+                if (j > i) {
+                    const systemB = galaxy.systems[j];
+                    if (systemB?.galaxyPos) { // Check if target system is valid
+                        line(systemA.galaxyPos.x, systemA.galaxyPos.y, systemB.galaxyPos.x, systemB.galaxyPos.y);
+                    }
+                }
+            });
+        }
+        // --- End Draw Connections ---
+
+
+        // --- Draw System Nodes ---
+        const nodeR = 15; // Radius for clickable area and drawing
+        systems.forEach((sysData, i) => { // Use the data from getSystemDataForMap which includes index 'i'
+            if (!sysData) return; // Skip if system data is invalid
+
+            let isCurrent = (i === currentIdx);
+            let isSelected = (i === this.selectedSystemIndex);
+            let isReachable = reachable.includes(i); // Check if this system index is in the reachable list
+
+            // Node Fill Color
+            if (isCurrent) fill(0, 255, 0);      // Green for current
+            else if (isSelected) fill(255, 255, 0); // Yellow for selected
+            else if (sysData.visited) fill(150, 150, 200); // Light Blue/Grey for visited
+            else fill(80, 80, 100);           // Dark Grey for unvisited
+
+            // Node Stroke (Outline)
+            if (isReachable && !isCurrent) { // Highlight reachable systems (that aren't the current one)
+                stroke(200, 200, 0); // Yellow outline
+                strokeWeight(2);
+            } else {
+                stroke(200);        // Default grey outline
+                strokeWeight(1);
+            }
+
+            // Draw the ellipse
+            ellipse(sysData.x, sysData.y, nodeR * 2, nodeR * 2);
+            // Store clickable area
+            this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
+
+            // Draw Text Labels
+            fill(255); noStroke(); textAlign(CENTER, TOP); textSize(12);
+            text(sysData.name, sysData.x, sysData.y + nodeR + 5);
+            textSize(10);
+            if (sysData.visited || isCurrent) text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
+            else text(`(Unknown)`, sysData.x, sysData.y + nodeR + 20); // Hide info for unvisited
+        });
+        // --- End Draw System Nodes ---
+
+
+        // --- Draw Jump Button ---
+        // Logic remains the same: Show if a reachable system (not current) is selected
+        this.jumpButtonArea = { x: 0, y: 0, w: 0, h: 0 }; // Reset button area
+        if (this.selectedSystemIndex !== -1 && this.selectedSystemIndex !== currentIdx && reachable.includes(this.selectedSystemIndex)) {
+            let btnW = 150, btnH = 40, btnX = width / 2 - btnW / 2, btnY = height - btnH - 20;
+            fill(0, 180, 255); // Blue jump button
+            rect(btnX, btnY, btnW, btnH, 5);
+            fill(0); textSize(18); textAlign(CENTER, CENTER); noStroke(); // Black text
+            text(`Jump`, btnX + btnW / 2, btnY + btnH / 2);
+            this.jumpButtonArea = { x: btnX, y: btnY, w: btnW, h: btnH }; // Define clickable area
+        }
+        // --- End Draw Jump Button ---
+
+        // --- Instructions ---
+        fill(200); textAlign(CENTER, BOTTOM); textSize(14);
+        text("Click reachable system (yellow outline) to select, then click JUMP.", width / 2, height - 70);
+        text("Press 'M' or 'ESC' to return to flight.", width / 2, height - 5);
+        // ---
+
+        pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
 
     /** Draws the Game Over overlay screen */
