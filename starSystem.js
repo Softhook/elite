@@ -233,8 +233,14 @@ class StarSystem {
                 }
                 let dE = dist(enemy.pos.x, enemy.pos.y, player.pos.x, player.pos.y); if (dE > this.despawnRadius * 1.1) this.enemies.splice(i, 1);
             }
-            // Update Asteroids
-            for (let i = this.asteroids.length - 1; i >= 0; i--) { /* ... asteroid update ... */ }
+
+            // --- Update Asteroids & Handle Destruction/Despawn ---
+            for (let i = this.asteroids.length - 1; i >= 0; i--) {
+                const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
+                try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
+                if (asteroid.isDestroyed()) { player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
+                let dA = dist(asteroid.pos.x, asteroid.pos.y, player.pos.x, player.pos.y); if (dA > this.despawnRadius * 1.2) this.asteroids.splice(i, 1);
+            }
 
             // --- Update Projectiles (Ensure proj.update() is called) ---
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
