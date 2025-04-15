@@ -201,7 +201,22 @@ function drawGnatInterceptor(s, thrusting = false) { // Light Fighter 1
 
 function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(210, 190, 80);
+    stroke(120, 100, 30);
+    strokeWeight(1);
+    beginShape();
+    vertex(r * 1.043, r * 0.010);
+    vertex(r * -0.013, r * 0.455);
+    vertex(r * -0.057, r * 0.910);
+    vertex(r * -0.457, r * 0.810);
+    vertex(r * -0.857, r * 0.210);
+    vertex(r * -0.857, r * -0.190);
+    vertex(r * -0.457, r * -0.790);
+    vertex(r * -0.057, r * -0.890);
+    vertex(r * -0.013, r * -0.445);
+    endShape(CLOSE);
+
     if (thrusting) { fill(255, 210, 0); noStroke(); ellipse(-r*0.8, r*0.1, r*0.3, r*0.15); ellipse(-r*0.8, -r*0.1, r*0.3, r*0.15); }
 }
 
