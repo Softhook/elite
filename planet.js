@@ -165,4 +165,53 @@ class Planet {
         pop(); // Restore matrix (removes ring rotation)
     }
 
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            size: this.size,
+            baseColor: this.baseColor ? this.baseColor.toString() : null,
+            featureColor1: this.featureColor1 ? this.featureColor1.toString() : null,
+            featureColor2: this.featureColor2 ? this.featureColor2.toString() : null,
+            featureRand: this.featureRand,
+            noiseScale: this.noiseScale,
+            noisePersistence: this.noisePersistence,
+            hasAtmosphere: this.hasAtmosphere,
+            atmosphereColor: this.atmosphereColor ? this.atmosphereColor.toString() : null,
+            hasRings: this.hasRings,
+            ringAngle: this.ringAngle,
+            ringPerspective: this.ringPerspective,
+            ringInnerRad: this.ringInnerRad,
+            ringOuterRad: this.ringOuterRad,
+            numRingSegments: this.numRingSegments,
+            ringColor1: this.ringColor1 ? this.ringColor1.toString() : null,
+            ringColor2: this.ringColor2 ? this.ringColor2.toString() : null,
+            rotationSpeed: this.rotationSpeed,
+            currentRotation: this.currentRotation
+        };
+    }
+
+    static fromJSON(data) {
+        // Use baseColor and featureColor1/2 if possible, else fallback to random
+        let c1 = data.baseColor && typeof color === "function" ? color(data.baseColor) : undefined;
+        let c2 = data.featureColor1 && typeof color === "function" ? color(data.featureColor1) : undefined;
+        const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2);
+        p.featureColor2 = data.featureColor2 && typeof color === "function" ? color(data.featureColor2) : p.featureColor2;
+        p.featureRand = data.featureRand;
+        p.noiseScale = data.noiseScale;
+        p.noisePersistence = data.noisePersistence;
+        p.hasAtmosphere = data.hasAtmosphere;
+        p.atmosphereColor = data.atmosphereColor && typeof color === "function" ? color(data.atmosphereColor) : null;
+        p.hasRings = data.hasRings;
+        p.ringAngle = data.ringAngle;
+        p.ringPerspective = data.ringPerspective;
+        p.ringInnerRad = data.ringInnerRad;
+        p.ringOuterRad = data.ringOuterRad;
+        p.numRingSegments = data.numRingSegments;
+        p.ringColor1 = data.ringColor1 && typeof color === "function" ? color(data.ringColor1) : null;
+        p.ringColor2 = data.ringColor2 && typeof color === "function" ? color(data.ringColor2) : null;
+        p.rotationSpeed = data.rotationSpeed;
+        p.currentRotation = data.currentRotation;
+        return p;
+    }
+
 } // End of Planet Class

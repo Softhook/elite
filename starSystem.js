@@ -28,12 +28,14 @@ class StarSystem {
      * @param {string} [securityLevel='Medium'] - The security level (e.g., 'High', 'Anarchy').
      */
     constructor(name, economyType, galaxyX, galaxyY, systemIndex, techLevel = 5, securityLevel = 'Medium') {
+        console.log("StarSystem constructor called for", name);
         // console.log(`   >>> StarSystem Constructor Start: ${name} (Index ${systemIndex})`); // Verbose
         this.name = name;
         this.economyType = economyType;
         try { this.galaxyPos = createVector(galaxyX, galaxyY); } catch(e) { this.galaxyPos = {x: galaxyX, y: galaxyY}; } // Map position
         this.visited = false;
         this.systemIndex = systemIndex; // Used for seeding static elements
+        this.connectedSystemIndices = []; // <-- ADD THIS LINE
 
         // Assign tech and security levels, using defaults if not provided
         this.techLevel = techLevel || floor(random(1, 11)); // Default random 1-10 if not provided
@@ -354,6 +356,57 @@ class StarSystem {
             default:
                 return { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
         }
+    }
+
+    toJSON() {
+        return {
+            name: this.name,
+            economyType: this.economyType,
+            galaxyPos: { x: this.galaxyPos.x, y: this.galaxyPos.y },
+            systemIndex: this.systemIndex,
+            techLevel: this.techLevel,
+            securityLevel: this.securityLevel,
+            visited: this.visited,
+            connectedSystemIndices: this.connectedSystemIndices ? [...this.connectedSystemIndices] : [],
+            // Save planets if present
+            planets: Array.isArray(this.planets)
+                ? this.planets.map(p => (typeof p.toJSON === 'function' ? p.toJSON() : null))
+                : [],
+            // Save station if present
+            station: this.station && typeof this.station.toJSON === 'function'
+                ? this.station.toJSON()
+                : null,
+        };
+    }
+
+    static fromJSON(data) {
+        const sys = new StarSystem(
+            data.name,
+            data.economyType,
+            data.galaxyPos.x,
+            data.galaxyPos.y,
+            data.systemIndex,
+            data.techLevel,
+            data.securityLevel
+        );
+        sys.visited = data.visited;
+        sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
+
+        // Restore planets if present
+        if (Array.isArray(data.planets) && typeof Planet !== "undefined" && typeof Planet.fromJSON === "function") {
+            sys.planets = data.planets.map(p => Planet.fromJSON(p));
+        } else {
+            sys.planets = [];
+        }
+
+        // Restore station if present
+        if (data.station && typeof Station !== "undefined" && typeof Station.fromJSON === "function") {
+            sys.station = Station.fromJSON(data.station);
+        } else {
+            sys.station = null;
+        }
+
+        return sys;
     }
 
 } // End of StarSystem Class

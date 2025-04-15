@@ -107,6 +107,11 @@ class Galaxy {
         if (this.systems.length >= 2) { this.generateConnections(NEAREST_NEIGHBORS_TO_CONNECT); }
         else { console.log("   Skipping connection generation (less than 2 systems created)."); }
 
+        console.log("System connections after generation:");
+        this.systems.forEach((sys, idx) => {
+            console.log(`${idx} (${sys.name}): [${sys.connectedSystemIndices.join(', ')}]`);
+        });
+
         // --- Initialize Static Elements ---
         console.log("   Galaxy.initGalaxySystems: Initializing static elements for each system...");
         this.systems.forEach((system, index) => { /* ... same init logic ... */
@@ -143,6 +148,10 @@ class Galaxy {
 
         for (let i = 0; i < this.systems.length; i++) {
             const systemA = this.systems[i];
+            if (!Array.isArray(systemA.connectedSystemIndices)) {
+                console.warn("Forcing connectedSystemIndices to [] for", systemA.name);
+                systemA.connectedSystemIndices = [];
+            }
             // Ensure system A and its position/connections array are valid
             if (!systemA?.galaxyPos || !Array.isArray(systemA.connectedSystemIndices)) {
                 console.warn(`   Skipping connections for invalid system or connections array at index ${i}`);
@@ -355,47 +364,60 @@ class Galaxy {
 
     /** Gathers save data for all systems and current index. */
     getSaveData() {
-        if (!this.systems) return { systems: [], currentSystemIndex: 0 };
         return {
-             systems: this.systems.map(sys => sys?.getSaveData() || { visited: false }),
-             currentSystemIndex: this.currentSystemIndex
-         };
+            systems: this.systems.map(sys => (typeof sys.toJSON === 'function' ? sys.toJSON() : null)),
+            currentSystemIndex: this.currentSystemIndex
+        };
     }
 
     /** Loads saved data into systems and sets current index. Regenerates connections. */
-    loadSaveData(galaxyData) {
-         this.currentSystemIndex = galaxyData?.currentSystemIndex ?? 0;
-         if (this.currentSystemIndex < 0 || this.currentSystemIndex >= this.systems.length) {
-              console.warn(`Loaded invalid currentSystemIndex (${galaxyData?.currentSystemIndex}). Resetting to 0.`);
-              this.currentSystemIndex = 0;
-         }
+    loadSaveData(data) {
+        console.log("Galaxy.loadSaveData called with data:", data);
 
-         const systemsSaveData = galaxyData?.systems;
-        if (systemsSaveData && Array.isArray(systemsSaveData) && systemsSaveData.length === this.systems.length) {
-             console.log("Loading system visited data...");
-             for (let i = 0; i < this.systems.length; i++) {
-                 // Ensure system exists before loading into it
-                 if (this.systems[i] && systemsSaveData[i]) {
-                     this.systems[i].loadSaveData(systemsSaveData[i]);
-                 } else {
-                      console.warn(`Skipping load for system index ${i} due to invalid system object or save data.`);
-                 }
-             }
-         } else {
-            console.log("No valid system visited data found or length mismatch, using defaults.");
-            if (this.systems.length > 0 && this.systems[this.currentSystemIndex]) {
-                 this.systems[this.currentSystemIndex].visited = true;
+        if (!data || !Array.isArray(data.systems)) {
+            console.warn("Galaxy.loadSaveData: No data or systems array missing.");
+            return;
+        }
+
+        // Debug: Check if StarSystem is defined and has fromJSON
+        console.log("StarSystem in loadSaveData:", typeof StarSystem, StarSystem);
+        if (!StarSystem || typeof StarSystem.fromJSON !== 'function') {
+            console.error("StarSystem.fromJSON is not a function!", StarSystem);
+        }
+
+        // Debug: Log the first system data to be loaded
+        if (data.systems.length > 0) {
+            console.log("First system data to load:", data.systems[0]);
+        }
+
+        this.systems = data.systems.map((sysData, idx) => {
+            const sys = StarSystem.fromJSON(sysData);
+            if (!sys) {
+                console.warn(`StarSystem.fromJSON returned null/undefined for system at index ${idx}:`, sysData);
             }
-         }
+            return sys;
+        }).filter(Boolean);
 
-         // Regenerate connections based on loaded/default system positions
-         // Ensure systems array is valid before generating connections
-         if (this.systems.length >= 2) {
-             console.log("Regenerating connections after load...");
-             this.generateConnections(3); // Use the same 'k' value as in init
-         } else {
-              console.log("Skipping connection regeneration after load (not enough systems).");
-         }
-     } // --- End loadSaveData ---
+        this.systems.forEach((sys, idx) => {
+            if (sys && typeof sys.initStaticElements === 'function') {
+                try {
+                    sys.initStaticElements();
+                } catch (e) {
+                    console.error(`Error during initStaticElements for loaded system ${idx} (${sys?.name || 'N/A'}):`, e);
+                }
+            }
+        });
+
+        this.currentSystemIndex = data.currentSystemIndex ?? 0;
+
+        // Debug: Log the loaded systems
+        console.log("Loaded systems after fromJSON:", this.systems);
+
+        this.systems.forEach((sys, idx) => {
+            sys.connectedSystems = (sys.connectedSystemIndices || []).map(i => this.systems[i]);
+            // Debug: Log each system's connections
+            console.log(`System ${idx} (${sys.name}) connections:`, sys.connectedSystemIndices);
+        });
+    }
 
 } // End Galaxy Class
