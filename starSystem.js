@@ -119,10 +119,11 @@ class StarSystem {
 
     /** Creates random planets using seeded random. Called by initStaticElements. Includes position logging. */
     createRandomPlanets() {
-         // console.log("            >>> Entering createRandomPlanets..."); // Verbose
+         // Increase distances for planets
          let numPlanets = 1; try { numPlanets = floor(random(2, 7)); } catch(e) {}
-         let minD = 600; let maxD = this.despawnRadius * 0.9; let minSep = 300;
-         // console.log(`            Creating ${numPlanets} planets (minD:${minD}, maxD:${maxD.toFixed(0)}, minSep:${minSep})...`); // Verbose
+         let minD = 1200; // Was 600, now doubled
+         let maxD = this.despawnRadius * 1.8; // Was 0.9, now doubled
+         let minSep = 600; // Was 300, now doubled
          this.planets = [];
          for (let i = 0; i < numPlanets; i++) {
              let validPos = false; let attemptPos; let attempts = 0; const maxAttempts = 100;
@@ -132,18 +133,20 @@ class StarSystem {
                  try {
                      calculatedAngle = random(TWO_PI); calculatedDist = random(minD, maxD);
                      attemptPos = createVector(cos(calculatedAngle) * calculatedDist, sin(calculatedAngle) * calculatedDist);
-                     // console.log(`            Attempt ${attempts}: Angle=${calculatedAngle.toFixed(3)}rad (${degrees(calculatedAngle).toFixed(1)}deg), Dist=${calculatedDist.toFixed(0)}, Pos=(${attemptPos.x.toFixed(0)}, ${attemptPos.y.toFixed(0)})`); // Verbose log
                      validPos = true;
                      for (let p of this.planets) { if (p5.Vector.dist(attemptPos, p.pos) < minSep) { validPos = false; break; } }
                  } catch(e) { console.error("Error during planet placement calc:", e); validPos = false; break; }
              }
              if (validPos && attemptPos) {
-                 // console.log(`            -> Placing planet ${i + 1} at (${attemptPos.x.toFixed(0)}, ${attemptPos.y.toFixed(0)})`); // Verbose log
-                 try { let sz = random(60, 150); let c1 = color(random(50, 200), random(50, 200), random(50, 200)); let c2 = color(random(50, 200), random(50, 200), random(50, 200)); this.planets.push(new Planet(attemptPos.x, attemptPos.y, sz, c1, c2)); }
+                 try { 
+                     let sz = random(60, 150) * 2; // Double the size
+                     let c1 = color(random(50, 200), random(50, 200), random(50, 200)); 
+                     let c2 = color(random(50, 200), random(50, 200), random(50, 200)); 
+                     this.planets.push(new Planet(attemptPos.x, attemptPos.y, sz, c1, c2)); 
+                 }
                  catch(e) { console.error("Error creating/pushing planet object:", e); }
-             } else { /* console.log(`            -> Failed to place planet ${i + 1}.`); */ } // Verbose log
+             }
          }
-         // console.log(`            <<< Exiting createRandomPlanets... Placed: ${this.planets.length}/${numPlanets}`); // Verbose
     } // End createRandomPlanets
 
     /** Called when player enters system. Resets dynamic objects. */
