@@ -15,14 +15,9 @@ class Planet {
         push();
         translate(this.pos.x, this.pos.y);
 
-        // Simple two-tone drawing
         noStroke();
         fill(this.color1);
         ellipse(0, 0, this.size, this.size);
-
-        // Add a simple crescent/feature
-        fill(this.color2);
-        arc(0, 0, this.size, this.size, PI * 0.8, PI * 1.8); // Example arc
 
         pop();
     }
