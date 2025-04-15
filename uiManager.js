@@ -277,8 +277,15 @@ class UIManager {
             fill(255); noStroke(); textAlign(CENTER, TOP); textSize(12);
             text(sysData.name, sysData.x, sysData.y + nodeR + 5);
             textSize(10);
-            if (sysData.visited || isCurrent) text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
-            else text(`(Unknown)`, sysData.x, sysData.y + nodeR + 20); // Hide info for unvisited
+            if (sysData.visited || isCurrent) {
+                text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
+                // --- Add security level below type ---
+                const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
+                fill(200, 200, 100); // Gold/yellow for visibility
+                text(`Law: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
+            } else {
+                text(`(Unknown)`, sysData.x, sysData.y + nodeR + 20);
+            }
         });
         // --- End Draw System Nodes ---
 

@@ -1,5 +1,20 @@
 // ****** StarSystem.js ******
 
+const POLICE_SHIPS = ["CobraMkIII", "Viper",];
+const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder"]; // Ensure these names exist in SHIP_DEFINITIONS
+
+// --- CORRECTED HAULER LIST ---
+// Removed invalid "Hauler". Adjusted mix slightly. Ensure names match SHIP_DEFINITIONS keys.
+const HAULER_SHIPS = [
+    "Adder", // Common small hauler
+    "Adder",
+    "Type6Transporter", // Common medium hauler
+    "Type6Transporter",
+    "Keelback",         // Combat Trader variant
+    "Python",           // Less common, powerful multi-role/hauler
+    "Type9Heavy"        // Less common, heavy hauler
+];
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -167,32 +182,46 @@ class StarSystem {
     trySpawnNPC(player) {
         if (!player?.pos || this.enemies.length >= this.maxEnemies) return;
 
-        let chosenRole; let chosenShipTypeName;
-        try { // Wrap random selection
-            let roleRoll = random(); const pC=0.45, polC=0.25; if(roleRoll<pC)chosenRole=AI_ROLE.PIRATE;else if(roleRoll<pC+polC)chosenRole=AI_ROLE.POLICE;else chosenRole=AI_ROLE.HAULER;
-            switch(chosenRole) { case AI_ROLE.PIRATE: chosenShipTypeName=random(["Krait","WaspAssault"]);break; case AI_ROLE.POLICE: chosenShipTypeName=random(["CobraMkIII"]);break; case AI_ROLE.HAULER: chosenShipTypeName=random(["Adder","Adder","Python"]);break; default: chosenShipTypeName="Krait"; }
+        // Get probabilities based on security level
+        const probs = this.getEnemyRoleProbabilities();
+        let r = random();
+        let chosenRole;
+        if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
+        else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
+        else chosenRole = AI_ROLE.HAULER;
 
-            // --- Optional Thargoid Override ---
-             const thargoidChance = 0.03; // Keep low
-             if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
-                  // !!! USE THE CORRECT KEY FROM SHIP_DEFINITIONS !!!
-                  chosenShipTypeName = "Thargoid"; // Use "Thargoid", not "Thargoid Interceptor"
-                  // !!! ------------------------------------------ !!!
-                  chosenRole = AI_ROLE.PIRATE; // Treat Thargoid as hostile for basic AI
-                  console.warn("!!! Thargoid Spawn Triggered !!!");
-             }
-             // --- End Thargoid Override ---
+        let chosenShipTypeName;
+        switch (chosenRole) {
+            case AI_ROLE.PIRATE:
+                chosenShipTypeName = random(PIRATE_SHIPS);
+                break;
+            case AI_ROLE.POLICE:
+                chosenShipTypeName = random(POLICE_SHIPS);
+                break;
+            case AI_ROLE.HAULER:
+                chosenShipTypeName = random(HAULER_SHIPS);
+                break;
+            default:
+                chosenShipTypeName = "Krait";
+        }
 
-        } catch (e) { console.error("Error during NPC role/type selection:", e); chosenShipTypeName = "Krait"; chosenRole = AI_ROLE.PIRATE; } // Fallback on error
+        // --- Optional Thargoid Override ---
+        const thargoidChance = 0.03;
+        if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
+            chosenShipTypeName = "Thargoid";
+            chosenRole = AI_ROLE.PIRATE;
+            console.warn("!!! Thargoid Spawn Triggered !!!");
+        }
+        // --- End Thargoid Override ---
 
-        // console.log(`Attempting to spawn a ${chosenRole} (${chosenShipTypeName})...`); // Verbose log
-
-        let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(150,400);
-        let spawnX = player.pos.x + cos(angle)*spawnDist; let spawnY = player.pos.y + sin(angle)*spawnDist;
+        let angle = random(TWO_PI);
+        let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(150,400);
+        let spawnX = player.pos.x + cos(angle)*spawnDist;
+        let spawnY = player.pos.y + sin(angle)*spawnDist;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, player, chosenShipTypeName, chosenRole);
-            newEnemy.calculateRadianProperties(); // Calculate radians
-            newEnemy.initializeColors(); // Initialize colors
+            newEnemy.calculateRadianProperties();
+            newEnemy.initializeColors();
             this.enemies.push(newEnemy);
         } catch(e) { console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); }
     }
@@ -309,6 +338,22 @@ class StarSystem {
          }
          console.warn(`Cannot get missions for ${this.name}: Missing station, MissionGenerator, galaxy, or player.`);
          return []; // Return empty if cannot generate
+    }
+
+    getEnemyRoleProbabilities() {
+        // Adjust these as needed for your game balance
+        switch ((this.securityLevel || '').toLowerCase()) {
+            case 'high':
+                return { PIRATE: 0.15, POLICE: 0.55, HAULER: 0.3 };
+            case 'medium':
+                return { PIRATE: 0.35, POLICE: 0.35, HAULER: 0.3 };
+            case 'low':
+                return { PIRATE: 0.55, POLICE: 0.2, HAULER: 0.25 };
+            case 'anarchy':
+                return { PIRATE: 0.8, POLICE: 0.05, HAULER: 0.15 };
+            default:
+                return { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
+        }
     }
 
 } // End of StarSystem Class
