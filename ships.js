@@ -50,8 +50,20 @@ function drawAdder(s, thrusting = false) {
 }
 function drawKrait(s, thrusting = false) { // REVERTED NAME
      let r = s / 2; let def = SHIP_DEFINITIONS.Krait; // REVERTED NAME
-     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+     fill(100, 120, 100);
+    stroke(140, 160, 140);
+    strokeWeight(1);
+    beginShape();
+    vertex(r * 0.855, r * 0.000);
+    vertex(r * 0.055, r * 0.600);
+    vertex(r * -0.454, r * 0.597);
+    vertex(r * -0.448, r * -0.599);
+    vertex(r * 0.055, r * -0.600);
+    endShape(CLOSE);
+
+    // --- Engine glow (copied from original base: Krait) ---
     if (thrusting) { fill(180, 180, 100); noStroke(); ellipse(-r*0.7, r*0.3, r*0.3, r*0.2); ellipse(-r*0.7, -r*0.3, r*0.3, r*0.2); }
+
 }
 function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     let r = s / 2;
@@ -67,7 +79,6 @@ function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     ellipse(0, 0, r*0.5, r*0.5);
 }
 
-// --- First Batch of Added Ships ---
 function drawAspExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.AspExplorer;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
@@ -118,8 +129,6 @@ function drawImperialClipper(s, thrusting = false) {
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(80, 180, 255); noStroke(); ellipse(-r * 0.7, r * 0.6, r * 0.5, r * 0.25); ellipse(-r * 0.7, -r * 0.6, r * 0.5, r * 0.25); }
 }
-
-// --- Second Batch of Added Ships (15 New) ---
 
 function drawShardInterceptor(s, thrusting = false) { // Alien 1
     let r = s / 2; let def = SHIP_DEFINITIONS.ShardInterceptor;
@@ -372,13 +381,23 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawKeelback, vertexData: [ { x: 0.7, y: 0 }, { x: 0.5, y: 0.6 }, { x: -0.2, y: 0.7 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.7 }, { x: -1.0, y: -0.7 }, { x: -0.8, y: -0.9 }, { x: -0.2, y: -0.7 }, { x: 0.5, y: -0.6 } ],
         fillColor: [180, 150, 80], strokeColor: [100, 80, 40], strokeW: 1.5
     },
-    "Krait": { // REVERTED NAME from KraitMkII
-        name: "Krait", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
-        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 3.8, baseHull: 160, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
-        armament: "3 Large, 2 Med Fwd", costCategory: "High", description: "A popular multi-role ship, capable in combat and can launch fighters.",
-        drawFunction: drawKrait, // Uses the same draw function
-         vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
-        fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5
+    "Krait": {
+        name: "Krait", role: "Light Fighter", sizeCategory: "Small", size: 22,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRateDegrees: 4.2,
+        baseHull: 40, baseShield: 40, shieldRecharge: 1.3, cargoCapacity: 4,
+        armament: "2 Small Fwd?", costCategory: "Very Low",
+        description: "Cheap, fast, fragile fighter often used by pirates.",
+        drawFunction: drawKrait,
+         vertexData: [
+            { x: 1, y: 0 },
+            { x: 0.2, y: 0.6 },
+            { x: -0.8, y: 0.6 },
+            { x: -0.8, y: -0.6 },
+            { x: 0.2, y: -0.6 }
+        ],
+        fillColor: [100, 120, 100],
+        strokeColor: [140, 160, 140],
+        strokeW: 1
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
