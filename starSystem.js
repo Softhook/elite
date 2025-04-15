@@ -134,36 +134,52 @@ class StarSystem {
     }
 // --- End initStaticElements method ---
 
-    /** Creates random planets using seeded random. Called by initStaticElements. Includes position logging. */
+    /** Creates random planets using seeded random. Called by initStaticElements. */
     createRandomPlanets() {
-         // Increase distances for planets
-         let numPlanets = 1; try { numPlanets = floor(random(2, 7)); } catch(e) {}
-         let minD = 1200; // Was 600, now doubled
-         let maxD = this.despawnRadius * 1.8; // Was 0.9, now doubled
-         let minSep = 600; // Was 300, now doubled
-         this.planets = [];
-         for (let i = 0; i < numPlanets; i++) {
-             let validPos = false; let attemptPos; let attempts = 0; const maxAttempts = 100;
-             let calculatedAngle = NaN, calculatedDist = NaN;
-             while (!validPos && attempts < maxAttempts) {
-                 attempts++;
-                 try {
-                     calculatedAngle = random(TWO_PI); calculatedDist = random(minD, maxD);
-                     attemptPos = createVector(cos(calculatedAngle) * calculatedDist, sin(calculatedAngle) * calculatedDist);
-                     validPos = true;
-                     for (let p of this.planets) { if (p5.Vector.dist(attemptPos, p.pos) < minSep) { validPos = false; break; } }
-                 } catch(e) { console.error("Error during planet placement calc:", e); validPos = false; break; }
-             }
-             if (validPos && attemptPos) {
-                 try { 
-                     let sz = random(60, 150) * 2; // Double the size
-                     let c1 = color(random(50, 200), random(50, 200), random(50, 200)); 
-                     let c2 = color(random(50, 200), random(50, 200), random(50, 200)); 
-                     this.planets.push(new Planet(attemptPos.x, attemptPos.y, sz, c1, c2)); 
-                 }
-                 catch(e) { console.error("Error creating/pushing planet object:", e); }
-             }
-         }
+        // Clear any previous planets and add the central star at (0,0)
+        this.planets = [];
+        this.planets.push(Planet.createSun());
+
+        let numPlanets = floor(random(2, 7));
+        let minOrbit = 1200;
+        let maxOrbit = this.despawnRadius * 1.8;
+
+        // Get a base rotation for the system (in radians)
+        let baseAngle = random(TWO_PI);
+
+        for (let i = 0; i < numPlanets; i++) {
+            // Calculate the orbit angle in radians with a small random offset
+            let angleRad = baseAngle + (TWO_PI / numPlanets) * i + random(-0.1, 0.1);
+            // Determine a random orbit radius
+            let orbitRadius = random(minOrbit, maxOrbit);
+            // Because the global angleMode is DEGREES, convert the radian value to degrees
+            let angleDeg = degrees(angleRad);
+            let px = cos(angleDeg) * orbitRadius;
+            let py = sin(angleDeg) * orbitRadius;
+
+            let sz = random(60, 150) * 2;
+            let c1 = color(random(50, 200), random(50, 200), random(50, 200));
+            let c2 = color(random(50, 200), random(50, 200), random(50, 200));
+
+            // Create the planet with the computed world coordinates
+            let planet = new Planet(px, py, sz, c1, c2);
+            this.planets.push(planet);
+
+            console.log(`Planet ${i}: angleRad=${angleRad.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}`);
+        }
+
+        // Position the station near a random planet (do not use the star at index 0)
+        if (this.station && this.planets.length > 1) {
+            let randomIndex = floor(random(1, this.planets.length));
+            let chosenPlanet = this.planets[randomIndex];
+            // Use atan2 to determine the angle of the chosen planet relative to (0,0)
+            let angleDeg = atan2(chosenPlanet.pos.y, chosenPlanet.pos.x);
+            // Convert back to radians for the p5.Vector.fromAngle() function (which expects radians)
+            let angleRad = radians(angleDeg);
+            let offsetDistance = chosenPlanet.size * 1.5 + 80; // Ensure the station is offset a bit
+            let offset = p5.Vector.fromAngle(angleRad).mult(offsetDistance);
+            this.station.pos = p5.Vector.add(chosenPlanet.pos, offset);
+        }
     } // End createRandomPlanets
 
     /** Called when player enters system. Resets dynamic objects. */

@@ -52,6 +52,14 @@ class Planet {
         this.currentRotation = random(TWO_PI);
     }
 
+    // Add a static method that creates the sun (at 0,0)
+    static createSun() {
+        let sunSize = 400;  // Adjust as needed
+        let sunColor1 = color(255, 255, 100);  // Bright yellow
+        let sunColor2 = color(255, 200, 100);
+        return new Planet(0, 0, sunSize, sunColor1, sunColor2);
+    }
+
     draw() {
         push(); // Isolate transformations for the entire planet/ring system
         translate(this.pos.x, this.pos.y);
