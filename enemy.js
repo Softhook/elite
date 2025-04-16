@@ -463,7 +463,7 @@ class Enemy {
             // If close enough OR moving very slowly, start counting down a wait timer.
             if (distance < arrivalThreshold || this.vel.mag() < slowSpeedThreshold) {
                 if (this.waitTimer === 0) {
-                    this.waitTimer = random(500, 1500); // wait duration in milliseconds
+                    this.waitTimer = random(1000, 3600); // wait duration in milliseconds
                     console.log(`Transporter ${this.shipTypeName} arrived. Waiting for ${(this.waitTimer / 1000).toFixed(2)}s before turning.`);
                 } else {
                     this.waitTimer -= deltaTime;
