@@ -186,6 +186,10 @@ class StarSystem {
             this.visited = true;
             this.economyType = this.actualEconomy;
             console.log(`${this.name} discovered! Economy set to ${this.economyType}`);
+            if (this.station && this.station.market) {
+                this.station.market.systemType = this.economyType;
+                this.station.market.updatePrices();
+            }
         }
     }
 

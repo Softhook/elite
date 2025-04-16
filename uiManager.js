@@ -50,6 +50,14 @@ class UIManager {
          push();
          let pX=width*0.2, pY=height*0.2, pW=width*0.6, pH=height*0.6; fill(20,20,50,220); stroke(100,100,255); rect(pX,pY,pW,pH,10); // Panel
          fill(255); textSize(24); textAlign(CENTER,TOP); text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20); // Title
+
+         // --- Add system type and lawlessness ---
+         let system = galaxy?.getCurrentSystem();
+         let econ = system?.economyType || station.market.systemType || "Unknown";
+         let law = system?.securityLevel || "Unknown";
+         textSize(16); textAlign(CENTER,TOP);
+         text(`System Type: ${econ}   |   Law Level: ${law}`, pX+pW/2, pY+55);
+
          let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+80, btnSp=btnH+15; // Buttons layout
          const menuOpts = [ { text: "Commodity Market", state: "VIEWING_MARKET" }, { text: "Mission Board", state: "VIEWING_MISSIONS" }, { text: "Undock", action: "UNDOCK" } ];
          menuOpts.forEach((opt, i) => { let btnY=btnSY+i*btnSp; fill(50,50,90); stroke(150,150,200); rect(btnX,btnY,btnW,btnH,5); fill(220); textSize(18); textAlign(CENTER,CENTER); noStroke(); text(opt.text, btnX+btnW/2, btnY+btnH/2); let d={x:btnX,y:btnY,w:btnW,h:btnH,text:opt.text}; if(opt.state)d.state=opt.state; if(opt.action)d.action=opt.action; this.stationMenuButtonAreas.push(d); }); // Store button data
