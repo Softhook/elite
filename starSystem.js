@@ -1,13 +1,21 @@
 // ****** StarSystem.js ******
 
-const POLICE_SHIPS = ["CobraMkIII", "Viper",];
-const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder"]; // Ensure these names exist in SHIP_DEFINITIONS
+const POLICE_SHIPS = ["CobraMkIII"];
+const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder", "ShardInterceptor", "GnatInterceptor"]; // Ensure these names exist in SHIP_DEFINITIONS
 
 // --- CORRECTED HAULER LIST ---
 // Removed invalid "Hauler". Adjusted mix slightly. Ensure names match SHIP_DEFINITIONS keys.
 const HAULER_SHIPS = [
     "Adder", // Common small hauler
     "Adder",
+    "Anaconda",
+    "DiamondbackExplorer",
+    "ImperialClipper",
+    "Viper",
+    "FederalAssaultShip",
+    "Viper",
+    "PathfinderSurvey",
+    "StarlinerCruiser", // Passenger variant
     "Type6Transporter", // Common medium hauler
     "Type6Transporter",
     "Keelback",         // Combat Trader variant
