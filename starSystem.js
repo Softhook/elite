@@ -15,6 +15,9 @@ const HAULER_SHIPS = [
     "Type9Heavy"        // Less common, heavy hauler
 ];
 
+const TRANSPORT_SHIPS = ["ProspectorMiner", "MuleFreighter"]; // Ensure these names exist in SHIP_DEFINITIONS
+
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -226,7 +229,7 @@ class StarSystem {
         // --- New transport spawn branch (15% chance) ---
         if (random() < 0.25) {
             chosenRole = AI_ROLE.TRANSPORT;
-            chosenShipTypeName = "Sidewinder";
+            chosenShipTypeName = random(TRANSPORT_SHIPS);
         }
 
         // --- Optional Thargoid Override ---
