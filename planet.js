@@ -22,7 +22,7 @@ class Planet {
         this.featureColor1 = color2 || lerpColor(this.baseColor, color(random(255)), 0.3);
         // Generate a second feature color deterministically
         let c1r = red(this.baseColor); let c1g = green(this.baseColor); let c1b = blue(this.baseColor);
-        this.featureColor2 = color( (c1r * 0.8 + random(50))%255, (c1g * 0.7 + random(60))%255, (c1b * 0.9 + random(40))%255);
+        this.featureColor2 = color( (c1r * 0.8 + random(50)) % 255, (c1g * 0.7 + random(60)) % 255, (c1b * 0.9 + random(40)) % 255);
 
         this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
 
@@ -47,9 +47,25 @@ class Planet {
         }
         // --- End Rings Restored ---
 
-        // Rotation
-        this.rotationSpeed = random(-0.001, 0.001);
-        this.currentRotation = random(TWO_PI);
+        // Stop rotation for all planets.
+        this.rotationSpeed = 0;
+        this.currentRotation = 0;
+
+        // Initialize shadowOffset to null. It will be set later.
+        this.shadowOffset = null;
+    }
+
+    // Call this method once you know the sun's position.
+    computeShadowOffset(sunPos) {
+        if (sunPos && sunPos instanceof p5.Vector) {
+            let toSun = p5.Vector.sub(sunPos, this.pos);
+            toSun.normalize();
+            // Compute the shadow offset once.
+            this.shadowOffset = toSun.mult(-this.size * 0.15);
+        } else {
+            // Fallback default
+            this.shadowOffset = createVector(this.size * -0.075, this.size * 0.075);
+        }
     }
 
     // Add a static method that creates the sun (at 0,0)
@@ -57,11 +73,13 @@ class Planet {
         let sunSize = 400;  // Adjust as needed
         let sunColor1 = color(255, 255, 100);  // Bright yellow
         let sunColor2 = color(255, 200, 100);
-        return new Planet(0, 0, sunSize, sunColor1, sunColor2);
+        let sun = new Planet(0, 0, sunSize, sunColor1, sunColor2);
+        sun.isSun = true; // Mark this planet as the sun.
+        return sun;
     }
 
-    draw() {
-        push(); // Isolate transformations for the entire planet/ring system
+    draw(sunPos) {
+        push();
         translate(this.pos.x, this.pos.y);
 
         // 1. Atmosphere (Drawn first, behind everything)
@@ -93,12 +111,23 @@ class Planet {
         this.drawPlanetHalf(true); // isTopHalf = true
 
         // 5. Shading (Apply last, relative to view)
-        // (Optional: Could also be applied within drawPlanetHalf)
-        noStroke();
-        fill(0, 0, 0, 55);
-        let shadowOffsetX = this.size * -0.075; // Adjusted offset for better look
-        let shadowOffsetY = this.size * 0.075;
-        ellipse(shadowOffsetX, shadowOffsetY, this.size * 1.05, this.size * 1.05);
+        // Re-orient shadow so that it faces away from the sun if sunPos is provided.
+        if (!this.isSun) {
+            noStroke();
+            fill(0, 0, 0, 55);
+            // Ensure shadowOffset is computed only once.
+            if (!this.shadowOffset) {
+                // Compute once if it hasn't been set.
+                if (sunPos && sunPos instanceof p5.Vector) {
+                    let toSun = p5.Vector.sub(sunPos, this.pos);
+                    toSun.normalize();
+                    this.shadowOffset = toSun.mult(-this.size * 0.15);
+                } else {
+                    this.shadowOffset = createVector(this.size * -0.075, this.size * 0.075);
+                }
+            }
+            ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
+        }
 
         pop(); // Restore overall matrix
     }

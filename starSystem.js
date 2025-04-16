@@ -335,18 +335,35 @@ class StarSystem {
 
     /** Draws the entire system centered on the player. */
     draw(player) {
-        if (!player || !player.pos || isNaN(player.pos.x) || isNaN(player.pos.y)) return;
-        push(); let tx = width / 2 - player.pos.x; let ty = height / 2 - player.pos.y;
-        if(isNaN(tx) || isNaN(ty)) { tx = 0; ty = 0;} translate(tx, ty);
-        try { // Wrap drawing calls
-            this.drawBackground();
-            if (this.station) this.station.draw();
-            this.planets.forEach(p => p?.draw()); this.asteroids.forEach(a => a?.draw());
-            this.enemies.forEach(e => e?.draw());
-            this.projectiles.forEach(proj => proj.draw());
-            player.draw();
-        } catch (e) { console.error(`Error during StarSystem ${this.name} world element drawing:`, e); }
-        finally { pop(); } // Ensure pop() runs
+        if (!player || !player.pos) return;
+        push();
+        let tx = width / 2 - player.pos.x;
+        let ty = height / 2 - player.pos.y;
+        translate(tx, ty);
+        // Optionally set default tx/ty if needed
+        // Draw background, station, etc.
+        this.drawBackground();
+        if (this.station) this.station.draw();
+        
+        // Determine sun position using the first planet if it exists.
+        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
+        
+        // Draw each planet passing the sunPos.
+        this.planets.forEach(p => {
+            if (p) {
+                // Compute shadowOffset only once if it hasn't been set.
+                if (!p.shadowOffset && !p.isSun) {
+                    p.computeShadowOffset(sunPos);
+                }
+                p.draw(sunPos);
+            }
+        });
+        
+        this.asteroids.forEach(a => { if (a) a.draw(); });
+        this.enemies.forEach(e => { if (e) e.draw(); });
+        this.projectiles.forEach(proj => proj.draw());
+        player.draw();
+        pop();
     }
 
     // --- Save/Load System State ---
