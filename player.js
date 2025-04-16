@@ -236,23 +236,33 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
 
     /** Applies base stats and calculates Radian properties. */
-    applyShipDefinition(typeName) {
-        // console.log(`Player applying definition for: ${typeName}`); // Optional log
-        const shipDef = SHIP_DEFINITIONS[typeName] || SHIP_DEFINITIONS[this.shipTypeName] || SHIP_DEFINITIONS["Sidewinder"];
-        typeName = shipDef.name; // Ensure typeName matches the actual definition used
-
-        this.shipTypeName = typeName; this.size = shipDef.size; this.maxSpeed = shipDef.baseMaxSpeed;
-        this.thrustForce = shipDef.baseThrust; this.rotationSpeedDegrees = shipDef.baseTurnRateDegrees;
-        this.maxHull = shipDef.baseHull; this.cargoCapacity = shipDef.cargoCapacity;
-
-        try {
-             this.rotationSpeed = radians(this.rotationSpeedDegrees); // Calculate radians/frame
-             if (isNaN(this.rotationSpeed)) throw new Error("radians() resulted in NaN");
-        } catch (e) {
-             console.error(`Error converting degrees to radians for Player ${this.shipTypeName}:`, e);
-             this.rotationSpeed = 0.06; // Fallback radians value
+    applyShipDefinition(shipTypeName) {
+        this.shipTypeName = shipTypeName;
+        const def = SHIP_DEFINITIONS[shipTypeName];
+        if (!def) {
+            console.error("Unknown ship type:", shipTypeName);
+            return;
         }
-        // console.log(` Applied definition: RotSpeed=${this.rotationSpeed.toFixed(4)} rad/f`); // Optional log
+        // Copy all relevant stats
+        this.shipDefinition = def;
+        this.size = def.size;
+        this.maxSpeed = def.baseMaxSpeed;
+        this.thrustForce = def.baseThrust;
+        this.rotationSpeedDegrees = def.baseTurnRateDegrees;
+        this.maxHull = def.baseHull;
+        this.hull = def.baseHull;
+        this.cargoCapacity = def.cargoCapacity;
+        this.weaponSlots = def.weaponSlots;
+        // ...copy any other relevant properties...
+
+        // Recalculate any derived properties
+        this.calculateRadianProperties && this.calculateRadianProperties();
+        this.updateShipVisual && this.updateShipVisual();
+    }
+
+    calculateRadianProperties() {
+        this.rotationSpeed = radians(this.rotationSpeedDegrees);
+        // Other conversions can go here if needed.
     }
 
     /** Handles mouse click for firing attempt. */

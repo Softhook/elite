@@ -215,6 +215,14 @@ function mousePressed() {
         player.handleFireInput();
     }
 }
+
+function mouseWheel(event) {
+    if (uiManager && gameStateManager) {
+        if (uiManager.handleMouseWheel(event, gameStateManager.currentState)) {
+            return false; // prevent default
+        }
+    }
+}
 // --- End Input Handling ---
 
 

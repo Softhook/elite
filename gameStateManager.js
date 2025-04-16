@@ -82,18 +82,24 @@ class GameStateManager {
                 } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }
                 break;
 
-            case "DOCKED": // Main station menu state - waits for UI clicks
+            case "DOCKED":
                 if (player) { player.vel.set(0, 0); } break;
 
-            case "VIEWING_MARKET": // Waits for UI clicks
+            case "VIEWING_MARKET":
                 if (!currentSystem?.station) { this.setState("DOCKED"); break; } if (player) { player.vel.set(0, 0); } break;
 
-            case "VIEWING_MISSIONS": // Waits for UI clicks
+            case "VIEWING_MISSIONS":
                 if (!currentSystem?.station) { this.setState("DOCKED"); break; } if (player) { player.vel.set(0, 0); } break;
 
-            case "GALAXY_MAP": /* UI handles clicks */ break;
+            case "VIEWING_SHIPYARD":
+            case "VIEWING_UPGRADES":
+                // No update logic needed, just wait for UI clicks
+                break;
 
-            case "JUMPING": // Handle hyperspace jump sequence
+            case "GALAXY_MAP":
+                break;
+
+            case "JUMPING":
                 if (!galaxy || this.jumpTargetSystemIndex < 0 || this.jumpTargetSystemIndex >= galaxy.systems.length) { this.setState("IN_FLIGHT"); break; } // Validate jump state
                 this.jumpChargeTimer += deltaTime / 1000; // Increment timer
                 if (this.jumpChargeTimer >= this.jumpChargeDuration) { // Check if jump complete
@@ -101,9 +107,14 @@ class GameStateManager {
                 }
                 break;
 
-             case "GAME_OVER": /* Passive state, waits for UI click */ break;
-            case "LOADING": /* Passive state, handled by setup */ break;
-            default: console.warn(`Unknown game state in update(): ${this.currentState}`); this.setState("IN_FLIGHT"); break;
+             case "GAME_OVER":
+             case "LOADING":
+                break;
+
+            default:
+                console.warn(`Unknown game state in update(): ${this.currentState}`);
+                this.setState("IN_FLIGHT");
+                break;
         }
     } // End of update method
 
@@ -140,7 +151,15 @@ class GameStateManager {
                  if (uiManager && currentSystem?.station && player) { try { uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player); } catch(e) { console.error("Error drawing mission board:", e); } }
                  break;
 
-            // TODO: Add drawing cases for VIEWING_SHIPYARD, VIEWING_SERVICES later
+            case "VIEWING_SHIPYARD":
+                if (uiManager && player) uiManager.drawShipyardMenu(player);
+                break;
+
+            case "VIEWING_UPGRADES":
+                if (uiManager && player) uiManager.drawUpgradesMenu(player);
+                break;
+
+            // TODO: Add drawing cases for VIEWING_SERVICES later
 
             case "GALAXY_MAP":
                  if (uiManager && galaxy && player) { try { uiManager.drawGalaxyMap(galaxy, player); } catch(e) { console.error("Error drawing galaxy map:", e); } }

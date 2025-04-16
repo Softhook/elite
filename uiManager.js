@@ -12,6 +12,8 @@ class UIManager {
         this.marketBackButtonArea = {}; // { x, y, w, h }
         this.shipyardListAreas = []; // Placeholder
         this.shipyardDetailButtons = {}; // Placeholder
+        this.upgradeListAreas = []; // Placeholder
+        this.upgradeDetailButtons = {}; // Placeholder
 
         // --- UI State ---
         this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
@@ -23,6 +25,10 @@ class UIManager {
         this.minimapY = 0; // Calculated in drawMinimap (now bottom right)
         this.minimapWorldViewRange = 5000; // World units shown across minimap width/height
         this.minimapScale = 1; // Calculated pixels per world unit
+
+        // --- Shipyard Scroll Properties ---
+        this.shipyardScrollOffset = 0;
+        this.shipyardScrollMax = 0;
     }
 
     /** Draws the Heads-Up Display (HUD) during flight */
@@ -45,23 +51,40 @@ class UIManager {
 
     /** Draws the Main Station Menu (when state is DOCKED) */
     drawStationMainMenu(station, player) {
-         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
-         this.stationMenuButtonAreas = []; // Clear old button definitions
-         push();
-         let pX=width*0.2, pY=height*0.2, pW=width*0.6, pH=height*0.6; fill(20,20,50,220); stroke(100,100,255); rect(pX,pY,pW,pH,10); // Panel
-         fill(255); textSize(24); textAlign(CENTER,TOP); text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20); // Title
+        if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
+        this.stationMenuButtonAreas = [];
+        push();
+        let pX=width*0.2, pY=height*0.2, pW=width*0.6, pH=height*0.6;
+        fill(20,20,50,220); stroke(100,100,255); rect(pX,pY,pW,pH,10);
+        fill(255); textSize(24); textAlign(CENTER,TOP);
+        text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20);
 
-         // --- Add system type and lawlessness ---
-         let system = galaxy?.getCurrentSystem();
-         let econ = system?.economyType || station.market.systemType || "Unknown";
-         let law = system?.securityLevel || "Unknown";
-         textSize(16); textAlign(CENTER,TOP);
-         text(`System Type: ${econ}   |   Law Level: ${law}`, pX+pW/2, pY+55);
+        // System type and law level as before...
+        let system = galaxy?.getCurrentSystem();
+        let econ = system?.economyType || station.market.systemType || "Unknown";
+        let law = system?.securityLevel || "Unknown";
+        textSize(16); textAlign(CENTER,TOP);
+        text(`System Type: ${econ}   |   Law Level: ${law}`, pX+pW/2, pY+55);
 
-         let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+80, btnSp=btnH+15; // Buttons layout
-         const menuOpts = [ { text: "Commodity Market", state: "VIEWING_MARKET" }, { text: "Mission Board", state: "VIEWING_MISSIONS" }, { text: "Undock", action: "UNDOCK" } ];
-         menuOpts.forEach((opt, i) => { let btnY=btnSY+i*btnSp; fill(50,50,90); stroke(150,150,200); rect(btnX,btnY,btnW,btnH,5); fill(220); textSize(18); textAlign(CENTER,CENTER); noStroke(); text(opt.text, btnX+btnW/2, btnY+btnH/2); let d={x:btnX,y:btnY,w:btnW,h:btnH,text:opt.text}; if(opt.state)d.state=opt.state; if(opt.action)d.action=opt.action; this.stationMenuButtonAreas.push(d); }); // Store button data
-         pop();
+        let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+80, btnSp=btnH+15;
+        const menuOpts = [
+            { text: "Commodity Market", state: "VIEWING_MARKET" },
+            { text: "Mission Board", state: "VIEWING_MISSIONS" },
+            { text: "Shipyard", state: "VIEWING_SHIPYARD" },           // NEW
+            { text: "Upgrades", state: "VIEWING_UPGRADES" },           // NEW
+            { text: "Undock", action: "UNDOCK" }
+        ];
+        menuOpts.forEach((opt, i) => {
+            let btnY=btnSY+i*btnSp;
+            fill(50,50,90); stroke(150,150,200); rect(btnX,btnY,btnW,btnH,5);
+            fill(220); textSize(18); textAlign(CENTER,CENTER); noStroke();
+            text(opt.text, btnX+btnW/2, btnY+btnH/2);
+            let d={x:btnX,y:btnY,w:btnW,h:btnH,text:opt.text};
+            if(opt.state) d.state=opt.state;
+            if(opt.action) d.action=opt.action;
+            this.stationMenuButtonAreas.push(d);
+        });
+        pop();
     } // --- End drawStationMainMenu ---
 
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
@@ -456,7 +479,22 @@ class UIManager {
 
         // --- DOCKED State (Main Station Menu) ---
         if (currentState === "DOCKED") {
-            for (const btn of this.stationMenuButtonAreas) { if (this.isClickInArea(mx, my, btn)) { if (btn.action === "UNDOCK") { if(gameStateManager)gameStateManager.setState("IN_FLIGHT"); return true; } else if (btn.state === "VIEWING_MARKET") { if(gameStateManager)gameStateManager.setState(btn.state); return true; } else if (btn.state === "VIEWING_MISSIONS") { if (gameStateManager?.fetchStationMissions(player)) { gameStateManager.setState(btn.state); } else { /* Fetch failed? Stay docked */ } return true; } else if (btn.state) { console.warn(`State ${btn.state} not handled.`); return true; } } } return false;
+            for (const btn of this.stationMenuButtonAreas) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "UNDOCK") {
+                        if(gameStateManager)gameStateManager.setState("IN_FLIGHT");
+                        return true;
+                    } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
+                               btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES") {
+                        if(gameStateManager)gameStateManager.setState(btn.state);
+                        return true;
+                    } else if (btn.state) {
+                        console.warn(`State ${btn.state} not handled.`);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
         // --- VIEWING_MARKET State ---
         else if (currentState === "VIEWING_MARKET") {
@@ -525,6 +563,51 @@ class UIManager {
             }
             return handled; // Return true if any mission board interaction occurred
         }
+        // --- VIEWING_SHIPYARD State ---
+        else if (currentState === "VIEWING_SHIPYARD") {
+            for (const area of this.shipyardListAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (player.credits >= area.price) {
+                        player.spendCredits(area.price);
+                        player.applyShipDefinition(area.shipType);
+                        saveGame && saveGame();
+                        alert(`You bought a ${area.shipType}!`);
+                    } else {
+                        alert("Not enough credits!");
+                    }
+                    return true;
+                }
+            }
+            // Back button
+            if (this.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
+                gameStateManager.setState("DOCKED");
+                return true;
+            }
+            return false;
+        }
+        // --- VIEWING_UPGRADES State ---
+        else if (currentState === "VIEWING_UPGRADES") {
+            for (const area of this.upgradeListAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (player.credits >= area.upgrade.price) {
+                        player.spendCredits(area.upgrade.price);
+                        // You would add the weapon to the player's upgrades here
+                        // e.g. player.addUpgrade(area.upgrade)
+                        saveGame && saveGame();
+                        alert(`You bought the ${area.upgrade.name}!`);
+                    } else {
+                        alert("Not enough credits!");
+                    }
+                    return true;
+                }
+            }
+            // Back button
+            if (this.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
+                gameStateManager.setState("DOCKED");
+                return true;
+            }
+            return false;
+        }
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy); }
         // --- GAME_OVER State ---
@@ -569,5 +652,107 @@ class UIManager {
         this.selectedSystemIndex = -1; // Clear selection if clicking empty space
         return false; // Allow click to pass through if needed elsewhere? For now, false.
     } // End handleGalaxyMapClicks
+
+    /** Draws the Shipyard Menu (when state is VIEWING_SHIPYARD) */
+    drawShipyardMenu(player) {
+        if (!player) return;
+        this.shipyardListAreas = [];
+        push();
+        let pX=width*0.25, pY=height*0.18, pW=width*0.5, pH=height*0.64;
+        fill(30,30,60,230); stroke(100,200,255); rect(pX,pY,pW,pH,10);
+        fill(255); textSize(24); textAlign(CENTER,TOP);
+        text("Shipyard", pX+pW/2, pY+20);
+
+        // List all ships from SHIP_DEFINITIONS
+        let ships = Object.values(SHIP_DEFINITIONS);
+        let rowH = 40, startY = pY+60, visibleRows = floor((pH-120)/rowH);
+        let totalRows = ships.length;
+        let scrollAreaH = visibleRows * rowH;
+        this.shipyardScrollMax = max(0, totalRows - visibleRows);
+
+        // Clamp scroll offset
+        this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
+
+        // Draw visible ships
+        let firstRow = this.shipyardScrollOffset;
+        let lastRow = min(firstRow + visibleRows, totalRows);
+        textSize(16);
+        for (let i = firstRow; i < lastRow; i++) {
+            let ship = ships[i];
+            let y = startY + (i-firstRow)*rowH;
+            fill(60,60,100); stroke(120,180,255); rect(pX+20, y, pW-40, rowH-6, 5);
+            fill(255); noStroke(); textAlign(LEFT,CENTER);
+            let price = ship.price || (ship.baseHull*20+ship.cargoCapacity*10+1000);
+            text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr`, pX+30, y+rowH/2);
+            this.shipyardListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, shipType:ship.name, price});
+        }
+
+        // Draw scrollbar if needed
+        if (this.shipyardScrollMax > 0) {
+            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
+            fill(60,60,100); stroke(120,180,255); rect(barX, barY, barW, barH, 6);
+            let handleH = max(30, barH * (visibleRows / totalRows));
+            let handleY = barY + (barH-handleH) * (this.shipyardScrollOffset / this.shipyardScrollMax);
+            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
+            // Store for click/drag
+            this.shipyardScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
+        } else {
+            this.shipyardScrollbarArea = null;
+        }
+
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
+        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        text("Back", backX+backW/2, backY+backH/2);
+        this.shipyardDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
+        pop();
+    }
+
+    /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
+    drawUpgradesMenu(player) {
+        if (!player) return;
+        this.upgradeListAreas = [];
+        push();
+        let pX=width*0.28, pY=height*0.22, pW=width*0.44, pH=height*0.56;
+        fill(40,30,60,230); stroke(200,100,255); rect(pX,pY,pW,pH,10);
+        fill(255); textSize(24); textAlign(CENTER,TOP);
+        text("Upgrades", pX+pW/2, pY+20);
+
+        // Example upgrades (weapons from ships.js)
+        const upgrades = [
+            { name: "Pulse Laser", price: 1200, dps: 10, desc: "Standard energy weapon." },
+            { name: "Beam Laser", price: 2500, dps: 16, desc: "Continuous beam, high energy use." },
+            { name: "Multi-Cannon", price: 1800, dps: 13, desc: "Ballistic, good vs hull." },
+            { name: "Railgun", price: 4000, dps: 22, desc: "High damage, slow fire." }
+        ];
+        let rowH = 38, startY = pY+60;
+        textSize(15);
+        upgrades.forEach((upg, i) => {
+            let y = startY + i*rowH;
+            fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
+            fill(255); noStroke(); textAlign(LEFT,CENTER);
+            text(`${upg.name}  |  DPS: ${upg.dps}  |  Price: ${upg.price}cr  |  ${upg.desc}`, pX+30, y+rowH/2);
+            this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
+        });
+
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
+        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        text("Back", backX+backW/2, backY+backH/2);
+        this.upgradeDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
+        pop();
+    }
+
+    /** Handles mouse wheel events for scrolling */
+    handleMouseWheel(event, currentState) {
+        if (currentState === "VIEWING_SHIPYARD" && this.shipyardScrollMax > 0) {
+            this.shipyardScrollOffset += event.deltaY > 0 ? 1 : -1;
+            this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
+            return true;
+        }
+        return false;
+    }
 
 } // End of UIManager Class

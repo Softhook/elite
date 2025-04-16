@@ -62,4 +62,13 @@ class Station {
         }
         return s;
     }
+
+    purchaseShip(player, area) {
+        if (player.credits >= area.price) {
+            player.spendCredits(area.price);
+            player.applyShipDefinition(area.shipType);
+            saveGame && saveGame();
+            alert(`You bought a ${area.shipType}!`);
+        }
+    }
 }
