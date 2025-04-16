@@ -10,7 +10,7 @@ const WEAPON_UPGRADES = [
         name: "Beam Laser",
         damage: 16,
         color: [0, 200, 255], // Cyan
-        fireRate: 0.6,
+        fireRate: 0.1,
         desc: "Continuous beam, high energy use."
     },
     {
@@ -22,7 +22,7 @@ const WEAPON_UPGRADES = [
     },
     {
         name: "Railgun",
-        damage: 22,
+        damage: 50,
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
         desc: "High damage, slow fire."
