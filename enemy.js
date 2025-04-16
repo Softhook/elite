@@ -20,6 +20,12 @@ const AI_STATE = {
     TRANSPORTING: 7   // New state for transport behaviour
 };
 
+// Reverse lookup for AI_STATE values to names
+const AI_STATE_NAME = {};
+for (const [k, v] of Object.entries(AI_STATE)) {
+    AI_STATE_NAME[v] = k;
+}
+
 class Enemy {
     /**
      * Creates an Enemy instance with role-specific behavior and ship type.
@@ -544,6 +550,21 @@ class Enemy {
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
              push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+        }
+
+        // Draw always-horizontal info label above the ship
+        if (!this.destroyed) {
+            push();
+            textAlign(CENTER, BOTTOM);
+            textSize(12);
+            fill(255);
+            noStroke();
+            // Get state name from AI_STATE value
+            let stateKey = Object.keys(AI_STATE).find(k => AI_STATE[k] === this.currentState) || "";
+            let targetLabel = (this.target && this.target.shipTypeName) ? this.target.shipTypeName : "None";
+            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
+            text(label, this.pos.x, this.pos.y - this.size / 2 - 5);
+            pop();
         }
     }
 
