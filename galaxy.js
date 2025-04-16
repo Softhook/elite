@@ -20,9 +20,13 @@ class Galaxy {
         const namePrefixes = ["Ache", "Ali", "An", "Bei", "Beta", "Ceo", "Ceti", "Cor", "Cygn", "Delta", "Diso", "Ep", "Era", "Eta", "Exo", "Glie", "Hep", "Hip", "Kap", "Kru", "Lave", "Mu", "Neu", "Novi", "Omi", "Pro", "Rho", "Ross", "Sol", "Tau", "Uma", "Uri", "Xi", "Zaon", "Zeta"];
         const nameRoots = ["mar", "ath", "dan", "dis", "gon", "lia", "nar", "nus", "on", "or", "phi", "qua", "ri", "sus", "tei", "tis", "tor", "us", "ve", "xe", "za"];
         const nameSuffixes = ["", "a", "i", "o", "us", "is", " Prime", " Minor", " Major", " Gateway", " Reach", " Verge", " Drift", " Abyss", " Point", " Outpost", " Landing", " VII", " IX", " IV"];
-        const singleNames = ["Bastion", "Terminus", "Horizon", "Elysium", "Crucible", "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"];
+        const singleNames = ["Bastion", "Terminus", "Horizon", "Lewes", "Amhurst", "Elysium", "Crucible", "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"];
         const generatedNames = new Set();
-        const economyTypes = ["Industrial", "Agricultural", "Tech", "Extraction", "Refinery", "High Tech", "Tourism", "Service"];
+        const economyTypes = [
+            "Industrial", "Agricultural", "Tech", "Mining", // <-- changed from Extraction
+            "Refinery", "High Tech", "Tourism", "Service",
+            "Military", "Offworld", "Alien" // <-- new types
+        ];
         const securityLevels = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
 
 

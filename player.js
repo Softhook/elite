@@ -285,7 +285,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         let shootingAngleRad = radians(shootingAngleDeg); // Ensure Radians
         let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngleRad, 'PLAYER');
+        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngleRad, this); // Pass `this` (the player object)
         this.currentSystem.addProjectile(proj);
     }
 

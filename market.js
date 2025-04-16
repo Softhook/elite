@@ -53,10 +53,25 @@ class Market {
                     if (['Food', 'Metals', 'Minerals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
                     if (['Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; } // Slight need for tech
                     break;
-                case 'Extraction':
-                    caseHit = 'Extraction'; // Produces Metals, Minerals. Needs Food, Machinery, Medicine.
+                    case 'Mining':
+                    caseHit = 'Mining';
                     if (['Metals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
                     if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
+                    break;
+                case 'Military':
+                    caseHit = 'Military';
+                    if (['Machinery', 'Metals', 'Computers', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
+                    if (['Luxury Goods', 'Textiles', 'Food'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
+                    break;
+                case 'Offworld':
+                    caseHit = 'Offworld';
+                    if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
+                    if (['Food', 'Textiles', 'Metals'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
+                    break;
+                case 'Alien':
+                    caseHit = 'Alien';
+                    if (['Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.5; comm.sellPrice *= 0.6; }
+                    if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 2.0; comm.sellPrice *= 1.8; }
                     break;
                 case 'Refinery':
                     caseHit = 'Refinery'; // Produces Metals, Chemicals. Needs Minerals, Machinery, Food.
@@ -74,7 +89,7 @@ class Market {
                     caseHit = 'Tourism'; // Needs Food, Medicine, Luxury Goods, Textiles.
                     if (['Food', 'Medicine', 'Luxury Goods', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
                     if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.5; comm.sellPrice *= 1.4; } // No production
-                    break;
+                    break; // <--- THIS IS IMPORTANT
                 case 'Service':
                     caseHit = 'Service'; // Needs Food, Computers, Machinery, Medicine, Textiles.
                     if (['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }

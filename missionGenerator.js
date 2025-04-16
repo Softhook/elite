@@ -14,25 +14,31 @@ const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Viper', 'CobraMkIII'];
 const ECONOMY_EXPORTS = {
     'Agricultural': ['Food', 'Textiles'],
     'Industrial': ['Machinery'],
-    'Extraction': ['Metals', 'Minerals'],
-    'Refinery': ['Metals', 'Chemicals'], // Refine minerals/metals, produce chemicals
-    'Tech': ['Computers', 'Medicine'], // Maybe some basic components
+    'Mining': ['Metals', 'Minerals'], // <-- changed from Extraction
+    'Refinery': ['Metals', 'Chemicals'],
+    'Tech': ['Computers', 'Medicine'],
     'High Tech': ['Computers', 'Medicine', 'Adv Components'],
-    'Tourism': [], // Don't typically export physical goods
-    'Service': [], // Don't typically export physical goods
-    'Default': ['Food', 'Textiles', 'Machinery'] // Fallback exports
+    'Tourism': [],
+    'Service': [],
+    'Military': [], // <-- new
+    'Offworld': ['Luxury Goods', 'Adv Components'],   // <-- new
+    'Alien': ['Adv Components'],      // <-- new
+    'Default': ['Food', 'Textiles', 'Machinery']
 };
 // Define preferred cargo *imports* (goods they need/buy dearly)
 const ECONOMY_IMPORTS = {
-    'Agricultural': ['Machinery', 'Chemicals', 'Medicine', 'Computers'], // Need farm equip, fertilizer, meds
-    'Industrial': ['Food', 'Metals', 'Minerals', 'Chemicals', 'Adv Components'], // Need raw mats, food for workers, some tech
-    'Extraction': ['Food', 'Machinery', 'Medicine', 'Computers'], // Need food, equip, meds for remote sites
-    'Refinery': ['Minerals', 'Machinery', 'Food', 'Medicine'], // Need raw minerals, equip, food
-    'Tech': ['Food', 'Metals', 'Chemicals', 'Machinery'], // Need food, basic mats, tools
-    'High Tech': ['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'], // Need food, raw mats, high-end consumer goods
-    'Tourism': ['Food', 'Luxury Goods', 'Medicine', 'Textiles'], // Need food, consumer goods, meds
-    'Service': ['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'], // Need various supplies
-    'Default': LEGAL_CARGO // Fallback imports (want everything)
+    'Agricultural': ['Machinery', 'Chemicals', 'Medicine', 'Computers'],
+    'Industrial': ['Food', 'Metals', 'Minerals', 'Chemicals', 'Adv Components'],
+    'Mining': ['Food', 'Machinery', 'Medicine', 'Computers'], // <-- changed from Extraction
+    'Refinery': ['Minerals', 'Machinery', 'Food', 'Medicine'],
+    'Tech': ['Food', 'Metals', 'Chemicals', 'Machinery'],
+    'High Tech': ['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'],
+    'Tourism': ['Food', 'Luxury Goods', 'Medicine', 'Textiles'],
+    'Service': ['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'],
+    'Military': ['Food','Luxury Goods', 'Medicine'], // <-- new
+    'Offworld': ['Food', 'Textiles', 'Metals'],           // <-- new
+    'Alien': ['Food', 'Textiles', 'Machinery', 'Medicine'], // <-- new
+    'Default': LEGAL_CARGO
 };
 
 
@@ -78,7 +84,7 @@ class MissionGenerator {
         // Security Modifiers
         switch (systemSecurity) {
             case 'High':
-                adjustedBounty *= 1.8;       // Significantly more bounties
+                adjustedBounty *= 0.1;       // Much les bounties
                 adjustedIllegal *= 0.1;      // Drastically fewer illegal missions
                 adjustedLegal *= 1.1;        // Slightly more legal trade
                 break;
@@ -93,7 +99,7 @@ class MissionGenerator {
                 adjustedLegal *= 0.8;        // Slightly less legal trade emphasis
                 break;
             case 'Anarchy':
-                adjustedBounty *= 0.1;       // Very few official bounties
+                adjustedBounty *= 1.8;       // Lots of bounties
                 adjustedIllegal *= 4.0;      // Lots of illegal missions
                 adjustedLegal *= 0.3;        // Much less legal trade emphasis
                 break;
@@ -104,7 +110,7 @@ class MissionGenerator {
         switch (systemEconomy) {
              case 'Industrial':
              case 'Refinery':
-             case 'Extraction':
+             case 'Mining':
                   adjustedLegal *= 1.1; // Slightly more trade focus
                   adjustedBounty *= 0.9;
                   break;
