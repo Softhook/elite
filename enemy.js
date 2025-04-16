@@ -256,9 +256,9 @@ class Enemy {
     } // End updateHaulerAI
 
     /** Transport AI Logic - Moves between two endpoints chosen among
-        non-sun planets (if available) or falls back to station + planet.
-        This update makes the ship return after arriving at an endpoint,
-        then switch and travel to the other.
+        non-sun planets or falls back to station + planet.
+        When near an endpoint (within arrivalThreshold), the ship pauses
+        for a short period before switching destinations.
     */
     updateTransportAI(system) {
         if (!system) return;
@@ -266,45 +266,41 @@ class Enemy {
         // Define routePoints if not yet set:
         if (!this.routePoints) {
             let pts = [];
-            // Try to pick two distinct endpoints from non-sun planets if available.
             if (system.planets && system.planets.length > 1) {
-                // Collect indices of non-sun planets (assume sun is at index 0)
                 let candidateIndices = [];
                 for (let i = 1; i < system.planets.length; i++) {
                     candidateIndices.push(i);
                 }
                 if (candidateIndices.length >= 2) {
-                    // Shuffle candidates:
-                    let shuffled = shuffle(candidateIndices, true); // p5.js utility
+                    let shuffled = shuffle(candidateIndices, true);
                     pts.push(system.planets[shuffled[0]].pos.copy());
                     pts.push(system.planets[shuffled[1]].pos.copy());
                 } else {
-                    // Only one planet available – use it and the station (if available)
                     pts.push(system.planets[1].pos.copy());
                     pts.push(system.station ? system.station.pos.copy() : p5.Vector.add(system.planets[1].pos, createVector(300, 0)));
                 }
             } else if (system.station) {
-                // Fallback: station plus a nearby offset
                 pts.push(system.station.pos.copy());
                 pts.push(p5.Vector.add(system.station.pos, createVector(300, 0)));
             } else {
-                // Last resort: use two fixed positions.
                 pts.push(createVector(0, 0));
                 pts.push(createVector(300, 300));
             }
             this.routePoints = pts;
-            // Start by heading toward the second endpoint
+            // Start with destination index 1
             this.currentRouteIndex = 1;
+            // Reset wait timer when first setting route.
+            this.waitTimer = 0;
+            console.log(`Transporter ${this.shipTypeName} route set to endpoints: (${pts[0].x.toFixed(1)}, ${pts[0].y.toFixed(1)}) and (${pts[1].x.toFixed(1)}, ${pts[1].y.toFixed(1)})`);
         }
         
-        // Determine the current destination.
         let destination = this.routePoints[this.currentRouteIndex];
         let desiredDir = p5.Vector.sub(destination, this.pos);
         let distance = desiredDir.mag();
         desiredDir.normalize();
         
         // Rotate smoothly towards the destination.
-        let targetAngle = desiredDir.heading(); // in radians
+        let targetAngle = desiredDir.heading();
         let diff = targetAngle - this.angle;
         while (diff < -PI) diff += TWO_PI;
         while (diff > PI) diff -= TWO_PI;
@@ -314,20 +310,37 @@ class Enemy {
             this.angle = (this.angle + TWO_PI) % TWO_PI;
         }
         
-        // Apply thrust towards the destination if not close.
-        if (distance > 20) {
+        // Arrival behavior:
+        const arrivalThreshold = 20;     // Consider "arrived" if within 20 units
+        const slowSpeedThreshold = 0.1;    // And if nearly stopped
+        if (distance > arrivalThreshold) {
+            // Not yet near destination: reset waitTimer and thrust toward destination.
+            if (this.waitTimer !== 0) {
+                console.log(`Transporter ${this.shipTypeName} resuming travel (distance: ${distance.toFixed(2)})`);
+            }
+            this.waitTimer = 0;
             let thrustVec = p5.Vector.fromAngle(this.angle);
             thrustVec.mult(this.thrustForce);
             this.vel.add(thrustVec);
         } else {
-            // Slow down / pause briefly upon destination arrival.
+            // Arrival detected: apply braking.
             this.vel.mult(0.8);
-            // Debug: log current distance if below 20
-            //console.log(`Transporter ${this.shipTypeName} near destination; distance: ${distance.toFixed(2)}`);
-            // Switch destination if within a small threshold (e.g., 10 instead of 5)
-            if (distance < 10) {
-                console.log(`Transporter ${this.shipTypeName} reached destination. Switching endpoint.`);
-                this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
+            // If close enough OR moving very slowly, start counting down a wait timer.
+            if (distance < arrivalThreshold || this.vel.mag() < slowSpeedThreshold) {
+                if (this.waitTimer === 0) {
+                    this.waitTimer = random(500, 1500); // wait duration in milliseconds
+                    console.log(`Transporter ${this.shipTypeName} arrived. Waiting for ${(this.waitTimer / 1000).toFixed(2)}s before turning.`);
+                } else {
+                    this.waitTimer -= deltaTime;
+                    if (this.waitTimer <= 0) {
+                        // Switch destination.
+                        this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
+                        console.log(`Transporter ${this.shipTypeName} switching destination to endpoint ${this.currentRouteIndex} at (${this.routePoints[this.currentRouteIndex].x.toFixed(1)}, ${this.routePoints[this.currentRouteIndex].y.toFixed(1)})`);
+                        this.waitTimer = 0;
+                        // Optionally reset velocity for a fresh start.
+                        this.vel.set(0, 0);
+                    }
+                }
             }
         }
         
