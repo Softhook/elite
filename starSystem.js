@@ -23,18 +23,18 @@ class StarSystem {
      * Creates a Star System instance. Sets up basic properties.
      * Seeded elements (planets, bgStars) are generated later via initStaticElements().
      * @param {string} name - The name of the system.
-     * @param {string} economyType - The type of economy (e.g., "Industrial").
+     * @param {string} economy - The actual economy type (e.g., "Industrial").
      * @param {number} galaxyX - The X coordinate on the main galaxy map.
      * @param {number} galaxyY - The Y coordinate on the main galaxy map.
      * @param {number} systemIndex - The unique index of this system, used for seeding.
      * @param {number} [techLevel=5] - The technological level of the system (1-10).
      * @param {string} [securityLevel='Medium'] - The security level (e.g., 'High', 'Anarchy').
      */
-    constructor(name, economyType, galaxyX, galaxyY, systemIndex, techLevel = 5, securityLevel = 'Medium') {
+    constructor(name, economy, galaxyX, galaxyY, systemIndex, techLevel = 5, securityLevel = 'Medium') {
         console.log("StarSystem constructor called for", name);
-        // console.log(`   >>> StarSystem Constructor Start: ${name} (Index ${systemIndex})`); // Verbose
         this.name = name;
-        this.economyType = economyType;
+        this.actualEconomy = economy; // Store the actual randomly chosen economy internally.
+        this.economyType = "Unknown"; // Visible economy remains "Unknown" until discovered.
         try { this.galaxyPos = createVector(galaxyX, galaxyY); } catch(e) { this.galaxyPos = {x: galaxyX, y: galaxyY}; } // Map position
         this.visited = false;
         this.systemIndex = systemIndex; // Used for seeding static elements
@@ -58,9 +58,6 @@ class StarSystem {
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
         this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 25;
         this.despawnRadius = 2000; // Default, updated in initStaticElements based on screen size
-
-        // console.log(`   <<< StarSystem ${name} CONSTRUCTOR FINISHED (Minimal Init) <<<`); // Verbose
-        // IMPORTANT: initStaticElements() must be called after p5 setup is complete.
     }
 
     /**
@@ -78,18 +75,15 @@ class StarSystem {
         }
 
         // --- Apply Seed for deterministic generation ---
-        // console.log(`         Setting randomSeed(${this.systemIndex})`); // Verbose
         randomSeed(this.systemIndex);
 
         // --- Create Station (Pass a generated name) ---
         console.log("         Creating Station...");
         let stationName = `${this.name} Hub`; // Example name generation: "Solara Hub"
         try {
-             this.station = new Station(0, 0, this.economyType, stationName); // Pass name here
+             this.station = new Station(0, 0, this.actualEconomy, stationName); // Pass name here
         } catch(e) {
              console.error("         Error creating Station:", e);
-             // Attempt to create a station without a name as fallback? Or leave as null?
-             // this.station = new Station(0, 0, this.economyType); // Fallback without name?
         }
         console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`); // Log created station name
 
@@ -100,17 +94,13 @@ class StarSystem {
             console.error("         Error getting width/height/max for despawnRadius:", e);
             this.despawnRadius = 2000; // Use default fallback
         }
-        // console.log(`         Despawn Radius set to: ${this.despawnRadius}`); // Verbose
 
         // --- Seeded Visual Background Elements ---
-        // console.log("         Creating star color/size..."); // Verbose
         try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
         try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
-        // console.log(`         Star Color/Size created.`); // Verbose
 
         this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 100; // Default star count
         try { numBgStars = floor(random(250, 400)); } catch(e) {} // Use default on error
-        // console.log(`         Generating ${numBgStars} background stars...`); // Verbose
         try { // Generate background stars using seeded random
             for (let i = 0; i < numBgStars; i++) {
                 this.bgStars.push({
@@ -120,22 +110,16 @@ class StarSystem {
                 });
             }
         } catch(e) { console.error("Error generating background stars:", e); }
-        // console.log(`         Background stars generated (count: ${this.bgStars.length}).`); // Verbose
 
         // --- Initialize Planets (Seeded) ---
-        // console.log("         Calling createRandomPlanets..."); // Verbose
         try { this.createRandomPlanets(); } // Call method that uses seeded random
         catch(e) { console.error("Error during createRandomPlanets call:", e); }
-        // console.log("         Finished createRandomPlanets call."); // Verbose
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
-        // console.log(`      ${this.name}: Resetting random seed.`); // Verbose
         randomSeed(); // Reset to non-deterministic (time-based) random
-        // console.log("      Seed reset."); // Verbose
 
         console.log(`      <<< ${this.name}: initStaticElements() Finished`); // Log completion
     }
-// --- End initStaticElements method ---
 
     /** Creates random planets using seeded random. Called by initStaticElements. */
     createRandomPlanets() {
@@ -187,16 +171,22 @@ class StarSystem {
 
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
-        // console.log(`>>> Entering enterSystem for ${this.name}...`); // Verbose
-        this.visited = true; this.enemies = []; this.projectiles = []; this.asteroids = [];
+        this.discover(); // Mark as visited and update the economy if needed.
+        this.enemies = []; this.projectiles = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         if (player && player.pos) {
-            // console.log("   enterSystem: Spawning initial NPCs..."); // Verbose
             for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
-            // console.log("   enterSystem: Spawning initial Asteroids..."); // Verbose
             for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
         }
-        // console.log(`<<< Exiting enterSystem... System: ${this.name}`); // Verbose
+    }
+
+    /** Call this method when the system is discovered by the player. */
+    discover() {
+        if (!this.visited) {
+            this.visited = true;
+            this.economyType = this.actualEconomy;
+            console.log(`${this.name} discovered! Economy set to ${this.economyType}`);
+        }
     }
 
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
@@ -353,7 +343,6 @@ class StarSystem {
             if (this.station) this.station.draw();
             this.planets.forEach(p => p?.draw()); this.asteroids.forEach(a => a?.draw());
             this.enemies.forEach(e => e?.draw());
-            //console.log(`Projectiles count: ${this.projectiles.length}`);
             this.projectiles.forEach(proj => proj.draw());
             player.draw();
         } catch (e) { console.error(`Error during StarSystem ${this.name} world element drawing:`, e); }
@@ -414,7 +403,7 @@ class StarSystem {
     static fromJSON(data) {
         const sys = new StarSystem(
             data.name,
-            data.economyType,
+            data.economyType,  // Although if undiscovered, this might be "Unknown"
             data.galaxyPos.x,
             data.galaxyPos.y,
             data.systemIndex,
@@ -422,6 +411,7 @@ class StarSystem {
             data.securityLevel
         );
         sys.visited = data.visited;
+        sys.economyType = data.economyType;
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
 
         // Restore planets if present
@@ -441,7 +431,6 @@ class StarSystem {
         return sys;
     }
 
-    // Add this method to the StarSystem class
     checkProjectileCollisions(player) {
         // Loop backwards over projectiles so removals don't skip elements
         for (let i = this.projectiles.length - 1; i >= 0; i--) {

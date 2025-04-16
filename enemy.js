@@ -217,22 +217,22 @@ class Enemy {
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
-        // At the very start of updateCombatAI for pirates, add a fallback:
-        if (this.role === AI_ROLE.PIRATE && (!this.target || this.target.hull <= 0)) {
+        // Guard against a missing or destroyed target.
+        if (this.role === AI_ROLE.PIRATE && (!this.target || !this.target.pos || this.target.hull <= 0)) {
             console.log(`${this.shipTypeName} lost its target, reverting to Player.`);
-            this.target = system.player;  // Assuming system.player is a valid reference.
+            this.target = system.player;  // Assuming system.player is valid.
         }
 
-        // For pirates: only switch target from the player if a Police or Hauler enemy is significantly closer.
-        if (this.role === AI_ROLE.PIRATE && this.target && this.target instanceof Player) {
+        // For pirates: only switch target from Player if a Police or Hauler enemy is significantly closer.
+        if (this.role === AI_ROLE.PIRATE && this.target && (this.target instanceof Player) && this.target.pos) {
             let candidate = null;
             let playerDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
             if (system.enemies && system.enemies.length > 0) {
                 for (let e of system.enemies) {
-                    // Avoid self and ensure valid hull.
-                    if (e !== this && e.hull > 0 && (e.role === AI_ROLE.POLICE || e.role === AI_ROLE.HAULER)) {
+                    // Avoid self and check that candidate has a valid pos.
+                    if (e !== this && e.hull > 0 && e.pos && (e.role === AI_ROLE.POLICE || e.role === AI_ROLE.HAULER)) {
                         let candidateDistance = dist(this.pos.x, this.pos.y, e.pos.x, e.pos.y);
-                        // Only switch if candidate is notably closer (e.g. 20% closer)
+                        // Switch if the candidate is 20% closer.
                         if (candidateDistance < playerDistance * 0.8) {
                             candidate = e;
                             break;
@@ -246,29 +246,30 @@ class Enemy {
             }
         }
 
-        // After the candidate switching block (that only triggers when target is Player)
-        if (this.role === AI_ROLE.PIRATE && this.target && !(this.target instanceof Player)) {
-            // Compare distances: current target vs player
+        // After candidate switching: if the target is not Player.
+        if (this.role === AI_ROLE.PIRATE && this.target && !(this.target instanceof Player) && 
+            this.target.pos && system.player?.pos) {
             let candidateDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
             let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
-            // If the player is closer than the current candidate and within detection range, revert.
+            // If the player is closer and within detection range, revert to player.
             if (playerDistance < candidateDistance && playerDistance < this.detectionRange) {
                 console.log(`${this.shipTypeName} reverting target from ${this.target.shipTypeName} to Player since player is closer (${playerDistance.toFixed(2)} vs ${candidateDistance.toFixed(2)})`);
                 this.target = system.player;
             }
         }
-        
+
+        // Continue with the rest of updateCombatAI...
         let targetExists = this.target?.hull > 0;
         let distanceToTarget = targetExists
              ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y)
              : Infinity;
         let desiredMovementTargetPos = null;
         let shootingAngle = this.angle;
-        if (targetExists) {
+        if (targetExists && this.target.pos) {
             shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x));
         }
         let previousState = this.currentState;
-        
+
         // --- Combat State Machine ---
         switch (this.currentState) {
             case AI_STATE.IDLE:
@@ -327,10 +328,7 @@ class Enemy {
                 this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
                 break;
         }
-        
-        // Uncomment the following debug line if needed:
-        // if(this.currentState !== previousState) { console.log(` -> ${this.shipTypeName}(${this.role}) State: ${previousState}->${this.currentState}`); }
-        
+
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     } // End updateCombatAI
