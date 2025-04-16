@@ -1,10 +1,10 @@
 // ****** StarSystem.js ******
 
 const POLICE_SHIPS = ["CobraMkIII"];
-const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder", "ShardInterceptor", "GnatInterceptor"]; // Ensure these names exist in SHIP_DEFINITIONS
+//const POLICE_SHIPS = ["JackalMultirole"];
 
-// --- CORRECTED HAULER LIST ---
-// Removed invalid "Hauler". Adjusted mix slightly. Ensure names match SHIP_DEFINITIONS keys.
+
+const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder", "ShardInterceptor", "GnatInterceptor"]; // Ensure these names exist in SHIP_DEFINITIONS
 const HAULER_SHIPS = [
     "Adder", // Common small hauler
     "Adder",
@@ -24,7 +24,9 @@ const HAULER_SHIPS = [
 ];
 
 const TRANSPORT_SHIPS = ["ProspectorMiner", "MuleFreighter"]; // Ensure these names exist in SHIP_DEFINITIONS
-
+const MILITARY_SHIPS = ["FederalAssaultShip", "ImperialClipper", "Python", "Anaconda", "Viper", "CobraMkIII"];
+const ALIEN_SHIPS = ["Thargoid", "GnatInterceptor", "ShardInterceptor"];
+// You can expand these lists as needed.
 
 class StarSystem {
     /**
@@ -205,44 +207,63 @@ class StarSystem {
     trySpawnNPC(player) {
         if (!player?.pos || this.enemies.length >= this.maxEnemies) return;
 
-        // Get probabilities based on security level
-        const probs = this.getEnemyRoleProbabilities();
-        let r = random();
-        let chosenRole;
-        if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
-        else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
-        else chosenRole = AI_ROLE.HAULER;
+        let chosenRole, chosenShipTypeName;
+        const econ = (this.actualEconomy || this.economyType || "").toLowerCase();
+        const sec = (this.securityLevel || "").toLowerCase();
 
-        let chosenShipTypeName;
-        switch (chosenRole) {
-            case AI_ROLE.PIRATE:
-                chosenShipTypeName = random(PIRATE_SHIPS);
-                break;
-            case AI_ROLE.POLICE:
-                chosenShipTypeName = random(POLICE_SHIPS);
-                break;
-            case AI_ROLE.HAULER:
-                chosenShipTypeName = random(HAULER_SHIPS);
-                break;
-            default:
-                chosenShipTypeName = "Krait";
+        // --- Special cases for economy ---
+        if (econ === "military") {
+            chosenRole = AI_ROLE.HAULER;
+            chosenShipTypeName = random(MILITARY_SHIPS);
+        } else if (econ === "alien") {
+            // Mostly alien ships, but allow a few Vipers as "observers"
+            if (random() < 0.8) {
+                chosenRole = AI_ROLE.PIRATE;
+                chosenShipTypeName = random(ALIEN_SHIPS);
+            } else {
+                chosenRole = AI_ROLE.POLICE;
+                chosenShipTypeName = "Viper";
+            }
+        } else {
+            // --- Standard spawn logic based on security ---
+            const probs = this.getEnemyRoleProbabilities();
+            let r = random();
+            if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
+            else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
+            else chosenRole = AI_ROLE.HAULER;
+
+            switch (chosenRole) {
+                case AI_ROLE.PIRATE:
+                    chosenShipTypeName = random(PIRATE_SHIPS);
+                    break;
+                case AI_ROLE.POLICE:
+                    chosenShipTypeName = random(POLICE_SHIPS);
+                    break;
+                case AI_ROLE.HAULER:
+                    chosenShipTypeName = random(HAULER_SHIPS);
+                    break;
+                default:
+                    chosenShipTypeName = "Krait";
+            }
+
+            // --- Optional: Transport spawn branch ---
+            if (random() < 0.25) {
+                chosenRole = AI_ROLE.TRANSPORT;
+                chosenShipTypeName = random(TRANSPORT_SHIPS);
+            }
         }
 
-        // --- New transport spawn branch (15% chance) ---
-        if (random() < 0.25) {
-            chosenRole = AI_ROLE.TRANSPORT;
-            chosenShipTypeName = random(TRANSPORT_SHIPS);
+        // --- Thargoid override only for non-alien systems ---
+        if (econ !== "alien") {
+            const thargoidChance = 0.01;
+            if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
+                chosenShipTypeName = "Thargoid";
+                chosenRole = AI_ROLE.PIRATE;
+                console.warn("!!! Thargoid Spawn Triggered !!!");
+            }
         }
 
-        // --- Optional Thargoid Override ---
-        const thargoidChance = 0.01;
-        if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
-            chosenShipTypeName = "Thargoid";
-            chosenRole = AI_ROLE.PIRATE;
-            console.warn("!!! Thargoid Spawn Triggered !!!");
-        }
-        // --- End Thargoid Override ---
-
+        // --- Spawn the ship ---
         let angle = random(TWO_PI);
         let spawnDist = sqrt(sq(width/2) + sq(height/2)) + random(150, 400);
         let spawnX = player.pos.x + cos(angle) * spawnDist;

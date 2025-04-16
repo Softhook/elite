@@ -254,7 +254,22 @@ function drawStarlinerCruiser(s, thrusting = false) { // Trader/Passenger
 
 function drawJackalMultirole(s, thrusting = false) { // Multi-role
     let r = s / 2; let def = SHIP_DEFINITIONS.JackalMultirole;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    
+    fill(13, 104, 89);
+    stroke(198, 247, 126);
+    strokeWeight(1.5);
+    beginShape();
+    vertex(r * 0.722, r * 0.000);
+    vertex(r * 0.222, r * 0.500);
+    vertex(r * 0.217, r * 0.800);
+    vertex(r * -0.833, r * 0.600);
+    vertex(r * -0.484, r * 0.300);
+    vertex(r * -0.484, r * -0.300);
+    vertex(r * -0.833, r * -0.600);
+    vertex(r * 0.217, r * -0.800);
+    vertex(r * 0.222, r * -0.500);
+    endShape(CLOSE);
+    
     if (thrusting) { fill(255, 180, 100); noStroke(); ellipse(-r*0.9, r*0.2, r*0.4, r*0.2); ellipse(-r*0.9, -r*0.2, r*0.4, r*0.2); }
 }
 
