@@ -233,7 +233,7 @@ class StarSystem {
         }
 
         // --- Optional Thargoid Override ---
-        const thargoidChance = 0.03;
+        const thargoidChance = 0.01;
         if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
             chosenShipTypeName = "Thargoid";
             chosenRole = AI_ROLE.PIRATE;

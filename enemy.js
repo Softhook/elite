@@ -217,19 +217,44 @@ class Enemy {
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
-        // If pirate and no valid target, look for a police ship to attack.
+        // At the very start of updateCombatAI for pirates, add a fallback:
         if (this.role === AI_ROLE.PIRATE && (!this.target || this.target.hull <= 0)) {
-            let policeTarget = null;
+            console.log(`${this.shipTypeName} lost its target, reverting to Player.`);
+            this.target = system.player;  // Assuming system.player is a valid reference.
+        }
+
+        // For pirates: only switch target from the player if a Police or Hauler enemy is significantly closer.
+        if (this.role === AI_ROLE.PIRATE && this.target && this.target instanceof Player) {
+            let candidate = null;
+            let playerDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
             if (system.enemies && system.enemies.length > 0) {
                 for (let e of system.enemies) {
-                    if (e !== this && e.hull > 0 && e.role === AI_ROLE.POLICE) {
-                        policeTarget = e;
-                        break;
+                    // Avoid self and ensure valid hull.
+                    if (e !== this && e.hull > 0 && (e.role === AI_ROLE.POLICE || e.role === AI_ROLE.HAULER)) {
+                        let candidateDistance = dist(this.pos.x, this.pos.y, e.pos.x, e.pos.y);
+                        // Only switch if candidate is notably closer (e.g. 20% closer)
+                        if (candidateDistance < playerDistance * 0.8) {
+                            candidate = e;
+                            break;
+                        }
                     }
                 }
             }
-            if (policeTarget) {
-                this.target = policeTarget;
+            if (candidate) {
+                console.log(`${this.shipTypeName} switching target from Player (${playerDistance.toFixed(2)}) to ${candidate.shipTypeName}`);
+                this.target = candidate;
+            }
+        }
+
+        // After the candidate switching block (that only triggers when target is Player)
+        if (this.role === AI_ROLE.PIRATE && this.target && !(this.target instanceof Player)) {
+            // Compare distances: current target vs player
+            let candidateDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
+            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
+            // If the player is closer than the current candidate and within detection range, revert.
+            if (playerDistance < candidateDistance && playerDistance < this.detectionRange) {
+                console.log(`${this.shipTypeName} reverting target from ${this.target.shipTypeName} to Player since player is closer (${playerDistance.toFixed(2)} vs ${candidateDistance.toFixed(2)})`);
+                this.target = system.player;
             }
         }
         
