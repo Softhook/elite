@@ -145,10 +145,16 @@ class GameStateManager {
                  else { /* Draw error if market missing */ background(10,0,0); fill(255); text("Error: Market data unavailable", width/2, height/2); }
                  break;
 
-             case "VIEWING_MISSIONS": // Draws the Mission Board
-                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(20,20,40); }
-                 if (player) { try {player.draw();} catch(e) {}}
-                 if (uiManager && currentSystem?.station && player) { try { uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player); } catch(e) { console.error("Error drawing mission board:", e); } }
+             case "VIEWING_MISSIONS":
+                 // Fetch missions if not already fetched
+                 if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
+                     const currentSystem = galaxy?.getCurrentSystem();
+                     const currentStation = currentSystem?.station;
+                     this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentStation, galaxy, player);
+                 }
+                 if (uiManager && currentSystem?.station && player) {
+                     uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player);
+                 }
                  break;
 
             case "VIEWING_SHIPYARD":
@@ -236,9 +242,10 @@ class GameStateManager {
     fetchStationMissions(player) {
          const currentSystem = galaxy?.getCurrentSystem();
          if (currentSystem?.station && galaxy && player && typeof MissionGenerator?.generateMissions === 'function') {
-              // console.log("Fetching missions for", currentSystem.station.name); // Optional log
+              console.log("[GameStateManager] Fetching missions for", currentSystem?.name, currentSystem?.station?.name);
               try {
                   this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentSystem.station, galaxy, player);
+                  console.log("[GameStateManager] Missions fetched:", this.currentStationMissions);
                   this.selectedMissionIndex = -1; return true;
               } catch(e) { console.error("Error during MissionGenerator.generateMissions:", e); this.currentStationMissions = []; return false; }
          }

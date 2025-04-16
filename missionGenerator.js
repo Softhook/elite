@@ -52,6 +52,9 @@ class MissionGenerator {
             return [];
         }
 
+        console.log("[MissionGenerator] Called with:", currentSystem, currentStation, player);
+        console.log("[MissionGenerator] Generating missions for", currentSystem?.name, currentStation?.name, player?.shipTypeName);
+
         const maxMissions = floor(random(5, 10)); // Slightly more variance maybe?
         const systemSecurity = currentSystem.securityLevel || 'Medium';
         const systemEconomy = currentSystem.economyType || 'Industrial'; // Default if undefined
@@ -194,6 +197,8 @@ class MissionGenerator {
                  }):`, error);
             }
         } // End mission generation loop
+
+        console.log("[MissionGenerator] Missions generated:", availableMissions);
 
         console.log(`Generated ${availableMissions.length} missions (Sec: ${systemSecurity}, Econ: ${systemEconomy}).`);
         return availableMissions;

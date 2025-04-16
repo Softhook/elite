@@ -106,6 +106,7 @@ class UIManager {
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
     drawMissionBoard(missions, selectedIndex, player) { // selectedIndex is still needed for list highlighting
+        console.log("[MissionBoard] missions:", missions, "selectedIndex:", selectedIndex, "player.activeMission:", player?.activeMission);
          if (!player) { console.warn("drawMissionBoard missing player"); return; }
          this.missionListButtonAreas = []; this.missionDetailButtonAreas = {}; // Clear areas
 
