@@ -1,14 +1,19 @@
 // ****** projectile.js ******
 
 class Projectile {
-    constructor(x, y, angle, owner, speed = 8, damage = 10) {
+    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null) {
         this.pos = createVector(x, y);
-        this.owner = owner; // Store reference to the shooter object
-        this.damage = damage;
+        this.owner = owner;
+        // Use weapon upgrade if owner is Player
+        if (owner instanceof Player && owner.currentWeapon) {
+            this.damage = owner.currentWeapon.damage;
+            this.color = color(...owner.currentWeapon.color);
+        } else {
+            this.damage = damage;
+            this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
+        }
         this.size = (owner && owner instanceof Player) ? 4 : 3;
-        this.color = (owner && owner instanceof Player) ? color(0, 255, 0) : color(255, 0, 0);
-        this.lifespan = 90; // Frames before disappearing
-        console.log(`Projectile from shooter: ${owner.shipTypeName || "Player"}`);
+        this.lifespan = 90;
         this.vel = p5.Vector.fromAngle(angle).mult(speed);
     }
 

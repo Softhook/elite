@@ -46,6 +46,10 @@ class UIManager {
              fill(255, 180, 0); textAlign(CENTER, CENTER); textSize(12);
              text(`Mission: ${player.activeMission.title}`, width / 2, 15);
         }
+        if (player.currentWeapon) {
+            fill(0, 180, 255); textAlign(LEFT, CENTER); textSize(12);
+            text(`Weapon: ${player.currentWeapon.name}`, 10, 35);
+        }
         pop();
     }
 
@@ -592,8 +596,7 @@ class UIManager {
                 if (this.isClickInArea(mx, my, area)) {
                     if (player.credits >= area.upgrade.price) {
                         player.spendCredits(area.upgrade.price);
-                        // You would add the weapon to the player's upgrades here
-                        // e.g. player.addUpgrade(area.upgrade)
+                        player.setWeaponByName(area.upgrade.name); // Equip the weapon
                         saveGame && saveGame();
                         alert(`You bought the ${area.upgrade.name}!`);
                     } else {

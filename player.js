@@ -37,7 +37,9 @@ class Player {
 
         // --- Current State ---
         this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
-        this.currentSystem = null; this.fireCooldown = 0; this.fireRate = 0.25;
+        this.currentSystem = null; this.fireCooldown = 0;
+        this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
+        this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; this.isWanted = false;
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
@@ -440,6 +442,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // ----------------------------------
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
+    }
+
+    setWeaponByName(name) {
+        const found = WEAPON_UPGRADES.find(w => w.name === name);
+        if (found) {
+            this.currentWeapon = found;
+            this.fireRate = found.fireRate;
+        }
     }
 
 } // End of Player Class
