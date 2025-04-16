@@ -199,17 +199,20 @@ function keyPressed() {
 }
 
 function mousePressed() {
-    // Ensure core objects exist before handling clicks
-    if (!gameStateManager || !player || !uiManager || !galaxy) { return; }
+    // --- Fullscreen ON only once, on first click inside canvas ---
+    if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+        fullscreen(true);
+        // Optionally return here if you want to prevent other click actions on the first click
+        // return;
+    }
 
-    // 1. Let UIManager try to handle the click based on current state
+    // Existing input handling...
+    if (!gameStateManager || !player || !uiManager || !galaxy) { return; }
     let clickHandledByUI = uiManager.handleMouseClicks(
         mouseX, mouseY, gameStateManager.currentState, player, player.currentSystem?.station?.getMarket(), galaxy
     );
-
-    // 2. If UI didn't handle it AND we're in flight, assume it's a firing attempt
     if (!clickHandledByUI && gameStateManager.currentState === "IN_FLIGHT") {
-        player.handleFireInput(); // Player class handles cooldown check
+        player.handleFireInput();
     }
 }
 // --- End Input Handling ---
