@@ -570,9 +570,9 @@ class UIManager {
                 if (this.isClickInArea(mx, my, area)) {
                     if (player.credits >= area.price) {
                         player.spendCredits(area.price);
-                        player.applyShipDefinition(area.shipType);
+                        player.applyShipDefinition(area.shipTypeKey);
                         saveGame && saveGame();
-                        alert(`You bought a ${area.shipType}!`);
+                        alert(`You bought a ${area.shipName}!`)
                     } else {
                         alert("Not enough credits!");
                     }
@@ -685,7 +685,12 @@ class UIManager {
             fill(255); noStroke(); textAlign(LEFT,CENTER);
             let price = ship.price || (ship.baseHull*20+ship.cargoCapacity*10+1000);
             text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr`, pX+30, y+rowH/2);
-            this.shipyardListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, shipType:ship.name, price});
+            this.shipyardListAreas.push({
+                x: pX+20, y: y, w: pW-40, h: rowH-6,
+                shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], // The actual key
+                shipName: ship.name, // Display name
+                price
+            });
         }
 
         // Draw scrollbar if needed
