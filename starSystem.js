@@ -268,7 +268,7 @@ class StarSystem {
 
     /** Updates dynamic objects, handles spawning/despawning, checks collisions. */
     update(player) {
-        if (!player || !player.pos) { console.warn("StarSystem update skipped: Invalid player object."); return; }
+        if (!player || !player.pos) return;
         try {
             // Update Enemies & Check Bounty Progress
             for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -305,14 +305,17 @@ class StarSystem {
 
             // --- Update Projectiles (Ensure proj.update() is called) ---
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                 const proj = this.projectiles[i]; if (!proj) { this.projectiles.splice(i, 1); continue; }
-                 try { proj.update(); } catch(e) { console.error("Err updating Projectile:",e,proj); } // <<< Call update()
-                 let dP = dist(proj.pos.x, proj.pos.y, player.pos.x, player.pos.y); if (proj.lifespan <= 0 || dP > this.despawnRadius) { this.projectiles.splice(i, 1); }
+                let proj = this.projectiles[i];
+                proj.update();
+                if (proj.lifespan <= 0 || proj.isOffScreen()) {
+                    this.projectiles.splice(i, 1);
+                }
             }
             // --- End Projectile Loop ---
 
             // Collision Checks
             this.checkCollisions(player);
+            this.checkProjectileCollisions(player); // Added call to new method
             // Spawning Timers
             this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(player); this.enemySpawnTimer = 0; }
             this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(player); this.asteroidSpawnTimer = 0; }
@@ -349,7 +352,9 @@ class StarSystem {
             this.drawBackground();
             if (this.station) this.station.draw();
             this.planets.forEach(p => p?.draw()); this.asteroids.forEach(a => a?.draw());
-            this.enemies.forEach(e => e?.draw()); this.projectiles.forEach(p => p?.draw());
+            this.enemies.forEach(e => e?.draw());
+            //console.log(`Projectiles count: ${this.projectiles.length}`);
+            this.projectiles.forEach(proj => proj.draw());
             player.draw();
         } catch (e) { console.error(`Error during StarSystem ${this.name} world element drawing:`, e); }
         finally { pop(); } // Ensure pop() runs
@@ -434,6 +439,35 @@ class StarSystem {
         }
 
         return sys;
+    }
+
+    // Add this method to the StarSystem class
+    checkProjectileCollisions(player) {
+        // Loop backwards over projectiles so removals don't skip elements
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            let proj = this.projectiles[i];
+
+            // Check collision against the player if the shooter is not the player
+            if (player && proj.owner !== player && proj.checkCollision(player)) {
+                console.log(`Projectile hit player! Damage: ${proj.damage}`);
+                player.takeDamage(proj.damage);
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+            
+            // Check collision against each enemy ship (allowing friendly fire)
+            for (let enemy of this.enemies) {
+                // Do not let a ship be hit by its own projectile
+                if (proj.owner === enemy) continue;
+
+                if (proj.checkCollision(enemy)) {
+                    console.log(`Projectile hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
+                    enemy.takeDamage(proj.damage);
+                    this.projectiles.splice(i, 1);
+                    break; // Break to avoid checking this projectile against other ships
+                }
+            }
+        }
     }
 
 } // End of StarSystem Class

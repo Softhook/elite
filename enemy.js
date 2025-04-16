@@ -57,6 +57,15 @@ class Enemy {
         this.role = role;
         // ---
 
+        // After setting role in the constructor
+        this.role = role;
+        if (this.role === AI_ROLE.PIRATE) {
+            // Pirates are automatically wanted
+            this.isWanted = true;
+        } else {
+            this.isWanted = false;
+        }
+
         // --- Physics & Stats (using the final shipDef) ---
         this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI); // Radians
         this.size = shipDef.size; this.baseMaxSpeed = shipDef.baseMaxSpeed; this.baseThrust = shipDef.baseThrust;
@@ -208,37 +217,134 @@ class Enemy {
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
+        // If pirate and no valid target, look for a police ship to attack.
+        if (this.role === AI_ROLE.PIRATE && (!this.target || this.target.hull <= 0)) {
+            let policeTarget = null;
+            if (system.enemies && system.enemies.length > 0) {
+                for (let e of system.enemies) {
+                    if (e !== this && e.hull > 0 && e.role === AI_ROLE.POLICE) {
+                        policeTarget = e;
+                        break;
+                    }
+                }
+            }
+            if (policeTarget) {
+                this.target = policeTarget;
+            }
+        }
+        
         let targetExists = this.target?.hull > 0;
-        let distanceToTarget = targetExists ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) : Infinity;
-        let desiredMovementTargetPos = null; let shootingAngle = this.angle;
-        if (targetExists) { shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x)); }
+        let distanceToTarget = targetExists
+             ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y)
+             : Infinity;
+        let desiredMovementTargetPos = null;
+        let shootingAngle = this.angle;
+        if (targetExists) {
+            shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x));
+        }
         let previousState = this.currentState;
+        
         // --- Combat State Machine ---
         switch (this.currentState) {
-            case AI_STATE.IDLE: case AI_STATE.PATROLLING: this.vel.mult(this.drag * 0.95); if (targetExists && distanceToTarget < this.detectionRange) { this.currentState = AI_STATE.APPROACHING; } break;
-            case AI_STATE.APPROACHING: if (!targetExists || distanceToTarget > this.detectionRange * 1.1) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } desiredMovementTargetPos = this.predictTargetPosition() || this.target?.pos; if (distanceToTarget < this.engageDistance) { this.currentState = AI_STATE.ATTACK_PASS; this.passTimer = this.passDuration; } break;
-            case AI_STATE.ATTACK_PASS: if (!targetExists) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } this.passTimer -= deltaTime / 1000; if (this.target?.vel) { desiredMovementTargetPos = p5.Vector.add(this.target.pos, this.target.vel.copy().setMag(100)); } else { desiredMovementTargetPos = this.target?.pos; } if (this.passTimer <= 0 || !desiredMovementTargetPos) { this.currentState = AI_STATE.REPOSITIONING; if (targetExists) { let v=p5.Vector.sub(this.pos,this.target.pos); v.setMag(this.repositionDistance * 1.5); this.repositionTarget=p5.Vector.add(this.pos, v); } else { this.repositionTarget=null; } } break;
-            case AI_STATE.REPOSITIONING: if (!targetExists) { this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break; } desiredMovementTargetPos = this.repositionTarget; let distToRepo = this.repositionTarget ? dist(this.pos.x, this.pos.y, this.repositionTarget.x, this.repositionTarget.y) : Infinity; if (!desiredMovementTargetPos || distanceToTarget > this.repositionDistance || distToRepo < 50) { this.currentState = AI_STATE.APPROACHING; this.repositionTarget = null; } break;
-            default: this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); break;
+            case AI_STATE.IDLE:
+            case AI_STATE.PATROLLING:
+                this.vel.mult(this.drag * 0.95);
+                if (targetExists && distanceToTarget < this.detectionRange) {
+                    this.currentState = AI_STATE.APPROACHING;
+                }
+                break;
+            case AI_STATE.APPROACHING:
+                if (!targetExists || distanceToTarget > this.detectionRange * 1.1) {
+                    this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                    break;
+                }
+                desiredMovementTargetPos = this.predictTargetPosition() || this.target?.pos;
+                if (distanceToTarget < this.engageDistance) {
+                    this.currentState = AI_STATE.ATTACK_PASS;
+                    this.passTimer = this.passDuration;
+                }
+                break;
+            case AI_STATE.ATTACK_PASS:
+                if (!targetExists) {
+                    this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                    break;
+                }
+                this.passTimer -= deltaTime / 1000;
+                if (this.target?.vel) {
+                    desiredMovementTargetPos = p5.Vector.add(this.target.pos, this.target.vel.copy().setMag(100));
+                } else {
+                    desiredMovementTargetPos = this.target?.pos;
+                }
+                if (this.passTimer <= 0 || !desiredMovementTargetPos) {
+                    this.currentState = AI_STATE.REPOSITIONING;
+                    if (targetExists) {
+                        let v = p5.Vector.sub(this.pos, this.target.pos);
+                        v.setMag(this.repositionDistance * 1.5);
+                        this.repositionTarget = p5.Vector.add(this.pos, v);
+                    } else {
+                        this.repositionTarget = null;
+                    }
+                }
+                break;
+            case AI_STATE.REPOSITIONING:
+                if (!targetExists) {
+                    this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                    break;
+                }
+                desiredMovementTargetPos = this.repositionTarget;
+                let distToRepo = this.repositionTarget ? dist(this.pos.x, this.pos.y, this.repositionTarget.x, this.repositionTarget.y) : Infinity;
+                if (!desiredMovementTargetPos || distanceToTarget > this.repositionDistance || distToRepo < 50) {
+                    this.currentState = AI_STATE.APPROACHING;
+                    this.repositionTarget = null;
+                }
+                break;
+            default:
+                this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                break;
         }
+        
+        // Uncomment the following debug line if needed:
         // if(this.currentState !== previousState) { console.log(` -> ${this.shipTypeName}(${this.role}) State: ${previousState}->${this.currentState}`); }
+        
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     } // End updateCombatAI
 
     /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
     updatePoliceAI(system) {
-        let targetExists = this.target?.hull > 0;
-        let isAggressive = targetExists && this.target.isWanted === true;
-        if (isAggressive && (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) { this.currentState = AI_STATE.APPROACHING; }
-        else if (!isAggressive && (this.currentState !== AI_STATE.PATROLLING && this.currentState !== AI_STATE.IDLE)) { this.currentState = AI_STATE.PATROLLING; this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500)); }
-        if (isAggressive && targetExists) { this.updateCombatAI(system); } // Use combat logic
-        else { // Patrolling logic
+        let wantedTarget = null;
+        if (system.enemies && system.enemies.length > 0) {
+            for (let e of system.enemies) {
+                if (e !== this && e.hull > 0 && e.isWanted) {
+                    wantedTarget = e;
+                    break;
+                }
+            }
+        }
+        if (wantedTarget) {
+            // Target any wanted ship, not just the player.
+            this.target = wantedTarget;
+            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
+                this.currentState = AI_STATE.APPROACHING;
+            }
+            this.updateCombatAI(system);
+        } else {
+            // No wanted target: Patrol.
             this.currentState = AI_STATE.PATROLLING;
-            if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500)); }
+            if (!this.patrolTargetPos) {
+                this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500));
+            }
             let desiredMovementTargetPos = this.patrolTargetPos;
-            let distToPatrolTarget = desiredMovementTargetPos ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y) : Infinity;
-            if (distToPatrolTarget < 50) { if(system?.station?.pos) this.patrolTargetPos = system.station.pos.copy(); else this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000)); desiredMovementTargetPos = this.patrolTargetPos; }
+            let distToPatrolTarget = desiredMovementTargetPos
+                ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
+                : Infinity;
+            if (distToPatrolTarget < 50) {
+                if(system?.station?.pos)
+                    this.patrolTargetPos = system.station.pos.copy();
+                else
+                    this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000));
+                desiredMovementTargetPos = this.patrolTargetPos;
+            }
             this.performRotationAndThrust(desiredMovementTargetPos);
         }
     } // End updatePoliceAI
@@ -361,14 +467,22 @@ class Enemy {
          return angleDifference;
     }
 
-     /** Helper: Checks conditions and calls fire() if appropriate. */
-     performFiring(system, canFire, distanceToTarget, shootingAngleRad) {
-         if (canFire && distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-             if (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || (this.isThargoid && this.currentState !== AI_STATE.IDLE)) {
-                 this.fire(system, shootingAngleRad); this.fireCooldown = this.fireRate;
-             }
-         }
-     }
+    /** Helper: Checks conditions and calls fire() if appropriate. */
+    performFiring(system, targetExists, distanceToTarget, shootingAngle) {
+        // Check if there is a valid target
+        if (!targetExists) return;
+
+        // If within a certain range and the cooldown has expired, fire a shot
+        if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
+            // Create a projectile from this enemy. The projectile's owner is set to this enemy.
+            let proj = new Projectile(this.pos.x, this.pos.y, shootingAngle, this);
+            system.projectiles.push(proj);
+            
+            // Reset cooldown (assumes fireRate in seconds, adjust as needed)
+            this.fireCooldown = this.fireRate;
+            console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
+        }
+    }
 
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
