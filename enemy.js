@@ -4,7 +4,8 @@
 const AI_ROLE = {
     PIRATE: 'Pirate',
     POLICE: 'Police',
-    HAULER: 'Hauler'
+    HAULER: 'Hauler',
+    TRANSPORT: 'Transport'  // New role for local shuttles
 };
 
 // Define AI States (Shared across roles, but used differently)
@@ -15,7 +16,8 @@ const AI_STATE = {
     REPOSITIONING: 3, // Moving away after pass (Pirate/Police when hostile)
     PATROLLING: 4,    // Moving towards a point (e.g., station or patrol route) - Police/Hauler
     NEAR_STATION: 5,  // Paused near station - Hauler only
-    LEAVING_SYSTEM: 6 // Moving towards exit point - Hauler only
+    LEAVING_SYSTEM: 6,// Moving towards exit point - Hauler only
+    TRANSPORTING: 7   // New state for transport behaviour
 };
 
 class Enemy {
@@ -100,13 +102,26 @@ class Enemy {
         this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0); // Use degree speed for rough scaling
 
         // --- Role-Specific Initial State ---
-        switch(this.role) {
-             case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break; // Start moving
-             case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break; // Start patrolling
-             case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break; // Start Idle
-             default: this.currentState = AI_STATE.IDLE;
+        this.role = role;
+        if (this.role === AI_ROLE.TRANSPORT) {
+            // For transport shuttles, use lower speed and a fixed route behavior.
+            this.currentState = AI_STATE.TRANSPORTING;
+            // Set lower speed multipliers for smoother shuttle motion.
+            this.maxSpeed = this.baseMaxSpeed * 0.5;
+            this.thrustForce = this.baseThrust * 0.6;
+            // Prepare route properties (to be assigned later)
+            this.routePoints = null;         // Array of two p5.Vector points [pointA, pointB]
+            this.currentRouteIndex = 0;      // Which point we're moving toward
+        } else {
+            // Existing role assignments – for Pirates/Police/Hauler, etc.
+            switch(this.role) {
+                case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break;
+                case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break;
+                case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break;
+                default: this.currentState = AI_STATE.IDLE;
+            }
+            if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
         }
-        if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; } // Thargoids start aggressive
 
         console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
@@ -162,18 +177,33 @@ class Enemy {
 
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
-        if (this.destroyed || !system) return; // Skip if destroyed or system missing
+        if (this.destroyed || !system) return;
         this.fireCooldown -= deltaTime / 1000;
-        try { // Wrap AI updates
-            switch (this.role) {
-                case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
-                case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
-                case AI_ROLE.HAULER: this.updateHaulerAI(system); break;
-                default: this.vel.mult(this.drag * 0.95); break;
+        
+        // New branch for TRANSPORT role:
+        if (this.role === AI_ROLE.TRANSPORT) {
+            this.updateTransportAI(system);
+        } else {
+            try {
+                // Existing role-specific updates.
+                switch (this.role) {
+                    case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
+                    case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
+                    case AI_ROLE.HAULER: this.updateHaulerAI(system); break;
+                    default: this.vel.mult(this.drag * 0.95); break;
+                }
+            } catch (e) {
+                console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
+                this.currentState = AI_STATE.IDLE;
             }
-        } catch (e) { console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e); this.currentState = AI_STATE.IDLE; }
-        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed); // Apply physics
-        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); } else { this.vel.set(0,0); }
+            this.vel.mult(this.drag);
+            this.vel.limit(this.maxSpeed);
+            if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { 
+                this.pos.add(this.vel); 
+            } else { 
+                this.vel.set(0, 0); 
+            }
+        }
     } // End update
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
@@ -224,6 +254,88 @@ class Enemy {
          }
          this.performRotationAndThrust(desiredMovementTargetPos); // Haulers just move
     } // End updateHaulerAI
+
+    /** Transport AI Logic - Moves between two endpoints chosen among
+        non-sun planets (if available) or falls back to station + planet.
+        This update makes the ship return after arriving at an endpoint,
+        then switch and travel to the other.
+    */
+    updateTransportAI(system) {
+        if (!system) return;
+        
+        // Define routePoints if not yet set:
+        if (!this.routePoints) {
+            let pts = [];
+            // Try to pick two distinct endpoints from non-sun planets if available.
+            if (system.planets && system.planets.length > 1) {
+                // Collect indices of non-sun planets (assume sun is at index 0)
+                let candidateIndices = [];
+                for (let i = 1; i < system.planets.length; i++) {
+                    candidateIndices.push(i);
+                }
+                if (candidateIndices.length >= 2) {
+                    // Shuffle candidates:
+                    let shuffled = shuffle(candidateIndices, true); // p5.js utility
+                    pts.push(system.planets[shuffled[0]].pos.copy());
+                    pts.push(system.planets[shuffled[1]].pos.copy());
+                } else {
+                    // Only one planet available – use it and the station (if available)
+                    pts.push(system.planets[1].pos.copy());
+                    pts.push(system.station ? system.station.pos.copy() : p5.Vector.add(system.planets[1].pos, createVector(300, 0)));
+                }
+            } else if (system.station) {
+                // Fallback: station plus a nearby offset
+                pts.push(system.station.pos.copy());
+                pts.push(p5.Vector.add(system.station.pos, createVector(300, 0)));
+            } else {
+                // Last resort: use two fixed positions.
+                pts.push(createVector(0, 0));
+                pts.push(createVector(300, 300));
+            }
+            this.routePoints = pts;
+            // Start by heading toward the second endpoint
+            this.currentRouteIndex = 1;
+        }
+        
+        // Determine the current destination.
+        let destination = this.routePoints[this.currentRouteIndex];
+        let desiredDir = p5.Vector.sub(destination, this.pos);
+        let distance = desiredDir.mag();
+        desiredDir.normalize();
+        
+        // Rotate smoothly towards the destination.
+        let targetAngle = desiredDir.heading(); // in radians
+        let diff = targetAngle - this.angle;
+        while (diff < -PI) diff += TWO_PI;
+        while (diff > PI) diff -= TWO_PI;
+        if (abs(diff) > 0.01) {
+            let rotationStep = constrain(diff, -this.rotationSpeed, this.rotationSpeed);
+            this.angle += rotationStep;
+            this.angle = (this.angle + TWO_PI) % TWO_PI;
+        }
+        
+        // Apply thrust towards the destination if not close.
+        if (distance > 20) {
+            let thrustVec = p5.Vector.fromAngle(this.angle);
+            thrustVec.mult(this.thrustForce);
+            this.vel.add(thrustVec);
+        } else {
+            // Slow down / pause briefly upon destination arrival.
+            this.vel.mult(0.8);
+            // Debug: log current distance if below 20
+            //console.log(`Transporter ${this.shipTypeName} near destination; distance: ${distance.toFixed(2)}`);
+            // Switch destination if within a small threshold (e.g., 10 instead of 5)
+            if (distance < 10) {
+                console.log(`Transporter ${this.shipTypeName} reached destination. Switching endpoint.`);
+                this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
+            }
+        }
+        
+        // Apply drag and update position.
+        this.vel.mult(this.drag);
+        this.vel.limit(this.maxSpeed);
+        this.pos.add(this.vel);
+    }
 
     /** Helper: Rotates towards target, applies thrust if aligned. Returns angle difference. */
     performRotationAndThrust(desiredMovementTargetPos) {
@@ -291,3 +403,4 @@ class Enemy {
     checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
 
 } // End of Enemy Class
+

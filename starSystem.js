@@ -223,6 +223,12 @@ class StarSystem {
                 chosenShipTypeName = "Krait";
         }
 
+        // --- New transport spawn branch (15% chance) ---
+        if (random() < 0.25) {
+            chosenRole = AI_ROLE.TRANSPORT;
+            chosenShipTypeName = "Sidewinder";
+        }
+
         // --- Optional Thargoid Override ---
         const thargoidChance = 0.03;
         if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
@@ -233,15 +239,17 @@ class StarSystem {
         // --- End Thargoid Override ---
 
         let angle = random(TWO_PI);
-        let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(150,400);
-        let spawnX = player.pos.x + cos(angle)*spawnDist;
-        let spawnY = player.pos.y + sin(angle)*spawnDist;
+        let spawnDist = sqrt(sq(width/2) + sq(height/2)) + random(150, 400);
+        let spawnX = player.pos.x + cos(angle) * spawnDist;
+        let spawnY = player.pos.y + sin(angle) * spawnDist;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, player, chosenShipTypeName, chosenRole);
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             this.enemies.push(newEnemy);
-        } catch(e) { console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); }
+        } catch(e) { 
+            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); 
+        }
     }
 
     /** Attempts to spawn an asteroid. */
