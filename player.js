@@ -404,7 +404,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
             // --- Save the plain mission data object ---
-            activeMission: missionDataToSave
+            activeMission: missionDataToSave,
+            weaponName: this.currentWeapon?.name || null // <-- ADD THIS LINE
             // -----------------------------------------
         };
     }
@@ -421,6 +422,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.credits = data.credits ?? 1000;
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
+
+        // --- Load weapon ---
+        if (data.weaponName) {
+            this.setWeaponByName(data.weaponName);
+        } else {
+            this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser if missing
+            this.fireRate = this.currentWeapon.fireRate;
+        }
 
         // --- Load active mission ---
         this.activeMission = null; // Start fresh before loading

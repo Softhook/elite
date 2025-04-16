@@ -66,7 +66,7 @@ class StarSystem {
 
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
-        this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 25;
+        this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 10;
         this.despawnRadius = 2000; // Default, updated in initStaticElements based on screen size
     }
 
