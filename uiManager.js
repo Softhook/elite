@@ -58,7 +58,7 @@ class UIManager {
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         this.stationMenuButtonAreas = [];
         push();
-        let pX=width*0.2, pY=height*0.2, pW=width*0.6, pH=height*0.6;
+        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
         fill(20,20,50,220); stroke(100,100,255); rect(pX,pY,pW,pH,10);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20);
@@ -109,7 +109,7 @@ class UIManager {
     } // --- End drawMarketScreen ---
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
-    drawMissionBoard(missions, selectedIndex, player) { // selectedIndex is still needed for list highlighting
+    drawMissionBoard(missions, selectedIndex, player) {
         //console.log("[MissionBoard] missions:", missions, "selectedIndex:", selectedIndex, "player.activeMission:", player?.activeMission);
          if (!player) { console.warn("drawMissionBoard missing player"); return; }
          this.missionListButtonAreas = []; this.missionDetailButtonAreas = {}; // Clear areas
@@ -131,7 +131,8 @@ class UIManager {
 
          push(); // Isolate drawing
          // --- Panel & Title ---
-         let pX=width*0.1, pY=height*0.1, pW=width*0.8, pH=height*0.8; fill(20,50,20,220); stroke(100,255,100); rect(pX,pY,pW,pH,10);
+         let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
+         fill(20,50,20,220); stroke(100,255,100); rect(pX,pY,pW,pH,10);
          fill(255); textSize(24); textAlign(CENTER,TOP); text("Station Mission Board", pX+pW/2, pY+20);
          // --- Layout ---
          let listW = pW*0.4, detailX = pX+listW+10, detailW = pW-listW-20; let cY = pY+60, cH = pH-110;
@@ -350,7 +351,20 @@ class UIManager {
 
     /** Draws the Game Over overlay screen */
     drawGameOverScreen() {
-        push(); fill(0, 0, 0, 150); rect(0, 0, width, height); fill(255, 0, 0); textSize(48); textAlign(CENTER, CENTER); text("GAME OVER", width/2, height/2 - 30); fill(255); textSize(20); text("Click to Restart", width/2, height/2 + 30); pop();
+        push();
+        fill(0, 0, 0, 220); // Semi-transparent black overlay
+        rect(0, 0, width, height);
+
+        fill(255, 60, 60);
+        textAlign(CENTER, CENTER);
+        textSize(48);
+        text("GAME OVER", width / 2, height / 2 - 40);
+
+        fill(255);
+        textSize(22);
+        text("Press F5 or reload to restart", width / 2, height / 2 + 20);
+
+        pop();
     } // --- End drawGameOverScreen ---
 
     drawMinimap(player, system) {
@@ -662,7 +676,7 @@ class UIManager {
         if (!player) return;
         this.shipyardListAreas = [];
         push();
-        let pX=width*0.25, pY=height*0.18, pW=width*0.5, pH=height*0.64;
+        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
         fill(30,30,60,230); stroke(100,200,255); rect(pX,pY,pW,pH,10);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text("Shipyard", pX+pW/2, pY+20);
@@ -723,7 +737,7 @@ class UIManager {
         if (!player) return;
         this.upgradeListAreas = [];
         push();
-        let pX=width*0.28, pY=height*0.22, pW=width*0.44, pH=height*0.56;
+        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
         fill(40,30,60,230); stroke(200,100,255); rect(pX,pY,pW,pH,10);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text("Upgrades", pX+pW/2, pY+20);
@@ -731,9 +745,22 @@ class UIManager {
         // Use the global WEAPON_UPGRADES array
         const upgrades = WEAPON_UPGRADES;
         let rowH = 38, startY = pY+60;
+        let visibleRows = floor((pH-120)/rowH);
+        let totalRows = upgrades.length;
+        let scrollAreaH = visibleRows * rowH;
+        this.upgradeScrollMax = max(0, totalRows - visibleRows);
+
+        // Clamp scroll offset
+        if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
+        this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
+
+        // Draw visible upgrades
+        let firstRow = this.upgradeScrollOffset;
+        let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(15);
-        upgrades.forEach((upg, i) => {
-            let y = startY + i*rowH;
+        for (let i = firstRow; i < lastRow; i++) {
+            let upg = upgrades[i];
+            let y = startY + (i-firstRow)*rowH;
             fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
             text(
@@ -741,7 +768,20 @@ class UIManager {
                 pX+30, y+rowH/2
             );
             this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
-        });
+        }
+
+        // Draw scrollbar if needed
+        if (this.upgradeScrollMax > 0) {
+            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
+            fill(60,60,100); stroke(180,100,255); rect(barX, barY, barW, barH, 6);
+            let handleH = max(30, barH * (visibleRows / totalRows));
+            let handleY = barY + (barH-handleH) * (this.upgradeScrollOffset / this.upgradeScrollMax);
+            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
+            // Store for click/drag if you want to implement it
+            this.upgradeScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
+        } else {
+            this.upgradeScrollbarArea = null;
+        }
 
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
@@ -757,6 +797,12 @@ class UIManager {
         if (currentState === "VIEWING_SHIPYARD" && this.shipyardScrollMax > 0) {
             this.shipyardScrollOffset += event.deltaY > 0 ? 1 : -1;
             this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
+            return true;
+        }
+        if (currentState === "VIEWING_UPGRADES" && this.upgradeScrollMax > 0) {
+            if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
+            this.upgradeScrollOffset += event.deltaY > 0 ? 1 : -1;
+            this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
             return true;
         }
         return false;
