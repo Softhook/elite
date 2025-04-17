@@ -1,23 +1,66 @@
 // ****** weaponSystem.js ******
 
 class WeaponSystem {
+    // --- Generic fire method for easy switching ---
+    static fire(owner, system, angle, mode = "single") {
+        switch (mode) {
+            case "single":      return WeaponSystem.fireProjectile(owner, system, angle);
+            case "spread2":     return WeaponSystem.fireSpread(owner, system, angle, 2);
+            case "spread3":     return WeaponSystem.fireSpread(owner, system, angle, 3);
+            case "spread4":     return WeaponSystem.fireSpread(owner, system, angle, 4);
+            case "straight2":   return WeaponSystem.fireStraight(owner, system, angle, 2);
+            case "straight3":   return WeaponSystem.fireStraight(owner, system, angle, 3);
+            case "straight4":   return WeaponSystem.fireStraight(owner, system, angle, 4);
+            case "beam":        return WeaponSystem.fireBeam(owner, system, angle);
+            case "turret":      return WeaponSystem.fireTurret(owner, system);
+            case "force":       return WeaponSystem.fireForce(owner, system);
+            default:            return WeaponSystem.fireProjectile(owner, system, angle);
+        }
+    }
+
+    // --- Single projectile ---
     static fireProjectile(owner, system, angle) {
         const weapon = owner.currentWeapon;
-        // No offset here!
         const proj = new Projectile(
             owner.pos.x, owner.pos.y, angle, owner,
             8, weapon.damage, weapon.color
         );
         system.addProjectile(proj);
+        //console.log("Projectile fired at angle", angle);
     }
 
-    static fireSpread(owner, system, angle) {
-        const spreadAngles = [-0.15, 0, 0.15];
-        for (let offset of spreadAngles) {
-            WeaponSystem.fireProjectile(owner, system, angle + offset);
+    // --- N-way spread (angled) ---
+    static fireSpread(owner, system, angle, count = 3) {
+        // Centered spread, e.g. for 3: [-0.15, 0, 0.15]
+        let spread = 0.3; // total spread in radians
+        if (count === 2) spread = 0.18;
+        if (count === 4) spread = 0.4;
+        const start = -spread / 2;
+        const step = count > 1 ? spread / (count - 1) : 0;
+        for (let i = 0; i < count; i++) {
+            WeaponSystem.fireProjectile(owner, system, angle + start + i * step);
         }
     }
 
+    // --- N-way straight (parallel) ---
+    static fireStraight(owner, system, angle, count = 3) {
+        // Offset projectiles perpendicular to angle
+        const spacing = 12; // pixels between projectiles
+        const mid = (count - 1) / 2;
+        for (let i = 0; i < count; i++) {
+            let offset = (i - mid) * spacing;
+            let perp = p5.Vector.fromAngle(angle + HALF_PI).mult(offset);
+            let pos = p5.Vector.add(owner.pos, perp);
+            const weapon = owner.currentWeapon;
+            const proj = new Projectile(
+                pos.x, pos.y, angle, owner,
+                8, weapon.damage, weapon.color
+            );
+            system.addProjectile(proj);
+        }
+    }
+
+    // --- Beam weapon ---
     static fireBeam(owner, system, angle) {
         const beamLength = 1200;
         const beamStart = owner.pos.copy();
@@ -36,11 +79,9 @@ class WeaponSystem {
                 if (projLength > 0 && projLength < beamLength) {
                     let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
                     let distToBeam = p5.Vector.dist(enemy.pos, closestPoint);
-                    if (distToBeam < enemy.size / 2) {
-                        if (projLength < minDist) {
-                            minDist = projLength;
-                            hitTarget = enemy;
-                        }
+                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
+                        minDist = projLength;
+                        hitTarget = enemy;
                     }
                 }
             }
@@ -60,18 +101,12 @@ class WeaponSystem {
                 }
             }
             if (hitTarget === player) {
-                console.log("system.player === player?", system.player === player); // should be true
-                console.log("About to damage player:", system.player);
                 player.takeDamage(owner.currentWeapon.damage);
-                console.log("Player hit by beam! Damage:", owner.currentWeapon.damage);
             }
         }
 
         if (hitTarget) {
             hitTarget.takeDamage(owner.currentWeapon.damage);
-            if (hitTarget instanceof Player) {
-                console.log("Player hit by beam! Damage:", owner.currentWeapon.damage);
-            }
         }
         // Store beam info for drawing (works for both player and enemy)
         owner.lastBeam = {
@@ -82,6 +117,7 @@ class WeaponSystem {
         };
     }
 
+    // --- Turret weapon (auto-aims at nearest target) ---
     static fireTurret(owner, system, target) {
         if (!target && system && system.enemies && system.enemies.length > 0) {
             // Find nearest enemy (or player if owner is enemy)
@@ -100,6 +136,7 @@ class WeaponSystem {
         WeaponSystem.fireProjectile(owner, system, angle);
     }
 
+    // --- Force weapon (area effect) ---
     static fireForce(owner, system) {
         if (!system) return;
         const radius = 200;
@@ -111,7 +148,6 @@ class WeaponSystem {
                 let forceDir = p5.Vector.sub(system.player.pos, owner.pos).normalize();
                 system.player.vel.add(forceDir.mult(8));
                 system.player.takeDamage(owner.currentWeapon.damage);
-                console.log("Player hit by force weapon! Damage:", owner.currentWeapon.damage);
             }
         }
 

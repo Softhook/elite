@@ -554,26 +554,7 @@ class Enemy {
 
     fireWeapon(target = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
-        switch (this.currentWeapon.type) {
-            case "projectile":
-                console.log("Enemy firing projectile");
-                WeaponSystem.fireProjectile(this, this.currentSystem, this.angle);
-                break;
-            case "beam":
-                console.log("Enemy firing beam");
-                WeaponSystem.fireBeam(this, this.currentSystem, this.angle);
-                break;
-            case "spread":
-                WeaponSystem.fireSpread(this, this.currentSystem, this.angle);
-                break;
-            case "turret":
-                console.log("Enemy firing turret");
-                WeaponSystem.fireTurret(this, this.currentSystem, target);
-                break;
-            case "force":
-                WeaponSystem.fireForce(this, this.currentSystem);
-                break;
-        }
+        WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
     }
 
     /** Draws the enemy ship using its defined draw function and role-based stroke. */

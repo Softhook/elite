@@ -307,24 +307,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     /** Fires the current weapon based on its type using WeaponSystem. */
     fireWeapon(target = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
-        switch (this.currentWeapon.type) {
-            case "projectile":
-                WeaponSystem.fireProjectile(this, this.currentSystem, this.angle);
-                break;
-            case "beam":
-                WeaponSystem.fireBeam(this, this.currentSystem, this.angle);
-                break;
-            case "spread":
-                WeaponSystem.fireSpread(this, this.currentSystem, this.angle);
-                break;
-            case "turret":
-                WeaponSystem.fireTurret(this, this.currentSystem, target);
-                break;
-            case "force":
-                WeaponSystem.fireForce(this, this.currentSystem);
-                break;
-            // Add more types as needed
-        }
+        WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
+        console.log(`${this.currentWeapon.name} fired by player at angle ${this.angle}`);
     }
 
     /** Updates player physics state. */
