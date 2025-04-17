@@ -353,14 +353,32 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
             pop();
         }
+
+        // Draw beam if recently fired
+        if (this.lastBeam && millis() - this.lastBeam.time < 120) {
+            push();
+            strokeWeight(6);
+            stroke(...this.lastBeam.color, 180);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
+            pop();
+        }
     }
 
     /** Applies damage to the player's hull. */
     takeDamage(amount) {
-        if (amount <= 0) return; this.hull -= amount;
+        if (this.destroyed || amount <= 0) return;
+        this.hull -= amount;
+        console.log("Player took damage:", amount, "Current hull:", this.hull);
         if (this.hull <= 0) {
-            this.hull = 0; console.log("Player Destroyed! GAME OVER.");
-            if (gameStateManager) gameStateManager.setState("GAME_OVER");
+            this.hull = 0;
+            this.destroyed = true;
+            // --- GAME OVER LOGIC ---
+            if (typeof gameStateManager !== "undefined" && gameStateManager) {
+                gameStateManager.setState("GAME_OVER");
+            } else {
+                alert("Game Over! Your ship has been destroyed.");
+                noLoop();
+            }
         }
     }
 

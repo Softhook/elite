@@ -2,7 +2,7 @@
 
 class Projectile {
     constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
-        const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2); // was 0.7
+        const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2);
         this.pos = createVector(x, y).add(spawnOffset);
         this.owner = owner;
         this.type = type; // Store weapon type for special behaviors

@@ -82,6 +82,7 @@ function setup() {
 
     if (systemToStartIn) {
         player.currentSystem = systemToStartIn; // Set player's current system reference
+        systemToStartIn.player = player; // Assign the player to the system
         // If no save game was loaded, the starting system needs its initial setup
         if (!loadGameWasSuccessful) {
             console.log("No save game found, running initial enterSystem for starting system..."); // Keep important log
@@ -269,7 +270,11 @@ function loadGame() {
 
                 // Link player object to the loaded system object (crucial)
                 player.currentSystem = galaxy.getCurrentSystem();
-                if (!player.currentSystem) { console.error("CRITICAL: Failed to link player to a valid currentSystem after load!"); }
+                if (player.currentSystem) {
+                    player.currentSystem.player = player; // Assign the player to the system
+                } else {
+                    console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                }
 
                 loadGameWasSuccessful = true; // Mark load as successful
                 console.log("Game Loaded Successfully.");

@@ -27,7 +27,7 @@ const WEAPON_UPGRADES = [
         desc: "Ballistic, good vs hull."
     },
     {
-        name: "Railgun",
+        name: "Railgun Turret",
         type: "turret",
         damage: 50,
         color: [255, 80, 255], // Magenta
@@ -36,9 +36,9 @@ const WEAPON_UPGRADES = [
         desc: "High damage, slow fire."
     },
     {
-        name: "Mega Blaster",
+        name: "Force Blaster",
         type: "force",
-        damage: 100,
+        damage: 3,
         color: [255, 0, 0], // Red
         fireRate: 0.5, 
         price: 10000,

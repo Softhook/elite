@@ -3,11 +3,9 @@
 class WeaponSystem {
     static fireProjectile(owner, system, angle) {
         const weapon = owner.currentWeapon;
-        // Use a larger offset to avoid spawning inside the ship
-        const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2);
-        const spawnPos = p5.Vector.add(owner.pos, spawnOffset);
+        // No offset here!
         const proj = new Projectile(
-            spawnPos.x, spawnPos.y, angle, owner,
+            owner.pos.x, owner.pos.y, angle, owner,
             8, weapon.damage, weapon.color
         );
         system.addProjectile(proj);
@@ -21,15 +19,15 @@ class WeaponSystem {
     }
 
     static fireBeam(owner, system, angle) {
-        // Beam: damage first enemy in line, store beam info for drawing
         const beamLength = 1200;
         const beamStart = owner.pos.copy();
         const beamEnd = p5.Vector.fromAngle(angle).mult(beamLength).add(owner.pos);
 
-        // Find first enemy hit by the beam
-        let hitEnemy = null;
+        let hitTarget = null;
         let minDist = Infinity;
-        if (system && system.enemies) {
+
+        // If owner is Player, check enemies
+        if (owner instanceof Player && system && system.enemies) {
             for (let enemy of system.enemies) {
                 if (enemy === owner) continue;
                 let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
@@ -41,14 +39,39 @@ class WeaponSystem {
                     if (distToBeam < enemy.size / 2) {
                         if (projLength < minDist) {
                             minDist = projLength;
-                            hitEnemy = enemy;
+                            hitTarget = enemy;
                         }
                     }
                 }
             }
         }
-        if (hitEnemy) {
-            hitEnemy.takeDamage(owner.currentWeapon.damage);
+
+        // If owner is Enemy, check player
+        if (owner instanceof Enemy && system && system.player) {
+            let player = system.player;
+            let toPlayer = p5.Vector.sub(player.pos, beamStart);
+            let beamDir = p5.Vector.fromAngle(angle).normalize();
+            let projLength = toPlayer.dot(beamDir);
+            if (projLength > 0 && projLength < beamLength) {
+                let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
+                let distToBeam = p5.Vector.dist(player.pos, closestPoint);
+                if (distToBeam < player.size / 2) {
+                    hitTarget = player;
+                }
+            }
+            if (hitTarget === player) {
+                console.log("system.player === player?", system.player === player); // should be true
+                console.log("About to damage player:", system.player);
+                player.takeDamage(owner.currentWeapon.damage);
+                console.log("Player hit by beam! Damage:", owner.currentWeapon.damage);
+            }
+        }
+
+        if (hitTarget) {
+            hitTarget.takeDamage(owner.currentWeapon.damage);
+            if (hitTarget instanceof Player) {
+                console.log("Player hit by beam! Damage:", owner.currentWeapon.damage);
+            }
         }
         // Store beam info for drawing (works for both player and enemy)
         owner.lastBeam = {
@@ -78,18 +101,34 @@ class WeaponSystem {
     }
 
     static fireForce(owner, system) {
-        if (!system || !system.enemies) return;
+        if (!system) return;
         const radius = 200;
-        for (let enemy of system.enemies) {
-            if (enemy === owner) continue;
-            let d = p5.Vector.dist(owner.pos, enemy.pos);
+
+        // If owner is Enemy, affect the player
+        if (owner instanceof Enemy && system.player) {
+            let d = p5.Vector.dist(owner.pos, system.player.pos);
             if (d < radius) {
-                let forceDir = p5.Vector.sub(enemy.pos, owner.pos).normalize();
-                enemy.vel.add(forceDir.mult(8));
-                enemy.takeDamage(owner.currentWeapon.damage);
+                let forceDir = p5.Vector.sub(system.player.pos, owner.pos).normalize();
+                system.player.vel.add(forceDir.mult(8));
+                system.player.takeDamage(owner.currentWeapon.damage);
+                console.log("Player hit by force weapon! Damage:", owner.currentWeapon.damage);
             }
         }
-        // Add a visual effect
+
+        // If owner is Player, affect all enemies
+        if (owner instanceof Player && system.enemies) {
+            for (let enemy of system.enemies) {
+                if (enemy === owner) continue;
+                let d = p5.Vector.dist(owner.pos, enemy.pos);
+                if (d < radius) {
+                    let forceDir = p5.Vector.sub(enemy.pos, owner.pos).normalize();
+                    enemy.vel.add(forceDir.mult(8));
+                    enemy.takeDamage(owner.currentWeapon.damage);
+                }
+            }
+        }
+
+        // Visual effect
         owner.lastForceWave = { pos: owner.pos.copy(), radius: 0, maxRadius: radius, time: millis() };
     }
 }

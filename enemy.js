@@ -214,7 +214,9 @@ class Enemy {
     update(system) {
         if (this.destroyed || !system) return;
         this.fireCooldown -= deltaTime / 1000;
-        
+
+        this.currentSystem = system;
+
         // New branch for TRANSPORT role:
         if (this.role === AI_ROLE.TRANSPORT) {
             this.updateTransportAI(system);
@@ -244,9 +246,13 @@ class Enemy {
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
         // Guard against a missing or destroyed target.
-        if (this.role === AI_ROLE.PIRATE && (!this.target || !this.target.pos || this.target.hull <= 0)) {
-            console.log(`${this.shipTypeName} lost its target, reverting to Player.`);
-            this.target = system.player;  // Assuming system.player is valid.
+        if (
+            this.role === AI_ROLE.PIRATE &&
+            (!this.target || !this.target.pos || this.target.hull <= 0 || (system.player && system.player.destroyed)) &&
+            system.player && !system.player.destroyed
+        ) {
+            this.target = system.player;
+            this.currentState = AI_STATE.APPROACHING;
         }
 
         // For pirates: only switch target from Player if a Police or Hauler enemy is significantly closer.
@@ -273,15 +279,17 @@ class Enemy {
         }
 
         // After candidate switching: if the target is not Player.
-        if (this.role === AI_ROLE.PIRATE && this.target && !(this.target instanceof Player) && 
-            this.target.pos && system.player?.pos) {
-            let candidateDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
-            // If the player is closer and within detection range, revert to player.
-            if (playerDistance < candidateDistance && playerDistance < this.detectionRange) {
-                console.log(`${this.shipTypeName} reverting target from ${this.target.shipTypeName} to Player since player is closer (${playerDistance.toFixed(2)} vs ${candidateDistance.toFixed(2)})`);
-                this.target = system.player;
-            }
+        if (
+            this.role === AI_ROLE.PIRATE &&
+            this.target && !(this.target instanceof Player) &&
+            (
+                !this.target.pos ||
+                this.target.hull <= 0 ||
+                (system.player && dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y) < this.detectionRange)
+            )
+        ) {
+            this.target = system.player;
+            this.currentState = AI_STATE.APPROACHING;
         }
 
         // Continue with the rest of updateCombatAI...
@@ -299,6 +307,12 @@ class Enemy {
         // --- Combat State Machine ---
         switch (this.currentState) {
             case AI_STATE.IDLE:
+                this.vel.mult(this.drag * 0.95);
+                if (system.player && !system.player.destroyed) {
+                    this.target = system.player;
+                    this.currentState = AI_STATE.APPROACHING;
+                }
+                break;
             case AI_STATE.PATROLLING:
                 this.vel.mult(this.drag * 0.95);
                 if (targetExists && distanceToTarget < this.detectionRange) {
@@ -518,18 +532,10 @@ class Enemy {
 
     /** Helper: Checks conditions and calls fire() if appropriate. */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-        // Check if there is a valid target
         if (!targetExists) return;
-
-        // If within a certain range and the cooldown has expired, fire a shot
         if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-            if (this.currentWeapon.type === "turret") {
-                this.fireWeapon(system.player); // Pass the player as the target
-            } else {
-                this.fireWeapon();
-            }
-            
-            // Reset cooldown (assumes fireRate in seconds, adjust as needed)
+            if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
+            this.fireWeapon();
             this.fireCooldown = this.fireRate;
             console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
         }
@@ -607,6 +613,15 @@ class Enemy {
             let t = (millis() - this.lastForceWave.time) / 300;
             let r = lerp(0, this.lastForceWave.maxRadius, t);
             ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
+            pop();
+        }
+
+        // Draw beam if recently fired
+        if (this.lastBeam && millis() - this.lastBeam.time < 120) {
+            push();
+            strokeWeight(6);
+            stroke(...this.lastBeam.color, 180);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
             pop();
         }
 
