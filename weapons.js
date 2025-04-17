@@ -11,7 +11,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Beam Laser",
         type: "beam",
-        damage: 16,
+        damage: 4,
         color: [0, 200, 255], // Cyan
         fireRate: 0.1,
         price: 2500,

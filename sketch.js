@@ -170,6 +170,15 @@ function draw() {
 function keyPressed() {
     if (!gameStateManager) return; // Don't process keys if game not ready
 
+    // --- Add this block for space bar firing ---
+    if (key === ' ' || keyCode === 32) {
+        if (gameStateManager.currentState === "IN_FLIGHT" && player) {
+            player.handleFireInput();
+        }
+        return false; // Prevent default space bar scrolling
+    }
+    // --- End space bar fire ---
+
     // Toggle Galaxy Map (M key)
     if (key === 'm' || key === 'M') {
         if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
