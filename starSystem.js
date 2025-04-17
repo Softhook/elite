@@ -60,6 +60,8 @@ class StarSystem {
         this.asteroids = [];
         this.enemies = [];
         this.projectiles = [];
+        this.beams = [];
+        this.forceWaves = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
         this.bgStars = [];     // Populated in initStaticElements
@@ -273,6 +275,7 @@ class StarSystem {
         let spawnY = player.pos.y + sin(angle) * spawnDist;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, player, chosenShipTypeName, chosenRole);
+            newEnemy.currentSystem = this;
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             this.enemies.push(newEnemy);
@@ -339,6 +342,12 @@ class StarSystem {
             }
             // --- End Projectile Loop ---
 
+            // Update Beams
+            this.updateBeams && this.updateBeams();
+
+            // Update Force Waves
+            this.updateForceWaves && this.updateForceWaves();
+
             // Collision Checks
             this.checkCollisions(player);
             this.checkProjectileCollisions(player); // Added call to new method
@@ -348,20 +357,99 @@ class StarSystem {
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
     } // End update
 
+    updateBeams() {
+        // Remove expired beams (e.g., beams with .lifespan <= 0)
+        for (let i = this.beams.length - 1; i >= 0; i--) {
+            let beam = this.beams[i];
+            beam.update && beam.update();
+            if (beam.lifespan !== undefined && beam.lifespan <= 0) {
+                this.beams.splice(i, 1);
+            }
+        }
+    }
+
+    drawBeams() {
+        for (let beam of this.beams) {
+            beam.draw && beam.draw();
+        }
+    }
+
+    updateForceWaves() {
+        for (let i = this.forceWaves.length - 1; i >= 0; i--) {
+            let wave = this.forceWaves[i];
+            wave.update && wave.update();
+            if (wave.lifespan !== undefined && wave.lifespan <= 0) {
+                this.forceWaves.splice(i, 1);
+            }
+        }
+    }
+
+    drawForceWaves() {
+        for (let wave of this.forceWaves) {
+            wave.draw && wave.draw();
+        }
+    }
 
     /** Checks collisions between all relevant dynamic objects. */
     checkCollisions(player) {
         if (!player) return;
-        try { // Wrap collision logic
-            // Projectiles vs Ships & Asteroids
-            for (let i = this.projectiles.length - 1; i >= 0; i--) { const p = this.projectiles[i]; if (!p) continue; let pRemoved = false; if (p.owner === 'ENEMY' && p.checkCollision(player)) { player.takeDamage(p.damage); this.projectiles.splice(i, 1); pRemoved = true; } if (pRemoved) continue; if (p.owner === 'PLAYER') { for (let j = this.enemies.length - 1; j >= 0; j--) { const e = this.enemies[j]; if (!e) continue; if (p.checkCollision(e)) { e.takeDamage(p.damage); this.projectiles.splice(i, 1); pRemoved = true; break; } } } if (pRemoved) continue; for (let j = this.asteroids.length - 1; j >= 0; j--) { const a = this.asteroids[j]; if (!a) continue; if (p.checkCollision(a)) { a.takeDamage(p.damage); this.projectiles.splice(i, 1); pRemoved = true; break; } } }
-            // Player vs Asteroids (Ramming)
-            for (let i = this.asteroids.length - 1; i >= 0; i--) { const a = this.asteroids[i]; if (!a || a.isDestroyed()) continue; if (player.checkCollision(a)) { let ramDmg = 10 + floor(a.size / 4); player.takeDamage(ramDmg); a.takeDamage(ramDmg * 2); } }
+        try {
+            for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                const p = this.projectiles[i];
+                if (!p) continue;
+                let pRemoved = false;
+
+                // Enemy projectile hits player
+                if (p.owner instanceof Enemy && p.checkCollision(player)) {
+                    player.takeDamage(p.damage);
+                    this.projectiles.splice(i, 1);
+                    pRemoved = true;
+                }
+                if (pRemoved) continue;
+
+                // Player projectile hits enemy
+                if (p.owner instanceof Player) {
+                    for (let j = this.enemies.length - 1; j >= 0; j--) {
+                        const e = this.enemies[j];
+                        if (!e) continue;
+                        if (p.checkCollision(e)) {
+                            e.takeDamage(p.damage);
+                            this.projectiles.splice(i, 1);
+                            pRemoved = true;
+                            break;
+                        }
+                    }
+                }
+                if (pRemoved) continue;
+
+                // Projectiles hit asteroids
+                for (let j = this.asteroids.length - 1; j >= 0; j--) {
+                    const a = this.asteroids[j];
+                    if (!a) continue;
+                    if (p.checkCollision(a)) {
+                        a.takeDamage(p.damage);
+                        this.projectiles.splice(i, 1);
+                        pRemoved = true;
+                        break;
+                    }
+                }
+            }
         } catch(e) { console.error(`Error during checkCollisions in ${this.name}:`, e); }
     } // End checkCollisions
 
     /** Adds a projectile to the system's list. */
-    addProjectile(proj) { if (proj) this.projectiles.push(proj); }
+    addProjectile(proj) {
+        if (proj) {
+            console.log("Adding projectile", proj);
+            this.projectiles.push(proj);
+        }
+    }
+
+    /** Adds a beam to the system's list. */
+    addBeam(beam) { if (beam) this.beams.push(beam); }
+
+    /** Adds a force wave to the system's list. */
+    addForceWave(wave) { if (wave) this.forceWaves.push(wave); }
 
     /** Draws background stars. Assumes called within translated space. */
     drawBackground() {
@@ -398,6 +486,8 @@ class StarSystem {
         this.asteroids.forEach(a => { if (a) a.draw(); });
         this.enemies.forEach(e => { if (e) e.draw(); });
         this.projectiles.forEach(proj => proj.draw());
+        this.drawBeams && this.drawBeams();
+        this.drawForceWaves && this.drawForceWaves();
         player.draw();
         pop();
     }

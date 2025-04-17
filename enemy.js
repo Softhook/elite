@@ -116,6 +116,26 @@ class Enemy {
         this.fireCooldown = random(1.0, 2.5);
         this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0); // Use degree speed for rough scaling
 
+        // --- Weapon Assignment ---
+        if (!this.currentWeapon) {
+            // Assign a random weapon, or pick based on role/ship type
+            if (typeof WEAPON_UPGRADES !== "undefined" && WEAPON_UPGRADES.length > 0) {
+                // Example: random weapon
+                this.currentWeapon = WEAPON_UPGRADES[Math.floor(random(WEAPON_UPGRADES.length))];
+            } else {
+                // Fallback: basic projectile weapon
+                this.currentWeapon = {
+                    name: "Default Laser",
+                    type: "projectile",
+                    damage: 8,
+                    color: [255, 0, 0],
+                    fireRate: 0.5,
+                    price: 0,
+                    desc: "Fallback weapon."
+                };
+            }
+        }
+
         // --- Role-Specific Initial State ---
         this.role = role;
         if (this.role === AI_ROLE.TRANSPORT) {
@@ -503,9 +523,11 @@ class Enemy {
 
         // If within a certain range and the cooldown has expired, fire a shot
         if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-            // Create a projectile from this enemy. The projectile's owner is set to this enemy.
-            let proj = new Projectile(this.pos.x, this.pos.y, shootingAngle, this);
-            system.projectiles.push(proj);
+            if (this.currentWeapon.type === "turret") {
+                this.fireWeapon(system.player); // Pass the player as the target
+            } else {
+                this.fireWeapon();
+            }
             
             // Reset cooldown (assumes fireRate in seconds, adjust as needed)
             this.fireCooldown = this.fireRate;
@@ -522,6 +544,30 @@ class Enemy {
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
         let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
         system.addProjectile(proj);
+    }
+
+    fireWeapon(target = null) {
+        if (!this.currentWeapon || !this.currentSystem) return;
+        switch (this.currentWeapon.type) {
+            case "projectile":
+                console.log("Enemy firing projectile");
+                WeaponSystem.fireProjectile(this, this.currentSystem, this.angle);
+                break;
+            case "beam":
+                console.log("Enemy firing beam");
+                WeaponSystem.fireBeam(this, this.currentSystem, this.angle);
+                break;
+            case "spread":
+                WeaponSystem.fireSpread(this, this.currentSystem, this.angle);
+                break;
+            case "turret":
+                console.log("Enemy firing turret");
+                WeaponSystem.fireTurret(this, this.currentSystem, target);
+                break;
+            case "force":
+                WeaponSystem.fireForce(this, this.currentSystem);
+                break;
+        }
     }
 
     /** Draws the enemy ship using its defined draw function and role-based stroke. */
@@ -550,6 +596,18 @@ class Enemy {
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
              push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+        }
+
+        // Draw force wave if recently fired
+        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+            push();
+            noFill();
+            stroke(0, 200, 255, 180);
+            strokeWeight(4);
+            let t = (millis() - this.lastForceWave.time) / 300;
+            let r = lerp(0, this.lastForceWave.maxRadius, t);
+            ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
+            pop();
         }
 
         // Draw always-horizontal info label above the ship

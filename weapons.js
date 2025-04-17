@@ -1,6 +1,7 @@
 const WEAPON_UPGRADES = [
     {
         name: "Pulse Laser",
+        type: "projectile",
         damage: 10,
         color: [0, 255, 0], // Green
         fireRate: 0.4,
@@ -9,6 +10,7 @@ const WEAPON_UPGRADES = [
     },
     {
         name: "Beam Laser",
+        type: "beam",
         damage: 16,
         color: [0, 200, 255], // Cyan
         fireRate: 0.1,
@@ -17,6 +19,7 @@ const WEAPON_UPGRADES = [
     },
     {
         name: "Multi-Cannon",
+        type: "spread",
         damage: 13,
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
@@ -25,6 +28,7 @@ const WEAPON_UPGRADES = [
     },
     {
         name: "Railgun",
+        type: "turret",
         damage: 50,
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
@@ -33,6 +37,7 @@ const WEAPON_UPGRADES = [
     },
     {
         name: "Mega Blaster",
+        type: "force",
         damage: 100,
         color: [255, 0, 0], // Red
         fireRate: 0.5, 

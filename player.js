@@ -269,7 +269,10 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Handles mouse click for firing attempt. */
     handleFireInput() {
-        if (this.fireCooldown <= 0) { this.fire(); this.fireCooldown = this.fireRate; }
+        if (this.fireCooldown <= 0) {
+            this.fireWeapon();
+            this.fireCooldown = this.fireRate;
+        }
     }
 
     /** Handles continuous key presses for movement. Normalizes angle. */
@@ -301,6 +304,29 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.currentSystem.addProjectile(proj);
     }
 
+    /** Fires the current weapon based on its type using WeaponSystem. */
+    fireWeapon(target = null) {
+        if (!this.currentWeapon || !this.currentSystem) return;
+        switch (this.currentWeapon.type) {
+            case "projectile":
+                WeaponSystem.fireProjectile(this, this.currentSystem, this.angle);
+                break;
+            case "beam":
+                WeaponSystem.fireBeam(this, this.currentSystem, this.angle);
+                break;
+            case "spread":
+                WeaponSystem.fireSpread(this, this.currentSystem, this.angle);
+                break;
+            case "turret":
+                WeaponSystem.fireTurret(this, this.currentSystem, target);
+                break;
+            case "force":
+                WeaponSystem.fireForce(this, this.currentSystem);
+                break;
+            // Add more types as needed
+        }
+    }
+
     /** Updates player physics state. */
     update() {
         this.vel.mult(this.drag); this.vel.limit(this.maxSpeed);
@@ -315,6 +341,18 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (typeof drawFunc !== 'function') { /* Draw fallback */ return; }
         push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle)); // Convert radians to degrees
         drawFunc(this.size, this.isThrusting); pop();
+
+        // Draw force wave if recently fired
+        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+            push();
+            noFill();
+            stroke(0, 200, 255, 180);
+            strokeWeight(4);
+            let t = (millis() - this.lastForceWave.time) / 300;
+            let r = lerp(0, this.lastForceWave.maxRadius, t);
+            ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
+            pop();
+        }
     }
 
     /** Applies damage to the player's hull. */
