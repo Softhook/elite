@@ -17,26 +17,46 @@ function drawShapeFromData(r, vertexData, fillCol, strokeCol, strokeWeightVal) {
 
 // --- Ship Drawing Functions (Using vertexData) ---
 
-// Original Ships 
-
-function drawACAB(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.ACAB;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    if (thrusting) { fill(255, 200, 0); noStroke(); ellipse(-r, 0, r*0.5, r*0.3); }
-}
-
+// Original Ships (Viper/Krait names reverted)
 function drawSidewinder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Sidewinder;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(180, 100, 20);
+    stroke(220, 150, 50);
+    strokeWeight(max(0, 1.00));
+    beginShape();
+    vertex(r * 0.9000, r * 0.0000);
+    vertex(r * -0.7000, r * 0.8000);
+    vertex(r * -0.9000, r * 0.0000);
+    vertex(r * -0.7000, r * -0.8000);
+    endShape(CLOSE);
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 200, 0); noStroke(); ellipse(-r, 0, r*0.5, r*0.3); }
 }
 function drawCobraMkIII(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.CobraMkIII;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    
+    fill(100, 150, 200);
+    stroke(200, 220, 255);
+    strokeWeight(max(0, 1.50));
+    beginShape();
+    vertex(r * 1.1895, r * 0.0180);
+    vertex(r * 0.4805, r * 0.4737);
+    vertex(r * -0.6195, r * 0.6008);
+    vertex(r * -0.5632, r * 0.3263);
+    vertex(r * -0.8782, r * 0.4137);
+    vertex(r * -0.8782, r * -0.3776);
+    vertex(r * -0.5632, r * -0.2902);
+    vertex(r * -0.6195, r * -0.5647);
+    vertex(r * 0.4805, r * -0.4376);
+    endShape(CLOSE);
+    
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 255, 100); noStroke(); ellipse(-r*0.9, r*0.15, r*0.4, r*0.2); ellipse(-r*0.9, -r*0.15, r*0.4, r*0.2); }
 }
-function drawViper(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.Viper;
+function drawViper(s, thrusting = false) { // REVERTED NAME
+    let r = s / 2; let def = SHIP_DEFINITIONS.Viper; // REVERTED NAME
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(100, 200, 255); noStroke(); ellipse(-r*0.9, 0, r*0.7, r*0.3); }
 }
@@ -55,10 +75,22 @@ function drawAdder(s, thrusting = false) {
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(200, 200, 180); noStroke(); ellipse(-r*0.8, -r*0.1, r*0.4, r*0.3); }
 }
-function drawKrait(s, thrusting = false) { 
-     let r = s / 2; let def = SHIP_DEFINITIONS.Krait; 
-     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+function drawKrait(s, thrusting = false) { // REVERTED NAME
+     let r = s / 2; let def = SHIP_DEFINITIONS.Krait; // REVERTED NAME
+     fill(100, 120, 100);
+    stroke(140, 160, 140);
+    strokeWeight(1);
+    beginShape();
+    vertex(r * 0.855, r * 0.000);
+    vertex(r * 0.055, r * 0.600);
+    vertex(r * -0.454, r * 0.597);
+    vertex(r * -0.448, r * -0.599);
+    vertex(r * 0.055, r * -0.600);
+    endShape(CLOSE);
+
+    // --- Engine glow (copied from original base: Krait) ---
     if (thrusting) { fill(180, 180, 100); noStroke(); ellipse(-r*0.7, r*0.3, r*0.3, r*0.2); ellipse(-r*0.7, -r*0.3, r*0.3, r*0.2); }
+
 }
 function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     let r = s / 2;
@@ -76,7 +108,21 @@ function drawThargoid(s, thrusting = false) { // (Original Thargoid)
 
 function drawAspExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.AspExplorer;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(200, 81, 81);
+    stroke(100, 90, 40);
+    strokeWeight(max(0, 1.50));
+    beginShape();
+    vertex(r * 1.0000, r * 0.0000);
+    vertex(r * 0.5000, r * 0.5714);
+    vertex(r * -0.4000, r * 0.9000);
+    vertex(r * -0.9000, r * 0.3000);
+    vertex(r * -0.9000, r * -0.3000);
+    vertex(r * -0.4000, r * -0.9000);
+    vertex(r * 0.5000, r * -0.5714);
+    endShape(CLOSE);
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 200, 100); noStroke(); ellipse(-r * 0.8, 0, r * 0.6, r * 0.4); }
 }
 function drawType6Transporter(s, thrusting = false) {
@@ -86,7 +132,22 @@ function drawType6Transporter(s, thrusting = false) {
 }
 function drawType9Heavy(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Type9Heavy;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(190, 140, 60);
+    stroke(110, 80, 30);
+    strokeWeight(max(0, 2.50));
+    beginShape();
+    vertex(r * 0.6727, r * 0.2000);
+    vertex(r * 0.5234, r * 0.8000);
+    vertex(r * -0.8000, r * 0.9000);
+    vertex(r * -1.0000, r * 0.8000);
+    vertex(r * -1.0000, r * -0.8000);
+    vertex(r * -0.8000, r * -0.9000);
+    vertex(r * 0.5234, r * -0.8000);
+    vertex(r * 0.6727, r * -0.2000);
+    endShape(CLOSE);
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 140, 0); noStroke(); ellipse(-r * 0.95, r * 0.6, r * 0.2, r * 0.1); ellipse(-r * 0.95, r * 0.2, r * 0.2, r * 0.1); ellipse(-r * 0.95, -r * 0.2, r * 0.2, r * 0.1); ellipse(-r * 0.95, -r * 0.6, r * 0.2, r * 0.1); }
 }
 function drawFederalAssaultShip(s, thrusting = false) {
@@ -116,12 +177,50 @@ function drawKeelback(s, thrusting = false) {
 }
 function drawVulture(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Vulture;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(80, 90, 80);
+    stroke(150, 160, 150);
+    strokeWeight(1.5);
+    beginShape();
+    vertex(r * 0.926, r * -0.004);
+    vertex(r * 0.217, r * 0.190);
+    vertex(r * -0.341, r * 0.258);
+    vertex(r * -0.574, r * 0.796);
+    vertex(r * -0.769, r * 0.695);
+    vertex(r * -0.770, r * 0.299);
+    vertex(r * -0.603, r * 0.147);
+    vertex(r * -0.613, r * -0.163);
+    vertex(r * -0.796, r * -0.364);
+    vertex(r * -0.820, r * -0.729);
+    vertex(r * -0.574, r * -0.804);
+    vertex(r * -0.359, r * -0.382);
+    vertex(r * 0.225, r * -0.241);
+    endShape(CLOSE);
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 150, 150); noStroke(); rect(-r * 0.9, r * 0.3, r * 0.4, r * 0.2); rect(-r * 0.9, -r * 0.5, r * 0.4, r * 0.2); }
 }
 function drawImperialClipper(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ImperialClipper;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(138, 31, 168);
+    stroke(234, 113, 196);
+    strokeWeight(max(0, 1.50));
+    beginShape();
+    vertex(r * 1.1000, r * 0.0000);
+    vertex(r * 0.6913, r * 0.1827);
+    vertex(r * 0.2744, r * 0.4504);
+    vertex(r * 0.0000, r * 0.6965);
+    vertex(r * -0.8000, r * 0.8000);
+    vertex(r * -1.0000, r * 0.4000);
+    vertex(r * -1.0000, r * -0.4000);
+    vertex(r * -0.8000, r * -0.8000);
+    vertex(r * 0.0000, r * -0.6965);
+    vertex(r * 0.2744, r * -0.4504);
+    vertex(r * 0.6913, r * -0.1827);
+    endShape(CLOSE);
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(80, 180, 255); noStroke(); ellipse(-r * 0.7, r * 0.6, r * 0.5, r * 0.25); ellipse(-r * 0.7, -r * 0.6, r * 0.5, r * 0.25); }
 }
 
@@ -196,7 +295,22 @@ function drawGnatInterceptor(s, thrusting = false) { // Light Fighter 1
 
 function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    fill(210, 190, 80);
+    stroke(120, 100, 30);
+    strokeWeight(1);
+    beginShape();
+    vertex(r * 1.043, r * 0.010);
+    vertex(r * -0.013, r * 0.455);
+    vertex(r * -0.057, r * 0.910);
+    vertex(r * -0.457, r * 0.810);
+    vertex(r * -0.857, r * 0.210);
+    vertex(r * -0.857, r * -0.190);
+    vertex(r * -0.457, r * -0.790);
+    vertex(r * -0.057, r * -0.890);
+    vertex(r * -0.013, r * -0.445);
+    endShape(CLOSE);
+
     if (thrusting) { fill(255, 210, 0); noStroke(); ellipse(-r*0.8, r*0.1, r*0.3, r*0.15); ellipse(-r*0.8, -r*0.1, r*0.3, r*0.15); }
 }
 
@@ -208,7 +322,57 @@ function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
 
 function drawCenturionGunship(s, thrusting = false) { // Heavy Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.CenturionGunship;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+/*     fill(100, 105, 115);
+    stroke(160, 165, 175);
+    strokeWeight(max(0, 2.20));
+    beginShape();
+    vertex(r * 0.8000, r * 0.0000);
+    vertex(r * 0.7000, r * 0.4000);
+    vertex(r * 0.2397, r * 0.4849);
+    vertex(r * 0.3905, r * 0.6425);
+    vertex(r * 0.2000, r * 0.8000);
+    vertex(r * -0.7000, r * 0.9000);
+    vertex(r * -1.0000, r * 0.6000);
+    vertex(r * -1.0000, r * -0.6000);
+    vertex(r * -0.7000, r * -0.9000);
+    vertex(r * 0.2000, r * -0.8000);
+    vertex(r * 0.4143, r * -0.6425);
+    vertex(r * 0.2397, r * -0.4849);
+    vertex(r * 0.7000, r * -0.4000);
+    endShape(CLOSE); */
+
+    // --- Shape Layer 1 (Index 1 in editor) ---
+    fill(100, 105, 115);
+    stroke(160, 165, 175);
+    strokeWeight(max(0, 2.20));
+    beginShape();
+    vertex(r * 0.8000, r * 0.0000);
+    vertex(r * 0.7000, r * 0.4000);
+    vertex(r * 0.2000, r * 0.8000);
+    vertex(r * -0.7000, r * 0.9000);
+    vertex(r * -1.0000, r * 0.6000);
+    vertex(r * -1.0000, r * -0.6000);
+    vertex(r * -0.7000, r * -0.9000);
+    vertex(r * 0.2000, r * -0.8000);
+    vertex(r * 0.7000, r * -0.4000);
+    endShape(CLOSE);
+
+    // --- Shape Layer 2 (Index 0 in editor) ---
+    fill(172, 217, 48);
+    stroke(50, 50, 60);
+    strokeWeight(0);
+    beginShape();
+    vertex(r * 0.0000, r * 0.2952);
+    vertex(r * 0.2905, r * 0.2095);
+    vertex(r * 0.4571, r * 0.0000);
+    vertex(r * 0.2905, r * -0.2095);
+    vertex(r * 0.0000, r * -0.2952);
+    endShape(CLOSE);
+
+
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 80, 80); noStroke(); rect(-r*0.95, r*0.3, r*0.3, r*0.3); rect(-r*0.95, -r*0.6, r*0.3, r*0.3); }
 }
 
@@ -234,7 +398,22 @@ function drawStarlinerCruiser(s, thrusting = false) { // Trader/Passenger
 
 function drawJackalMultirole(s, thrusting = false) { // Multi-role
     let r = s / 2; let def = SHIP_DEFINITIONS.JackalMultirole;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    
+    fill(13, 104, 89);
+    stroke(198, 247, 126);
+    strokeWeight(1.5);
+    beginShape();
+    vertex(r * 0.722, r * 0.000);
+    vertex(r * 0.222, r * 0.500);
+    vertex(r * 0.217, r * 0.800);
+    vertex(r * -0.833, r * 0.600);
+    vertex(r * -0.484, r * 0.300);
+    vertex(r * -0.484, r * -0.300);
+    vertex(r * -0.833, r * -0.600);
+    vertex(r * 0.217, r * -0.800);
+    vertex(r * 0.222, r * -0.500);
+    endShape(CLOSE);
+    
     if (thrusting) { fill(255, 180, 100); noStroke(); ellipse(-r*0.9, r*0.2, r*0.4, r*0.2); ellipse(-r*0.9, -r*0.2, r*0.4, r*0.2); }
 }
 
@@ -257,15 +436,6 @@ function drawHammerheadCorvette(s, thrusting = false) { // Unique 2
 // --- Global Ship Definitions Object ---
 // Stores base stats AND VERTEX DATA for each ship type.
 const SHIP_DEFINITIONS = {
-    "ACAB": {
-        name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRateDegrees: 3.0, baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
-        armament: "1 Med Fwd, 2 Small Util?", costCategory: "Low", description: "Standard Police.",
-        drawFunction: drawACAB, vertexData: [ { x: 0.8969, y: 0.0000 }, { x: 0.1469, y: 0.4929 }, { x: -0.6673, y: 0.6286 }, { x: -0.6031, y: 0.0000 }, { x: -0.6673, y: -0.6286 }, { x: 0.1469, y: -0.4929 } ],
-        fillColor: [100, 150, 200],
-        strokeColor: [151, 181, 196],
-        strokeW: 1.00
-    },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRateDegrees: 3.0, baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
@@ -284,10 +454,8 @@ const SHIP_DEFINITIONS = {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRateDegrees: 3.2, baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
         armament: "2 Med, 4 Small Fwd", costCategory: "Medium-High", description: "Iconic explorer with excellent visibility and jump range.",
-        drawFunction: drawAspExplorer, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.4127, y: 0.5133 }, { x: -0.4250, y: 0.8750 }, { x: -0.9000, y: 0.3000 }, { x: -0.9000, y: -0.3000 }, { x: -0.4250, y: -0.8750 }, { x: 0.4127, y: -0.5133 } ],
-        fillColor: [200, 180, 80],
-        strokeColor: [100, 90, 40],
-        strokeW: 1.50
+        drawFunction: drawAspExplorer, vertexData: [ { x: 1.0, y: 0 }, { x: 0.5, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.3 }, { x: -0.9, y: -0.3 }, { x: -0.4, y: -0.9 }, { x: 0.5, y: -0.8 } ],
+        fillColor: [200, 180, 80], strokeColor: [100, 90, 40], strokeW: 1.5
     },
     "BioFrigate": { // NEW - Alien 2
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
@@ -300,20 +468,15 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRateDegrees: 2.6, baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: "Heavy Fwd Cannons", costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
-        drawFunction: drawCenturionGunship, vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.7000, y: 0.4000 }, { x: 0.0000, y: 0.5048 }, { x: 0.3967, y: 0.6548 }, { x: 0.3896, y: 0.8786 }, { x: -0.7000, y: 0.9000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.7000, y: -0.9000 }, { x: 0.3896, y: -0.8786 }, { x: 0.3967, y: -0.6548 }, { x: 0.0000, y: -0.5048 }, { x: 0.7000, y: -0.4000 } ],
-        fillColor: [100, 105, 115],
-        strokeColor: [160, 165, 175],
-        strokeW: 2.20
+        drawFunction: drawCenturionGunship, vertexData: [ {x:0.8, y:0}, {x:0.7, y:0.4}, {x:0.2, y:0.8}, {x:-0.7, y:0.9}, {x:-1.0, y:0.6}, {x:-1.0, y:-0.6}, {x:-0.7, y:-0.9}, {x:0.2, y:-0.8}, {x:0.7, y:-0.4} ],
+        fillColor: [100, 105, 115], strokeColor: [160, 165, 175], strokeW: 2.2 // Dark grey blue
     },
     "CobraMkIII": {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRateDegrees: 3.5, baseHull: 120, baseShield: 100, shieldRecharge: 1.2, cargoCapacity: 44,
         armament: "2 Med Fwd, 2 Small Fwd/Turret?", costCategory: "Medium", description: "The legendary jack-of-all-trades.",
-        drawFunction: drawCobraMkIII, 
-        vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.5270 }, { x: -0.5045, y: 0.5634 }, { x: -0.5000, y: 0.2000 }, { x: -0.7734, y: 0.1770 }, { x: -0.7734, y: -0.1770 }, { x: -0.5000, y: -0.2000 }, { x: -0.5045, y: -0.5634 }, { x: 0.3000, y: -0.5270 } ],
-        fillColor: [100, 150, 200],
-        strokeColor: [200, 220, 255],
-        strokeW: 1.50
+        drawFunction: drawCobraMkIII, vertexData: [ { x: 1, y: 0 }, { x: 0.3, y: 0.6 }, { x: -0.8, y: 0.7 }, { x: -0.5, y: 0.2 }, { x: -1, y: 0.25 }, { x: -1, y: -0.25 }, { x: -0.5, y: -0.2 }, { x: -0.8, y: -0.7 }, { x: 0.3, y: -0.6 } ],
+        fillColor: [100, 150, 200], strokeColor: [200, 220, 255], strokeW: 1.5
     },
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
@@ -392,13 +555,23 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawKeelback, vertexData: [ { x: 0.7, y: 0 }, { x: 0.5, y: 0.6 }, { x: -0.2, y: 0.7 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.7 }, { x: -1.0, y: -0.7 }, { x: -0.8, y: -0.9 }, { x: -0.2, y: -0.7 }, { x: 0.5, y: -0.6 } ],
         fillColor: [180, 150, 80], strokeColor: [100, 80, 40], strokeW: 1.5
     },
-    "Krait": { // REVERTED NAME from KraitMkII
-        name: "Krait", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
-        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 3.8, baseHull: 160, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
-        armament: "3 Large, 2 Med Fwd", costCategory: "High", description: "A popular multi-role ship, capable in combat and can launch fighters.",
-        drawFunction: drawKrait, // Uses the same draw function
-         vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
-        fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5
+    "Krait": {
+        name: "Krait", role: "Light Fighter", sizeCategory: "Small", size: 22,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRateDegrees: 4.2,
+        baseHull: 40, baseShield: 40, shieldRecharge: 1.3, cargoCapacity: 4,
+        armament: "2 Small Fwd?", costCategory: "Very Low",
+        description: "Cheap, fast, fragile fighter often used by pirates.",
+        drawFunction: drawKrait,
+         vertexData: [
+            { x: 1, y: 0 },
+            { x: 0.2, y: 0.6 },
+            { x: -0.8, y: 0.6 },
+            { x: -0.8, y: -0.6 },
+            { x: 0.2, y: -0.6 }
+        ],
+        fillColor: [100, 120, 100],
+        strokeColor: [140, 160, 140],
+        strokeW: 1
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
@@ -502,10 +675,8 @@ const SHIP_DEFINITIONS = {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRateDegrees: 5.2, baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 2,
         armament: "Light cannons/missiles", costCategory: "Low", description: "Aggressive fighter with forward-swept wings.",
-        drawFunction: drawWaspAssault, vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.1473, y: 0.3081 }, { x: -0.3146, y: 0.9825 }, { x: -0.5494, y: 0.9822 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.5494, y: -0.9822 }, { x: -0.3146, y: -0.9825 }, { x: -0.1473, y: -0.3081 } ],
-        fillColor: [210, 190, 80],
-        strokeColor: [120, 100, 30],
-        strokeW: 1.00
+        drawFunction: drawWaspAssault, vertexData: [ {x:0.9, y:0}, {x:-0.2, y:0.9}, {x:-0.6, y:0.8}, {x:-1.0, y:0.2}, {x:-1.0, y:-0.2}, {x:-0.6, y:-0.8}, {x:-0.2, y:-0.9} ],
+        fillColor: [210, 190, 80], strokeColor: [120, 100, 30], strokeW: 1.0 // Yellow/Black
     },
 };
 // --- End Ship Definitions ---
