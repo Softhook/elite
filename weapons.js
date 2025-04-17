@@ -4,6 +4,7 @@ const WEAPON_UPGRADES = [
         damage: 10,
         color: [0, 255, 0], // Green
         fireRate: 0.4,
+        price: 1200,
         desc: "Standard energy weapon."
     },
     {
@@ -11,6 +12,7 @@ const WEAPON_UPGRADES = [
         damage: 16,
         color: [0, 200, 255], // Cyan
         fireRate: 0.1,
+        price: 2500,
         desc: "Continuous beam, high energy use."
     },
     {
@@ -18,6 +20,7 @@ const WEAPON_UPGRADES = [
         damage: 13,
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
+        price: 1800,
         desc: "Ballistic, good vs hull."
     },
     {
@@ -25,6 +28,15 @@ const WEAPON_UPGRADES = [
         damage: 50,
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
+        price: 4000,
         desc: "High damage, slow fire."
+    },
+    {
+        name: "Mega Blaster",
+        damage: 100,
+        color: [255, 0, 0], // Red
+        fireRate: 0.5, 
+        price: 10000,
+        desc: "Super damage."
     }
 ];

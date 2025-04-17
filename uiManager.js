@@ -110,7 +110,7 @@ class UIManager {
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
     drawMissionBoard(missions, selectedIndex, player) { // selectedIndex is still needed for list highlighting
-        console.log("[MissionBoard] missions:", missions, "selectedIndex:", selectedIndex, "player.activeMission:", player?.activeMission);
+        //console.log("[MissionBoard] missions:", missions, "selectedIndex:", selectedIndex, "player.activeMission:", player?.activeMission);
          if (!player) { console.warn("drawMissionBoard missing player"); return; }
          this.missionListButtonAreas = []; this.missionDetailButtonAreas = {}; // Clear areas
 
@@ -728,20 +728,15 @@ class UIManager {
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text("Upgrades", pX+pW/2, pY+20);
 
-        // Example upgrades (weapons from ships.js)
-        const upgrades = [
-            { name: "Pulse Laser", price: 1200, dps: 10, desc: "Standard energy weapon." },
-            { name: "Beam Laser", price: 2500, dps: 16, desc: "Continuous beam, high energy use." },
-            { name: "Multi-Cannon", price: 1800, dps: 13, desc: "Ballistic, good vs hull." },
-            { name: "Railgun", price: 4000, dps: 22, desc: "High damage, slow fire." }
-        ];
+        // Use the global WEAPON_UPGRADES array
+        const upgrades = WEAPON_UPGRADES;
         let rowH = 38, startY = pY+60;
         textSize(15);
         upgrades.forEach((upg, i) => {
             let y = startY + i*rowH;
             fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
-            text(`${upg.name}  |  DPS: ${upg.dps}  |  Price: ${upg.price}cr  |  ${upg.desc}`, pX+30, y+rowH/2);
+            text(`${upg.name}  |  DPS: ${upg.damage}  |  Price: ${upg.price}cr  |  ${upg.desc}`, pX+30, y+rowH/2);
             this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
         });
 

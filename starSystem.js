@@ -194,13 +194,16 @@ class StarSystem {
     discover() {
         if (!this.visited) {
             this.visited = true;
+        }
+        // Always update economyType if it's still "Unknown"
+        if (this.economyType === "Unknown" && this.actualEconomy) {
             this.economyType = this.actualEconomy;
-            console.log(`${this.name} discovered! Economy set to ${this.economyType}`);
             if (this.station && this.station.market) {
                 this.station.market.systemType = this.economyType;
                 this.station.market.updatePrices();
             }
         }
+        // Optionally, update market even if already visited
     }
 
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
@@ -433,6 +436,7 @@ class StarSystem {
         return {
             name: this.name,
             economyType: this.economyType,
+            actualEconomy: this.actualEconomy, // <-- Add this line
             galaxyPos: { x: this.galaxyPos.x, y: this.galaxyPos.y },
             systemIndex: this.systemIndex,
             techLevel: this.techLevel,
@@ -453,7 +457,7 @@ class StarSystem {
     static fromJSON(data) {
         const sys = new StarSystem(
             data.name,
-            data.economyType,  // Although if undiscovered, this might be "Unknown"
+            data.actualEconomy || data.economyType, // <-- Use actualEconomy if present, fallback to economyType
             data.galaxyPos.x,
             data.galaxyPos.y,
             data.systemIndex,
@@ -462,6 +466,7 @@ class StarSystem {
         );
         sys.visited = data.visited;
         sys.economyType = data.economyType;
+        sys.actualEconomy = data.actualEconomy || data.economyType; // <-- Ensure it's set
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
 
         // Restore planets if present
