@@ -442,6 +442,22 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.lastBeam && millis() - this.lastBeam.time < 120) {
             // ...existing beam drawing code...
         }
+        
+        // Draw beam if recently fired
+        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
+            push();
+            stroke(this.lastBeam.color);
+            strokeWeight(3);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, 
+                 this.lastBeam.end.x, this.lastBeam.end.y);
+            
+            // Add a glow effect
+            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100);
+            strokeWeight(6);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, 
+                 this.lastBeam.end.x, this.lastBeam.end.y);
+            pop();
+        }
     }
 
     /** Applies damage to the player's hull. */

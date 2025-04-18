@@ -119,9 +119,25 @@ class WeaponSystem {
 
     // --- Beam weapon ---
     static fireBeam(owner, system, angle) {
+        console.log("Firing beam weapon from", owner instanceof Player ? "player" : "enemy", "at angle", degrees(angle));
+        
         const beamLength = 1200;
         const beamStart = owner.pos.copy();
+        
+        // For player, calculate beam direction to mouse cursor
+        if (owner instanceof Player) {
+            // Convert screen mouse position to world coordinates - FIX THE CALCULATION
+            const worldMx = mouseX + (owner.pos.x - width/2);
+            const worldMy = mouseY + (owner.pos.y - height/2);
+            
+            // Calculate angle to mouse cursor
+            angle = Math.atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
+            console.log("Player beam aimed at mouse:", degrees(angle));
+        }
+        
+        // Calculate beam end point
         const beamEnd = p5.Vector.fromAngle(angle).mult(beamLength).add(owner.pos);
+        const beamDir = p5.Vector.fromAngle(angle).normalize();
 
         let hitTarget = null;
         let minDist = Infinity;
@@ -129,9 +145,8 @@ class WeaponSystem {
         // If owner is Player, check enemies
         if (owner instanceof Player && system && system.enemies) {
             for (let enemy of system.enemies) {
-                if (enemy === owner) continue;
+                if (!enemy || !enemy.pos || enemy === owner) continue;
                 let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
-                let beamDir = p5.Vector.fromAngle(angle).normalize();
                 let projLength = toEnemy.dot(beamDir);
                 if (projLength > 0 && projLength < beamLength) {
                     let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
@@ -147,30 +162,40 @@ class WeaponSystem {
         // If owner is Enemy, check player
         if (owner instanceof Enemy && system && system.player) {
             let player = system.player;
-            let toPlayer = p5.Vector.sub(player.pos, beamStart);
-            let beamDir = p5.Vector.fromAngle(angle).normalize();
-            let projLength = toPlayer.dot(beamDir);
-            if (projLength > 0 && projLength < beamLength) {
-                let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
-                let distToBeam = p5.Vector.dist(player.pos, closestPoint);
-                if (distToBeam < player.size / 2) {
-                    hitTarget = player;
+            if (player && player.pos) {
+                let toPlayer = p5.Vector.sub(player.pos, beamStart);
+                let projLength = toPlayer.dot(beamDir);
+                if (projLength > 0 && projLength < beamLength) {
+                    let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
+                    let distToBeam = p5.Vector.dist(player.pos, closestPoint);
+                    if (distToBeam < player.size / 2) {
+                        hitTarget = player;
+                    }
                 }
-            }
-            if (hitTarget === player) {
-                player.takeDamage(owner.currentWeapon.damage);
             }
         }
 
+        // Apply damage only once to the hit target
         if (hitTarget) {
             hitTarget.takeDamage(owner.currentWeapon.damage);
+            // Add a visual effect at hit point
+            const hitPoint = p5.Vector.add(
+                beamStart, 
+                p5.Vector.mult(beamDir, minDist)
+            );
+            
+            if (system.addExplosion) {
+                system.addExplosion(hitPoint.x, hitPoint.y, 10, owner.currentWeapon.color);
+            }
         }
-        // Store beam info for drawing (works for both player and enemy)
+        
+        // Store beam info for drawing - with CORRECT color
         owner.lastBeam = {
             start: beamStart,
             end: beamEnd,
             color: owner.currentWeapon.color,
-            time: millis()
+            time: millis(),
+            hit: hitTarget !== null
         };
     }
 
