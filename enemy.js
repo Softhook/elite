@@ -245,57 +245,86 @@ class Enemy {
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
-        // --- Robust retargeting: always check if pirate's target is invalid, else switch to player ---
-        if (
-            this.role === AI_ROLE.PIRATE &&
-            (
-                !this.target ||
-                !this.target.pos ||
-                this.target.hull <= 0 ||
-                (system.player && system.player.destroyed) ||
-                (this.target !== system.player && system.enemies && !system.enemies.includes(this.target))
-            ) &&
-            system.player && !system.player.destroyed
-        ) {
-            this.target = system.player;
-            this.currentState = AI_STATE.APPROACHING;
+        // --- Initialize flags if not present ---
+        if (this.combatFlagsInitialized === undefined) {
+            this.combatFlagsInitialized = true;
+            this.hasLoggedDamageActivation = false;
+            this.hasLoggedPlayerTargeting = false;
+            this.targetSwitchCooldown = 0; // INITIALIZE COOLDOWN
         }
 
-        // --- Fix: Never allow pirates to remain IDLE if targeting the player ---
-        if (
-            this.role === AI_ROLE.PIRATE &&
-            this.currentState === AI_STATE.IDLE &&
-            this.target === system.player &&
-            this.target &&
-            !this.target.destroyed
-        ) {
-            this.currentState = AI_STATE.APPROACHING;
+        // Update cooldown timer
+        if (this.targetSwitchCooldown > 0) {
+            this.targetSwitchCooldown -= deltaTime / 1000;
         }
-
-        // For pirates: only switch target from Player if a Police or Hauler enemy is significantly closer.
-        if (this.role === AI_ROLE.PIRATE && this.target && (this.target instanceof Player) && this.target.pos) {
-            let candidate = null;
-            let playerDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-            if (system.enemies && system.enemies.length > 0) {
-                for (let e of system.enemies) {
-                    // Avoid self and check that candidate has a valid pos.
-                    if (e !== this && e.hull > 0 && e.pos && (e.role === AI_ROLE.POLICE || e.role === AI_ROLE.HAULER)) {
-                        let candidateDistance = dist(this.pos.x, this.pos.y, e.pos.x, e.pos.y);
-                        // Switch if the candidate is 20% closer.
-                        if (candidateDistance < playerDistance * 0.8) {
-                            candidate = e;
-                            break;
-                        }
-                    }
+        
+        // IMPROVED: Check if being attacked by police (for pirates)
+        if (this.role === AI_ROLE.PIRATE && this.lastAttacker && 
+            this.lastAttacker.role === AI_ROLE.POLICE && 
+            this.targetSwitchCooldown <= 0) {
+            
+            let attackerDistance = dist(this.pos.x, this.pos.y, this.lastAttacker.pos.x, this.lastAttacker.pos.y);
+            
+            // ENHANCED: More responsive switching when attacked
+            // Prioritize defending against active attackers!
+            if (attackerDistance < this.detectionRange * 1.5) {
+                console.log(`Pirate ${this.shipTypeName} responding to police attack from ${this.lastAttacker.shipTypeName}`);
+                this.target = this.lastAttacker;
+                this.currentState = AI_STATE.APPROACHING;
+                this.targetSwitchCooldown = 2.0;
+            }
+        }
+        
+        // Existing target validity checking and cooldown logic...
+        
+        // MODIFIED: AGGRESSIVE PIRATE RETARGETING WITH STATE TRACKING
+        if (this.role === AI_ROLE.PIRATE &&
+            (this.currentState === AI_STATE.IDLE || !this.target || !this.target.pos || this.target.hull <= 0) &&
+            system.player && !system.player.destroyed) {
+            
+            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
+            
+            if (playerDistance < this.detectionRange * 1.5) {
+                // Only log targeting once per state change
+                if (!this.hasLoggedPlayerTargeting || this.target !== system.player) {
+                    console.log(`IDLE Pirate ${this.shipTypeName} actively targeting Player at distance ${playerDistance.toFixed(2)}`);
+                    this.hasLoggedPlayerTargeting = true;
                 }
-            }
-            if (candidate) {
-                console.log(`${this.shipTypeName} switching target from Player (${playerDistance.toFixed(2)}) to ${candidate.shipTypeName}`);
-                this.target = candidate;
+                
+                this.target = system.player;
+                this.currentState = AI_STATE.APPROACHING;
+                this.targetSwitchCooldown = 1.0;
             }
         }
-
-        // Continue with the rest of updateCombatAI...
+        
+        // Reset player targeting log flag when we change targets
+        if (this.target !== system.player) {
+            this.hasLoggedPlayerTargeting = false;
+        }
+        
+        // Existing targeting switching logic based on proximity...
+        
+        // MODIFIED: Make switching to player more likely
+        if (this.role === AI_ROLE.PIRATE && 
+            this.target && 
+            !(this.target instanceof Player) && 
+            system.player && 
+            !system.player.destroyed && 
+            this.targetSwitchCooldown <= 0) {
+            
+            let currentTargetDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
+            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
+            
+            // More lenient switching: Only need player to be 20% closer (was 40%)
+            // OR within absolute engagement distance threshold
+            if (playerDistance < currentTargetDistance * 0.8 || playerDistance < this.engageDistance * 1.5) {
+                console.log(`${this.shipTypeName} opportunistically switching target from ${this.target.shipTypeName} to Player (${playerDistance.toFixed(2)})`);
+                this.target = system.player;
+                this.targetSwitchCooldown = 2.0;
+            }
+        }
+        
+        // Rest of the combat AI logic...
         let targetExists = this.target?.hull > 0;
         let distanceToTarget = targetExists
              ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y)
@@ -536,11 +565,30 @@ class Enemy {
     /** Helper: Checks conditions and calls fire() if appropriate. */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         if (!targetExists) return;
+        
+        // NEW: Only fire if:
+        // 1. Target is within firing range AND
+        // 2. We're not in IDLE state AND
+        // 3. We're actually facing toward the target
         if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-            if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
-            this.fireWeapon();
-            this.fireCooldown = this.fireRate;
-            console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
+            // Calculate angle difference between current angle and angle to target
+            let angleDiff = shootingAngle - this.angle;
+            while (angleDiff < -PI) angleDiff += TWO_PI;
+            while (angleDiff > PI) angleDiff -= TWO_PI;
+            
+            // Only fire if roughly facing the target (within 30 degrees)
+            const firingAngleTolerance = radians(30);
+            
+            if (this.currentState !== AI_STATE.IDLE && abs(angleDiff) < firingAngleTolerance) {
+                if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
+                this.fireWeapon();
+                this.fireCooldown = this.fireRate;
+                console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
+            } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
+                // CRITICAL FIX: Force IDLE pirates who want to fire to transition to APPROACHING
+                console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);
+                this.currentState = AI_STATE.APPROACHING;
+            }
         }
     }
 
@@ -626,7 +674,20 @@ class Enemy {
     }
 
     // --- Standard Methods ---
-    takeDamage(amount) { if(this.destroyed || amount<=0) return; this.hull-=amount; if(this.hull<=0){ this.hull=0; this.destroyed=true; }}
+    takeDamage(amount, attacker = null) { 
+        if(this.destroyed || amount <= 0) return; 
+        this.hull -= amount; 
+        
+        // Track who's attacking us
+        if (attacker) {
+            this.lastAttacker = attacker;
+        }
+        
+        if(this.hull <= 0) { 
+            this.hull = 0; 
+            this.destroyed = true; 
+        }
+    }
     isDestroyed() { return this.destroyed; }
     checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
 

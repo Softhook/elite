@@ -186,15 +186,31 @@ class StarSystem {
         this.discover(); // Mark as visited and update the economy if needed.
         this.enemies = []; this.projectiles = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
-        if (player && player.pos) {
-            for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
-            for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
-        }
-        for (let enemy of this.enemies) {
-            if (enemy.role === AI_ROLE.PIRATE && enemy.target === player) {
-                enemy.currentState = AI_STATE.APPROACHING;
+        
+        // IMPROVEMENT: Add a small delay before spawning NPCs to ensure proper initialization
+        setTimeout(() => {
+            if (player && player.pos) {
+                for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
+                for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
+                
+                // ENHANCED: Ensure ALL pirates are in the correct initial state after jumping
+                for (let enemy of this.enemies) {
+                    if (enemy.role === AI_ROLE.PIRATE) {
+                        if (player && !player.destroyed) {
+                            enemy.target = player;
+                            // Force pirates into APPROACHING to ensure they move
+                            enemy.currentState = AI_STATE.APPROACHING; 
+                            // Force initial rotation toward player
+                            if (enemy.pos && player.pos) {
+                                let angle = atan2(player.pos.y - enemy.pos.y, player.pos.x - enemy.pos.x);
+                                enemy.angle = radians(angle);
+                            }
+                            console.log(`System jump: Pirate ${enemy.shipTypeName} targeting player`);
+                        }
+                    }
+                }
             }
-        }
+        }, 100); // Small 100ms delay
     }
 
     /** Call this method when the system is discovered by the player. */
@@ -472,12 +488,14 @@ class StarSystem {
                 continue;
             }
             
+            // Store attacker reference explicitly for clarity
+            const attacker = proj.owner || null;
             let hitDetected = false;
             
             // Check collision against the player if the shooter is not the player
-            if (player && proj.owner !== player && proj.checkCollision(player)) {
-                console.log(`Projectile from ${proj.owner?.shipTypeName || 'Unknown'} hit player! Damage: ${proj.damage}`);
-                player.takeDamage(proj.damage, proj.owner); // Pass attacker reference
+            if (player && attacker !== player && proj.checkCollision(player)) {
+                console.log(`Projectile from ${attacker?.shipTypeName || 'Unknown'} hit player! Damage: ${proj.damage}`);
+                player.takeDamage(proj.damage, attacker); // Pass attacker reference
                 this.projectiles.splice(i, 1);
                 continue; // Projectile is gone, move to the next one
             }
@@ -485,12 +503,25 @@ class StarSystem {
             // Check collision against each enemy ship
             for (let enemy of this.enemies) {
                 // Do not let a ship be hit by its own projectile
-                if (proj.owner === enemy) continue;
+                if (attacker === enemy) continue;
                 if (enemy.isDestroyed()) continue;
 
                 if (proj.checkCollision(enemy)) {
-                    console.log(`Projectile from ${proj.owner?.shipTypeName || 'Player'} hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
-                    enemy.takeDamage(proj.damage, proj.owner); // Pass attacker reference
+                    // Log collision with attacker information
+                    const attackerName = attacker ? 
+                        (attacker === player ? 'Player' : attacker.shipTypeName) : 
+                        'Unknown';
+                        
+                    console.log(`Projectile from ${attackerName} hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
+                    
+                    // CRITICAL: Always pass attacker reference to properly track who's attacking
+                    enemy.takeDamage(proj.damage, attacker);
+                    
+                    // Log special case of police attacking pirates
+                    if (attacker?.role === AI_ROLE.POLICE && enemy.role === AI_ROLE.PIRATE) {
+                        console.log(`Police ${attackerName} attacking Pirate ${enemy.shipTypeName}`);
+                    }
+                    
                     this.projectiles.splice(i, 1);
                     hitDetected = true;
                     break;
@@ -499,7 +530,7 @@ class StarSystem {
             
             if (hitDetected) continue;
             
-            // Check collision against asteroids
+            // Check collision against asteroids (no attacker attribution needed)
             for (let asteroid of this.asteroids) {
                 if (asteroid.isDestroyed()) continue;
                 
