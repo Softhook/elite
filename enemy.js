@@ -607,24 +607,36 @@ class Enemy {
             }
         }
         
-        // NEW: Only fire if:
-        // 1. Target is within firing range AND
-        // 2. We're not in IDLE state AND
-        // 3. We're actually facing toward the target
+        // Check if target is in firing range and cooldown is ready
         if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
             // Calculate angle difference between current angle and angle to target
             let angleDiff = shootingAngle - this.angle;
             while (angleDiff < -PI) angleDiff += TWO_PI;
             while (angleDiff > PI) angleDiff -= TWO_PI;
             
-            // Only fire if roughly facing the target (within 30 degrees)
+            // Check if weapon is a turret (can fire in any direction)
+            const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
+            
+            // MODIFIED: Only check firing angle for non-turret weapons
+            // Turrets can fire in any direction regardless of ship orientation
             const firingAngleTolerance = radians(30);
             
-            if (this.currentState !== AI_STATE.IDLE && abs(angleDiff) < firingAngleTolerance) {
+            if (this.currentState !== AI_STATE.IDLE && 
+                (isTurretWeapon || abs(angleDiff) < firingAngleTolerance)) {
+                
                 if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
-                this.fireWeapon();
+                
+                // For turrets, pass the player/target as the target parameter
+                // so the weapon system can calculate the correct firing angle
+                if (isTurretWeapon) {
+                    this.fireWeapon(this.target);
+                    console.log(`${this.shipTypeName} turret fired at target at distance ${distanceToTarget.toFixed(2)}`);
+                } else {
+                    this.fireWeapon();
+                    console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
+                }
+                
                 this.fireCooldown = this.fireRate;
-                console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
             } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
                 // CRITICAL FIX: Force IDLE pirates who want to fire to transition to APPROACHING
                 console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);

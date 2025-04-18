@@ -413,7 +413,7 @@ const SHIP_DEFINITIONS = {
     "Krait": { 
         name: "Krait", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
         baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 3.8, baseHull: 160, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
-        armament: ["Twin Pulse"], // Combat focused Pirate
+        armament: ["Mini-Turret"], // Combat focused Pirate
         costCategory: "High", description: "A popular multi-role ship, capable in combat and can launch fighters.",
         drawFunction: drawKrait, // Uses the same draw function
          vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
