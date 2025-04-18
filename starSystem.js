@@ -395,52 +395,131 @@ class StarSystem {
         }
     }
 
-    /** Checks collisions between all relevant dynamic objects. */
+    /** Handles all collision detection and responses in the system. */
     checkCollisions(player) {
         if (!player) return;
+        
         try {
-            for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                const p = this.projectiles[i];
-                if (!p) continue;
-                let pRemoved = false;
-
-                // Enemy projectile hits player
-                if (p.owner instanceof Enemy && p.checkCollision(player)) {
-                    player.takeDamage(p.damage);
-                    this.projectiles.splice(i, 1);
-                    pRemoved = true;
+            // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
+            
+            // Player vs Enemies
+            for (let enemy of this.enemies) {
+                if (enemy.isDestroyed()) continue;
+                if (player.checkCollision(enemy)) {
+                    // Handle ship-to-ship collision
+                    let collisionDamage = Math.floor(
+                        (player.vel.mag() + enemy.vel.mag()) * 5
+                    );
+                    console.log(`Ship collision! Damage: ${collisionDamage}`);
+                    player.takeDamage(collisionDamage);
+                    enemy.takeDamage(collisionDamage);
+                    
+                    // Apply physics push
+                    let pushVector = p5.Vector.sub(enemy.pos, player.pos).normalize().mult(5);
+                    player.vel.sub(pushVector);
+                    enemy.vel.add(pushVector);
                 }
-                if (pRemoved) continue;
-
-                // Player projectile hits enemy
-                if (p.owner instanceof Player) {
-                    for (let j = this.enemies.length - 1; j >= 0; j--) {
-                        const e = this.enemies[j];
-                        if (!e) continue;
-                        if (p.checkCollision(e)) {
-                            e.takeDamage(p.damage);
-                            this.projectiles.splice(i, 1);
-                            pRemoved = true;
-                            break;
-                        }
-                    }
+            }
+            
+            // Player vs Asteroids
+            for (let asteroid of this.asteroids) {
+                if (asteroid.isDestroyed()) continue;
+                if (player.checkCollision(asteroid)) {
+                    // Handle player-asteroid collision
+                    let collisionDamage = Math.floor(player.vel.mag() * 3);
+                    console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
+                    player.takeDamage(collisionDamage);
+                    asteroid.takeDamage(20); // Fixed damage to asteroid
+                    
+                    // Apply physics push
+                    let pushVector = p5.Vector.sub(asteroid.pos, player.pos).normalize().mult(3);
+                    player.vel.sub(pushVector);
+                    asteroid.vel.add(pushVector.mult(0.5)); // Asteroids move less
                 }
-                if (pRemoved) continue;
-
-                // Projectiles hit asteroids
-                for (let j = this.asteroids.length - 1; j >= 0; j--) {
-                    const a = this.asteroids[j];
-                    if (!a) continue;
-                    if (p.checkCollision(a)) {
-                        a.takeDamage(p.damage);
-                        this.projectiles.splice(i, 1);
-                        pRemoved = true;
-                        break;
+            }
+            
+            // Enemy vs Asteroid collisions (optional)
+            for (let enemy of this.enemies) {
+                if (enemy.isDestroyed()) continue;
+                for (let asteroid of this.asteroids) {
+                    if (asteroid.isDestroyed()) continue;
+                    if (enemy.checkCollision(asteroid)) {
+                        // Handle enemy-asteroid collision
+                        enemy.takeDamage(10);
+                        asteroid.takeDamage(10);
+                        
+                        // Apply physics push
+                        let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
+                        enemy.vel.sub(pushVector);
+                        asteroid.vel.add(pushVector.mult(0.5));
                     }
                 }
             }
-        } catch(e) { console.error(`Error during checkCollisions in ${this.name}:`, e); }
+            
+            
+        } catch(e) {
+            console.error("Error in checkCollisions:", e);
+        }
     } // End checkCollisions
+
+    /** Specifically handles projectile collisions with targets. */
+    checkProjectileCollisions(player) {
+        // Loop backwards over projectiles so removals don't skip elements
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            let proj = this.projectiles[i];
+            if (!proj) {
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+            
+            let hitDetected = false;
+            
+            // Check collision against the player if the shooter is not the player
+            if (player && proj.owner !== player && proj.checkCollision(player)) {
+                console.log(`Projectile from ${proj.owner?.shipTypeName || 'Unknown'} hit player! Damage: ${proj.damage}`);
+                player.takeDamage(proj.damage, proj.owner); // Pass attacker reference
+                this.projectiles.splice(i, 1);
+                continue; // Projectile is gone, move to the next one
+            }
+            
+            // Check collision against each enemy ship
+            for (let enemy of this.enemies) {
+                // Do not let a ship be hit by its own projectile
+                if (proj.owner === enemy) continue;
+                if (enemy.isDestroyed()) continue;
+
+                if (proj.checkCollision(enemy)) {
+                    console.log(`Projectile from ${proj.owner?.shipTypeName || 'Player'} hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
+                    enemy.takeDamage(proj.damage, proj.owner); // Pass attacker reference
+                    this.projectiles.splice(i, 1);
+                    hitDetected = true;
+                    break;
+                }
+            }
+            
+            if (hitDetected) continue;
+            
+            // Check collision against asteroids
+            for (let asteroid of this.asteroids) {
+                if (asteroid.isDestroyed()) continue;
+                
+                if (proj.checkCollision(asteroid)) {
+                    console.log(`Projectile hit asteroid! Damage: ${proj.damage}`);
+                    asteroid.takeDamage(proj.damage);
+                    this.projectiles.splice(i, 1);
+                    hitDetected = true;
+                    break;
+                }
+            }
+            
+            if (hitDetected) continue;
+            
+            // Remove expired projectiles
+            if (proj.lifespan <= 0 || proj.isOffScreen()) {
+                this.projectiles.splice(i, 1);
+            }
+        }
+    } // End checkProjectileCollisions
 
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {
@@ -579,34 +658,6 @@ class StarSystem {
         }
 
         return sys;
-    }
-
-    checkProjectileCollisions(player) {
-        // Loop backwards over projectiles so removals don't skip elements
-        for (let i = this.projectiles.length - 1; i >= 0; i--) {
-            let proj = this.projectiles[i];
-
-            // Check collision against the player if the shooter is not the player
-            if (player && proj.owner !== player && proj.checkCollision(player)) {
-                console.log(`Projectile hit player! Damage: ${proj.damage}`);
-                player.takeDamage(proj.damage);
-                this.projectiles.splice(i, 1);
-                continue;
-            }
-            
-            // Check collision against each enemy ship (allowing friendly fire)
-            for (let enemy of this.enemies) {
-                // Do not let a ship be hit by its own projectile
-                if (proj.owner === enemy) continue;
-
-                if (proj.checkCollision(enemy)) {
-                    console.log(`Projectile hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
-                    enemy.takeDamage(proj.damage);
-                    this.projectiles.splice(i, 1);
-                    break; // Break to avoid checking this projectile against other ships
-                }
-            }
-        }
     }
 
 } // End of StarSystem Class
