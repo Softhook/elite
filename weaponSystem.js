@@ -51,10 +51,27 @@ class WeaponSystem {
             case "turret":
                 this.fireTurret(owner, system, target || angle);
                 break;
-            // Other weapon types...
+            case "straight2":
+                this.fireStraight2(owner, system, angle);
+                break;
+            case "straight3": // Add missing handler for straight3
+                this.fireStraight3(owner, system, angle);
+                break;
+            case "straight4":
+                this.fireStraight4(owner, system, angle);
+                break;
+            case "spread2":
+                this.fireSpread2(owner, system, angle);
+                break;
+            case "spread3":
+                this.fireSpread3(owner, system, angle);
+                break;
+            case "spread4":
+                this.fireSpread4(owner, system, angle);
+                break;
             default:
-                // Default to various projectile types
-                this.fireProjectile(owner, system, angle, type);
+                // Default to single projectile
+                this.fireProjectile(owner, system, angle);
         }
     }
 
@@ -159,21 +176,87 @@ class WeaponSystem {
 
     // --- Turret weapon (auto-aims at nearest target) ---
     static fireTurret(owner, system, target) {
-        if (!target && system && system.enemies && system.enemies.length > 0) {
-            // Find nearest enemy (or player if owner is enemy)
-            let minDist = Infinity;
-            for (let enemy of system.enemies) {
-                if (enemy === owner) continue;
-                let d = p5.Vector.dist(owner.pos, enemy.pos);
-                if (d < minDist) {
-                    minDist = d;
-                    target = enemy;
+        // First - FIND A TARGET if none is provided
+        if ((!target || !target.pos) && system) {
+            // Find nearest enemy if player is firing
+            if (owner instanceof Player && system.enemies && system.enemies.length > 0) {
+                let nearestEnemy = null;
+                let closestDist = Infinity;
+                
+                // Find closest enemy
+                for (const enemy of system.enemies) {
+                    if (!enemy || !enemy.pos) continue;
+                    
+                    const dist = p5.Vector.dist(owner.pos, enemy.pos);
+                    if (dist < closestDist) {
+                        nearestEnemy = enemy;
+                        closestDist = dist;
+                    }
                 }
+                
+                // Use the nearest enemy as target
+                if (nearestEnemy) {
+                    target = nearestEnemy;
+                    console.log(`Turret targeting ${nearestEnemy.shipTypeName} at distance ${closestDist.toFixed(1)}`);
+                }
+            } 
+            // Find player if enemy is firing
+            else if (owner instanceof Enemy && system.player) {
+                target = system.player;
             }
         }
-        if (!target) return;
-        const angle = atan2(target.pos.y - owner.pos.y, target.pos.x - owner.pos.x);
-        WeaponSystem.fireProjectile(owner, system, angle);
+        
+        // If no target found after searching, fire forward
+        if (!target || !target.pos) {
+            WeaponSystem.fireProjectile(owner, system, owner.angle);
+            return;
+        }
+        
+        // Now calculate angle to target
+        const dx = target.pos.x - owner.pos.x;
+        const dy = target.pos.y - owner.pos.y;
+        
+        // Get precise angle to target
+        const angleToTarget = Math.atan2(dy, dx);
+        
+        // Calculate distance for debug logging
+        const targetDist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Log targeting info
+        console.log(`Turret firing at angle: ${degrees(angleToTarget).toFixed(1)}° toward ${target.shipTypeName || "target"} at distance: ${targetDist.toFixed(1)}`);
+        
+        // Fire the projectile using the precise angle
+        WeaponSystem.fireProjectile(owner, system, angleToTarget);
+    }
+
+    // --- Straight3 weapon ---
+    static fireStraight3(owner, system, angle) {
+        this.fireStraight(owner, system, angle, 3);
+    }
+
+    // --- Straight2 weapon (twin parallel shots) ---
+    static fireStraight2(owner, system, angle) {
+        this.fireStraight(owner, system, angle, 2);
+    }
+
+    // --- Straight4 weapon (quad parallel shots) ---
+    static fireStraight4(owner, system, angle) {
+        this.fireStraight(owner, system, angle, 4);
+    }
+
+    // --- Spread2 weapon (twin angled shots) ---
+    static fireSpread2(owner, system, angle) {
+        this.fireSpread(owner, system, angle, 2);
+    }
+
+    // --- Spread3 weapon (triple angled shots) ---
+    static fireSpread3(owner, system, angle) {
+        this.fireSpread(owner, system, angle, 3);
+    }
+
+    // --- Spread4 weapon (quad angled shots) ---
+    static fireSpread4(owner, system, angle) {
+        this.fireSpread(owner, system, angle, 4);
     }
 }
 
