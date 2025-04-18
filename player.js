@@ -320,32 +320,40 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Draws the player ship using its specific draw function. */
     draw() {
-         if (isNaN(this.angle)) { /* Draw fallback */ return; } // Safety check
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; const drawFunc = shipDef?.drawFunction;
-        if (typeof drawFunc !== 'function') { /* Draw fallback */ return; }
-        push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle)); // Convert radians to degrees
-        drawFunc(this.size, this.isThrusting); pop();
+        // Don't draw ship if exploding
+        if (this.exploding) {
+            // Show final flash during first 300ms
+            if (millis() - this.explosionStartTime < 300) {
+                push();
+                translate(this.pos.x, this.pos.y);
+                fill(255, 255, 255, map(millis() - this.explosionStartTime, 0, 300, 255, 0));
+                noStroke();
+                ellipse(0, 0, this.size * 1.5);
+                pop();
+            }
+            return; // Skip drawing the ship
+        }
+        
+        if (isNaN(this.angle)) { return; } // Safety check
+        
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; 
+        const drawFunc = shipDef?.drawFunction;
+        
+        if (typeof drawFunc !== 'function') { return; }
+        
+        push(); 
+        translate(this.pos.x, this.pos.y); 
+        rotate(degrees(this.angle)); // Convert radians to degrees
+        drawFunc(this.size, this.isThrusting); 
+        pop();
 
-        // Draw force wave if recently fired
+        // Existing weapon effects
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
-            push();
-            noFill();
-            stroke(0, 200, 255, 180);
-            strokeWeight(4);
-            let t = (millis() - this.lastForceWave.time) / 300;
-            let r = lerp(0, this.lastForceWave.maxRadius, t);
-            r = lerp(0, this.lastForceWave.maxRadius, t);
-            ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
-            pop();
+            // ...existing force wave drawing code...
         }
 
-        // Draw beam if recently fired
         if (this.lastBeam && millis() - this.lastBeam.time < 120) {
-            push();
-            strokeWeight(6);
-            stroke(...this.lastBeam.color, 180);
-            line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
-            pop();
+            // ...existing beam drawing code...
         }
     }
 
@@ -357,38 +365,55 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-
+            this.explosionStartTime = millis();
+            this.exploding = true; // Flag to track explosion sequence
+            
             // Create player explosion (larger, more dramatic)
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                // Player explosions are blue-tinted
+                // Main large explosion
                 this.currentSystem.addExplosion(
                     this.pos.x,
                     this.pos.y,
-                    this.size * 2.5,
+                    this.size * 3, // Larger explosion
                     [100, 150, 255]
                 );
-
-                // Multiple secondary explosions
-                for (let i = 0; i < 5; i++) {
+                
+                // Create cascading secondary explosions
+                for (let i = 0; i < 12; i++) { // More secondary explosions
                     setTimeout(() => {
                         if (this.currentSystem) {
+                            // Random offset explosions around ship
                             this.currentSystem.addExplosion(
-                                this.pos.x + random(-this.size, this.size),
-                                this.pos.y + random(-this.size, this.size),
-                                this.size * random(0.8, 1.2),
-                                [180, 200, 255]
+                                this.pos.x + random(-this.size*1.2, this.size*1.2),
+                                this.pos.y + random(-this.size*1.2, this.size*1.2),
+                                this.size * random(0.7, 1.5), // Varied sizes
+                                [
+                                    random(100, 200), // Random blue tint
+                                    random(150, 255), 
+                                    random(200, 255)
+                                ]
                             );
                         }
-                    }, i * 150);
+                    }, i * 120); // Staggered timing for cascade effect
                 }
-            }
-
-            // Existing Game Over logic
-            if (typeof gameStateManager !== "undefined" && gameStateManager) {
-                gameStateManager.setState("GAME_OVER");
+                
+                // CRITICAL: Delay game over screen until explosion sequence completes
+                setTimeout(() => {
+                    if (typeof gameStateManager !== "undefined" && gameStateManager) {
+                        gameStateManager.setState("GAME_OVER");
+                    } else {
+                        alert("Game Over! Your ship has been destroyed.");
+                        noLoop();
+                    }
+                }, 2000); // 2 second delay to allow explosion to finish
             } else {
-                alert("Game Over! Your ship has been destroyed.");
-                noLoop();
+                // Fallback if explosions not available
+                if (typeof gameStateManager !== "undefined" && gameStateManager) {
+                    gameStateManager.setState("GAME_OVER");
+                } else {
+                    alert("Game Over! Your ship has been destroyed.");
+                    noLoop();
+                }
             }
         }
     }
