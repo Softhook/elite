@@ -137,9 +137,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Pulse Array",
         type: "straight3",
-        damage: 7,
+        damage: 4,
         color: [255, 0, 255], // Purple
-        fireRate: 0.22,
+        fireRate: 0.32,
         price: 2500,
         desc: "Fires three parallel shots."
     },

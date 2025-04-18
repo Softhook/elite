@@ -374,11 +374,19 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         //console.log(`${this.currentWeapon.name} fired by player at angle ${this.angle}`);
     }
 
-    /** Updates player physics state. */
+    /** Updates player position, physics, and state. */
     update() {
         this.vel.mult(this.drag); this.vel.limit(this.maxSpeed);
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); }
         else { this.vel.set(0, 0); } // Reset invalid velocity
+
+        // Update cooldown timer
+        if (this.fireCooldown > 0) {
+            this.fireCooldown -= deltaTime / 1000;
+        }
+        
+        // Remove the spacebar-specific firing code from here since we're handling it in draw()
+        // This eliminates any potential inconsistency between the flag and actual key state
     }
 
     /** Draws the player ship using its specific draw function. */

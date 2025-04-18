@@ -132,13 +132,19 @@ function draw() {
     background(0); // Clear the canvas each frame
 
     // --- Game State Update and Draw ---
-    // Ensure core objects exist before trying to update/draw
     if (gameStateManager && player) {
         try {
             // Update game logic based on current state
-            gameStateManager.update(player); // Pass player ref
+            gameStateManager.update(player);
+            
+            // Continuous firing logic - using direct keyIsDown check
+            if (gameStateManager.currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
+                player.handleFireInput();
+            }
+            
             // Draw visuals based on current state
-            gameStateManager.draw(player);   // Pass player ref
+            gameStateManager.draw(player);
+            
         } catch (e) {
             // Catch any unexpected errors during the main loop
             console.error("!!! ERROR during gameStateManager update/draw:", e);
@@ -168,9 +174,10 @@ function draw() {
 // --- Input Handling Functions ---
 
 function keyPressed() {
+    // For spacebar - just trigger initial shot
     if (key === ' ' || keyCode === 32) {
         if (gameStateManager.currentState === "IN_FLIGHT" && player) {
-            player.fireWeapon();
+            player.handleFireInput();
         }
         return false;
     }
@@ -218,6 +225,11 @@ function keyPressed() {
     // }
 
     // return false; // Uncomment to prevent default browser key actions (like scrolling with arrows)
+}
+
+function keyReleased() {
+    // We'll leave this empty or handle other keys
+    return true; // Allow default for other keys
 }
 
 function mousePressed() {
