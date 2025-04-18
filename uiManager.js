@@ -102,6 +102,58 @@ class UIManager {
             fill(0, 180, 255); textAlign(LEFT, CENTER); textSize(12);
             text(`Weapon: ${player.currentWeapon.name}`, 10, 35);
         }
+
+        // Draw weapon selector bar
+        this.drawWeaponSelector(player);
+
+        pop();
+    }
+
+    /** Draws the weapon selector UI */
+    drawWeaponSelector(player) {
+        if (!player?.weapons || player.weapons.length === 0) return;
+        
+        const weaponBarY = 45; // Position below main HUD bar
+        const weaponBarH = 24;
+        
+        // Background for weapon bar
+        push();
+        fill(0, 50, 80, 150);
+        noStroke();
+        rect(0, weaponBarY, width, weaponBarH);
+        
+        // Display weapon slots
+        textAlign(LEFT, CENTER);
+        textSize(12);
+        let xPos = 10;
+        
+        player.weapons.forEach((weapon, index) => {
+            // Calculate width for this weapon slot
+            const isSelected = (index === player.weaponIndex);
+            const slotPadding = 10;
+            const slotText = `${index+1}: ${weapon.name}`;
+            const textW = textWidth(slotText);
+            const slotW = textW + slotPadding * 2;
+            
+            // Draw slot background
+            if (isSelected) {
+                fill(0, 100, 180, 200); // Highlight selected weapon
+            } else {
+                fill(0, 80, 120, 120); // Normal background
+            }
+            rect(xPos, weaponBarY + 3, slotW, weaponBarH - 6, 5);
+            
+            // Draw weapon name with key number
+            if (isSelected) {
+                fill(255, 255, 100); // Bright text for selected
+            } else {
+                fill(200); // Regular text
+            }
+            text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
+            
+            // Move to next position
+            xPos += slotW + 5;
+        });
         pop();
     }
 

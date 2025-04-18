@@ -177,6 +177,20 @@ function keyPressed() {
 
     if (!gameStateManager) return; // Don't process keys if game not ready
 
+    // WEAPON SWITCHING - Number keys 1-9
+    if (gameStateManager.currentState === "IN_FLIGHT" && player) {
+        // Check for number keys 1-9
+        const numKey = parseInt(key);
+        if (!isNaN(numKey) && numKey >= 1 && numKey <= 9) {
+            // Convert to 0-based index for array access
+            const weaponIndex = numKey - 1;
+            if (player.switchToWeapon(weaponIndex)) {
+                console.log(`Switched to weapon: ${player.currentWeapon.name}`);
+            }
+            return false; // Prevent default browser behavior
+        }
+    }
+
     // Toggle Galaxy Map (M key)
     if (key === 'm' || key === 'M') {
         if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");

@@ -42,6 +42,10 @@ class Player {
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; this.isWanted = false;
 
+        // Initialize weapons array based on ship definition
+        this.weapons = [];
+        this.weaponIndex = 0;
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -257,9 +261,68 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.weaponSlots = def.weaponSlots;
         // ...copy any other relevant properties...
 
+        // Load weapons from ship definition
+        this.loadWeaponsFromShipDefinition(shipTypeName);
+
         // Recalculate any derived properties
         this.calculateRadianProperties && this.calculateRadianProperties();
         this.updateShipVisual && this.updateShipVisual();
+    }
+
+    /** Loads weapons based on ship's standard armament */
+    loadWeaponsFromShipDefinition(shipTypeName) {
+        const shipDef = SHIP_DEFINITIONS[shipTypeName];
+        
+        // Initialize weapons array
+        this.weapons = [];
+        
+        if (shipDef && shipDef.armament && shipDef.armament.length) {
+            // Load each weapon from ship's armament
+            for (const weaponName of shipDef.armament) {
+                const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
+                if (weaponDef) {
+                    this.weapons.push({...weaponDef}); // Clone weapon definition
+                }
+            }
+        }
+        
+        // Fallback if no valid weapons were found
+        if (this.weapons.length === 0) {
+            // Add default pulse laser if no weapons defined
+            this.weapons.push(WEAPON_UPGRADES.find(w => w.name === "Pulse Laser") || {
+                name: "Pulse Laser",
+                type: "projectile",
+                damage: 8,
+                color: [255, 0, 0],
+                fireRate: 0.5,
+                price: 0,
+                desc: "Basic energy weapon"
+            });
+        }
+        
+        // Set current weapon to first one
+        this.weaponIndex = 0;
+        this.currentWeapon = this.weapons[this.weaponIndex];
+        console.log(`Loaded ${this.weapons.length} weapons for ${shipTypeName}:`, 
+                    this.weapons.map(w => w.name).join(', '));
+    }
+
+    /** Switches to the specified weapon index */
+    switchToWeapon(index) {
+        if (!this.weapons || !Array.isArray(this.weapons)) {
+            // Initialize weapons array if it doesn't exist
+            this.loadWeaponsFromShipDefinition(this.shipTypeName);
+        }
+        
+        if (index >= 0 && index < this.weapons.length) {
+            this.weaponIndex = index;
+            this.currentWeapon = this.weapons[this.weaponIndex];
+            this.fireRate = this.currentWeapon.fireRate || 0.5;
+            // Reset cooldown on weapon switch (optional)
+            this.fireCooldown = 0;
+            return true;
+        }
+        return false;
     }
 
     calculateRadianProperties() {
@@ -464,6 +527,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     // --- END checkCollision Method ---
 
     // --- Save/Load Functionality ---
+    /** Save data for persistence */
     getSaveData() {
         let normalizedAngle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; if (isNaN(normalizedAngle)) normalizedAngle = 0;
 
@@ -497,15 +561,17 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             isWanted: this.isWanted,
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
-            weaponName: this.currentWeapon?.name || null // <-- ADD THIS LINE
+            weaponIndex: this.weaponIndex, // Save the index instead of just the name
             // -----------------------------------------
         };
     }
 
+    /** Load save data */
     loadSaveData(data) {
         if (!data) { console.warn("Player.loadSaveData: No data provided."); return; }
         console.log("Player.loadSaveData: Loading data...");
 
+        // Load ship definition (which will populate weapons array)
         let typeToLoad = data.shipTypeName || "Sidewinder"; this.applyShipDefinition(typeToLoad);
         this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0);
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
@@ -515,12 +581,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
 
-        // --- Load weapon ---
-        if (data.weaponName) {
-            this.setWeaponByName(data.weaponName);
-        } else {
-            this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser if missing
-            this.fireRate = this.currentWeapon.fireRate;
+        // Set the weapon index if saved
+        if (data.weaponIndex !== undefined && 
+            data.weaponIndex >= 0 && 
+            data.weaponIndex < this.weapons.length) {
+            this.switchToWeapon(data.weaponIndex);
         }
 
         // --- Load active mission ---
