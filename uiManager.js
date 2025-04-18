@@ -69,6 +69,29 @@ class UIManager {
         push(); fill(0, 180, 0, 150); noStroke(); rect(0, 0, width, 40);
         fill(255); textSize(14); textAlign(LEFT, CENTER); text(`System: ${csName}`, 10, 20);
         textAlign(RIGHT, CENTER); text(`Hull: ${floor(hull)}/${maxHull}`, width-150, 20); text(`Credits: ${credits}`, width-280, 20); text(`Cargo: ${cargoAmt}/${cargoCap}`, width-10, 20);
+        
+        // LEGAL STATUS INDICATOR
+        if (player.isWanted) {
+            // Animate/flash the wanted status (oscillate alpha value)
+            const flashAlpha = map(sin(frameCount * 0.1), -1, 1, 150, 255);
+            // Draw warning background
+            fill(200, 0, 0, flashAlpha);
+            rect(width/2 - 60, 3, 120, 18, 3);
+            // Draw WANTED text
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("⚠️ WANTED ⚠️", width/2, 12);
+        } else {
+            // Show "LEGAL" status when not wanted
+            fill(0, 100, 0);
+            rect(width/2 - 60, 3, 120, 18, 3);
+            fill(200, 255, 200);
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("LEGAL", width/2, 12);
+        }
+        
         if (player.fireCooldown > 0 && player.fireRate > 0) { let c = constrain(map(player.fireCooldown,player.fireRate,0,0,1),0,1); fill(255,0,0,150); rect(width/2-50, 30, 100*c, 5); }
         // Display active mission title directly from player object
         if (player.activeMission?.title) {
