@@ -29,6 +29,32 @@ class UIManager {
         // --- Shipyard Scroll Properties ---
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
+
+        this.setPanelDefaults();
+    }
+
+    /** Sets standardized panel geometry for all station menus */
+    setPanelDefaults() {
+        this.panelX = () => width * 0.1;
+        this.panelY = () => height * 0.1;
+        this.panelW = () => width * 0.8;
+        this.panelH = () => height * 0.8;
+    }
+
+    /** Returns standardized panel geometry */
+    getPanelRect() {
+        return {
+            x: this.panelX(),
+            y: this.panelY(),
+            w: this.panelW(),
+            h: this.panelH()
+        };
+    }
+
+    /** Draws a standardized panel background */
+    drawPanelBG(fillCol, strokeCol) {
+        const {x, y, w, h} = this.getPanelRect();
+        fill(...fillCol); stroke(...strokeCol); rect(x, y, w, h, 10);
     }
 
     /** Draws the Heads-Up Display (HUD) during flight */
@@ -58,8 +84,8 @@ class UIManager {
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         this.stationMenuButtonAreas = [];
         push();
-        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
-        fill(20,20,50,220); stroke(100,100,255); rect(pX,pY,pW,pH,10);
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([20,20,50,220], [100,100,255]);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20);
 
@@ -97,7 +123,8 @@ class UIManager {
         market.updatePlayerCargo(player.cargo); const commodities = market.getPrices();
         this.marketButtonAreas = []; this.marketBackButtonArea = {}; // Clear areas
         push();
-        let pX=width*0.1, pY=height*0.1, pW=width*0.8, pH=height*0.8; fill(50,20,20,220); stroke(255,100,100); rect(pX,pY,pW,pH,10); // Panel
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([50,20,20,220], [255,100,100]);
         fill(255); textSize(24); textAlign(CENTER,TOP); text(`Commodity Market - ${market.systemType || 'Unknown'}`, pX+pW/2, pY+20); // Title
         textSize(16); textAlign(LEFT,TOP); text(`Credits: ${player.credits}`, pX+30, pY+60); text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+85); // Player Info
         let sY=pY+130, tW=pW-60, cols=6, cW=tW/cols, sX=pX+30; textAlign(CENTER,CENTER); textSize(14); fill(200); // Headers
@@ -129,10 +156,9 @@ class UIManager {
          }
          // --- End Context ---
 
+         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
          push(); // Isolate drawing
-         // --- Panel & Title ---
-         let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
-         fill(20,50,20,220); stroke(100,255,100); rect(pX,pY,pW,pH,10);
+         this.drawPanelBG([20,50,20,220], [100,255,100]);
          fill(255); textSize(24); textAlign(CENTER,TOP); text("Station Mission Board", pX+pW/2, pY+20);
          // --- Layout ---
          let listW = pW*0.4, detailX = pX+listW+10, detailW = pW-listW-20; let cY = pY+60, cH = pH-110;
@@ -676,8 +702,8 @@ class UIManager {
         if (!player) return;
         this.shipyardListAreas = [];
         push();
-        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
-        fill(30,30,60,230); stroke(100,200,255); rect(pX,pY,pW,pH,10);
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30,30,60,230], [100,200,255]);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text("Shipyard", pX+pW/2, pY+20);
 
@@ -737,8 +763,8 @@ class UIManager {
         if (!player) return;
         this.upgradeListAreas = [];
         push();
-        let pX = width * 0.1, pY = height * 0.1, pW = width * 0.8, pH = height * 0.8; // Standardized size
-        fill(40,30,60,230); stroke(200,100,255); rect(pX,pY,pW,pH,10);
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([40,30,60,230], [200,100,255]);
         fill(255); textSize(24); textAlign(CENTER,TOP);
         text("Upgrades", pX+pW/2, pY+20);
 

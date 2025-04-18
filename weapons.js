@@ -44,7 +44,6 @@ const WEAPON_UPGRADES = [
         price: 10000,
         desc: "Super damage, area effect."
     },
-    // --- New Weapons Below ---
     {
         name: "Twin Pulse",
         type: "straight2",
