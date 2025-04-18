@@ -46,6 +46,9 @@ class Player {
         this.weapons = [];
         this.weaponIndex = 0;
 
+        // Initialize thrust manager
+        this.thrustManager = new ThrustManager();
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -376,7 +379,17 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Updates player position, physics, and state. */
     update() {
-        this.vel.mult(this.drag); this.vel.limit(this.maxSpeed);
+        this.vel.mult(this.drag); 
+        this.vel.limit(this.maxSpeed);
+        
+        // Update thrust particles
+        this.thrustManager.update();
+        
+        // Create thrust particles if thrusting
+        if (this.isThrusting) {
+            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        }
+        
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); }
         else { this.vel.set(0, 0); } // Reset invalid velocity
 
@@ -404,6 +417,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             }
             return; // Skip drawing the ship
         }
+        
+        // Draw thrust particles BEHIND the ship
+        this.thrustManager.draw();
         
         if (isNaN(this.angle)) { return; } // Safety check
         

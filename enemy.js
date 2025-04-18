@@ -190,6 +190,9 @@ class Enemy {
 
         console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
+
+        // Initialize thrust manager
+        this.thrustManager = new ThrustManager();
     }
 
     /** Calculates and sets radian-based properties using p5.radians(). */
@@ -257,6 +260,10 @@ class Enemy {
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         if (this.destroyed || !system) return;
+
+        // Update thrust particles
+        this.thrustManager.update();
+
         this.fireCooldown -= deltaTime / 1000;
 
         this.currentSystem = system;
@@ -284,6 +291,11 @@ class Enemy {
             } else { 
                 this.vel.set(0, 0); 
             }
+        }
+
+        // Add thrust particles after movement logic
+        if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION) {
+            this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
     } // End update
 
@@ -695,6 +707,10 @@ class Enemy {
     /** Draws the enemy ship using its defined draw function and role-based stroke. */
     draw() {
         if (this.destroyed || isNaN(this.angle)) return;
+
+        // Draw thrust particles BEHIND the ship
+        this.thrustManager.draw();
+
         if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); } // Attempt init if needed
         if (!this.p5FillColor || !this.p5StrokeColor) { return; } // Skip draw if colors still bad
 
