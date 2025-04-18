@@ -410,10 +410,10 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawKeelback, vertexData: [ { x: 0.7, y: 0 }, { x: 0.5, y: 0.6 }, { x: -0.2, y: 0.7 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.7 }, { x: -1.0, y: -0.7 }, { x: -0.8, y: -0.9 }, { x: -0.2, y: -0.7 }, { x: 0.5, y: -0.6 } ],
         fillColor: [180, 150, 80], strokeColor: [100, 80, 40], strokeW: 1.5
     },
-    "Krait": { // REVERTED NAME from KraitMkII
+    "Krait": { 
         name: "Krait", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
         baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 3.8, baseHull: 160, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
-        armament: ["Heavy Cannon", "Pulse Array", "Mini-Turret"], // Combat focused multi-role
+        armament: ["Twin Pulse"], // Combat focused Pirate
         costCategory: "High", description: "A popular multi-role ship, capable in combat and can launch fighters.",
         drawFunction: drawKrait, // Uses the same draw function
          vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
@@ -534,7 +534,7 @@ const SHIP_DEFINITIONS = {
     "WaspAssault": { // NEW - Light Fighter 2
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRateDegrees: 5.2, baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 2,
-        armament: ["Burst Blaster", "Double Shot"], // All-out attack fighter
+        armament: ["Burst Blaster"], // All-out attack fighter
         costCategory: "Low", description: "Aggressive fighter with forward-swept wings.",
         drawFunction: drawWaspAssault, vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.1473, y: 0.3081 }, { x: -0.3146, y: 0.9825 }, { x: -0.5494, y: 0.9822 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.5494, y: -0.9822 }, { x: -0.3146, y: -0.9825 }, { x: -0.1473, y: -0.3081 } ],
         fillColor: [210, 190, 80],

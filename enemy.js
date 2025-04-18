@@ -112,18 +112,32 @@ class Enemy {
         // AI Tuning Parameters
         this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
 
-        // --- Weapon ---
+        // --- Weapon Assignment Based on Ship Definition ---
         this.fireCooldown = random(1.0, 2.5);
-        this.fireRate = 1.0 / max(0.5, this.rotationSpeedDegrees / 3.0); // Use degree speed for rough scaling
-
-        // --- Weapon Assignment ---
-        if (!this.currentWeapon) {
-            // Assign a random weapon, or pick based on role/ship type
-            if (typeof WEAPON_UPGRADES !== "undefined" && WEAPON_UPGRADES.length > 0) {
-                // Example: random weapon
-                this.currentWeapon = WEAPON_UPGRADES[Math.floor(random(WEAPON_UPGRADES.length))];
+        this.weaponIndex = 0; // To track which weapon is currently active if ship has multiple
+        
+        // Get weapons from ship definition instead of random assignment
+        if (shipDef.armament && shipDef.armament.length > 0) {
+            // Store all weapons the ship has
+            this.weapons = [];
+            
+            for (let weaponName of shipDef.armament) {
+                // Find the weapon definition
+                if (typeof WEAPON_UPGRADES !== "undefined" && WEAPON_UPGRADES.length > 0) {
+                    const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
+                    if (weaponDef) {
+                        this.weapons.push(weaponDef);
+                    }
+                }
+            }
+            
+            // Set the current weapon to the first one
+            if (this.weapons.length > 0) {
+                this.currentWeapon = this.weapons[0];
+                this.fireRate = this.currentWeapon.fireRate;
+                console.log(`${this.shipTypeName} armed with ${this.currentWeapon.name}`);
             } else {
-                // Fallback: basic projectile weapon
+                // Fallback: basic projectile weapon if no matching weapons found
                 this.currentWeapon = {
                     name: "Default Laser",
                     type: "projectile",
@@ -133,9 +147,22 @@ class Enemy {
                     price: 0,
                     desc: "Fallback weapon."
                 };
+                this.weapons = [this.currentWeapon];
             }
+        } else {
+            // Fallback: basic projectile weapon if ship has no defined armament
+            this.currentWeapon = {
+                name: "Default Laser",
+                type: "projectile",
+                damage: 8,
+                color: [255, 0, 0],
+                fireRate: 0.5,
+                price: 0,
+                desc: "Fallback weapon."
+            };
+            this.weapons = [this.currentWeapon];
         }
-
+        
         // --- Role-Specific Initial State ---
         this.role = role;
         if (this.role === AI_ROLE.TRANSPORT) {
@@ -566,6 +593,17 @@ class Enemy {
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         if (!targetExists) return;
         
+        // Check if we should switch weapons based on range
+        if (this.weapons && this.weapons.length > 1) {
+            // Example logic: use beam weapons at long range, projectiles at short range
+            const isLongRange = distanceToTarget > this.firingRange * 0.7;
+            const currentIsBeam = this.currentWeapon.type.includes('beam');
+            
+            if ((isLongRange && !currentIsBeam) || (!isLongRange && currentIsBeam)) {
+                this.cycleWeapon();
+            }
+        }
+        
         // NEW: Only fire if:
         // 1. Target is within firing range AND
         // 2. We're not in IDLE state AND
@@ -606,6 +644,17 @@ class Enemy {
     fireWeapon(target = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
         WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
+    }
+
+    /** Cycles to the next available weapon */
+    cycleWeapon() {
+        if (this.weapons && this.weapons.length > 1) {
+            this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
+            this.currentWeapon = this.weapons[this.weaponIndex];
+            this.fireRate = this.currentWeapon.fireRate;
+            // Reset cooldown when switching weapons (optional)
+            this.fireCooldown = this.fireRate * 0.5; 
+        }
     }
 
     /** Draws the enemy ship using its defined draw function and role-based stroke. */
