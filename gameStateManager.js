@@ -96,6 +96,10 @@ class GameStateManager {
                 // No update logic needed, just wait for UI clicks
                 break;
 
+            case "VIEWING_REPAIRS":
+                // No update logic needed for repairs menu
+                break;
+
             case "GALAXY_MAP":
                 break;
 
@@ -163,6 +167,10 @@ class GameStateManager {
 
             case "VIEWING_UPGRADES":
                 if (uiManager && player) uiManager.drawUpgradesMenu(player);
+                break;
+
+            case "VIEWING_REPAIRS":
+                if (uiManager && player) uiManager.drawRepairsMenu(player);
                 break;
 
             // TODO: Add drawing cases for VIEWING_SERVICES later

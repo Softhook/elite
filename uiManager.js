@@ -14,6 +14,9 @@ class UIManager {
         this.shipyardDetailButtons = {}; // Placeholder
         this.upgradeListAreas = []; // Placeholder
         this.upgradeDetailButtons = {}; // Placeholder
+        this.repairsFullButtonArea = {}; // Placeholder
+        this.repairsHalfButtonArea = {}; // Placeholder
+        this.repairsBackButtonArea = {}; // Placeholder
 
         // --- UI State ---
         this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
@@ -100,8 +103,9 @@ class UIManager {
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_MARKET" },
             { text: "Mission Board", state: "VIEWING_MISSIONS" },
-            { text: "Shipyard", state: "VIEWING_SHIPYARD" },           // NEW
-            { text: "Upgrades", state: "VIEWING_UPGRADES" },           // NEW
+            { text: "Shipyard", state: "VIEWING_SHIPYARD" },
+            { text: "Upgrades", state: "VIEWING_UPGRADES" },
+            { text: "Repairs", state: "VIEWING_REPAIRS" },
             { text: "Undock", action: "UNDOCK" }
         ];
         menuOpts.forEach((opt, i) => {
@@ -116,6 +120,49 @@ class UIManager {
         });
         pop();
     } // --- End drawStationMainMenu ---
+
+    /** Draws the Repairs Menu */
+    drawRepairsMenu(player) {
+        if (!player) return;
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([60,30,30,230], [255,180,100]);
+        fill(255); textSize(24); textAlign(CENTER,TOP);
+        text("Ship Repairs", pX+pW/2, pY+20);
+
+        // Show current hull and max hull
+        fill(220); textSize(18); textAlign(CENTER,TOP);
+        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+60);
+        text(`Credits: ${player.credits}`, pX+pW/2, pY+90);
+
+        // Calculate repair costs
+        let missing = player.maxHull - player.hull;
+        let fullCost = missing * 10;
+        let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
+        let halfCost = halfRepair * 7;
+
+        let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+140, btnY2 = btnY1+btnH+20;
+
+        // 100% Repair Button
+        fill(0,180,0); stroke(100,255,100); rect(btnX, btnY1, btnW, btnH, 5);
+        fill(255); textSize(18); textAlign(CENTER,CENTER); noStroke();
+        text(`Full Repair (${fullCost} cr)`, btnX+btnW/2, btnY1+btnH/2);
+        this.repairsFullButtonArea = {x:btnX, y:btnY1, w:btnW, h:btnH};
+
+        // 50% Repair Button
+        fill(180,180,0); stroke(220,220,100); rect(btnX, btnY2, btnW, btnH, 5);
+        fill(0); textSize(18); textAlign(CENTER,CENTER); noStroke();
+        text(`50% Repair (${halfCost} cr)`, btnX+btnW/2, btnY2+btnH/2);
+        this.repairsHalfButtonArea = {x:btnX, y:btnY2, w:btnW, h:btnH};
+
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
+        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        text("Back", backX+backW/2, backY+backH/2);
+        this.repairsBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
+        pop();
+    }
 
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
@@ -530,7 +577,8 @@ class UIManager {
                         if(gameStateManager)gameStateManager.setState("IN_FLIGHT");
                         return true;
                     } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
-                               btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES") {
+                               btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
+                               btn.state === "VIEWING_REPAIRS") {
                         if(gameStateManager)gameStateManager.setState(btn.state);
                         return true;
                     } else if (btn.state) {
@@ -647,6 +695,47 @@ class UIManager {
             }
             // Back button
             if (this.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
+                gameStateManager.setState("DOCKED");
+                return true;
+            }
+            return false;
+        }
+        // --- VIEWING_REPAIRS State ---
+        else if (currentState === "VIEWING_REPAIRS") {
+            // Full repair
+            if (this.isClickInArea(mx, my, this.repairsFullButtonArea)) {
+                let missing = player.maxHull - player.hull;
+                let cost = missing * 10;
+                if (missing <= 0) {
+                    alert("Your ship is already fully repaired!");
+                } else if (player.credits >= cost) {
+                    player.spendCredits(cost);
+                    player.hull = player.maxHull;
+                    alert(`Ship fully repaired for ${cost} credits.`);
+                } else {
+                    alert(`Not enough credits! Full repair costs ${cost} credits.`);
+                }
+                return true;
+            }
+            // 50% repair
+            if (this.isClickInArea(mx, my, this.repairsHalfButtonArea)) {
+                let missing = player.maxHull - player.hull;
+                let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
+                let cost = repairAmt * 7;
+                if (missing <= 0) {
+                    alert("Your ship is already fully repaired!");
+                } else if (player.credits >= cost) {
+                    player.spendCredits(cost);
+                    player.hull += repairAmt;
+                    if (player.hull > player.maxHull) player.hull = player.maxHull;
+                    alert(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
+                } else {
+                    alert(`Not enough credits! 50% repair costs ${cost} credits.`);
+                }
+                return true;
+            }
+            // Back button
+            if (this.isClickInArea(mx, my, this.repairsBackButtonArea)) {
                 gameStateManager.setState("DOCKED");
                 return true;
             }

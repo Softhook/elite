@@ -245,13 +245,30 @@ class Enemy {
 
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
-        // Guard against a missing or destroyed target.
+        // --- Robust retargeting: always check if pirate's target is invalid, else switch to player ---
         if (
             this.role === AI_ROLE.PIRATE &&
-            (!this.target || !this.target.pos || this.target.hull <= 0 || (system.player && system.player.destroyed)) &&
+            (
+                !this.target ||
+                !this.target.pos ||
+                this.target.hull <= 0 ||
+                (system.player && system.player.destroyed) ||
+                (this.target !== system.player && system.enemies && !system.enemies.includes(this.target))
+            ) &&
             system.player && !system.player.destroyed
         ) {
             this.target = system.player;
+            this.currentState = AI_STATE.APPROACHING;
+        }
+
+        // --- Fix: Never allow pirates to remain IDLE if targeting the player ---
+        if (
+            this.role === AI_ROLE.PIRATE &&
+            this.currentState === AI_STATE.IDLE &&
+            this.target === system.player &&
+            this.target &&
+            !this.target.destroyed
+        ) {
             this.currentState = AI_STATE.APPROACHING;
         }
 
@@ -276,30 +293,6 @@ class Enemy {
                 console.log(`${this.shipTypeName} switching target from Player (${playerDistance.toFixed(2)}) to ${candidate.shipTypeName}`);
                 this.target = candidate;
             }
-        }
-
-        // After candidate switching: if the target is not Player.
-        if (
-            this.role === AI_ROLE.PIRATE &&
-            this.target && !(this.target instanceof Player) &&
-            (
-                !this.target.pos ||
-                this.target.hull <= 0 ||
-                (system.player && dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y) < this.detectionRange)
-            )
-        ) {
-            this.target = system.player;
-            this.currentState = AI_STATE.APPROACHING;
-        }
-
-        // --- Fix: If pirate is IDLE but has player as target, force state to APPROACHING ---
-        if (
-            this.role === AI_ROLE.PIRATE &&
-            this.currentState === AI_STATE.IDLE &&
-            this.target instanceof Player &&
-            this.target.hull > 0
-        ) {
-            this.currentState = AI_STATE.APPROACHING;
         }
 
         // Continue with the rest of updateCombatAI...
