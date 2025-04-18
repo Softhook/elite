@@ -292,6 +292,16 @@ class Enemy {
             this.currentState = AI_STATE.APPROACHING;
         }
 
+        // --- Fix: If pirate is IDLE but has player as target, force state to APPROACHING ---
+        if (
+            this.role === AI_ROLE.PIRATE &&
+            this.currentState === AI_STATE.IDLE &&
+            this.target instanceof Player &&
+            this.target.hull > 0
+        ) {
+            this.currentState = AI_STATE.APPROACHING;
+        }
+
         // Continue with the rest of updateCombatAI...
         let targetExists = this.target?.hull > 0;
         let distanceToTarget = targetExists

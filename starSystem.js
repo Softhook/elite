@@ -190,6 +190,11 @@ class StarSystem {
             for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
             for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
         }
+        for (let enemy of this.enemies) {
+            if (enemy.role === AI_ROLE.PIRATE && enemy.target === player) {
+                enemy.currentState = AI_STATE.APPROACHING;
+            }
+        }
     }
 
     /** Call this method when the system is discovered by the player. */
