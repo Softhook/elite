@@ -418,11 +418,27 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         drawFunc(this.size, this.isThrusting); 
         pop();
 
-        // Existing weapon effects
+        // Draw force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
-            // ...existing force wave drawing code...
+            const timeSinceForce = millis() - this.lastForceWave.time;
+            const alpha = map(timeSinceForce, 0, 300, 200, 0);
+            
+            push();
+            translate(this.pos.x, this.pos.y);
+            noFill();
+            strokeWeight(3);
+            stroke(this.lastForceWave.color[0], 
+                   this.lastForceWave.color[1], 
+                   this.lastForceWave.color[2], 
+                   alpha);
+            
+            // Expanding circle at ship
+            const radius = map(timeSinceForce, 0, 300, 10, 40);
+            circle(0, 0, radius * 2);
+            pop();
         }
 
+        // Existing weapon effects
         if (this.lastBeam && millis() - this.lastBeam.time < 120) {
             // ...existing beam drawing code...
         }

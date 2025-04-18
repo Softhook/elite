@@ -341,7 +341,7 @@ const SHIP_DEFINITIONS = {
      "FerDeLance": {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRateDegrees: 3.0, baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Arc Projector", "Pulse Array"], // Luxury combat loadout
+        armament: ["Sniper Rail", "Force Blaster", "Pulse Array"], // Luxury combat loadout
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, { x: 0.2, y: -0.5 } ],
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2

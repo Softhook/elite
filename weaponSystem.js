@@ -1,20 +1,60 @@
 // ****** weaponSystem.js ******
 
 class WeaponSystem {
-    // --- Generic fire method for easy switching ---
-    static fire(owner, system, angle, mode = "single") {
-        switch (mode) {
-            case "single":      return WeaponSystem.fireProjectile(owner, system, angle);
-            case "spread2":     return WeaponSystem.fireSpread(owner, system, angle, 2);
-            case "spread3":     return WeaponSystem.fireSpread(owner, system, angle, 3);
-            case "spread4":     return WeaponSystem.fireSpread(owner, system, angle, 4);
-            case "straight2":   return WeaponSystem.fireStraight(owner, system, angle, 2);
-            case "straight3":   return WeaponSystem.fireStraight(owner, system, angle, 3);
-            case "straight4":   return WeaponSystem.fireStraight(owner, system, angle, 4);
-            case "beam":        return WeaponSystem.fireBeam(owner, system, angle);
-            case "turret":      return WeaponSystem.fireTurret(owner, system);
-            case "force":       return WeaponSystem.fireForce(owner, system);
-            default:            return WeaponSystem.fireProjectile(owner, system, angle);
+    /** Handles force blast weapon (area effect damage) */
+    static fireForce(owner, system, angle) {
+        if (!owner || !system) return;
+        
+        // Get position to emit force wave from
+        const forceWavePos = owner.pos.copy();
+        
+        // Get owner's current weapon for properties
+        const weapon = owner.currentWeapon;
+        const damage = weapon?.damage || 20; // Increased base damage
+        const color = weapon?.color || [255, 0, 0];
+        
+        console.log(`Force wave fired by ${owner instanceof Player ? "player" : "enemy"} with damage ${damage}`);
+        
+        // Create force wave in the system
+        system.forceWaves.push({
+            pos: forceWavePos,
+            owner: owner,
+            startTime: millis(),
+            radius: 50, // Starting radius
+            maxRadius: 750, // Maximum radius
+            growRate: 15, // How fast it grows per frame
+            damage: damage,
+            color: color,
+            processed: {}, // Track which entities have been affected already
+        });
+        
+        // Store reference for drawing effects
+        owner.lastForceWave = {
+            pos: forceWavePos.copy(),
+            time: millis(),
+            color: color
+        };
+    }
+
+    /** Generic fire method that dispatches to specific weapon handlers */
+    static fire(owner, system, angle, type = "projectile", target = null) {
+        if (!owner || !system) return;
+        
+        // Handle different weapon types
+        switch(type) {
+            case "force":
+                this.fireForce(owner, system, angle);
+                break;
+            case "beam":
+                this.fireBeam(owner, system, angle);
+                break;
+            case "turret":
+                this.fireTurret(owner, system, target || angle);
+                break;
+            // Other weapon types...
+            default:
+                // Default to various projectile types
+                this.fireProjectile(owner, system, angle, type);
         }
     }
 
@@ -134,38 +174,6 @@ class WeaponSystem {
         if (!target) return;
         const angle = atan2(target.pos.y - owner.pos.y, target.pos.x - owner.pos.x);
         WeaponSystem.fireProjectile(owner, system, angle);
-    }
-
-    // --- Force weapon (area effect) ---
-    static fireForce(owner, system) {
-        if (!system) return;
-        const radius = 200;
-
-        // If owner is Enemy, affect the player
-        if (owner instanceof Enemy && system.player) {
-            let d = p5.Vector.dist(owner.pos, system.player.pos);
-            if (d < radius) {
-                let forceDir = p5.Vector.sub(system.player.pos, owner.pos).normalize();
-                system.player.vel.add(forceDir.mult(8));
-                system.player.takeDamage(owner.currentWeapon.damage);
-            }
-        }
-
-        // If owner is Player, affect all enemies
-        if (owner instanceof Player && system.enemies) {
-            for (let enemy of system.enemies) {
-                if (enemy === owner) continue;
-                let d = p5.Vector.dist(owner.pos, enemy.pos);
-                if (d < radius) {
-                    let forceDir = p5.Vector.sub(enemy.pos, owner.pos).normalize();
-                    enemy.vel.add(forceDir.mult(8));
-                    enemy.takeDamage(owner.currentWeapon.damage);
-                }
-            }
-        }
-
-        // Visual effect
-        owner.lastForceWave = { pos: owner.pos.copy(), radius: 0, maxRadius: radius, time: millis() };
     }
 }
 

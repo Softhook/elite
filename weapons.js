@@ -38,9 +38,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Force Blaster",
         type: "force",
-        damage: 3,
+        damage: 300,
         color: [255, 0, 0], // Red
-        fireRate: 0.5, 
+        fireRate: 2, 
         price: 10000,
         desc: "Super damage, area effect."
     },
@@ -141,7 +141,7 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 255], // Purple
         fireRate: 0.32,
         price: 2500,
-        desc: "Fires three parallel shots."
+        desc: "Fast 3-way parallel shots."
     },
     {
         name: "Disruptor",

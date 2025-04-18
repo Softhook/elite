@@ -72,6 +72,9 @@ class Enemy {
             this.isWanted = false;
         }
 
+        // Add unique ID for force wave tracking
+        this.id = Date.now() + "_" + Math.floor(Math.random() * 1000);
+
         // --- Physics & Stats (using the final shipDef) ---
         this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI); // Radians
         this.size = shipDef.size; this.baseMaxSpeed = shipDef.baseMaxSpeed; this.baseThrust = shipDef.baseThrust;
@@ -685,15 +688,23 @@ class Enemy {
              push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
         }
 
-        // Draw force wave if recently fired
+        // Draw force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+            const timeSinceForce = millis() - this.lastForceWave.time;
+            const alpha = map(timeSinceForce, 0, 300, 200, 0);
+            
             push();
+            translate(this.pos.x, this.pos.y);
             noFill();
-            stroke(0, 200, 255, 180);
-            strokeWeight(4);
-            let t = (millis() - this.lastForceWave.time) / 300;
-            let r = lerp(0, this.lastForceWave.maxRadius, t);
-            ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
+            strokeWeight(3);
+            stroke(this.lastForceWave.color[0], 
+                   this.lastForceWave.color[1], 
+                   this.lastForceWave.color[2], 
+                   alpha);
+            
+            // Expanding circle at ship
+            const radius = map(timeSinceForce, 0, 300, 10, 40);
+            circle(0, 0, radius * 2);
             pop();
         }
 

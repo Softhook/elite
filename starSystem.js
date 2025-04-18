@@ -61,7 +61,7 @@ class StarSystem {
         this.enemies = [];
         this.projectiles = [];
         this.beams = [];
-        this.forceWaves = [];
+        this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
@@ -317,9 +317,9 @@ class StarSystem {
         } catch(e) { console.error("!!! ERROR during trySpawnAsteroid:", e); }
     }
 
-    /** Updates dynamic objects, handles spawning/despawning, checks collisions. */
-    update(player) {
-        if (!player || !player.pos) return;
+    /** Updates all system entities. */
+    update(playerRef) {
+        if (!playerRef || !playerRef.pos) return;
         try {
             // Update Enemies & Check Bounty Progress
             for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -329,29 +329,29 @@ class StarSystem {
                     let reward = 0; if (enemy.role !== AI_ROLE.HAULER) reward = 25;
                     // --- Check Active Bounty Mission & AUTO-COMPLETE ---
                     // Check using safe access ?. and correct types
-                    if (player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
-                        player.activeMission.progressCount++;
-                        console.log(`Bounty progress: ${player.activeMission.progressCount}/${player.activeMission.targetCount}`);
-                        if (player.activeMission.progressCount >= player.activeMission.targetCount) {
+                    if (playerRef.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
+                        playerRef.activeMission.progressCount++;
+                        console.log(`Bounty progress: ${playerRef.activeMission.progressCount}/${playerRef.activeMission.targetCount}`);
+                        if (playerRef.activeMission.progressCount >= playerRef.activeMission.targetCount) {
                              console.log("Bounty mission target count met! Completing mission...");
                              // Call player.completeMission WITHOUT system/station args for auto-complete
-                             player.completeMission(); // <<< Use simpler call for auto-complete
+                             playerRef.completeMission(); // <<< Use simpler call for auto-complete
                              reward = 0; // Don't give base reward if mission completed
                         }
                     }
                     // --- End Bounty Check ---
-                    if (reward > 0) player.addCredits(reward);
+                    if (reward > 0) playerRef.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
-                let dE = dist(enemy.pos.x, enemy.pos.y, player.pos.x, player.pos.y); if (dE > this.despawnRadius * 1.1) this.enemies.splice(i, 1);
+                let dE = dist(enemy.pos.x, enemy.pos.y, playerRef.pos.x, playerRef.pos.y); if (dE > this.despawnRadius * 1.1) this.enemies.splice(i, 1);
             }
 
             // --- Update Asteroids & Handle Destruction/Despawn ---
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
-                if (asteroid.isDestroyed()) { player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
-                let dA = dist(asteroid.pos.x, asteroid.pos.y, player.pos.x, player.pos.y); if (dA > this.despawnRadius * 1.2) this.asteroids.splice(i, 1);
+                if (asteroid.isDestroyed()) { playerRef.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
+                let dA = dist(asteroid.pos.x, asteroid.pos.y, playerRef.pos.x, playerRef.pos.y); if (dA > this.despawnRadius * 1.2) this.asteroids.splice(i, 1);
             }
 
             // --- Update Projectiles (Ensure proj.update() is called) ---
@@ -367,8 +367,60 @@ class StarSystem {
             // Update Beams
             this.updateBeams && this.updateBeams();
 
-            // Update Force Waves
-            this.updateForceWaves && this.updateForceWaves();
+            // Update and process force waves
+            for (let i = this.forceWaves.length - 1; i >= 0; i--) {
+                const wave = this.forceWaves[i];
+                
+                // Expand the wave
+                wave.radius += wave.growRate;
+                
+                // Check for collisions with enemies (if player's wave)
+                if (wave.owner === playerRef) {
+                    for (const enemy of this.enemies) {
+                        // Skip if already processed this enemy
+                        if (wave.processed[enemy.id]) continue;
+                        
+                        // Calculate distance from wave center to enemy
+                        const dist = p5.Vector.dist(wave.pos, enemy.pos);
+                        
+                        // If enemy is within wave radius, apply damage
+                        if (dist < wave.radius + enemy.size/2) {
+                            // Calculate damage with much less aggressive falloff
+                            const distRatio = dist / (wave.radius + enemy.size/2);
+                            
+                            // Use a gentler falloff curve (0.8 power instead of 1.5)
+                            // This ensures the damage remains high even at medium distances
+                            const falloff = Math.pow(1 - distRatio, 0.8);
+                            
+                            // Increase minimum damage and make it a percentage of base damage
+                            const minDamage = Math.max(30, Math.floor(wave.damage * 0.1));
+                            const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
+                            
+                            // Apply damage and mark as processed
+                            enemy.takeDamage(dmg);
+                            wave.processed[enemy.id] = true;
+                            console.log(`Force wave hit ${enemy.shipTypeName} for ${dmg} damage`);
+                        }
+                    }
+                }
+                
+                // Check collision with player (if enemy's wave)
+                if (wave.owner !== playerRef && playerRef && !wave.processed['player']) {
+                    const dist = p5.Vector.dist(wave.pos, playerRef.pos);
+                    if (dist < wave.radius + playerRef.size/2) {
+                        const falloff = 1 - (dist / (wave.radius + playerRef.size/2));
+                        const dmg = Math.max(1, Math.floor(wave.damage * falloff));
+                        playerRef.takeDamage(dmg);
+                        wave.processed['player'] = true;
+                        console.log(`Enemy force wave hit player for ${dmg} damage`);
+                    }
+                }
+                
+                // Remove wave if it reaches max size
+                if (wave.radius >= wave.maxRadius) {
+                    this.forceWaves.splice(i, 1);
+                }
+            }
 
             // Update explosions
             for (let i = this.explosions.length - 1; i >= 0; i--) {
@@ -379,11 +431,11 @@ class StarSystem {
             }
 
             // Collision Checks
-            this.checkCollisions(player);
-            this.checkProjectileCollisions(player); // Added call to new method
+            this.checkCollisions(playerRef);
+            this.checkProjectileCollisions(playerRef); // Added call to new method
             // Spawning Timers
-            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(player); this.enemySpawnTimer = 0; }
-            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(player); this.asteroidSpawnTimer = 0; }
+            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(playerRef); this.enemySpawnTimer = 0; }
+            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(playerRef); this.asteroidSpawnTimer = 0; }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
     } // End update
 
@@ -414,9 +466,38 @@ class StarSystem {
         }
     }
 
+    /** Draws force waves with proper transformation */
     drawForceWaves() {
-        for (let wave of this.forceWaves) {
-            wave.draw && wave.draw();
+        if (!this.forceWaves || this.forceWaves.length === 0) return;
+        
+        // No need for push/pop/translate here since we're already in the right coordinate system
+        // from the parent draw() method
+        
+        for (const wave of this.forceWaves) {
+            // Fade out as the wave expands
+            const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
+            
+            // Draw outer ring
+            noFill();
+            strokeWeight(6);
+            stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 2);
+            
+            // Draw secondary ring
+            strokeWeight(3);
+            stroke(255, 255, 255, alpha * 0.7);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 1.9);
+            
+            // Draw inner glow
+            strokeWeight(10);
+            stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 1.7);
+            
+            // Draw center pulse
+            const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
+            fill(wave.color[0], wave.color[1], wave.color[2], alpha);
+            noStroke();
+            circle(wave.pos.x, wave.pos.y, pulseSize);
         }
     }
 
@@ -586,12 +667,12 @@ class StarSystem {
         this.bgStars.forEach(s => ellipse(s.x, s.y, s.size, s.size));
     }
 
-    /** Draws the entire system centered on the player. */
-    draw(player) {
-        if (!player || !player.pos) return;
+    /** Draws all system contents. */
+    draw(playerRef) {
+        if (!playerRef || !playerRef.pos) return;
         push();
-        let tx = width / 2 - player.pos.x;
-        let ty = height / 2 - player.pos.y;
+        let tx = width / 2 - playerRef.pos.x;
+        let ty = height / 2 - playerRef.pos.y;
         translate(tx, ty);
         // Optionally set default tx/ty if needed
         // Draw background, station, etc.
@@ -618,7 +699,7 @@ class StarSystem {
         this.drawBeams && this.drawBeams();
         this.drawForceWaves && this.drawForceWaves();
         this.explosions.forEach(exp => exp.draw());
-        player.draw();
+        playerRef.draw();
         pop();
     }
 
