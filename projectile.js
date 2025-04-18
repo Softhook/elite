@@ -69,7 +69,7 @@ class Projectile {
 
 // Example usage of Projectile class
 const proj = new Projectile(
-    spawnPos.x, spawnPos.y, angle, this, // <-- this, not 'ENEMY'
+    this.pos.x, this.pos.y, angle, this, // <-- this.pos, not 'ENEMY'
     8, this.currentWeapon.damage, this.currentWeapon.color
 );
 this.currentSystem.addProjectile(proj);

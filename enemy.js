@@ -683,9 +683,47 @@ class Enemy {
             this.lastAttacker = attacker;
         }
         
-        if(this.hull <= 0) { 
-            this.hull = 0; 
-            this.destroyed = true; 
+        if (this.hull <= 0) {
+            this.hull = 0;
+            this.destroyed = true;
+            
+            // Create explosion effect
+            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                // Extract color from p5FillColor if available
+                let explosionColor;
+                if (this.p5FillColor) {
+                    explosionColor = [
+                        red(this.p5FillColor),
+                        green(this.p5FillColor),
+                        blue(this.p5FillColor)
+                    ];
+                } else {
+                    explosionColor = [255, 160, 30]; // Default orange
+                }
+                
+                // Create main explosion
+                this.currentSystem.addExplosion(
+                    this.pos.x, 
+                    this.pos.y,
+                    this.size * 1.5,
+                    explosionColor
+                );
+                
+                // Create smaller secondary explosions
+                const debrisCount = this.size > 40 ? 3 : 1;
+                for (let i = 0; i < debrisCount; i++) {
+                    setTimeout(() => {
+                        if (this.currentSystem) {
+                            this.currentSystem.addExplosion(
+                                this.pos.x + random(-this.size/2, this.size/2),
+                                this.pos.y + random(-this.size/2, this.size/2),
+                                this.size * random(0.4, 0.8),
+                                explosionColor
+                            );
+                        }
+                    }, i * 100); // Staggered timing
+                }
+            }
         }
     }
     isDestroyed() { return this.destroyed; }

@@ -62,6 +62,7 @@ class StarSystem {
         this.projectiles = [];
         this.beams = [];
         this.forceWaves = [];
+        this.explosions = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
         this.bgStars = [];     // Populated in initStaticElements
@@ -369,6 +370,14 @@ class StarSystem {
             // Update Force Waves
             this.updateForceWaves && this.updateForceWaves();
 
+            // Update explosions
+            for (let i = this.explosions.length - 1; i >= 0; i--) {
+                this.explosions[i].update();
+                if (this.explosions[i].isDone()) {
+                    this.explosions.splice(i, 1);
+                }
+            }
+
             // Collision Checks
             this.checkCollisions(player);
             this.checkProjectileCollisions(player); // Added call to new method
@@ -409,6 +418,11 @@ class StarSystem {
         for (let wave of this.forceWaves) {
             wave.draw && wave.draw();
         }
+    }
+
+    /** Adds an explosion to the system's list. */
+    addExplosion(x, y, size, color) {
+        this.explosions.push(new Explosion(x, y, size, color));
     }
 
     /** Handles all collision detection and responses in the system. */
@@ -603,6 +617,7 @@ class StarSystem {
         this.projectiles.forEach(proj => proj.draw());
         this.drawBeams && this.drawBeams();
         this.drawForceWaves && this.drawForceWaves();
+        this.explosions.forEach(exp => exp.draw());
         player.draw();
         pop();
     }

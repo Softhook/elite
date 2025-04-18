@@ -334,6 +334,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             strokeWeight(4);
             let t = (millis() - this.lastForceWave.time) / 300;
             let r = lerp(0, this.lastForceWave.maxRadius, t);
+            r = lerp(0, this.lastForceWave.maxRadius, t);
             ellipse(this.lastForceWave.pos.x, this.lastForceWave.pos.y, r * 2, r * 2);
             pop();
         }
@@ -356,7 +357,33 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-            // --- GAME OVER LOGIC ---
+
+            // Create player explosion (larger, more dramatic)
+            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                // Player explosions are blue-tinted
+                this.currentSystem.addExplosion(
+                    this.pos.x,
+                    this.pos.y,
+                    this.size * 2.5,
+                    [100, 150, 255]
+                );
+
+                // Multiple secondary explosions
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        if (this.currentSystem) {
+                            this.currentSystem.addExplosion(
+                                this.pos.x + random(-this.size, this.size),
+                                this.pos.y + random(-this.size, this.size),
+                                this.size * random(0.8, 1.2),
+                                [180, 200, 255]
+                            );
+                        }
+                    }, i * 150);
+                }
+            }
+
+            // Existing Game Over logic
             if (typeof gameStateManager !== "undefined" && gameStateManager) {
                 gameStateManager.setState("GAME_OVER");
             } else {
