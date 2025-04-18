@@ -24,7 +24,6 @@ function drawACAB(s, thrusting = false) {
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     if (thrusting) { fill(255, 200, 0); noStroke(); ellipse(-r, 0, r*0.5, r*0.3); }
 }
-
 function drawSidewinder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Sidewinder;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
@@ -514,7 +513,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawType9Heavy, vertexData: [ { x: 0.6, y: 0.2 }, { x: 0.7, y: 0.8 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.8 }, { x: -1.0, y: -0.8 }, { x: -0.8, y: -0.9 }, { x: 0.7, y: -0.8 }, { x: 0.6, y: -0.2 } ],
         fillColor: [190, 140, 60], strokeColor: [110, 80, 30], strokeW: 2.5
     },
-    "Viper": { // REVERTED NAME from ViperMkIII
+    "Viper": { 
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRateDegrees: 4.5, baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 4,
         armament: ["Multi-Cannon", "Twin Pulse"], // Fast fighter

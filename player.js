@@ -521,13 +521,58 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     /** Calculates total cargo quantity. */
     getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
 
-    /** Adds cargo. */
-    addCargo(commodityName, quantity) { if (quantity <= 0) return; const existingItem = this.cargo.find(item => item?.name === commodityName); if (this.getCargoAmount() + quantity > this.cargoCapacity) { return; } if (existingItem) { existingItem.quantity += quantity; } else { this.cargo.push({ name: commodityName, quantity: quantity }); } }
+    /** Adds cargo to player inventory. Returns true if successful. */
+    addCargo(commodityName, quantity) { 
+        // Validate input
+        if (!commodityName || quantity <= 0) {
+            return false;
+        }
+        
+        // Check cargo capacity
+        if (this.getCargoAmount() + quantity > this.cargoCapacity) {
+            return false;
+        }
+        
+        // Find existing item or add new one
+        const existingItem = this.cargo.find(item => item?.name === commodityName);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.cargo.push({ name: commodityName, quantity: quantity });
+        }
+        
+        return true;
+    }
 
-    /** Removes cargo. */
-    removeCargo(commodityName, quantity) { if (quantity <= 0) return; const itemIndex = this.cargo.findIndex(item => item?.name === commodityName); if (itemIndex > -1) { if (this.cargo[itemIndex].quantity < quantity) { return; } this.cargo[itemIndex].quantity -= quantity; if (this.cargo[itemIndex].quantity <= 0) { this.cargo.splice(itemIndex, 1); } } }
+    /** Removes cargo from player inventory. Returns true if successful. */
+    removeCargo(commodityName, quantity) {
+        // Validate input
+        if (!commodityName || quantity <= 0) {
+            return false;
+        }
+        
+        // Find the item
+        const itemIndex = this.cargo.findIndex(item => item?.name === commodityName);
+        if (itemIndex === -1) {
+            return false; // Item not found
+        }
+        
+        // Check if enough quantity exists
+        if (this.cargo[itemIndex].quantity < quantity) {
+            return false;
+        }
+        
+        // Remove the quantity
+        this.cargo[itemIndex].quantity -= quantity;
+        
+        // Remove item entirely if quantity is zero
+        if (this.cargo[itemIndex].quantity <= 0) {
+            this.cargo.splice(itemIndex, 1);
+        }
+        
+        return true;
+    }
 
-    // --- ADDED checkCollision Method ---
     /**
      * Basic circle-based collision check against another object.
      * @param {object} target - Object with pos {x, y} and size properties.
@@ -539,16 +584,18 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             // console.warn("Player checkCollision: Invalid target provided.", target); // Optional log
             return false;
         }
+        
         // Calculate distance squared between centers
         let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
+        
         // Calculate sum of radii squared (using size as diameter)
         let targetRadius = target.size / 2;
         let myRadius = this.size / 2;
         let sumRadiiSq = sq(targetRadius + myRadius);
+        
         // Collision occurs if distance squared is less than sum of radii squared
         return dSq < sumRadiiSq;
     }
-    // --- END checkCollision Method ---
 
     // --- Save/Load Functionality ---
     /** Save data for persistence */

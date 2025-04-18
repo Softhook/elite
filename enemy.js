@@ -223,9 +223,23 @@ class Enemy {
     /** Rotates towards target angle (radians). Returns remaining difference (radians). */
     rotateTowards(targetAngleRadians) {
         if (isNaN(targetAngleRadians)) return PI;
-        let diff = targetAngleRadians - this.angle; while (diff < -PI) diff += TWO_PI; while (diff > PI) diff -= TWO_PI;
+        
+        let diff = targetAngleRadians - this.angle; 
+        
+        // Fixed: Add proper braces to angle normalization loops
+        while (diff < -PI) {
+            diff += TWO_PI;
+        }
+        while (diff > PI) {
+            diff -= TWO_PI;
+        }
+        
         const rotationThreshold = 0.02;
-        if (abs(diff) > rotationThreshold) { let step = constrain(diff, -this.rotationSpeed, this.rotationSpeed); this.angle = (this.angle + step + TWO_PI) % TWO_PI; return diff - step; }
+        if (abs(diff) > rotationThreshold) { 
+            let step = constrain(diff, -this.rotationSpeed, this.rotationSpeed); 
+            this.angle = (this.angle + step + TWO_PI) % TWO_PI; 
+            return diff - step; 
+        }
         return 0; // Aligned
     }
 
@@ -611,8 +625,14 @@ class Enemy {
         if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
             // Calculate angle difference between current angle and angle to target
             let angleDiff = shootingAngle - this.angle;
-            while (angleDiff < -PI) angleDiff += TWO_PI;
-            while (angleDiff > PI) angleDiff -= TWO_PI;
+            
+            // Fixed: Add proper braces to angle normalization loops
+            while (angleDiff < -PI) {
+                angleDiff += TWO_PI;
+            }
+            while (angleDiff > PI) {
+                angleDiff -= TWO_PI;
+            }
             
             // Check if weapon is a turret (can fire in any direction)
             const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
