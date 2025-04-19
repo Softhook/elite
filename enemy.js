@@ -822,72 +822,107 @@ class Enemy {
 
     // --- Standard Methods ---
     takeDamage(amount, attacker = null) { 
-        if(this.destroyed || amount <= 0) return; 
+        if(this.destroyed || amount <= 0) return;
+        
         this.hull -= amount; 
         
         // Track who's attacking us
         if (attacker) {
             this.lastAttacker = attacker;
+            this.targetSwitchCooldown = 0; // Allow immediate targeting of attackers
+        }
+        
+        // Chance to jettison cargo when hit hard enough
+        if (amount > 5 && random() < 0.1) { // 10% chance
+            this.jettisionCargo();
         }
         
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
             
-            // Create explosion effect
+            // Drop cargo on destruction
+            this.dropCargo();
+            
+            // Create explosion at destruction position
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                // Extract color from p5FillColor if available
-                let explosionColor;
-                if (this.p5FillColor) {
-                    explosionColor = [
-                        red(this.p5FillColor),
-                        green(this.p5FillColor),
-                        blue(this.p5FillColor)
-                    ];
-                } else {
-                    explosionColor = [255, 160, 30]; // Default orange
-                }
-                
-                // Create main explosion
-                this.currentSystem.addExplosion(
-                    this.pos.x, 
-                    this.pos.y,
-                    this.size * 1.5,
-                    explosionColor
-                );
-                
-                // Create smaller secondary explosions
-                const debrisCount = this.size > 40 ? 3 : 1;
-                for (let i = 0; i < debrisCount; i++) {
-                    setTimeout(() => {
-                        if (this.currentSystem) {
-                            this.currentSystem.addExplosion(
-                                this.pos.x + random(-this.size/2, this.size/2),
-                                this.pos.y + random(-this.size/2, this.size/2),
-                                this.size * random(0.4, 0.8),
-                                explosionColor
-                            );
-                        }
-                    }, i * 100); // Staggered timing
-                }
+                this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
             }
+            
+            console.log(`${this.role} ${this.shipTypeName} destroyed!`);
+        }
+    }
 
-            // Mission progress logic for police role
-            if (this.role === AI_ROLE.POLICE && 
-                player.activeMission?.type === MISSION_TYPE.BOUNTY_POLICE && 
-                player.currentSystem.name === player.activeMission.destinationSystem) {
-                
-                // Increment counter for the mission
-                if (!player.missionProgress) player.missionProgress = {};
-                const flag = player.activeMission.completionFlagName;
-                
-                if (!player.missionProgress[flag]) player.missionProgress[flag] = 0;
-                player.missionProgress[flag]++;
-                
-                console.log(`Police ship destroyed: ${player.missionProgress[flag]}/${player.activeMission.targetCount}`);
+    /**
+     * Jettisons a single piece of cargo when hit
+     */
+    jettisionCargo() {
+        if (!this.currentSystem) return;
+        
+        // Get cargo types for this ship
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
+        
+        // Select a random cargo type and create it
+        const cargoType = random(shipDef.typicalCargo);
+        
+        // Calculate a position slightly offset from the ship
+        const offsetAngle = random(TWO_PI);
+        const offsetDist = this.size * 0.6;
+        const offsetX = this.pos.x + cos(offsetAngle) * offsetDist;
+        const offsetY = this.pos.y + sin(offsetAngle) * offsetDist;
+        
+        // Create and add cargo to the system
+        const cargo = new Cargo(offsetX, offsetY, cargoType);
+        
+        // Give cargo some velocity based on ship's velocity
+        if (this.vel) {
+            cargo.vel.add(p5.Vector.mult(this.vel, 0.3));
+            cargo.vel.add(p5.Vector.random2D().mult(random(0.5, 1.5)));
+        }
+        
+        // Add cargo to system's cargo array
+        if (typeof this.currentSystem.addCargo === 'function') {
+            this.currentSystem.addCargo(cargo);
+        }
+    }
+
+    /**
+     * Drops multiple cargo items when ship is destroyed
+     */
+    dropCargo() {
+        if (!this.currentSystem) return;
+        
+        // Get cargo types for this ship
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
+        
+        // Determine how many cargo items to drop based on ship size
+        const cargoDropCount = Math.floor(map(this.size, 20, 120, 1, 5));
+        
+        for (let i = 0; i < cargoDropCount; i++) {
+            // Select a random cargo type from this ship's typical cargo
+            const cargoType = random(shipDef.typicalCargo);
+            
+            // Calculate a random position around the ship's destruction point
+            const offsetAngle = random(TWO_PI);
+            const offsetDist = random(this.size * 0.2, this.size * 0.7);
+            const offsetX = this.pos.x + cos(offsetAngle) * offsetDist;
+            const offsetY = this.pos.y + sin(offsetAngle) * offsetDist;
+            
+            // Create and add cargo to the system
+            const cargo = new Cargo(offsetX, offsetY, cargoType);
+            
+            // Give cargo some velocity from the explosion
+            cargo.vel = p5.Vector.random2D().mult(random(0.8, 2.0));
+            
+            // Add cargo to system
+            if (typeof this.currentSystem.addCargo === 'function') {
+                this.currentSystem.addCargo(cargo);
             }
         }
     }
+
     isDestroyed() { return this.destroyed; }
     checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
 

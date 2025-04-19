@@ -63,6 +63,7 @@ class StarSystem {
         this.beams = [];
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
+        this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
         this.bgStars = [];     // Populated in initStaticElements
@@ -468,6 +469,40 @@ class StarSystem {
             // Collision Checks
             this.checkCollisions(playerRef);
             this.checkProjectileCollisions(playerRef); // Added call to new method
+
+            // Cargo collection
+            for (let i = this.cargo.length - 1; i >= 0; i--) {
+                const cargo = this.cargo[i];
+                if (!cargo) {
+                    this.cargo.splice(i, 1);
+                    continue;
+                }
+
+                // Check for player collection
+                if (cargo.checkCollision(playerRef)) {
+                    // Try to add cargo to player's inventory first
+                    if (playerRef.getCargoAmount() < playerRef.cargoCapacity) {
+                        const success = playerRef.addCargo(cargo.type, 1);
+                        
+                        if (success) {
+                            // Cargo added to inventory
+                            cargo.collected = true;
+                            console.log(`Player collected ${cargo.type} cargo (${playerRef.getCargoAmount()}/${playerRef.cargoCapacity}t)`);
+                            
+                            // Optional visual/audio feedback
+                            // You could add a brief flash or sound effect here
+                            
+                            this.cargo.splice(i, 1);
+                            continue;
+                        }
+                    } else {
+                        // Cargo hold is full - notify player
+                        console.log("Cannot collect cargo: Cargo hold full");
+                        // Maybe show a UI notification here
+                    }
+                }
+            }
+
             // Spawning Timers
             this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(playerRef); this.enemySpawnTimer = 0; }
             this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(playerRef); this.asteroidSpawnTimer = 0; }
@@ -696,6 +731,17 @@ class StarSystem {
     /** Adds a force wave to the system's list. */
     addForceWave(wave) { if (wave) this.forceWaves.push(wave); }
 
+    /** Adds a cargo item to the system's cargo array */
+    addCargo(cargo) {
+        // Ensure cargo array exists
+        if (!this.cargo) this.cargo = [];
+        
+        if (cargo) {
+            this.cargo.push(cargo);
+            console.log(`Cargo added: ${cargo.type}`);
+        }
+    }
+
     /** Draws background stars. Assumes called within translated space. */
     drawBackground() {
         if (!this.bgStars) return; fill(255); noStroke();
@@ -705,11 +751,12 @@ class StarSystem {
     /** Draws all system contents. */
     draw(playerRef) {
         if (!playerRef || !playerRef.pos) return;
+        
         push();
         let tx = width / 2 - playerRef.pos.x;
         let ty = height / 2 - playerRef.pos.y;
         translate(tx, ty);
-        // Optionally set default tx/ty if needed
+        
         // Draw background, station, etc.
         this.drawBackground();
         if (this.station) this.station.draw();
@@ -718,22 +765,29 @@ class StarSystem {
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
         
         // Draw each planet passing the sunPos.
-        this.planets.forEach(p => {
-            if (p) {
-                // Compute shadowOffset only once if it hasn't been set.
-                if (!p.shadowOffset && !p.isSun) {
-                    p.computeShadowOffset(sunPos);
-                }
-                p.draw(sunPos);
-            }
-        });
+        this.planets.forEach(p => p.draw(sunPos));
         
-        this.asteroids.forEach(a => { if (a) a.draw(); });
-        this.enemies.forEach(e => { if (e) e.draw(); });
+        this.asteroids.forEach(a => a.draw());
+        
+        // Add these debug logs to track cargo
+        //console.log(`Drawing ${this.cargo?.length || 0} cargo items`);
+        
+        // IMPORTANT: Draw cargo objects BEFORE enemies and player
+        // Make sure cargo array exists before attempting to iterate
+        if (this.cargo && this.cargo.length > 0) {
+            this.cargo.forEach(cargo => {
+                if (cargo && typeof cargo.draw === 'function') {
+                    cargo.draw();
+                }
+            });
+        }
+        
+        this.enemies.forEach(e => e.draw());
         this.projectiles.forEach(proj => proj.draw());
         this.drawBeams && this.drawBeams();
         this.drawForceWaves && this.drawForceWaves();
         this.explosions.forEach(exp => exp.draw());
+        
         playerRef.draw();
         pop();
     }
