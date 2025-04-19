@@ -119,14 +119,20 @@ class WeaponSystem {
 
     // --- Beam weapon ---
     static fireBeam(owner, system, angle) {
-        console.log("Firing beam weapon from", owner instanceof Player ? "player" : "enemy", "at angle", degrees(angle));
+        console.log("Firing beam weapon from", owner instanceof Player ? "player" : "enemy", "at angle", angle);
+        
+        // VALIDATION: Ensure angle is a valid number
+        if (isNaN(angle) || !isFinite(angle)) {
+            console.error("Invalid angle in fireBeam:", angle);
+            return;
+        }
         
         const beamLength = 1200;
         const beamStart = owner.pos.copy();
         
         // For player, calculate beam direction to mouse cursor
         if (owner instanceof Player) {
-            // Convert screen mouse position to world coordinates - FIX THE CALCULATION
+            // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (owner.pos.x - width/2);
             const worldMy = mouseY + (owner.pos.y - height/2);
             
@@ -135,21 +141,36 @@ class WeaponSystem {
             console.log("Player beam aimed at mouse:", degrees(angle));
         }
         
-        // Calculate beam end point
-        const beamEnd = p5.Vector.fromAngle(angle).mult(beamLength).add(owner.pos);
-        const beamDir = p5.Vector.fromAngle(angle).normalize();
+        // SAFE VECTOR CALCULATION: Create direction vector first
+        const beamDir = p5.Vector.fromAngle(angle);
+        
+        // VALIDATION: Ensure the direction vector is valid
+        if (!beamDir || isNaN(beamDir.x) || isNaN(beamDir.y)) {
+            console.error("Invalid beam direction vector created from angle:", angle);
+            return;
+        }
+        
+        // Now calculate the end point using a copy of the direction vector
+        const beamEnd = p5.Vector.add(
+            beamStart,
+            p5.Vector.mult(beamDir, beamLength)
+        );
+        
+        // Normalize a separate copy for hit detection
+        const beamDirNorm = beamDir.copy().normalize();
 
         let hitTarget = null;
         let minDist = Infinity;
 
+        // Rest of hit detection code remains the same...
         // If owner is Player, check enemies
         if (owner instanceof Player && system && system.enemies) {
             for (let enemy of system.enemies) {
                 if (!enemy || !enemy.pos || enemy === owner) continue;
                 let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
-                let projLength = toEnemy.dot(beamDir);
+                let projLength = toEnemy.dot(beamDirNorm);
                 if (projLength > 0 && projLength < beamLength) {
-                    let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
+                    let closestPoint = p5.Vector.add(beamStart, beamDirNorm.copy().mult(projLength));
                     let distToBeam = p5.Vector.dist(enemy.pos, closestPoint);
                     if (distToBeam < enemy.size / 2 && projLength < minDist) {
                         minDist = projLength;
@@ -164,12 +185,13 @@ class WeaponSystem {
             let player = system.player;
             if (player && player.pos) {
                 let toPlayer = p5.Vector.sub(player.pos, beamStart);
-                let projLength = toPlayer.dot(beamDir);
+                let projLength = toPlayer.dot(beamDirNorm);
                 if (projLength > 0 && projLength < beamLength) {
-                    let closestPoint = p5.Vector.add(beamStart, beamDir.copy().mult(projLength));
+                    let closestPoint = p5.Vector.add(beamStart, beamDirNorm.copy().mult(projLength));
                     let distToBeam = p5.Vector.dist(player.pos, closestPoint);
                     if (distToBeam < player.size / 2) {
                         hitTarget = player;
+                        minDist = projLength;
                     }
                 }
             }
@@ -178,18 +200,10 @@ class WeaponSystem {
         // Apply damage only once to the hit target
         if (hitTarget) {
             hitTarget.takeDamage(owner.currentWeapon.damage);
-            // Add a visual effect at hit point
-            const hitPoint = p5.Vector.add(
-                beamStart, 
-                p5.Vector.mult(beamDir, minDist)
-            );
-            
-            if (system.addExplosion) {
-                system.addExplosion(hitPoint.x, hitPoint.y, 10, owner.currentWeapon.color);
-            }
+            // Add a visual effect at hit point if possible
         }
         
-        // Store beam info for drawing - with CORRECT color
+        // Store beam info for drawing
         owner.lastBeam = {
             start: beamStart,
             end: beamEnd,
