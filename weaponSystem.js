@@ -201,6 +201,14 @@ class WeaponSystem {
         if (hitTarget) {
             hitTarget.takeDamage(owner.currentWeapon.damage);
             // Add a visual effect at hit point if possible
+            const hitPoint = p5.Vector.add(
+                beamStart, 
+                p5.Vector.mult(beamDirNorm, minDist)
+            );
+            
+            if (system.addExplosion) {
+                system.addExplosion(hitPoint.x, hitPoint.y, 10, owner.currentWeapon.color);
+            }
         }
         
         // Store beam info for drawing
