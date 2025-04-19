@@ -943,7 +943,7 @@ class UIManager {
             let y = startY + (i-firstRow)*rowH;
             fill(60,60,100); stroke(120,180,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
-            let price = ship.price || (ship.baseHull*20+ship.cargoCapacity*10+1000);
+            let price = ship.price;
             text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr`, pX+30, y+rowH/2);
             this.shipyardListAreas.push({
                 x: pX+20, y: y, w: pW-40, h: rowH-6,
