@@ -77,7 +77,21 @@ class Projectile {
         let d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
         let targetRadius = target.size / 2;
         let projectileRadius = this.size;
-        return d < (targetRadius + projectileRadius);
+        
+        if (d < (targetRadius + projectileRadius)) {
+            // Create explosion effect at impact point
+            if (this.owner && this.owner.currentSystem && this.owner.currentSystem.addExplosion) {
+                // Use projectile's position as impact point
+                const explosionSize = this.type === "missile" ? 15 : 8;
+                this.owner.currentSystem.addExplosion(
+                    this.pos.x, this.pos.y, 
+                    explosionSize, 
+                    this.color.levels
+                );
+            }
+            return true;
+        }
+        return false;
     }
     
     // Define isOffScreen to return true only if the projectile is really far out in world space.
