@@ -188,30 +188,52 @@ class StarSystem {
         this.enemies = []; this.projectiles = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         
-        // IMPROVEMENT: Add a small delay before spawning NPCs to ensure proper initialization
+        // Initial system population
         setTimeout(() => {
             if (player && player.pos) {
+                console.log(`Player entering ${this.name} system. Wanted status: ${player.isWanted}`);
+                
+                // Spawn initial NPCs
                 for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
                 for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
                 
-                // ENHANCED: Ensure ALL pirates are in the correct initial state after jumping
-                for (let enemy of this.enemies) {
-                    if (enemy.role === AI_ROLE.PIRATE) {
-                        if (player && !player.destroyed) {
-                            enemy.target = player;
-                            // Force pirates into APPROACHING to ensure they move
-                            enemy.currentState = AI_STATE.APPROACHING; 
-                            // Force initial rotation toward player
-                            if (enemy.pos && player.pos) {
-                                let angle = atan2(player.pos.y - enemy.pos.y, player.pos.x - enemy.pos.x);
-                                enemy.angle = radians(angle);
+                // CRITICAL FIX: Force police response on a slight delay after ships spawn
+                setTimeout(() => {
+                    // Check again if player exists and is wanted
+                    if (player && player.isWanted) {
+                        // Only log once per system entry, not for each police ship
+                        console.log(`WANTED ALERT: Broadcasting player wanted status in ${this.name} system!`);
+                        
+                        // Force all police to respond
+                        let policeCalled = false;
+                        let policeCount = 0;
+                        for (let enemy of this.enemies) {
+                            if (enemy.role === AI_ROLE.POLICE) {
+                                enemy.target = player;
+                                enemy.currentState = AI_STATE.APPROACHING;
+                                
+                                // Force immediate rotation toward player
+                                if (enemy.pos && player.pos) {
+                                    let angleToPlayer = atan2(player.pos.y - enemy.pos.y, player.pos.x - enemy.pos.x);
+                                    enemy.angle = radians(angleToPlayer);
+                                    enemy.desiredAngle = enemy.angle;
+                                }
+                                
+                                policeCalled = true;
+                                policeCount++;
                             }
-                            console.log(`System jump: Pirate ${enemy.shipTypeName} targeting player`);
+                        }
+                        
+                        // Only log summary rather than per-ship messages
+                        if (policeCalled) {
+                            console.log(`System Alert: ${policeCount} police ships responding to wanted status`);
+                        } else {
+                            console.log("No police ships available to respond to wanted status!");
                         }
                     }
-                }
+                }, 500); // 500ms delay after ships spawn to ensure AI is properly initialized
             }
-        }, 100); // Small 100ms delay
+        }, 100); // Initial 100ms delay
     }
 
     /** Call this method when the system is discovered by the player. */
@@ -300,6 +322,19 @@ class StarSystem {
             newEnemy.currentSystem = this;
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
+            
+            // NEW CODE: Make police immediately target wanted player upon spawn
+            if (newEnemy.role === AI_ROLE.POLICE && player && player.isWanted && !player.destroyed) {
+                newEnemy.target = player;
+                newEnemy.currentState = AI_STATE.APPROACHING;
+                // Force initial rotation toward player
+                if (newEnemy.pos && player.pos) {
+                    let angle = atan2(player.pos.y - newEnemy.pos.y, player.pos.x - player.pos.x);
+                    newEnemy.angle = radians(angle);
+                }
+                console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
+            }
+            
             this.enemies.push(newEnemy);
         } catch(e) { 
             console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); 
@@ -519,7 +554,7 @@ class StarSystem {
                 if (player.checkCollision(enemy)) {
                     // Handle ship-to-ship collision
                     let collisionDamage = Math.floor(
-                        (player.vel.mag() + enemy.vel.mag()) * 5
+                        (player.vel.mag() + enemy.vel.mag())
                     );
                     console.log(`Ship collision! Damage: ${collisionDamage}`);
                     player.takeDamage(collisionDamage);
@@ -537,7 +572,7 @@ class StarSystem {
                 if (asteroid.isDestroyed()) continue;
                 if (player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
-                    let collisionDamage = Math.floor(player.vel.mag() * 3);
+                    let collisionDamage = Math.floor(player.vel.mag());
                     console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     player.takeDamage(collisionDamage);
                     asteroid.takeDamage(20); // Fixed damage to asteroid

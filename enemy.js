@@ -463,6 +463,37 @@ class Enemy {
 
     /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
     updatePoliceAI(system) {
+        // FIRST check if player is wanted - prioritize player over other NPCs
+        if (system.player && system.player.isWanted && system.player.hull > 0) {
+            // Target wanted player
+            this.target = system.player;
+            
+            // Log when police first detect wanted player - ONLY log state transitions
+            if ((this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) && 
+                !this.reportedWantedTarget) {
+                // Only log once per police ship by using a flag
+                this.reportedWantedTarget = true;
+                // Only log for the first police ship that spots the player
+                if (!system.policeAlertSent) {
+                    console.log(`ALERT: Police responding to wanted status in ${system.name || ""} system`);
+                    system.policeAlertSent = true;
+                }
+                this.currentState = AI_STATE.APPROACHING;
+            }
+            
+            // Use combat AI against wanted player
+            this.updateCombatAI(system);
+            return;
+        } else {
+            // Reset flag when player is no longer wanted
+            this.reportedWantedTarget = false;
+            // Clear system alert flag if needed
+            if (system.player && !system.player.isWanted && system.policeAlertSent) {
+                system.policeAlertSent = false;
+            }
+        }
+        
+        // Rest of the police AI logic remains unchanged
         let wantedTarget = null;
         if (system.enemies && system.enemies.length > 0) {
             for (let e of system.enemies) {
@@ -472,15 +503,16 @@ class Enemy {
                 }
             }
         }
+        
         if (wantedTarget) {
-            // Target any wanted ship, not just the player.
+            // Target any wanted ship
             this.target = wantedTarget;
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
                 this.currentState = AI_STATE.APPROACHING;
             }
             this.updateCombatAI(system);
         } else {
-            // No wanted target: Patrol.
+            // No wanted targets: Patrol
             this.currentState = AI_STATE.PATROLLING;
             if (!this.patrolTargetPos) {
                 this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500));
