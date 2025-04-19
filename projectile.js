@@ -2,24 +2,49 @@
 
 class Projectile {
     constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
-        const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2);
-        this.pos = createVector(x, y).add(spawnOffset);
-        this.owner = owner;
-        this.type = type; // Store weapon type for special behaviors
-        this.target = target; // For homing missiles, etc.
+        try {
+            // Validate position inputs
+            if (isNaN(x) || isNaN(y)) {
+                console.warn(`Invalid projectile position: x=${x}, y=${y}`);
+                // Use owner position if available
+                if (owner && owner.pos) {
+                    x = owner.pos.x;
+                    y = owner.pos.y;
+                } else {
+                    x = 0; y = 0; // Last resort
+                }
+            }
+            
+            // Your original logic
+            const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2);
+            this.pos = createVector(x, y).add(spawnOffset);
+            this.owner = owner;
+            this.type = type;
+            this.target = target;
 
-        // Use weapon upgrade if owner is Player or Enemy with a weapon
-        if (owner && owner.currentWeapon) {
-            this.damage = owner.currentWeapon.damage;
-            this.color = color(...owner.currentWeapon.color);
-            this.type = owner.currentWeapon.type;
-        } else {
-            this.damage = damage;
-            this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
+            // Use weapon upgrade if owner is Player or Enemy with a weapon
+            if (owner && owner.currentWeapon) {
+                this.damage = owner.currentWeapon.damage;
+                this.color = color(...owner.currentWeapon.color);
+                this.type = owner.currentWeapon.type;
+            } else {
+                this.damage = damage;
+                this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
+            }
+            this.size = (owner && owner instanceof Player) ? 4 : 3;
+            this.lifespan = 90;
+            this.vel = p5.Vector.fromAngle(angle).mult(speed);
+        } catch (e) {
+            // Handle any constructor errors
+            console.error("Error creating projectile:", e);
+            this.pos = createVector(0, 0);
+            this.vel = createVector(0, 0);
+            this.size = 3;
+            this.lifespan = 1;
+            this.color = color(255, 0, 0);
+            this.damage = 0;
+            this.type = "error";
         }
-        this.size = (owner && owner instanceof Player) ? 4 : 3;
-        this.lifespan = 90;
-        this.vel = p5.Vector.fromAngle(angle).mult(speed);
     }
 
     update() {

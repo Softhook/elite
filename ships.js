@@ -265,7 +265,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [100, 150, 200],
         strokeColor: [151, 181, 196],
         strokeW: 1.00,
-        typicalCargo: ["Weapons", "Machinery", "Computers"]
+        typicalCargo: []
     },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
@@ -326,7 +326,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [100, 150, 200],
         strokeColor: [200, 220, 255],
         strokeW: 1.50,
-        typicalCargo: ["Metals", "Food", "Textiles", "Computers"]
+        typicalCargo: ["Food"]
     },
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
@@ -380,7 +380,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8, // Red
-        typicalCargo: ["Weapons"]
+        typicalCargo: []
     },
     "HammerheadCorvette": { // NEW - Unique 2
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
@@ -435,7 +435,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawKrait, // Uses the same draw function
          vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
-        typicalCargo: ["Food", "Textiles", "Narcotics"]
+        typicalCargo: ["Food"]
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
@@ -453,7 +453,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
         drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
-        typicalCargo: ["Food", "Textiles", "Machinery"]
+        typicalCargo: ["Food", "Machinery", "Metals"]
     },
     "NomadVoyager": { // NEW - Explorer 2
         name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
@@ -471,7 +471,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "Medium", description: "Designed for exploration and detailed surface scanning.",
         drawFunction: drawPathfinderSurvey, vertexData: [ {x:1.2, y:0}, {x:0.8, y:0.2}, {x:-0.5, y:0.5}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.5, y:-0.5}, {x:0.8, y:-0.2} ], // Long nose
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
-        typicalCargo: ["Minerals", "Metals", "Adv Components"]
+        typicalCargo: ["Food", "Minerals", "Metals", "Adv Components"]
     },
     "ProspectorMiner": { // NEW - Miner
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
@@ -498,7 +498,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "N/A", description: "Fast alien fighter composed of sharp, crystalline structures.",
         drawFunction: drawShardInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.2, y:0.2}, {x:-0.8, y:0.8}, {x:-1.0, y:0.1}, {x:-1.0, y:-0.1}, {x:-0.8, y:-0.8}, {x:-0.2, y:-0.2} ], // Asymmetric shards
         fillColor: [180, 180, 240], strokeColor: [240, 240, 255], strokeW: 1.0, // Set in draw func: Blue/Purple/White
-        typicalCargo: ["Chemicals", "Adv Components"]
+        typicalCargo: []
     },
     "Sidewinder": {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
@@ -507,7 +507,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
-        typicalCargo: ["Food", "Textiles"]
+        typicalCargo: ["Food"]
     },
     "StarlinerCruiser": { // NEW - Trader/Passenger
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
