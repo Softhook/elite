@@ -9,9 +9,9 @@ class Cargo {
         this.type = type || random(LEGAL_CARGO); // Default to random legal cargo
         this.size = 8; // Small container size
         this.rotation = random(TWO_PI);
-        this.rotationSpeed = random(-0.02, 0.02);
+        this.rotationSpeed = random(-0.01, 0.01); // Was too subtle at -0.02 to 0.02
         this.collected = false;
-        this.lifetime = 600; // Exists for 10 seconds (60fps * 10)
+        this.lifetime = 1800; // Exists for 30 seconds (60fps * 20)
         
         // Determine color based on cargo type
         this.color = this.determineColor();
@@ -69,7 +69,7 @@ class Cargo {
         
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.rotation);
+        rotate(degrees(this.rotation)); // Convert radians to degrees before rotating
         
         // Draw container
         fill(this.color);
@@ -88,6 +88,15 @@ class Cargo {
         stroke(min(255, this.color[0] * 0.6), min(255, this.color[1] * 0.6), min(255, this.color[2] * 0.6));
         line(-this.size/1.5, 0, this.size/1.5, 0);
         line(0, -this.size/1.5, 0, this.size/1.5);
+        
+        // Draw an asymmetrical mark to make rotation more visible
+        fill(255, 255, 255, 120);
+        noStroke();
+        triangle(
+            -this.size/2.5, -this.size/2.5,
+            -this.size/1.8, -this.size/2.5,
+            -this.size/2.5, -this.size/1.8
+        );
         
         // Draw a small glint to indicate valuable content
         if (this.lifetime % 60 < 15) {

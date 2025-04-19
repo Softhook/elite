@@ -470,13 +470,16 @@ class StarSystem {
             this.checkCollisions(playerRef);
             this.checkProjectileCollisions(playerRef); // Added call to new method
 
-            // Cargo collection
+            // Cargo collection and updates
             for (let i = this.cargo.length - 1; i >= 0; i--) {
                 const cargo = this.cargo[i];
                 if (!cargo) {
                     this.cargo.splice(i, 1);
                     continue;
                 }
+
+                // IMPORTANT: Call the update method on each cargo object
+                cargo.update();
 
                 // Check for player collection
                 if (cargo.checkCollision(playerRef)) {
@@ -500,6 +503,11 @@ class StarSystem {
                         console.log("Cannot collect cargo: Cargo hold full");
                         // Maybe show a UI notification here
                     }
+                }
+
+                // Remove expired cargo
+                if (cargo.isExpired()) {
+                    this.cargo.splice(i, 1);
                 }
             }
 
