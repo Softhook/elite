@@ -22,42 +22,34 @@ function drawShapeFromData(r, vertexData, fillCol, strokeCol, strokeWeightVal) {
 function drawACAB(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ACAB;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 200, 0); noStroke(); ellipse(-r, 0, r*0.5, r*0.3); }
 }
 function drawSidewinder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Sidewinder;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 200, 0); noStroke(); ellipse(-r, 0, r*0.5, r*0.3); }
 }
 function drawCobraMkIII(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.CobraMkIII;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 255, 100); noStroke(); ellipse(-r*0.9, r*0.15, r*0.4, r*0.2); ellipse(-r*0.9, -r*0.15, r*0.4, r*0.2); }
 }
 function drawViper(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Viper;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(100, 200, 255); noStroke(); ellipse(-r*0.9, 0, r*0.7, r*0.3); }
 }
 function drawPython(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Python;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 150, 50); noStroke(); ellipse(-r*0.95, r*0.5, r*0.3, r*0.2); ellipse(-r*0.95, -r*0.5, r*0.3, r*0.2); }
 }
 function drawAnaconda(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Anaconda;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    // if (thrusting) { fill(200, 100, 255); noStroke(); ellipse(-r, 0, r*0.6, r*0.4); }
 }
 function drawAdder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Adder;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(200, 200, 180); noStroke(); ellipse(-r*0.8, -r*0.1, r*0.4, r*0.3); }
 }
 function drawKrait(s, thrusting = false) { 
      let r = s / 2; let def = SHIP_DEFINITIONS.Krait; 
      drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(180, 180, 100); noStroke(); ellipse(-r*0.7, r*0.3, r*0.3, r*0.2); ellipse(-r*0.7, -r*0.3, r*0.3, r*0.2); }
 }
 function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     let r = s / 2;
@@ -76,66 +68,47 @@ function drawThargoid(s, thrusting = false) { // (Original Thargoid)
 function drawAspExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.AspExplorer;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 200, 100); noStroke(); ellipse(-r * 0.8, 0, r * 0.6, r * 0.4); }
 }
 function drawType6Transporter(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Type6Transporter;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 160, 0); noStroke(); ellipse(-r * 0.9, r * 0.5, r * 0.3, r * 0.15); ellipse(-r * 0.9, -r * 0.5, r * 0.3, r * 0.15); }
 }
 function drawType9Heavy(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Type9Heavy;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 140, 0); noStroke(); ellipse(-r * 0.95, r * 0.6, r * 0.2, r * 0.1); ellipse(-r * 0.95, r * 0.2, r * 0.2, r * 0.1); ellipse(-r * 0.95, -r * 0.2, r * 0.2, r * 0.1); ellipse(-r * 0.95, -r * 0.6, r * 0.2, r * 0.1); }
 }
 function drawFederalAssaultShip(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.FederalAssaultShip;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(150, 180, 255); noStroke(); ellipse(-r * 0.9, r * 0.15, r * 0.5, r * 0.25); ellipse(-r * 0.9, -r * 0.15, r * 0.5, r * 0.25); }
 }
 function drawImperialCourier(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ImperialCourier;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(50, 150, 255); noStroke(); ellipse(-r * 0.9, 0, r * 0.4, r * 0.25); ellipse(-r * 0.8, r * 0.35, r * 0.3, r * 0.2); ellipse(-r * 0.8, -r * 0.35, r * 0.3, r * 0.2); }
 }
 function drawDiamondbackExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.DiamondbackExplorer;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(200, 255, 100); noStroke(); ellipse(-r * 0.85, r * 0.3, r * 0.4, r * 0.2); ellipse(-r * 0.85, -r * 0.3, r * 0.4, r * 0.2); }
 }
 function drawFerDeLance(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.FerDeLance;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 100, 100); noStroke(); ellipse(-r * 0.8, 0, r * 0.7, r * 0.35); }
 }
 function drawKeelback(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Keelback;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 180, 50); noStroke(); ellipse(-r * 0.95, r * 0.55, r * 0.3, r * 0.15); ellipse(-r * 0.95, -r * 0.55, r * 0.3, r * 0.15); }
 }
 function drawVulture(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Vulture;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 150, 150); noStroke(); rect(-r * 0.9, r * 0.3, r * 0.4, r * 0.2); rect(-r * 0.9, -r * 0.5, r * 0.4, r * 0.2); }
 }
 function drawImperialClipper(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ImperialClipper;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(80, 180, 255); noStroke(); ellipse(-r * 0.7, r * 0.6, r * 0.5, r * 0.25); ellipse(-r * 0.7, -r * 0.6, r * 0.5, r * 0.25); }
 }
 
 function drawShardInterceptor(s, thrusting = false) { // Alien 1
     let r = s / 2; let def = SHIP_DEFINITIONS.ShardInterceptor;
-    // Use HSB for shifting colors
-    colorMode(HSB, 360, 100, 100, 100);
-    let hue = (180 + sin(frameCount * 0.5) * 30) % 360; // Pulsating blue/purple
-    fill(hue, 70, 90, 70);
-    stroke((hue + 180) % 360, 50, 100, 80); // Contrasting yellow/green stroke
-    strokeWeight(def.strokeW);
-    drawShapeFromData(r, def.vertexData, null, null, null); // Colors set above
-    colorMode(RGB, 255); // Reset color mode
-    // Crystalline engine glow
-    //if (thrusting) { fill(hue, 90, 100); noStroke(); rect(-r*0.9, -r*0.15, r*0.5, r*0.3); }
+    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawBioFrigate(s, thrusting = false) { // Alien 2
@@ -162,15 +135,11 @@ function drawGeometricDrone(s, thrusting = false) { // Alien 3
     rotate(frameCount * 0.3); // Slow constant rotation
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     pop();
-    // Central point light or no visible propulsion
-    //if (thrusting) { fill(255, 0, 255); noStroke(); ellipse(0, 0, r*0.2, r*0.2); }
 }
 
 function drawMuleFreighter(s, thrusting = false) { // Small Transporter
     let r = s / 2; let def = SHIP_DEFINITIONS.MuleFreighter;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    // Simple, off-center engine
-    //if (thrusting) { fill(240, 130, 0); noStroke(); ellipse(-r*0.9, r*0.3, r*0.4, r*0.2); }
 }
 
 function drawProspectorMiner(s, thrusting = false) { // Miner
@@ -183,32 +152,26 @@ function drawProspectorMiner(s, thrusting = false) { // Miner
     rect(r * 0.5, -r * 0.6, r * 0.4, r * 0.2); // Bottom arm base
     ellipse(r*0.9, r*0.5, r*0.1, r*0.1); // Top claw endpoint
     ellipse(r*0.9, -r*0.5, r*0.1, r*0.1); // Bottom claw endpoint
-    // Engine glow
-    //if (thrusting) { fill(255, 220, 0); noStroke(); ellipse(-r*0.95, 0, r*0.5, r*0.3); }
 }
 
 function drawGnatInterceptor(s, thrusting = false) { // Light Fighter 1
     let r = s / 2; let def = SHIP_DEFINITIONS.GnatInterceptor;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(200, 255, 255); noStroke(); ellipse(-r*0.9, 0, r*0.3, r*0.15); }
 }
 
 function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-   // if (thrusting) { fill(255, 210, 0); noStroke(); ellipse(-r*0.8, r*0.1, r*0.3, r*0.15); ellipse(-r*0.8, -r*0.1, r*0.3, r*0.15); }
 }
 
 function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.GladiusFighter;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(180, 180, 255); noStroke(); ellipse(-r, 0, r*0.6, r*0.3); }
 }
 
 function drawCenturionGunship(s, thrusting = false) { // Heavy Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.CenturionGunship;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-   // if (thrusting) { fill(255, 80, 80); noStroke(); rect(-r*0.95, r*0.3, r*0.3, r*0.3); rect(-r*0.95, -r*0.6, r*0.3, r*0.3); }
 }
 
 function drawPathfinderSurvey(s, thrusting = false) { // Explorer 1
@@ -216,37 +179,31 @@ function drawPathfinderSurvey(s, thrusting = false) { // Explorer 1
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     // Implied Sensor dish
     noFill(); stroke(180, 180, 220); strokeWeight(1); arc(r*0.8, 0, r*0.4, r*0.8, -90, 90);
-   // if (thrusting) { fill(100, 255, 200); noStroke(); ellipse(-r*0.9, 0, r*0.4, r*0.2); }
 }
 
 function drawNomadVoyager(s, thrusting = false) { // Explorer 2
     let r = s / 2; let def = SHIP_DEFINITIONS.NomadVoyager;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-   // if (thrusting) { fill(200, 200, 200); noStroke(); ellipse(-r, 0, r*0.5, r*0.5); } // Round glow
 }
 
 function drawStarlinerCruiser(s, thrusting = false) { // Trader/Passenger
     let r = s / 2; let def = SHIP_DEFINITIONS.StarlinerCruiser;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(200, 220, 255); noStroke(); ellipse(-r*0.95, r*0.1, r*0.2, r*0.1); ellipse(-r*0.95, -r*0.1, r*0.2, r*0.1); }
 }
 
 function drawJackalMultirole(s, thrusting = false) { // Multi-role
     let r = s / 2; let def = SHIP_DEFINITIONS.JackalMultirole;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(255, 180, 100); noStroke(); ellipse(-r*0.9, r*0.2, r*0.4, r*0.2); ellipse(-r*0.9, -r*0.2, r*0.4, r*0.2); }
 }
 
 function drawMantaHauler(s, thrusting = false) { // Unique 1
     let r = s / 2; let def = SHIP_DEFINITIONS.MantaHauler;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(0, 200, 150); noStroke(); ellipse(-r*0.8, r*0.6, r*0.3, r*0.1); ellipse(-r*0.8, -r*0.6, r*0.3, r*0.1); } // Wingtip engines
 }
 
 function drawHammerheadCorvette(s, thrusting = false) { // Unique 2
     let r = s / 2; let def = SHIP_DEFINITIONS.HammerheadCorvette;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    //if (thrusting) { fill(100, 150, 255); noStroke(); ellipse(-r, r*0.1, r*0.5, r*0.2); ellipse(-r, -r*0.1, r*0.5, r*0.2); }
 }
 
 
