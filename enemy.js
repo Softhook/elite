@@ -197,8 +197,9 @@ class Enemy {
 
         // Cargo collection behavior variables
         this.cargoTarget = null;
-        this.cargoDetectionRange = 500; // How far pirates can see cargo
+        this.cargoDetectionRange = 500; // How far ships can see cargo
         this.cargoCollectionCooldown = 0;
+        this.previousState = null; // For returning to original state after collecting
     }
 
     /** Calculates and sets radian-based properties using p5.radians(). */
@@ -287,9 +288,33 @@ class Enemy {
             }
         }
 
+        // For transporters: Check for cargo like pirates do
+        if (this.role === AI_ROLE.TRANSPORT && 
+            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+            this.cargoCollectionCooldown <= 0) {
+            
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                // Remember current state to return to after collection
+                this.previousState = this.currentState;
+                this.cargoTarget = cargoTarget;
+                this.currentState = AI_STATE.COLLECTING_CARGO;
+                console.log(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
+            }
+        }
+
         // New branch for TRANSPORT role:
         if (this.role === AI_ROLE.TRANSPORT) {
-            this.updateTransportAI(system);
+            // Handle cargo collection first if applicable
+            if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                if (!this.updateCargoCollectionAI(system)) {
+                    // When done collecting, return to previous state
+                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
+                }
+            } else {
+                // Normal transport behavior
+                this.updateTransportAI(system);
+            }
         } else {
             try {
                 // Existing role-specific updates.
@@ -991,38 +1016,108 @@ class Enemy {
         if (!this.cargoTarget || this.cargoTarget.collected) {
             this.cargoTarget = this.detectCargo(system);
             
-            // If no cargo found, return to normal pirate behavior
+            // If no cargo found, return to normal behavior
             if (!this.cargoTarget) {
-                this.currentState = AI_STATE.IDLE;
+                if (this.role === AI_ROLE.TRANSPORT) {
+                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
+                } else {
+                    this.currentState = AI_STATE.IDLE;
+                }
                 return false; // No cargo to collect, resume normal behavior
             }
         }
         
-        // Move toward cargo target
-        const desiredMovementTargetPos = this.cargoTarget.pos;
-        this.performRotationAndThrust(desiredMovementTargetPos);
+        // Different movement handling for transporters vs. other roles
+        if (this.role === AI_ROLE.TRANSPORT) {
+            // Use direct thrust approach like in updateTransportAI
+            let desiredDir = p5.Vector.sub(this.cargoTarget.pos, this.pos);
+            let distance = desiredDir.mag();
+            desiredDir.normalize();
+            
+            // Rotate smoothly towards the cargo
+            let targetAngle = desiredDir.heading();
+            let diff = targetAngle - this.angle;
+            while (diff < -PI) diff += TWO_PI;
+            while (diff > PI) diff -= TWO_PI;
+            
+            // CHANGE 1: Use a smaller rotation step to prevent overshooting
+            if (abs(diff) > 0.02) {
+                // Reduce rotation speed by half for more precise movement
+                let rotationStep = constrain(diff, -this.rotationSpeed * 0.5, this.rotationSpeed * 0.5);
+                this.angle += rotationStep;
+                this.angle = (this.angle + TWO_PI) % TWO_PI;
+            }
+            
+            // CHANGE 2: Always apply some thrust, but vary the amount based on alignment
+            // This ensures the ship is always making forward progress
+            let thrustScale = 0.2; // Minimum thrust even when poorly aligned
+            
+            if (abs(diff) < 0.8) { // Much wider tolerance (about 45 degrees)
+                // Scale thrust based on alignment and distance
+                thrustScale = map(abs(diff), 0, 0.8, 1.0, 0.2);
+                
+                const arrivalDistance = 100; // Start slowing down within this distance
+                if (distance < arrivalDistance) {
+                    thrustScale *= map(distance, 0, arrivalDistance, 0.2, 1.0);
+                }
+            }
+            
+            // Apply thrust with calculated scale
+            let thrustVec = p5.Vector.fromAngle(this.angle);
+            thrustVec.mult(this.thrustForce * thrustScale);
+            this.vel.add(thrustVec);
+            
+            // CHANGE 3: Add stronger directional damping to prevent circling
+            // Apply more damping to velocity component perpendicular to desired direction
+            let velParallel = desiredDir.copy().mult(desiredDir.dot(this.vel));
+            let velPerp = p5.Vector.sub(this.vel, velParallel);
+            velPerp.mult(0.7); // Dampen perpendicular component more aggressively
+            this.vel = p5.Vector.add(velParallel, velPerp);
+            
+            // Additional damping when close to cargo
+            if (distance < 50) {
+                this.vel.mult(0.85);
+            }
+            
+            // Apply standard physics updates
+            this.vel.mult(this.drag);
+            this.vel.limit(this.maxSpeed);
+            
+            // Update position
+            if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+                this.pos.add(this.vel);
+                
+                // Debug log to track progress
+                if (frameCount % 30 === 0) {
+                    console.log(`Transport moving toward cargo: Vel(${this.vel.x.toFixed(2)},${this.vel.y.toFixed(2)}), Dist:${distance.toFixed(2)}, Angle diff:${diff.toFixed(3)}, Thrust:${thrustScale.toFixed(2)}`);
+                }
+            } else {
+                this.vel.set(0, 0);
+                console.error(`Invalid velocity for ${this.shipTypeName} during cargo collection`);
+            }
+        } else {
+            // Original approach for pirates and other ships
+            const desiredMovementTargetPos = this.cargoTarget.pos;
+            this.performRotationAndThrust(desiredMovementTargetPos);
+        }
         
         // Check if we've reached the cargo
         const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
         
         // When close enough to collect
         if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
-            // Mark the cargo as collected
+            // Collection logic unchanged
             this.cargoTarget.collected = true;
             
-            // Remove from system cargo array
             const cargoIndex = system.cargo.indexOf(this.cargoTarget);
             if (cargoIndex !== -1) {
                 system.cargo.splice(cargoIndex, 1);
             }
             
             console.log(`${this.shipTypeName} collected cargo`);
-            
-            // Reset cargo target
             this.cargoTarget = null;
-            this.cargoCollectionCooldown = 1.0; // Brief cooldown before looking for more
-            
-            return true; // Successfully collected
+            this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+            return true;
         }
         
         return true; // Still collecting
