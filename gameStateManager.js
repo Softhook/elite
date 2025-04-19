@@ -6,7 +6,8 @@ class GameStateManager {
      * Handles fetching/caching missions for the UI.
      */
     constructor() {
-        this.currentState = "LOADING"; // Initial state
+        // Start with title screen instead of LOADING
+        this.currentState = "TITLE_SCREEN"; 
         this.previousState = null;     // Track previous state for transition logic
         // Jump state variables
         this.jumpTargetSystemIndex = -1;
@@ -73,6 +74,20 @@ class GameStateManager {
         const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system
 
         switch (this.currentState) {
+            case "TITLE_SCREEN":
+                // Title screen doesn't need game updates, just UI rendering
+                if (titleScreen) {
+                    titleScreen.update(deltaTime);
+                }
+                break;
+
+            case "INSTRUCTIONS":
+                // Instructions screen also just needs UI updates
+                if (titleScreen) {
+                    titleScreen.update(deltaTime);
+                }
+                break;
+
             case "IN_FLIGHT":
                 if (!player || !currentSystem) { break; } // Need player and system
                 try { // Wrap core updates
@@ -223,6 +238,18 @@ class GameStateManager {
                  }
                  break; // End JUMPING case
             // --- END CORRECTION ---
+
+            case "TITLE_SCREEN":
+                if (titleScreen) {
+                    titleScreen.drawTitleScreen();
+                }
+                break;
+
+            case "INSTRUCTIONS":
+                if (titleScreen) {
+                    titleScreen.drawInstructionScreen();
+                }
+                break;
 
              case "GAME_OVER":
                  background(0, 150); if (uiManager) { try { uiManager.drawGameOverScreen(); } catch(e) {} }

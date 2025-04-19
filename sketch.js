@@ -10,6 +10,7 @@ let uiManager;              // Handles drawing UI elements (HUD, menus, map)
 let gameStateManager;       // Controls the overall game state (flight, docked, map etc.)
 const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
 let loadGameWasSuccessful = false;     // Flag to track if a saved game was successfully loaded
+let titleScreen;            // Handles title screen and instructions screen
 // --- End Global Variables ---
 
 // --- p5.js Setup Function ---
@@ -47,6 +48,7 @@ function setup() {
     player = new Player();
     // console.log("Creating UIManager..."); // Verbose log
     uiManager = new UIManager();
+    titleScreen = new TitleScreen();
 
     // --- Initialize Galaxy Systems (Populate galaxy.systems array) ---
     // This step calls StarSystem constructors which rely on p5 functions
@@ -131,6 +133,12 @@ function setup() {
 function draw() {
     background(0); // Clear the canvas each frame
 
+    // Update title screen animations if in title or instructions screen
+    if (gameStateManager.currentState === "TITLE_SCREEN" || 
+        gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen.update(deltaTime);
+    }
+
     // --- Game State Update and Draw ---
     if (gameStateManager && player) {
         try {
@@ -177,6 +185,12 @@ function draw() {
 // --- Input Handling Functions ---
 
 function keyPressed() {
+    // Handle instructions screen keyboard input
+    if (gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen.handleKeyPress(keyCode);
+        return;
+    }
+
     // For spacebar - just trigger initial shot
     if (key === ' ' || keyCode === 32) {
         if (gameStateManager.currentState === "IN_FLIGHT" && player) {
@@ -236,6 +250,13 @@ function keyReleased() {
 }
 
 function mousePressed() {
+    // Handle title screen clicks
+    if (gameStateManager.currentState === "TITLE_SCREEN" || 
+        gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen.handleClick();
+        return;
+    }
+
     // --- Fullscreen ON only once, on first click inside canvas ---
     if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
         fullscreen(true);
