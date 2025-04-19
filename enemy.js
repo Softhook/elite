@@ -17,7 +17,8 @@ const AI_STATE = {
     PATROLLING: 4,    // Moving towards a point (e.g., station or patrol route) - Police/Hauler
     NEAR_STATION: 5,  // Paused near station - Hauler only
     LEAVING_SYSTEM: 6,// Moving towards exit point - Hauler only
-    TRANSPORTING: 7   // New state for transport behaviour
+    TRANSPORTING: 7,  // New state for transport behaviour
+    COLLECTING_CARGO: 8   // New state for cargo collection behavior
 };
 
 // Reverse lookup for AI_STATE values to names
@@ -193,6 +194,11 @@ class Enemy {
 
         // Initialize thrust manager
         this.thrustManager = new ThrustManager();
+
+        // Cargo collection behavior variables
+        this.cargoTarget = null;
+        this.cargoDetectionRange = 500; // How far pirates can see cargo
+        this.cargoCollectionCooldown = 0;
     }
 
     /** Calculates and sets radian-based properties using p5.radians(). */
@@ -268,6 +274,19 @@ class Enemy {
 
         this.currentSystem = system;
 
+        // For pirates: Look for cargo first if not already collecting
+        if (this.role === AI_ROLE.PIRATE && 
+            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+            this.cargoCollectionCooldown <= 0) {
+            
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                this.cargoTarget = cargoTarget;
+                this.currentState = AI_STATE.COLLECTING_CARGO;
+                console.log(`${this.shipTypeName} detected cargo - moving to collect`);
+            }
+        }
+
         // New branch for TRANSPORT role:
         if (this.role === AI_ROLE.TRANSPORT) {
             this.updateTransportAI(system);
@@ -275,7 +294,18 @@ class Enemy {
             try {
                 // Existing role-specific updates.
                 switch (this.role) {
-                    case AI_ROLE.PIRATE: this.updateCombatAI(system); break;
+                    case AI_ROLE.PIRATE:
+                        // Handle cargo collection first if applicable
+                        if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                            if (!this.updateCargoCollectionAI(system)) {
+                                // If no cargo to collect, resume combat AI
+                                this.updateCombatAI(system);
+                            }
+                        } else {
+                            // No cargo collecting, use normal combat AI
+                            this.updateCombatAI(system);
+                        }
+                        break;
                     case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
                     case AI_ROLE.HAULER: this.updateHaulerAI(system); break;
                     default: this.vel.mult(this.drag * 0.95); break;
@@ -813,7 +843,16 @@ class Enemy {
             noStroke();
             // Get state name from AI_STATE value
             let stateKey = Object.keys(AI_STATE).find(k => AI_STATE[k] === this.currentState) || "";
-            let targetLabel = (this.target && this.target.shipTypeName) ? this.target.shipTypeName : "None";
+            let targetLabel = "";
+            
+            if (this.currentState === AI_STATE.COLLECTING_CARGO && this.cargoTarget) {
+                targetLabel = "Cargo";
+            } else if (this.target && this.target.shipTypeName) {
+                targetLabel = this.target.shipTypeName;
+            } else {
+                targetLabel = "None";
+            }
+            
             let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
             text(label, this.pos.x, this.pos.y - this.size / 2 - 5);
             pop();
@@ -926,5 +965,67 @@ class Enemy {
     isDestroyed() { return this.destroyed; }
     checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
 
+    /** Detects nearby cargo within range */
+    detectCargo(system) {
+        if (!system?.cargo || system.cargo.length === 0) return null;
+        
+        let closestCargo = null;
+        let closestDistance = Infinity;
+        
+        for (const cargo of system.cargo) {
+            if (cargo.collected) continue;
+            
+            const distance = dist(this.pos.x, this.pos.y, cargo.pos.x, cargo.pos.y);
+            if (distance < this.cargoDetectionRange && distance < closestDistance) {
+                closestCargo = cargo;
+                closestDistance = distance;
+            }
+        }
+        
+        return closestCargo;
+    }
+
+    /** Handles cargo collection AI */
+    updateCargoCollectionAI(system) {
+        // If our target cargo disappeared or was collected, find a new one
+        if (!this.cargoTarget || this.cargoTarget.collected) {
+            this.cargoTarget = this.detectCargo(system);
+            
+            // If no cargo found, return to normal pirate behavior
+            if (!this.cargoTarget) {
+                this.currentState = AI_STATE.IDLE;
+                return false; // No cargo to collect, resume normal behavior
+            }
+        }
+        
+        // Move toward cargo target
+        const desiredMovementTargetPos = this.cargoTarget.pos;
+        this.performRotationAndThrust(desiredMovementTargetPos);
+        
+        // Check if we've reached the cargo
+        const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
+        
+        // When close enough to collect
+        if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
+            // Mark the cargo as collected
+            this.cargoTarget.collected = true;
+            
+            // Remove from system cargo array
+            const cargoIndex = system.cargo.indexOf(this.cargoTarget);
+            if (cargoIndex !== -1) {
+                system.cargo.splice(cargoIndex, 1);
+            }
+            
+            console.log(`${this.shipTypeName} collected cargo`);
+            
+            // Reset cargo target
+            this.cargoTarget = null;
+            this.cargoCollectionCooldown = 1.0; // Brief cooldown before looking for more
+            
+            return true; // Successfully collected
+        }
+        
+        return true; // Still collecting
+    }
 } // End of Enemy Class
 
