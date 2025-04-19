@@ -2,9 +2,10 @@
 
 // Define Mission Types using a constant object for better readability and safety
 const MISSION_TYPE = {
-    DELIVERY_LEGAL: 'Delivery (Legal)',
-    DELIVERY_ILLEGAL: 'Delivery (Smuggling)',
-    BOUNTY_PIRATE: 'Bounty (Pirates)',
+    DELIVERY_LEGAL: 'delivery_legal',
+    DELIVERY_ILLEGAL: 'delivery_illegal',
+    BOUNTY_PIRATE: 'bounty_pirate',
+    BOUNTY_POLICE: 'bounty_police', // Add this new type
     // Add more types as needed:
     // ASSASSINATION_CLEAN: 'Assassination (Clean Target)',
     // ASSASSINATION_WANTED: 'Assassination (Criminal)',

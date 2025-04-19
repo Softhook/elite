@@ -53,7 +53,7 @@ class Market {
                     if (['Food', 'Metals', 'Minerals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
                     if (['Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; } // Slight need for tech
                     break;
-                    case 'Mining':
+                case 'Mining':
                     caseHit = 'Mining';
                     if (['Metals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
                     if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
@@ -78,9 +78,8 @@ class Market {
                     if (['Metals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.75; comm.sellPrice *= 0.85; }
                     if (['Minerals', 'Machinery', 'Food', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.25; comm.sellPrice *= 1.15; }
                     break;
-                case 'Tech': // Falls through to High Tech (can separate later if needed)
                 case 'High Tech':
-                    caseHit = 'Tech/High Tech'; // Produces Computers, Medicine, Adv Components. Needs Food, Metals, Chemicals, Luxury.
+                    caseHit = 'High Tech'; // Produces Computers, Medicine, Adv Components. Needs Food, Metals, Chemicals, Luxury.
                     if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
                     if (['Food', 'Metals', 'Chemicals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
                     if (['Luxury Goods'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; } // Slightly higher demand
@@ -93,7 +92,20 @@ class Market {
                 case 'Service':
                     caseHit = 'Service'; // Needs Food, Computers, Machinery, Medicine, Textiles.
                     if (['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                     if (['Metals', 'Minerals', 'Chemicals', 'Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; } // No production
+                    if (['Metals', 'Minerals', 'Chemicals', 'Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; } // No production
+                    break;
+                case 'Separatist':
+                    caseHit = 'Separatist'; // Produces Weapons, Machinery. Needs Metals, Food, Medicine
+                    if (['Machinery', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.9; }
+                    if (['Metals', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
+                    // Military goods (if implemented) would be produced here
+                    if (['Computers'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
+                    break;
+                case 'Imperial':
+                    caseHit = 'Imperial'; // Produces Luxury Goods, Adv Components. Needs Food, Textiles, Metals
+                    if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) { comm.buyPrice *= 0.6; comm.sellPrice *= 0.7; }
+                    if (['Food', 'Textiles', 'Metals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
+                    if (['Medicine'].includes(comm.name)) { comm.buyPrice *= 0.9; comm.sellPrice *= 0.95; } // Decent medical care
                     break;
                 default:
                     caseHit = 'default';
@@ -105,22 +117,22 @@ class Market {
             comm.sellPrice = max(1, floor(comm.sellPrice));
             // console.log(`     -> ${comm.name}: Buy=${comm.buyPrice}, Sell=${comm.sellPrice} (Case: ${caseHit})`); // Debug log
         });
-         console.log(` <- Prices updated.`);
+        console.log(` <- Prices updated.`);
     }
 
     // --- updatePlayerCargo, buy, sell, getPrices remain the same ---
     // Updates the 'playerStock' field for market display based on player's cargo
     updatePlayerCargo(playerCargo) {
         if (!Array.isArray(playerCargo)) {
-             console.warn("updatePlayerCargo received invalid playerCargo:", playerCargo);
-             // Reset stocks if cargo is invalid
-             this.commodities.forEach(comm => { comm.playerStock = 0; });
-             return;
-         }
-         this.commodities.forEach(comm => {
-             const itemInCargo = playerCargo.find(item => item && item.name === comm.name); // Added check for item existence
-             comm.playerStock = itemInCargo ? itemInCargo.quantity : 0;
-         });
+            console.warn("updatePlayerCargo received invalid playerCargo:", playerCargo);
+            // Reset stocks if cargo is invalid
+            this.commodities.forEach(comm => { comm.playerStock = 0; });
+            return;
+        }
+        this.commodities.forEach(comm => {
+            const itemInCargo = playerCargo.find(item => item && item.name === comm.name); // Added check for item existence
+            comm.playerStock = itemInCargo ? itemInCargo.quantity : 0;
+        });
     }
 
     // Handles player attempt to buy commodities
@@ -169,9 +181,9 @@ class Market {
             this.updatePlayerCargo(player.cargo); // Update market display immediately
             console.log(`--- Market.buy SUCCESS: Bought ${quantity} ${commodityName} for ${cost} credits. ---`);
             // Consider saving game state after a successful trade
-             if (typeof saveGame === 'function') { // Check if saveGame exists globally
+            if (typeof saveGame === 'function') { // Check if saveGame exists globally
                 saveGame();
-             }
+            }
             return true; // Indicate successful purchase
         } else {
             // This case (having enough credits but spendCredits failing) indicates an issue in Player.spendCredits
@@ -194,10 +206,10 @@ class Market {
 
         // Check if player actually has enough of the item
         const itemInCargo = player.cargo.find(item => item && item.name === commodityName); // Added check for item
-         if (!itemInCargo || itemInCargo.quantity < quantity) {
+        if (!itemInCargo || itemInCargo.quantity < quantity) {
             console.log(`SELL FAILED: Not enough ${commodityName} in cargo (Have: ${itemInCargo ? itemInCargo.quantity : 0}, Need: ${quantity})`);
             return false;
-         }
+        }
 
         // --- If checks pass, proceed ---
         const income = comm.sellPrice * quantity;
@@ -210,9 +222,9 @@ class Market {
 
         console.log(`--- Market.sell SUCCESS ---`);
         // Consider saving game state after a successful trade
-         if (typeof saveGame === 'function') {
-             saveGame();
-         }
+        if (typeof saveGame === 'function') {
+            saveGame();
+        }
         return true; // Indicate successful sale
     }
 

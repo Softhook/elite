@@ -16,13 +16,14 @@ const ECONOMY_EXPORTS = {
     'Industrial': ['Machinery'],
     'Mining': ['Metals', 'Minerals'], // <-- changed from Extraction
     'Refinery': ['Metals', 'Chemicals'],
-    'Tech': ['Computers', 'Medicine'],
     'High Tech': ['Computers', 'Medicine', 'Adv Components'],
     'Tourism': [],
     'Service': [],
     'Military': [], // <-- new
     'Offworld': ['Luxury Goods', 'Adv Components'],   // <-- new
     'Alien': ['Adv Components'],      // <-- new
+    'Separatist': ['Machinery', 'Chemicals'], // <-- new
+    'Imperial': ['Luxury Goods', 'Adv Components', 'Computers', 'Medicine'], // <-- new
     'Default': ['Food', 'Textiles', 'Machinery']
 };
 // Define preferred cargo *imports* (goods they need/buy dearly)
@@ -31,13 +32,14 @@ const ECONOMY_IMPORTS = {
     'Industrial': ['Food', 'Metals', 'Minerals', 'Chemicals', 'Adv Components'],
     'Mining': ['Food', 'Machinery', 'Medicine', 'Computers'], // <-- changed from Extraction
     'Refinery': ['Minerals', 'Machinery', 'Food', 'Medicine'],
-    'Tech': ['Food', 'Metals', 'Chemicals', 'Machinery'],
     'High Tech': ['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'],
     'Tourism': ['Food', 'Luxury Goods', 'Medicine', 'Textiles'],
     'Service': ['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'],
     'Military': ['Food','Luxury Goods', 'Medicine'], // <-- new
     'Offworld': ['Food', 'Textiles', 'Metals'],           // <-- new
     'Alien': ['Food', 'Textiles', 'Machinery', 'Medicine'], // <-- new
+    'Separatist': ['Metals', 'Food', 'Medicine', 'Adv Components', 'Computers'], // <-- new
+    'Imperial': ['Food', 'Textiles', 'Metals', 'Machinery'], // <-- new
     'Default': LEGAL_CARGO
 };
 
@@ -123,7 +125,6 @@ class MissionGenerator {
                   adjustedIllegal *= 0.9; // Less likely hotbed for crime? Maybe.
                   break;
              case 'High Tech':
-             case 'Tech':
                   // Maybe slightly more bounties due to valuable assets?
                   adjustedBounty *= 1.1;
                   adjustedLegal *= 1.1;
@@ -134,6 +135,25 @@ class MissionGenerator {
                   adjustedLegal *= 0.9;
                   // Could add specific 'passenger' or 'courier' missions later here
                   break;
+             case 'Separatist':
+                  adjustedBounty *= 1.5; // More bounty missions - militant society
+                  adjustedIllegal *= 1.2; // More black market activity
+                  adjustedLegal *= 0.8;  // Less standard trade
+                  break;
+             case 'Imperial':
+                  adjustedLegal *= 1.3;  // More luxurious trade
+                  adjustedBounty *= 0.8; // Less bounty hunting - stable space
+                  // Could have special high-value transport missions
+                  break;
+        }
+
+        // Special missions for specific economy/security combinations
+        if ((systemSecurity === 'Anarchy' || systemEconomy === 'Separatist') && random() < 0.3) {
+            // 30% chance to generate a cop killer mission in these systems
+            let copKillerMission = this.createCopKillerMission(currentSystem, currentStation, galaxy, player);
+            if (copKillerMission) {
+                availableMissions.push(copKillerMission);
+            }
         }
 
         // --- Normalize Probabilities ---
@@ -375,5 +395,77 @@ class MissionGenerator {
             targetDesc: `${targetCount} Pirate vessels`, targetCount: targetCount, rewardCredits: totalReward, isIllegal: false,
         });
      }
+
+    /** Creates a Cop Killer Mission - only available in Anarchy and Separatist systems */
+    static createCopKillerMission(originSystem, originStation, galaxy, player) {
+        // Find a destination system that isn't anarchy (needs to have cops to kill)
+        let potentialSystems = [];
+        const maxSearchJumps = 3;
+        
+        // Search through connected systems to find ones with cops (not anarchy)
+        for (let i = 0; i < galaxy.systems.length; i++) {
+            // Skip origin system and anarchy systems
+            if (i === originSystem.systemIndex || 
+                galaxy.systems[i].securityLevel === 'Anarchy') continue;
+                
+            // Check if within range
+            let jumpDist = galaxy.getJumpDistance(originSystem.systemIndex, i);
+            if (jumpDist <= maxSearchJumps && jumpDist > 0) {
+                potentialSystems.push(galaxy.systems[i]);
+            }
+        }
+        
+        // No viable target systems found
+        if (potentialSystems.length === 0) {
+            console.log("No viable target systems found for cop killer mission");
+            return null;
+        }
+        
+        // Select a random target system
+        const targetSystem = random(potentialSystems);
+        
+        // Determine target count based on security level of destination
+        let targetCount = 3; // Base count
+        switch (targetSystem.securityLevel) {
+            case 'High':
+                targetCount = floor(random(2, 4)); // Fewer targets but higher security
+                break;
+            case 'Medium':
+                targetCount = floor(random(3, 5));
+                break;
+            case 'Low':
+                targetCount = floor(random(4, 7)); // More targets in low security
+                break;
+        }
+        
+        // Calculate reward based on target system security and distance
+        let jumpDistance = galaxy.getJumpDistance(originSystem.systemIndex, targetSystem.systemIndex);
+        let baseReward = 600;
+        let securityMultiplier = 1.0;
+        
+        if (targetSystem.securityLevel === 'High') securityMultiplier = 2.0;
+        else if (targetSystem.securityLevel === 'Medium') securityMultiplier = 1.5;
+        
+        let totalReward = floor(baseReward * targetCount * securityMultiplier * (1 + (jumpDistance * 0.3)));
+        
+        // Ensure minimum reward
+        totalReward = max(800, totalReward);
+        
+        // Create the mission object
+        return new Mission({
+            type: MISSION_TYPE.BOUNTY_POLICE, // Will need to add this constant to Mission class
+            title: `Eliminate ${targetCount} Police Ships in ${targetSystem.name}`,
+            description: `Certain parties in ${originSystem.name} require the disruption of security operations in ${targetSystem.name}. Eliminate ${targetCount} police vessels and return for payment. Warning: This action will result in WANTED status.`,
+            originSystem: originSystem.name, 
+            originStation: originStation.name,
+            destinationSystem: targetSystem.name, 
+            destinationStation: null, // No specific station required
+            targetDesc: `${targetCount} Police vessels`, 
+            targetCount: targetCount, 
+            rewardCredits: totalReward, 
+            isIllegal: true, // This is definitely illegal
+            completionFlagName: `copKillerMission_${targetSystem.name}_${targetCount}`
+        });
+    }
 
 } // End MissionGenerator Class

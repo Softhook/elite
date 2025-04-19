@@ -23,9 +23,9 @@ class Galaxy {
         const singleNames = ["Bastion", "Terminus", "Horizon", "Lewes", "Amhurst", "Elysium", "Crucible", "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"];
         const generatedNames = new Set();
         const economyTypes = [
-            "Industrial", "Agricultural", "Tech", "Mining", // <-- changed from Extraction
+            "Industrial", "Agricultural", "Mining", // <-- changed from Extraction
             "Refinery", "High Tech", "Tourism", "Service",
-            "Military", "Offworld", "Alien" // <-- new types
+            "Military", "Offworld", "Seperatist", "Imperial", "Alien" // <-- new types
         ];
         const securityLevels = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
 

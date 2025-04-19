@@ -871,6 +871,21 @@ class Enemy {
                     }, i * 100); // Staggered timing
                 }
             }
+
+            // Mission progress logic for police role
+            if (this.role === AI_ROLE.POLICE && 
+                player.activeMission?.type === MISSION_TYPE.BOUNTY_POLICE && 
+                player.currentSystem.name === player.activeMission.destinationSystem) {
+                
+                // Increment counter for the mission
+                if (!player.missionProgress) player.missionProgress = {};
+                const flag = player.activeMission.completionFlagName;
+                
+                if (!player.missionProgress[flag]) player.missionProgress[flag] = 0;
+                player.missionProgress[flag]++;
+                
+                console.log(`Police ship destroyed: ${player.missionProgress[flag]}/${player.activeMission.targetCount}`);
+            }
         }
     }
     isDestroyed() { return this.destroyed; }
