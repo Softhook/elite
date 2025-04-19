@@ -33,6 +33,13 @@ class UIManager {
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
 
+        // FPS tracking properties
+        this.fpsValues = [];          // Array to store recent FPS readings
+        this.fpsMaxSamples = 30;      // Number of samples to average (half a second at 60fps)
+        this.fpsUpdateInterval = 10;  // Update display every 10 frames
+        this.fpsFrameCount = 0;       // Frame counter for updates
+        this.fpsAverage = 0;          // Current average FPS value to display
+
         this.setPanelDefaults();
     }
 
@@ -639,6 +646,52 @@ class UIManager {
             pop(); // Restore drawing state from before minimap drawing push()
         }
     } // End drawMinimap
+    
+    /** Draws the current framerate in the bottom left corner with averaging */
+    drawFramerate() {
+        // Sample current framerate
+        const currentFps = frameRate();
+        
+        // Store the sample
+        this.fpsValues.push(currentFps);
+        
+        // Keep the samples array at desired length
+        while (this.fpsValues.length > this.fpsMaxSamples) {
+            this.fpsValues.shift(); // Remove oldest sample
+        }
+        
+        // Only update the display periodically
+        this.fpsFrameCount++;
+        if (this.fpsFrameCount >= this.fpsUpdateInterval) {
+            // Calculate average FPS
+            const sum = this.fpsValues.reduce((total, fps) => total + fps, 0);
+            this.fpsAverage = Math.round(sum / this.fpsValues.length);
+            this.fpsFrameCount = 0; // Reset counter
+        }
+        
+        // Draw the display
+        push();
+        // Set up text style
+        noStroke();
+        textAlign(LEFT, BOTTOM);
+        textSize(12);
+        
+        // Draw text with semi-transparent background
+        fill(0, 0, 0, 120);
+        rect(5, height - 25, 65, 20, 3);
+        
+        // Color changes based on performance
+        if (this.fpsAverage >= 50) {
+            fill(0, 255, 0); // Green for good framerate
+        } else if (this.fpsAverage >= 30) {
+            fill(255, 255, 0); // Yellow for acceptable framerate
+        } else {
+            fill(255, 0, 0); // Red for poor framerate
+        }
+        
+        text(`FPS: ${this.fpsAverage}`, 10, height - 10);
+        pop();
+    }
     
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
