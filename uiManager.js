@@ -98,10 +98,6 @@ class UIManager {
              fill(255, 180, 0); textAlign(CENTER, CENTER); textSize(12);
              text(`Mission: ${player.activeMission.title}`, width / 2, 15);
         }
-        if (player.currentWeapon) {
-            fill(0, 180, 255); textAlign(LEFT, CENTER); textSize(12);
-            text(`Weapon: ${player.currentWeapon.name}`, 10, 35);
-        }
 
         // Draw weapon selector bar
         this.drawWeaponSelector(player);

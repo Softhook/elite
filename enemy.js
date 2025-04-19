@@ -722,14 +722,14 @@ class Enemy {
             return;
         }
 
-        push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle));
+        //push(); translate(this.pos.x, this.pos.y); rotate(degrees(this.angle));
         // Use initialized p5.Color objects
-        fill(this.p5FillColor); stroke(this.p5StrokeColor);
-        strokeWeight(1);
-        let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        try { drawFunc(this.size, showThrust); } // Call specific draw function
-        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
-        pop();
+        //fill(this.p5FillColor); stroke(this.p5StrokeColor);
+        //strokeWeight(1);
+        //let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
+        //try { drawFunc(this.size, showThrust); } // Call specific draw function
+        //catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+        //pop();
 
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
