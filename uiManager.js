@@ -66,22 +66,26 @@ class UIManager {
         const csName = player.currentSystem?.name || 'N/A'; const cargoAmt = player.getCargoAmount() ?? 0;
         const cargoCap = player.cargoCapacity ?? 0; const hull = player.hull ?? 0; const maxHull = player.maxHull || 1;
         const credits = player.credits ?? 0;
+        const shipName = player.shipTypeName || "Unknown Ship"; // Get player's ship type name
+        
         push(); fill(0, 180, 0, 150); noStroke(); rect(0, 0, width, 40);
         fill(255); textSize(14); textAlign(LEFT, CENTER); text(`System: ${csName}`, 10, 20);
-        textAlign(RIGHT, CENTER); text(`Hull: ${floor(hull)}/${maxHull}`, width-150, 20); text(`Credits: ${credits}`, width-280, 20); text(`Cargo: ${cargoAmt}/${cargoCap}`, width-10, 20);
+        
+        // Display ship name and credits on the same line 
+        textAlign(RIGHT, CENTER); 
+        text(`${shipName}   Hull: ${floor(hull)}/${maxHull}   Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits} `, width-20, 20); 
         
         // LEGAL STATUS INDICATOR
         if (player.isWanted) {
-            // Animate/flash the wanted status (oscillate alpha value)
-            const flashAlpha = map(sin(frameCount * 0.1), -1, 1, 150, 255);
+    
             // Draw warning background
-            fill(200, 0, 0, flashAlpha);
+            fill(200, 0, 0);
             rect(width/2 - 60, 3, 120, 18, 3);
             // Draw WANTED text
             fill(255);
             textAlign(CENTER, CENTER);
             textSize(14);
-            text("⚠️ WANTED ⚠️", width/2, 12);
+            text("WANTED", width/2, 12);
         } else {
             // Show "LEGAL" status when not wanted
             fill(0, 100, 0);
