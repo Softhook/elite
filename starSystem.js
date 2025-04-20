@@ -732,7 +732,7 @@ class StarSystem {
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {
         if (proj) {
-            console.log("Adding projectile", proj);
+            //console.log("Adding projectile", proj);
             this.projectiles.push(proj);
         }
     }
@@ -750,7 +750,8 @@ class StarSystem {
         
         if (cargo) {
             this.cargo.push(cargo);
-            console.log(`Cargo added: ${cargo.type}`);
+            //console.log(`Cargo added: ${cargo.type}`);
+            uiManager.addMessage(`Cargo picked up: ${cargo.type}`);
         }
     }
 

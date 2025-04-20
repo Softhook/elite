@@ -3,6 +3,14 @@
 class Market {
     constructor(systemType) {
         this.systemType = systemType;
+
+        // If Alien, no goods available
+        if (systemType === 'Alien') {
+            this.commodities = [];
+            console.log("Market initialized for Alien system: No goods available.");
+            return;
+        }
+
         this.commodities = [
             // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock
             // Basic Goods
@@ -26,17 +34,17 @@ class Market {
         // Example: { name: 'Raw Materials', baseBuy: 30, baseSell: 25, buyPrice: 0, sellPrice: 0, playerStock: 0 }
 
         this.updatePrices();
-        console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`); // Log type
+        console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`);
     }
 
     // Price adjustment based on economy type
     updatePrices() {
-        console.log(` -> Updating prices for: ${this.systemType}`); // Log when updating
+        console.log(` -> Updating prices for: ${this.systemType}`);
         this.commodities.forEach(comm => {
             // Reset to base prices before applying adjustments
             comm.buyPrice = comm.baseBuy;
             comm.sellPrice = comm.baseSell;
-            let caseHit = 'default'; // Debugging
+            let caseHit = 'default';
 
             // Apply adjustments based on system economy
             // Lower buy/sell price means the system PRODUCES it (cheap supply)
@@ -115,7 +123,7 @@ class Market {
             // Ensure prices are integers and non-negative, avoid zero prices
             comm.buyPrice = max(1, floor(comm.buyPrice));
             comm.sellPrice = max(1, floor(comm.sellPrice));
-            // console.log(`     -> ${comm.name}: Buy=${comm.buyPrice}, Sell=${comm.sellPrice} (Case: ${caseHit})`); // Debug log
+            // console.log(`     -> ${comm.name}: Buy=${comm.buyPrice}, Sell=${comm.sellPrice} (Case: ${caseHit})`);
         });
         console.log(` <- Prices updated.`);
     }
