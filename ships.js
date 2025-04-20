@@ -403,8 +403,10 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRateDegrees: 2.3, baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
         armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
-        drawFunction: drawHammerheadCorvette, vertexData: [ {x:1.1, y:0.4}, {x:0.8, y:0.9}, {x:0.4, y:0.9}, {x:0.1, y:0.4}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:0.1, y:-0.4}, {x:0.4, y:-0.9}, {x:0.8, y:-0.9}, {x:1.1, y:-0.4} ],
-        fillColor: [70, 100, 130], strokeColor: [150, 180, 210], strokeW: 2.0, // Blue-grey
+        drawFunction: drawHammerheadCorvette, vertexData: [ { x: 0.8888, y: 0.3500 }, { x: 0.5937, y: 0.4670 }, { x: 0.4300, y: 0.7285 }, { x: 0.1520, y: 0.8587 }, { x: -0.1612, y: 0.5488 }, { x: -0.9161, y: 0.4670 }, { x: -0.9159, y: 0.3625 }, { x: -0.5436, y: 0.1330 }, { x: -0.5436, y: -0.1330 }, { x: -0.9159, y: -0.3625 }, { x: -0.9202, y: -0.4650 }, { x: -0.1612, y: -0.5488 }, { x: 0.1520, y: -0.8587 }, { x: 0.4300, y: -0.7285 }, { x: 0.5978, y: -0.4650 }, { x: 0.8888, y: -0.3500 }, { x: 0.9388, y: 0.0000 } ],
+        fillColor: [70, 100, 130],
+        strokeColor: [150, 180, 210],
+        strokeW: 2.00, // Blue-grey
         typicalCargo: ["Metals", "Weapons", "Luxury Goods"],
         price: 14000
     },
