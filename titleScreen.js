@@ -18,8 +18,8 @@ class TitleScreen {
             ship => typeof SHIP_DEFINITIONS[ship].drawFunction === 'function'
         );
         
-        // Instructions screen
-        this.instructionScrollY = height;
+        // Instructions screen - fixed position instead of scrolling
+        this.instructionScrollY = height * 0.1; // Set to final position directly
     }
     
     update(deltaTime) {
@@ -42,10 +42,10 @@ class TitleScreen {
             }
         }
         else if (gameStateManager.currentState === "INSTRUCTIONS") {
-            // Scroll instructions upward
-            if (this.instructionScrollY > height * 0.1) {
-                this.instructionScrollY -= deltaTime * 0.05;
-            }
+            // Remove this scrolling code - instructions will be static
+            // if (this.instructionScrollY > height * 0.1) {
+            //     this.instructionScrollY -= deltaTime * 0.05;
+            // }
         }
     }
     
@@ -62,13 +62,13 @@ class TitleScreen {
         fill(0, 180, 255);
         stroke(0, 100, 200);
         strokeWeight(3);
-        text("ELITE", width/2, this.titleY);
+        text("ELITE Redux", width/2, this.titleY);
         
         // Author credit
         textSize(24);
         fill(200, 200, 255, this.authorAlpha);
         noStroke();
-        text("Created by: Your Name", width/2, this.titleY + 80);
+        text("Christian Nold, Easter 2025", width/2, this.titleY + 80);
         pop();
         
         // Draw ship carousel
@@ -193,7 +193,8 @@ class TitleScreen {
     handleClick() {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
             gameStateManager.setState("INSTRUCTIONS");
-            this.instructionScrollY = height; // Reset instruction scroll position
+            // No need to reset position since it's static
+            // this.instructionScrollY = height; 
         } else if (gameStateManager.currentState === "INSTRUCTIONS") {
             gameStateManager.setState("IN_FLIGHT");
         }
