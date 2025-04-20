@@ -110,7 +110,7 @@ class TitleScreen {
         const lineHeight = 30;
         
         // Introduction
-        text("Welcome to Elite, a space trading and combat simulation.", textX, textY);
+        text("Space trading, combat, piracy, assasinations you know ...", textX, textY);
         textY += lineHeight * 2;
         
         // Controls section
@@ -141,7 +141,7 @@ class TitleScreen {
         text("• Dock with stations to trade, upgrade and take missions", textX, textY); textY += lineHeight;
         text("• Destroy enemies to collect bounties and cargo", textX, textY); textY += lineHeight;
         text("• Jump between star systems using the galaxy map", textX, textY); textY += lineHeight;
-        text("• Upgrade your ship and weapons to become elite", textX, textY); textY += lineHeight * 2;
+        text("• Upgrade your ship and weapons to become ELITE", textX, textY); textY += lineHeight * 2;
         
         // Start prompt
         textSize(24);
