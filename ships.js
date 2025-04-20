@@ -91,7 +91,47 @@ function drawDiamondbackExplorer(s, thrusting = false) {
 }
 function drawFerDeLance(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.FerDeLance;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+
+    // --- Shape Layer 1 (Index 3 in editor) ---
+    fill(60, 65, 70);
+    stroke(140, 150, 160);
+    strokeWeight(max(0.5, 2.00));
+    beginShape();
+    vertex(r * 1.1000, r * 0.0000);
+    vertex(r * 0.2000, r * 0.5000);
+    vertex(r * -0.6000, r * 0.6000);
+    vertex(r * -0.9000, r * 0.2000);
+    vertex(r * -0.9000, r * -0.2000);
+    vertex(r * -0.6000, r * -0.6000);
+    vertex(r * 0.2000, r * -0.5000);
+    endShape(CLOSE);
+
+    // --- Shape Layer 2 (Index 2 in editor) ---
+    fill(150, 150, 180);
+    stroke(50, 50, 60);
+    strokeWeight(max(0.01));
+    beginShape();
+    vertex(r * -0.8998, r * -0.2009);
+    vertex(r * 0.0000, r * -0.2431);
+    vertex(r * -0.6013, r * -0.5970);
+    endShape(CLOSE);
+
+    // --- Shape Layer 3 (Index 1 in editor) ---
+    beginShape();
+    vertex(r * -0.8995, r * 0.2035);
+    vertex(r * -0.6020, r * 0.5957);
+    vertex(r * 0.0000, r * 0.3052);
+    endShape(CLOSE);
+
+    // --- Shape Layer 4 (Index 0 in editor) ---
+    beginShape();
+    vertex(r * 0.5349, r * 0.0000);
+    vertex(r * 0.2360, r * 0.1505);
+    vertex(r * 0.2360, r * -0.1505);
+    endShape(CLOSE);
+
+
+    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawKeelback(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Keelback;
