@@ -591,8 +591,10 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRateDegrees: 0.8, baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Double Shot", "Twin Pulse"], // Defensive cargo hauler
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
-        drawFunction: drawType9Heavy, vertexData: [ { x: 0.6, y: 0.2 }, { x: 0.7, y: 0.8 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.8 }, { x: -1.0, y: -0.8 }, { x: -0.8, y: -0.9 }, { x: 0.7, y: -0.8 }, { x: 0.6, y: -0.2 } ],
-        fillColor: [190, 140, 60], strokeColor: [110, 80, 30], strokeW: 2.5,
+        drawFunction: drawType9Heavy, vertexData: [ { x: 0.8208, y: 0.2000 }, { x: 0.7000, y: 0.8000 }, { x: -0.8000, y: 0.9000 }, { x: -1.0000, y: 0.8000 }, { x: -1.0000, y: -0.8000 }, { x: -0.8000, y: -0.9000 }, { x: 0.7000, y: -0.8000 }, { x: 0.8208, y: -0.2000 } ],
+        fillColor: [190, 140, 60],
+        strokeColor: [110, 80, 30],
+        strokeW: 2.50,
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 50250
     },
@@ -612,8 +614,10 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRateDegrees: 5.5, baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 8,
         armament: ["Heavy Cannon", "Burst Blaster"], // Aggressive fighter
         costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
-        drawFunction: drawVulture, vertexData: [ { x: 0.8, y: 0 }, { x: 0.4, y: 0.7 }, { x: -0.7, y: 0.8 }, { x: -1.0, y: 0.2 }, { x: -1.0, y: -0.2 }, { x: -0.7, y: -0.8 }, { x: 0.4, y: -0.7 } ],
-        fillColor: [80, 90, 80], strokeColor: [150, 160, 150], strokeW: 1.5,
+        drawFunction: drawVulture, vertexData: [ { x: 0.8001, y: 0.0951 }, { x: -0.1201, y: 0.3805 }, { x: -0.2033, y: 1.0132 }, { x: -0.7000, y: 1.1822 }, { x: -0.7456, y: 0.4692 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7456, y: -0.4692 }, { x: -0.7000, y: -1.1822 }, { x: -0.2033, y: -1.0132 }, { x: -0.1201, y: -0.3805 }, { x: 0.8001, y: -0.0951 } ],
+        fillColor: [210, 4, 4],
+        strokeColor: [138, 138, 138],
+        strokeW: 1.50,
         typicalCargo: ["Weapons", "Narcotics", "Slaves"],
         price: 8250
     },
