@@ -47,10 +47,16 @@ function drawAdder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Adder;
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
-function drawKrait(s, thrusting = false) { 
-     let r = s / 2; let def = SHIP_DEFINITIONS.Krait; 
+function drawKraitMKI(s, thrusting = false) { 
+     let r = s / 2; let def = SHIP_DEFINITIONS.KraitMKI; 
      drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
+
+function drawKraitMKII(s, thrusting = false) { 
+    let r = s / 2; let def = SHIP_DEFINITIONS.KraitMKII; 
+    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
 function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     let r = s / 2;
     let baseHue = (frameCount * 0.5) % 360; colorMode(HSB, 360, 100, 100, 100);
@@ -427,8 +433,10 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRateDegrees: 3.6, baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
         armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
         costCategory: "Medium", description: "Adaptable, angular multi-purpose vessel.",
-        drawFunction: drawJackalMultirole, vertexData: [ {x:1.0, y:0}, {x:0.5, y:0.5}, {x:-0.2, y:0.8}, {x:-0.8, y:0.6}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.8, y:-0.6}, {x:-0.2, y:-0.8}, {x:0.5, y:-0.5} ],
-        fillColor: [170, 160, 150], strokeColor: [90, 80, 70], strokeW: 1.5, // Sandy grey
+        drawFunction: drawJackalMultirole, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.5000 }, { x: -0.2000, y: 0.8000 }, { x: -0.8000, y: 0.6000 }, { x: -0.4103, y: 0.1697 }, { x: -0.4103, y: -0.1697 }, { x: -0.8000, y: -0.6000 }, { x: -0.2000, y: -0.8000 }, { x: 0.5000, y: -0.5000 } ],
+        fillColor: [170, 160, 150],
+        strokeColor: [90, 80, 70],
+        strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 8120
     },
@@ -437,20 +445,36 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRateDegrees: 2.5, baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
         armament: ["Double Shot", "Twin Pulse"], // Combat trader
         costCategory: "Low-Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
-        drawFunction: drawKeelback, vertexData: [ { x: 0.7, y: 0 }, { x: 0.5, y: 0.6 }, { x: -0.2, y: 0.7 }, { x: -0.8, y: 0.9 }, { x: -1.0, y: 0.7 }, { x: -1.0, y: -0.7 }, { x: -0.8, y: -0.9 }, { x: -0.2, y: -0.7 }, { x: 0.5, y: -0.6 } ],
-        fillColor: [180, 150, 80], strokeColor: [100, 80, 40], strokeW: 1.5,
+        drawFunction: drawKeelback, vertexData: [ { x: 0.6302, y: 0.0000 }, { x: 0.5000, y: 0.5114 }, { x: -0.2000, y: 0.6114 }, { x: -0.8000, y: 0.8114 }, { x: -1.0033, y: 0.5917 }, { x: -0.5571, y: 0.2745 }, { x: -0.6302, y: 0.0000 }, { x: -0.5571, y: -0.2745 }, { x: -1.0033, y: -0.5917 }, { x: -0.8000, y: -0.8114 }, { x: -0.2000, y: -0.6114 }, { x: 0.5000, y: -0.5114 } ],
+        fillColor: [180, 150, 80],
+        strokeColor: [100, 80, 40],
+        strokeW: 1.50,
         typicalCargo: ["Minerals", "Metals", "Machinery"],
         price: 7200
     },
-    "Krait": { 
-        name: "Krait", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
-        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 3.8, baseHull: 160, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
+    "KraitMKI": { 
+        name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 7.2, baseThrust: 0.15, baseTurnRateDegrees: 3.8, baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
+        armament: ["Pulse Laser"],
+        costCategory: "High", description: "Fighter popular with pirates.",
+        drawFunction: drawKraitMKI,
+        vertexData: [ { x: 0.4629, y: 0.0000 }, { x: 0.1200, y: 0.4186 }, { x: -0.6914, y: 0.4186 }, { x: -0.6914, y: -0.4071 }, { x: 0.1200, y: -0.4071 } ],
+        fillColor: [100, 120, 100],
+        strokeColor: [140, 160, 140],
+        strokeW: 1.50,
+        typicalCargo: [],
+        price: 6000
+    },
+
+    "KraitMKII": { 
+        name: "Krait MKII", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
+        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 2.3, baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
         armament: ["Mini-Turret"], // Combat focused Pirate
-        costCategory: "High", description: "A popular multi-role ship, capable in combat and can launch fighters.",
-        drawFunction: drawKrait, // Uses the same draw function
+        costCategory: "High", description: "Multi-role ship, popular with pirates.",
+        drawFunction: drawKraitMKII, // Uses the same draw function
          vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
-        typicalCargo: ["Food"],
+        typicalCargo: ["Food","Minerals"],
         price: 6000
     },
     "MantaHauler": { // NEW - Unique 1
@@ -533,17 +557,17 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food"],
         price: 2500
     },
-    "StarlinerCruiser": { // NEW - Trader/Passenger
+    "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
         baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRateDegrees: 1.4, baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
-        armament: ["Mini-Turret", "Twin Pulse"], // Defensive passenger ship
-        costCategory: "High", description: "Long, sleek vessel designed primarily for passenger comfort.",
+        armament: ["Mini-Turret"], // Defensive passenger ship
+        costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
         drawFunction: drawStarlinerCruiser, vertexData: [ {x:1.2, y:0}, {x:1.0, y:0.2}, {x:-0.9, y:0.3}, {x:-1.1, y:0.1}, {x:-1.1, y:-0.1}, {x:-0.9, y:-0.3}, {x:1.0, y:-0.2} ], // Elongated
         fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine"],
         price: 11000
     },
-    "Thargoid": { // (Original Thargoid)
+    "Thargoid": { 
         name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
         baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRateDegrees: 6.0, baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
@@ -559,7 +583,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
         drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
-        typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
+        typicalCargo: ["Textiles", "Minerals", "Metals", "Machinery"],
         price: 4200
     },
      "Type9Heavy": {
@@ -593,11 +617,11 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons", "Narcotics", "Slaves"],
         price: 8250
     },
-    "WaspAssault": { // NEW - Light Fighter 2
+    "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRateDegrees: 5.2, baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 2,
         armament: ["Burst Blaster"], // All-out attack fighter
-        costCategory: "Low", description: "Aggressive fighter with forward-swept wings.",
+        costCategory: "Low", description: "Aggressive, agile fighter with forward-swept wings.",
         drawFunction: drawWaspAssault, vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.1473, y: 0.3081 }, { x: -0.3146, y: 0.9825 }, { x: -0.5494, y: 0.9822 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.5494, y: -0.9822 }, { x: -0.3146, y: -0.9825 }, { x: -0.1473, y: -0.3081 } ],
         fillColor: [210, 190, 80],
         strokeColor: [120, 100, 30],

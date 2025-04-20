@@ -4,7 +4,7 @@ const POLICE_SHIPS = ["ACAB","CobraMkIII"];
 //const POLICE_SHIPS = ["JackalMultirole"];
 
 
-const PIRATE_SHIPS = ["Krait", "WaspAssault", "Sidewinder"]; // Ensure these names exist in SHIP_DEFINITIONS
+const PIRATE_SHIPS = ["KraitMKI", "KraitMKII", "Sidewinder"]; // Ensure these names exist in SHIP_DEFINITIONS
 const HAULER_SHIPS = [
     "Adder", // Common small hauler
     "Adder",

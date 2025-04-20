@@ -2,6 +2,8 @@
 
 ## Bugs and Issues
 
+aI swithcing really quicly making red line jitter
+
 - Fix inconsistent ship pricing formulas (previously baseHull*20 + cargoCapacity*10 + 1000, now baseMaxSpeed * hull)
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
 Issue: When buying weapons, it currently just overwrites the first weapon slot
@@ -19,7 +21,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 - Fix AI behavior inconsistencies and edge cases
 
-aI swithcing really quicly making red line jitter
+
 
 - Improve enemy targeting and combat decisions
 - Fix potential memory leaks with explosion particles
