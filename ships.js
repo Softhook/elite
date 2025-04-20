@@ -443,9 +443,9 @@ const SHIP_DEFINITIONS = {
     "Keelback": {
         name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRateDegrees: 2.5, baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
-        armament: ["Double Shot", "Twin Pulse"], // Combat trader
-        costCategory: "Low-Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
-        drawFunction: drawKeelback, vertexData: [ { x: 0.6302, y: 0.0000 }, { x: 0.5000, y: 0.5114 }, { x: -0.2000, y: 0.6114 }, { x: -0.8000, y: 0.8114 }, { x: -1.0033, y: 0.5917 }, { x: -0.5571, y: 0.2745 }, { x: -0.6302, y: 0.0000 }, { x: -0.5571, y: -0.2745 }, { x: -1.0033, y: -0.5917 }, { x: -0.8000, y: -0.8114 }, { x: -0.2000, y: -0.6114 }, { x: 0.5000, y: -0.5114 } ],
+        armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
+        costCategory: "Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
+        drawFunction: drawKeelback, vertexData: [ { x: 0.6302, y: 0.0000 }, { x: 0.5000, y: 0.5114 }, { x: -0.2000, y: 0.6114 }, { x: -0.8000, y: 0.8114 }, { x: -1.0033, y: 0.5917 }, { x: -0.5571, y: 0.2745 }, { x: -0.7905, y: 0.1373 }, { x: -0.7839, y: -0.1373 }, { x: -0.5571, y: -0.2745 }, { x: -1.0033, y: -0.5917 }, { x: -0.8000, y: -0.8114 }, { x: -0.2000, y: -0.6114 }, { x: 0.5000, y: -0.5114 } ],
         fillColor: [180, 150, 80],
         strokeColor: [100, 80, 40],
         strokeW: 1.50,
