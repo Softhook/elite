@@ -1,0 +1,103 @@
+# Elite Game Development TODO
+
+## Bugs and Issues
+
+- Fix inconsistent ship pricing formulas (previously baseHull*20 + cargoCapacity*10 + 1000, now baseMaxSpeed * hull)
+- Fix weapon buying into slots on ship.currently just temp overwrites first weapon
+Issue: When buying weapons, it currently just overwrites the first weapon slot
+Ships have multiple weapon hardpoints defined in ship definition but can't use them
+No UI for selecting which weapon slot to install into
+No way to manage multiple weapons on complex ships
+Solution: Implement proper weapon slot management with selection UI
+
+- All projectile collisions use simple circle-based detection regardless of ship shape
+Problems:
+Hits register when visually the projectile hasn't touched the ship
+Misses occur when projectiles appear to hit elongated ship parts
+No consideration for ship orientation during collision tests
+Solution: Implement more precise hitbox system using ship vertex data
+
+- Fix AI behavior inconsistencies and edge cases
+- Improve enemy targeting and combat decisions
+- Fix potential memory leaks with explosion particles
+- Correct remaining ship rotation angle issues (degrees vs radians)
+- Improve handling of edge cases in the solar system generation
+
+## Core Gameplay Enhancements
+
+- Add proper docking sequence (rotation alignment, docking bay entry)
+- Implement visual starfield distortion during hyperjump
+- Add more varied asteroid field generation
+- Implement asteroid mining gameplay
+- Add salvaging mechanics for destroyed ships
+- Add smuggling mechanics with scanning gameplay
+- Add ship fuel management and refueling
+- Implement ship upgrades beyond weapons:
+  - Shield generators/boosters
+  - Scanner upgrades
+
+## Graphics and UI Improvements
+
+- Redesign space stations with more complex models and entry ports
+- Add proper 3D ship models (even if sprite-based)
+- Improve ship destruction sequences
+- Add engine thrust visualization for all ships
+- Add more visual effects for different weapon types
+- Create station interior view when docked
+- Improve HUD with radar and target information
+- Add system for ship damage visualization on hulls
+- Improve galaxy map interface with route planning
+- Add cockpit view option
+
+## Economy and Progression
+
+- Implement more sophisticated economic simulation
+- Add price fluctuations based on supply/demand
+- Implement market events (shortages, surpluses)
+- Create proper ship purchasing/trading system with trade-ins
+- Add ship insurance system
+- Implement reputation system with factions
+- Create consequences for illegal activities
+- Add bounty system for player crimes
+- Implement NPC trade routes affecting economies
+
+## Mission and Content
+
+- Add more varied mission types:
+  - Escort missions
+  - Rescue missions
+  - Exploration missions
+  - Assassination contracts
+  - Mining contracts
+  - Salvage operations
+- Implement mission chains with storylines
+- Add NPC dialogue system
+- Implement random events while traveling
+- Add special encounters with rare ships
+- Create faction warfare with territory control
+- Add randomized news and galactic events
+- Implement alien invasion scenarios
+
+## Advanced Features
+
+- Add planetary landings and surface exploration
+- Implement procedural planet surface generation
+- Create space station construction and ownership
+- Add player fleet management
+- Implement crew hiring and management
+- Add multiplayer capabilities
+- Create mod support system
+- Implement save/load with multiple profiles
+- Add achievements system
+- Create advanced navigation with autopilot options
+
+## Technical Improvements
+
+- Optimize rendering for large numbers of objects
+- Implement spatial partitioning for collision detection
+- Add serialization for all game objects
+- Improve game state management
+- Add proper error handling and recovery
+- Implement sound effects and music system
+- Add settings menu with graphics options
+- Create proper game packaging and distribution
