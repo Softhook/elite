@@ -204,7 +204,8 @@ class StarSystem {
                     if (player && player.isWanted) {
                         // Only log once per system entry, not for each police ship
                         console.log(`WANTED ALERT: Broadcasting player wanted status in ${this.name} system!`);
-                        
+                        uiManager.addMessage(`WANTED ALERT: Player is wanted status in ${this.name} system!`);
+
                         // Force all police to respond
                         let policeCalled = false;
                         let policeCount = 0;
@@ -228,8 +229,11 @@ class StarSystem {
                         // Only log summary rather than per-ship messages
                         if (policeCalled) {
                             console.log(`System Alert: ${policeCount} police ships responding to wanted status`);
+                            uiManager.addMessage(`System Alert: ${policeCount} police ships responding to wanted status`);
                         } else {
                             console.log("No police ships available to respond to wanted status!");
+                            uiManager.addMessage(`No police ships available to respond to wanted status!`);
+
                         }
                     }
                 }, 500); // 500ms delay after ships spawn to ensure AI is properly initialized
@@ -309,7 +313,7 @@ class StarSystem {
             if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
                 chosenShipTypeName = "Thargoid";
                 chosenRole = AI_ROLE.PIRATE;
-                console.warn("!!! Thargoid Spawn Triggered !!!");
+                uiManager.addMessage(`Thargoid Spawn Detected`);
             }
         }
 
