@@ -542,8 +542,10 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRateDegrees: 5.0, baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Fast alien fighter composed of sharp, crystalline structures.",
-        drawFunction: drawShardInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.2, y:0.2}, {x:-0.8, y:0.8}, {x:-1.0, y:0.1}, {x:-1.0, y:-0.1}, {x:-0.8, y:-0.8}, {x:-0.2, y:-0.2} ], // Asymmetric shards
-        fillColor: [180, 180, 240], strokeColor: [240, 240, 255], strokeW: 1.0, // Set in draw func: Blue/Purple/White
+        drawFunction: drawShardInterceptor, vertexData: [ { x: 1.0831, y: 0.0000 }, { x: 0.4335, y: 0.2433 }, { x: -0.1945, y: 0.1331 }, { x: -0.7955, y: 0.8065 }, { x: -1.2651, y: 0.4935 }, { x: -0.7083, y: 0.0000 }, { x: -1.2651, y: -0.4935 }, { x: -0.7955, y: -0.8065 }, { x: -0.1945, y: -0.1331 }, { x: 0.4335, y: -0.2433 } ],
+        fillColor: [180, 180, 240],
+        strokeColor: [240, 240, 255],
+        strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
         price: 9000
     },
