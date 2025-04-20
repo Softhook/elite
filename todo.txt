@@ -34,7 +34,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
-- Add proper docking sequence (rotation alignment, docking bay entry)
 - Implement visual starfield distortion during hyperjump
 - Add more varied asteroid field generation
 - Implement asteroid mining gameplay
