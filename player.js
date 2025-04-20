@@ -213,6 +213,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     // --- Proceed with Completion ---
     if (canComplete) {
         console.log(`   Completing mission: ${this.activeMission.title}`);
+
+
+        
         let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
 
         // Remove cargo ONLY for delivery missions
@@ -232,6 +235,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // --- Provide feedback ---
         //alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
         console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
+        uiManager.addMessage(`Mission Complete: ${completedTitle} | Reward: ${reward}cr`);
 
         saveGame(); // Save progress
         return true; // Success
@@ -481,6 +485,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.destroyed || amount <= 0) return;
         this.hull -= amount;
         console.log("Player took damage:", amount, "Current hull:", this.hull);
+        uiManager.addMessage(`Damage: ${amount}`);
+
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;

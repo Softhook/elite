@@ -42,7 +42,7 @@ class UIManager {
 
         this.messages = [];
         this.messageDisplayTime = 4000; // ms
-        this.maxMessagesToShow = 2;
+        this.maxMessagesToShow = 4;
 
         this.setPanelDefaults();
     }
@@ -1071,7 +1071,7 @@ class UIManager {
 
         push();
         textAlign(CENTER, BOTTOM);
-        textSize(16);
+        textSize(12);
         fill(255);
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
