@@ -40,6 +40,10 @@ class UIManager {
         this.fpsFrameCount = 0;       // Frame counter for updates
         this.fpsAverage = 0;          // Current average FPS value to display
 
+        this.messages = [];
+        this.messageDisplayTime = 4000; // ms
+        this.maxMessagesToShow = 2;
+
         this.setPanelDefaults();
     }
 
@@ -792,9 +796,9 @@ class UIManager {
                         player.spendCredits(area.price);
                         player.applyShipDefinition(area.shipTypeKey);
                         saveGame && saveGame();
-                        alert(`You bought a ${area.shipName}!`)
+                        uiManager.addMessage("You bought a " + area.shipName + "!");
                     } else {
-                        alert("Not enough credits!");
+                        uiManager.addMessage("Not enough credits!");
                     }
                     return true;
                 }
@@ -814,9 +818,9 @@ class UIManager {
                         player.spendCredits(area.upgrade.price);
                         player.setWeaponByName(area.upgrade.name); // Equip the weapon
                         saveGame && saveGame();
-                        alert(`You bought the ${area.upgrade.name}!`);
+                        uiManager.addMessage("You bought the " + area.upgrade.name + "!");
                     } else {
-                        alert("Not enough credits!");
+                        uiManager.addMessage("Not enough credits!");
                     }
                     return true;
                 }
@@ -835,13 +839,13 @@ class UIManager {
                 let missing = player.maxHull - player.hull;
                 let cost = missing * 10;
                 if (missing <= 0) {
-                    alert("Your ship is already fully repaired!");
+                    uiManager.addMessage("Your ship is already fully repaired!");
                 } else if (player.credits >= cost) {
                     player.spendCredits(cost);
                     player.hull = player.maxHull;
-                    alert(`Ship fully repaired for ${cost} credits.`);
+                    uiManager.addMessage(`Ship fully repaired for ${cost} credits.`);
                 } else {
-                    alert(`Not enough credits! Full repair costs ${cost} credits.`);
+                    uiManager.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
                 }
                 return true;
             }
@@ -851,14 +855,14 @@ class UIManager {
                 let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
                 let cost = repairAmt * 7;
                 if (missing <= 0) {
-                    alert("Your ship is already fully repaired!");
+                    uiManager.addMessage("Your ship is already fully repaired!");
                 } else if (player.credits >= cost) {
                     player.spendCredits(cost);
                     player.hull += repairAmt;
                     if (player.hull > player.maxHull) player.hull = player.maxHull;
-                    alert(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
+                    uiManager.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
                 } else {
-                    alert(`Not enough credits! 50% repair costs ${cost} credits.`);
+                    uiManager.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
                 }
                 return true;
             }
@@ -1049,6 +1053,35 @@ class UIManager {
             return true;
         }
         return false;
+    }
+
+    // Add a message to the queue
+    addMessage(msg) {
+        this.messages.push({ text: msg, time: millis() });
+        // Keep only the last 10 messages (optional)
+        if (this.messages.length > 10) this.messages.shift();
+    }
+
+    // Draw messages at the bottom of the screen
+    drawMessages() {
+        const now = millis();
+        // Only show recent messages
+        const recent = this.messages.filter(m => now - m.time < this.messageDisplayTime);
+        const toShow = recent.slice(-this.maxMessagesToShow);
+
+        push();
+        textAlign(CENTER, BOTTOM);
+        textSize(16);
+        fill(255);
+        noStroke();
+        for (let i = 0; i < toShow.length; i++) {
+            text(
+                toShow[i].text,
+                width / 2,
+                height - 10 - (toShow.length - 1 - i) * 22
+            );
+        }
+        pop();
     }
 
 } // End of UIManager Class

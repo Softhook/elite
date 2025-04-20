@@ -139,7 +139,7 @@ class Enemy {
             if (this.weapons.length > 0) {
                 this.currentWeapon = this.weapons[0];
                 this.fireRate = this.currentWeapon.fireRate;
-                console.log(`${this.shipTypeName} armed with ${this.currentWeapon.name}`);
+                uiManager.addMessage(`${this.shipTypeName} armed with ${this.currentWeapon.name}`);
             } else {
                 // Fallback: basic projectile weapon if no matching weapons found
                 this.currentWeapon = {
@@ -913,7 +913,8 @@ class Enemy {
                 this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
             }
             
-            console.log(`${this.role} ${this.shipTypeName} destroyed!`);
+            //console.log(`${this.role} ${this.shipTypeName} destroyed!`);
+            uiManager.addMessage(`${this.role} ${this.shipTypeName} destroyed`);
         }
     }
 

@@ -172,6 +172,7 @@ function draw() {
 
     // Draw framerate display (always visible in all game states)
     uiManager.drawFramerate();
+    uiManager.drawMessages();
 
     // Optional Debug Line (Screen Coords)
     // if (gameStateManager?.currentState === "IN_FLIGHT" && player) {
