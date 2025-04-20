@@ -818,6 +818,31 @@ class Enemy {
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
         pop();
 
+        // --- Draw Health Bar (only when damaged) ---
+        if (this.hull < this.maxHull && this.maxHull > 0) {
+            let healthPercent = this.hull / this.maxHull;
+            let barW = this.size * 0.9; // Make slightly wider than for asteroids
+            let barH = 6;
+            let barX = this.pos.x - barW / 2;
+            let barY = this.pos.y + this.size/2 + 5; // Position above ship
+
+            push();
+            noStroke();
+            // Red background
+            fill(255, 0, 0);
+            rect(barX, barY, barW, barH);
+            // Green health remaining
+            fill(0, 255, 0);
+            rect(barX, barY, barW * healthPercent, barH);
+            
+            // Optional: Add black outline for better visibility
+            stroke(0);
+            strokeWeight(1);
+            noFill();
+            rect(barX, barY, barW, barH);
+            pop();
+        }
+
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
              push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
