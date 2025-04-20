@@ -125,10 +125,11 @@ class TitleScreen {
         text("W or UP ARROW - Thrust forward", textX, textY); textY += lineHeight;
         text("A or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
         text("D or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
-        text("SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
+        text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
         text("1-9 - Switch weapons", textX, textY); textY += lineHeight;
-        text("M - Galaxy map", textX, textY); textY += lineHeight * 2;
-        
+        text("M - Galaxy map", textX, textY); textY += lineHeight;
+        ext("Mouse to target beam weapons", textX, textY); textY += lineHeight * 2;
+
         // Gameplay tips
         textSize(24);
         fill(0, 180, 255);
