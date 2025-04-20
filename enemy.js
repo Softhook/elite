@@ -139,7 +139,7 @@ class Enemy {
             if (this.weapons.length > 0) {
                 this.currentWeapon = this.weapons[0];
                 this.fireRate = this.currentWeapon.fireRate;
-                uiManager.addMessage(`${this.shipTypeName} armed with ${this.currentWeapon.name}`);
+                uiManager.addMessage(`Detected ${this.shipTypeName} armed with ${this.currentWeapon.name}`);
             } else {
                 // Fallback: basic projectile weapon if no matching weapons found
                 this.currentWeapon = {
