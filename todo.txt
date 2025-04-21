@@ -4,7 +4,6 @@
 
 weapon names
 
-
 aI swithcing really quicly making red line jitter
 
 - Fix inconsistent ship pricing formulas (previously baseHull*20 + cargoCapacity*10 + 1000, now baseMaxSpeed * hull)
@@ -25,10 +24,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Fix AI behavior inconsistencies and edge cases
 
 
-
 - Improve enemy targeting and combat decisions
 - Fix potential memory leaks with explosion particles
-- Correct remaining ship rotation angle issues (degrees vs radians)
 - Improve handling of edge cases in the solar system generation
 
 - Alien ships should not be vailable to buy
@@ -37,11 +34,9 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
-scanner upgrade to show helthbars and text for ships
-
-
-blue line point to station
-
+- opposturnity, assasin, alien enemy beahviour
+- scanner upgrade to show helthbars and text for ships
+- blue line point to station
 - Implement visual starfield distortion during hyperjump
 - Add more varied asteroid field generation
 - Implement asteroid mining gameplay
@@ -49,11 +44,12 @@ blue line point to station
 - Add smuggling mechanics with scanning gameplay
 - Add ship fuel management and refueling
 - Implement ship upgrades beyond weapons:
-  - Shield generators/boosters
-  - Scanner upgrades
+- Shield generators/boosters
+
 
 ## Graphics and UI Improvements
 
+- add some space features nebula, moons
 - Redesign space station
 - Add proper 3D ship models (even if sprite-based)
 - Add engine thrust visualization for all ships

@@ -261,7 +261,7 @@ class Galaxy {
                 let arrivalPosition = p5.Vector.fromAngle(arrivalAngle).mult(arrivalDist);
                 player.pos.set(arrivalPosition.x, arrivalPosition.y);
                 player.vel.set(0, 0);
-                console.log(`Player arrived in ${newSystemName} at angle ${degrees(arrivalAngle).toFixed(1)} deg, dist ${arrivalDist.toFixed(0)}, final pos (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
+                console.log(`Player arrived in ${newSystemName} at angle ${(arrivalAngle * 180 / Math.PI).toFixed(1)} deg, dist ${arrivalDist.toFixed(0)}, final pos (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
                 player.currentSystem = newSystem;
                 newSystem.enterSystem(player); // Should be safe if newSystem is valid
             } else { console.error(`Error during jump completion: Player (${!!player}) or New System (${!!newSystem}) object invalid!`); }

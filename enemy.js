@@ -766,7 +766,7 @@ class Enemy {
             
             // MODIFIED: Only check firing angle for non-turret weapons
             // Turrets can fire in any direction regardless of ship orientation
-            const firingAngleTolerance = radians(30);
+            const firingAngleTolerance = 0.52;
             
             if (this.currentState !== AI_STATE.IDLE && 
                 (isTurretWeapon || abs(angleDiff) < firingAngleTolerance)) {

@@ -69,7 +69,7 @@ class Cargo {
         
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.rotation); // Convert radians to degrees before rotating
+        rotate(this.rotation); // Rotation is in radians, as required by p5.js rotate()
         
         // Draw container
         fill(this.color);

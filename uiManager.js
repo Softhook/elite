@@ -637,7 +637,7 @@ class UIManager {
                     // Draw rotated triangle if fully within bounds
                     push();
                     translate(mapX, mapY);
-                    rotate(degrees(enemy.angle) - 90);
+                    rotate(enemy.angle - PI / 2);  // PI/2 radians = 90 degrees
                     triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8); // Triangle scaled roughly by half-extent
                     pop();
                 }
