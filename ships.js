@@ -307,10 +307,10 @@ const SHIP_DEFINITIONS = {
         price: 8250,
         aiRoles: ["EXPLORER"]
     },
-    "BioFrigate": { // NEW - Alien 2
+    "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRateDegrees: 2.0, baseHull: 500, baseShield: 150, shieldRecharge: 2.5, // Hull tanky, weak shields?
-        armament: ["Force Blaster", "Disruptor"], // Alien tech weapons
+        armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
         drawFunction: drawBioFrigate, vertexData: [ {x:1.0, y:0}, {x:0.6, y:0.6}, {x:0.1, y:0.8}, {x:-0.5, y:0.7}, {x:-0.9, y:0.2}, {x:-1.0, y:0}, {x:-0.9, y:-0.2}, {x:-0.5, y:-0.7}, {x:0.1, y:-0.8}, {x:0.6, y:-0.6} ],
         fillColor: [80, 140, 100], strokeColor: [40, 80, 50], strokeW: 2.5, // Murky green
@@ -318,7 +318,7 @@ const SHIP_DEFINITIONS = {
         price: 20000,
         aiRoles: ["ALIEN"]
     },
-    "CenturionGunship": { // NEW - Heavy Fighter
+    "CenturionGunship": {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRateDegrees: 2.6, baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser"], // Balanced heavy firepower
@@ -378,7 +378,7 @@ const SHIP_DEFINITIONS = {
         price: 11700,
         aiRoles: ["MILITARY"]
     },
-    "GeometricDrone": { // NEW - Alien 3
+    "GeometricDrone": {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
         baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRateDegrees: 8.0, baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
         armament: ["Scatter Beam"], // Alien tech
@@ -389,7 +389,7 @@ const SHIP_DEFINITIONS = {
         price: 1800,
         aiRoles: ["ALIEN"]
     },
-    "GladiusFighter": { // NEW - Medium Fighter
+    "GladiusFighter": {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRateDegrees: 4.0, baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 6,
         armament: ["Burst Blaster", "Twin Pulse"], // Fast attack loadout
@@ -457,7 +457,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 8120,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER","MILITARY"]
     },
     "Keelback": {
         name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
@@ -639,7 +639,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRateDegrees: 4.5, baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 4,
         armament: ["Multi-Cannon", "Twin Pulse"], // Fast fighter
         costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
-        drawFunction: drawViper, // Uses the same draw function
+        drawFunction: drawViper,
         vertexData: [ { x: 1.1, y: 0 }, { x: -0.6, y: 0.5 }, { x: -1, y: 0.3 }, { x: -1, y: -0.3 }, { x: -0.6, y: -0.5 } ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
