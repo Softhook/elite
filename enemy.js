@@ -756,7 +756,7 @@ class Enemy {
                 
             case AI_STATE.PATROLLING:
                 // Transition to APPROACHING if in detection range
-                if (targetExists && distanceToTarget < this.detectionRange) {
+                if (targetExists && this.isWithinDistance(this.target, this.detectionRange)) {
                     this.changeState(AI_STATE.APPROACHING);
                 }
                 break;
@@ -770,9 +770,9 @@ class Enemy {
                 
                 // When fleeing, move away from attacker and increase speed
                 if (this.target && this.target.pos) {
-                    let escapeVector = p5.Vector.sub(this.pos, this.target.pos);
-                    escapeVector.normalize().mult(2000);  // Aim very far away
-                    this.escapeTarget = p5.Vector.add(this.pos, escapeVector);
+                    this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                    this.tempVector.normalize().mult(2000);
+                    this.escapeTarget = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
                     
                     // Apply stronger thrust for escape
                     this.performRotationAndThrust(this.escapeTarget);
@@ -924,10 +924,10 @@ class Enemy {
             
             let desiredMovementTargetPos = this.patrolTargetPos;
             let distToPatrolTarget = desiredMovementTargetPos
-                ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
+                ? this.distanceTo(desiredMovementTargetPos)
                 : Infinity;
                 
-            if (distToPatrolTarget < 50) {
+            if (this.isWithinDistance(desiredMovementTargetPos, 50)) {
                 if(system?.station?.pos)
                     this.patrolTargetPos = system.station.pos.copy();
                 else
@@ -1015,8 +1015,8 @@ class Enemy {
                     desiredMovementTargetPos = this.patrolTargetPos; 
                     break; 
                 } 
-                let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
-                if (dS < this.stationProximityThreshold) { 
+                let dS = this.distanceTo(desiredMovementTargetPos); 
+                if (this.isWithinDistance(desiredMovementTargetPos, this.stationProximityThreshold)) { 
                     this.changeState(AI_STATE.NEAR_STATION); 
                 } 
                 break;
@@ -1039,8 +1039,8 @@ class Enemy {
                 } 
                 desiredMovementTargetPos = this.patrolTargetPos; 
                 if (!desiredMovementTargetPos) break; 
-                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
-                if (dE < 150) { 
+                let dE = this.distanceTo(desiredMovementTargetPos); 
+                if (this.isWithinDistance(desiredMovementTargetPos, 150)) { 
                     this.destroyed = true; 
                 } 
                 break;
@@ -1049,9 +1049,9 @@ class Enemy {
                 // Handle fleeing directly in hauler update loop
                 if (this.target && this.target.pos) {
                     // Calculate escape vector away from threat
-                    const escapeVector = p5.Vector.sub(this.pos, this.target.pos);
-                    escapeVector.normalize().mult(2000);
-                    const escapeTargetPos = p5.Vector.add(this.pos, escapeVector);
+                    this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                    this.tempVector.normalize().mult(2000);
+                    const escapeTargetPos = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
                     
                     // Use strong thrust to escape
                     const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
@@ -1143,9 +1143,9 @@ class Enemy {
         
         let destination = this.routePoints[this.currentRouteIndex];
         
-        // Reuse the tempVector to avoid creating new vectors
+        // Use direct distance calculation
+        let distance = this.distanceTo(destination);
         this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
-        let distance = this.tempVector.mag();
         this.tempVector.normalize();
         let targetAngle = this.tempVector.heading();
         
@@ -1293,7 +1293,7 @@ class Enemy {
         }
         
         // Check if we've reached the cargo
-        const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
+        const distanceToCargo = this.distanceTo(this.cargoTarget);
         
         // When close enough to collect
         if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
@@ -1358,7 +1358,41 @@ class Enemy {
      */
     distanceTo(target) {
         if (!target?.pos) return Infinity;
-        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+        
+        // Use direct calculation instead of calling dist() function
+        const dx = this.pos.x - target.pos.x;
+        const dy = this.pos.y - target.pos.y;
+        return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    /**
+     * Calculates squared distance to target entity (faster)
+     * @param {Object} target - Entity with pos property
+     * @return {number} Squared distance to target or Infinity if invalid
+     */
+    distanceSquaredTo(target) {
+        if (!target?.pos) return Infinity;
+        
+        // Avoid square root operation for better performance
+        const dx = this.pos.x - target.pos.x;
+        const dy = this.pos.y - target.pos.y;
+        return dx*dx + dy*dy;
+    }
+
+    /**
+     * Efficient check if target is within specified distance
+     * @param {Object} target - Entity with pos property
+     * @param {number} maxDistance - Maximum distance to check against
+     * @return {boolean} Whether target is within the distance
+     */
+    isWithinDistance(target, maxDistance) {
+        if (!target?.pos) return false;
+        
+        // Compare squared distances to avoid square root
+        const maxDistSq = maxDistance * maxDistance;
+        const dx = this.pos.x - target.pos.x;
+        const dy = this.pos.y - target.pos.y;
+        return (dx*dx + dy*dy) <= maxDistSq;
     }
 
     /**
@@ -1548,7 +1582,9 @@ class Enemy {
         }
         
         // Enhanced firing logic with weapon-specific behaviors
-        if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
+        const effectiveFiringRangeSq = effectiveFiringRange * effectiveFiringRange;
+        const distanceToTargetSq = this.distanceSquaredTo(this.target);
+        if (distanceToTargetSq < effectiveFiringRangeSq && this.isWeaponReady()) {
             // Check if we can fire at the target
             if (this.canFireAtTarget(shootingAngle)) {
                 if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
@@ -1856,10 +1892,11 @@ class Enemy {
         for (const cargo of system.cargo) {
             if (cargo.collected) continue;
             
-            const distance = dist(this.pos.x, this.pos.y, cargo.pos.x, cargo.pos.y);
-            if (distance < this.cargoDetectionRange && distance < closestDistance) {
+            const distanceSq = this.distanceSquaredTo(cargo);
+            const detectionRangeSq = this.cargoDetectionRange * this.cargoDetectionRange;
+            if (distanceSq < detectionRangeSq && distanceSq < closestDistance) {
                 closestCargo = cargo;
-                closestDistance = distance;
+                closestDistance = distanceSq;
             }
         }
         
@@ -1925,9 +1962,9 @@ class Enemy {
      */
     checkCollision(target) { 
         if (!target?.pos || target.size === undefined) return false; 
-        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); 
-        let sumRadii = (target.size / 2) + (this.size / 2); 
-        return dSq < sq(sumRadii);
+        const distSq = this.distanceSquaredTo(target);
+        const sumRadii = (target.size / 2) + (this.size / 2); 
+        return distSq < sumRadii * sumRadii;
     }
 
     // -----------------------
