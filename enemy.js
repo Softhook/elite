@@ -1,5 +1,9 @@
 // ****** Enemy.js ******
 
+// -------------------------
+// --- Constants & Enums ---
+// -------------------------
+
 // Define AI Roles using a constant object for readability and maintainability
 const AI_ROLE = {
     PIRATE: 'Pirate',
@@ -28,6 +32,10 @@ for (const [k, v] of Object.entries(AI_STATE)) {
 }
 
 class Enemy {
+    // ---------------------------------
+    // --- Constructor & Initialization
+    // ---------------------------------
+    
     /**
      * Creates an Enemy instance with role-specific behavior and ship type.
      * Stores speeds/rates/colors initially as raw values.
@@ -205,6 +213,10 @@ class Enemy {
         this.tempVector = createVector(0, 0);
     }
 
+    // -----------------------------
+    // --- Initialization Methods ---
+    // -----------------------------
+    
     /** Calculates and sets radian-based properties using p5.radians(). */
     calculateRadianProperties() {
          if (typeof radians !== 'function') {
@@ -231,60 +243,10 @@ class Enemy {
          } catch(e) { console.error(`Error creating colors for Enemy ${this.shipTypeName}:`, e); this.p5FillColor = color(180); this.p5StrokeColor = color(255); } // Fallbacks
     }
 
-    /** Predicts player's future position. */
-    predictTargetPosition() {
-        if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
-        
-        // Reuse the temp vector instead of creating new ones
-        this.tempVector.set(this.target.vel.x, this.target.vel.y);
-        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
-        this.tempVector.mult(pf);
-        this.tempVector.add(this.target.pos);
-        return this.tempVector;
-    }
-
-    /** Rotates towards target angle (radians). Returns remaining difference (radians). */
-    rotateTowards(targetAngleRadians) {
-        if (isNaN(targetAngleRadians)) return 0;
-        
-        let diff = targetAngleRadians - this.angle;
-        
-        // Single calculation normalization
-        diff = ((diff % TWO_PI) + TWO_PI) % TWO_PI;
-        if (diff > PI) diff -= TWO_PI;
-        
-        const rotationThreshold = 0.02;
-        if (abs(diff) > rotationThreshold) {
-            // Use Math.sign for browser compatibility 
-            const rotationAmount = Math.sign(diff) * 
-                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
-            this.angle += rotationAmount;
-        }
-        return diff;
-    }
-
-    /** Applies forward thrust. */
-    thrustForward() {
-        if (isNaN(this.angle)) return;
-        
-        this.thrustVector.set(cos(this.angle), sin(this.angle));
-        this.thrustVector.mult(this.thrustForce);
-        this.vel.add(this.thrustVector);
-        
-        // Create thrust particles
-        if (this.thrustManager) {
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
-        }
-    }
-
-    /** Sets a target position far away for Haulers leaving the system. */
-    setLeavingSystemTarget(system) {
-        let angle = random(TWO_PI); let dist = (system?.despawnRadius ?? 3000) * 1.5;
-        this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
-        this.currentState = AI_STATE.LEAVING_SYSTEM; this.hasPausedNearStation = false;
-        // console.log(`Hauler ${this.shipTypeName} leaving towards target`); // Optional log
-    }
-
+    // -------------------------
+    // --- Core Update Logic ---
+    // -------------------------
+    
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         if (this.destroyed || !system) return;
@@ -373,8 +335,12 @@ class Enemy {
         if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION) {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
-    } // End update
+    }
 
+    // ---------------------------
+    // --- Role-Specific Updates ---
+    // ---------------------------
+    
     /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
     updateCombatAI(system) {
         // --- Initialize flags if not present ---
@@ -537,22 +503,44 @@ class Enemy {
 
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
-    } // End updateCombatAI
+    }
 
     /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
     updatePoliceAI(system) {
         // FIRST check if player is wanted - prioritize player over other NPCs
-        if (system.player && system.player.isWanted && system.player.hull > 0) {
-            // FIX: Set the target and change to APPROACHING state
-            this.target = system.player;
-            this.currentState = AI_STATE.APPROACHING;
+        // MODIFIED: Also check system-wide alert status
+        if ((system.player && system.player.isWanted && system.player.hull > 0) || 
+            (system.policeAlertSent && system.player && system.player.hull > 0)) {
             
-            // This is critical - use the combat AI when player is wanted
+            // Always set player as target when wanted
+            this.target = system.player;
+            
+            // MODIFIED: Immediately pursue if system-wide alert is active
+            if (system.policeAlertSent && 
+                (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) {
+                this.currentState = AI_STATE.APPROACHING;
+                
+                // Force rotation toward player
+                if (this.pos && system.player.pos) {
+                    let angleToPlayer = atan2(system.player.pos.y - this.pos.y, 
+                                            system.player.pos.x - this.pos.x);
+                    this.angle = angleToPlayer;
+                }
+                
+                if (!this.hasReportedWantedPlayer) {
+                    console.log(`Police ${this.shipTypeName} responding to system-wide alert`);
+                    this.hasReportedWantedPlayer = true;
+                }
+            }
+            
+            // CRITICAL FIX: Add this line to actually use combat AI when player is wanted
             this.updateCombatAI(system);
-            return; // Skip patrol logic
+            return; // Skip the rest of the method
         } else {
-            // Reset flag when player is no longer wanted
+            // Reset flags when player is no longer wanted
+            this.hasReportedWantedPlayer = false;
             this.reportedWantedTarget = false;
+            
             // Clear system alert flag if needed
             if (system.player && !system.player.isWanted && system.policeAlertSent) {
                 system.policeAlertSent = false;
@@ -596,7 +584,7 @@ class Enemy {
             }
             this.performRotationAndThrust(desiredMovementTargetPos);
         }
-    } // End updatePoliceAI
+    }
 
     /** Hauler AI Logic - Moves between station and system edge. */
     updateHaulerAI(system) {
@@ -608,13 +596,9 @@ class Enemy {
              default: if(system?.station?.pos) { this.patrolTargetPos = system.station.pos.copy(); this.currentState = AI_STATE.PATROLLING; } else { this.setLeavingSystemTarget(system); } break;
          }
          this.performRotationAndThrust(desiredMovementTargetPos); // Haulers just move
-    } // End updateHaulerAI
+    }
 
-    /** Transport AI Logic - Moves between two endpoints chosen among
-        non-sun planets or falls back to station + planet.
-        When near an endpoint (within arrivalThreshold), the ship pauses
-        for a short period before switching destinations.
-    */
+    /** Transport AI Logic - Moves between two endpoints. */
     updateTransportAI(system) {
         if (!system) return;
         
@@ -709,25 +693,246 @@ class Enemy {
         this.pos.add(this.vel);
     }
 
-    /** Helper: Rotates towards target, applies thrust if aligned. Returns angle difference. */
+    /** Handles cargo collection AI */
+    updateCargoCollectionAI(system) {
+        // If our target cargo disappeared or was collected, find a new one
+        if (!this.cargoTarget || this.cargoTarget.collected) {
+            this.cargoTarget = this.detectCargo(system);
+            
+            // If no cargo found, return to normal behavior
+            if (!this.cargoTarget) {
+                if (this.role === AI_ROLE.TRANSPORT) {
+                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
+                } else {
+                    this.currentState = AI_STATE.IDLE;
+                }
+                return false; // No cargo to collect, resume normal behavior
+            }
+        }
+        
+        // Different movement handling for transporters vs. other roles
+        if (this.role === AI_ROLE.TRANSPORT) {
+            // Use direct thrust approach like in updateTransportAI
+            let desiredDir = p5.Vector.sub(this.cargoTarget.pos, this.pos);
+            let distance = desiredDir.mag();
+            desiredDir.normalize();
+            
+            // Rotate smoothly towards the cargo
+            let targetAngle = desiredDir.heading();
+            let diff = targetAngle - this.angle;
+            diff = ((diff % TWO_PI) + TWO_PI) % TWO_PI;
+            if (diff > PI) diff -= TWO_PI;
+            
+            // CHANGE 1: Use a smaller rotation step to prevent overshooting
+            if (abs(diff) > 0.02) {
+                // Reduce rotation speed by half for more precise movement
+                let rotationStep = constrain(diff, -this.rotationSpeed * 0.5, this.rotationSpeed * 0.5);
+                this.angle += rotationStep;
+                this.angle = (this.angle + TWO_PI) % TWO_PI;
+            }
+            
+            // CHANGE 2: Always apply some thrust, but vary the amount based on alignment
+            // This ensures the ship is always making forward progress
+            let thrustScale = 0.2; // Minimum thrust even when poorly aligned
+            
+            if (abs(diff) < 0.8) { // Much wider tolerance (about 45 degrees)
+                // Scale thrust based on alignment and distance
+                thrustScale = map(abs(diff), 0, 0.8, 1.0, 0.2);
+                
+                const arrivalDistance = 100; // Start slowing down within this distance
+                if (distance < arrivalDistance) {
+                    thrustScale *= map(distance, 0, arrivalDistance, 0.2, 1.0);
+                }
+            }
+            
+            // Apply thrust with calculated scale
+            let thrustVec = p5.Vector.fromAngle(this.angle);
+            thrustVec.mult(this.thrustForce * thrustScale);
+            this.vel.add(thrustVec);
+            
+            // CHANGE 3: Add stronger directional damping to prevent circling
+            // Apply more damping to velocity component perpendicular to desired direction
+            let velParallel = desiredDir.copy().mult(desiredDir.dot(this.vel));
+            let velPerp = p5.Vector.sub(this.vel, velParallel);
+            velPerp.mult(0.7); // Dampen perpendicular component more aggressively
+            this.vel = p5.Vector.add(velParallel, velPerp);
+            
+            // Additional damping when close to cargo
+            if (distance < 50) {
+                this.vel.mult(0.85);
+            }
+            
+            // Apply standard physics updates
+            this.vel.mult(this.drag);
+            this.vel.limit(this.maxSpeed);
+            
+            // Update position
+            if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+                this.pos.add(this.vel);
+                
+                // Debug log to track progress
+                if (frameCount % 30 === 0) {
+                    console.log(`Transport moving toward cargo: Vel(${this.vel.x.toFixed(2)},${this.vel.y.toFixed(2)}), Dist:${distance.toFixed(2)}, Angle diff:${diff.toFixed(3)}, Thrust:${thrustScale.toFixed(2)}`);
+                }
+            } else {
+                this.vel.set(0, 0);
+                console.error(`Invalid velocity for ${this.shipTypeName} during cargo collection`);
+            }
+        } else {
+            // Original approach for pirates and other ships
+            const desiredMovementTargetPos = this.cargoTarget.pos;
+            this.performRotationAndThrust(desiredMovementTargetPos);
+        }
+        
+        // Check if we've reached the cargo
+        const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
+        
+        // When close enough to collect
+        if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
+            // Collection logic unchanged
+            this.cargoTarget.collected = true;
+            
+            const cargoIndex = system.cargo.indexOf(this.cargoTarget);
+            if (cargoIndex !== -1) {
+                system.cargo.splice(cargoIndex, 1);
+            }
+            
+            console.log(`${this.shipTypeName} collected cargo`);
+            this.cargoTarget = null;
+            this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+            return true;
+        }
+        
+        return true; // Still collecting
+    }
+
+    // -----------------------
+    // --- Movement & Physics ---
+    // -----------------------
+    
+    /** Predicts player's future position. */
+    predictTargetPosition() {
+        if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
+        
+        // Reuse the temp vector instead of creating new ones
+        this.tempVector.set(this.target.vel.x, this.target.vel.y);
+        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        this.tempVector.mult(pf);
+        this.tempVector.add(this.target.pos);
+        return this.tempVector;
+    }
+
+    /** 
+     * Normalizes an angle to the range [-PI, PI]
+     * @param {number} angle - The angle to normalize
+     * @return {number} The normalized angle
+     */
+    normalizeAngle(angle) {
+        let normalized = ((angle % TWO_PI) + TWO_PI) % TWO_PI;
+        if (normalized > PI) normalized -= TWO_PI;
+        return normalized;
+    }
+
+    /** 
+     * Gets the signed angle difference between target angle and current angle 
+     * @param {number} targetAngle - The target angle in radians
+     * @return {number} The normalized angle difference in range [-PI, PI]
+     */
+    getAngleDifference(targetAngle) {
+        let diff = targetAngle - this.angle;
+        return this.normalizeAngle(diff);
+    }
+
+    /** 
+     * Calculates distance to target entity
+     * @param {Object} target - Entity with pos property
+     * @return {number} Distance to target or Infinity if invalid
+     */
+    distanceTo(target) {
+        if (!target?.pos) return Infinity;
+        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+    }
+
+    /**
+     * Checks if target is valid (exists, has position, positive hull, not destroyed)
+     * @param {Object} target - The target to validate
+     * @return {boolean} Whether target is valid
+     */
+    isTargetValid(target) {
+        return target && target.pos && 
+               ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) && 
+               (target.destroyed === undefined || !target.destroyed);
+    }
+
+    /** 
+     * Rotates towards target angle (radians). Returns remaining difference (radians).
+     * @param {number} targetAngleRadians - The target angle to rotate towards
+     * @return {number} The remaining angle difference
+     */
+    rotateTowards(targetAngleRadians) {
+        if (isNaN(targetAngleRadians)) return 0;
+        
+        let diff = this.getAngleDifference(targetAngleRadians);
+        
+        const rotationThreshold = 0.02;
+        if (abs(diff) > rotationThreshold) {
+            // Use Math.sign for browser compatibility 
+            const rotationAmount = Math.sign(diff) * 
+                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
+            this.angle += rotationAmount;
+        }
+        return diff;
+    }
+
+    /** 
+     * Applies forward thrust in current facing direction
+     * @param {number} [multiplier=1.0] - Optional thrust multiplier
+     */
+    thrustForward(multiplier = 1.0) {
+        if (isNaN(this.angle)) return;
+        
+        this.thrustVector.set(cos(this.angle), sin(this.angle));
+        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(this.thrustVector);
+        
+        // Create thrust particles
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        }
+    }
+
+    /** 
+     * Sets a target position far away for Haulers leaving the system.
+     * @param {Object} system - The current star system
+     */
+    setLeavingSystemTarget(system) {
+        let angle = random(TWO_PI);
+        let dist = (system?.despawnRadius ?? 3000) * 1.5;
+        this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
+        this.currentState = AI_STATE.LEAVING_SYSTEM;
+        this.hasPausedNearStation = false;
+    }
+
+    /** 
+     * Helper: Rotates towards target, applies thrust if aligned. Returns angle difference.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
+     * @return {number} The angle difference in radians
+     */
     performRotationAndThrust(desiredMovementTargetPos) {
         let angleDifference = PI;
+        
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
-            // FIX: Calculate direction vector correctly
+            // Calculate direction vector correctly
             let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
             
-            // FIX: Only compute angle if length isn't zero
+            // Only compute angle if length isn't zero
             if (desiredDir.magSq() > 0.001) {
                 let desiredAngle = desiredDir.heading();
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
         
-        // FIX: Make sure angle difference is properly normalized before comparison
-        angleDifference = ((angleDifference % TWO_PI) + TWO_PI) % TWO_PI;
-        if (angleDifference > PI) angleDifference -= TWO_PI;
-        
-        // FIX: Add proper thrust logic
+        // Add proper thrust logic
         if (this.currentState !== AI_STATE.IDLE && 
             this.currentState !== AI_STATE.NEAR_STATION && 
             abs(angleDifference) < this.angleTolerance) {
@@ -737,55 +942,76 @@ class Enemy {
         return angleDifference;
     }
 
-    /** Helper: Checks conditions and calls fire() if appropriate. */
+    // ---------------------------
+    // --- Combat & Weapons ---
+    // ---------------------------
+    
+    /**
+     * Check if weapon cooldown is complete and ready to fire
+     * @return {boolean} Whether weapon is ready to fire
+     */
+    isWeaponReady() {
+        return this.fireCooldown <= 0;
+    }
+
+    /**
+     * Select appropriate weapon based on distance to target
+     * @param {number} distanceToTarget - Distance to current target
+     */
+    selectBestWeapon(distanceToTarget) {
+        if (!this.weapons || this.weapons.length <= 1) return;
+        
+        const isLongRange = distanceToTarget > this.firingRange * 0.7;
+        const currentIsBeam = this.currentWeapon.type.includes('beam');
+        
+        if ((isLongRange && !currentIsBeam) || (!isLongRange && currentIsBeam)) {
+            this.cycleWeapon();
+        }
+    }
+
+    /**
+     * Check if we can fire at target based on angle difference
+     * @param {number} targetAngle - Angle to target in radians
+     * @return {boolean} Whether firing angle is acceptable
+     */
+    canFireAtTarget(targetAngle) {
+        const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
+        const angleDiff = this.getAngleDifference(targetAngle);
+        const firingAngleTolerance = 0.52;
+        
+        return this.currentState !== AI_STATE.IDLE && 
+               (isTurretWeapon || Math.abs(angleDiff) < firingAngleTolerance);
+    }
+
+    /** 
+     * Helper: Checks conditions and calls fire() if appropriate.
+     * @param {Object} system - The current star system
+     * @param {boolean} targetExists - Whether target is valid
+     * @param {number} distanceToTarget - Distance to target
+     * @param {number} shootingAngle - Angle to target in radians
+     */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         if (!targetExists) return;
         
-        // Check if we should switch weapons based on range
-        if (this.weapons && this.weapons.length > 1) {
-            // Example logic: use beam weapons at long range, projectiles at short range
-            const isLongRange = distanceToTarget > this.firingRange * 0.7;
-            const currentIsBeam = this.currentWeapon.type.includes('beam');
-            
-            if ((isLongRange && !currentIsBeam) || (!isLongRange && currentIsBeam)) {
-                this.cycleWeapon();
-            }
-        }
+        // Select best weapon for current range
+        this.selectBestWeapon(distanceToTarget);
         
         // Check if target is in firing range and cooldown is ready
-        if (distanceToTarget < this.firingRange && this.fireCooldown <= 0) {
-            // Calculate angle difference between current angle and angle to target
-            let angleDiff = shootingAngle - this.angle;
-            
-            // REPLACE:
-            angleDiff = ((angleDiff % TWO_PI) + TWO_PI) % TWO_PI;
-            if (angleDiff > PI) angleDiff -= TWO_PI;
-            
-            // Check if weapon is a turret (can fire in any direction)
-            const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
-            
-            // MODIFIED: Only check firing angle for non-turret weapons
-            // Turrets can fire in any direction regardless of ship orientation
-            const firingAngleTolerance = 0.52;
-            
-            if (this.currentState !== AI_STATE.IDLE && 
-                (isTurretWeapon || abs(angleDiff) < firingAngleTolerance)) {
-                
+        if (distanceToTarget < this.firingRange && this.isWeaponReady()) {
+            // Check if we can fire at the target
+            if (this.canFireAtTarget(shootingAngle)) {
                 if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
                 
                 // For turrets, pass the player/target as the target parameter
-                // so the weapon system can calculate the correct firing angle
-                if (isTurretWeapon) {
+                if (this.currentWeapon && this.currentWeapon.type === 'turret') {
                     this.fireWeapon(this.target);
-                    console.log(`${this.shipTypeName} turret fired at target at distance ${distanceToTarget.toFixed(2)}`);
                 } else {
                     this.fireWeapon();
-                    console.log(`${this.shipTypeName} fired at target at distance ${distanceToTarget.toFixed(2)}`);
                 }
                 
                 this.fireCooldown = this.fireRate;
             } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
-                // CRITICAL FIX: Force IDLE pirates who want to fire to transition to APPROACHING
+                // Force IDLE pirates who want to fire to transition to APPROACHING
                 console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);
                 this.currentState = AI_STATE.APPROACHING;
             }
@@ -819,6 +1045,10 @@ class Enemy {
         }
     }
 
+    // -----------------
+    // --- Rendering ---
+    // -----------------
+    
     /** Draws the enemy ship using its defined draw function and role-based stroke. */
     draw() {
         if (this.destroyed || isNaN(this.angle)) return;
@@ -937,40 +1167,10 @@ class Enemy {
         }
     }
 
-    // --- Standard Methods ---
-    takeDamage(amount, attacker = null) { 
-        if(this.destroyed || amount <= 0) return;
-        
-        this.hull -= amount; 
-        
-        // Track who's attacking us
-        if (attacker) {
-            this.lastAttacker = attacker;
-            this.targetSwitchCooldown = 0; // Allow immediate targeting of attackers
-        }
-        
-        // Chance to jettison cargo when hit hard enough
-        if (amount > 5 && random() < 0.1) { // 10% chance
-            this.jettisionCargo();
-        }
-        
-        if (this.hull <= 0) {
-            this.hull = 0;
-            this.destroyed = true;
-            
-            // Drop cargo on destruction
-            this.dropCargo();
-            
-            // Create explosion at destruction position
-            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
-            }
-            
-            //console.log(`${this.role} ${this.shipTypeName} destroyed!`);
-            uiManager.addMessage(`${this.role} ${this.shipTypeName} destroyed`);
-        }
-    }
-
+    // ------------------
+    // --- Cargo Handling ---
+    // ------------------
+    
     /**
      * Jettisons a single piece of cargo when hit
      */
@@ -1041,10 +1241,11 @@ class Enemy {
         }
     }
 
-    isDestroyed() { return this.destroyed; }
-    checkCollision(target) { if (!target?.pos || target.size===undefined) return false; let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); let sumRadii = (target.size / 2) + (this.size / 2); return dSq < sq(sumRadii); }
-
-    /** Detects nearby cargo within range */
+    /** 
+     * Detects nearby cargo within range 
+     * @param {Object} system - The current star system
+     * @return {Object|null} The closest cargo or null if none found
+     */
     detectCargo(system) {
         if (!system?.cargo || system.cargo.length === 0) return null;
         
@@ -1064,117 +1265,68 @@ class Enemy {
         return closestCargo;
     }
 
-    /** Handles cargo collection AI */
-    updateCargoCollectionAI(system) {
-        // If our target cargo disappeared or was collected, find a new one
-        if (!this.cargoTarget || this.cargoTarget.collected) {
-            this.cargoTarget = this.detectCargo(system);
-            
-            // If no cargo found, return to normal behavior
-            if (!this.cargoTarget) {
-                if (this.role === AI_ROLE.TRANSPORT) {
-                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
-                } else {
-                    this.currentState = AI_STATE.IDLE;
-                }
-                return false; // No cargo to collect, resume normal behavior
-            }
+    // -----------------------
+    // --- Utility Methods ---
+    // -----------------------
+    
+    /**
+     * Applies damage to the ship and handles destruction
+     * @param {number} amount - Amount of damage to apply
+     * @param {Object} attacker - Entity that caused the damage
+     * @return {number} Remaining hull value
+     */
+    takeDamage(amount, attacker = null) { 
+        if(this.destroyed || amount <= 0) return;
+        
+        this.hull -= amount; 
+        
+        // Track who's attacking us
+        if (attacker) {
+            this.lastAttacker = attacker;
+            this.targetSwitchCooldown = 0; // Allow immediate targeting of attackers
         }
         
-        // Different movement handling for transporters vs. other roles
-        if (this.role === AI_ROLE.TRANSPORT) {
-            // Use direct thrust approach like in updateTransportAI
-            let desiredDir = p5.Vector.sub(this.cargoTarget.pos, this.pos);
-            let distance = desiredDir.mag();
-            desiredDir.normalize();
-            
-            // Rotate smoothly towards the cargo
-            let targetAngle = desiredDir.heading();
-            let diff = targetAngle - this.angle;
-            diff = ((diff % TWO_PI) + TWO_PI) % TWO_PI;
-            if (diff > PI) diff -= TWO_PI;
-            
-            // CHANGE 1: Use a smaller rotation step to prevent overshooting
-            if (abs(diff) > 0.02) {
-                // Reduce rotation speed by half for more precise movement
-                let rotationStep = constrain(diff, -this.rotationSpeed * 0.5, this.rotationSpeed * 0.5);
-                this.angle += rotationStep;
-                this.angle = (this.angle + TWO_PI) % TWO_PI;
-            }
-            
-            // CHANGE 2: Always apply some thrust, but vary the amount based on alignment
-            // This ensures the ship is always making forward progress
-            let thrustScale = 0.2; // Minimum thrust even when poorly aligned
-            
-            if (abs(diff) < 0.8) { // Much wider tolerance (about 45 degrees)
-                // Scale thrust based on alignment and distance
-                thrustScale = map(abs(diff), 0, 0.8, 1.0, 0.2);
-                
-                const arrivalDistance = 100; // Start slowing down within this distance
-                if (distance < arrivalDistance) {
-                    thrustScale *= map(distance, 0, arrivalDistance, 0.2, 1.0);
-                }
-            }
-            
-            // Apply thrust with calculated scale
-            let thrustVec = p5.Vector.fromAngle(this.angle);
-            thrustVec.mult(this.thrustForce * thrustScale);
-            this.vel.add(thrustVec);
-            
-            // CHANGE 3: Add stronger directional damping to prevent circling
-            // Apply more damping to velocity component perpendicular to desired direction
-            let velParallel = desiredDir.copy().mult(desiredDir.dot(this.vel));
-            let velPerp = p5.Vector.sub(this.vel, velParallel);
-            velPerp.mult(0.7); // Dampen perpendicular component more aggressively
-            this.vel = p5.Vector.add(velParallel, velPerp);
-            
-            // Additional damping when close to cargo
-            if (distance < 50) {
-                this.vel.mult(0.85);
-            }
-            
-            // Apply standard physics updates
-            this.vel.mult(this.drag);
-            this.vel.limit(this.maxSpeed);
-            
-            // Update position
-            if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-                this.pos.add(this.vel);
-                
-                // Debug log to track progress
-                if (frameCount % 30 === 0) {
-                    console.log(`Transport moving toward cargo: Vel(${this.vel.x.toFixed(2)},${this.vel.y.toFixed(2)}), Dist:${distance.toFixed(2)}, Angle diff:${diff.toFixed(3)}, Thrust:${thrustScale.toFixed(2)}`);
-                }
-            } else {
-                this.vel.set(0, 0);
-                console.error(`Invalid velocity for ${this.shipTypeName} during cargo collection`);
-            }
-        } else {
-            // Original approach for pirates and other ships
-            const desiredMovementTargetPos = this.cargoTarget.pos;
-            this.performRotationAndThrust(desiredMovementTargetPos);
+        // Chance to jettison cargo when hit hard enough
+        if (amount > 5 && random() < 0.1) { // 10% chance
+            this.jettisionCargo();
         }
         
-        // Check if we've reached the cargo
-        const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
-        
-        // When close enough to collect
-        if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
-            // Collection logic unchanged
-            this.cargoTarget.collected = true;
+        if (this.hull <= 0) {
+            this.hull = 0;
+            this.destroyed = true;
             
-            const cargoIndex = system.cargo.indexOf(this.cargoTarget);
-            if (cargoIndex !== -1) {
-                system.cargo.splice(cargoIndex, 1);
+            // Drop cargo on destruction
+            this.dropCargo();
+            
+            // Create explosion at destruction position
+            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
             }
             
-            console.log(`${this.shipTypeName} collected cargo`);
-            this.cargoTarget = null;
-            this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
-            return true;
+            //console.log(`${this.role} ${this.shipTypeName} destroyed!`);
+            uiManager.addMessage(`${this.role} ${this.shipTypeName} destroyed`);
         }
-        
-        return true; // Still collecting
+        return this.hull;
     }
-} // End of Enemy Class
+
+    /**
+     * Checks if ship has been destroyed
+     * @return {boolean} Whether ship is destroyed
+     */
+    isDestroyed() { 
+        return this.destroyed; 
+    }
+
+    /**
+     * Checks for collision with target entity
+     * @param {Object} target - Entity to check collision with
+     * @return {boolean} Whether collision occurred
+     */
+    checkCollision(target) { 
+        if (!target?.pos || target.size === undefined) return false; 
+        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); 
+        let sumRadii = (target.size / 2) + (this.size / 2); 
+        return dSq < sq(sumRadii);
+    }
+}
 

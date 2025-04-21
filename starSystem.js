@@ -208,6 +208,14 @@ class StarSystem {
         this.enemies = []; this.projectiles = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         
+        // CRITICAL FIX: Set system-wide police alert immediately if player is wanted
+        if (player && player.isWanted) {
+            this.policeAlertSent = true;
+            console.log(`System-wide police alert active in ${this.name} system!`);
+        } else {
+            this.policeAlertSent = false;
+        }
+        
         // Initial system population
         setTimeout(() => {
             if (player && player.pos) {
@@ -348,14 +356,18 @@ class StarSystem {
             newEnemy.initializeColors();
             
             // NEW CODE: Make police immediately target wanted player upon spawn
-            if (newEnemy.role === AI_ROLE.POLICE && player && player.isWanted && !player.destroyed) {
+            if (newEnemy.role === AI_ROLE.POLICE && 
+                ((player && player.isWanted && !player.destroyed) || this.policeAlertSent)) {
+                
                 newEnemy.target = player;
                 newEnemy.currentState = AI_STATE.APPROACHING;
+                
                 // Force initial rotation toward player
                 if (newEnemy.pos && player.pos) {
                     let angle = atan2(player.pos.y - newEnemy.pos.y, player.pos.x - player.pos.x);
                     newEnemy.angle = angle; // Already in radians
                 }
+                
                 console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }
             
