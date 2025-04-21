@@ -2,6 +2,12 @@
 
 ## Bugs and Issues
 
+weapon names
+weapon categories
+
+make ship role part of the ship
+
+
 aI swithcing really quicly making red line jitter
 
 - Fix inconsistent ship pricing formulas (previously baseHull*20 + cargoCapacity*10 + 1000, now baseMaxSpeed * hull)
@@ -34,6 +40,11 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+scanner upgrade to show helthbars and text for ships
+
+
+blue line point to station
+
 - Implement visual starfield distortion during hyperjump
 - Add more varied asteroid field generation
 - Implement asteroid mining gameplay
@@ -46,16 +57,12 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Graphics and UI Improvements
 
-- Redesign space stations with more complex models and entry ports
+- Redesign space station
 - Add proper 3D ship models (even if sprite-based)
-- Improve ship destruction sequences
 - Add engine thrust visualization for all ships
-- Add more visual effects for different weapon types
-- Create station interior view when docked
 - Improve HUD with radar and target information
 - Add system for ship damage visualization on hulls
 - Improve galaxy map interface with route planning
-- Add cockpit view option
 
 ## Economy and Progression
 
@@ -63,7 +70,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Add price fluctuations based on supply/demand
 - Implement market events (shortages, surpluses)
 - Create proper ship purchasing/trading system with trade-ins
-- Add ship insurance system
 - Implement reputation system with factions
 - Create consequences for illegal activities
 - Add bounty system for player crimes
@@ -92,11 +98,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Implement procedural planet surface generation
 - Create space station construction and ownership
 - Add player fleet management
-- Implement crew hiring and management
 - Add multiplayer capabilities
-- Create mod support system
-- Implement save/load with multiple profiles
-- Add achievements system
+- Add elite achievements system
 - Create advanced navigation with autopilot options
 
 ## Technical Improvements
@@ -108,4 +111,3 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Add proper error handling and recovery
 - Implement sound effects and music system
 - Add settings menu with graphics options
-- Create proper game packaging and distribution
