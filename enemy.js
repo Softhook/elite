@@ -22,7 +22,8 @@ const AI_STATE = {
     NEAR_STATION: 5,  // Paused near station - Hauler only
     LEAVING_SYSTEM: 6,// Moving towards exit point - Hauler only
     TRANSPORTING: 7,  // New state for transport behaviour
-    COLLECTING_CARGO: 8   // New state for cargo collection behavior
+    COLLECTING_CARGO: 8,   // New state for cargo collection behavior
+    FLEEING: 9        // New state for damaged ships trying to escape
 };
 
 // Reverse lookup for AI_STATE values to names
@@ -214,6 +215,9 @@ class Enemy {
 
         // Flag for thrusting
         this.isThrusting = false;
+
+        // Initialize attack cooldown
+        this.attackCooldown = 0;
     }
 
     // -----------------------------
@@ -263,6 +267,11 @@ class Enemy {
         // Cargo collection cooldown
         if (this.cargoCollectionCooldown > 0) {
             this.cargoCollectionCooldown -= deltaTime / 1000;
+        }
+
+        // Process hauler attack cooldown
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= deltaTime / 1000;
         }
 
         // For pirates: Look for cargo first if not already collecting
@@ -380,7 +389,8 @@ class Enemy {
                     return true;
                 }
             } else if (this.role === AI_ROLE.HAULER && 
-                       attackerDistance < this.detectionRange) {
+                       attackerDistance < this.detectionRange &&
+                       (!this.attackCooldown || this.attackCooldown <= 0)) {
                 // Haulers should always respond to attacks, regardless of threat level
                 
                 // Store current hauler state to return to later
@@ -750,6 +760,55 @@ class Enemy {
                     this.changeState(AI_STATE.APPROACHING);
                 }
                 break;
+
+            case AI_STATE.FLEEING:
+                // Add a minimum flee time to prevent premature exit
+                if (!this.fleeStartTime) {
+                    this.fleeStartTime = millis();
+                    this.fleeMinDuration = 2000; // Minimum 2 seconds of fleeing
+                }
+                
+                // When fleeing, move away from attacker and increase speed
+                if (this.target && this.target.pos) {
+                    let escapeVector = p5.Vector.sub(this.pos, this.target.pos);
+                    escapeVector.normalize().mult(2000);  // Aim very far away
+                    this.escapeTarget = p5.Vector.add(this.pos, escapeVector);
+                    
+                    // Apply stronger thrust for escape
+                    this.performRotationAndThrust(this.escapeTarget);
+                    this.thrustForward(1.2);  // Apply extra thrust when fleeing
+                    
+                    // Add some randomness to make escape path less predictable
+                    if (frameCount % 20 === 0) {
+                        this.vel.add(p5.Vector.random2D().mult(0.5));
+                    }
+                }
+                
+                // Only exit FLEEING when truly safe AND minimum flee time has passed
+                const timeInFlee = millis() - (this.fleeStartTime || 0);
+                if (timeInFlee > this.fleeMinDuration && 
+                    (!this.isTargetValid(this.target) || 
+                     this.distanceTo(this.target) > this.detectionRange * 2.0)) {
+                    
+                    console.log(`${this.shipTypeName} escaped successfully!`);
+                    
+                    // Add a long cooldown before we can be provoked again
+                    this.attackCooldown = 20.0;
+                    this.lastAttacker = null;  // Reset attacker reference
+                    this.fleeStartTime = null;  // Reset flee timer
+                    
+                    // Always return to a non-combat state (PATROLLING or previous state)
+                    // IMPORTANT: Never return to a combat state like ATTACK_PASS
+                    if (this.previousHaulerState && 
+                        this.previousHaulerState !== AI_STATE.APPROACHING && 
+                        this.previousHaulerState !== AI_STATE.ATTACK_PASS && 
+                        this.previousHaulerState !== AI_STATE.REPOSITIONING) {
+                        this.changeState(this.previousHaulerState);
+                    } else {
+                        this.changeState(AI_STATE.PATROLLING);
+                    }
+                }
+                break;
         }
     }
 
@@ -887,7 +946,9 @@ class Enemy {
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
             this.currentState !== AI_STATE.APPROACHING && 
             this.currentState !== AI_STATE.ATTACK_PASS &&
-            this.currentState !== AI_STATE.REPOSITIONING) {
+            this.currentState !== AI_STATE.REPOSITIONING &&
+            this.currentState !== AI_STATE.FLEEING &&
+            (!this.attackCooldown || this.attackCooldown <= 0)) {  // Add this line
             
             const attackerDistance = this.distanceTo(this.lastAttacker);
             
@@ -918,53 +979,24 @@ class Enemy {
             // Update the combat timer
             this.haulerCombatTimer -= deltaTime / 1000;
             
-            // If target destroyed or timer expired, return to hauling
-            if (this.haulerCombatTimer <= 0 || 
-                !this.isTargetValid(this.target) || 
-                this.distanceTo(this.target) > this.detectionRange * 2) {
-                
-                // Reset combat-related properties
-                this.target = null;
-                this.haulerCombatTimer = undefined;
-                
-                // Return to previous hauling state
-                if (this.previousHaulerState) {
-                    this.changeState(this.previousHaulerState);
-                    if (this.previousTargetPos) {
-                        this.patrolTargetPos = this.previousTargetPos;
-                    }
-                    console.log(`Hauler ${this.shipTypeName} returning to trade route`);
-                } else {
-                    this.changeState(AI_STATE.PATROLLING);
-                }
-                
-                return; // Skip combat logic, go back to normal hauling
-            }
-
             // Check hull status - flee if heavily damaged
-            if (this.haulerCombatTimer !== undefined && this.hull < this.maxHull * 0.4) {
+            if (this.hull < this.maxHull * 0.4 && 
+                this.currentState !== AI_STATE.FLEEING) {
                 console.log(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
                 
-                // Instead of attacking, try to move away from attacker
+                // Change to actual fleeing state
+                this.changeState(AI_STATE.FLEEING);
+                
+                // Apply immediate velocity away from the threat
                 if (this.target && this.target.pos) {
-                    // Create an escape vector away from attacker
-                    let escapeVector = p5.Vector.sub(this.pos, this.target.pos);
-                    escapeVector.normalize().mult(1000); // Far away point
-                    
-                    // Set as temporary movement target
-                    this.escapeTarget = p5.Vector.add(this.pos, escapeVector);
-                    
-                    // Custom movement logic for escape
-                    this.performRotationAndThrust(this.escapeTarget);
-                    
-                    // Reduce combat timer to return to trading faster
-                    this.haulerCombatTimer *= 0.5;
+                    let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize();
+                    this.vel.add(escapeDir.mult(this.maxSpeed * 0.8));
                 }
                 
-                return;
+                return; // Skip other combat logic
             }
             
-            // While in combat, use combat AI
+            // Original combat handling code continues...
             this.updateCombatAI(system);
             return;
         }
@@ -972,12 +1004,106 @@ class Enemy {
         // Original hauler logic for normal operations...
         let desiredMovementTargetPos = null;
         switch (this.currentState) {
-            case AI_STATE.PATROLLING: if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy(); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dS < this.stationProximityThreshold) { this.changeState(AI_STATE.NEAR_STATION); } break;
-            case AI_STATE.NEAR_STATION: this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000; if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.changeState(AI_STATE.LEAVING_SYSTEM); desiredMovementTargetPos = this.patrolTargetPos; } break;
-            case AI_STATE.LEAVING_SYSTEM: if (!this.patrolTargetPos) { this.setLeavingSystemTarget(system); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) break; let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dE < 150) { this.destroyed = true; } break;
-            default: if(system?.station?.pos) { this.patrolTargetPos = system.station.pos.copy(); this.changeState(AI_STATE.PATROLLING); } else { this.changeState(AI_STATE.LEAVING_SYSTEM); } break;
+            case AI_STATE.PATROLLING: 
+                // Existing patrolling code... 
+                if (!this.patrolTargetPos) { 
+                    this.patrolTargetPos = system?.station?.pos?.copy(); 
+                } 
+                desiredMovementTargetPos = this.patrolTargetPos; 
+                if (!desiredMovementTargetPos) { 
+                    this.setLeavingSystemTarget(system); 
+                    desiredMovementTargetPos = this.patrolTargetPos; 
+                    break; 
+                } 
+                let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
+                if (dS < this.stationProximityThreshold) { 
+                    this.changeState(AI_STATE.NEAR_STATION); 
+                } 
+                break;
+                
+            case AI_STATE.NEAR_STATION: 
+                // Existing near station code... 
+                this.vel.mult(0.8); 
+                this.nearStationTimer -= deltaTime / 1000; 
+                if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { 
+                    this.hasPausedNearStation = true; 
+                    this.changeState(AI_STATE.LEAVING_SYSTEM); 
+                    desiredMovementTargetPos = this.patrolTargetPos; 
+                } 
+                break;
+                
+            case AI_STATE.LEAVING_SYSTEM: 
+                // Existing leaving system code... 
+                if (!this.patrolTargetPos) { 
+                    this.setLeavingSystemTarget(system); 
+                } 
+                desiredMovementTargetPos = this.patrolTargetPos; 
+                if (!desiredMovementTargetPos) break; 
+                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
+                if (dE < 150) { 
+                    this.destroyed = true; 
+                } 
+                break;
+                
+            case AI_STATE.FLEEING:
+                // Handle fleeing directly in hauler update loop
+                if (this.target && this.target.pos) {
+                    // Calculate escape vector away from threat
+                    const escapeVector = p5.Vector.sub(this.pos, this.target.pos);
+                    escapeVector.normalize().mult(2000);
+                    const escapeTargetPos = p5.Vector.add(this.pos, escapeVector);
+                    
+                    // Use strong thrust to escape
+                    const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
+                    
+                    // Apply extra thrust when generally pointing in escape direction
+                    if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
+                        this.thrustForward(1.5); // 50% more thrust when fleeing
+                    }
+                    
+                    // Add randomness to make escape path less predictable
+                    if (frameCount % 20 === 0) {
+                        this.vel.add(p5.Vector.random2D().mult(0.5));
+                    }
+                    
+                    // Check if we've escaped far enough
+                    if (!this.isTargetValid(this.target) || 
+                        this.distanceTo(this.target) > this.detectionRange * 2.5) {
+                        console.log(`${this.shipTypeName} escaped successfully!`);
+                        
+                        // Add long cooldown before we can be provoked again
+                        this.attackCooldown = 20.0;
+                        this.lastAttacker = null; // Reset attacker reference
+                        
+                        // Return to normal hauling
+                        if (this.previousHaulerState) {
+                            this.changeState(this.previousHaulerState);
+                        } else {
+                            this.changeState(AI_STATE.PATROLLING);
+                        }
+                    }
+                    
+                    // Skip the normal movement code below
+                    return;
+                } else {
+                    // No valid target to flee from, return to normal
+                    this.changeState(AI_STATE.PATROLLING);
+                    return;
+                }
+                
+            default: 
+                // Existing default code... 
+                if(system?.station?.pos) { 
+                    this.patrolTargetPos = system.station.pos.copy(); 
+                    this.changeState(AI_STATE.PATROLLING); 
+                } else { 
+                    this.changeState(AI_STATE.LEAVING_SYSTEM); 
+                } 
+                break;
         }
-        this.performRotationAndThrust(desiredMovementTargetPos); // Haulers just move
+        
+        // Existing movement code...
+        this.performRotationAndThrust(desiredMovementTargetPos);
     }
 
     /** Transport AI Logic - Moves between two endpoints. */
@@ -1887,6 +2013,10 @@ class Enemy {
                 // Reset cargo target when leaving collection state
                 this.cargoTarget = null;
                 this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+                break;
+
+            case AI_STATE.FLEEING:
+                this.fleeStartTime = null;
                 break;
         }
     }
