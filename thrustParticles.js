@@ -10,7 +10,10 @@ class ThrustParticle {
         // Create velocity vector pointing opposite to ship's direction
         // with some randomization for spread
         const speed = random(0.5, 2.5);
+        // Angle is in radians, add PI to reverse direction and small random spread
         const spreadAngle = angle + PI + random(-0.2, 0.2);
+        // Ensure this is actually radians
+        // These are small radian values (~11 degrees) for random spread
         this.vel = p5.Vector.fromAngle(spreadAngle).mult(speed);
         
         // Size based on ship size but with variation

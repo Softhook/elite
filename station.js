@@ -11,7 +11,7 @@ class Station {
         this.market = new Market(systemType);
         this.color = color(180, 180, 200); // Visual color
         this.angle = 0; // Optional rotation angle
-        this.rotationSpeed = 0.1; // Optional rotation speed
+        this.rotationSpeed = 0.02; // Optional rotation speed
     }
 
     getMarket() {

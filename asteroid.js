@@ -41,8 +41,8 @@ class Asteroid {
     update() {
         if (this.destroyed) return;
         this.pos.add(this.vel);
-        this.angle += this.rotationSpeed;
-        this.angle = (this.angle + TWO_PI) % TWO_PI;
+        this.angle = (this.angle + this.rotationSpeed) % TWO_PI;
+        if (this.angle < 0) this.angle += TWO_PI;
     }
 
     draw() {
@@ -53,18 +53,16 @@ class Asteroid {
         rotate(this.angle);
 
         fill(this.color);
-       // stroke(80);
-       // strokeWeight(2);
+        stroke(80);
+        strokeWeight(1);
 
-        // Draw a square using vertices, inscribed in the collision circle
-        let r = this.size / 2;
-        let s = r * Math.SQRT1_2; // side from center to corner for inscribed square
+        // Draw an irregular shape using pre-generated vertices
         beginShape();
-        vertex(-s, -s);
-        vertex(s, -s);
-        vertex(s, s);
-        vertex(-s, s);
+        for (let v of this.vertices) {
+            vertex(v.x, v.y);
+        }
         endShape(CLOSE);
+        
         pop();
 
         // --- Draw Health Bar ---
@@ -73,7 +71,7 @@ class Asteroid {
             let barW = this.size * 0.7;
             let barH = 5;
             let barX = this.pos.x - barW / 2;
-            let barY = this.pos.y - r - 14;
+            let barY = this.pos.y - this.maxRadius - 14;
 
             push();
             noStroke();
@@ -83,14 +81,6 @@ class Asteroid {
             rect(barX, barY, barW * healthPercent, barH);
             pop();
         }
-
-        // --- Draw Collision Circle for Debugging ---
-        push();
-        noFill();
-        stroke(0, 255, 255, 120);
-        strokeWeight(1);
-        ellipse(this.pos.x, this.pos.y, r * 2, r * 2);
-        pop();
     }
 
     /**

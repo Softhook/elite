@@ -367,11 +367,10 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (!this.currentSystem || isNaN(this.angle)) { return; } // Safety checks
         let tx = width / 2 - this.pos.x; let ty = height / 2 - this.pos.y;
         let worldMx = mouseX - tx; let worldMy = mouseY - ty;
-        let shootingAngleDeg = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
-        let shootingAngleRad = radians(shootingAngleDeg); // Ensure Radians
+        let shootingAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
         let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
         let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngleRad, this); // Pass `this` (the player object)
+        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngle, this); // Pass `this` (the player object)
         this.currentSystem.addProjectile(proj);
     }
 

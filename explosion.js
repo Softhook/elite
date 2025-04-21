@@ -69,15 +69,16 @@ class Explosion {
         const debrisCount = floor(this.size / 8) + 5;
         
         for (let i = 0; i < debrisCount; i++) {
-            // Randomize velocity
             const angle = random(TWO_PI);
-            const speed = random(2, 7) * constrain(this.size / 30, 0.8, 2.5);
+            // Reduce speed range to keep debris closer
+            const speed = random(1.5, 4.5) * constrain(this.size / 30, 0.6, 1.8);
             const vel = p5.Vector.fromAngle(angle).mult(speed);
             
-            // Create angular debris
-            const size = random(3, 8);
+            // Make debris smaller
+            const size = random(2, 5);
             const rotation = random(TWO_PI);
-            const rotSpeed = random(-0.1, 0.1);
+            // Adjust rotation for radians
+            const rotSpeed = random(-0.05, 0.05);
             
             this.debris.push({
                 pos: this.pos.copy(),
@@ -89,7 +90,8 @@ class Explosion {
                 color: this.adjustColor([...this.baseColor], -30), // Darker than base
                 opacity: 255,
                 decay: random(1.5, 3),
-                drag: random(0.96, 0.98)
+                // Increase drag to slow debris faster
+                drag: random(0.94, 0.96)
             });
         }
     }
@@ -156,7 +158,8 @@ class Explosion {
         
         for (let i = 0; i < burstCount; i++) {
             const angle = random(TWO_PI);
-            const speed = random(3, 6) * (this.size / 30);
+            // Reduce speed of secondary burst
+            const speed = random(2, 4) * constrain(this.size / 30, 0.5, 1.5);
             const vel = p5.Vector.fromAngle(angle).mult(speed);
             
             this.particles.push({

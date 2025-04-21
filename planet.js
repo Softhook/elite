@@ -153,7 +153,7 @@ class Planet {
             // Loop horizontally across the band
             for (let x = -bandR; x < bandR; x += bandHeight) {
                 // Calculate noise coordinates (texture fixed to surface)
-                let angle = atan2(y, x);
+                let angle = atan2(y, x); // No change needed as atan2 returns radians
                 let distFromCenter = dist(0, 0, x, y);
                 let noiseX = (cos(angle) * distFromCenter) * this.noiseScale + this.featureRand;
                 let noiseY = (sin(angle) * distFromCenter) * this.noiseScale + this.featureRand;

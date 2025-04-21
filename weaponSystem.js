@@ -145,7 +145,8 @@ class WeaponSystem {
             const worldMy = mouseY + (owner.pos.y - height/2);
             
             // Calculate angle to mouse cursor
-            angle = Math.atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
+            const shootingAngle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
+            angle = shootingAngle;
             console.log("Player beam aimed at mouse:", degrees(angle));
         }
         
@@ -215,7 +216,7 @@ class WeaponSystem {
             );
             
             if (system.addExplosion) {
-                system.addExplosion(hitPoint.x, hitPoint.y, 10, owner.currentWeapon.color);
+                system.addExplosion(hitPoint.x, hitPoint.y, 6, owner.currentWeapon.color);
             }
         }
         
@@ -278,7 +279,7 @@ class WeaponSystem {
         const targetDist = Math.sqrt(dx*dx + dy*dy);
         
         // Log targeting info
-        console.log(`Turret firing at angle: ${degrees(angleToTarget).toFixed(1)}° toward ${target.shipTypeName || "target"} at distance: ${targetDist.toFixed(1)}`);
+        console.log(`Turret firing at angle: ${(angleToTarget * 180 / Math.PI).toFixed(1)}° toward ${target.shipTypeName || "target"} at distance: ${targetDist.toFixed(1)}`);
         
         // Fire the projectile using the precise angle
         WeaponSystem.fireProjectile(owner, system, angleToTarget);

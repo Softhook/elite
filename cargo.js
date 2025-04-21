@@ -58,7 +58,7 @@ class Cargo {
         this.vel.mult(0.98);
         
         // Update rotation
-        this.rotation += this.rotationSpeed;
+        this.rotation = (this.rotation + this.rotationSpeed) % TWO_PI;
         
         // Decrease lifetime
         this.lifetime--;

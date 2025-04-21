@@ -650,15 +650,17 @@ class Enemy {
         }
         
         let destination = this.routePoints[this.currentRouteIndex];
-        let desiredDir = p5.Vector.sub(destination, this.pos);
-        let distance = desiredDir.mag();
-        desiredDir.normalize();
+        
+        // Reuse the tempVector to avoid creating new vectors
+        this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
+        let distance = this.tempVector.mag();
+        this.tempVector.normalize();
+        let targetAngle = this.tempVector.heading();
         
         // FIX: Use the rotateTowards method for consistency
-        let targetAngle = desiredDir.heading();
         this.rotateTowards(targetAngle);
         
-        // FIX: Apply thrust only when reasonably aligned
+        // FIX: Make sure angle difference is properly normalized before comparison
         let angleDiff = targetAngle - this.angle;
         angleDiff = ((angleDiff % TWO_PI) + TWO_PI) % TWO_PI;
         if (angleDiff > PI) angleDiff -= TWO_PI;
@@ -720,6 +722,10 @@ class Enemy {
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
+        
+        // FIX: Make sure angle difference is properly normalized before comparison
+        angleDifference = ((angleDifference % TWO_PI) + TWO_PI) % TWO_PI;
+        if (angleDifference > PI) angleDifference -= TWO_PI;
         
         // FIX: Add proper thrust logic
         if (this.currentState !== AI_STATE.IDLE && 
