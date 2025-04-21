@@ -29,9 +29,9 @@ class Explosion {
         const particleCount = floor(this.size / 2) + 15;
         
         for (let i = 0; i < particleCount; i++) {
-            // Randomize velocity direction and speed
             const angle = random(TWO_PI);
-            const speed = random(1, 4) * (this.size / 30);
+            // More consistent particle speed with better size scaling
+            const speed = random(1, 4) * constrain(this.size / 30, 0.5, 3);
             const vel = p5.Vector.fromAngle(angle).mult(speed);
             
             // Randomize particle properties
@@ -49,7 +49,7 @@ class Explosion {
         // Add bright core particles
         for (let i = 0; i < particleCount/2; i++) {
             const angle = random(TWO_PI);
-            const speed = random(0.5, 3) * (this.size / 30);
+            const speed = random(0.5, 3) * constrain(this.size / 30, 0.5, 2.5);
             const vel = p5.Vector.fromAngle(angle).mult(speed);
             
             this.particles.push({
@@ -71,13 +71,13 @@ class Explosion {
         for (let i = 0; i < debrisCount; i++) {
             // Randomize velocity
             const angle = random(TWO_PI);
-            const speed = random(2, 7) * (this.size / 30);
+            const speed = random(2, 7) * constrain(this.size / 30, 0.8, 2.5);
             const vel = p5.Vector.fromAngle(angle).mult(speed);
             
             // Create angular debris
             const size = random(3, 8);
             const rotation = random(TWO_PI);
-            const rotSpeed = random(-0.2, 0.2);
+            const rotSpeed = random(-0.1, 0.1);
             
             this.debris.push({
                 pos: this.pos.copy(),
@@ -126,7 +126,9 @@ class Explosion {
             const p = this.particles[i];
             p.pos.add(p.vel);
             p.vel.mult(p.drag);
-            p.opacity -= p.decay;
+            // Scale decay by deltaTime for consistent animation speed
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            p.opacity -= p.decay * timeScale;
             
             if (p.opacity <= 0) {
                 this.particles.splice(i, 1);
@@ -139,7 +141,8 @@ class Explosion {
             d.pos.add(d.vel);
             d.vel.mult(d.drag);
             d.rotation += d.rotSpeed;
-            d.opacity -= d.decay;
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            d.opacity -= d.decay * timeScale;
             
             if (d.opacity <= 0) {
                 this.debris.splice(i, 1);
@@ -194,7 +197,7 @@ class Explosion {
         for (const d of this.debris) {
             push();
             translate(d.pos.x, d.pos.y);
-            rotate(d.rotation);
+            rotate(d.rotation % TWO_PI); // Normalize rotation angle
             fill(d.color[0], d.color[1], d.color[2], d.opacity);
             stroke(0, min(d.opacity, 100));
             strokeWeight(1);

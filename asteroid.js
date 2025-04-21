@@ -20,7 +20,7 @@ class Asteroid {
         // Generate angles first, ensure they're in ascending order
         let angles = [];
         for (let i = 0; i < numVertices; i++) {
-            angles.push(map(i, 0, numVertices, 0, TWO_PI));
+            angles.push(i * TWO_PI / numVertices);
         }
         
         // Sort angles to ensure clockwise order (not strictly necessary in this case,

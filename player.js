@@ -352,7 +352,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (keyIsDown(UP_ARROW) || keyIsDown(87)) { this.thrust(); this.isThrusting = true; }
         else { this.isThrusting = false; }
         if (this.fireCooldown > 0) { this.fireCooldown -= deltaTime / 1000; }
-        this.angle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; // Normalize angle [0, 2PI)
+        this.angle %= TWO_PI;
+        if (this.angle < 0) this.angle += TWO_PI;
     }
 
     /** Applies forward thrust force based on current facing angle (radians). */

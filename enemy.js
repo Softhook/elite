@@ -85,7 +85,7 @@ class Enemy {
 
         this.baseTurnRate = shipDef.baseTurnRate; // Use direct radian value
         this.rotationSpeed = this.baseTurnRate * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
-        this.angleTolerance = 15 * PI/180; // About 0.26 radians
+        this.angleTolerance = 0.26; // About 15 degrees in radians
 
         // Apply NPC role modifiers (using degrees for turn rate calculation later)
         this.drag = 0.985; this.maxHull = shipDef.baseHull; this.hull = this.maxHull; this.destroyed = false;
@@ -202,6 +202,7 @@ class Enemy {
 
         // Add thrust vector initialization
         this.thrustVector = createVector(0, 0);
+        this.tempVector = createVector(0, 0);
     }
 
     /** Calculates and sets radian-based properties using p5.radians(). */
@@ -233,8 +234,13 @@ class Enemy {
     /** Predicts player's future position. */
     predictTargetPosition() {
         if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
+        
+        // Reuse the temp vector instead of creating new ones
+        this.tempVector.set(this.target.vel.x, this.target.vel.y);
         let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
-        return p5.Vector.add(this.target.pos, p5.Vector.mult(this.target.vel, pf));
+        this.tempVector.mult(pf);
+        this.tempVector.add(this.target.pos);
+        return this.tempVector;
     }
 
     /** Rotates towards target angle (radians). Returns remaining difference (radians). */
@@ -243,13 +249,15 @@ class Enemy {
         
         let diff = targetAngleRadians - this.angle;
         
-        // Normalize the angle difference more efficiently
+        // Single calculation normalization
         diff = ((diff % TWO_PI) + TWO_PI) % TWO_PI;
         if (diff > PI) diff -= TWO_PI;
         
         const rotationThreshold = 0.02;
         if (abs(diff) > rotationThreshold) {
-            let rotationAmount = Math.sign(diff) * min(abs(diff), this.rotationSpeed * (deltaTime / 16.67));
+            // Use Math.sign for browser compatibility 
+            const rotationAmount = Math.sign(diff) * 
+                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
             this.angle += rotationAmount;
         }
         return diff;
@@ -257,10 +265,16 @@ class Enemy {
 
     /** Applies forward thrust. */
     thrustForward() {
-        // Reset vector instead of creating new one
+        if (isNaN(this.angle)) return;
+        
         this.thrustVector.set(cos(this.angle), sin(this.angle));
         this.thrustVector.mult(this.thrustForce);
         this.vel.add(this.thrustVector);
+        
+        // Create thrust particles
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        }
     }
 
     /** Sets a target position far away for Haulers leaving the system. */
@@ -450,7 +464,8 @@ class Enemy {
         let desiredMovementTargetPos = null;
         let shootingAngle = this.angle;
         if (targetExists && this.target.pos) {
-            shootingAngle = radians(atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x));
+            // atan2 already returns radians in p5.js, don't call radians() on it
+            shootingAngle = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
         }
         let previousState = this.currentState;
 
