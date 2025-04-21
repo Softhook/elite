@@ -63,7 +63,8 @@ function drawThargoid(s, thrusting = false) { // (Original Thargoid)
     fill(baseHue, 80, 70, 80); stroke( (baseHue + 40) % 360, 90, 90, 90); strokeWeight(2);
     beginShape();
     for (let i = 0; i < 8; i++) {
-        let angle1 = map(i, 0, 8, 0, TWO_PI); let angle2 = map(i + 0.5, 0, 8, 0, TWO_PI);
+        let angle1 = map(i, 0, 8, 0, TWO_PI); // Using TWO_PI (radians)
+        let angle2 = map(i + 0.5, 0, 8, 0, TWO_PI);
         let outerR = r * 1.1; let innerR = r * 0.6;
         vertex(cos(angle1) * outerR, sin(angle1) * outerR); vertex(cos(angle2) * innerR, sin(angle2) * innerR);
     } endShape(CLOSE);
@@ -178,7 +179,7 @@ function drawGeometricDrone(s, thrusting = false) { // Alien 3
     let r = s / 2; let def = SHIP_DEFINITIONS.GeometricDrone;
     // Sharp geometric look
     push(); // Use push/pop for rotation
-    rotate(frameCount * 0.3); // Slow constant rotation
+    rotate(frameCount * 0.3); // Assuming radians
     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     pop();
 }
@@ -261,7 +262,8 @@ function drawHammerheadCorvette(s, thrusting = false) { // Unique 2
 const SHIP_DEFINITIONS = {
     "ACAB": {
         name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRateDegrees: 3.0, baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236, // Direct radian value for 3.0 degrees
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
         armament: ["Twin Pulse"], // Police with targeting turret
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawACAB, vertexData: [ { x: 0.8969, y: 0.0000 }, { x: 0.1469, y: 0.4929 }, { x: -0.6673, y: 0.6286 }, { x: -0.6031, y: 0.0000 }, { x: -0.6673, y: -0.6286 }, { x: 0.1469, y: -0.4929 } ],
@@ -274,7 +276,8 @@ const SHIP_DEFINITIONS = {
     },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRateDegrees: 3.0, baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
         armament: ["Pulse Laser"], // Basic defensive setup
         costCategory: "Low", description: "Affordable entry-level freighter or explorer.",
         drawFunction: drawAdder, vertexData: [ { x: 0.8, y: 0 }, { x: 0.2, y: 0.8 }, { x: -0.9, y: 0.7 }, { x: -0.7, y: 0 }, { x: -0.9, y: -0.9 }, { x: 0.1, y: -0.7 } ],
@@ -285,7 +288,8 @@ const SHIP_DEFINITIONS = {
     },
     "Anaconda": {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
-        baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRateDegrees: 1.2, baseHull: 400, baseShield: 350, shieldRecharge: 0.7, cargoCapacity: 150,
+        baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
+        baseHull: 400, baseShield: 350, shieldRecharge: 0.7, cargoCapacity: 150,
         armament: ["Force Blaster"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
         drawFunction: drawAnaconda, vertexData: [ { x: 1.2, y: 0 }, { x: 0.9, y: 0.3 }, { x: -0.9, y: 0.4 }, { x: -1.1, y: 0.2 }, { x: -1.1, y: -0.2 }, { x: -0.9, y: -0.4 }, { x: 0.9, y: -0.3 } ],
@@ -296,7 +300,8 @@ const SHIP_DEFINITIONS = {
     },
     "AspExplorer": {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
-        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRateDegrees: 3.2, baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
+        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
+        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
         armament: ["Beam Laser", "Twin Pulse"], // Utility-focused
         costCategory: "Medium-High", description: "Iconic explorer with excellent visibility and jump range.",
         drawFunction: drawAspExplorer, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.4127, y: 0.5133 }, { x: -0.4250, y: 0.8750 }, { x: -0.9000, y: 0.3000 }, { x: -0.9000, y: -0.3000 }, { x: -0.4250, y: -0.8750 }, { x: 0.4127, y: -0.5133 } ],
@@ -309,7 +314,8 @@ const SHIP_DEFINITIONS = {
     },
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
-        baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRateDegrees: 2.0, baseHull: 500, baseShield: 150, shieldRecharge: 2.5, // Hull tanky, weak shields?
+        baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
+        baseHull: 500, baseShield: 150, shieldRecharge: 2.5, // Hull tanky, weak shields?
         armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
         drawFunction: drawBioFrigate, vertexData: [ {x:1.0, y:0}, {x:0.6, y:0.6}, {x:0.1, y:0.8}, {x:-0.5, y:0.7}, {x:-0.9, y:0.2}, {x:-1.0, y:0}, {x:-0.9, y:-0.2}, {x:-0.5, y:-0.7}, {x:0.1, y:-0.8}, {x:0.6, y:-0.6} ],
@@ -320,7 +326,8 @@ const SHIP_DEFINITIONS = {
     },
     "CenturionGunship": {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
-        baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRateDegrees: 2.6, baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
+        baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
+        baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.7000, y: 0.4000 }, { x: 0.0000, y: 0.5048 }, { x: 0.3967, y: 0.6548 }, { x: 0.3896, y: 0.8786 }, { x: -0.7000, y: 0.9000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.7000, y: -0.9000 }, { x: 0.3896, y: -0.8786 }, { x: 0.3967, y: -0.6548 }, { x: 0.0000, y: -0.5048 }, { x: 0.7000, y: -0.4000 } ],
@@ -333,7 +340,8 @@ const SHIP_DEFINITIONS = {
     },
     "CobraMkIII": {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
-        baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRateDegrees: 3.5, baseHull: 120, baseShield: 100, shieldRecharge: 1.2, cargoCapacity: 44,
+        baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
+        baseHull: 120, baseShield: 100, shieldRecharge: 1.2, cargoCapacity: 44,
         armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
@@ -347,7 +355,8 @@ const SHIP_DEFINITIONS = {
     },
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
-        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRateDegrees: 3.0, baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
+        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
+        baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
         armament: ["Beam Laser", "Double Shot"], // Explorer with some punch
         costCategory: "Medium", description: "Utilitarian explorer known for good heat management.",
         drawFunction: drawDiamondbackExplorer, vertexData: [ { x: 1.0, y: 0 }, { x: 0.2, y: 0.4 }, { x: -0.5, y: 0.9 }, { x: -0.9, y: 0.5 }, { x: -0.8, y: 0 }, { x: -0.9, y: -0.5 }, { x: -0.5, y: -0.9 }, { x: 0.2, y: -0.4 } ],
@@ -358,7 +367,8 @@ const SHIP_DEFINITIONS = {
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
-        baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRateDegrees: 2.5, baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 30,
+        baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
+        baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, vertexData: [ { x: 0.9, y: 0 }, { x: 0.7, y: 0.5 }, { x: -0.2, y: 0.6 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: -0.2, y: -0.6 }, { x: 0.7, y: -0.5 } ],
@@ -369,7 +379,8 @@ const SHIP_DEFINITIONS = {
     },
      "FerDeLance": {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
-        baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRateDegrees: 3.0, baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
+        baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
+        baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
         armament: ["Sniper Rail", "Force Blaster", "Pulse Array"], // Luxury combat loadout
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, { x: 0.2, y: -0.5 } ],
@@ -380,7 +391,8 @@ const SHIP_DEFINITIONS = {
     },
     "GeometricDrone": {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
-        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRateDegrees: 8.0, baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
+        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
+        baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
         armament: ["Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
         drawFunction: drawGeometricDrone, vertexData: [ {x:1,y:0}, {x:0.5,y:0.87}, {x:-0.5,y:0.87}, {x:-1,y:0}, {x:-0.5,y:-0.87}, {x:0.5,y:-0.87} ], // Regular Hexagon
@@ -391,7 +403,8 @@ const SHIP_DEFINITIONS = {
     },
     "GladiusFighter": {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
-        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRateDegrees: 4.0, baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 6,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 6,
         armament: ["Burst Blaster", "Twin Pulse"], // Fast attack loadout
         costCategory: "Medium", description: "Balanced space superiority fighter. Agile and well-armed.",
         drawFunction: drawGladiusFighter, vertexData: [ {x:1.1, y:0}, {x:0.3, y:0.4}, {x:-0.2, y:0.7}, {x:-0.9, y:0.5}, {x:-1.0, y:0}, {x:-0.9, y:-0.5}, {x:-0.2, y:-0.7}, {x:0.3, y:-0.4} ],
@@ -402,7 +415,8 @@ const SHIP_DEFINITIONS = {
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
-        baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRateDegrees: 6.0, baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 0,
+        baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.10472,
+        baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 0,
         armament: ["Pulse Laser"], // Fast single weapon
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
@@ -413,7 +427,8 @@ const SHIP_DEFINITIONS = {
     },
     "HammerheadCorvette": { // NEW - Unique 2
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
-        baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRateDegrees: 2.3, baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
+        baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
+        baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
         armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, vertexData: [ { x: 0.8888, y: 0.3500 }, { x: 0.5937, y: 0.4670 }, { x: 0.4300, y: 0.7285 }, { x: 0.1520, y: 0.8587 }, { x: -0.1612, y: 0.5488 }, { x: -0.9161, y: 0.4670 }, { x: -0.9159, y: 0.3625 }, { x: -0.5436, y: 0.1330 }, { x: -0.5436, y: -0.1330 }, { x: -0.9159, y: -0.3625 }, { x: -0.9202, y: -0.4650 }, { x: -0.1612, y: -0.5488 }, { x: 0.1520, y: -0.8587 }, { x: 0.4300, y: -0.7285 }, { x: 0.5978, y: -0.4650 }, { x: 0.8888, y: -0.3500 }, { x: 0.9388, y: 0.0000 } ],
@@ -426,7 +441,8 @@ const SHIP_DEFINITIONS = {
     },
     "ImperialClipper": {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
-        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRateDegrees: 1.5, baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
+        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
+        baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
         armament: ["Arc Projector", "Mini-Turret", "Beam Laser"], // Elegant, balanced
         costCategory: "High", description: "Elegant and fast Imperial ship, excels in straight lines.",
         drawFunction: drawImperialClipper, vertexData: [ { x: 1.1, y: 0 }, { x: 0.7, y: 0.2 }, { x: 0.1, y: 0.9 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: 0.1, y: -0.9 }, { x: 0.7, y: -0.2 } ],
@@ -437,7 +453,8 @@ const SHIP_DEFINITIONS = {
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
-        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRateDegrees: 4.3, baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
+        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
+        baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
         armament: ["Pulse Array", "Beam Laser"], // Elegant, refined
         costCategory: "Medium", description: "Fast, sleek Imperial ship with strong shields for its size.",
         drawFunction: drawImperialCourier, vertexData: [ { x: 1.0, y: 0 }, { x: 0.4, y: 0.3 }, { x: -0.5, y: 0.5 }, { x: -0.9, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.9, y: -0.4 }, { x: -0.5, y: -0.5 }, { x: 0.4, y: -0.3 } ],
@@ -448,7 +465,8 @@ const SHIP_DEFINITIONS = {
     },
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
-        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRateDegrees: 3.6, baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
+        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
+        baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
         armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
         costCategory: "Medium", description: "Adaptable, angular multi-purpose vessel.",
         drawFunction: drawJackalMultirole, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.5000 }, { x: -0.2000, y: 0.8000 }, { x: -0.8000, y: 0.6000 }, { x: -0.4103, y: 0.1697 }, { x: -0.4103, y: -0.1697 }, { x: -0.8000, y: -0.6000 }, { x: -0.2000, y: -0.8000 }, { x: 0.5000, y: -0.5000 } ],
@@ -461,7 +479,8 @@ const SHIP_DEFINITIONS = {
     },
     "Keelback": {
         name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
-        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRateDegrees: 2.5, baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.04363,
+        baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
         armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
         costCategory: "Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
         drawFunction: drawKeelback, vertexData: [ { x: 0.6302, y: 0.0000 }, { x: 0.5000, y: 0.5114 }, { x: -0.2000, y: 0.6114 }, { x: -0.8000, y: 0.8114 }, { x: -1.0033, y: 0.5917 }, { x: -0.5571, y: 0.2745 }, { x: -0.7905, y: 0.1373 }, { x: -0.7839, y: -0.1373 }, { x: -0.5571, y: -0.2745 }, { x: -1.0033, y: -0.5917 }, { x: -0.8000, y: -0.8114 }, { x: -0.2000, y: -0.6114 }, { x: 0.5000, y: -0.5114 } ],
@@ -474,7 +493,8 @@ const SHIP_DEFINITIONS = {
     },
     "KraitMKI": { 
         name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 7.2, baseThrust: 0.15, baseTurnRateDegrees: 3.8, baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
+        baseMaxSpeed: 7.2, baseThrust: 0.15, baseTurnRate: 0.06632,
+        baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
         armament: ["Pulse Laser"],
         costCategory: "High", description: "Fighter popular with pirates.",
         drawFunction: drawKraitMKI,
@@ -489,7 +509,8 @@ const SHIP_DEFINITIONS = {
 
     "KraitMKII": { 
         name: "Krait MKII", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
-        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRateDegrees: 2.3, baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
+        baseMaxSpeed: 6.2, baseThrust: 0.11, baseTurnRate: 0.04014,
+        baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
         armament: ["Mini-Turret"], // Combat focused Pirate
         costCategory: "High", description: "Multi-role ship, popular with pirates.",
         drawFunction: drawKraitMKII, // Uses the same draw function
@@ -501,7 +522,8 @@ const SHIP_DEFINITIONS = {
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
-        baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRateDegrees: 1.6, baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
+        baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
+        baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
         armament: ["Mini-Turret", "Double Shot"], // Defensive
         costCategory: "Medium-High", description: "Extremely wide cargo ship, resembling a manta ray.",
         drawFunction: drawMantaHauler, vertexData: [ {x:0.8, y:0}, {x:0.2, y:0.3}, {x:-0.6, y:0.9}, {x:-0.9, y:0.7}, {x:-1.0, y:0}, {x:-0.9, y:-0.7}, {x:-0.6, y:-0.9}, {x:0.2, y:-0.3} ],
@@ -512,7 +534,8 @@ const SHIP_DEFINITIONS = {
     },
     "MuleFreighter": { // NEW - Small Transporter
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
-        baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRateDegrees: 2.8, baseHull: 70, baseShield: 40, shieldRecharge: 0.8, cargoCapacity: 30,
+        baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
+        baseHull: 70, baseShield: 40, shieldRecharge: 0.8, cargoCapacity: 30,
         armament: ["N/A"], // Basic defense
         costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
         drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
@@ -523,7 +546,8 @@ const SHIP_DEFINITIONS = {
     },
     "NomadVoyager": { // NEW - Explorer 2
         name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
-        baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRateDegrees: 2.9, baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
+        baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRate: 0.05061,
+        baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
         armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
         costCategory: "High", description: "Self-sufficient long-range vessel built for endurance.",
         drawFunction: drawNomadVoyager, vertexData: [ {x:0.9, y:0}, {x:0.7, y:0.5}, {x:0.1, y:0.8}, {x:-0.8, y:0.7}, {x:-1.1, y:0}, {x:-0.8, y:-0.7}, {x:0.1, y:-0.8}, {x:0.7, y:-0.5} ], // Rounded, pod-like
@@ -534,7 +558,8 @@ const SHIP_DEFINITIONS = {
     },
     "PathfinderSurvey": { // NEW - Explorer 1
         name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
-        baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRateDegrees: 2.5, baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
+        baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
+        baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
         armament: ["Beam Laser", "Scatter Beam"], // Scanning/scientific
         costCategory: "Medium", description: "Designed for exploration and detailed surface scanning.",
         drawFunction: drawPathfinderSurvey, vertexData: [ {x:1.2, y:0}, {x:0.8, y:0.2}, {x:-0.5, y:0.5}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.5, y:-0.5}, {x:0.8, y:-0.2} ], // Long nose
@@ -545,7 +570,8 @@ const SHIP_DEFINITIONS = {
     },
     "ProspectorMiner": { // NEW - Miner
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
-        baseMaxSpeed: 3.5, baseThrust: 0.08, baseTurnRateDegrees: 2.2, baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80, // Includes refinery space
+        baseMaxSpeed: 3.5, baseThrust: 0.08, baseTurnRate: 0.03840,
+        baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80, // Includes refinery space
         armament: ["Beam Laser", "Pulse Laser"], // Mining tools
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
         drawFunction: drawProspectorMiner, vertexData: [ {x:0.6, y:0}, {x:0.4, y:0.8}, {x:-0.4, y:0.9}, {x:-0.9, y:0.6}, {x:-1.0, y:-0.3}, {x:-0.9, y:-0.6}, {x:-0.4, y:-0.9}, {x:0.4, y:-0.8} ], // Bulky, functional
@@ -556,7 +582,8 @@ const SHIP_DEFINITIONS = {
     },
     "Python": {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRateDegrees: 2.2, baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
+        baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
         armament: ["Heavy Cannon", "Arc Projector", "Mini-Turret"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
         drawFunction: drawPython, vertexData: [ { x: 0.8, y: 0 }, { x: 0.6, y: 0.7 }, { x: -0.6, y: 0.9 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.6, y: -0.9 }, { x: 0.6, y: -0.7 } ],
@@ -567,7 +594,8 @@ const SHIP_DEFINITIONS = {
     },
     "ShardInterceptor": { // NEW - Alien 1
         name: "Shard Interceptor (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRateDegrees: 5.0, baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
+        baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
+        baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Fast alien fighter composed of sharp, crystalline structures.",
         drawFunction: drawShardInterceptor, vertexData: [ { x: 1.0831, y: 0.0000 }, { x: 0.4335, y: 0.2433 }, { x: -0.1945, y: 0.1331 }, { x: -0.7955, y: 0.8065 }, { x: -1.2651, y: 0.4935 }, { x: -0.7083, y: 0.0000 }, { x: -1.2651, y: -0.4935 }, { x: -0.7955, y: -0.8065 }, { x: -0.1945, y: -0.1331 }, { x: 0.4335, y: -0.2433 } ],
@@ -580,7 +608,8 @@ const SHIP_DEFINITIONS = {
     },
     "Sidewinder": {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
-        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRateDegrees: 4.0, baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
+        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
+        baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
         armament: ["Pulse Laser"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
@@ -591,7 +620,8 @@ const SHIP_DEFINITIONS = {
     },
     "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
-        baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRateDegrees: 1.4, baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
+        baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
+        baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
         armament: ["Mini-Turret"], // Defensive passenger ship
         costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
         drawFunction: drawStarlinerCruiser, vertexData: [ {x:1.2, y:0}, {x:1.0, y:0.2}, {x:-0.9, y:0.3}, {x:-1.1, y:0.1}, {x:-1.1, y:-0.1}, {x:-0.9, y:-0.3}, {x:1.0, y:-0.2} ], // Elongated
@@ -602,7 +632,8 @@ const SHIP_DEFINITIONS = {
     },
     "Thargoid": { 
         name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
-        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRateDegrees: 6.0, baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
+        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
+        baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
         costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
         drawFunction: drawThargoid, vertexData: [], // Not editable via vertex data in this setup
@@ -612,7 +643,8 @@ const SHIP_DEFINITIONS = {
     },
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
-        baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRateDegrees: 2.0, baseHull: 100, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
+        baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
+        baseHull: 100, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
         costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
         drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
@@ -623,7 +655,8 @@ const SHIP_DEFINITIONS = {
     },
      "Type9Heavy": {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
-        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRateDegrees: 0.8, baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
+        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
+        baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Double Shot", "Twin Pulse"], // Defensive cargo hauler
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
         drawFunction: drawType9Heavy, vertexData: [ { x: 0.8208, y: 0.2000 }, { x: 0.7000, y: 0.8000 }, { x: -0.8000, y: 0.9000 }, { x: -1.0000, y: 0.8000 }, { x: -1.0000, y: -0.8000 }, { x: -0.8000, y: -0.9000 }, { x: 0.7000, y: -0.8000 }, { x: 0.8208, y: -0.2000 } ],
@@ -636,7 +669,8 @@ const SHIP_DEFINITIONS = {
     },
     "Viper": { 
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
-        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRateDegrees: 4.5, baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 4,
+        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
+        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 4,
         armament: ["Multi-Cannon", "Twin Pulse"], // Fast fighter
         costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
         drawFunction: drawViper,
@@ -648,7 +682,8 @@ const SHIP_DEFINITIONS = {
     },
      "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
-        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRateDegrees: 5.5, baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 8,
+        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 8,
         armament: ["Heavy Cannon", "Burst Blaster"], // Aggressive fighter
         costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
         drawFunction: drawVulture, vertexData: [ { x: 0.8001, y: 0.0951 }, { x: -0.1201, y: 0.3805 }, { x: -0.2033, y: 1.0132 }, { x: -0.7000, y: 1.1822 }, { x: -0.7456, y: 0.4692 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7456, y: -0.4692 }, { x: -0.7000, y: -1.1822 }, { x: -0.2033, y: -1.0132 }, { x: -0.1201, y: -0.3805 }, { x: 0.8001, y: -0.0951 } ],
@@ -661,7 +696,8 @@ const SHIP_DEFINITIONS = {
     },
     "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
-        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRateDegrees: 5.2, baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 2,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 2,
         armament: ["Burst Blaster"], // All-out attack fighter
         costCategory: "Low", description: "Aggressive, agile fighter with forward-swept wings.",
         drawFunction: drawWaspAssault, vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.1473, y: 0.3081 }, { x: -0.3146, y: 0.9825 }, { x: -0.5494, y: 0.9822 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.5494, y: -0.9822 }, { x: -0.3146, y: -0.9825 }, { x: -0.1473, y: -0.3081 } ],

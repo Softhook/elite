@@ -69,7 +69,7 @@ class Cargo {
         
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(degrees(this.rotation)); // Convert radians to degrees before rotating
+        rotate(this.rotation); // Convert radians to degrees before rotating
         
         // Draw container
         fill(this.color);

@@ -2,8 +2,7 @@
 
 class Player {
     /**
-     * Creates a Player instance. Stores speeds/rates in degrees initially.
-     * Radian properties are calculated by applyShipDefinition.
+     * Creates a Player instance. Stores speeds/rates
      * @param {string} [shipTypeName="Sidewinder"] - The type name of the ship to use.
      */
     constructor(shipTypeName = "Sidewinder") {
@@ -24,11 +23,11 @@ class Player {
         this.angle = 0; // Current facing angle (RADIANS, 0 = right)
         this.drag = 0.985;
 
-        // --- Store Base Stats from Definition (Including Degrees) ---
+        // --- Store Base Stats from Definition ---
         this.size = shipDef.size;
         this.maxSpeed = shipDef.baseMaxSpeed;
         this.thrustForce = shipDef.baseThrust;
-        this.rotationSpeedDegrees = shipDef.baseTurnRateDegrees; // STORE DEGREES
+        this.rotationSpeed = shipDef.baseTurnRate; // Already in RADIANS
         this.maxHull = shipDef.baseHull;
         this.cargoCapacity = shipDef.cargoCapacity;
 
@@ -261,7 +260,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.size = def.size;
         this.maxSpeed = def.baseMaxSpeed;
         this.thrustForce = def.baseThrust;
-        this.rotationSpeedDegrees = def.baseTurnRateDegrees;
+        this.rotationSpeed = def.baseTurnRate; // Direct radian value
         this.maxHull = def.baseHull;
         this.hull = def.baseHull;
         this.cargoCapacity = def.cargoCapacity;
@@ -333,8 +332,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     }
 
     calculateRadianProperties() {
-        this.rotationSpeed = radians(this.rotationSpeedDegrees);
-        // Other conversions can go here if needed.
+        // No conversion needed - the value is already in radians
+        // Just copy it from the ship definition if needed
+        // this.rotationSpeed = this.baseTurnRate;
     }
 
     /** Handles mouse click for firing attempt. */
@@ -434,7 +434,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         
         push(); 
         translate(this.pos.x, this.pos.y); 
-        rotate(degrees(this.angle)); // Convert radians to degrees
+        rotate(this.angle);
         drawFunc(this.size, this.isThrusting); 
         pop();
 

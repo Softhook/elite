@@ -18,9 +18,9 @@ let titleScreen;            // Handles title screen and instructions screen
 function setup() {
     // Create the canvas to fill the browser window
     createCanvas(windowWidth, windowHeight);
-    // Set angle mode to DEGREES for p5.js rotation functions (like rotate())
+    // Set angle mode to RADIANS for p5.js rotation functions (like rotate())
     // Note: Internal angle calculations in classes mostly use RADIANS now.
-    angleMode(DEGREES);
+    angleMode(RADIANS);
     // Default text alignment and size
     textAlign(CENTER, CENTER);
     textSize(14);

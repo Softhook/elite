@@ -173,13 +173,11 @@ class StarSystem {
 
         for (let i = 0; i < numPlanets; i++) {
             // Calculate the orbit angle in radians with a small random offset
-            let angleRad = baseAngle + (TWO_PI / numPlanets) * i + random(-0.1, 0.1);
+            let angle = baseAngle + (TWO_PI / numPlanets) * i + random(-0.1, 0.1);
             // Determine a random orbit radius
             let orbitRadius = random(minOrbit, maxOrbit);
-            // Because the global angleMode is DEGREES, convert the radian value to degrees
-            let angleDeg = degrees(angleRad);
-            let px = cos(angleDeg) * orbitRadius;
-            let py = sin(angleDeg) * orbitRadius;
+            let px = cos(angle) * orbitRadius;
+            let py = sin(angle) * orbitRadius;
 
             let sz = random(60, 150) * 2;
             let c1 = color(random(50, 200), random(50, 200), random(50, 200));
@@ -189,7 +187,7 @@ class StarSystem {
             let planet = new Planet(px, py, sz, c1, c2);
             this.planets.push(planet);
 
-            console.log(`Planet ${i}: angleRad=${angleRad.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}`);
+            console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}`);
         }
 
         // Position the station near a random planet (do not use the star at index 0)
@@ -197,11 +195,9 @@ class StarSystem {
             let randomIndex = floor(random(1, this.planets.length));
             let chosenPlanet = this.planets[randomIndex];
             // Use atan2 to determine the angle of the chosen planet relative to (0,0)
-            let angleDeg = atan2(chosenPlanet.pos.y, chosenPlanet.pos.x);
-            // Convert back to radians for the p5.Vector.fromAngle() function (which expects radians)
-            let angleRad = radians(angleDeg);
+            let angle = atan2(chosenPlanet.pos.y, chosenPlanet.pos.x); // Already in radians
             let offsetDistance = chosenPlanet.size * 1.5 + 80; // Ensure the station is offset a bit
-            let offset = p5.Vector.fromAngle(angleRad).mult(offsetDistance);
+            let offset = p5.Vector.fromAngle(angle).mult(offsetDistance);
             this.station.pos = p5.Vector.add(chosenPlanet.pos, offset);
         }
     } // End createRandomPlanets
@@ -240,7 +236,7 @@ class StarSystem {
                                 // Force immediate rotation toward player
                                 if (enemy.pos && player.pos) {
                                     let angleToPlayer = atan2(player.pos.y - enemy.pos.y, player.pos.x - enemy.pos.x);
-                                    enemy.angle = radians(angleToPlayer);
+                                    enemy.angle = angleToPlayer;
                                     enemy.desiredAngle = enemy.angle;
                                 }
                                 
@@ -358,7 +354,7 @@ class StarSystem {
                 // Force initial rotation toward player
                 if (newEnemy.pos && player.pos) {
                     let angle = atan2(player.pos.y - newEnemy.pos.y, player.pos.x - player.pos.x);
-                    newEnemy.angle = radians(angle);
+                    newEnemy.angle = angle; // Already in radians
                 }
                 console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }

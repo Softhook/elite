@@ -8,8 +8,8 @@ class Asteroid {
         this.health = this.maxHealth;
 
         this.vel = p5.Vector.random2D().mult(random(0.1, 0.6));
-        this.angle = random(0, 360);
-        this.rotationSpeed = random(-0.6, 0.6);
+        this.angle = random(0, TWO_PI);
+        this.rotationSpeed = random(-0.01, 0.01);
 
         // Generate vertices in strict clockwise order
         this.vertices = [];
@@ -42,7 +42,7 @@ class Asteroid {
         if (this.destroyed) return;
         this.pos.add(this.vel);
         this.angle += this.rotationSpeed;
-        this.angle = (this.angle + 360) % 360;
+        this.angle = (this.angle + TWO_PI) % TWO_PI;
     }
 
     draw() {
@@ -50,7 +50,7 @@ class Asteroid {
 
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.angle); // Angle in degrees if angleMode(DEGREES) is set
+        rotate(this.angle);
 
         fill(this.color);
        // stroke(80);
