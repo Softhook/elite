@@ -211,6 +211,9 @@ class Enemy {
         // Add thrust vector initialization
         this.thrustVector = createVector(0, 0);
         this.tempVector = createVector(0, 0);
+
+        // Flag for thrusting
+        this.isThrusting = false;
     }
 
     // -----------------------------
@@ -251,12 +254,16 @@ class Enemy {
     update(system) {
         if (this.destroyed || !system) return;
 
-        // Update thrust particles
-        this.thrustManager.update();
-
-        this.fireCooldown -= deltaTime / 1000;
-
+        // Store reference to current system
         this.currentSystem = system;
+        
+        // Update weapon cooldown
+        this.fireCooldown -= deltaTime / 1000;
+        
+        // Cargo collection cooldown
+        if (this.cargoCollectionCooldown > 0) {
+            this.cargoCollectionCooldown -= deltaTime / 1000;
+        }
 
         // For pirates: Look for cargo first if not already collecting
         if (this.role === AI_ROLE.PIRATE && 
@@ -286,54 +293,50 @@ class Enemy {
             }
         }
 
-        // New branch for TRANSPORT role:
-        if (this.role === AI_ROLE.TRANSPORT) {
-            // Handle cargo collection first if applicable
-            if (this.currentState === AI_STATE.COLLECTING_CARGO) {
-                if (!this.updateCargoCollectionAI(system)) {
-                    // When done collecting, return to previous state
-                    this.changeState(this.previousState || AI_STATE.TRANSPORTING);
+        // Role-specific AI behavior updates
+        try {
+            if (this.role === AI_ROLE.TRANSPORT) {
+                // Handle cargo collection first if applicable
+                if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                    if (!this.updateCargoCollectionAI(system)) {
+                        // When done collecting, return to previous state
+                        this.changeState(this.previousState || AI_STATE.TRANSPORTING);
+                    }
+                } else {
+                    // Normal transport behavior
+                    this.updateTransportAI(system);
                 }
             } else {
-                // Normal transport behavior
-                this.updateTransportAI(system);
-            }
-        } else {
-            try {
-                // Existing role-specific updates.
+                // Handle other role behaviors
                 switch (this.role) {
                     case AI_ROLE.PIRATE:
-                        // Handle cargo collection first if applicable
                         if (this.currentState === AI_STATE.COLLECTING_CARGO) {
                             if (!this.updateCargoCollectionAI(system)) {
-                                // If no cargo to collect, resume combat AI
                                 this.updateCombatAI(system);
                             }
                         } else {
-                            // No cargo collecting, use normal combat AI
                             this.updateCombatAI(system);
                         }
                         break;
-                    case AI_ROLE.POLICE: this.updatePoliceAI(system); break;
-                    case AI_ROLE.HAULER: this.updateHaulerAI(system); break;
-                    default: this.vel.mult(this.drag * 0.95); break;
+                    case AI_ROLE.POLICE: 
+                        this.updatePoliceAI(system); 
+                        break;
+                    case AI_ROLE.HAULER: 
+                        this.updateHaulerAI(system); 
+                        break;
+                    default: 
+                        // Default behavior for unknown roles
+                        this.vel.mult(this.drag * 0.95); 
+                        break;
                 }
-            } catch (e) {
-                console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
-                this.changeState(AI_STATE.IDLE);
+                
+                // Update physics - except for Transport role which handles its own physics
+                this.updatePhysics();
             }
-            this.vel.mult(this.drag);
-            this.vel.limit(this.maxSpeed);
-            if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { 
-                this.pos.add(this.vel); 
-            } else { 
-                this.vel.set(0, 0); 
-            }
-        }
-
-        // Add thrust particles after movement logic
-        if (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION) {
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        } catch (e) {
+            console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
+            this.changeState(AI_STATE.IDLE);
+            this.updatePhysics(); // Still update physics even on error
         }
     }
 
@@ -352,34 +355,44 @@ class Enemy {
             this.targetSwitchCooldown -= deltaTime / 1000;
         }
         
-        // Check if being attacked by police (for pirates)
-        if (this.role === AI_ROLE.PIRATE && this.lastAttacker && 
-            this.lastAttacker.role === AI_ROLE.POLICE && 
+        // If we've been attacked, consider retaliating
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
             this.targetSwitchCooldown <= 0) {
             
-            let attackerDistance = this.distanceTo(this.lastAttacker);
+            const attackerDistance = this.distanceTo(this.lastAttacker);
+            const attackerIsThreat = this.lastAttacker.hull > this.hull * 0.3; // Only worry about threats
             
-            // Prioritize defending against active attackers
-            if (attackerDistance < this.detectionRange * 1.5) {
-                console.log(`Pirate ${this.shipTypeName} responding to police attack from ${this.lastAttacker.shipTypeName}`);
+            // Different rules for different roles
+            if (this.role === AI_ROLE.PIRATE && attackerDistance < this.detectionRange * 1.5) {
+                // Pirates more likely to retaliate against attackers
+                console.log(`Pirate ${this.shipTypeName} responding to attack from ${this.lastAttacker.shipTypeName}`);
                 this.target = this.lastAttacker;
                 this.changeState(AI_STATE.APPROACHING);
                 this.targetSwitchCooldown = 2.0;
                 return true;
+            } else if (this.role === AI_ROLE.POLICE && attackerDistance < this.detectionRange && attackerIsThreat) {
+                // Police will attack threats more cautiously
+                if (this.lastAttacker.isWanted) {
+                    console.log(`Police ${this.shipTypeName} pursuing wanted attacker ${this.lastAttacker.shipTypeName}`);
+                    this.target = this.lastAttacker;
+                    this.changeState(AI_STATE.APPROACHING);
+                    this.targetSwitchCooldown = 1.5;
+                    return true;
+                }
             }
         }
         
-        // AGGRESSIVE PIRATE RETARGETING WITH STATE TRACKING
+        // Pirates proactively hunt the player
         if (this.role === AI_ROLE.PIRATE &&
             (this.currentState === AI_STATE.IDLE || !this.isTargetValid(this.target)) &&
             this.isTargetValid(system.player)) {
             
-            let playerDistance = this.distanceTo(system.player);
+            const playerDistance = this.distanceTo(system.player);
+            const playerValue = system.player.credits > 10000 ? 1.5 : 1.0; // More interested in wealthy players
             
-            if (playerDistance < this.detectionRange * 1.5) {
-                // Only log targeting once per state change
+            if (playerDistance < this.detectionRange * playerValue) {
                 if (!this.hasLoggedPlayerTargeting || this.target !== system.player) {
-                    console.log(`IDLE Pirate ${this.shipTypeName} actively targeting Player at distance ${playerDistance.toFixed(2)}`);
+                    console.log(`Pirate ${this.shipTypeName} actively targeting Player at distance ${playerDistance.toFixed(2)}`);
                     this.hasLoggedPlayerTargeting = true;
                 }
                 
@@ -395,27 +408,227 @@ class Enemy {
             this.hasLoggedPlayerTargeting = false;
         }
         
-        // Make switching to player more likely
-        if (this.role === AI_ROLE.PIRATE && 
-            this.isTargetValid(this.target) && 
-            !(this.target instanceof Player) && 
-            this.isTargetValid(system.player) && 
-            this.targetSwitchCooldown <= 0) {
+        // Target switching logic - possibly switch to a better target
+        if (this.isTargetValid(this.target) && this.targetSwitchCooldown <= 0) {
+            // Check for better targets
+            let bestTarget = this.target;
+            let bestScore = this.evaluateTargetScore(this.target, system); // Pass system here
             
-            let currentTargetDistance = this.distanceTo(this.target);
-            let playerDistance = this.distanceTo(system.player);
+            // Consider the player
+            if (this.isTargetValid(system.player) && this.target !== system.player) {
+                const playerScore = this.evaluateTargetScore(system.player, system) * 1.2; // Pass system here
+                if (playerScore > bestScore) {
+                    bestTarget = system.player;
+                    bestScore = playerScore;
+                }
+            }
             
-            // More lenient switching: Only need player to be 20% closer (was 40%)
-            // OR within absolute engagement distance threshold
-            if (playerDistance < currentTargetDistance * 0.8 || playerDistance < this.engageDistance * 1.5) {
-                console.log(`${this.shipTypeName} opportunistically switching target from ${this.target.shipTypeName} to Player (${playerDistance.toFixed(2)})`);
-                this.target = system.player;
+            // Consider other enemies
+            if (system.enemies && system.enemies.length > 0) {
+                for (const enemy of system.enemies) {
+                    // Skip ourselves and invalid targets
+                    if (enemy === this || !this.isTargetValid(enemy)) continue;
+                    
+                    // Skip non-wanted ships for police
+                    if (this.role === AI_ROLE.POLICE && !enemy.isWanted) continue;
+                    
+                    const enemyScore = this.evaluateTargetScore(enemy, system); // Pass system here
+                    if (enemyScore > bestScore) {
+                        bestTarget = enemy;
+                        bestScore = enemyScore;
+                    }
+                }
+            }
+            
+            // Switch to best target if it's different
+            if (bestTarget !== this.target) {
+                console.log(`${this.shipTypeName} switching target to ${bestTarget.shipTypeName || 'Player'} (score: ${bestScore.toFixed(1)})`);
+                this.target = bestTarget;
                 this.targetSwitchCooldown = 2.0;
-                return true;
             }
         }
         
         return this.isTargetValid(this.target);
+    }
+
+    /**
+     * Evaluate how attractive a target is based on various factors
+     * Higher score = more attractive target
+     * @param {Object} target - The target to evaluate
+     * @param {Object} system - The current star system
+     * @return {number} A score representing target attractiveness
+     */
+    evaluateTargetScore(target, system) {
+        if (!this.isTargetValid(target)) return 0;
+        
+        let score = 100; // Base score
+        
+        // Distance factor - closer targets are more attractive
+        const distance = this.distanceTo(target);
+        score -= distance * 0.1; // Reduce score based on distance
+        
+        // Hull factor - weaker targets are more attractive
+        if (target.hull !== undefined && target.maxHull !== undefined) {
+            const hullPercent = target.hull / target.maxHull;
+            score += (1 - hullPercent) * 30; // Up to 30 points for damaged targets
+        }
+        
+        // Role-specific factors
+        if (this.role === AI_ROLE.PIRATE) {
+            // Pirates prefer valuable targets
+            if (target === system.player) {
+                // Players with cargo are more attractive
+                if (target.cargo && target.cargo.length > 0) {
+                    score += target.cargo.length * 10;
+                }
+                
+                // Damaged players are more attractive
+                if (target.hull < target.maxHull * 0.5) {
+                    score += 30;
+                }
+            } else if (target.role === AI_ROLE.HAULER) {
+                // Haulers might have valuable cargo
+                score += 20;
+            } else if (target.role === AI_ROLE.POLICE) {
+                // Pirates generally avoid police unless they attacked first
+                score -= 30;
+                
+                // Unless this police attacked us
+                if (target === this.lastAttacker) {
+                    score += 50;
+                }
+            }
+        } else if (this.role === AI_ROLE.POLICE) {
+            // Police prioritize wanted ships
+            if (target.isWanted) {
+                score += 50;
+                
+                // Even more if they're actively committing crimes
+                if (target.role === AI_ROLE.PIRATE) {
+                    score += 20;
+                }
+            } else {
+                // Police should ignore non-wanted ships
+                score = 0;
+            }
+        }
+        
+        return score;
+    }
+
+    /**
+     * Calculate optimal weapon for current combat situation
+     * Takes into account range, target type, and weapon capabilities
+     * @param {number} distanceToTarget - Distance to current target
+     * @param {Object} target - The current target
+     * @return {Object} The selected weapon definition
+     */
+    selectOptimalWeapon(distanceToTarget, target) {
+        // If we only have one weapon, just use it
+        if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
+        
+        // Score each weapon based on situation
+        let bestScore = -1;
+        let bestWeapon = this.currentWeapon;
+        
+        for (const weapon of this.weapons) {
+            let score = 0;
+            
+            // Range considerations
+            const isLongRange = distanceToTarget > this.firingRange * 0.7;
+            const isMediumRange = distanceToTarget > this.firingRange * 0.4 && distanceToTarget <= this.firingRange * 0.7;
+            const isShortRange = distanceToTarget <= this.firingRange * 0.4;
+            
+            // Score based on weapon type and range
+            if (weapon.type.includes('beam') && isLongRange) {
+                score += 3; // Beams are good at long range
+            } else if (weapon.type.includes('beam') && isMediumRange) {
+                score += 2;
+            } else if (weapon.type.includes('beam') && isShortRange) {
+                score += 1;
+            }
+            
+            if (weapon.type === 'projectile' && isShortRange) {
+                score += 3; // Projectiles are best at short range
+            } else if (weapon.type === 'projectile' && isMediumRange) {
+                score += 2;
+            } else if (weapon.type === 'projectile' && isLongRange) {
+                score += 1;
+            }
+            
+            if (weapon.type === 'missile' && (isMediumRange || isLongRange)) {
+                score += 3; // Missiles are best at medium to long range
+            } else if (weapon.type === 'missile' && isShortRange) {
+                score += 1;
+            }
+            
+            if (weapon.type === 'turret') {
+                score += 2; // Turrets are flexible at any range
+            }
+            
+            // Target-specific considerations
+            if (target) {
+                // Against fast targets, prefer weapons with higher accuracy
+                if (target.maxSpeed > 5 && weapon.type === 'turret') {
+                    score += 2;
+                }
+                
+                // Against large targets, prefer high damage weapons
+                if (target.size > 50 && weapon.damage > 10) {
+                    score += 2;
+                }
+                
+                // Against armored targets (high hull), prefer armor penetrating weapons
+                if (target.maxHull > 100 && weapon.armorPiercing) {
+                    score += 3;
+                }
+            }
+            
+            // If this weapon scores better, select it
+            if (score > bestScore) {
+                bestScore = score;
+                bestWeapon = weapon;
+            }
+        }
+        
+        // Only change weapons if the selected one is different and better by at least 2 points
+        if (bestWeapon !== this.currentWeapon && bestScore > 0) {
+            return bestWeapon;
+        }
+        
+        // Otherwise stick with current weapon
+        return this.currentWeapon;
+    }
+
+    /**
+     * Select the appropriate weapon and set it as current
+     * @param {number} distanceToTarget - Distance to current target
+     */
+    selectBestWeapon(distanceToTarget) {
+        if (!this.weapons || this.weapons.length <= 1) return;
+        
+        // Use our new optimal weapon selection algorithm
+        const optimalWeapon = this.selectOptimalWeapon(distanceToTarget, this.target);
+        
+        // If we got a different weapon, switch to it
+        if (optimalWeapon !== this.currentWeapon) {
+            // Find the index of the optimal weapon
+            const newIndex = this.weapons.indexOf(optimalWeapon);
+            if (newIndex !== -1) {
+                this.weaponIndex = newIndex;
+                this.currentWeapon = this.weapons[this.weaponIndex];
+                this.fireRate = this.currentWeapon.fireRate;
+                // Reset cooldown when switching weapons (half normal delay)
+                this.fireCooldown = this.fireRate * 0.5;
+                
+                // Log weapon change for debugging
+                if (this.lastWeaponSwitch === undefined || 
+                    millis() - this.lastWeaponSwitch > 2000) {
+                    console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
+                    this.lastWeaponSwitch = millis();
+                }
+            }
+        }
     }
 
     /**
@@ -953,17 +1166,21 @@ class Enemy {
     /** 
      * Applies forward thrust in current facing direction
      * @param {number} [multiplier=1.0] - Optional thrust multiplier
+     * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
-    thrustForward(multiplier = 1.0) {
+    thrustForward(multiplier = 1.0, createParticles = true) {
         if (isNaN(this.angle)) return;
         
+        // Calculate thrust vector
         this.thrustVector.set(cos(this.angle), sin(this.angle));
         this.thrustVector.mult(this.thrustForce * multiplier);
+        
+        // Apply thrust to velocity
         this.vel.add(this.thrustVector);
         
-        // Create thrust particles
-        if (this.thrustManager) {
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        // Flag that we're thrusting - particles will be created in updatePhysics
+        if (createParticles) {
+            this.isThrusting = true;
         }
     }
 
@@ -1008,6 +1225,44 @@ class Enemy {
         return angleDifference;
     }
 
+    /**
+     * Updates the physics (drag, velocity, position) for the ship
+     * Centralizes all physics calculations in one place
+     */
+    updatePhysics() {
+        // Skip if destroyed
+        if (this.destroyed) return;
+        
+        // Apply drag based on role
+        const effectiveDrag = this.currentState === AI_STATE.NEAR_STATION ? this.drag * 0.8 : this.drag;
+        this.vel.mult(effectiveDrag);
+        
+        // Ensure we don't exceed max speed
+        this.vel.limit(this.maxSpeed);
+        
+        // Update position only if velocity is valid
+        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+            this.pos.add(this.vel);
+        } else {
+            console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
+            this.vel.set(0, 0);
+        }
+        
+        // Update thrust particles
+        if (this.thrustManager) {
+            this.thrustManager.update();
+        }
+        
+        // Create thrust particles if actively thrusting
+        // This will be controlled by a separate flag now
+        if (this.isThrusting) {
+            if (this.thrustManager) {
+                this.thrustManager.createThrust(this.pos, this.angle, this.size);
+            }
+            this.isThrusting = false; // Reset for next frame
+        }
+    }
+
     // ---------------------------
     // --- Combat & Weapons ---
     // ---------------------------
@@ -1018,21 +1273,6 @@ class Enemy {
      */
     isWeaponReady() {
         return this.fireCooldown <= 0;
-    }
-
-    /**
-     * Select appropriate weapon based on distance to target
-     * @param {number} distanceToTarget - Distance to current target
-     */
-    selectBestWeapon(distanceToTarget) {
-        if (!this.weapons || this.weapons.length <= 1) return;
-        
-        const isLongRange = distanceToTarget > this.firingRange * 0.7;
-        const currentIsBeam = this.currentWeapon.type.includes('beam');
-        
-        if ((isLongRange && !currentIsBeam) || (!isLongRange && currentIsBeam)) {
-            this.cycleWeapon();
-        }
     }
 
     /**
@@ -1059,23 +1299,62 @@ class Enemy {
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         if (!targetExists) return;
         
-        // Select best weapon for current range
+        // Select best weapon for current situation
         this.selectBestWeapon(distanceToTarget);
         
-        // Check if target is in firing range and cooldown is ready
-        if (distanceToTarget < this.firingRange && this.isWeaponReady()) {
+        // Adjust firing range based on weapon type
+        let effectiveFiringRange = this.firingRange;
+        if (this.currentWeapon) {
+            switch (this.currentWeapon.type) {
+                case 'beam':
+                    effectiveFiringRange *= 1.2; // Beams have longer range
+                    break;
+                case 'missile':
+                    effectiveFiringRange *= 1.3; // Missiles have even longer range
+                    break;
+                case 'turret':
+                    effectiveFiringRange *= 0.9; // Turrets have slightly shorter range
+                    break;
+            }
+        }
+        
+        // Enhanced firing logic with weapon-specific behaviors
+        if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
             // Check if we can fire at the target
             if (this.canFireAtTarget(shootingAngle)) {
                 if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
                 
-                // For turrets, pass the player/target as the target parameter
-                if (this.currentWeapon && this.currentWeapon.type === 'turret') {
-                    this.fireWeapon(this.target);
+                // Weapon-specific behavior
+                if (this.currentWeapon) {
+                    if (this.currentWeapon.type === 'turret') {
+                        // Turrets track the target
+                        this.fireWeapon(this.target);
+                    } else if (this.currentWeapon.type === 'missile' && 
+                              this.role !== AI_ROLE.POLICE && 
+                              random() < 0.7) {
+                        // Non-police ships sometimes hold missile fire to conserve ammo
+                        console.log(`${this.shipTypeName} holding missile fire to conserve ammo`);
+                    } else if (this.currentWeapon.type === 'beam' && 
+                              distanceToTarget > this.firingRange * 0.8 && 
+                              random() < 0.4) {
+                        // Sometimes hold beam fire at extreme ranges due to damage falloff
+                        console.log(`${this.shipTypeName} holding beam fire at extreme range`);
+                    } else {
+                        // Standard firing
+                        this.fireWeapon();
+                    }
                 } else {
+                    // Fallback if no weapon defined
                     this.fireWeapon();
                 }
                 
+                // Set cooldown based on fire rate
                 this.fireCooldown = this.fireRate;
+                
+                // Add a slight movement pause after firing for more realistic combat
+                if (this.currentWeapon && this.currentWeapon.type === 'projectile' && random() < 0.3) {
+                    this.vel.mult(0.9); // Slow down slightly
+                }
             } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
                 // Force IDLE pirates who want to fire to transition to APPROACHING
                 console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);
@@ -1229,6 +1508,26 @@ class Enemy {
             
             let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
             text(label, this.pos.x, this.pos.y - this.size / 2 - 5);
+            pop();
+        }
+
+        // Draw weapon range indicator in combat (debug)
+        if (this.currentWeapon && this.target && 
+            (this.currentState === AI_STATE.APPROACHING || 
+             this.currentState === AI_STATE.ATTACK_PASS)) {
+            
+            push();
+            stroke(200, 200, 0, 50);
+            noFill();
+            strokeWeight(1);
+            let effectiveRange = this.firingRange;
+            
+            // Adjust range circle based on weapon type
+            if (this.currentWeapon.type === 'beam') effectiveRange *= 1.2;
+            else if (this.currentWeapon.type === 'missile') effectiveRange *= 1.3;
+            else if (this.currentWeapon.type === 'turret') effectiveRange *= 0.9;
+            
+            circle(this.pos.x, this.pos.y, effectiveRange * 2);
             pop();
         }
     }
