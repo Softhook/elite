@@ -105,12 +105,3 @@ class Projectile {
         );
     }
 }
-
-// Example usage of Projectile class
-if (this.pos && angle !== undefined) {
-    const proj = new Projectile(
-        this.pos.x, this.pos.y, angle, this,
-        8, this.currentWeapon?.damage || 10, this.currentWeapon?.color || [255,0,0]
-    );
-    this.currentSystem.addProjectile(proj);
-}
