@@ -269,7 +269,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [151, 181, 196],
         strokeW: 1.00,
         typicalCargo: [],
-        price: 2700
+        price: 2700,
+        aiRoles: ["POLICE"]
     },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
@@ -279,7 +280,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawAdder, vertexData: [ { x: 0.8, y: 0 }, { x: 0.2, y: 0.8 }, { x: -0.9, y: 0.7 }, { x: -0.7, y: 0 }, { x: -0.9, y: -0.9 }, { x: 0.1, y: -0.7 } ],
         fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
         typicalCargo: ["Food", "Textiles", "Minerals"],
-        price: 2700
+        price: 2700,
+        aiRoles: ["HAULER"]
     },
     "Anaconda": {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
@@ -289,7 +291,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawAnaconda, vertexData: [ { x: 1.2, y: 0 }, { x: 0.9, y: 0.3 }, { x: -0.9, y: 0.4 }, { x: -1.1, y: 0.2 }, { x: -1.1, y: -0.2 }, { x: -0.9, y: -0.4 }, { x: 0.9, y: -0.3 } ],
         fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery"],
-        price: 12000
+        price: 12000,
+        aiRoles: ["HAULER", "MILITARY"]
     },
     "AspExplorer": {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
@@ -301,7 +304,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [100, 90, 40],
         strokeW: 1.50,
         typicalCargo: ["Minerals", "Medicine", "Computers"],
-        price: 8250
+        price: 8250,
+        aiRoles: ["EXPLORER"]
     },
     "BioFrigate": { // NEW - Alien 2
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
@@ -311,7 +315,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawBioFrigate, vertexData: [ {x:1.0, y:0}, {x:0.6, y:0.6}, {x:0.1, y:0.8}, {x:-0.5, y:0.7}, {x:-0.9, y:0.2}, {x:-1.0, y:0}, {x:-0.9, y:-0.2}, {x:-0.5, y:-0.7}, {x:0.1, y:-0.8}, {x:0.6, y:-0.6} ],
         fillColor: [80, 140, 100], strokeColor: [40, 80, 50], strokeW: 2.5, // Murky green
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
-        price: 20000
+        price: 20000,
+        aiRoles: ["ALIEN"]
     },
     "CenturionGunship": { // NEW - Heavy Fighter
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
@@ -323,7 +328,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [160, 165, 175],
         strokeW: 2.20,
         typicalCargo: ["Weapons", "Metals", "Machinery"],
-        price: 15360
+        price: 15360,
+        aiRoles: ["MILITARY"]
     },
     "CobraMkIII": {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
@@ -336,7 +342,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [200, 220, 255],
         strokeW: 1.50,
         typicalCargo: ["Food"],
-        price: 7200
+        price: 7200,
+        aiRoles: ["POLICE", "HAULER"]
     },
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
@@ -346,7 +353,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawDiamondbackExplorer, vertexData: [ { x: 1.0, y: 0 }, { x: 0.2, y: 0.4 }, { x: -0.5, y: 0.9 }, { x: -0.9, y: 0.5 }, { x: -0.8, y: 0 }, { x: -0.9, y: -0.5 }, { x: -0.5, y: -0.9 }, { x: 0.2, y: -0.4 } ],
         fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
-        price: 6500
+        price: 6500,
+        aiRoles: ["EXPLORER"]
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
@@ -356,7 +364,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawFederalAssaultShip, vertexData: [ { x: 0.9, y: 0 }, { x: 0.7, y: 0.5 }, { x: -0.2, y: 0.6 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: -0.2, y: -0.6 }, { x: 0.7, y: -0.5 } ],
         fillColor: [110, 120, 130], strokeColor: [180, 190, 200], strokeW: 2,
         typicalCargo: ["Weapons", "Metals", "Adv Components"],
-        price: 15000
+        price: 15000,
+        aiRoles: ["MILITARY"]
     },
      "FerDeLance": {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
@@ -366,7 +375,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawFerDeLance, vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, { x: 0.2, y: -0.5 } ],
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
         typicalCargo: ["Luxury Goods", "Weapons", "Narcotics"],
-        price: 11700
+        price: 11700,
+        aiRoles: ["MILITARY"]
     },
     "GeometricDrone": { // NEW - Alien 3
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
@@ -376,7 +386,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawGeometricDrone, vertexData: [ {x:1,y:0}, {x:0.5,y:0.87}, {x:-0.5,y:0.87}, {x:-1,y:0}, {x:-0.5,y:-0.87}, {x:0.5,y:-0.87} ], // Regular Hexagon
         fillColor: [50, 50, 60], strokeColor: [200, 200, 255], strokeW: 1.0, // Dark metallic, light stroke
         typicalCargo: ["Chemicals", "Adv Components"],
-        price: 1800
+        price: 1800,
+        aiRoles: ["ALIEN"]
     },
     "GladiusFighter": { // NEW - Medium Fighter
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
@@ -386,7 +397,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawGladiusFighter, vertexData: [ {x:1.1, y:0}, {x:0.3, y:0.4}, {x:-0.2, y:0.7}, {x:-0.9, y:0.5}, {x:-1.0, y:0}, {x:-0.9, y:-0.5}, {x:-0.2, y:-0.7}, {x:0.3, y:-0.4} ],
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Weapons", "Computers"],
-        price: 7000
+        price: 7000,
+        aiRoles: ["MILITARY"]
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
@@ -396,7 +408,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8, // Red
         typicalCargo: [],
-        price: 8850
+        price: 8850,
+        aiRoles: ["MILITARY"]
     },
     "HammerheadCorvette": { // NEW - Unique 2
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
@@ -408,7 +421,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [150, 180, 210],
         strokeW: 2.00, // Blue-grey
         typicalCargo: ["Metals", "Weapons", "Luxury Goods"],
-        price: 14000
+        price: 14000,
+        aiRoles: ["MILITARY"]
     },
     "ImperialClipper": {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
@@ -418,7 +432,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawImperialClipper, vertexData: [ { x: 1.1, y: 0 }, { x: 0.7, y: 0.2 }, { x: 0.1, y: 0.9 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: 0.1, y: -0.9 }, { x: 0.7, y: -0.2 } ],
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles"],
-        price: 12600
+        price: 12600,
+        aiRoles: ["HAULER"]
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
@@ -428,7 +443,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawImperialCourier, vertexData: [ { x: 1.0, y: 0 }, { x: 0.4, y: 0.3 }, { x: -0.5, y: 0.5 }, { x: -0.9, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.9, y: -0.4 }, { x: -0.5, y: -0.5 }, { x: 0.4, y: -0.3 } ],
         fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
         typicalCargo: ["Luxury Goods", "Medicine"],
-        price: 5460
+        price: 5460,
+        aiRoles: ["MILITARY"]
     },
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
@@ -440,7 +456,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [90, 80, 70],
         strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
-        price: 8120
+        price: 8120,
+        aiRoles: ["HAULER"]
     },
     "Keelback": {
         name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
@@ -452,7 +469,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [100, 80, 40],
         strokeW: 1.50,
         typicalCargo: ["Minerals", "Metals", "Machinery"],
-        price: 7200
+        price: 7200,
+        aiRoles: ["HAULER"]
     },
     "KraitMKI": { 
         name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
@@ -465,7 +483,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [140, 160, 140],
         strokeW: 1.50,
         typicalCargo: [],
-        price: 6000
+        price: 6000,
+        aiRoles: ["PIRATE"]
     },
 
     "KraitMKII": { 
@@ -477,7 +496,8 @@ const SHIP_DEFINITIONS = {
          vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
         typicalCargo: ["Food","Minerals"],
-        price: 6000
+        price: 6000,
+        aiRoles: ["PIRATE"]
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
@@ -487,7 +507,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawMantaHauler, vertexData: [ {x:0.8, y:0}, {x:0.2, y:0.3}, {x:-0.6, y:0.9}, {x:-0.9, y:0.7}, {x:-1.0, y:0}, {x:-0.9, y:-0.7}, {x:-0.6, y:-0.9}, {x:0.2, y:-0.3} ],
         fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
-        price: 8750
+        price: 8750,
+        aiRoles: ["HAULER"]
     },
     "MuleFreighter": { // NEW - Small Transporter
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
@@ -497,7 +518,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
-        price: 2660
+        price: 2660,
+        aiRoles: ["TRANSPORT"]
     },
     "NomadVoyager": { // NEW - Explorer 2
         name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
@@ -507,7 +529,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawNomadVoyager, vertexData: [ {x:0.9, y:0}, {x:0.7, y:0.5}, {x:0.1, y:0.8}, {x:-0.8, y:0.7}, {x:-1.1, y:0}, {x:-0.8, y:-0.7}, {x:0.1, y:-0.8}, {x:0.7, y:-0.5} ], // Rounded, pod-like
         fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
-        price: 9360
+        price: 9360,
+        aiRoles: ["EXPLORER"]
     },
     "PathfinderSurvey": { // NEW - Explorer 1
         name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
@@ -517,7 +540,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawPathfinderSurvey, vertexData: [ {x:1.2, y:0}, {x:0.8, y:0.2}, {x:-0.5, y:0.5}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.5, y:-0.5}, {x:0.8, y:-0.2} ], // Long nose
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
         typicalCargo: ["Food", "Minerals", "Metals", "Adv Components"],
-        price: 6000
+        price: 6000,
+        aiRoles: ["EXPLORER"]
     },
     "ProspectorMiner": { // NEW - Miner
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
@@ -527,7 +551,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawProspectorMiner, vertexData: [ {x:0.6, y:0}, {x:0.4, y:0.8}, {x:-0.4, y:0.9}, {x:-0.9, y:0.6}, {x:-1.0, y:-0.3}, {x:-0.9, y:-0.6}, {x:-0.4, y:-0.9}, {x:0.4, y:-0.8} ], // Bulky, functional
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
         typicalCargo: ["Minerals", "Metals"],
-        price: 7000
+        price: 7000,
+        aiRoles: ["TRANSPORT"]
     },
     "Python": {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
@@ -537,7 +562,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawPython, vertexData: [ { x: 0.8, y: 0 }, { x: 0.6, y: 0.7 }, { x: -0.6, y: 0.9 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.6, y: -0.9 }, { x: 0.6, y: -0.7 } ],
         fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals"],
-        price: 12600
+        price: 12600,
+        aiRoles: ["HAULER"]
     },
     "ShardInterceptor": { // NEW - Alien 1
         name: "Shard Interceptor (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 30,
@@ -549,7 +575,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [240, 240, 255],
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
-        price: 9000
+        price: 9000,
+        aiRoles: ["ALIEN"]
     },
     "Sidewinder": {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
@@ -559,7 +586,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
         typicalCargo: ["Food"],
-        price: 2500
+        price: 2500,
+        aiRoles: ["PIRATE"]
     },
     "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
@@ -569,7 +597,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawStarlinerCruiser, vertexData: [ {x:1.2, y:0}, {x:1.0, y:0.2}, {x:-0.9, y:0.3}, {x:-1.1, y:0.1}, {x:-1.1, y:-0.1}, {x:-0.9, y:-0.3}, {x:1.0, y:-0.2} ], // Elongated
         fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine"],
-        price: 11000
+        price: 11000,
+        aiRoles: ["HAULER"]
     },
     "Thargoid": { 
         name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
@@ -578,7 +607,8 @@ const SHIP_DEFINITIONS = {
         costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
         drawFunction: drawThargoid, vertexData: [], // Not editable via vertex data in this setup
         typicalCargo: ["Chemicals", "Adv Components", "Narcotics"],
-        price: 16000
+        price: 16000,
+        aiRoles: ["ALIEN"]
     },
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
@@ -588,7 +618,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
         typicalCargo: ["Textiles", "Minerals", "Metals", "Machinery"],
-        price: 4200
+        price: 4200,
+        aiRoles: ["HAULER"]
     },
      "Type9Heavy": {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
@@ -600,7 +631,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [110, 80, 30],
         strokeW: 2.50,
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
-        price: 50250
+        price: 50250,
+        aiRoles: ["HAULER"]
     },
     "Viper": { 
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
@@ -611,7 +643,8 @@ const SHIP_DEFINITIONS = {
         vertexData: [ { x: 1.1, y: 0 }, { x: -0.6, y: 0.5 }, { x: -1, y: 0.3 }, { x: -1, y: -0.3 }, { x: -0.6, y: -0.5 } ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
-        price: 6000
+        price: 6000,
+        aiRoles: ["MILITARY"]
     },
      "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
@@ -623,7 +656,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [138, 138, 138],
         strokeW: 1.50,
         typicalCargo: ["Weapons", "Narcotics", "Slaves"],
-        price: 8250
+        price: 8250,
+        aiRoles: ["MILITARY"]
     },
     "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -635,7 +669,8 @@ const SHIP_DEFINITIONS = {
         strokeColor: [120, 100, 30],
         strokeW: 1.00,
         typicalCargo: ["Weapons", "Computers"],
-        price: 8000
+        price: 8000,
+        aiRoles: ["MILITARY"]
     },
 };
 // --- End Ship Definitions ---

@@ -1,32 +1,55 @@
 // ****** StarSystem.js ******
 
-const POLICE_SHIPS = ["ACAB","CobraMkIII"];
-//const POLICE_SHIPS = ["JackalMultirole"];
+// Build ship role arrays from SHIP_DEFINITIONS
+const buildShipRoleArrays = () => {
+    const POLICE_SHIPS = [];
+    const PIRATE_SHIPS = [];
+    const HAULER_SHIPS = [];
+    const TRANSPORT_SHIPS = [];
+    const MILITARY_SHIPS = [];
+    const ALIEN_SHIPS = [];
+    
+    // Iterate through all ship definitions
+    for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
+        if (!shipData.aiRoles || !Array.isArray(shipData.aiRoles)) continue;
+        
+        // Add ship to appropriate role arrays based on its aiRoles
+        if (shipData.aiRoles.includes("POLICE")) POLICE_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("PIRATE")) PIRATE_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("HAULER")) HAULER_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("TRANSPORT")) TRANSPORT_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("MILITARY")) MILITARY_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("ALIEN")) ALIEN_SHIPS.push(shipKey);
+    }
+    
+    return {
+        POLICE_SHIPS,
+        PIRATE_SHIPS, 
+        HAULER_SHIPS,
+        TRANSPORT_SHIPS,
+        MILITARY_SHIPS,
+        ALIEN_SHIPS
+    };
+};
 
+// Initialize the role arrays
+const {
+    POLICE_SHIPS,
+    PIRATE_SHIPS,
+    HAULER_SHIPS, 
+    TRANSPORT_SHIPS,
+    MILITARY_SHIPS,
+    ALIEN_SHIPS
+} = buildShipRoleArrays();
 
-const PIRATE_SHIPS = ["KraitMKI", "KraitMKII", "Sidewinder"]; // Ensure these names exist in SHIP_DEFINITIONS
-const HAULER_SHIPS = [
-    "Adder", // Common small hauler
-    "Adder",
-    "Anaconda",
-    "DiamondbackExplorer",
-    "ImperialClipper",
-    "Viper",
-    "FederalAssaultShip",
-    "Viper",
-    "PathfinderSurvey",
-    "StarlinerCruiser", // Passenger variant
-    "Type6Transporter", // Common medium hauler
-    "Type6Transporter",
-    "Keelback",         // Combat Trader variant
-    "Python",           // Less common, powerful multi-role/hauler
-    "Type9Heavy"        // Less common, heavy hauler
-];
-
-const TRANSPORT_SHIPS = ["ProspectorMiner", "MuleFreighter"]; // Ensure these names exist in SHIP_DEFINITIONS
-const MILITARY_SHIPS = ["FederalAssaultShip", "ImperialClipper", "Python", "Anaconda", "Viper", "CobraMkIII"];
-const ALIEN_SHIPS = ["Thargoid", "GnatInterceptor", "ShardInterceptor"];
-// You can expand these lists as needed.
+// Log the generated arrays to verify
+console.log("Ship role arrays generated from ship definitions:");
+console.log("POLICE_SHIPS:", POLICE_SHIPS);
+console.log("PIRATE_SHIPS:", PIRATE_SHIPS);
+console.log("HAULER_SHIPS:", HAULER_SHIPS);
+console.log("TRANSPORT_SHIPS:", TRANSPORT_SHIPS);
+console.log("MILITARY_SHIPS:", MILITARY_SHIPS);
+console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
 
 class StarSystem {
     /**
