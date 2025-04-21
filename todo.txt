@@ -49,6 +49,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Graphics and UI Improvements
 
+- better title screen
 - add some space features nebula, moons
 - Redesign space station
 - Add proper 3D ship models (even if sprite-based)
