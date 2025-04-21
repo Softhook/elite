@@ -3,9 +3,6 @@
 ## Bugs and Issues
 
 weapon names
-weapon categories
-
-make ship role part of the ship
 
 
 aI swithcing really quicly making red line jitter
