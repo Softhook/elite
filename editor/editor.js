@@ -380,7 +380,27 @@ function handleShipSelection() {
         thargoidWarningSpan.style('display', 'none');
     }
 
-    if (descriptionDiv) { descriptionDiv.html(descriptionText); }
+    if (descriptionDiv) {
+        let propertyDisplay = "";
+        
+        // If we have a valid ship definition, show its properties
+        if (currentShipDef) {
+            propertyDisplay = `<div style="text-align:left">
+                <p><strong>Description:</strong> ${descriptionText}</p>
+                <p><strong>Role:</strong> ${currentShipDef.role || 'N/A'}</p>
+                <p><strong>Speed:</strong> ${currentShipDef.baseMaxSpeed || 'N/A'} | 
+                   <strong>Thrust:</strong> ${currentShipDef.baseThrust || 'N/A'} | 
+                   <strong>Turn Rate:</strong> ${currentShipDef.baseTurnRate?.toFixed(5) || 'N/A'} rad/frame</p>
+                <p><strong>Cargo Capacity:</strong> ${currentShipDef.cargoCapacity || 'N/A'} units</p>
+                <p><strong>Armament:</strong> ${Array.isArray(currentShipDef.armament) ? currentShipDef.armament.join(', ') : 'N/A'}</p>
+                <p><strong>Price:</strong> ${currentShipDef.price ? currentShipDef.price.toLocaleString() : 'N/A'} cr</p>
+            </div>`;
+        } else {
+            propertyDisplay = descriptionText;
+        }
+        
+        descriptionDiv.html(propertyDisplay);
+    }
     updateUIControls(); // Update button states
     updateColorPickersFromSelection(); // Reset/set color pickers
 }
