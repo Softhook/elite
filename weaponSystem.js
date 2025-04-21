@@ -12,8 +12,9 @@ class WeaponSystem {
         const weapon = owner.currentWeapon;
         const damage = weapon?.damage || 20; // Increased base damage
         const color = weapon?.color || [255, 0, 0];
+        const maxRadius = weapon?.maxRadius || 750; // Get maxRadius from weapon or use default
         
-        console.log(`Force wave fired by ${owner instanceof Player ? "player" : "enemy"} with damage ${damage}`);
+        console.log(`Force wave fired by ${owner instanceof Player ? "player" : "enemy"} with damage ${damage}, maxRadius: ${maxRadius}`);
         
         // Create force wave in the system
         system.forceWaves.push({
@@ -21,7 +22,7 @@ class WeaponSystem {
             owner: owner,
             startTime: millis(),
             radius: 50, // Starting radius
-            maxRadius: 750, // Maximum radius
+            maxRadius: maxRadius, // Use the weapon's maxRadius property
             growRate: 15, // How fast it grows per frame
             damage: damage,
             color: color,
@@ -60,6 +61,9 @@ class WeaponSystem {
             case "straight4":
                 this.fireStraight4(owner, system, angle);
                 break;
+            case "straight5":
+                    this.fireStraight5(owner, system, angle);
+                break;                
             case "spread2":
                 this.fireSpread2(owner, system, angle);
                 break;
@@ -69,6 +73,9 @@ class WeaponSystem {
             case "spread4":
                 this.fireSpread4(owner, system, angle);
                 break;
+            case "spread5":
+                    this.fireSpread5(owner, system, angle);
+                break;                
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
@@ -92,6 +99,7 @@ class WeaponSystem {
         let spread = 0.3; // total spread in radians
         if (count === 2) spread = 0.18;
         if (count === 4) spread = 0.4;
+        if (count === 5) spread = 0.2;
         const start = -spread / 2;
         const step = count > 1 ? spread / (count - 1) : 0;
         for (let i = 0; i < count; i++) {
@@ -276,19 +284,25 @@ class WeaponSystem {
         WeaponSystem.fireProjectile(owner, system, angleToTarget);
     }
 
-    // --- Straight3 weapon ---
-    static fireStraight3(owner, system, angle) {
-        this.fireStraight(owner, system, angle, 3);
-    }
 
     // --- Straight2 weapon (twin parallel shots) ---
     static fireStraight2(owner, system, angle) {
         this.fireStraight(owner, system, angle, 2);
     }
 
+    // --- Straight3 weapon ---
+    static fireStraight3(owner, system, angle) {
+        this.fireStraight(owner, system, angle, 3);
+    }
+
     // --- Straight4 weapon (quad parallel shots) ---
     static fireStraight4(owner, system, angle) {
         this.fireStraight(owner, system, angle, 4);
+    }
+
+        // --- Straight5 weapon (Five parallel shots) ---
+    static fireStraight5(owner, system, angle) {
+            this.fireStraight(owner, system, angle, 5);
     }
 
     // --- Spread2 weapon (twin angled shots) ---
@@ -304,6 +318,10 @@ class WeaponSystem {
     // --- Spread4 weapon (quad angled shots) ---
     static fireSpread4(owner, system, angle) {
         this.fireSpread(owner, system, angle, 4);
+    }
+        // --- Spread5 weapon (Five angled shots) ---   
+    static fireSpread5(owner, system, angle) {
+        this.fireSpread(owner, system, angle, 5);
     }
 }
 

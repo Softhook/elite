@@ -148,6 +148,19 @@ const WEAPON_UPGRADES = [
         price: 2100,
         desc: "Wide 4-way spread, covers more area."
     },
+
+    // -----------------------------
+    // Spread Weapons (5-way)
+    // -----------------------------
+    {
+        name: "Quad Cone",
+        type: "spread5",
+        damage: 9,
+        color: [255, 0, 0], // Red
+        fireRate: 0.3,
+        price: 6100,
+        desc: "Tight 5-way spread."
+    },
     
     // -----------------------------
     // Turret Weapons (Auto-aiming)
@@ -181,6 +194,17 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 0], // Red
         fireRate: 2, 
         price: 10000,
+        maxRadius: 300,
+        desc: "Super damage, area effect."
+    }
+    {
+        name: "Jedi Force",
+        type: "force",
+        damage: 300,
+        color: [255, 255, 0], // Purple
+        fireRate: 2, 
+        price: 10000,
+        maxRadius: 750,
         desc: "Super damage, area effect."
     }
 ];
