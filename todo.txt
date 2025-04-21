@@ -2,11 +2,10 @@
 
 ## Bugs and Issues
 
-weapon names
 
-aI swithcing really quicly making red line jitter
 
-- Fix inconsistent ship pricing formulas (previously baseHull*20 + cargoCapacity*10 + 1000, now baseMaxSpeed * hull)
+- aI swithcing really quicly making red line jitter
+
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
 Issue: When buying weapons, it currently just overwrites the first weapon slot
 Ships have multiple weapon hardpoints defined in ship definition but can't use them
@@ -22,8 +21,6 @@ No consideration for ship orientation during collision tests
 Solution: Implement more precise hitbox system using ship vertex data
 
 - Fix AI behavior inconsistencies and edge cases
-
-
 - Improve enemy targeting and combat decisions
 - Fix potential memory leaks with explosion particles
 - Improve handling of edge cases in the solar system generation
@@ -49,6 +46,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Graphics and UI Improvements
 
+- weapon names clarify
 - better title screen
 - add some space features nebula, moons
 - Redesign space station

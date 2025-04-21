@@ -388,6 +388,7 @@ function handleShipSelection() {
             propertyDisplay = `<div style="text-align:left">
                 <p><strong>Description:</strong> ${descriptionText}</p>
                 <p><strong>Role:</strong> ${currentShipDef.role || 'N/A'}</p>
+                <p><strong>Hull:</strong> ${currentShipDef.baseHull || 'N/A'}</p>
                 <p><strong>Speed:</strong> ${currentShipDef.baseMaxSpeed || 'N/A'} | 
                    <strong>Thrust:</strong> ${currentShipDef.baseThrust || 'N/A'} | 
                    <strong>Turn Rate:</strong> ${currentShipDef.baseTurnRate?.toFixed(5) || 'N/A'} rad/frame</p>

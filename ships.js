@@ -262,9 +262,9 @@ function drawHammerheadCorvette(s, thrusting = false) { // Unique 2
 const SHIP_DEFINITIONS = {
     "ACAB": {
         name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236, // Direct radian value for 3.0 degrees
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
-        armament: ["Twin Pulse"], // Police with targeting turret
+        armament: ["Twin Pulse"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawACAB, vertexData: [ { x: 0.8969, y: 0.0000 }, { x: 0.1469, y: 0.4929 }, { x: -0.6673, y: 0.6286 }, { x: -0.6031, y: 0.0000 }, { x: -0.6673, y: -0.6286 }, { x: 0.1469, y: -0.4929 } ],
         fillColor: [100, 150, 200],
@@ -278,7 +278,7 @@ const SHIP_DEFINITIONS = {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
-        armament: ["Pulse Laser"], // Basic defensive setup
+        armament: ["Pulse Laser"],
         costCategory: "Low", description: "Affordable entry-level freighter or explorer.",
         drawFunction: drawAdder, vertexData: [ { x: 0.8, y: 0 }, { x: 0.2, y: 0.8 }, { x: -0.9, y: 0.7 }, { x: -0.7, y: 0 }, { x: -0.9, y: -0.9 }, { x: 0.1, y: -0.7 } ],
         fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
@@ -302,7 +302,7 @@ const SHIP_DEFINITIONS = {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
-        armament: ["Beam Laser", "Twin Pulse"], // Utility-focused
+        armament: ["Beam Laser", "Twin Pulse"],
         costCategory: "Medium-High", description: "Iconic explorer with excellent visibility and jump range.",
         drawFunction: drawAspExplorer, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.4127, y: 0.5133 }, { x: -0.4250, y: 0.8750 }, { x: -0.9000, y: 0.3000 }, { x: -0.9000, y: -0.3000 }, { x: -0.4250, y: -0.8750 }, { x: 0.4127, y: -0.5133 } ],
         fillColor: [200, 180, 80],
