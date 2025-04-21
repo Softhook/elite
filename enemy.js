@@ -266,7 +266,7 @@ class Enemy {
             const cargoTarget = this.detectCargo(system);
             if (cargoTarget) {
                 this.cargoTarget = cargoTarget;
-                this.currentState = AI_STATE.COLLECTING_CARGO;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
                 console.log(`${this.shipTypeName} detected cargo - moving to collect`);
             }
         }
@@ -281,7 +281,7 @@ class Enemy {
                 // Remember current state to return to after collection
                 this.previousState = this.currentState;
                 this.cargoTarget = cargoTarget;
-                this.currentState = AI_STATE.COLLECTING_CARGO;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
                 console.log(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
             }
         }
@@ -292,7 +292,7 @@ class Enemy {
             if (this.currentState === AI_STATE.COLLECTING_CARGO) {
                 if (!this.updateCargoCollectionAI(system)) {
                     // When done collecting, return to previous state
-                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
+                    this.changeState(this.previousState || AI_STATE.TRANSPORTING);
                 }
             } else {
                 // Normal transport behavior
@@ -320,7 +320,7 @@ class Enemy {
                 }
             } catch (e) {
                 console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
-                this.currentState = AI_STATE.IDLE;
+                this.changeState(AI_STATE.IDLE);
             }
             this.vel.mult(this.drag);
             this.vel.limit(this.maxSpeed);
@@ -341,46 +341,40 @@ class Enemy {
     // --- Role-Specific Updates ---
     // ---------------------------
     
-    /** Common Combat AI Logic (Attack Pass) - Used by Pirates and hostile Police. */
-    updateCombatAI(system) {
-        // --- Initialize flags if not present ---
-        if (this.combatFlagsInitialized === undefined) {
-            this.combatFlagsInitialized = true;
-            this.hasLoggedDamageActivation = false;
-            this.hasLoggedPlayerTargeting = false;
-            this.targetSwitchCooldown = 0; // INITIALIZE COOLDOWN
-        }
-
+    /**
+     * Updates the enemy's targeting information
+     * @param {Object} system - The current star system
+     * @return {boolean} Whether a valid target was found
+     */
+    updateTargeting(system) {
         // Update cooldown timer
         if (this.targetSwitchCooldown > 0) {
             this.targetSwitchCooldown -= deltaTime / 1000;
         }
         
-        // IMPROVED: Check if being attacked by police (for pirates)
+        // Check if being attacked by police (for pirates)
         if (this.role === AI_ROLE.PIRATE && this.lastAttacker && 
             this.lastAttacker.role === AI_ROLE.POLICE && 
             this.targetSwitchCooldown <= 0) {
             
-            let attackerDistance = dist(this.pos.x, this.pos.y, this.lastAttacker.pos.x, this.lastAttacker.pos.y);
+            let attackerDistance = this.distanceTo(this.lastAttacker);
             
-            // ENHANCED: More responsive switching when attacked
-            // Prioritize defending against active attackers!
+            // Prioritize defending against active attackers
             if (attackerDistance < this.detectionRange * 1.5) {
                 console.log(`Pirate ${this.shipTypeName} responding to police attack from ${this.lastAttacker.shipTypeName}`);
                 this.target = this.lastAttacker;
-                this.currentState = AI_STATE.APPROACHING;
+                this.changeState(AI_STATE.APPROACHING);
                 this.targetSwitchCooldown = 2.0;
+                return true;
             }
         }
         
-        // Existing target validity checking and cooldown logic...
-        
-        // MODIFIED: AGGRESSIVE PIRATE RETARGETING WITH STATE TRACKING
+        // AGGRESSIVE PIRATE RETARGETING WITH STATE TRACKING
         if (this.role === AI_ROLE.PIRATE &&
-            (this.currentState === AI_STATE.IDLE || !this.target || !this.target.pos || this.target.hull <= 0) &&
-            system.player && !system.player.destroyed) {
+            (this.currentState === AI_STATE.IDLE || !this.isTargetValid(this.target)) &&
+            this.isTargetValid(system.player)) {
             
-            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
+            let playerDistance = this.distanceTo(system.player);
             
             if (playerDistance < this.detectionRange * 1.5) {
                 // Only log targeting once per state change
@@ -390,8 +384,9 @@ class Enemy {
                 }
                 
                 this.target = system.player;
-                this.currentState = AI_STATE.APPROACHING;
+                this.changeState(AI_STATE.APPROACHING);
                 this.targetSwitchCooldown = 1.0;
+                return true;
             }
         }
         
@@ -400,18 +395,15 @@ class Enemy {
             this.hasLoggedPlayerTargeting = false;
         }
         
-        // Existing targeting switching logic based on proximity...
-        
-        // MODIFIED: Make switching to player more likely
+        // Make switching to player more likely
         if (this.role === AI_ROLE.PIRATE && 
-            this.target && 
+            this.isTargetValid(this.target) && 
             !(this.target instanceof Player) && 
-            system.player && 
-            !system.player.destroyed && 
+            this.isTargetValid(system.player) && 
             this.targetSwitchCooldown <= 0) {
             
-            let currentTargetDistance = dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-            let playerDistance = dist(this.pos.x, this.pos.y, system.player.pos.x, system.player.pos.y);
+            let currentTargetDistance = this.distanceTo(this.target);
+            let playerDistance = this.distanceTo(system.player);
             
             // More lenient switching: Only need player to be 20% closer (was 40%)
             // OR within absolute engagement distance threshold
@@ -419,96 +411,164 @@ class Enemy {
                 console.log(`${this.shipTypeName} opportunistically switching target from ${this.target.shipTypeName} to Player (${playerDistance.toFixed(2)})`);
                 this.target = system.player;
                 this.targetSwitchCooldown = 2.0;
+                return true;
             }
         }
         
-        // Rest of the combat AI logic...
-        let targetExists = this.target?.hull > 0;
-        let distanceToTarget = targetExists
-             ? dist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y)
-             : Infinity;
-        let desiredMovementTargetPos = null;
-        let shootingAngle = this.angle;
-        if (targetExists && this.target.pos) {
-            // atan2 already returns radians in p5.js, don't call radians() on it
-            shootingAngle = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
-        }
-        let previousState = this.currentState;
+        return this.isTargetValid(this.target);
+    }
 
-        // --- Combat State Machine ---
+    /**
+     * Calculate the movement target position based on current state and target
+     * @param {number} distanceToTarget - Current distance to target
+     * @return {p5.Vector|null} Position vector to move toward
+     */
+    getMovementTargetForState(distanceToTarget) {
+        let desiredMovementTargetPos = null;
+        
         switch (this.currentState) {
-            case AI_STATE.IDLE:
-                // FIX: If we have a valid target, immediately transition to APPROACHING
-                if (targetExists && this.target.pos) {
-                    this.currentState = AI_STATE.APPROACHING;
+            case AI_STATE.APPROACHING:
+                if (this.isTargetValid(this.target)) {
                     desiredMovementTargetPos = this.predictTargetPosition();
                 }
                 break;
                 
-            case AI_STATE.APPROACHING:
-                // Check distance to determine next state
-                if (targetExists && distanceToTarget < this.engageDistance) {
-                    this.currentState = AI_STATE.ATTACK_PASS;
-                    this.passTimer = 0;
-                } else if (targetExists) {
-                    // FIX: Ensure we're setting a proper target position
-                    desiredMovementTargetPos = this.predictTargetPosition();
-                }
-                break;
-            
-            case AI_STATE.PATROLLING:
-                this.vel.mult(this.drag * 0.95);
-                if (targetExists && distanceToTarget < this.detectionRange) {
-                    this.currentState = AI_STATE.APPROACHING;
-                }
-                break;
             case AI_STATE.ATTACK_PASS:
-                if (!targetExists) {
-                    this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                    break;
-                }
-                this.passTimer -= deltaTime / 1000;
-                if (this.target?.vel) {
-                    desiredMovementTargetPos = p5.Vector.add(this.target.pos, this.target.vel.copy().setMag(100));
-                } else {
-                    desiredMovementTargetPos = this.target?.pos;
-                }
-                if (this.passTimer <= 0 || !desiredMovementTargetPos) {
-                    this.currentState = AI_STATE.REPOSITIONING;
-                    if (targetExists) {
-                        let v = p5.Vector.sub(this.pos, this.target.pos);
-                        v.setMag(this.repositionDistance * 1.5);
-                        this.repositionTarget = p5.Vector.add(this.pos, v);
+                if (this.isTargetValid(this.target)) {
+                    if (this.target.vel) {
+                        desiredMovementTargetPos = p5.Vector.add(
+                            this.target.pos, 
+                            this.target.vel.copy().setMag(100)
+                        );
                     } else {
-                        this.repositionTarget = null;
+                        desiredMovementTargetPos = this.target.pos;
                     }
                 }
                 break;
+                
             case AI_STATE.REPOSITIONING:
-                if (!targetExists) {
-                    this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                    break;
-                }
                 desiredMovementTargetPos = this.repositionTarget;
-                let distToRepo = this.repositionTarget ? dist(this.pos.x, this.pos.y, this.repositionTarget.x, this.repositionTarget.y) : Infinity;
-                if (!desiredMovementTargetPos || distanceToTarget > this.repositionDistance || distToRepo < 50) {
-                    this.currentState = AI_STATE.APPROACHING;
-                    this.repositionTarget = null;
-                }
                 break;
-            default:
-                this.currentState = (this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                
+            case AI_STATE.PATROLLING:
+                desiredMovementTargetPos = this.patrolTargetPos;
                 break;
         }
+        
+        return desiredMovementTargetPos;
+    }
 
+    /**
+     * Update the enemy's combat state based on target and distance
+     * @param {boolean} targetExists - Whether we have a valid target
+     * @param {number} distanceToTarget - Distance to the current target
+     */
+    updateCombatState(targetExists, distanceToTarget) {
+        switch (this.currentState) {
+            case AI_STATE.IDLE:
+                // Transition to APPROACHING if we have a valid target
+                if (targetExists) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
+                break;
+                
+            case AI_STATE.APPROACHING:
+                // Transition to ATTACK_PASS when close enough
+                if (targetExists && distanceToTarget < this.engageDistance) {
+                    this.changeState(AI_STATE.ATTACK_PASS);
+                } else if (!targetExists) {
+                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                }
+                break;
+                
+            case AI_STATE.ATTACK_PASS:
+                if (!targetExists) {
+                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                    break;
+                }
+                
+                // Transition to REPOSITIONING when pass timer expires
+                this.passTimer -= deltaTime / 1000;
+                if (this.passTimer <= 0) {
+                    // Prepare data for repositioning
+                    let stateData = {};
+                    if (targetExists) {
+                        let v = p5.Vector.sub(this.pos, this.target.pos);
+                        v.setMag(this.repositionDistance * 1.5);
+                        stateData.repositionTarget = p5.Vector.add(this.pos, v);
+                    }
+                    this.changeState(AI_STATE.REPOSITIONING, stateData);
+                }
+                break;
+                
+            case AI_STATE.REPOSITIONING:
+                if (!targetExists) {
+                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                    break;
+                }
+                
+                // Check if we've reached the repositioning target or target is too far
+                let distToRepo = this.repositionTarget ? 
+                    this.distanceTo(this.repositionTarget) : Infinity;
+                    
+                if (distanceToTarget > this.repositionDistance || distToRepo < 50) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
+                break;
+                
+            case AI_STATE.PATROLLING:
+                // Transition to APPROACHING if in detection range
+                if (targetExists && distanceToTarget < this.detectionRange) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Main combat AI implementation - now using smaller helper methods
+     * @param {Object} system - The current star system
+     */
+    updateCombatAI(system) {
+        // Initialize flags if not already set
+        if (this.combatFlagsInitialized === undefined) {
+            this.combatFlagsInitialized = true;
+            this.hasLoggedDamageActivation = false;
+            this.hasLoggedPlayerTargeting = false;
+            this.targetSwitchCooldown = 0;
+        }
+        
+        // Update targeting information
+        const targetExists = this.updateTargeting(system);
+        
+        // Calculate distance to target and shooting angle
+        let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
+        let shootingAngle = this.angle;
+        
+        if (targetExists) {
+            shootingAngle = atan2(
+                this.target.pos.y - this.pos.y, 
+                this.target.pos.x - this.pos.x
+            );
+        }
+        
+        // Update state based on conditions
+        this.updateCombatState(targetExists, distanceToTarget);
+        
+        // Get movement target based on current state
+        const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
+        
+        // Perform movement and firing
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
 
-    /** Police AI Logic - Patrols, switches to Combat AI if player is wanted. */
+    /**
+     * Police AI Logic - Patrols, switches to Combat AI if player is wanted
+     * @param {Object} system - The current star system
+     */
     updatePoliceAI(system) {
         // FIRST check if player is wanted - prioritize player over other NPCs
-        // MODIFIED: Also check system-wide alert status
         if ((system.player && system.player.isWanted && system.player.hull > 0) || 
             (system.policeAlertSent && system.player && system.player.hull > 0)) {
             
@@ -518,7 +578,7 @@ class Enemy {
             // MODIFIED: Immediately pursue if system-wide alert is active
             if (system.policeAlertSent && 
                 (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) {
-                this.currentState = AI_STATE.APPROACHING;
+                this.changeState(AI_STATE.APPROACHING);
                 
                 // Force rotation toward player
                 if (this.pos && system.player.pos) {
@@ -533,9 +593,9 @@ class Enemy {
                 }
             }
             
-            // CRITICAL FIX: Add this line to actually use combat AI when player is wanted
+            // Use combat AI when player is wanted
             this.updateCombatAI(system);
-            return; // Skip the rest of the method
+            return;
         } else {
             // Reset flags when player is no longer wanted
             this.hasReportedWantedPlayer = false;
@@ -547,7 +607,7 @@ class Enemy {
             }
         }
         
-        // Rest of the police AI logic remains unchanged
+        // Check for wanted ships
         let wantedTarget = null;
         if (system.enemies && system.enemies.length > 0) {
             for (let e of system.enemies) {
@@ -562,19 +622,24 @@ class Enemy {
             // Target any wanted ship
             this.target = wantedTarget;
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
-                this.currentState = AI_STATE.APPROACHING;
+                this.changeState(AI_STATE.APPROACHING);
             }
             this.updateCombatAI(system);
         } else {
             // No wanted targets: Patrol
-            this.currentState = AI_STATE.PATROLLING;
+            if (this.currentState !== AI_STATE.PATROLLING) {
+                this.changeState(AI_STATE.PATROLLING);
+            }
+            
             if (!this.patrolTargetPos) {
                 this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500));
             }
+            
             let desiredMovementTargetPos = this.patrolTargetPos;
             let distToPatrolTarget = desiredMovementTargetPos
                 ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
                 : Infinity;
+                
             if (distToPatrolTarget < 50) {
                 if(system?.station?.pos)
                     this.patrolTargetPos = system.station.pos.copy();
@@ -582,6 +647,7 @@ class Enemy {
                     this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000));
                 desiredMovementTargetPos = this.patrolTargetPos;
             }
+            
             this.performRotationAndThrust(desiredMovementTargetPos);
         }
     }
@@ -590,10 +656,10 @@ class Enemy {
     updateHaulerAI(system) {
          let desiredMovementTargetPos = null;
          switch (this.currentState) {
-             case AI_STATE.PATROLLING: if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy(); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dS < this.stationProximityThreshold) { this.currentState = AI_STATE.NEAR_STATION; this.nearStationTimer = this.stationPauseDuration; this.vel.mult(0.1); } break;
-             case AI_STATE.NEAR_STATION: this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000; if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; } break;
+             case AI_STATE.PATROLLING: if (!this.patrolTargetPos) { this.patrolTargetPos = system?.station?.pos?.copy(); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) { this.setLeavingSystemTarget(system); desiredMovementTargetPos = this.patrolTargetPos; break; } let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dS < this.stationProximityThreshold) { this.changeState(AI_STATE.NEAR_STATION); } break;
+             case AI_STATE.NEAR_STATION: this.vel.mult(0.8); this.nearStationTimer -= deltaTime / 1000; if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { this.hasPausedNearStation = true; this.changeState(AI_STATE.LEAVING_SYSTEM); desiredMovementTargetPos = this.patrolTargetPos; } break;
              case AI_STATE.LEAVING_SYSTEM: if (!this.patrolTargetPos) { this.setLeavingSystemTarget(system); } desiredMovementTargetPos = this.patrolTargetPos; if (!desiredMovementTargetPos) break; let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); if (dE < 150) { this.destroyed = true; } break;
-             default: if(system?.station?.pos) { this.patrolTargetPos = system.station.pos.copy(); this.currentState = AI_STATE.PATROLLING; } else { this.setLeavingSystemTarget(system); } break;
+             default: if(system?.station?.pos) { this.patrolTargetPos = system.station.pos.copy(); this.changeState(AI_STATE.PATROLLING); } else { this.changeState(AI_STATE.LEAVING_SYSTEM); } break;
          }
          this.performRotationAndThrust(desiredMovementTargetPos); // Haulers just move
     }
@@ -702,9 +768,9 @@ class Enemy {
             // If no cargo found, return to normal behavior
             if (!this.cargoTarget) {
                 if (this.role === AI_ROLE.TRANSPORT) {
-                    this.currentState = this.previousState || AI_STATE.TRANSPORTING;
+                    this.changeState(this.previousState || AI_STATE.TRANSPORTING);
                 } else {
-                    this.currentState = AI_STATE.IDLE;
+                    this.changeState(AI_STATE.IDLE);
                 }
                 return false; // No cargo to collect, resume normal behavior
             }
@@ -909,7 +975,7 @@ class Enemy {
         let angle = random(TWO_PI);
         let dist = (system?.despawnRadius ?? 3000) * 1.5;
         this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
-        this.currentState = AI_STATE.LEAVING_SYSTEM;
+        this.changeState(AI_STATE.LEAVING_SYSTEM);
         this.hasPausedNearStation = false;
     }
 
@@ -1013,7 +1079,7 @@ class Enemy {
             } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
                 // Force IDLE pirates who want to fire to transition to APPROACHING
                 console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);
-                this.currentState = AI_STATE.APPROACHING;
+                this.changeState(AI_STATE.APPROACHING);
             }
         }
     }
@@ -1327,6 +1393,93 @@ class Enemy {
         let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); 
         let sumRadii = (target.size / 2) + (this.size / 2); 
         return dSq < sq(sumRadii);
+    }
+
+    // -----------------------
+    // --- State Management ---
+    // -----------------------
+
+    /**
+     * Changes the AI state with proper logging and initialization
+     * @param {number} newState - The new AI state to transition to
+     * @param {Object} [stateData={}] - Additional data needed for the new state
+     */
+    changeState(newState, stateData = {}) {
+        // Don't do anything if it's the same state
+        if (newState === this.currentState) return;
+        
+        const oldState = this.currentState;
+        this.currentState = newState;
+        
+        // Log state changes with informative context
+        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
+        
+        // Execute exit actions for the old state
+        this.onStateExit(oldState, stateData);
+        
+        // Execute entry actions for the new state
+        this.onStateEntry(newState, stateData);
+    }
+
+    /**
+     * Handles actions when entering a new state
+     * @param {number} state - The state being entered
+     * @param {Object} stateData - Additional data for state initialization
+     */
+    onStateEntry(state, stateData = {}) {
+        switch(state) {
+            case AI_STATE.ATTACK_PASS:
+                // Initialize attack pass with timer
+                this.passTimer = this.passDuration;
+                break;
+                
+            case AI_STATE.REPOSITIONING:
+                // Set repositioning target if we have a valid target
+                if (stateData.repositionTarget) {
+                    this.repositionTarget = stateData.repositionTarget;
+                } else if (this.isTargetValid(this.target)) {
+                    let v = p5.Vector.sub(this.pos, this.target.pos);
+                    v.setMag(this.repositionDistance * 1.5);
+                    this.repositionTarget = p5.Vector.add(this.pos, v);
+                }
+                break;
+                
+            case AI_STATE.NEAR_STATION:
+                // Initialize station timer
+                this.nearStationTimer = this.stationPauseDuration;
+                this.vel.mult(0.1); // Slow down immediately
+                break;
+                
+            case AI_STATE.LEAVING_SYSTEM:
+                this.setLeavingSystemTarget(this.currentSystem);
+                break;
+                
+            case AI_STATE.COLLECTING_CARGO:
+                // Store previous state to return to later
+                if (this.currentState !== AI_STATE.COLLECTING_CARGO) {
+                    this.previousState = oldState;
+                }
+                break;
+        }
+    }
+
+    /**
+     * Handles actions when exiting a state
+     * @param {number} state - The state being exited
+     * @param {Object} stateData - Additional data for cleanup
+     */
+    onStateExit(state, stateData = {}) {
+        switch(state) {
+            case AI_STATE.REPOSITIONING:
+                this.repositionTarget = null;
+                break;
+                
+            case AI_STATE.COLLECTING_CARGO:
+                // Reset cargo target when leaving collection state
+                this.cargoTarget = null;
+                this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+                break;
+        }
     }
 }
 
