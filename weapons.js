@@ -196,7 +196,7 @@ const WEAPON_UPGRADES = [
         price: 10000,
         maxRadius: 300,
         desc: "Super damage, area effect."
-    }
+    },
     {
         name: "Jedi Force",
         type: "force",
