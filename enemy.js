@@ -149,18 +149,30 @@ class Enemy {
                 this.fireRate = this.currentWeapon.fireRate;
                 uiManager.addMessage(`Detected ${this.shipTypeName} armed with ${this.currentWeapon.name}`);
             } else {
-                // Ship has armament defined but none were found - mark as unarmed
-                this.weapons = [];
-                this.currentWeapon = null;
-                this.fireRate = 0;
-                console.log(`${this.shipTypeName} has no valid weapons found in armament list`);
+                // Fallback: basic projectile weapon if no matching weapons found
+                this.currentWeapon = {
+                    name: "Default Laser",
+                    type: "projectile",
+                    damage: 8,
+                    color: [255, 0, 0],
+                    fireRate: 0.5,
+                    price: 0,
+                    desc: "Fallback weapon."
+                };
+                this.weapons = [this.currentWeapon];
             }
         } else {
-            // Ship has no defined armament - mark as unarmed
-            this.weapons = [];
-            this.currentWeapon = null;
-            this.fireRate = 0;
-            console.log(`${this.shipTypeName} has no weapons defined`);
+            // Fallback: basic projectile weapon if ship has no defined armament
+            this.currentWeapon = {
+                name: "Default Laser",
+                type: "projectile",
+                damage: 8,
+                color: [255, 0, 0],
+                fireRate: 0.5,
+                price: 0,
+                desc: "Fallback weapon."
+            };
+            this.weapons = [this.currentWeapon];
         }
         
         // --- Role-Specific Initial State ---
