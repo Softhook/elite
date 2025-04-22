@@ -3,13 +3,17 @@
  * Can be collected by the player for profit
  */
 class Cargo {
-    constructor(x, y, type) {
+    constructor(x, y, type, quantity = 1) {
         this.pos = createVector(x, y);
         this.vel = createVector(random(-0.5, 0.5), random(-0.5, 0.5));
         this.type = type || random(LEGAL_CARGO); // Default to random legal cargo
-        this.size = 8; // Small container size
+        this.quantity = Math.min(50, Math.max(1, quantity)); // Between 1 and 50 units
+        
+        // Visual size scales slightly with quantity
+        this.size = 8 + Math.min(6, Math.floor(this.quantity / 10)); 
+        
         this.rotation = random(TWO_PI);
-        this.rotationSpeed = random(-0.01, 0.01); // Was too subtle at -0.02 to 0.02
+        this.rotationSpeed = random(-0.01, 0.01);
         this.collected = false;
         this.lifetime = 1800; // Exists for 30 seconds (60fps * 20)
         
@@ -69,7 +73,7 @@ class Cargo {
         
         push();
         translate(this.pos.x, this.pos.y);
-        rotate(this.rotation); // Rotation is in radians, as required by p5.js rotate()
+        rotate(this.rotation);
         
         // Draw container
         fill(this.color);
@@ -78,11 +82,21 @@ class Cargo {
         
         // Box with subtle perspective
         beginShape();
-        vertex(-this.size/1.5, -this.size/1.5); // Top-left
-        vertex(this.size/1.5, -this.size/1.5);  // Top-right
-        vertex(this.size/1.5, this.size/1.5);   // Bottom-right
-        vertex(-this.size/1.5, this.size/1.5);  // Bottom-left
+        vertex(-this.size/1.5, -this.size/1.5);
+        vertex(this.size/1.5, -this.size/1.5);
+        vertex(this.size/1.5, this.size/1.5);
+        vertex(-this.size/1.5, this.size/1.5);
         endShape(CLOSE);
+        
+        // Draw quantity indicator
+        if (this.quantity > 1) {
+            fill(255);
+            noStroke();
+            textSize(this.size / 2);
+            textAlign(CENTER, CENTER);
+            // Show x2, x3, etc. for quantities
+            text(`x${this.quantity}`, 0, 0);
+        }
         
         // Draw some details (packaging lines)
         stroke(min(255, this.color[0] * 0.6), min(255, this.color[1] * 0.6), min(255, this.color[2] * 0.6));
@@ -146,8 +160,8 @@ class Cargo {
             'Slaves': 350
         };
         
-        // Add a small random variation
+        // Calculate based on quantity
         const baseValue = baseValues[this.type] || 50;
-        return Math.floor(baseValue * random(0.8, 1.2));
+        return Math.floor(baseValue * this.quantity * random(0.8, 1.2));
     }
 }

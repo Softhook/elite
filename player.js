@@ -560,27 +560,49 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     /** Calculates total cargo quantity. */
     getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
 
-    /** Adds cargo to player inventory. Returns true if successful. */
-    addCargo(commodityName, quantity) { 
+    /** 
+     * Adds cargo to player inventory, respecting capacity limits.
+     * @param {string} commodityName - Type of cargo to add
+     * @param {number} quantity - Amount to add
+     * @param {boolean} [allowPartial=false] - Whether to add partial amount if full amount won't fit
+     * @returns {object} {success: boolean, added: number} - Success status and amount actually added
+     */
+    addCargo(commodityName, quantity, allowPartial = false) { 
         // Validate input
         if (!commodityName || quantity <= 0) {
-            return false;
+            return { success: false, added: 0 };
         }
         
-        // Check cargo capacity
-        if (this.getCargoAmount() + quantity > this.cargoCapacity) {
-            return false;
+        // Calculate available space
+        const currentAmount = this.getCargoAmount();
+        const spaceAvailable = this.cargoCapacity - currentAmount;
+        
+        // Nothing fits
+        if (spaceAvailable <= 0) {
+            return { success: false, added: 0 };
+        }
+        
+        // Determine how much we can add
+        let amountToAdd = quantity;
+        
+        // If it doesn't all fit and we allow partial collection
+        if (quantity > spaceAvailable && allowPartial) {
+            amountToAdd = spaceAvailable;
+        } 
+        // If it doesn't all fit and we don't allow partial collection
+        else if (quantity > spaceAvailable) {
+            return { success: false, added: 0 };
         }
         
         // Find existing item or add new one
         const existingItem = this.cargo.find(item => item?.name === commodityName);
         if (existingItem) {
-            existingItem.quantity += quantity;
+            existingItem.quantity += amountToAdd;
         } else {
-            this.cargo.push({ name: commodityName, quantity: quantity });
+            this.cargo.push({ name: commodityName, quantity: amountToAdd });
         }
         
-        return true;
+        return { success: true, added: amountToAdd };
     }
 
     /** Removes cargo from player inventory. Returns true if successful. */

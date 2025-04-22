@@ -510,45 +510,7 @@ class StarSystem {
             this.checkProjectileCollisions(playerRef); // Added call to new method
 
             // Cargo collection and updates
-            for (let i = this.cargo.length - 1; i >= 0; i--) {
-                const cargo = this.cargo[i];
-                if (!cargo) {
-                    this.cargo.splice(i, 1);
-                    continue;
-                }
-
-                // IMPORTANT: Call the update method on each cargo object
-                cargo.update();
-
-                // Check for player collection
-                if (cargo.checkCollision(playerRef)) {
-                    // Try to add cargo to player's inventory first
-                    if (playerRef.getCargoAmount() < playerRef.cargoCapacity) {
-                        const success = playerRef.addCargo(cargo.type, 1);
-                        
-                        if (success) {
-                            // Cargo added to inventory
-                            cargo.collected = true;
-                            console.log(`Player collected ${cargo.type} cargo (${playerRef.getCargoAmount()}/${playerRef.cargoCapacity}t)`);
-                            
-                            // Optional visual/audio feedback
-                            // You could add a brief flash or sound effect here
-                            
-                            this.cargo.splice(i, 1);
-                            continue;
-                        }
-                    } else {
-                        // Cargo hold is full - notify player
-                        console.log("Cannot collect cargo: Cargo hold full");
-                        // Maybe show a UI notification here
-                    }
-                }
-
-                // Remove expired cargo
-                if (cargo.isExpired()) {
-                    this.cargo.splice(i, 1);
-                }
-            }
+            this.handleCargoCollection();
 
             // Spawning Timers
             this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(playerRef); this.enemySpawnTimer = 0; }
@@ -763,6 +725,65 @@ class StarSystem {
             }
         }
     } // End checkProjectileCollisions
+
+    /**
+     * Handles player collecting cargo in the system
+     */
+    handleCargoCollection() {
+        for (let i = this.cargo.length - 1; i >= 0; i--) {
+            const cargo = this.cargo[i];
+            
+            if (cargo.collected || cargo.isExpired()) {
+                // Remove collected or expired cargo
+                this.cargo.splice(i, 1);
+                continue;
+            }
+            
+            if (cargo.checkCollision(this.player)) {
+                // Try to add the cargo to player's hold
+                const result = this.player.addCargo(cargo.type, cargo.quantity, true);
+                
+                if (result.success) {
+                    // Calculate value based on amount actually collected
+                    const value = Math.floor((cargo.getValue() / cargo.quantity) * result.added);
+                    
+                    // Add success message
+                    if (result.added === cargo.quantity) {
+                        // Collected everything
+                        uiManager.addMessage(`Collected ${result.added}t of ${cargo.type}. Value: ${value}cr`);
+                        this.player.addCredits(value);
+                        cargo.collected = true;
+                    } else {
+                        // Collected partial amount
+                        uiManager.addMessage(`Collected ${result.added}t of ${cargo.type}. Cargo hold full!`);
+                        this.player.addCredits(value);
+                        
+                        // Update cargo container with remaining amount
+                        cargo.quantity -= result.added;
+                        
+                        // Play a different sound for partial collection
+                        if (typeof soundManager !== 'undefined') {
+                            soundManager.playSound('pickupCoin', 0.7, 0.8); // Lower volume to indicate partial pickup
+                        }
+                        continue; // Don't remove the cargo container yet
+                    }
+                    
+                    // Play collection sound
+                    if (typeof soundManager !== 'undefined') {
+                        soundManager.playSound('pickupCoin');
+                    }
+                } else {
+                    // Cargo hold is full
+                    uiManager.addMessage('Cargo hold full!');
+                    
+                    // Play error sound
+                    if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                        soundManager.playSound('error');
+                    }
+                }
+            }
+        }
+    }
 
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {

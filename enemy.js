@@ -1935,30 +1935,37 @@ class Enemy {
     }
 
     /**
-     * Drops multiple cargo items when ship is destroyed
+     * Drops cargo when ship is destroyed - each cargo represents 1/3 of ship capacity
      */
     dropCargo() {
         if (!this.currentSystem) return;
         
-        // Get cargo types for this ship
+        // Get ship definition with cargo capacity
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
         
-        // Determine how many cargo items to drop based on ship size
-        const cargoDropCount = Math.floor(map(this.size, 20, 120, 1, 5));
+        // Get the ship's cargo capacity
+        const cargoCapacity = shipDef.cargoCapacity || 0;
+        if (cargoCapacity <= 0) return;
         
-        for (let i = 0; i < cargoDropCount; i++) {
-            // Select a random cargo type from this ship's typical cargo
-            const cargoType = random(shipDef.typicalCargo);
-            
-            // Calculate a random position around the ship's destruction point
+        // Each cargo container represents 1/3 of ship's capacity
+        const cargoQuantity = Math.floor(cargoCapacity / 3);
+        
+        console.log(`${this.shipTypeName} destroyed - dropping cargo worth ${cargoQuantity} units (1/3 of ${cargoCapacity} capacity)`);
+        
+        // Select a random cargo type from this ship's typical cargo
+        const cargoType = random(shipDef.typicalCargo);
+        
+        // Only drop if quantity is meaningful
+        if (cargoQuantity > 0) {
+            // Calculate position around the ship's destruction point
             const offsetAngle = random(TWO_PI);
             const offsetDist = random(this.size * 0.2, this.size * 0.7);
             const offsetX = this.pos.x + cos(offsetAngle) * offsetDist;
             const offsetY = this.pos.y + sin(offsetAngle) * offsetDist;
             
-            // Create and add cargo to the system
-            const cargo = new Cargo(offsetX, offsetY, cargoType);
+            // Create cargo with quantity
+            const cargo = new Cargo(offsetX, offsetY, cargoType, cargoQuantity);
             
             // Give cargo some velocity from the explosion
             cargo.vel = p5.Vector.random2D().mult(random(0.8, 2.0));
@@ -1966,6 +1973,7 @@ class Enemy {
             // Add cargo to system
             if (typeof this.currentSystem.addCargo === 'function') {
                 this.currentSystem.addCargo(cargo);
+                uiManager.addMessage(`${this.shipTypeName} dropped ${cargoQuantity} units of ${cargoType}`);
             }
         }
     }
