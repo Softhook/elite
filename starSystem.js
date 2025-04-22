@@ -794,46 +794,167 @@ class StarSystem {
 
     /** Draws all system contents. */
     draw(playerRef) {
-        if (!playerRef || !playerRef.pos) return;
+        if (!playerRef || !playerRef.pos)
+            return;
         
         push();
         let tx = width / 2 - playerRef.pos.x;
         let ty = height / 2 - playerRef.pos.y;
         translate(tx, ty);
         
-        // Draw background, station, etc.
+        // Calculate screen bounds once (with margin)
+        const screenBounds = {
+            left: -tx - 100,
+            right: -tx + width + 100,
+            top: -ty - 100,
+            bottom: -ty + height + 100
+        };
+        
+        // Draw background (always visible)
         this.drawBackground();
-        if (this.station) this.station.draw();
         
-        // Determine sun position using the first planet if it exists.
-        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
-        
-        // Draw each planet passing the sunPos.
-        this.planets.forEach(p => p.draw(sunPos));
-        
-        this.asteroids.forEach(a => a.draw());
-        
-        // Add these debug logs to track cargo
-        //console.log(`Drawing ${this.cargo?.length || 0} cargo items`);
-        
-        // IMPORTANT: Draw cargo objects BEFORE enemies and player
-        // Make sure cargo array exists before attempting to iterate
-        if (this.cargo && this.cargo.length > 0) {
-            this.cargo.forEach(cargo => {
-                if (cargo && typeof cargo.draw === 'function') {
-                    cargo.draw();
-                }
-            });
+        // Draw station only if visible
+        if (this.station && 
+            this.isInView(this.station.pos.x, this.station.pos.y, 
+                          this.station.size * 2, screenBounds)) {
+            this.station.draw();
         }
         
-        this.enemies.forEach(e => e.draw());
-        this.projectiles.forEach(proj => proj.draw());
-        this.drawBeams && this.drawBeams();
-        this.drawForceWaves && this.drawForceWaves();
-        this.explosions.forEach(exp => exp.draw());
+        // Determine sun position using the first planet if it exists
+        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
         
+        // Draw only visible planets
+        for (let i = 0; i < this.planets.length; i++) {
+            const p = this.planets[i];
+            if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds)) {
+                p.draw(sunPos);
+            }
+        }
+        
+        // Draw only visible asteroids
+        for (let i = 0; i < this.asteroids.length; i++) {
+            const a = this.asteroids[i];
+            if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds)) {
+                a.draw();
+            }
+        }
+        
+        // Draw only visible cargo
+        if (this.cargo && this.cargo.length > 0) {
+            for (let i = 0; i < this.cargo.length; i++) {
+                const c = this.cargo[i];
+                if (this.isInView(c.pos.x, c.pos.y, c.size * 4, screenBounds)) {
+                    c.draw();
+                }
+            }
+        }
+        
+        // Draw only visible enemies
+        for (let i = 0; i < this.enemies.length; i++) {
+            const e = this.enemies[i];
+            if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds)) {
+                e.draw();
+            }
+        }
+        
+        // Draw only visible projectiles
+        for (let i = 0; i < this.projectiles.length; i++) {
+            const proj = this.projectiles[i];
+            if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds)) {
+                proj.draw();
+            }
+        }
+        
+        // Special effects culling
+        if (this.beams && this.beams.length > 0) {
+            this.drawBeamsWithCulling(screenBounds);
+        }
+        
+        if (this.forceWaves && this.forceWaves.length > 0) {
+            this.drawForceWavesWithCulling(screenBounds);
+        }
+        
+        // Draw only visible explosions
+        for (let i = 0; i < this.explosions.length; i++) {
+            const exp = this.explosions[i];
+            if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds)) {
+                exp.draw();
+            }
+        }
+        
+        // Player is always drawn (center of view)
         playerRef.draw();
+        
         pop();
+    }
+
+    /**
+     * Fast check if an object is in the visible screen area
+     * @param {number} x - Object's x position
+     * @param {number} y - Object's y position
+     * @param {number} size - Object's size with margin
+     * @param {Object} bounds - Screen boundaries
+     * @return {boolean} Whether the object is visible
+     */
+    isInView(x, y, size, bounds) {
+        return (
+            x + size >= bounds.left &&
+            x - size <= bounds.right &&
+            y + size >= bounds.top &&
+            y - size <= bounds.bottom
+        );
+    }
+
+    /** Draw beams with visibility culling */
+    drawBeamsWithCulling(screenBounds) {
+        for (let i = 0; i < this.beams.length; i++) {
+            const beam = this.beams[i];
+            
+            // Fast check if either beam endpoint is in view
+            const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds);
+            const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds);
+            
+            // If either end is visible, or beam crosses screen, draw it
+            if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
+                stroke(beam.color);
+                strokeWeight(beam.width || 2);
+                line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+            }
+        }
+    }
+
+    /** Draw force waves with visibility culling */
+    drawForceWavesWithCulling(screenBounds) {
+        for (let i = 0; i < this.forceWaves.length; i++) {
+            const wave = this.forceWaves[i];
+            
+            // Only draw if wave intersects screen
+            if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds)) {
+                noFill();
+                stroke(wave.color[0], wave.color[1], wave.color[2], 150);
+                strokeWeight(2);
+                ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
+            }
+        }
+    }
+
+    /**
+     * Checks if a line segment intersects the screen
+     * Used for beams that might cross screen without endpoints being visible
+     * @param {p5.Vector} p1 - Start point
+     * @param {p5.Vector} p2 - End point
+     * @param {Object} bounds - Screen boundaries
+     * @return {boolean} Whether line intersects screen
+     */
+    lineIntersectsScreen(p1, p2, bounds) {
+        // Simple check: if line is entirely left/right/above/below screen
+        if ((p1.x < bounds.left && p2.x < bounds.left) ||
+            (p1.x > bounds.right && p2.x > bounds.right) ||
+            (p1.y < bounds.top && p2.y < bounds.top) ||
+            (p1.y > bounds.bottom && p2.y > bounds.bottom)) {
+            return false;
+        }
+        return true; // Line potentially intersects screen
     }
 
     // --- Save/Load System State ---
