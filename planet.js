@@ -1,11 +1,10 @@
 // ****** planet.js ******
-// --- V8 - Textured Planet, Rings Drawn Between Halves ---
+// --- Optimized Textured Planet with Buffer-based Rendering ---
 
 class Planet {
     /**
      * Creates a Planet instance with detailed visuals and rings.
-     * Uses split-drawing method for rings.
-     * Compatible with StarSystem calling: new Planet(x, y, size, color1, color2)
+     * Uses buffer-based pre-rendering for performance.
      * @param {number} worldX - World coordinate X.
      * @param {number} worldY - World coordinate Y.
      * @param {number} size - Diameter of the planet.
@@ -22,7 +21,7 @@ class Planet {
         this.featureColor1 = color2 || lerpColor(this.baseColor, color(random(255)), 0.3);
         // Generate a second feature color deterministically
         let c1r = red(this.baseColor); let c1g = green(this.baseColor); let c1b = blue(this.baseColor);
-        this.featureColor2 = color( (c1r * 0.8 + random(50)) % 255, (c1g * 0.7 + random(60)) % 255, (c1b * 0.9 + random(40)) % 255);
+        this.featureColor2 = color((c1r * 0.8 + random(50)) % 255, (c1g * 0.7 + random(60)) % 255, (c1b * 0.9 + random(40)) % 255);
 
         this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
 
@@ -32,7 +31,7 @@ class Planet {
         this.noisePersistence = random(0.4, 0.6); // Noise detail factor
 
         this.hasAtmosphere = random() < 0.4; // Less frequent
-        this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null; // Very subtle base color
+        this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
 
         // --- Rings Restored ---
         this.hasRings = random() < 0.25;
@@ -41,26 +40,198 @@ class Planet {
             this.ringPerspective = map(abs(this.ringAngle), 0, PI / 6, 0.15, 0.4); // Y-scale factor
             this.ringInnerRad = r * random(1.2, 1.5);
             this.ringOuterRad = this.ringInnerRad * random(1.3, 1.8);
-            this.numRingSegments = floor(random(60, 160)); // Density
+            this.numRingSegments = floor(random(60, 160)); // Reduced for performance
             this.ringColor1 = lerpColor(this.baseColor, color(200), 0.6);
             this.ringColor2 = lerpColor(this.featureColor1, color(150), 0.6);
         }
-        // --- End Rings Restored ---
 
-        // Stop rotation for all planets.
-        this.rotationSpeed = 0;
+        this.rotationSpeed = 0; // Not used currently but kept for compatibility
         this.currentRotation = 0;
-
-        // Initialize shadowOffset to null. It will be set later.
         this.shadowOffset = null;
+        
+        // Create and pre-render all the graphical elements
+        this.createBuffers();
     }
 
-    // Call this method once you know the sun's position.
+    /**
+     * Creates all the necessary graphics buffers and pre-renders
+     * the planet components for efficient drawing
+     */
+    createBuffers() {
+        // Size calculations for buffers
+        const bufferSize = Math.ceil(this.size * 1.2); // Make buffer a bit larger
+        const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
+        const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * 1.4) : 0;
+        
+        // Create appropriate buffers based on whether planet has rings
+        if (this.hasRings) {
+            // For ringed planets, we need separate buffers for top/bottom halves
+            this.planetBufferTop = createGraphics(bufferSize, bufferSize);
+            this.planetBufferBottom = createGraphics(bufferSize, bufferSize);
+            this.ringsBuffer = createGraphics(ringBufferSize, ringBufferSize);
+            
+            // Render planet texture to both halves
+            this.renderPlanetTexture(this.planetBufferTop, true);  // Top half
+            this.renderPlanetTexture(this.planetBufferBottom, false); // Bottom half
+            this.renderRings(); // Render rings
+        } else {
+            // For normal planets, just one buffer for the whole planet
+            this.planetBuffer = createGraphics(bufferSize, bufferSize);
+            this.renderPlanetTexture(this.planetBuffer); // Render full planet
+        }
+        
+        // Create atmosphere buffer if needed
+        if (this.hasAtmosphere) {
+            this.atmosphereBuffer = createGraphics(atmBufferSize, atmBufferSize);
+            this.renderAtmosphere();
+        }
+    }
+    
+    /**
+     * Renders the planet texture to the specified buffer
+     * @param {p5.Graphics} pg - The graphics buffer to render to
+     * @param {boolean} isTopHalf - If specified, only render that half
+     */
+    renderPlanetTexture(pg, isTopHalf = null) {
+        const bufferCenter = pg.width / 2;
+        const r = this.size / 2;
+        
+        // First clear the buffer and set up
+        pg.clear();
+        pg.noStroke();
+        pg.noiseDetail(4, this.noisePersistence);
+        
+        // Draw a solid base circle first to prevent transparency issues
+        pg.fill(this.baseColor);
+        pg.ellipse(bufferCenter, bufferCenter, this.size, this.size);
+        
+        // Determine y-range based on whether we're rendering half or whole
+        let yStart, yEnd;
+        if (isTopHalf === true) {
+            yStart = -r;
+            yEnd = 0;
+        } else if (isTopHalf === false) {
+            yStart = 0;
+            yEnd = r;
+        } else {
+            // Full planet
+            yStart = -r;
+            yEnd = r;
+        }
+        
+        // Set resolution based on planet size (bigger planets = bigger bands for efficiency)
+        const bandHeight = max(2, Math.ceil(4 * (100 / this.size)));
+        
+        // Loop through vertical bands
+        for (let y = yStart; y < yEnd; y += bandHeight) {
+            // Calculate band width at this y position
+            const bandR = sqrt(max(0, r * r - y * y));
+            if (bandR <= 0) continue;
+            
+            // Loop through horizontal segments of this band
+            for (let x = -bandR; x < bandR; x += bandHeight) {
+                // Calculate noise coordinates for consistent texture
+                const angle = atan2(y, x);
+                const distFromCenter = dist(0, 0, x, y);
+                const noiseX = (cos(angle) * distFromCenter) * this.noiseScale + this.featureRand;
+                const noiseY = (sin(angle) * distFromCenter) * this.noiseScale + this.featureRand;
+                const noiseZ = this.featureRand * 0.1;
+                
+                // Determine color from noise and palette
+                const n = pg.noise(noiseX, noiseY, noiseZ);
+                const paletteIndex = floor(n * (this.palette.length - 1));
+                const lerpFactor = (n * (this.palette.length - 1)) % 1;
+                const col1 = this.palette[paletteIndex];
+                const col2 = this.palette[min(paletteIndex + 1, this.palette.length - 1)];
+                const bandColor = lerpColor(col1, col2, lerpFactor);
+                
+                // Ensure full opacity for the texture fill
+                pg.fill(red(bandColor), green(bandColor), blue(bandColor), 255);
+                
+                // Draw texture segment at correct position (center the planet in the buffer)
+                pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
+            }
+        }
+        
+        // If rendering half planets, mask out the unused half
+        if (isTopHalf === true) {
+            // For top half, mask out bottom
+            pg.fill(0, 0); // Use transparent fill to create a "hole"
+            pg.rect(0, bufferCenter, pg.width, bufferCenter);
+        } else if (isTopHalf === false) {
+            // For bottom half, mask out top
+            pg.fill(0, 0); // Use transparent fill to create a "hole"
+            pg.rect(0, 0, pg.width, bufferCenter);
+        }
+        
+        // Reset noise detail 
+        pg.noiseDetail(4, 0.5);
+    }
+    
+    /**
+     * Renders the ring system to its buffer
+     */
+    renderRings() {
+        const pg = this.ringsBuffer;
+        const bufferCenter = pg.width / 2;
+        
+        // Clear buffer
+        pg.clear();
+        pg.push();
+        pg.translate(bufferCenter, bufferCenter);
+        pg.rotate(this.ringAngle);
+        
+        pg.noFill();
+        
+        // Draw ring segments from inner to outer radius
+        const segmentStep = (this.ringOuterRad - this.ringInnerRad) / this.numRingSegments;
+        for (let i = 0; i < this.numRingSegments; i++) {
+            const segmentProgress = i / this.numRingSegments;
+            const currentRad = lerp(this.ringInnerRad, this.ringOuterRad, segmentProgress);
+            
+            // Use noise for color variation
+            const noiseVal = pg.noise(segmentProgress * 5 + this.featureRand, this.featureRand + 10);
+            const segmentColor = lerpColor(this.ringColor1, this.ringColor2, noiseVal);
+            const segmentAlpha = lerp(80, 180, pg.noise(segmentProgress * 3 + this.featureRand + 20));
+            
+            pg.stroke(red(segmentColor), green(segmentColor), blue(segmentColor), segmentAlpha);
+            pg.strokeWeight(segmentStep * 0.9); // Slightly thinner for performance
+            
+            // Draw full ellipse with correct perspective
+            pg.ellipse(0, 0, currentRad * 2, currentRad * 2 * this.ringPerspective);
+        }
+        
+        pg.pop();
+    }
+    
+    /**
+     * Renders the atmosphere effect to its buffer
+     */
+    renderAtmosphere() {
+        const pg = this.atmosphereBuffer;
+        const bufferCenter = pg.width / 2;
+        
+        // Clear buffer first
+        pg.clear();
+        pg.noStroke();
+        
+        // Draw atmosphere layers from outside in
+        for (let i = 5; i > 0; i--) {
+            const atmSizeFactor = 1.0 + i * 0.04;
+            const atmAlpha = alpha(this.atmosphereColor) * (1.0 - i * 0.15);
+            
+            pg.fill(red(this.atmosphereColor), green(this.atmosphereColor), blue(this.atmosphereColor), atmAlpha);
+            pg.ellipse(bufferCenter, bufferCenter, this.size * atmSizeFactor, this.size * atmSizeFactor);
+        }
+    }
+    
+    /**
+     * Compute shadow offset based on sun position
+     */
     computeShadowOffset(sunPos) {
         if (sunPos && sunPos instanceof p5.Vector) {
-            let toSun = p5.Vector.sub(sunPos, this.pos);
+            const toSun = p5.Vector.sub(sunPos, this.pos);
             toSun.normalize();
-            // Compute the shadow offset once.
             this.shadowOffset = toSun.mult(-this.size * 0.15);
         } else {
             // Fallback default
@@ -68,140 +239,65 @@ class Planet {
         }
     }
 
-    // Add a static method that creates the sun (at 0,0)
+    /**
+     * Static method to create the sun
+     */
     static createSun() {
-        let sunSize = 400;  // Adjust as needed
-        let sunColor1 = color(255, 255, 100);  // Bright yellow
-        let sunColor2 = color(255, 200, 100);
-        let sun = new Planet(0, 0, sunSize, sunColor1, sunColor2);
-        sun.isSun = true; // Mark this planet as the sun.
+        const sunSize = 400;  // Adjust as needed
+        const sunColor1 = color(255, 255, 100);  // Bright yellow
+        const sunColor2 = color(255, 200, 100);
+        const sun = new Planet(0, 0, sunSize, sunColor1, sunColor2);
+        sun.isSun = true; // Mark this planet as the sun
         return sun;
     }
 
+    /**
+     * Draw the planet using pre-rendered buffers
+     */
     draw(sunPos) {
+        // Compute the shadow once
+        if (!this.shadowOffset) {
+            this.computeShadowOffset(sunPos);
+        }
+        
         push();
         translate(this.pos.x, this.pos.y);
-
-        // 1. Atmosphere (Drawn first, behind everything)
-        // Rotates independently of the main drawing order trick
-        if (this.hasAtmosphere && this.atmosphereColor) {
-            push();
-            rotate(this.currentRotation); // Rotate atmosphere with planet conceptually
-            noStroke();
-            for (let i = 5; i > 0; i--) {
-                let atmSizeFactor = 1.0 + i * 0.04;
-                let atmAlpha = alpha(this.atmosphereColor) * (1.0 - i * 0.15);
-                fill(red(this.atmosphereColor), green(this.atmosphereColor), blue(this.atmosphereColor), atmAlpha);
-                ellipse(0, 0, this.size * atmSizeFactor, this.size * atmSizeFactor);
-            }
-            pop();
+        
+        // Draw atmosphere if present (always behind everything)
+        if (this.hasAtmosphere && this.atmosphereBuffer) {
+            const atmSize = this.atmosphereBuffer.width;
+            image(this.atmosphereBuffer, -atmSize/2, -atmSize/2);
         }
-
-        // 2. Draw BOTTOM half of the planet
-        this.drawPlanetHalf(false); // isTopHalf = false
-
-        // 3. Draw the FULL ring system (if it has rings)
-        // This will draw on top of the bottom half of the planet
+        
         if (this.hasRings) {
-            this.drawFullRings();
+            // For planets with rings, follow the correct z-order:
+            // 1. Bottom half of planet
+            const halfSize = this.planetBufferBottom.width;
+            image(this.planetBufferBottom, -halfSize/2, -halfSize/2);
+            
+            // 2. Rings
+            const ringsSize = this.ringsBuffer.width;
+            image(this.ringsBuffer, -ringsSize/2, -ringsSize/2);
+            
+            // 3. Top half of planet
+            image(this.planetBufferTop, -halfSize/2, -halfSize/2);
+        } else {
+            // For planets without rings, simply draw the full planet buffer
+            const bufferSize = this.planetBuffer.width;
+            image(this.planetBuffer, -bufferSize/2, -bufferSize/2);
         }
-
-        // 4. Draw TOP half of the planet
-        // This will draw on top of the rings and the bottom half, completing the illusion
-        this.drawPlanetHalf(true); // isTopHalf = true
-
-        // 5. Shading (Apply last, relative to view)
-        // Re-orient shadow so that it faces away from the sun if sunPos is provided.
-        if (!this.isSun) {
+        
+        // Apply shadow as a simple overlay
+        if (!this.isSun && this.shadowOffset) {
             noStroke();
             fill(0, 0, 0, 55);
-            // Ensure shadowOffset is computed only once.
-            if (!this.shadowOffset) {
-                // Compute once if it hasn't been set.
-                if (sunPos && sunPos instanceof p5.Vector) {
-                    let toSun = p5.Vector.sub(sunPos, this.pos);
-                    toSun.normalize();
-                    this.shadowOffset = toSun.mult(-this.size * 0.15);
-                } else {
-                    this.shadowOffset = createVector(this.size * -0.075, this.size * 0.075);
-                }
-            }
             ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
         }
-
-        pop(); // Restore overall matrix
+        
+        pop();
     }
 
-    /** Helper function to draw the top or bottom half of the textured planet */
-    drawPlanetHalf(isTopHalf) {
-        push(); // Isolate this half's drawing and rotation
-        rotate(this.currentRotation); // Apply visual rotation
-
-        let r = this.size / 2;
-        noStroke();
-        noiseDetail(4, this.noisePersistence);
-
-        const bandHeight = 4; // Drawing resolution
-        let yStart = isTopHalf ? -r : 0; // Start Y for top or bottom half
-        let yEnd = isTopHalf ? 0 : r;   // End Y for top or bottom half
-
-        // Loop through vertical bands for the specified half
-        for (let y = yStart; y < yEnd; y += bandHeight) {
-            let bandR = sqrt(max(0, r * r - y * y)); // Width (radius) of the planet slice at this Y
-             if (bandR <= 0) continue;
-
-            // Loop horizontally across the band
-            for (let x = -bandR; x < bandR; x += bandHeight) {
-                // Calculate noise coordinates (texture fixed to surface)
-                let angle = atan2(y, x); // No change needed as atan2 returns radians
-                let distFromCenter = dist(0, 0, x, y);
-                let noiseX = (cos(angle) * distFromCenter) * this.noiseScale + this.featureRand;
-                let noiseY = (sin(angle) * distFromCenter) * this.noiseScale + this.featureRand;
-                let noiseZ = this.featureRand * 0.1;
-
-                // Determine color from noise and palette
-                let n = noise(noiseX, noiseY, noiseZ);
-                let paletteIndex = floor(n * (this.palette.length - 1));
-                let lerpFactor = (n * (this.palette.length - 1)) % 1;
-                let col1 = this.palette[paletteIndex];
-                let col2 = this.palette[min(paletteIndex + 1, this.palette.length - 1)];
-                let bandColor = lerpColor(col1, col2, lerpFactor);
-
-                fill(bandColor);
-                rect(x, y, bandHeight, bandHeight); // Draw texture segment
-            }
-        }
-        noiseDetail(4, 0.5); // Reset noise detail
-        pop(); // Restore from this half's rotation
-    }
-
-
-    /** Helper function to draw the complete ring system using dense ellipses */
-    drawFullRings() {
-        push(); // Isolate ring transformations
-        rotate(this.ringAngle); // Apply the fixed ring tilt
-
-        noFill();
-        strokeWeight(1); // Thin segments for density
-
-        // Loop through ring segments from inner to outer radius
-        for (let i = 0; i < this.numRingSegments; i++) {
-            let segmentProgress = i / this.numRingSegments;
-            let currentRad = lerp(this.ringInnerRad, this.ringOuterRad, segmentProgress);
-
-            // Determine color and alpha using noise for variation
-            let noiseVal = noise(segmentProgress * 5 + this.featureRand, this.featureRand + 10);
-            let segmentColor = lerpColor(this.ringColor1, this.ringColor2, noiseVal);
-            let segmentAlpha = lerp(80, 180, noise(segmentProgress * 3 + this.featureRand + 20));
-            stroke(red(segmentColor), green(segmentColor), blue(segmentColor), segmentAlpha);
-
-            // Draw a full ellipse, squashed vertically by perspective
-            ellipse(0, 0, currentRad * 2, currentRad * 2 * this.ringPerspective);
-        }
-
-        pop(); // Restore matrix (removes ring rotation)
-    }
-
+    // Keep toJSON and fromJSON methods
     toJSON() {
         return {
             pos: { x: this.pos.x, y: this.pos.y },
@@ -248,7 +344,9 @@ class Planet {
         p.ringColor2 = data.ringColor2 && typeof color === "function" ? color(data.ringColor2) : null;
         p.rotationSpeed = data.rotationSpeed;
         p.currentRotation = data.currentRotation;
+        
+        // Recreate buffers after loading
+        p.createBuffers();
         return p;
     }
-
-} // End of Planet Class
+}

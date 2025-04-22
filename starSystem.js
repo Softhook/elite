@@ -1031,4 +1031,31 @@ class StarSystem {
         return sys;
     }
 
+    /**
+     * Initialize all graphical elements for this system.
+     * Call when this system becomes the active system.
+     */
+    initGraphics() {
+        // Pre-render all planets in this system
+        for (let i = 0; i < this.planets.length; i++) {
+            this.planets[i].createBuffers();
+        }
+        
+        // Any other system-specific graphics initialization
+        console.log(`Pre-rendered ${this.planets.length} planets for system: ${this.name}`);
+    }
+
+    /**
+     * Clean up graphical resources when leaving this system.
+     * Call when jumping to another system.
+     */
+    disposeGraphics() {
+        // Dispose all planet buffers to free memory
+        for (let i = 0; i < this.planets.length; i++) {
+            this.planets[i].disposeBuffers();
+        }
+        
+        console.log(`Disposed graphics for system: ${this.name}`);
+    }
+
 } // End of StarSystem Class

@@ -728,4 +728,27 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         }
     }
 
+    jumpToSystem(galaxy, systemIndex) {
+        // Existing code for jump validation, fuel consumption, etc.
+        
+        // First release resources from the old system
+        if (galaxy.currentSystem) {
+            galaxy.currentSystem.disposeGraphics();
+        }
+
+        // Then initialize the new system
+        const oldSystem = galaxy.currentSystem;
+        galaxy.currentSystem = galaxy.systems[systemIndex];
+        galaxy.currentSystem.initGraphics();
+        
+        // Existing code for entering the new system, player positioning, etc.
+        galaxy.currentSystem.enterSystem(this);
+        
+        // Log the jump
+        console.log(`Player jumped from ${oldSystem?.name || 'unknown'} to ${galaxy.currentSystem.name}`);
+        
+        // Reset the player's position near the system's entrance point
+        // ...rest of existing code...
+    }
+
 } // End of Player Class
