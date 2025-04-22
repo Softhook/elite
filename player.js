@@ -378,6 +378,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     fireWeapon(target = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
         WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
+
         //console.log(`${this.currentWeapon.name} fired by player at angle ${this.angle}`);
     }
 

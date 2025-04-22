@@ -10,12 +10,15 @@ let uiManager;              // Handles drawing UI elements (HUD, menus, map)
 let gameStateManager;       // Controls the overall game state (flight, docked, map etc.)
 const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
 let loadGameWasSuccessful = false;     // Flag to track if a saved game was successfully loaded
+let soundManager;
 let titleScreen;            // Handles title screen and instructions screen
 // --- End Global Variables ---
 
 // --- p5.js Setup Function ---
 // Runs once at the beginning when the sketch starts.
 function setup() {
+
+    soundManager = new SoundManager(); // Create the manager
     // Create the canvas to fill the browser window
     createCanvas(windowWidth, windowHeight);
     // Set angle mode to RADIANS for p5.js rotation functions (like rotate())

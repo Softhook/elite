@@ -90,7 +90,11 @@ class WeaponSystem {
             8, weapon.damage, weapon.color
         );
         system.addProjectile(proj);
-        //console.log("Projectile fired at angle", angle);
+        
+        // Play laser sound
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('laserShoot');
+        }
     }
 
     // --- N-way spread (angled) ---

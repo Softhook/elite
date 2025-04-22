@@ -22,6 +22,7 @@ class Explosion {
         if (typeof soundManager !== 'undefined' && soundManager?.playExplosion) {
             soundManager.playExplosion(size);
         }
+
     }
     
     generateParticles() {
