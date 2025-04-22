@@ -93,7 +93,7 @@ class WeaponSystem {
         
         // Play laser sound
         if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('laserShoot');
+            soundManager.playSound('laser');
         }
     }
 
