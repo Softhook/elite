@@ -644,8 +644,8 @@ const SHIP_DEFINITIONS = {
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
-        baseHull: 100, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
-        armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
+        baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
+        armament: ["Mini-Turret"],
         costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
         drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
@@ -657,7 +657,7 @@ const SHIP_DEFINITIONS = {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
         baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
-        armament: ["Mini-Turret", "Double Shot", "Twin Pulse"], // Defensive cargo hauler
+        armament: ["Mini-Turret"],
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
         drawFunction: drawType9Heavy, vertexData: [ { x: 0.8208, y: 0.2000 }, { x: 0.7000, y: 0.8000 }, { x: -0.8000, y: 0.9000 }, { x: -1.0000, y: 0.8000 }, { x: -1.0000, y: -0.8000 }, { x: -0.8000, y: -0.9000 }, { x: 0.7000, y: -0.8000 }, { x: 0.8208, y: -0.2000 } ],
         fillColor: [190, 140, 60],

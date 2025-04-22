@@ -149,30 +149,18 @@ class Enemy {
                 this.fireRate = this.currentWeapon.fireRate;
                 uiManager.addMessage(`Detected ${this.shipTypeName} armed with ${this.currentWeapon.name}`);
             } else {
-                // Fallback: basic projectile weapon if no matching weapons found
-                this.currentWeapon = {
-                    name: "Default Laser",
-                    type: "projectile",
-                    damage: 8,
-                    color: [255, 0, 0],
-                    fireRate: 0.5,
-                    price: 0,
-                    desc: "Fallback weapon."
-                };
-                this.weapons = [this.currentWeapon];
+                // Ship has armament defined but none were found - mark as unarmed
+                this.weapons = [];
+                this.currentWeapon = null;
+                this.fireRate = 0;
+                console.log(`${this.shipTypeName} has no valid weapons found in armament list`);
             }
         } else {
-            // Fallback: basic projectile weapon if ship has no defined armament
-            this.currentWeapon = {
-                name: "Default Laser",
-                type: "projectile",
-                damage: 8,
-                color: [255, 0, 0],
-                fireRate: 0.5,
-                price: 0,
-                desc: "Fallback weapon."
-            };
-            this.weapons = [this.currentWeapon];
+            // Ship has no defined armament - mark as unarmed
+            this.weapons = [];
+            this.currentWeapon = null;
+            this.fireRate = 0;
+            console.log(`${this.shipTypeName} has no weapons defined`);
         }
         
         // --- Role-Specific Initial State ---
@@ -702,6 +690,25 @@ class Enemy {
      * @param {number} distanceToTarget - Distance to the current target
      */
     updateCombatState(targetExists, distanceToTarget) {
+        // Skip combat states if ship is unarmed
+        if (!this.currentWeapon) {
+            // Unarmed ships should flee or patrol instead of attacking
+            if (this.currentState === AI_STATE.APPROACHING || 
+                this.currentState === AI_STATE.ATTACK_PASS || 
+                this.currentState === AI_STATE.REPOSITIONING) {
+                    
+                if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
+                    // Haulers and transports flee when they would attack but can't
+                    this.changeState(AI_STATE.FLEEING);
+                } else {
+                    // Others just return to default state
+                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                }
+            }
+            return;
+        }
+        
+        // Continue with normal combat state changes for armed ships
         switch (this.currentState) {
             case AI_STATE.IDLE:
                 // Transition to APPROACHING if we have a valid target
@@ -1560,7 +1567,8 @@ class Enemy {
      * @param {number} shootingAngle - Angle to target in radians
      */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-        if (!targetExists) return;
+        // Skip firing if unarmed
+        if (!targetExists || !this.currentWeapon) return;
         
         // Select best weapon for current situation
         this.selectBestWeapon(distanceToTarget);
