@@ -816,7 +816,7 @@ class StarSystem {
         // Draw station only if visible
         if (this.station && 
             this.isInView(this.station.pos.x, this.station.pos.y, 
-                          this.station.size * 2, screenBounds)) {
+                          this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
             this.station.draw();
         }
         
@@ -826,7 +826,7 @@ class StarSystem {
         // Draw only visible planets
         for (let i = 0; i < this.planets.length; i++) {
             const p = this.planets[i];
-            if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds)) {
+            if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 p.draw(sunPos);
             }
         }
@@ -834,7 +834,7 @@ class StarSystem {
         // Draw only visible asteroids
         for (let i = 0; i < this.asteroids.length; i++) {
             const a = this.asteroids[i];
-            if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds)) {
+            if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 a.draw();
             }
         }
@@ -843,7 +843,7 @@ class StarSystem {
         if (this.cargo && this.cargo.length > 0) {
             for (let i = 0; i < this.cargo.length; i++) {
                 const c = this.cargo[i];
-                if (this.isInView(c.pos.x, c.pos.y, c.size * 4, screenBounds)) {
+                if (this.isInView(c.pos.x, c.pos.y, c.size * 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                     c.draw();
                 }
             }
@@ -852,7 +852,7 @@ class StarSystem {
         // Draw only visible enemies
         for (let i = 0; i < this.enemies.length; i++) {
             const e = this.enemies[i];
-            if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds)) {
+            if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 e.draw();
             }
         }
@@ -860,7 +860,7 @@ class StarSystem {
         // Draw only visible projectiles
         for (let i = 0; i < this.projectiles.length; i++) {
             const proj = this.projectiles[i];
-            if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds)) {
+            if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 proj.draw();
             }
         }
@@ -877,7 +877,7 @@ class StarSystem {
         // Draw only visible explosions
         for (let i = 0; i < this.explosions.length; i++) {
             const exp = this.explosions[i];
-            if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds)) {
+            if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 exp.draw();
             }
         }
@@ -889,20 +889,10 @@ class StarSystem {
     }
 
     /**
-     * Fast check if an object is in the visible screen area
-     * @param {number} x - Object's x position
-     * @param {number} y - Object's y position
-     * @param {number} size - Object's size with margin
-     * @param {Object} bounds - Screen boundaries
-     * @return {boolean} Whether the object is visible
+     * Faster check using primitive values instead of object parameter
      */
-    isInView(x, y, size, bounds) {
-        return (
-            x + size >= bounds.left &&
-            x - size <= bounds.right &&
-            y + size >= bounds.top &&
-            y - size <= bounds.bottom
-        );
+    isInView(x, y, size, left, right, top, bottom) {
+        return (x + size >= left && x - size <= right && y + size >= top && y - size <= bottom);
     }
 
     /** Draw beams with visibility culling */
@@ -911,8 +901,8 @@ class StarSystem {
             const beam = this.beams[i];
             
             // Fast check if either beam endpoint is in view
-            const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds);
-            const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds);
+            const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
+            const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
             
             // If either end is visible, or beam crosses screen, draw it
             if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
@@ -929,7 +919,7 @@ class StarSystem {
             const wave = this.forceWaves[i];
             
             // Only draw if wave intersects screen
-            if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds)) {
+            if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 noFill();
                 stroke(wave.color[0], wave.color[1], wave.color[2], 150);
                 strokeWeight(2);
