@@ -204,16 +204,20 @@ class StarSystem {
 
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
-        this.discover(); // Mark as visited and update the economy if needed.
+        this.discover();
         this.enemies = []; this.projectiles = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         
-        // CRITICAL FIX: Set system-wide police alert immediately if player is wanted
+        // CRITICAL FIX: Associate the player with this system
+        this.player = player;
+        
+        // Set system-wide police alert immediately if player is wanted
         if (player && player.isWanted) {
+            console.log(`ALERT: Wanted player detected entering ${this.name} system!`);
             this.policeAlertSent = true;
-            console.log(`System-wide police alert active in ${this.name} system!`);
         } else {
             this.policeAlertSent = false;
+            console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
         }
         
         // Initial system population

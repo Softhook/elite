@@ -232,7 +232,21 @@ function keyPressed() {
     }
     // DEBUG: Toggle Player Wanted Status (L key)
     if (key === 'l' || key === 'L') {
-        if (player) { player.isWanted = !player.isWanted; console.log("Player Wanted Status Toggled:", player.isWanted); }
+        if (player) { 
+            player.isWanted = !player.isWanted; 
+            console.log("Player Wanted Status Toggled:", player.isWanted);
+            
+            // CRITICAL FIX: Update the current system's police alert flag
+            if (player.currentSystem) {
+                if (player.isWanted) {
+                    player.currentSystem.policeAlertSent = true;
+                    console.log(`ALERT: System-wide police alert issued in ${player.currentSystem.name}!`);
+                } else {
+                    player.currentSystem.policeAlertSent = false;
+                    console.log(`NOTICE: Police alert cleared in ${player.currentSystem.name}.`);
+                }
+            }
+        }
     }
     // DEBUG: Clear Save Data (Shift + C key)
     // if (key === 'c' || key === 'C') {

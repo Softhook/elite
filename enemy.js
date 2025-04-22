@@ -855,6 +855,7 @@ class Enemy {
      * @param {Object} system - The current star system
      */
     updatePoliceAI(system) {
+
         // FIRST check if player is wanted - prioritize player over other NPCs
         if ((system.player && system.player.isWanted && system.player.hull > 0) || 
             (system.policeAlertSent && system.player && system.player.hull > 0)) {
