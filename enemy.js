@@ -928,10 +928,29 @@ class Enemy {
                 : Infinity;
                 
             if (distToPatrolTarget < 50) {
-                if(system?.station?.pos)
-                    this.patrolTargetPos = system.station.pos.copy();
-                else
+                // Select a new patrol target - sometimes station, sometimes elsewhere
+                if (system?.station?.pos) {
+                    if (random() < 0.3) { // 30% chance to patrol back to station
+                        this.patrolTargetPos = system.station.pos.copy();
+                        console.log(`Police ${this.shipTypeName} patrolling back to station`);
+                    } else {
+                        // 70% chance to patrol elsewhere in the system
+                        const patrolRange = 800; // Area to patrol within
+                        const patrolAngle = random(TWO_PI);
+                        const patrolDist = random(300, patrolRange);
+                        
+                        // Create patrol point relative to current position
+                        this.patrolTargetPos = createVector(
+                            this.pos.x + cos(patrolAngle) * patrolDist,
+                            this.pos.y + sin(patrolAngle) * patrolDist
+                        );
+                        
+                        console.log(`Police ${this.shipTypeName} patrolling to new point at distance ${patrolDist.toFixed(0)}`);
+                    }
+                } else {
+                    // No station, just patrol randomly
                     this.patrolTargetPos = createVector(random(-1000, 1000), random(-1000, 1000));
+                }
                 desiredMovementTargetPos = this.patrolTargetPos;
             }
             
