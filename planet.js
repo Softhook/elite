@@ -36,7 +36,7 @@ class Planet {
         // --- Rings Restored ---
         this.hasRings = random() < 0.25;
         if (this.hasRings) {
-            this.ringAngle = random(-PI / 12, PI / 12); // Keep tilt moderate
+            this.ringAngle = random(-PI / 20, PI / 20); // Very subtle ring tilt (±9°)
             this.ringPerspective = map(abs(this.ringAngle), 0, PI / 6, 0.15, 0.4); // Y-scale factor
             this.ringInnerRad = r * random(1.2, 1.5);
             this.ringOuterRad = this.ringInnerRad * random(1.3, 1.8);
@@ -49,8 +49,8 @@ class Planet {
         this.currentRotation = 0;
         this.shadowOffset = null;
         
-        // Create and pre-render all the graphical elements
-        this.createBuffers();
+        // Flag to track buffer creation status - IMPORTANT CHANGE
+        this.buffersCreated = false;
     }
 
     /**
@@ -58,12 +58,15 @@ class Planet {
      * the planet components for efficient drawing
      */
     createBuffers() {
+        // Skip if buffers already exist
+        if (this.buffersCreated) return;
+        
         // Size calculations for buffers
         const bufferSize = Math.ceil(this.size * 1.2); // Make buffer a bit larger
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
         const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * 1.4) : 0;
         
-        // --- CHANGE: Always create ONE main planet buffer ---
+        // Create main planet buffer
         this.planetBuffer = createGraphics(bufferSize, bufferSize);
         this.renderPlanetTexture(this.planetBuffer); // Render the full planet texture
         
@@ -78,6 +81,33 @@ class Planet {
             this.atmosphereBuffer = createGraphics(atmBufferSize, atmBufferSize);
             this.renderAtmosphere();
         }
+        
+        // Set flag to track that buffers have been created
+        this.buffersCreated = true;
+    }
+    
+    /**
+     * Frees memory by disposing graphics buffers when leaving a system
+     */
+    disposeBuffers() {
+        if (!this.buffersCreated) return;
+        
+        if (this.planetBuffer) {
+            this.planetBuffer.remove();
+            this.planetBuffer = null;
+        }
+        
+        if (this.hasRings && this.ringsBuffer) {
+            this.ringsBuffer.remove();
+            this.ringsBuffer = null;
+        }
+        
+        if (this.hasAtmosphere && this.atmosphereBuffer) {
+            this.atmosphereBuffer.remove();
+            this.atmosphereBuffer = null;
+        }
+        
+        this.buffersCreated = false;
     }
     
     /**
@@ -222,7 +252,8 @@ class Planet {
      * Draw the planet using pre-rendered buffers
      */
     draw(sunPos) {
-        if (!this.planetBuffer) { // Ensure buffer exists
+        // Create buffers on demand when first drawn
+        if (!this.buffersCreated) {
             this.createBuffers();
         }
         
@@ -242,7 +273,7 @@ class Planet {
         const bufferW = this.planetBuffer.width;
         const bufferH = this.planetBuffer.height;
         const bufferCenterX = bufferW / 2;
-        const bufferCenterY = bufferH / 2; // Still useful for centering
+        const bufferCenterY = bufferH / 2;
         const destX = -bufferCenterX; 
         const destY = -bufferCenterY; 
         
@@ -261,10 +292,10 @@ class Planet {
             const topHeight = bufferH * 0.45;
             image(
                 this.planetBuffer,
-                destX, destY,                   // Destination: top-left corner
-                bufferW, topHeight,             // Destination size: full width, 45% height
-                0, 0,                           // Source position: start from top-left
-                bufferW, topHeight              // Source size: read full width, 45% height
+                destX, destY,
+                bufferW, topHeight,
+                0, 0,
+                bufferW, topHeight
             );
             
         } else {
@@ -330,26 +361,9 @@ class Planet {
         p.rotationSpeed = data.rotationSpeed;
         p.currentRotation = data.currentRotation;
         
-        // Recreate buffers after loading
-        p.createBuffers();
+        // Don't create buffers immediately - will be created on first draw
+        // This prevents memory and performance issues during game load
+        
         return p;
-    }
-
-    // --- Optional: Update disposeBuffers if you implemented it ---
-    disposeBuffers() {
-        if (this.planetBuffer) {
-            this.planetBuffer.remove();
-            this.planetBuffer = null;
-        }
-        if (this.ringsBuffer) { // Only exists for ringed planets
-            this.ringsBuffer.remove();
-            this.ringsBuffer = null;
-        }
-        if (this.atmosphereBuffer) {
-            this.atmosphereBuffer.remove();
-            this.atmosphereBuffer = null;
-        }
-        // Reset flag if you use one
-        // this.buffersCreated = false; 
     }
 }
