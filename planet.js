@@ -10,47 +10,90 @@ class Planet {
      * @param {number} size - Diameter of the planet.
      * @param {p5.Color} color1 - Primary base color object passed from StarSystem.
      * @param {p5.Color} color2 - Secondary color object passed from StarSystem.
+     * @param {Object} options - Optional configuration settings.
      */
-    constructor(worldX, worldY, size, color1, color2) {
+    constructor(worldX, worldY, size, color1, color2, options = {}) {
         this.pos = createVector(worldX, worldY);
         this.size = size;
-        let r = size / 2;
+        this.radius = size / 2;
+        
+        // Extract options with defaults
+        const {
+            ringProbability = 0.25,
+            atmosphereProbability = 0.4,
+            minRingTilt = -PI/20,
+            maxRingTilt = PI/20,
+            isSun = false
+        } = options;
+        
+        this.isSun = isSun;
 
-        // Store base colors provided by StarSystem
-        this.baseColor = color1 || color(random(80, 180), random(80, 180), random(80, 180));
-        this.featureColor1 = color2 || lerpColor(this.baseColor, color(random(255)), 0.3);
-        // Generate a second feature color deterministically
-        let c1r = red(this.baseColor); let c1g = green(this.baseColor); let c1b = blue(this.baseColor);
-        this.featureColor2 = color((c1r * 0.8 + random(50)) % 255, (c1g * 0.7 + random(60)) % 255, (c1b * 0.9 + random(40)) % 255);
-
-        this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
-
+        // Generate color palette
+        this.generateColorPalette(color1, color2);
+        
         // Deterministic properties using random() (seeded by StarSystem)
-        this.featureRand = random(10000); // Offset for noise calculations
-        this.noiseScale = random(0.8, 3.5) / r; // Scale for surface noise based on size
-        this.noisePersistence = random(0.4, 0.6); // Noise detail factor
+        this.featureRand = random(10000);
+        this.noiseScale = random(0.8, 3.5) / this.radius;
+        this.noisePersistence = random(0.4, 0.6);
 
-        this.hasAtmosphere = random() < 0.4; // Less frequent
-        this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
+        // Atmosphere
+        this.generateAtmosphere(atmosphereProbability);
+        
+        // Rings
+        this.generateRings(ringProbability, minRingTilt, maxRingTilt);
 
-        // --- Rings Restored ---
-        this.hasRings = random() < 0.25;
-        if (this.hasRings) {
-            this.ringAngle = random(-PI / 20, PI / 20); // Very subtle ring tilt (±9°)
-            this.ringPerspective = map(abs(this.ringAngle), 0, PI / 6, 0.15, 0.4); // Y-scale factor
-            this.ringInnerRad = r * random(1.2, 1.5);
-            this.ringOuterRad = this.ringInnerRad * random(1.3, 1.8);
-            this.numRingSegments = floor(random(60, 160)); // Reduced for performance
-            this.ringColor1 = lerpColor(this.baseColor, color(200), 0.6);
-            this.ringColor2 = lerpColor(this.featureColor1, color(150), 0.6);
-        }
-
-        this.rotationSpeed = 0; // Not used currently but kept for compatibility
+        this.rotationSpeed = 0;
         this.currentRotation = 0;
         this.shadowOffset = null;
         
-        // Flag to track buffer creation status - IMPORTANT CHANGE
+        // Flag to track buffer creation status
         this.buffersCreated = false;
+    }
+    
+    /**
+     * Generate the planet's color palette
+     */
+    generateColorPalette(color1, color2) {
+        this.baseColor = color1 || color(random(80, 180), random(80, 180), random(80, 180));
+        this.featureColor1 = color2 || lerpColor(this.baseColor, color(random(255)), 0.3);
+        
+        // Generate a second feature color deterministically
+        let c1r = red(this.baseColor);
+        let c1g = green(this.baseColor);
+        let c1b = blue(this.baseColor);
+        this.featureColor2 = color(
+            (c1r * 0.8 + random(50)) % 255,
+            (c1g * 0.7 + random(60)) % 255,
+            (c1b * 0.9 + random(40)) % 255
+        );
+        
+        this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
+    }
+    
+    /**
+     * Generate atmosphere parameters
+     */
+    generateAtmosphere(probability) {
+        this.hasAtmosphere = random() < probability;
+        this.atmosphereColor = this.hasAtmosphere ? 
+            color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
+    }
+    
+    /**
+     * Generate ring parameters
+     */
+    generateRings(probability, minTilt, maxTilt) {
+        this.hasRings = random() < probability;
+        
+        if (this.hasRings) {
+            this.ringAngle = random(minTilt, maxTilt);
+            this.ringPerspective = map(abs(this.ringAngle), 0, PI/6, 0.15, 0.4);
+            this.ringInnerRad = this.radius * random(1.2, 1.5);
+            this.ringOuterRad = this.ringInnerRad * random(1.3, 1.8);
+            this.numRingSegments = floor(random(60, 160));
+            this.ringColor1 = lerpColor(this.baseColor, color(200), 0.6);
+            this.ringColor2 = lerpColor(this.featureColor1, color(150), 0.6);
+        }
     }
 
     /**
@@ -58,19 +101,18 @@ class Planet {
      * the planet components for efficient drawing
      */
     createBuffers() {
-        // Skip if buffers already exist
         if (this.buffersCreated) return;
         
         // Size calculations for buffers
-        const bufferSize = Math.ceil(this.size * 1.2); // Make buffer a bit larger
+        const bufferSize = Math.ceil(this.size * 1.2);
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
         const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * 1.4) : 0;
         
         // Create main planet buffer
         this.planetBuffer = createGraphics(bufferSize, bufferSize);
-        this.renderPlanetTexture(this.planetBuffer); // Render the full planet texture
+        this.renderPlanetTexture(this.planetBuffer);
         
-        // Create rings buffer ONLY if needed
+        // Create rings buffer only if needed
         if (this.hasRings) {
             this.ringsBuffer = createGraphics(ringBufferSize, ringBufferSize);
             this.renderRings();
@@ -82,7 +124,6 @@ class Planet {
             this.renderAtmosphere();
         }
         
-        // Set flag to track that buffers have been created
         this.buffersCreated = true;
     }
     
@@ -122,7 +163,7 @@ class Planet {
         // First clear the buffer and set up
         pg.clear();
         pg.noStroke();
-        pg.noiseDetail(4, this.noisePersistence);
+        pg.noiseDetail(3, this.noisePersistence);
         
         // Draw a solid base circle first to prevent transparency issues
         pg.fill(this.baseColor);
@@ -239,13 +280,10 @@ class Planet {
     /**
      * Static method to create the sun
      */
-    static createSun() {
-        const sunSize = 400;  // Adjust as needed
+    static createSun(size = 400) {
         const sunColor1 = color(255, 255, 100);  // Bright yellow
         const sunColor2 = color(255, 200, 100);
-        const sun = new Planet(0, 0, sunSize, sunColor1, sunColor2);
-        sun.isSun = true; // Mark this planet as the sun
-        return sun;
+        return new Planet(0, 0, size, sunColor1, sunColor2, { isSun: true });
     }
 
     /**
@@ -270,37 +308,12 @@ class Planet {
             image(this.atmosphereBuffer, -atmSize/2, -atmSize/2);
         }
         
-        const bufferW = this.planetBuffer.width;
-        const bufferH = this.planetBuffer.height;
-        const bufferCenterX = bufferW / 2;
-        const bufferCenterY = bufferH / 2;
-        const destX = -bufferCenterX; 
-        const destY = -bufferCenterY; 
-        
         if (this.hasRings) {
-            // --- IMPROVED DRAWING LOGIC FOR RING PLANETS ---
-            
-            // 1. First draw the FULL planet behind everything (as a base layer)
-            image(this.planetBuffer, destX, destY);
-            
-            // 2. Draw the rings on top of that
-            const ringsSize = this.ringsBuffer.width;
-            image(this.ringsBuffer, -ringsSize/2, -ringsSize/2);
-            
-            // 3. Draw the top 45% of the planet again, on top of the rings
-            // This creates a perfect "mask" effect with no seam
-            const topHeight = bufferH * 0.45;
-            image(
-                this.planetBuffer,
-                destX, destY,
-                bufferW, topHeight,
-                0, 0,
-                bufferW, topHeight
-            );
-            
+            this.drawRingedPlanet();
         } else {
             // For planets without rings, simply draw the full planet buffer
-            image(this.planetBuffer, destX, destY);
+            const bufferSize = this.planetBuffer.width;
+            image(this.planetBuffer, -bufferSize/2, -bufferSize/2);
         }
         
         // Apply shadow
@@ -312,58 +325,59 @@ class Planet {
         
         pop();
     }
-
-    // Keep toJSON and fromJSON methods
-    toJSON() {
-        return {
-            pos: { x: this.pos.x, y: this.pos.y },
-            size: this.size,
-            baseColor: this.baseColor ? this.baseColor.toString() : null,
-            featureColor1: this.featureColor1 ? this.featureColor1.toString() : null,
-            featureColor2: this.featureColor2 ? this.featureColor2.toString() : null,
-            featureRand: this.featureRand,
-            noiseScale: this.noiseScale,
-            noisePersistence: this.noisePersistence,
-            hasAtmosphere: this.hasAtmosphere,
-            atmosphereColor: this.atmosphereColor ? this.atmosphereColor.toString() : null,
-            hasRings: this.hasRings,
-            ringAngle: this.ringAngle,
-            ringPerspective: this.ringPerspective,
-            ringInnerRad: this.ringInnerRad,
-            ringOuterRad: this.ringOuterRad,
-            numRingSegments: this.numRingSegments,
-            ringColor1: this.ringColor1 ? this.ringColor1.toString() : null,
-            ringColor2: this.ringColor2 ? this.ringColor2.toString() : null,
-            rotationSpeed: this.rotationSpeed,
-            currentRotation: this.currentRotation
-        };
+    
+    /**
+     * Draw a planet with rings using the correct layering technique
+     */
+    drawRingedPlanet() {
+        const bufferW = this.planetBuffer.width;
+        const bufferH = this.planetBuffer.height;
+        const destX = -bufferW/2;
+        const destY = -bufferH/2;
+        
+        // 1. First draw the FULL planet behind everything
+        image(this.planetBuffer, destX, destY);
+        
+        // 2. Draw the rings on top of that
+        const ringsSize = this.ringsBuffer.width;
+        image(this.ringsBuffer, -ringsSize/2, -ringsSize/2);
+        
+        // 3. Draw the top portion of the planet on top of the rings
+        const topHeight = bufferH * 0.45;
+        image(
+            this.planetBuffer,
+            destX, destY,
+            bufferW, topHeight,
+            0, 0,
+            bufferW, topHeight
+        );
     }
 
+    /**
+     * Creates a Planet instance from JSON data.
+     * @param {Object} data - Serialized planet data.
+     * @returns {Planet} New planet instance.
+     */
     static fromJSON(data) {
-        // Use baseColor and featureColor1/2 if possible, else fallback to random
         let c1 = data.baseColor && typeof color === "function" ? color(data.baseColor) : undefined;
         let c2 = data.featureColor1 && typeof color === "function" ? color(data.featureColor1) : undefined;
+        
         const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2);
-        p.featureColor2 = data.featureColor2 && typeof color === "function" ? color(data.featureColor2) : p.featureColor2;
-        p.featureRand = data.featureRand;
-        p.noiseScale = data.noiseScale;
-        p.noisePersistence = data.noisePersistence;
-        p.hasAtmosphere = data.hasAtmosphere;
-        p.atmosphereColor = data.atmosphereColor && typeof color === "function" ? color(data.atmosphereColor) : null;
-        p.hasRings = data.hasRings;
-        p.ringAngle = data.ringAngle;
-        p.ringPerspective = data.ringPerspective;
-        p.ringInnerRad = data.ringInnerRad;
-        p.ringOuterRad = data.ringOuterRad;
-        p.numRingSegments = data.numRingSegments;
-        p.ringColor1 = data.ringColor1 && typeof color === "function" ? color(data.ringColor1) : null;
-        p.ringColor2 = data.ringColor2 && typeof color === "function" ? color(data.ringColor2) : null;
-        p.rotationSpeed = data.rotationSpeed;
-        p.currentRotation = data.currentRotation;
+        
+        // Copy all properties from data to the planet
+        Object.keys(data).forEach(key => {
+            // Skip position and size that were handled in constructor
+            if (key === 'pos' || key === 'size') return;
+            
+            // Handle color objects specially
+            if (key.includes('Color') && data[key] && typeof color === "function") {
+                p[key] = color(data[key]);
+            } else {
+                p[key] = data[key];
+            }
+        });
         
         // Don't create buffers immediately - will be created on first draw
-        // This prevents memory and performance issues during game load
-        
         return p;
     }
 }
