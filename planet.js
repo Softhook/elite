@@ -63,21 +63,14 @@ class Planet {
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
         const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * 1.4) : 0;
         
-        // Create appropriate buffers based on whether planet has rings
+        // --- CHANGE: Always create ONE main planet buffer ---
+        this.planetBuffer = createGraphics(bufferSize, bufferSize);
+        this.renderPlanetTexture(this.planetBuffer); // Render the full planet texture
+        
+        // Create rings buffer ONLY if needed
         if (this.hasRings) {
-            // For ringed planets, we need separate buffers for top/bottom halves
-            this.planetBufferTop = createGraphics(bufferSize, bufferSize);
-            this.planetBufferBottom = createGraphics(bufferSize, bufferSize);
             this.ringsBuffer = createGraphics(ringBufferSize, ringBufferSize);
-            
-            // Render planet texture to both halves
-            this.renderPlanetTexture(this.planetBufferTop, true);  // Top half
-            this.renderPlanetTexture(this.planetBufferBottom, false); // Bottom half
-            this.renderRings(); // Render rings
-        } else {
-            // For normal planets, just one buffer for the whole planet
-            this.planetBuffer = createGraphics(bufferSize, bufferSize);
-            this.renderPlanetTexture(this.planetBuffer); // Render full planet
+            this.renderRings();
         }
         
         // Create atmosphere buffer if needed
@@ -88,11 +81,11 @@ class Planet {
     }
     
     /**
-     * Renders the planet texture to the specified buffer
+     * Renders the FULL planet texture to the specified buffer.
+     * Removed the isTopHalf logic and masking.
      * @param {p5.Graphics} pg - The graphics buffer to render to
-     * @param {boolean} isTopHalf - If specified, only render that half
      */
-    renderPlanetTexture(pg, isTopHalf = null) {
+    renderPlanetTexture(pg) { // Removed isTopHalf parameter
         const bufferCenter = pg.width / 2;
         const r = this.size / 2;
         
@@ -105,39 +98,25 @@ class Planet {
         pg.fill(this.baseColor);
         pg.ellipse(bufferCenter, bufferCenter, this.size, this.size);
         
-        // Determine y-range based on whether we're rendering half or whole
-        let yStart, yEnd;
-        if (isTopHalf === true) {
-            yStart = -r;
-            yEnd = 0;
-        } else if (isTopHalf === false) {
-            yStart = 0;
-            yEnd = r;
-        } else {
-            // Full planet
-            yStart = -r;
-            yEnd = r;
-        }
+        // --- CHANGE: Always render the full planet ---
+        const yStart = -r;
+        const yEnd = r;
         
-        // Set resolution based on planet size (bigger planets = bigger bands for efficiency)
+        // Set resolution based on planet size
         const bandHeight = max(2, Math.ceil(4 * (100 / this.size)));
         
-        // Loop through vertical bands
+        // Loop through vertical bands (full planet)
         for (let y = yStart; y < yEnd; y += bandHeight) {
-            // Calculate band width at this y position
             const bandR = sqrt(max(0, r * r - y * y));
             if (bandR <= 0) continue;
             
-            // Loop through horizontal segments of this band
             for (let x = -bandR; x < bandR; x += bandHeight) {
-                // Calculate noise coordinates for consistent texture
                 const angle = atan2(y, x);
                 const distFromCenter = dist(0, 0, x, y);
                 const noiseX = (cos(angle) * distFromCenter) * this.noiseScale + this.featureRand;
                 const noiseY = (sin(angle) * distFromCenter) * this.noiseScale + this.featureRand;
                 const noiseZ = this.featureRand * 0.1;
                 
-                // Determine color from noise and palette
                 const n = pg.noise(noiseX, noiseY, noiseZ);
                 const paletteIndex = floor(n * (this.palette.length - 1));
                 const lerpFactor = (n * (this.palette.length - 1)) % 1;
@@ -145,24 +124,12 @@ class Planet {
                 const col2 = this.palette[min(paletteIndex + 1, this.palette.length - 1)];
                 const bandColor = lerpColor(col1, col2, lerpFactor);
                 
-                // Ensure full opacity for the texture fill
                 pg.fill(red(bandColor), green(bandColor), blue(bandColor), 255);
-                
-                // Draw texture segment at correct position (center the planet in the buffer)
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
             }
         }
         
-        // If rendering half planets, mask out the unused half
-        if (isTopHalf === true) {
-            // For top half, mask out bottom
-            pg.fill(0, 0); // Use transparent fill to create a "hole"
-            pg.rect(0, bufferCenter, pg.width, bufferCenter);
-        } else if (isTopHalf === false) {
-            // For bottom half, mask out top
-            pg.fill(0, 0); // Use transparent fill to create a "hole"
-            pg.rect(0, 0, pg.width, bufferCenter);
-        }
+        // --- REMOVED MASKING LOGIC ---
         
         // Reset noise detail 
         pg.noiseDetail(4, 0.5);
@@ -255,7 +222,10 @@ class Planet {
      * Draw the planet using pre-rendered buffers
      */
     draw(sunPos) {
-        // Compute the shadow once
+        if (!this.planetBuffer) { // Ensure buffer exists (relevant if using dispose/create logic)
+            this.createBuffers();
+        }
+        
         if (!this.shadowOffset) {
             this.computeShadowOffset(sunPos);
         }
@@ -263,31 +233,51 @@ class Planet {
         push();
         translate(this.pos.x, this.pos.y);
         
-        // Draw atmosphere if present (always behind everything)
+        // Draw atmosphere if present
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             const atmSize = this.atmosphereBuffer.width;
             image(this.atmosphereBuffer, -atmSize/2, -atmSize/2);
         }
         
+        const bufferW = this.planetBuffer.width;
+        const bufferH = this.planetBuffer.height;
+        const bufferCenterX = bufferW / 2;
+        const bufferCenterY = bufferH / 2;
+        const destX = -bufferCenterX; // Destination top-left corner
+        const destY = -bufferCenterY; // Destination top-left corner
+        
         if (this.hasRings) {
-            // For planets with rings, follow the correct z-order:
-            // 1. Bottom half of planet
-            const halfSize = this.planetBufferBottom.width;
-            image(this.planetBufferBottom, -halfSize/2, -halfSize/2);
+            // --- NEW DRAWING LOGIC FOR RINGS ---
+            // Use image(img, dx, dy, dWidth, dHeight, sx, sy, [sWidth], [sHeight])
             
-            // 2. Rings
+            // 1. Draw bottom half of planet from the full buffer
+            image(
+                this.planetBuffer,
+                destX, destY + bufferCenterY, // Destination: draw starting at the middle Y
+                bufferW, bufferCenterY,       // Destination size: full width, half height
+                0, bufferCenterY,             // Source position: start reading from middle Y
+                bufferW, bufferCenterY        // Source size: read full width, half height
+            );
+            
+            // 2. Draw rings
             const ringsSize = this.ringsBuffer.width;
             image(this.ringsBuffer, -ringsSize/2, -ringsSize/2);
             
-            // 3. Top half of planet
-            image(this.planetBufferTop, -halfSize/2, -halfSize/2);
+            // 3. Draw top half of planet from the full buffer
+            image(
+                this.planetBuffer,
+                destX, destY,                 // Destination: draw starting at the top-left
+                bufferW, bufferCenterY,       // Destination size: full width, half height
+                0, 0,                         // Source position: start reading from top-left
+                bufferW, bufferCenterY        // Source size: read full width, half height
+            );
+            
         } else {
             // For planets without rings, simply draw the full planet buffer
-            const bufferSize = this.planetBuffer.width;
-            image(this.planetBuffer, -bufferSize/2, -bufferSize/2);
+            image(this.planetBuffer, destX, destY);
         }
         
-        // Apply shadow as a simple overlay
+        // Apply shadow
         if (!this.isSun && this.shadowOffset) {
             noStroke();
             fill(0, 0, 0, 55);
@@ -348,5 +338,23 @@ class Planet {
         // Recreate buffers after loading
         p.createBuffers();
         return p;
+    }
+
+    // --- Optional: Update disposeBuffers if you implemented it ---
+    disposeBuffers() {
+        if (this.planetBuffer) {
+            this.planetBuffer.remove();
+            this.planetBuffer = null;
+        }
+        if (this.ringsBuffer) { // Only exists for ringed planets
+            this.ringsBuffer.remove();
+            this.ringsBuffer = null;
+        }
+        if (this.atmosphereBuffer) {
+            this.atmosphereBuffer.remove();
+            this.atmosphereBuffer = null;
+        }
+        // Reset flag if you use one
+        // this.buffersCreated = false; 
     }
 }
