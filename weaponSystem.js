@@ -1,8 +1,22 @@
 // ****** weaponSystem.js ******
 
+// Define weapon types as constants for better safety
+const WEAPON_TYPE = {
+    PROJECTILE: 'projectile',
+    BEAM: 'beam',
+    FORCE: 'force',
+    TURRET: 'turret',
+    STRAIGHT: 'straight',
+    SPREAD: 'spread'
+};
+
 class WeaponSystem {
-    /** Handles force blast weapon (area effect damage) */
-    static fireForce(owner, system, angle) {
+    /** 
+     * Handles force blast weapon (area effect damage)
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     */
+    static fireForce(owner, system) {
         if (!owner || !system) return;
         
         // Get position to emit force wave from
@@ -10,9 +24,9 @@ class WeaponSystem {
         
         // Get owner's current weapon for properties
         const weapon = owner.currentWeapon;
-        const damage = weapon?.damage || 20; // Increased base damage
+        const damage = weapon?.damage || 20;
         const color = weapon?.color || [255, 0, 0];
-        const maxRadius = weapon?.maxRadius || 750; // Get maxRadius from weapon or use default
+        const maxRadius = weapon?.maxRadius || 750;
         
         console.log(`Force wave fired by ${owner instanceof Player ? "player" : "enemy"} with damage ${damage}, maxRadius: ${maxRadius}`);
         
@@ -21,12 +35,12 @@ class WeaponSystem {
             pos: forceWavePos,
             owner: owner,
             startTime: millis(),
-            radius: 50, // Starting radius
-            maxRadius: maxRadius, // Use the weapon's maxRadius property
-            growRate: 15, // How fast it grows per frame
+            radius: 50,
+            maxRadius: maxRadius,
+            growRate: 15,
             damage: damage,
             color: color,
-            processed: {}, // Track which entities have been affected already
+            processed: {},
         });
         
         // Store reference for drawing effects
@@ -37,53 +51,63 @@ class WeaponSystem {
         };
     }
 
-    /** Generic fire method that dispatches to specific weapon handlers */
-    static fire(owner, system, angle, type = "projectile", target = null) {
+    /** 
+     * Generic fire method that dispatches to specific weapon handlers
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     * @param {string} type - Weapon type
+     * @param {Object} target - Optional target for aimed weapons
+     */
+    static fire(owner, system, angle, type = WEAPON_TYPE.PROJECTILE, target = null) {
         if (!owner || !system) return;
+        
+        // Extract count from type name if present (e.g., "spread3" -> 3)
+        let count = 1;
+        const countMatch = /(\d+)$/.exec(type);
+        if (countMatch) {
+            count = parseInt(countMatch[1]);
+            // Remove count from type to get base type
+            type = type.replace(/\d+$/, '');
+        }
         
         // Handle different weapon types
         switch(type) {
-            case "force":
-                this.fireForce(owner, system, angle);
+            case WEAPON_TYPE.FORCE:
+                this.fireForce(owner, system);
                 break;
-            case "beam":
+                
+            case WEAPON_TYPE.BEAM:
                 this.fireBeam(owner, system, angle);
                 break;
-            case "turret":
+                
+            case WEAPON_TYPE.TURRET:
                 this.fireTurret(owner, system, target || angle);
                 break;
-            case "straight2":
-                this.fireStraight2(owner, system, angle);
+                
+            case WEAPON_TYPE.STRAIGHT:
+                this.fireStraight(owner, system, angle, count);
                 break;
-            case "straight3": // Add missing handler for straight3
-                this.fireStraight3(owner, system, angle);
+                
+            case WEAPON_TYPE.SPREAD:
+                this.fireSpread(owner, system, angle, count);
                 break;
-            case "straight4":
-                this.fireStraight4(owner, system, angle);
-                break;
-            case "straight5":
-                    this.fireStraight5(owner, system, angle);
-                break;                
-            case "spread2":
-                this.fireSpread2(owner, system, angle);
-                break;
-            case "spread3":
-                this.fireSpread3(owner, system, angle);
-                break;
-            case "spread4":
-                this.fireSpread4(owner, system, angle);
-                break;
-            case "spread5":
-                    this.fireSpread5(owner, system, angle);
-                break;                
+                
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
         }
     }
 
-    // --- Single projectile ---
+    /** 
+     * Fire a single projectile
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     */
     static fireProjectile(owner, system, angle) {
+        if (!owner?.currentWeapon) return;
+        
         const weapon = owner.currentWeapon;
         const proj = new Projectile(
             owner.pos.x, owner.pos.y, angle, owner,
@@ -97,236 +121,255 @@ class WeaponSystem {
         }
     }
 
-    // --- N-way spread (angled) ---
+    /** 
+     * Fire multiple projectiles in a spread pattern
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Base firing angle in radians
+     * @param {number} count - Number of projectiles to fire
+     */
     static fireSpread(owner, system, angle, count = 3) {
-        // Centered spread, e.g. for 3: [-0.15, 0, 0.15]
-        let spread = 0.3; // total spread in radians
-        if (count === 2) spread = 0.18;
-        if (count === 4) spread = 0.4;
-        if (count === 5) spread = 0.2;
+        if (count < 1 || !owner || !system) return;
+        
+        // Calculate appropriate spread based on count
+        const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
+        const spread = spreadMap[count] || 0.3;
+        
         const start = -spread / 2;
         const step = count > 1 ? spread / (count - 1) : 0;
+        
         for (let i = 0; i < count; i++) {
-            WeaponSystem.fireProjectile(owner, system, angle + start + i * step);
+            this.fireProjectile(owner, system, angle + start + i * step);
         }
     }
 
-    // --- N-way straight (parallel) ---
+    /** 
+     * Fire multiple projectiles in parallel
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     * @param {number} count - Number of projectiles to fire
+     */
     static fireStraight(owner, system, angle, count = 3) {
+        if (count < 1 || !owner || !system || !owner.currentWeapon) return;
+        
         // Offset projectiles perpendicular to angle
         const spacing = 12; // pixels between projectiles
         const mid = (count - 1) / 2;
+        const perpAngle = angle + HALF_PI;
+        
+        // Cache the perpendicular vector direction
+        const perpDir = p5.Vector.fromAngle(perpAngle);
+        
         for (let i = 0; i < count; i++) {
             let offset = (i - mid) * spacing;
-            let perp = p5.Vector.fromAngle(angle + HALF_PI).mult(offset);
-            let pos = p5.Vector.add(owner.pos, perp);
+            // Calculate the position with minimal vector allocations
+            let x = owner.pos.x + perpDir.x * offset;
+            let y = owner.pos.y + perpDir.y * offset;
+            
             const weapon = owner.currentWeapon;
             const proj = new Projectile(
-                pos.x, pos.y, angle, owner,
+                x, y, angle, owner,
                 8, weapon.damage, weapon.color
             );
             system.addProjectile(proj);
         }
+        
+        // Play laser sound once for all projectiles
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('laser');
+        }
     }
 
-    // --- Beam weapon ---
+    /** 
+     * Fire a beam weapon and handle hit detection
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     */
     static fireBeam(owner, system, angle) {
-        console.log("Firing beam weapon from", owner instanceof Player ? "player" : "enemy", "at angle", angle);
+        if (!owner || !system) return;
         
-        // VALIDATION: Ensure angle is a valid number
+        // Validate angle
         if (isNaN(angle) || !isFinite(angle)) {
             console.error("Invalid angle in fireBeam:", angle);
             return;
         }
         
+        // Get beam properties
         const beamLength = 1200;
         const beamStart = owner.pos.copy();
         
-        // For player, calculate beam direction to mouse cursor
+        // Handle player aiming at mouse cursor
         if (owner instanceof Player) {
             // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (owner.pos.x - width/2);
             const worldMy = mouseY + (owner.pos.y - height/2);
             
             // Calculate angle to mouse cursor
-            const shootingAngle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
-            angle = shootingAngle;
-            console.log("Player beam aimed at mouse:", degrees(angle));
+            angle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
         }
         
-        // SAFE VECTOR CALCULATION: Create direction vector first
+        // Calculate beam direction and endpoint
         const beamDir = p5.Vector.fromAngle(angle);
-        
-        // VALIDATION: Ensure the direction vector is valid
         if (!beamDir || isNaN(beamDir.x) || isNaN(beamDir.y)) {
-            console.error("Invalid beam direction vector created from angle:", angle);
+            console.error("Invalid beam direction from angle:", angle);
             return;
         }
         
-        // Now calculate the end point using a copy of the direction vector
-        const beamEnd = p5.Vector.add(
-            beamStart,
-            p5.Vector.mult(beamDir, beamLength)
-        );
-        
-        // Normalize a separate copy for hit detection
+        const beamEnd = p5.Vector.add(beamStart, p5.Vector.mult(beamDir, beamLength));
         const beamDirNorm = beamDir.copy().normalize();
-
-        let hitTarget = null;
-        let minDist = Infinity;
-
-        // Rest of hit detection code remains the same...
-        // If owner is Player, check enemies
-        if (owner instanceof Player && system && system.enemies) {
-            for (let enemy of system.enemies) {
-                if (!enemy || !enemy.pos || enemy === owner) continue;
-                let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
-                let projLength = toEnemy.dot(beamDirNorm);
-                if (projLength > 0 && projLength < beamLength) {
-                    let closestPoint = p5.Vector.add(beamStart, beamDirNorm.copy().mult(projLength));
-                    let distToBeam = p5.Vector.dist(enemy.pos, closestPoint);
-                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
-                        minDist = projLength;
-                        hitTarget = enemy;
-                    }
-                }
-            }
-        }
-
-        // If owner is Enemy, check player
-        if (owner instanceof Enemy && system && system.player) {
-            let player = system.player;
-            if (player && player.pos) {
-                let toPlayer = p5.Vector.sub(player.pos, beamStart);
-                let projLength = toPlayer.dot(beamDirNorm);
-                if (projLength > 0 && projLength < beamLength) {
-                    let closestPoint = p5.Vector.add(beamStart, beamDirNorm.copy().mult(projLength));
-                    let distToBeam = p5.Vector.dist(player.pos, closestPoint);
-                    if (distToBeam < player.size / 2) {
-                        hitTarget = player;
-                        minDist = projLength;
-                    }
-                }
-            }
-        }
-
-        // Apply damage only once to the hit target
-        if (hitTarget) {
-            hitTarget.takeDamage(owner.currentWeapon.damage);
-            // Add a visual effect at hit point if possible
-            const hitPoint = p5.Vector.add(
-                beamStart, 
-                p5.Vector.mult(beamDirNorm, minDist)
-            );
-            
-            if (system.addExplosion) {
-                system.addExplosion(hitPoint.x, hitPoint.y, 6, owner.currentWeapon.color);
-            }
-        }
+        
+        // Perform hit detection
+        const hit = this.performBeamHitDetection(owner, system, beamStart, beamDirNorm, beamLength);
         
         // Store beam info for drawing
         owner.lastBeam = {
             start: beamStart,
             end: beamEnd,
-            color: owner.currentWeapon.color,
+            color: owner.currentWeapon?.color || [255, 0, 0],
             time: millis(),
-            hit: hitTarget !== null
+            hit: hit.target !== null
         };
+        
+        // Handle hit effects
+        if (hit.target) {
+            hit.target.takeDamage(owner.currentWeapon?.damage || 10);
+            
+            if (system.addExplosion) {
+                system.addExplosion(hit.point.x, hit.point.y, 6, owner.currentWeapon?.color || [255, 0, 0]);
+            }
+        }
     }
-
-    // --- Turret weapon (auto-aims at nearest target) ---
-    static fireTurret(owner, system, target) {
-        // First - FIND A TARGET if none is provided
-        if ((!target || !target.pos) && system) {
-            // Find nearest enemy if player is firing
-            if (owner instanceof Player && system.enemies && system.enemies.length > 0) {
-                let nearestEnemy = null;
-                let closestDist = Infinity;
+    
+    /**
+     * Performs hit detection for beam weapons
+     * @param {Object} owner - Entity firing the beam
+     * @param {Object} system - Current star system
+     * @param {p5.Vector} beamStart - Starting position of beam
+     * @param {p5.Vector} beamDir - Normalized direction vector
+     * @param {number} beamLength - Length of the beam
+     * @return {Object} Hit result with target and hit point
+     */
+    static performBeamHitDetection(owner, system, beamStart, beamDir, beamLength) {
+        let hitTarget = null;
+        let minDist = Infinity;
+        let hitPoint = null;
+        
+        // Check enemies if owner is Player
+        if (owner instanceof Player && system?.enemies) {
+            for (let enemy of system.enemies) {
+                if (!enemy?.pos || enemy === owner) continue;
                 
-                // Find closest enemy
-                for (const enemy of system.enemies) {
-                    if (!enemy || !enemy.pos) continue;
+                let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
+                let projLength = toEnemy.dot(beamDir);
+                
+                if (projLength > 0 && projLength < beamLength) {
+                    let closestPoint = p5.Vector.add(
+                        beamStart, 
+                        p5.Vector.mult(beamDir, projLength)
+                    );
                     
-                    const dist = p5.Vector.dist(owner.pos, enemy.pos);
-                    if (dist < closestDist) {
-                        nearestEnemy = enemy;
-                        closestDist = dist;
+                    let distToBeam = p5.Vector.dist(enemy.pos, closestPoint);
+                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
+                        minDist = projLength;
+                        hitTarget = enemy;
+                        hitPoint = closestPoint;
                     }
                 }
-                
-                // Use the nearest enemy as target
-                if (nearestEnemy) {
-                    target = nearestEnemy;
-                    console.log(`Turret targeting ${nearestEnemy.shipTypeName} at distance ${closestDist.toFixed(1)}`);
-                }
-            } 
-            // Find player if enemy is firing
-            else if (owner instanceof Enemy && system.player) {
-                target = system.player;
             }
         }
         
-        // If no target found after searching, fire forward
-        if (!target || !target.pos) {
-            WeaponSystem.fireProjectile(owner, system, owner.angle);
+        // Check player if owner is Enemy
+        if (owner instanceof Enemy && system?.player?.pos) {
+            let toPlayer = p5.Vector.sub(system.player.pos, beamStart);
+            let projLength = toPlayer.dot(beamDir);
+            
+            if (projLength > 0 && projLength < beamLength) {
+                let closestPoint = p5.Vector.add(
+                    beamStart, 
+                    p5.Vector.mult(beamDir, projLength)
+                );
+                
+                let distToBeam = p5.Vector.dist(system.player.pos, closestPoint);
+                if (distToBeam < system.player.size / 2 && projLength < minDist) {
+                    minDist = projLength;
+                    hitTarget = system.player;
+                    hitPoint = closestPoint;
+                }
+            }
+        }
+        
+        return {
+            target: hitTarget,
+            point: hitPoint || beamStart
+        };
+    }
+    
+    /**
+     * Find the nearest valid target for a turret
+     * @param {Object} owner - Entity firing the turret
+     * @param {Object} system - Current star system
+     * @return {Object|null} The nearest valid target or null
+     */
+    static findNearestTarget(owner, system) {
+        if (!owner || !system) return null;
+        
+        // Find nearest enemy if player is firing
+        if (owner instanceof Player && system.enemies?.length > 0) {
+            let nearestEnemy = null;
+            let closestDist = Infinity;
+            
+            for (const enemy of system.enemies) {
+                if (!enemy?.pos) continue;
+                
+                const dist = p5.Vector.dist(owner.pos, enemy.pos);
+                if (dist < closestDist) {
+                    nearestEnemy = enemy;
+                    closestDist = dist;
+                }
+            }
+            
+            if (nearestEnemy) {
+                console.log(`Turret targeting ${nearestEnemy.shipTypeName} at distance ${closestDist.toFixed(1)}`);
+                return nearestEnemy;
+            }
+        }
+        // Find player if enemy is firing
+        else if (owner instanceof Enemy && system.player?.pos) {
+            return system.player;
+        }
+        
+        return null;
+    }
+
+    /** 
+     * Fire a turret weapon that auto-aims at the nearest target
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {Object|number} target - Target object or fallback angle
+     */
+    static fireTurret(owner, system, target) {
+        if (!owner || !system) return;
+        
+        // If target is not provided or invalid, find one
+        if (!target?.pos) {
+            target = this.findNearestTarget(owner, system);
+        }
+        
+        // If still no valid target, fire forward
+        if (!target?.pos) {
+            this.fireProjectile(owner, system, owner.angle);
             return;
         }
         
-        // Now calculate angle to target
+        // Calculate angle to target
         const dx = target.pos.x - owner.pos.x;
         const dy = target.pos.y - owner.pos.y;
-        
-        // Get precise angle to target
         const angleToTarget = Math.atan2(dy, dx);
         
-        // Calculate distance for debug logging
-        const targetDist = Math.sqrt(dx*dx + dy*dy);
-        
-        // Log targeting info
-        console.log(`Turret firing at angle: ${(angleToTarget * 180 / Math.PI).toFixed(1)}° toward ${target.shipTypeName || "target"} at distance: ${targetDist.toFixed(1)}`);
-        
-        // Fire the projectile using the precise angle
-        WeaponSystem.fireProjectile(owner, system, angleToTarget);
-    }
-
-
-    // --- Straight2 weapon (twin parallel shots) ---
-    static fireStraight2(owner, system, angle) {
-        this.fireStraight(owner, system, angle, 2);
-    }
-
-    // --- Straight3 weapon ---
-    static fireStraight3(owner, system, angle) {
-        this.fireStraight(owner, system, angle, 3);
-    }
-
-    // --- Straight4 weapon (quad parallel shots) ---
-    static fireStraight4(owner, system, angle) {
-        this.fireStraight(owner, system, angle, 4);
-    }
-
-        // --- Straight5 weapon (Five parallel shots) ---
-    static fireStraight5(owner, system, angle) {
-            this.fireStraight(owner, system, angle, 5);
-    }
-
-    // --- Spread2 weapon (twin angled shots) ---
-    static fireSpread2(owner, system, angle) {
-        this.fireSpread(owner, system, angle, 2);
-    }
-
-    // --- Spread3 weapon (triple angled shots) ---
-    static fireSpread3(owner, system, angle) {
-        this.fireSpread(owner, system, angle, 3);
-    }
-
-    // --- Spread4 weapon (quad angled shots) ---
-    static fireSpread4(owner, system, angle) {
-        this.fireSpread(owner, system, angle, 4);
-    }
-        // --- Spread5 weapon (Five angled shots) ---   
-    static fireSpread5(owner, system, angle) {
-        this.fireSpread(owner, system, angle, 5);
+        // Fire the projectile at the calculated angle
+        this.fireProjectile(owner, system, angleToTarget);
     }
 }
 
