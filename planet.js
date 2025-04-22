@@ -36,7 +36,7 @@ class Planet {
         // --- Rings Restored ---
         this.hasRings = random() < 0.25;
         if (this.hasRings) {
-            this.ringAngle = random(-PI / 6, PI / 6); // Keep tilt relatively moderate
+            this.ringAngle = random(-PI / 12, PI / 12); // Keep tilt moderate
             this.ringPerspective = map(abs(this.ringAngle), 0, PI / 6, 0.15, 0.4); // Y-scale factor
             this.ringInnerRad = r * random(1.2, 1.5);
             this.ringOuterRad = this.ringInnerRad * random(1.3, 1.8);
@@ -222,7 +222,7 @@ class Planet {
      * Draw the planet using pre-rendered buffers
      */
     draw(sunPos) {
-        if (!this.planetBuffer) { // Ensure buffer exists (relevant if using dispose/create logic)
+        if (!this.planetBuffer) { // Ensure buffer exists
             this.createBuffers();
         }
         
@@ -242,34 +242,29 @@ class Planet {
         const bufferW = this.planetBuffer.width;
         const bufferH = this.planetBuffer.height;
         const bufferCenterX = bufferW / 2;
-        const bufferCenterY = bufferH / 2;
-        const destX = -bufferCenterX; // Destination top-left corner
-        const destY = -bufferCenterY; // Destination top-left corner
+        const bufferCenterY = bufferH / 2; // Still useful for centering
+        const destX = -bufferCenterX; 
+        const destY = -bufferCenterY; 
         
         if (this.hasRings) {
-            // --- NEW DRAWING LOGIC FOR RINGS ---
-            // Use image(img, dx, dy, dWidth, dHeight, sx, sy, [sWidth], [sHeight])
+            // --- IMPROVED DRAWING LOGIC FOR RING PLANETS ---
             
-            // 1. Draw bottom half of planet from the full buffer
-            image(
-                this.planetBuffer,
-                destX, destY + bufferCenterY, // Destination: draw starting at the middle Y
-                bufferW, bufferCenterY,       // Destination size: full width, half height
-                0, bufferCenterY,             // Source position: start reading from middle Y
-                bufferW, bufferCenterY        // Source size: read full width, half height
-            );
+            // 1. First draw the FULL planet behind everything (as a base layer)
+            image(this.planetBuffer, destX, destY);
             
-            // 2. Draw rings
+            // 2. Draw the rings on top of that
             const ringsSize = this.ringsBuffer.width;
             image(this.ringsBuffer, -ringsSize/2, -ringsSize/2);
             
-            // 3. Draw top half of planet from the full buffer
+            // 3. Draw the top 45% of the planet again, on top of the rings
+            // This creates a perfect "mask" effect with no seam
+            const topHeight = bufferH * 0.45;
             image(
                 this.planetBuffer,
-                destX, destY,                 // Destination: draw starting at the top-left
-                bufferW, bufferCenterY,       // Destination size: full width, half height
-                0, 0,                         // Source position: start reading from top-left
-                bufferW, bufferCenterY        // Source size: read full width, half height
+                destX, destY,                   // Destination: top-left corner
+                bufferW, topHeight,             // Destination size: full width, 45% height
+                0, 0,                           // Source position: start from top-left
+                bufferW, topHeight              // Source size: read full width, 45% height
             );
             
         } else {
