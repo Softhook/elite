@@ -536,7 +536,7 @@ const SHIP_DEFINITIONS = {
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
         baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
         baseHull: 70, baseShield: 40, shieldRecharge: 0.8, cargoCapacity: 30,
-        armament: ["N/A"], // Basic defense
+        armament: [],
         costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
         drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
@@ -560,7 +560,7 @@ const SHIP_DEFINITIONS = {
         name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
         baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
         baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
-        armament: ["Beam Laser", "Scatter Beam"], // Scanning/scientific
+        armament: [],
         costCategory: "Medium", description: "Designed for exploration and detailed surface scanning.",
         drawFunction: drawPathfinderSurvey, vertexData: [ {x:1.2, y:0}, {x:0.8, y:0.2}, {x:-0.5, y:0.5}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.5, y:-0.5}, {x:0.8, y:-0.2} ], // Long nose
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
@@ -572,7 +572,7 @@ const SHIP_DEFINITIONS = {
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 3.5, baseThrust: 0.08, baseTurnRate: 0.03840,
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80, // Includes refinery space
-        armament: ["Beam Laser", "Pulse Laser"], // Mining tools
+        armament: [],
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
         drawFunction: drawProspectorMiner, vertexData: [ {x:0.6, y:0}, {x:0.4, y:0.8}, {x:-0.4, y:0.9}, {x:-0.9, y:0.6}, {x:-1.0, y:-0.3}, {x:-0.9, y:-0.6}, {x:-0.4, y:-0.9}, {x:0.4, y:-0.8} ], // Bulky, functional
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
@@ -657,8 +657,7 @@ const SHIP_DEFINITIONS = {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
         baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
-        //armament: ["Mini-Turret"],
-        armament: [],
+        armament: ["Mini-Turret"],
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
         drawFunction: drawType9Heavy, vertexData: [ { x: 0.8208, y: 0.2000 }, { x: 0.7000, y: 0.8000 }, { x: -0.8000, y: 0.9000 }, { x: -1.0000, y: 0.8000 }, { x: -1.0000, y: -0.8000 }, { x: -0.8000, y: -0.9000 }, { x: 0.7000, y: -0.8000 }, { x: 0.8208, y: -0.2000 } ],
         fillColor: [190, 140, 60],

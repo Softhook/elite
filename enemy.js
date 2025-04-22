@@ -690,25 +690,6 @@ class Enemy {
      * @param {number} distanceToTarget - Distance to the current target
      */
     updateCombatState(targetExists, distanceToTarget) {
-        // Skip combat states if ship is unarmed
-        if (!this.currentWeapon) {
-            // Unarmed ships should flee or patrol instead of attacking
-            if (this.currentState === AI_STATE.APPROACHING || 
-                this.currentState === AI_STATE.ATTACK_PASS || 
-                this.currentState === AI_STATE.REPOSITIONING) {
-                    
-                if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
-                    // Haulers and transports flee when they would attack but can't
-                    this.changeState(AI_STATE.FLEEING);
-                } else {
-                    // Others just return to default state
-                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                }
-            }
-            return;
-        }
-        
-        // Continue with normal combat state changes for armed ships
         switch (this.currentState) {
             case AI_STATE.IDLE:
                 // Transition to APPROACHING if we have a valid target
@@ -763,7 +744,7 @@ class Enemy {
                 
             case AI_STATE.PATROLLING:
                 // Transition to APPROACHING if in detection range
-                if (targetExists && this.isWithinDistance(this.target, this.detectionRange)) {
+                if (targetExists && distanceToTarget < this.detectionRange) {
                     this.changeState(AI_STATE.APPROACHING);
                 }
                 break;
@@ -777,9 +758,9 @@ class Enemy {
                 
                 // When fleeing, move away from attacker and increase speed
                 if (this.target && this.target.pos) {
-                    this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-                    this.tempVector.normalize().mult(2000);
-                    this.escapeTarget = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                    let escapeVector = p5.Vector.sub(this.pos, this.target.pos);
+                    escapeVector.normalize().mult(2000);  // Aim very far away
+                    this.escapeTarget = p5.Vector.add(this.pos, escapeVector);
                     
                     // Apply stronger thrust for escape
                     this.performRotationAndThrust(this.escapeTarget);
@@ -931,10 +912,10 @@ class Enemy {
             
             let desiredMovementTargetPos = this.patrolTargetPos;
             let distToPatrolTarget = desiredMovementTargetPos
-                ? this.distanceTo(desiredMovementTargetPos)
+                ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
                 : Infinity;
                 
-            if (this.isWithinDistance(desiredMovementTargetPos, 50)) {
+            if (distToPatrolTarget < 50) {
                 if(system?.station?.pos)
                     this.patrolTargetPos = system.station.pos.copy();
                 else
@@ -1022,8 +1003,8 @@ class Enemy {
                     desiredMovementTargetPos = this.patrolTargetPos; 
                     break; 
                 } 
-                let dS = this.distanceTo(desiredMovementTargetPos); 
-                if (this.isWithinDistance(desiredMovementTargetPos, this.stationProximityThreshold)) { 
+                let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
+                if (dS < this.stationProximityThreshold) { 
                     this.changeState(AI_STATE.NEAR_STATION); 
                 } 
                 break;
@@ -1046,8 +1027,8 @@ class Enemy {
                 } 
                 desiredMovementTargetPos = this.patrolTargetPos; 
                 if (!desiredMovementTargetPos) break; 
-                let dE = this.distanceTo(desiredMovementTargetPos); 
-                if (this.isWithinDistance(desiredMovementTargetPos, 150)) { 
+                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
+                if (dE < 150) { 
                     this.destroyed = true; 
                 } 
                 break;
@@ -1056,9 +1037,9 @@ class Enemy {
                 // Handle fleeing directly in hauler update loop
                 if (this.target && this.target.pos) {
                     // Calculate escape vector away from threat
-                    this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-                    this.tempVector.normalize().mult(2000);
-                    const escapeTargetPos = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                    const escapeVector = p5.Vector.sub(this.pos, this.target.pos);
+                    escapeVector.normalize().mult(2000);
+                    const escapeTargetPos = p5.Vector.add(this.pos, escapeVector);
                     
                     // Use strong thrust to escape
                     const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
@@ -1117,6 +1098,96 @@ class Enemy {
     updateTransportAI(system) {
         if (!system) return;
         
+        // Add attack response logic for transports
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
+            this.currentState !== AI_STATE.FLEEING &&
+            (!this.attackCooldown || this.attackCooldown <= 0)) {
+            
+            const attackerDistance = this.distanceTo(this.lastAttacker);
+            
+            if (attackerDistance < this.detectionRange * 1.5) {
+                // Store current state to return to later
+                this.previousTransportState = this.currentState;
+                this.previousRoutePoints = this.routePoints ? [...this.routePoints] : null;
+                this.previousRouteIndex = this.currentRouteIndex;
+                
+                // Unlike haulers, transports should immediately flee (no combat)
+                console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
+                this.target = this.lastAttacker; // Set attacker as target to flee from
+                this.changeState(AI_STATE.FLEEING);
+                
+                // Add a message to UI for player feedback
+                if (uiManager && typeof uiManager.addMessage === 'function') {
+                    uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
+                }
+                
+                // Apply immediate velocity boost away from attacker
+                if (this.target && this.target.pos) {
+                    let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize();
+                    this.vel.add(escapeDir.mult(this.maxSpeed * 0.9));
+                }
+                
+                // Set cooldown to prevent immediate re-engagement
+                this.attackCooldown = 15.0;
+                return; // Skip normal transport behavior
+            }
+        }
+        
+        // Check if we're fleeing
+        if (this.currentState === AI_STATE.FLEEING) {
+            if (this.target && this.target.pos) {
+                // Calculate escape vector away from threat
+                this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                this.tempVector.normalize().mult(2000);
+                const escapeTargetPos = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                
+                // Use strong thrust to escape
+                const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
+                
+                // Apply extra thrust when pointed in escape direction
+                if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
+                    this.thrustForward(1.8); // 80% more thrust when fleeing (more than haulers)
+                }
+                
+                // Add more randomness to make transport escape harder to predict
+                if (frameCount % 15 === 0) {
+                    this.vel.add(p5.Vector.random2D().mult(0.8));
+                }
+                
+                // Check if we've escaped far enough
+                if (!this.isTargetValid(this.target) || 
+                    this.distanceTo(this.target) > this.detectionRange * 3.0) {
+                    console.log(`Transport ${this.shipTypeName} escaped successfully!`);
+                    
+                    // Add long cooldown before we can be provoked again
+                    this.attackCooldown = 30.0; // Longer than haulers
+                    this.lastAttacker = null; // Reset attacker reference
+                    
+                    // Return to normal transport route
+                    if (this.previousTransportState) {
+                        this.changeState(this.previousTransportState);
+                        // Restore previous route if needed
+                        if (this.previousRoutePoints) {
+                            this.routePoints = this.previousRoutePoints;
+                            this.currentRouteIndex = this.previousRouteIndex;
+                        }
+                    } else {
+                        this.changeState(AI_STATE.TRANSPORTING);
+                    }
+                }
+                
+                // Handle physics in fleeing state
+                this.vel.mult(this.drag);
+                this.vel.limit(this.maxSpeed * 1.2); // Allow slightly higher speed when fleeing
+                this.pos.add(this.vel);
+                return; // Skip normal transport behavior
+            } else {
+                // No valid target to flee from, return to normal
+                this.changeState(AI_STATE.TRANSPORTING);
+            }
+        }
+        
+        // Original transport logic continues...
         // Define routePoints if not yet set:
         if (!this.routePoints) {
             let pts = [];
@@ -1150,9 +1221,9 @@ class Enemy {
         
         let destination = this.routePoints[this.currentRouteIndex];
         
-        // Use direct distance calculation
-        let distance = this.distanceTo(destination);
+        // Reuse the tempVector to avoid creating new vectors
         this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
+        let distance = this.tempVector.mag();
         this.tempVector.normalize();
         let targetAngle = this.tempVector.heading();
         
@@ -1300,7 +1371,7 @@ class Enemy {
         }
         
         // Check if we've reached the cargo
-        const distanceToCargo = this.distanceTo(this.cargoTarget);
+        const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
         
         // When close enough to collect
         if (distanceToCargo < this.size/2 + this.cargoTarget.size*2) {
@@ -1365,41 +1436,7 @@ class Enemy {
      */
     distanceTo(target) {
         if (!target?.pos) return Infinity;
-        
-        // Use direct calculation instead of calling dist() function
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        return Math.sqrt(dx*dx + dy*dy);
-    }
-
-    /**
-     * Calculates squared distance to target entity (faster)
-     * @param {Object} target - Entity with pos property
-     * @return {number} Squared distance to target or Infinity if invalid
-     */
-    distanceSquaredTo(target) {
-        if (!target?.pos) return Infinity;
-        
-        // Avoid square root operation for better performance
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        return dx*dx + dy*dy;
-    }
-
-    /**
-     * Efficient check if target is within specified distance
-     * @param {Object} target - Entity with pos property
-     * @param {number} maxDistance - Maximum distance to check against
-     * @return {boolean} Whether target is within the distance
-     */
-    isWithinDistance(target, maxDistance) {
-        if (!target?.pos) return false;
-        
-        // Compare squared distances to avoid square root
-        const maxDistSq = maxDistance * maxDistance;
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        return (dx*dx + dy*dy) <= maxDistSq;
+        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
     }
 
     /**
@@ -1567,8 +1604,7 @@ class Enemy {
      * @param {number} shootingAngle - Angle to target in radians
      */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-        // Skip firing if unarmed
-        if (!targetExists || !this.currentWeapon) return;
+        if (!targetExists) return;
         
         // Select best weapon for current situation
         this.selectBestWeapon(distanceToTarget);
@@ -1590,9 +1626,7 @@ class Enemy {
         }
         
         // Enhanced firing logic with weapon-specific behaviors
-        const effectiveFiringRangeSq = effectiveFiringRange * effectiveFiringRange;
-        const distanceToTargetSq = this.distanceSquaredTo(this.target);
-        if (distanceToTargetSq < effectiveFiringRangeSq && this.isWeaponReady()) {
+        if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
             // Check if we can fire at the target
             if (this.canFireAtTarget(shootingAngle)) {
                 if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
@@ -1668,6 +1702,24 @@ class Enemy {
             // Reset cooldown when switching weapons (optional)
             this.fireCooldown = this.fireRate * 0.5; 
         }
+    }
+
+    /**
+     * Check if this ship is armed with any weapons
+     * @return {boolean} Whether ship has any weapons
+     */
+    isArmed() {
+        return !!this.currentWeapon;
+    }
+    
+    /**
+     * Check if currently in a combat state
+     * @return {boolean} Whether in a combat-related state
+     */
+    isInCombatState() {
+        return this.currentState === AI_STATE.APPROACHING || 
+               this.currentState === AI_STATE.ATTACK_PASS || 
+               this.currentState === AI_STATE.REPOSITIONING;
     }
 
     // -----------------
@@ -1900,11 +1952,10 @@ class Enemy {
         for (const cargo of system.cargo) {
             if (cargo.collected) continue;
             
-            const distanceSq = this.distanceSquaredTo(cargo);
-            const detectionRangeSq = this.cargoDetectionRange * this.cargoDetectionRange;
-            if (distanceSq < detectionRangeSq && distanceSq < closestDistance) {
+            const distance = dist(this.pos.x, this.pos.y, cargo.pos.x, cargo.pos.y);
+            if (distance < this.cargoDetectionRange && distance < closestDistance) {
                 closestCargo = cargo;
-                closestDistance = distanceSq;
+                closestDistance = distance;
             }
         }
         
@@ -1970,9 +2021,9 @@ class Enemy {
      */
     checkCollision(target) { 
         if (!target?.pos || target.size === undefined) return false; 
-        const distSq = this.distanceSquaredTo(target);
-        const sumRadii = (target.size / 2) + (this.size / 2); 
-        return distSq < sumRadii * sumRadii;
+        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); 
+        let sumRadii = (target.size / 2) + (this.size / 2); 
+        return dSq < sq(sumRadii);
     }
 
     // -----------------------
@@ -1985,6 +2036,24 @@ class Enemy {
      * @param {Object} [stateData={}] - Additional data needed for the new state
      */
     changeState(newState, stateData = {}) {
+        // Prevent unarmed ships from entering combat states
+        if (!this.isArmed() && 
+            (newState === AI_STATE.APPROACHING || 
+             newState === AI_STATE.ATTACK_PASS || 
+             newState === AI_STATE.REPOSITIONING)) {
+            
+            console.log(`${this.role} ${this.shipTypeName} cannot enter combat state - unarmed`);
+            
+            // Choose appropriate non-combat state based on role
+            if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
+                // Haulers and transports flee when attacked
+                newState = AI_STATE.FLEEING;
+            } else {
+                // Others go to their default non-combat state
+                newState = this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE;
+            }
+        }
+        
         // Don't do anything if it's the same state
         if (newState === this.currentState) return;
         
