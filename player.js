@@ -572,11 +572,53 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-            gameStateManager.setState("GAME_OVER");
+            this.explosionStartTime = millis(); // Track start time
+            this.exploding = true; // Flag to track explosion sequence
+
+            // Create player explosion (larger, more dramatic)
+            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                // Main large explosion
+                this.currentSystem.addExplosion(
+                    this.pos.x,
+                    this.pos.y,
+                    this.size * 3, // Larger explosion
+                    [100, 150, 255] // Blueish-white core
+                );
+
+                // Create cascading secondary explosions
+                for (let i = 0; i < 12; i++) { // More secondary explosions
+                    setTimeout(() => {
+                        // Check if currentSystem still exists when timeout runs
+                        if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                            // Random offset explosions around ship
+                            this.currentSystem.addExplosion(
+                                this.pos.x + random(-this.size*1.2, this.size*1.2),
+                                this.pos.y + random(-this.size*1.2, this.size*1.2),
+                                this.size * random(0.7, 1.5), // Varied sizes
+                                [
+                                    random(100, 200), // Random blue tint
+                                    random(150, 255),
+                                    random(200, 255)
+                                ]
+                            );
+                        }
+                    }, i * 120); // Staggered timing for cascade effect (total duration ~1.4 seconds)
+                }
+
+                // Delay GAME_OVER state change until after the explosion cascade
+                setTimeout(() => {
+                    gameStateManager.setState("GAME_OVER");
+                }, 1500); // Increased delay to match explosion duration
+
+            } else {
+                // Fallback if system not available - immediate game over
+                console.warn("Player destroyed but currentSystem or addExplosion invalid. Immediate GAME_OVER.");
+                gameStateManager.setState("GAME_OVER");
+            }
         }
-        
+
         return { damage: amount, shieldHit: shieldHit };
-    }
+    } // End takeDamage
 
     /** Checks if the player can dock with the station. */
     canDock(station) {

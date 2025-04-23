@@ -2058,6 +2058,10 @@ class Enemy {
      * @return {Object} Object containing damage dealt and shield hit status
      */
     takeDamage(amount, attacker = null) {
+        if (attacker && amount > 0) {
+            this.lastAttacker = attacker;
+        }
+
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
 
         let damageDealt = 0;
@@ -2096,7 +2100,47 @@ class Enemy {
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-            
+            console.log(`ENEMY DESTROYED: ${this.shipTypeName}`); // Log destruction
+
+            // Create a large explosion when ship is destroyed
+            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                console.log(`   CurrentSystem valid. Explosions array length BEFORE: ${this.currentSystem.explosions?.length ?? 'N/A'}`); // Log array length before
+                const explosionSize = this.size / 3;
+                const explosionColor = this.role === AI_ROLE.PIRATE ?
+                    [255, 100, 30] : [255, 165, 0];
+
+                // Add multiple explosion particles for a more dramatic effect
+                console.log("   Creating smaller explosions...");
+                for (let i = 0; i < 5; i++) {
+                    const offsetX = random(-this.size/4, this.size/4);
+                    const offsetY = random(-this.size/4, this.size/4);
+                    console.log(`      Adding small explosion ${i+1} at offset (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
+                    this.currentSystem.addExplosion(
+                        this.pos.x + offsetX,
+                        this.pos.y + offsetY,
+                        explosionSize + random(-2, 2),
+                        explosionColor
+                    );
+                }
+                console.log("   ...Finished smaller explosions.");
+
+                // Add a bigger central explosion
+                console.log("   Adding central explosion...");
+                this.currentSystem.addExplosion(
+                    this.pos.x,
+                    this.pos.y,
+                    explosionSize * 1.5,
+                    [255, 220, 180]
+                );
+                console.log("   ...Finished central explosion.");
+                console.log(`   Explosions array length AFTER: ${this.currentSystem.explosions?.length ?? 'N/A'}`); // Log array length after
+
+                // Drop cargo when destroyed
+                this.dropCargo();
+            } else {
+                console.log("   CurrentSystem or addExplosion invalid!"); // Log if system/function is missing
+            }
+
             // Handle attacker-specific logic if attacker is provided
             if (attacker instanceof Player) {
                 // Credit the player for the kill
