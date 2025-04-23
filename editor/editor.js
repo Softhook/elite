@@ -66,6 +66,11 @@ let dragConstrainedAxis = null; // 'x', 'y', or null
 
 // --- Setup ---
 function setup() {
+    console.log("Setup running...");
+    console.log("SHIP_DEFINITIONS available:", typeof SHIP_DEFINITIONS !== 'undefined');
+    console.log("Ship count:", typeof SHIP_DEFINITIONS !== 'undefined' ? 
+        Object.keys(SHIP_DEFINITIONS).length : "N/A");
+    
     let canvas = createCanvas(canvasWidth, canvasHeight);
     canvas.parent('main');
     ellipseMode(RADIUS); // Use RADIUS for handle size consistency
