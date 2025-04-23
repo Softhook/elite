@@ -127,6 +127,15 @@ function setup() {
     // --- Initialize State ---
     handleShipSelection(); // Load initial state (or blank)
     updateUIControls(); // Set initial button disabled states etc.
+
+    // Add a direct event listener for Command+Z
+    document.addEventListener('keydown', function(e) {
+      // Check if this is Command+Z (metaKey is Command on Mac)
+      if (e.key === 'z' && e.metaKey) {
+        e.preventDefault(); // Prevent browser's default undo behavior
+        undoLastChange();
+      }
+    });
 }
 
 // --- Undo History Functions ---
@@ -654,6 +663,50 @@ function mouseReleased() {
 function keyPressed() {
     if (isThargoidSelected()) return; // Ignore keys if Thargoid selected
 
+    // First check for Cmd+Z (as first priority)
+    if (key === 'z' && (keyCode === 91 || keyCode === 93)) {
+        undoLastChange();
+        return false; // Prevent default browser behavior
+    }
+
+    // === NEW KEYBOARD SHORTCUTS ===
+    
+    // Zoom In: Period (.)
+    if (key === '.') {
+        zoomIn();
+        return false;
+    }
+    
+    // Zoom Out: Comma (,)
+    if (key === ',') {
+        zoomOut();
+        return false;
+    }
+    
+    // Add New Shape: A
+    if (key === 'a' && isEditable()) {
+        addNewShape();
+        return false;
+    }
+    
+    // Toggle Add Vertex Mode: V
+    if (key === 'v' && selectedShapeIndex !== -1 && isEditable()) {
+        toggleAddVertexMode();
+        return false;
+    }
+    
+    // Straighten Symmetry: S
+    if (key === 's' && selectedShapeIndex !== -1 && isEditable()) {
+        handleStraightenClick();
+        return false;
+    }
+    
+    // Export: E
+    if (key === 'e' && (shapes.length > 0 || isThargoidSelected())) {
+        exportDrawFunctionCode();
+        return false;
+    }
+
     // Delete Selected Vertices (DELETE or BACKSPACE without Shift)
     if ((keyCode === DELETE || keyCode === BACKSPACE) && !keyIsDown(SHIFT) && selectedShapeIndex !== -1 && selectedVertexIndices.length > 0 && isEditable()) {
         if (shapes[selectedShapeIndex]?.vertexData) {
@@ -677,9 +730,18 @@ function keyPressed() {
         }
     }
     // Add Ctrl+Z / Cmd+Z for Undo
-    else if (key === 'z' && (keyIsDown(CONTROL) || keyIsDown(COMMAND))) {
+    else if (key === 'z' && (keyIsDown(CONTROL) || keyCode === 91 || keyCode === 93)) {
         undoLastChange();
     }
+}
+
+function keyReleased() {
+  // Check for Command+Z specifically
+  if (key === 'z' && keyIsDown(91)) {
+    undoLastChange();
+    return false; // Prevent default browser behavior
+  }
+  return true;
 }
 
 // --- UI Update Functions ---

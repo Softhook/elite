@@ -806,8 +806,6 @@ class StarSystem {
         
         if (cargo) {
             this.cargo.push(cargo);
-            //console.log(`Cargo added: ${cargo.type}`);
-            uiManager.addMessage(`Cargo picked up: ${cargo.type}`);
         }
     }
 
