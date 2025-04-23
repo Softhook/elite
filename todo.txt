@@ -2,6 +2,8 @@
 
 ## Bugs and Issues
 
+i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
+
 put the messagses in teh corner with 10 lines
 
 limit the amount of goods aer availbe at certain planets based on their econmy

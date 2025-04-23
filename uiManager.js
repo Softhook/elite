@@ -79,95 +79,117 @@ class UIManager {
     /** Draws the Heads-Up Display (HUD) during flight */
     drawHUD(player) {
         if (!player) { console.warn("drawHUD: Player object missing"); return; }
-        const csName = player.currentSystem?.name || 'N/A'; const cargoAmt = player.getCargoAmount() ?? 0;
-        const cargoCap = player.cargoCapacity ?? 0; const hull = player.hull ?? 0; const maxHull = player.maxHull || 1;
+        const csName = player.currentSystem?.name || 'N/A'; 
+        const cargoAmt = player.getCargoAmount() ?? 0;
+        const cargoCap = player.cargoCapacity ?? 0; 
+        const hull = player.hull ?? 0; 
+        const maxHull = player.maxHull || 1;
         const credits = player.credits ?? 0;
-        const shipName = player.shipTypeName || "Unknown Ship"; // Get player's ship type name
+        const shipName = player.shipTypeName || "Unknown Ship";
         
-        push(); fill(0, 180, 0, 150); noStroke(); rect(0, 0, width, 40);
-        fill(255); textSize(14); textAlign(LEFT, CENTER); text(`System: ${csName}`, 10, 20);
+        // Top HUD bar background
+        push(); 
+        fill(0, 180, 0, 150); 
+        noStroke(); 
+        rect(0, 0, width, 40);
         
-        // Display ship name and credits on the same line 
-        textAlign(RIGHT, CENTER); 
-        text(`${shipName}   Hull: ${floor(hull)}/${maxHull}   Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits} `, width-20, 20); 
+        // Left side - System name
+        fill(255); 
+        textSize(14); 
+        textAlign(LEFT, CENTER); 
+        text(`System: ${csName}`, 10, 20);
         
-        // LEGAL STATUS INDICATOR
+        // ALIGNED: Status elements at consistent vertical position
+        const statusLineY = 20; // Central Y position for all status elements
+        
+        // Center - LEGAL status - aligned at statusLineY
         if (player.isWanted) {
-    
             // Draw warning background
             fill(200, 0, 0);
-            rect(width/2 - 60, 3, 120, 18, 3);
+            rect(width/2 - 80, statusLineY - 10, 160, 20, 3);
             // Draw WANTED text
             fill(255);
             textAlign(CENTER, CENTER);
             textSize(14);
-            text("WANTED", width/2, 12);
+            text("WANTED", width/2, statusLineY);
         } else {
             // Show "LEGAL" status when not wanted
             fill(0, 100, 0);
-            rect(width/2 - 60, 3, 120, 18, 3);
+            rect(width/2 - 80, statusLineY - 10, 160, 20, 3);
             fill(200, 255, 200);
             textAlign(CENTER, CENTER);
             textSize(14);
-            text("LEGAL", width/2, 12);
+            text("LEGAL", width/2, statusLineY);
         }
         
-        if (player.fireCooldown > 0 && player.fireRate > 0) { let c = constrain(map(player.fireCooldown,player.fireRate,0,0,1),0,1); fill(255,0,0,150); rect(width/2-50, 30, 100*c, 5); }
-        // Display active mission title directly from player object
+        // ALIGNED: Active mission title - at same statusLineY
         if (player.activeMission?.title) {
-             fill(255, 180, 0); textAlign(CENTER, CENTER); textSize(12);
-             text(`Mission: ${player.activeMission.title}`, width / 2, 15);
+            fill(255, 180, 0); 
+            textAlign(LEFT, CENTER); 
+            textSize(14);
+            text(`Mission: ${player.activeMission.title}`, width/2 + 100, statusLineY);
         }
+        
+        // Right side - Ship info - aligned with statusLineY
+        textAlign(RIGHT, CENTER);
+        text(`${shipName}   Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width-350, statusLineY);
+        
+        // === Shield and Hull bars integration in top bar ===
+        const barWidth = 140;
+        const barHeight = 14;
+        const barX = width - 150;
+        const barMiddleY = 20;
 
-        // Display hull and shield status
-        const hullPercent = player.hull / player.maxHull;
-        const shieldPercent = player.shield / player.maxShield;
-
-        // Hull bar
-        const barWidth = 150;
-        const barHeight = 12;
-        const barX = width - 170;
-        const barY = 60;
-
-        // Add Shield bar first (appears above hull)
+        // Upper bar - Shield
         if (player.maxShield > 0) {
+            // Shield background 
             fill(20, 20, 60);
-            rect(barX, barY - 15, barWidth, barHeight);
-
+            rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
+            
+            // Shield level
+            const shieldPercent = player.shield / player.maxShield;
             fill(50, 100, 255);
-            rect(barX, barY - 15, barWidth * shieldPercent, barHeight);
-
+            rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
+            
+            // Shield border
             stroke(100, 150, 255);
             noFill();
-            rect(barX, barY - 15, barWidth, barHeight);
-
+            rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
+            
+            // Shield text
             fill(255);
             noStroke();
-            textAlign(RIGHT, CENTER);
+            textAlign(LEFT, CENTER);
             textSize(12);
-            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 5, barY - 9);
+            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 85, barMiddleY - barHeight/2 - 2);
         }
 
-        // Draw hull bar
+        // Lower bar - Hull
         fill(60, 20, 20);
-        rect(barX, barY, barWidth, barHeight);
+        rect(barX, barMiddleY + 2, barWidth, barHeight);
 
+        // Hull level
+        const hullPercent = player.hull / player.maxHull;
         fill(255, 50, 50);
-        rect(barX, barY, barWidth * hullPercent, barHeight);
+        rect(barX, barMiddleY + 2, barWidth * hullPercent, barHeight);
 
+        // Hull border
         stroke(255, 100, 100);
         noFill();
-        rect(barX, barY, barWidth, barHeight);
+        rect(barX, barMiddleY + 2, barWidth, barHeight);
 
+        // Hull text
         fill(255);
         noStroke();
-        textAlign(RIGHT, CENTER);
+        textAlign(LEFT, CENTER);
         textSize(12);
-        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 5, barY + 6);
-
-        // Draw weapon selector bar
+        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 85, barMiddleY + barHeight/2 + 2);
+        
+        // REMOVED: Fire cooldown bar (moved to drawWeaponSelector)
+        
+        // Weapon selector (with integrated cooldown bar)
         this.drawWeaponSelector(player);
-
+        
         pop();
     }
 
@@ -213,9 +235,26 @@ class UIManager {
             }
             text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
             
+            // ADDED: Draw cooldown bar for the selected weapon
+            if (isSelected && player.fireCooldown > 0 && player.fireRate > 0) {
+                let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
+                fill(255, 50, 50, 200);
+                noStroke();
+                // Place cooldown bar at the bottom of this weapon slot
+                rect(xPos, weaponBarY + weaponBarH - 3, slotW * c, 3);
+            }
+            
             // Move to next position
             xPos += slotW + 5;
         });
+        
+        // ADDED: Draw a global cooldown bar if needed (only when weapon has cooldown)
+        if (player.fireCooldown > 0 && player.fireRate > 0) {
+            let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
+            fill(255, 0, 0, 150);
+            rect(width/2 - 100, weaponBarY - 3, 200 * c, 3);
+        }
+        
         pop();
     }
 

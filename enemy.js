@@ -228,7 +228,7 @@ class Enemy {
         this.shieldHitTime = 0;
 
         // Shield recharge delay
-        this.shieldRechargeDelay = 3000; // 3 seconds delay after shield hit
+        this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
     }
 
