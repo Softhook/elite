@@ -223,6 +223,13 @@ class Enemy {
         this.maxShield = shipDef.baseShield || 0;
         this.shield = this.maxShield;
         this.shieldRechargeRate = shipDef.shieldRecharge || 0;
+
+        // Add hit effect to shield tracking
+        this.shieldHitTime = 0;
+
+        // Shield recharge delay
+        this.shieldRechargeDelay = 3000; // 3 seconds delay after shield hit
+        this.lastShieldHitTime = 0; // Track when shield was last hit
     }
 
     // -----------------------------
@@ -279,8 +286,9 @@ class Enemy {
             this.attackCooldown -= deltaTime / 1000;
         }
 
-        // Regenerate shields if not destroyed
-        if (this.shield < this.maxShield && !this.destroyed) {
+        // Regenerate shields only after recharge delay has passed
+        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
+        if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
             const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016;
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
@@ -1836,6 +1844,14 @@ class Enemy {
             strokeWeight(1.5);
             ellipse(0, 0, this.size * 1.3, this.size * 1.3);
 
+            // Add shield hit visual effect
+            if (millis() - this.shieldHitTime < 300) {
+                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
+                stroke(150, 220, 255, hitOpacity);
+                strokeWeight(3);
+                ellipse(0, 0, this.size * 1.4, this.size * 1.4);
+            }
+
             pop();
         }
 
@@ -2039,15 +2055,21 @@ class Enemy {
      * Applies damage to the ship and handles destruction
      * @param {number} amount - Amount of damage to apply
      * @param {Object} attacker - Entity that caused the damage
-     * @return {number} Remaining hull value
+     * @return {Object} Object containing damage dealt and shield hit status
      */
     takeDamage(amount, attacker = null) {
-        if (this.destroyed || amount <= 0) return 0;
+        if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
 
         let damageDealt = 0;
+        let shieldHit = false;
 
         // If we have shields, damage them first
         if (this.shield > 0) {
+            // Record time of shield hit for visual effect AND recharge delay
+            this.shieldHitTime = millis();
+            this.lastShieldHitTime = millis(); // Set the recharge delay timer
+            shieldHit = true; // IMPORTANT: If shield > 0, it's ALWAYS a shield hit
+
             if (amount <= this.shield) {
                 // Shield absorbs all damage
                 this.shield -= amount;
@@ -2058,41 +2080,73 @@ class Enemy {
                 damageDealt = amount;
                 this.shield = 0;
                 this.hull -= remainingDamage;
+                
+                // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
+                // Always report as a shield hit if shields absorbed ANY damage
+                shieldHit = true;
             }
         } else {
             // No shields, damage hull directly
             this.hull -= amount;
             damageDealt = amount;
-        }
-
-        // Track who's attacking us
-        if (attacker) {
-            this.lastAttacker = attacker;
-            this.targetSwitchCooldown = 0; // Allow immediate targeting of attackers
-        }
-
-        // Chance to jettison cargo when hit hard enough
-        if (amount > 5 && random() < 0.1) { // 10% chance
-            this.jettisionCargo();
+            shieldHit = false;
         }
 
         // Handle destruction
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-
-            // Drop cargo on destruction
-            this.dropCargo();
-
-            // Create explosion at destruction position
-            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
+            
+            // Handle attacker-specific logic if attacker is provided
+            if (attacker instanceof Player) {
+                // Credit the player for the kill
+                if (attacker.activeMission) {
+                    // Update progress for bounty missions
+                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE && 
+                        this.role === AI_ROLE.PIRATE) {
+                        attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                        console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                    }
+                }
+                
+                // Add credits to player for kill
+                const bounty = this.getBounty();
+                if (bounty > 0) {
+                    attacker.addCredits(bounty);
+                    uiManager.addMessage(`Bounty collected: ${bounty} credits`);
+                }
             }
-
-            uiManager.addMessage(`${this.role} ${this.shipTypeName} destroyed`);
         }
 
-        return damageDealt;
+        return { damage: damageDealt, shieldHit: shieldHit };
+    }
+
+    /**
+     * Returns the bounty value for this enemy when destroyed
+     * @return {number} Bounty amount in credits
+     */
+    getBounty() {
+        // Base bounty on role and ship type
+        if (this.role === AI_ROLE.PIRATE) {
+            // Pirates have higher bounties
+            const shipSizeFactor = {
+                "Sidewinder": 50,
+                "Cobra": 125,
+                "Viper": 175,
+                "Python": 300,
+                "Anaconda": 500,
+                "KraitMKII": 350,
+                "Vulture": 250
+            };
+            
+            return shipSizeFactor[this.shipTypeName] || 100;
+        } else if (this.role === AI_ROLE.HOSTILE) {
+            // Hostile ships have moderate bounties
+            return 75;
+        }
+        
+        // No bounty for non-hostile ships
+        return 0;
     }
 
     /**

@@ -232,13 +232,16 @@ class WeaponSystem {
             hit: hit.target !== null
         };
         
-        // Handle hit effects
+        // Handle hit effects - replacing the old code with the new method
         if (hit.target) {
-            hit.target.takeDamage(owner.currentWeapon?.damage || 10);
-            
-            if (system.addExplosion) {
-                system.addExplosion(hit.point.x, hit.point.y, 6, owner.currentWeapon?.color || [255, 0, 0]);
-            }
+            this.handleHitEffects(
+                hit.target,
+                hit.point,
+                owner.currentWeapon?.damage || 10,
+                owner,
+                system,
+                owner.currentWeapon?.color || [255, 0, 0]
+            );
         }
     }
     
@@ -370,6 +373,43 @@ class WeaponSystem {
         
         // Fire the projectile at the calculated angle
         this.fireProjectile(owner, system, angleToTarget);
+    }
+
+    /**
+     * Handles all weapon hit effects in one centralized place
+     * @param {Object} target - The entity being hit
+     * @param {Object} hitPoint - Position where the hit occurred
+     * @param {number} damage - Amount of damage being dealt
+     * @param {Object} owner - Entity that fired the weapon
+     * @param {Object} system - Current star system
+     * @param {Array|p5.Color} color - Weapon color for visual effects
+     */
+    static handleHitEffects(target, hitPoint, damage, owner, system, color) {
+        // IMPORTANT: Check shield status BEFORE applying damage
+        const targetHasShield = target.shield > 0;
+        
+        // Apply damage and get result
+        target.takeDamage(damage, owner);
+        
+        // Set shield hit time if target has shields
+        if (targetHasShield) {
+            target.lastShieldHitTime = millis();
+        }
+        
+        // Only create explosion if there were NO shields before the hit
+        if (!targetHasShield && system.addExplosion) {
+            // Convert color to safe format
+            let explosionColor;
+            if (Array.isArray(color)) {
+                explosionColor = color;
+            } else if (color && color.levels) {
+                explosionColor = [color.levels[0], color.levels[1], color.levels[2]];
+            } else {
+                explosionColor = [255, 0, 0];
+            }
+            
+            system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
+        }
     }
 }
 

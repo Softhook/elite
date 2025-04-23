@@ -654,74 +654,66 @@ class StarSystem {
 
     /** Specifically handles projectile collisions with targets. */
     checkProjectileCollisions(player) {
-        // Loop backwards over projectiles so removals don't skip elements
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
-            let proj = this.projectiles[i];
-            if (!proj) {
+            const proj = this.projectiles[i];
+            
+            // For player hits:
+            if (proj.owner instanceof Enemy && proj.checkCollision(player)) {
+                // Use centralized hit handler from WeaponSystem
+                WeaponSystem.handleHitEffects(
+                    player,
+                    proj.pos,
+                    proj.damage,
+                    proj.owner,
+                    this,
+                    proj.color
+                );
+                
                 this.projectiles.splice(i, 1);
                 continue;
             }
             
-            // Store attacker reference explicitly for clarity
-            const attacker = proj.owner || null;
-            let hitDetected = false;
-            
-            // Check collision against the player if the shooter is not the player
-            if (player && attacker !== player && proj.checkCollision(player)) {
-                console.log(`Projectile from ${attacker?.shipTypeName || 'Unknown'} hit player! Damage: ${proj.damage}`);
-                player.takeDamage(proj.damage, attacker); // Pass attacker reference
-                this.projectiles.splice(i, 1);
-                continue; // Projectile is gone, move to the next one
-            }
-            
-            // Check collision against each enemy ship
-            for (let enemy of this.enemies) {
-                // Do not let a ship be hit by its own projectile
-                if (attacker === enemy) continue;
-                if (enemy.isDestroyed()) continue;
-
-                if (proj.checkCollision(enemy)) {
-                    // Log collision with attacker information
-                    const attackerName = attacker ? 
-                        (attacker === player ? 'Player' : attacker.shipTypeName) : 
-                        'Unknown';
+            // For enemy hits:
+            if (proj.owner instanceof Player) {
+                for (let j = 0; j < this.enemies.length; j++) {
+                    const enemy = this.enemies[j];
+                    if (proj.checkCollision(enemy)) {
+                        // Use centralized hit handler from WeaponSystem
+                        WeaponSystem.handleHitEffects(
+                            enemy,
+                            proj.pos,
+                            proj.damage,
+                            proj.owner,
+                            this,
+                            proj.color
+                        );
                         
-                    console.log(`Projectile from ${attackerName} hit ${enemy.shipTypeName}! Damage: ${proj.damage}`);
-                    
-                    // CRITICAL: Always pass attacker reference to properly track who's attacking
-                    enemy.takeDamage(proj.damage, attacker);
-                    
-                    // Log special case of police attacking pirates
-                    if (attacker?.role === AI_ROLE.POLICE && enemy.role === AI_ROLE.PIRATE) {
-                        console.log(`Police ${attackerName} attacking Pirate ${enemy.shipTypeName}`);
+                        this.projectiles.splice(i, 1);
+                        break;
                     }
-                    
-                    this.projectiles.splice(i, 1);
-                    hitDetected = true;
-                    break;
                 }
             }
             
-            if (hitDetected) continue;
-            
-            // Check collision against asteroids (no attacker attribution needed)
-            for (let asteroid of this.asteroids) {
-                if (asteroid.isDestroyed()) continue;
-                
-                if (proj.checkCollision(asteroid)) {
-                    console.log(`Projectile hit asteroid! Damage: ${proj.damage}`);
-                    asteroid.takeDamage(proj.damage);
-                    this.projectiles.splice(i, 1);
-                    hitDetected = true;
-                    break;
+            // NEW CODE: For enemy-to-enemy hits (friendly fire)
+            if (proj.owner instanceof Enemy) {
+                for (let j = 0; j < this.enemies.length; j++) {
+                    const enemy = this.enemies[j];
+                    // Skip if the enemy is shooting itself
+                    if (enemy !== proj.owner && proj.checkCollision(enemy)) {
+                        // Use centralized hit handler from WeaponSystem
+                        WeaponSystem.handleHitEffects(
+                            enemy,
+                            proj.pos,
+                            proj.damage / 2, // Reduce damage for friendly fire
+                            proj.owner,
+                            this,
+                            proj.color
+                        );
+                        
+                        this.projectiles.splice(i, 1);
+                        break;
+                    }
                 }
-            }
-            
-            if (hitDetected) continue;
-            
-            // Remove expired projectiles
-            if (proj.lifespan <= 0 || proj.isOffScreen()) {
-                this.projectiles.splice(i, 1);
             }
         }
     } // End checkProjectileCollisions

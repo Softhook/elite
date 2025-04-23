@@ -53,6 +53,13 @@ class Player {
         this.shield = this.maxShield;
         this.shieldRechargeRate = shipDef.shieldRecharge || 0;
 
+        // Add hit effect to shield tracking
+        this.shieldHitTime = 0;
+
+        // Shield recharge delay
+        this.shieldRechargeDelay = 3000; // 3 seconds delay after shield hit
+        this.lastShieldHitTime = 0; // Track when shield was last hit
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -412,8 +419,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             this.fireCooldown -= deltaTime / 1000;
         }
 
-        // Regenerate shields
-        if (this.shield < this.maxShield) {
+        // Regenerate shields only after recharge delay has passed
+        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
+        if (this.shield < this.maxShield && timeSinceShieldHit > this.shieldRechargeDelay) {
             // Scale by deltaTime for consistent recharge rate
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1; // Normalize to ~60fps
             const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016; // Per-frame rate
@@ -456,7 +464,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         drawFunc(this.size, this.isThrusting); 
         pop();
 
-        // Draw shield effect if shields are active
+        // Draw shield effect with improved visuals
         if (this.shield > 0) {
             push();
             translate(this.pos.x, this.pos.y);
@@ -469,6 +477,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             stroke(100, 180, 255, shieldAlpha);
             strokeWeight(1.5);
             ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+            
+            // Add shield hit visual effect
+            if (millis() - this.shieldHitTime < 300) {
+                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
+                stroke(150, 220, 255, hitOpacity);
+                strokeWeight(3);
+                ellipse(0, 0, this.size * 1.4, this.size * 1.4);
+            }
             
             pop();
         }
@@ -517,26 +533,39 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Applies damage to the player's hull. */
     takeDamage(amount) {
-        if (this.destroyed || amount <= 0) return;
+        if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
+        
+        let shieldHit = false;
         
         // If we have shields, damage them first
         if (this.shield > 0) {
+            // Record time of shield hit for visual effect AND recharge delay
+            this.shieldHitTime = millis();
+            this.lastShieldHitTime = millis(); // Set the recharge delay timer
+            shieldHit = true; // IMPORTANT: If shield > 0, it's ALWAYS a shield hit
+            
             if (amount <= this.shield) {
                 // Shield absorbs all damage
                 this.shield -= amount;
                 uiManager.addMessage(`Shield damage: ${amount.toFixed(1)}`);
-                return;
+                return { damage: amount, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
                 const remainingDamage = amount - this.shield;
-                uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
                 this.shield = 0;
                 this.hull -= remainingDamage;
+                
+                // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
+                uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
+                
+                // Always report as a shield hit if shields absorbed ANY damage
+                shieldHit = true;
             }
         } else {
             // No shields, damage hull directly
             this.hull -= amount;
             uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
+            shieldHit = false;
         }
         
         // Check for destruction
@@ -545,6 +574,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             this.destroyed = true;
             gameStateManager.setState("GAME_OVER");
         }
+        
+        return { damage: amount, shieldHit: shieldHit };
     }
 
     /** Checks if the player can dock with the station. */
