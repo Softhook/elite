@@ -2104,36 +2104,43 @@ class Enemy {
 
             // Create a large explosion when ship is destroyed
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                console.log(`   CurrentSystem valid. Explosions array length BEFORE: ${this.currentSystem.explosions?.length ?? 'N/A'}`); // Log array length before
-                const explosionSize = this.size / 3;
+                console.log(`   CurrentSystem valid. Explosions array length BEFORE: ${this.currentSystem.explosions?.length ?? 'N/A'}`);
+
+                // --- NEW Cascading Explosion Logic ---
+                const baseExplosionSize = this.size / 2; // Base size scales with ship
+                const numExplosions = Math.max(3, Math.min(10, 3 + Math.floor(this.size / 15))); // 3-10 explosions based on size
+                const cascadeDelay = 80; // Delay between explosions in ms
                 const explosionColor = this.role === AI_ROLE.PIRATE ?
-                    [255, 100, 30] : [255, 165, 0];
+                    [255, 100, 30] : // Orange/Red for Pirates
+                    [255, 165, 0];  // Orange for others
 
-                // Add multiple explosion particles for a more dramatic effect
-                console.log("   Creating smaller explosions...");
-                for (let i = 0; i < 5; i++) {
-                    const offsetX = random(-this.size/4, this.size/4);
-                    const offsetY = random(-this.size/4, this.size/4);
-                    console.log(`      Adding small explosion ${i+1} at offset (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
-                    this.currentSystem.addExplosion(
-                        this.pos.x + offsetX,
-                        this.pos.y + offsetY,
-                        explosionSize + random(-2, 2),
-                        explosionColor
-                    );
+                console.log(`   Creating ${numExplosions} cascading explosions...`);
+
+                // Create cascading secondary explosions
+                for (let i = 0; i < numExplosions; i++) {
+                    setTimeout(() => {
+                        // Check if currentSystem still exists when timeout runs
+                        if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                            // Random offset explosions around ship
+                            const offsetX = random(-this.size * 0.8, this.size * 0.8);
+                            const offsetY = random(-this.size * 0.8, this.size * 0.8);
+                            const currentExplosionSize = baseExplosionSize * random(0.6, 1.3); // Varied sizes
+
+                            // Use the determined enemy color
+                            this.currentSystem.addExplosion(
+                                this.pos.x + offsetX,
+                                this.pos.y + offsetY,
+                                currentExplosionSize,
+                                explosionColor // Use the enemy-specific color
+                            );
+                        }
+                    }, i * cascadeDelay); // Staggered timing for cascade effect
                 }
-                console.log("   ...Finished smaller explosions.");
+                // --- End NEW Logic ---
 
-                // Add a bigger central explosion
-                console.log("   Adding central explosion...");
-                this.currentSystem.addExplosion(
-                    this.pos.x,
-                    this.pos.y,
-                    explosionSize * 1.5,
-                    [255, 220, 180]
-                );
-                console.log("   ...Finished central explosion.");
-                console.log(`   Explosions array length AFTER: ${this.currentSystem.explosions?.length ?? 'N/A'}`); // Log array length after
+                console.log(`   ...Finished scheduling explosions.`);
+                // Note: The AFTER log won't reflect timed explosions immediately
+                // console.log(`   Explosions array length AFTER: ${this.currentSystem.explosions?.length ?? 'N/A'}`);
 
                 // Drop cargo when destroyed
                 this.dropCargo();
