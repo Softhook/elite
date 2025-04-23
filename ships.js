@@ -291,8 +291,23 @@ const SHIP_DEFINITIONS = {
         baseHull: 500, baseShield: 150, shieldRecharge: 2.5, // Hull tanky, weak shields?
         armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
-        drawFunction: drawBioFrigate, vertexData: [ {x:1.0, y:0}, {x:0.6, y:0.6}, {x:0.1, y:0.8}, {x:-0.5, y:0.7}, {x:-0.9, y:0.2}, {x:-1.0, y:0}, {x:-0.9, y:-0.2}, {x:-0.5, y:-0.7}, {x:0.1, y:-0.8}, {x:0.6, y:-0.6} ],
-        fillColor: [80, 140, 100], strokeColor: [40, 80, 50], strokeW: 2.5, // Murky green
+        drawFunction: drawBioFrigate,       
+
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 } ],
+                fillColor: [80, 140, 100],
+                strokeColor: [40, 80, 50],
+                strokeW: 2.50
+            },
+            {
+                vertexData: [ { x: 0.0000, y: -0.5162 }, { x: 0.3110, y: -0.1819 }, { x: 0.9574, y: 0.0000 }, { x: 0.3110, y: 0.1819 }, { x: 0.0000, y: 0.5162 }, { x: -0.3857, y: 0.0000 } ],
+                fillColor: [230, 61, 120],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
+
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
         price: 20000,
         aiRoles: ["ALIEN"]
@@ -344,8 +359,33 @@ const SHIP_DEFINITIONS = {
         baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
-        drawFunction: drawFederalAssaultShip, vertexData: [ { x: 0.9, y: 0 }, { x: 0.7, y: 0.5 }, { x: -0.2, y: 0.6 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: -0.2, y: -0.6 }, { x: 0.7, y: -0.5 } ],
-        fillColor: [110, 120, 130], strokeColor: [180, 190, 200], strokeW: 2,
+        drawFunction: drawFederalAssaultShip, 
+        
+        fillColor: [110, 120, 130],
+        strokeColor: [180, 190, 200],
+        strokeW: 2.00,
+        
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.5000 }, { x: -0.2000, y: 0.6000 }, { x: -0.8000, y: 0.8000 }, { x: -1.0000, y: 0.4000 }, { x: -1.0000, y: -0.4000 }, { x: -0.8000, y: -0.8000 }, { x: -0.2000, y: -0.6000 }, { x: 0.7000, y: -0.5000 } ],
+                fillColor: [110, 120, 130],
+                strokeColor: [180, 190, 200],
+                strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: -0.7567, y: -0.3486 }, { x: 0.7567, y: -0.3486 }, { x: -0.6661, y: -0.5037 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.01
+            },
+            {
+                vertexData: [ { x: -0.7339, y: 0.3453 }, { x: 0.7405, y: 0.3453 }, { x: -0.6367, y: 0.4955 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.01
+            }
+        ],
+
         typicalCargo: ["Computers","Computers","Computers","Weapons", "Metals", "Adv Components"],
         price: 15000,
         aiRoles: ["MILITARY"]
@@ -597,7 +637,23 @@ const SHIP_DEFINITIONS = {
         baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
         armament: [],
         costCategory: "Medium", description: "Designed for exploration and detailed surface scanning.",
-        drawFunction: drawPathfinderSurvey, vertexData: [ {x:1.2, y:0}, {x:0.8, y:0.2}, {x:-0.5, y:0.5}, {x:-1.0, y:0.3}, {x:-1.0, y:-0.3}, {x:-0.5, y:-0.5}, {x:0.8, y:-0.2} ], // Long nose
+        drawFunction: drawPathfinderSurvey, 
+        
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.2000, y: 0.0000 }, { x: 0.8000, y: 0.2000 }, { x: -0.5000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.5000 }, { x: 0.8000, y: -0.2000 } ],
+                fillColor: [130, 160, 170],
+                strokeColor: [200, 230, 240],
+                strokeW: 1.20
+            },
+            {
+                vertexData: [ { x: -0.1751, y: -0.5092 }, { x: -0.1751, y: 0.5092 }, { x: 0.0000, y: 0.7714 }, { x: 0.0000, y: -0.7714 } ],
+                fillColor: [30, 77, 46],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
+        
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
         typicalCargo: ["Food","Food", "Minerals","Minerals", "Metals"],
         price: 6000,

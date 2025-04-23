@@ -47,7 +47,12 @@
         button:disabled { cursor: not-allowed; opacity: 0.6; }
         button.active { background-color: #a0d0ff; border-color: #60a0df; font-weight: bold; }
         #instructions { margin-top: 15px; font-size: 0.9em; color: #555; text-align: center; max-width: 600px; padding: 0 10px; line-height: 1.4; }
-        #thargoidWarning { font-weight: bold; }
+        #thargoidWarning { 
+            font-weight: bold; 
+            color: red;
+            display: none; 
+            margin-top: 10px;
+        }
 
         /* Styling for the new description area */
         #shipDescriptionArea {
@@ -83,7 +88,6 @@
         <button id="addVertexButton">Toggle Add Vertex Mode</button>
         <span>(Click edge)</span>
         <button id="straightenButton">Straighten Symmetry</button>
-        <!-- *** ADD THIS BUTTON *** -->
         <button id="undoButton" title="Undo Last Change">Undo</button>
         <button id="zoomOutButton" title="Zoom Out">-</button>
         <button id="zoomInButton" title="Zoom In">+</button>
@@ -105,16 +109,12 @@
         <!-- p5.js canvas will be inserted here by editor.js -->
     </main>
 
-    <!-- *** NEW DESCRIPTION AREA *** -->
+    <!-- Description Area -->
     <div id="shipDescriptionArea">
         Select a ship to view its description.
+        <span id="thargoidWarning">(Thargoid shape is complex and not directly editable here)</span>
     </div>
 
-    <!-- Instructions Area -->
-    <div id="instructions">
-        Select shape layer by clicking inside it. Click & drag vertex handles to move. SHIFT+Click handles to multi-select. Select vertex & press DELETE/BACKSPACE to remove. Use 'Add Vertex Mode' then click an edge to add point. Use color controls for selected shape. SHIFT+DELETE removes selected shape layer. Click & drag selected shape (not handle) to move whole shape.
-        <span id="thargoidWarning" style="color: red; display: none;"> (Thargoid shape is complex and not directly editable here)</span>
-    </div>
     
 
 </body>
