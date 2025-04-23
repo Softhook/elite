@@ -44,6 +44,11 @@ class UIManager {
         this.messageDisplayTime = 4000; // ms
         this.maxMessagesToShow = 4;
 
+        // Properties for market button holding
+        this.marketButtonHeld = null;
+        this.lastButtonAction = 0;
+        this.buttonRepeatDelay = 150; // ms between repeated actions
+
         this.setPanelDefaults();
     }
 
@@ -253,20 +258,145 @@ class UIManager {
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
         if (!market || !player || typeof market.getPrices !== 'function') { /* Draw error */ return; }
-        market.updatePlayerCargo(player.cargo); const commodities = market.getPrices();
-        this.marketButtonAreas = []; this.marketBackButtonArea = {}; // Clear areas
+        market.updatePlayerCargo(player.cargo); 
+        const commodities = market.getPrices();
+        this.marketButtonAreas = []; 
+        this.marketBackButtonArea = {}; // Clear areas
+        
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([50,20,20,220], [255,100,100]);
-        fill(255); textSize(24); textAlign(CENTER,TOP); text(`Commodity Market - ${market.systemType || 'Unknown'}`, pX+pW/2, pY+20); // Title
-        textSize(16); textAlign(LEFT,TOP); text(`Credits: ${player.credits}`, pX+30, pY+60); text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+85); // Player Info
-        let sY=pY+130, tW=pW-60, cols=6, cW=tW/cols, sX=pX+30; textAlign(CENTER,CENTER); textSize(14); fill(200); // Headers
-        text("Commodity", sX+cW*0.5, sY); text("Buy", sX+cW*1.5, sY); text("Sell", sX+cW*2.5, sY); text("Held", sX+cW*3.5, sY);
-        sY+=30; const rowH=30, btnW=cW*0.8, btnH=rowH*0.8; // Rows
-        (commodities || []).forEach((comm, i) => { if (!comm) return; let yP=sY+i*rowH, tY=yP+rowH/2; fill(255); textAlign(LEFT,CENTER); text(comm.name||'?', sX+10, tY, cW-15); textAlign(RIGHT,CENTER); text(comm.buyPrice??'?', sX+cW*2-10, tY); text(comm.sellPrice??'?', sX+cW*3-10, tY); text(comm.playerStock??'?', sX+cW*4-10, tY); let buyX=sX+cW*4.1, buyY=yP+(rowH-btnH)/2; fill(0,150,0); rect(buyX,buyY,btnW,btnH,3); fill(255); textAlign(CENTER,CENTER); textSize(12); text("Buy 1", buyX+btnW/2, buyY+btnH/2); this.marketButtonAreas.push({x:buyX,y:buyY,w:btnW,h:btnH,action:'buy',commodity:comm.name}); let sellX=sX+cW*5.1, sellY=yP+(rowH-btnH)/2; fill(150,0,0); rect(sellX,sellY,btnW,btnH,3); fill(255); textAlign(CENTER,CENTER); textSize(12); text("Sell 1", sellX+btnW/2, sellY+btnH/2); this.marketButtonAreas.push({x:sellX,y:sellY,w:btnW,h:btnH,action:'sell',commodity:comm.name}); });
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15; fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5); fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backX+backW/2, backY+backH/2); this.marketBackButtonArea = {x:backX, y:backY, w:backW, h:backH}; // Back Button
+        
+        // Title and player info
+        fill(255); textSize(24); textAlign(CENTER,TOP); 
+        text(`Commodity Market - ${market.systemType || 'Unknown'}`, pX+pW/2, pY+20);
+        textSize(16); textAlign(LEFT,TOP); 
+        text(`Credits: ${player.credits}`, pX+30, pY+60); 
+        text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+85);
+        
+        // Table setup
+        let sY = pY+130, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30; 
+        textAlign(CENTER,CENTER); textSize(14); fill(200);
+        
+        // Column headers
+        text("Commodity", sX+cW*0.5, sY); 
+        text("Buy", sX+cW*1.5, sY); 
+        text("Sell", sX+cW*2.5, sY); 
+        text("Held", sX+cW*3.5, sY);
+        
+        // Row setup
+        sY += 30; 
+        const rowH = 30;
+        const btnW = cW*0.65; 
+        const btnH = rowH*0.8;
+        
+        // Draw commodity rows
+        (commodities || []).forEach((comm, i) => { 
+            if (!comm) return; 
+            let yP = sY+i*rowH;
+            let tY = yP+rowH/2; 
+            
+            // Commodity name and prices
+            fill(255); 
+            textAlign(LEFT,CENTER); 
+            text(comm.name||'?', sX+10, tY, cW-15); 
+            textAlign(RIGHT,CENTER); 
+            text(comm.buyPrice??'?', sX+cW*2-10, tY); 
+            text(comm.sellPrice??'?', sX+cW*3-10, tY); 
+            text(comm.playerStock??'?', sX+cW*4-10, tY);
+            
+            // Buy 1 button
+            let buy1X = sX+cW*4.2;
+            let buy1Y = yP+(rowH-btnH)/2;
+            fill(0,150,0); 
+            rect(buy1X, buy1Y, btnW, btnH, 3);
+            fill(255); 
+            textAlign(CENTER,CENTER); 
+            textSize(12); 
+            text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+            this.marketButtonAreas.push({
+                x: buy1X, 
+                y: buy1Y, 
+                w: btnW, 
+                h: btnH, 
+                action: 'buy', 
+                quantity: 1,
+                commodity: comm.name
+            });
+            
+            // Buy All button
+            let buyAllX = sX+cW*5.2;
+            let buyAllY = yP+(rowH-btnH)/2;
+            fill(0,180,0); 
+            rect(buyAllX, buyAllY, btnW, btnH, 3);
+            fill(255); 
+            textAlign(CENTER,CENTER); 
+            textSize(12); 
+            text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+            this.marketButtonAreas.push({
+                x: buyAllX, 
+                y: buyAllY, 
+                w: btnW, 
+                h: btnH, 
+                action: 'buyAll',
+                commodity: comm.name
+            });
+            
+            // Sell 1 button
+            let sell1X = sX+cW*6.2;
+            let sell1Y = yP+(rowH-btnH)/2;
+            fill(150,0,0); 
+            rect(sell1X, sell1Y, btnW, btnH, 3);
+            fill(255); 
+            textAlign(CENTER,CENTER); 
+            textSize(12); 
+            text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+            this.marketButtonAreas.push({
+                x: sell1X, 
+                y: sell1Y, 
+                w: btnW, 
+                h: btnH, 
+                action: 'sell',
+                quantity: 1, 
+                commodity: comm.name
+            });
+            
+            // Sell All button
+            let sellAllX = sX+cW*7.2;
+            let sellAllY = yP+(rowH-btnH)/2;
+            fill(180,0,0); 
+            rect(sellAllX, sellAllY, btnW, btnH, 3);
+            fill(255); 
+            textAlign(CENTER,CENTER); 
+            textSize(12); 
+            text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+            this.marketButtonAreas.push({
+                x: sellAllX, 
+                y: sellAllY, 
+                w: btnW, 
+                h: btnH, 
+                action: 'sellAll',
+                commodity: comm.name
+            });
+        });
+        
+        // Back button
+        let backW = 100;
+        let backH = 30;
+        let backX = pX+pW/2-backW/2;
+        let backY = pY+pH-backH-15;
+        fill(180,180,0); 
+        stroke(220,220,100); 
+        rect(backX, backY, backW, backH, 5);
+        fill(0); 
+        textSize(16); 
+        textAlign(CENTER,CENTER); 
+        noStroke(); 
+        text("Back", backX+backW/2, backY+backH/2);
+        this.marketBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
+        
         pop();
-    } // --- End drawMarketScreen ---
+    }
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
     drawMissionBoard(missions, selectedIndex, player) {
@@ -723,8 +853,12 @@ class UIManager {
         }
         // --- VIEWING_MARKET State ---
         else if (currentState === "VIEWING_MARKET") {
-             if (this.isClickInArea(mx, my, this.marketBackButtonArea)) { if(gameStateManager)gameStateManager.setState("DOCKED"); return true; }
-             for (const btn of this.marketButtonAreas) { if (this.isClickInArea(mx, my, btn)) { if (market&&player) { if(btn.action==='buy')market.buy(btn.commodity,1,player); else if(btn.action==='sell')market.sell(btn.commodity,1,player); } return true; } } return false;
+            if (this.isClickInArea(mx, my, this.marketBackButtonArea)) { 
+                if(gameStateManager) gameStateManager.setState("DOCKED"); 
+                return true; 
+            }
+            
+            return this.handleMarketMousePress(mx, my, market, player);
         }
         // --- VIEWING_MISSIONS State ---
         else if (currentState === "VIEWING_MISSIONS") {
@@ -1082,6 +1216,73 @@ class UIManager {
             );
         }
         pop();
+    }
+
+    // Update this method to check the back button first
+    handleMarketMousePress(mx, my, market, player) {
+        // First check if clicking on the back button
+        if (this.isClickInArea(mx, my, this.marketBackButtonArea)) { 
+            if(gameStateManager) gameStateManager.setState("DOCKED"); 
+            return true; 
+        }
+        
+        // Check if clicking on a market button
+        for (const btn of this.marketButtonAreas) {
+            if (this.isClickInArea(mx, my, btn)) {
+                this.marketButtonHeld = btn;
+                this.performMarketAction(btn, market, player);
+                this.lastButtonAction = millis();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Add this new method to handle mouse release
+    handleMarketMouseRelease() {
+        this.marketButtonHeld = null;
+        return false;
+    }
+
+    // Add this new method to check for held buttons
+    checkMarketButtonHeld(market, player) {
+        if (this.marketButtonHeld && millis() - this.lastButtonAction > this.buttonRepeatDelay) {
+            this.performMarketAction(this.marketButtonHeld, market, player);
+            this.lastButtonAction = millis();
+        }
+    }
+
+    // Add this new method to perform the market action
+    performMarketAction(btn, market, player) {
+        if (!market || !player || !btn) return;
+        
+        switch(btn.action) {
+            case 'buy':
+                market.buy(btn.commodity, 1, player);
+                break;
+            case 'buyAll':
+                // Calculate max possible purchase based on cargo space and credits
+                const item = market.getPrices().find(c => c.name === btn.commodity);
+                if (!item) return;
+                
+                const availableSpace = player.cargoCapacity - player.getCargoAmount();
+                const maxAffordable = Math.floor(player.credits / item.buyPrice);
+                const quantity = Math.min(availableSpace, maxAffordable);
+                
+                if (quantity > 0) {
+                    market.buy(btn.commodity, quantity, player);
+                }
+                break;
+            case 'sell':
+                market.sell(btn.commodity, 1, player);
+                break;
+            case 'sellAll':
+                const cargo = player.cargo.find(c => c.name === btn.commodity);
+                if (cargo && cargo.quantity > 0) {
+                    market.sell(btn.commodity, cargo.quantity, player);
+                }
+                break;
+        }
     }
 
 } // End of UIManager Class

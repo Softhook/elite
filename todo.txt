@@ -2,7 +2,7 @@
 
 ## Bugs and Issues
 
-
+put back the spinning cargo that dissapears
 
 - aI swithcing really quicly making red line jitter
 

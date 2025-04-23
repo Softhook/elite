@@ -156,6 +156,14 @@ function draw() {
             // Draw visuals based on current state
             gameStateManager.draw(player);
             
+            // Check for held market buttons
+            if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+                uiManager.checkMarketButtonHeld(
+                    player.currentSystem?.station?.getMarket(), 
+                    player
+                );
+            }
+            
         } catch (e) {
             // Catch any unexpected errors during the main loop
             console.error("!!! ERROR during gameStateManager update/draw:", e);
@@ -278,8 +286,15 @@ function mousePressed() {
     // --- Fullscreen ON only once, on first click inside canvas ---
     if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
         fullscreen(true);
-        // Optionally return here if you want to prevent other click actions on the first click
-        // return;
+    }
+
+    // Handle market button presses specifically 
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        return uiManager.handleMarketMousePress(
+            mouseX, mouseY, 
+            player.currentSystem?.station?.getMarket(), 
+            player
+        );
     }
 
     // Existing input handling...
@@ -290,6 +305,14 @@ function mousePressed() {
     if (!clickHandledByUI && gameStateManager.currentState === "IN_FLIGHT") {
         player.handleFireInput();
     }
+}
+
+function mouseReleased() {
+    // Handle market button releases
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        uiManager.handleMarketMouseRelease();
+    }
+    return false;
 }
 
 function mouseWheel(event) {
