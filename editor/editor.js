@@ -25,6 +25,10 @@ let currentShipKey = null; // Key ("Sidewinder", "CobraMkIII", etc.) or "--- New
 let currentShipDef = null; // The original definition object (if loaded)
 let shapes = []; // Array of shape objects: { vertexData: [{x,y},...], fillColor: [r,g,b], strokeColor: [r,g,b], strokeW: number }
 
+// Layer stacking: shapes[0] = BOTTOM layer, shapes[shapes.length-1] = TOP layer
+// Drawing order: bottom to top (i=0 to i=shapes.length-1)
+// Selection order: top to bottom (i=shapes.length-1 to i=0)
+
 // --- Undo History ---
 let historyStack = [];
 const maxHistorySize = 30; // Max number of undo steps
@@ -280,8 +284,8 @@ function draw() {
         // Draw Thargoid (non-editable) or Editable Shapes
         if (isThargoidSelected()) {
             SHIP_DEFINITIONS.Thargoid.drawFunction(actualDrawSize_s, false);
-        } else { // Draw Editable Shapes
-            for (let i = shapes.length - 1; i >= 0; i--) { // Draw bottom layers first
+        } else { 
+            for (let i = 0; i < shapes.length; i++) { // Draw in order: shapes[0] at bottom, shapes[length-1] on top
                 let shape = shapes[i];
                 if (shape && shape.vertexData && shape.vertexData.length > 1) {
                     fill(shape.fillColor[0], shape.fillColor[1], shape.fillColor[2]);
@@ -360,8 +364,25 @@ function handleShipSelection() {
     } else if (SHIP_DEFINITIONS[currentShipKey]) {
         currentShipDef = SHIP_DEFINITIONS[currentShipKey];
         descriptionText = currentShipDef.description || "No description available.";
-        // Load vertex data if available and not Thargoid
-        if (currentShipDef.vertexData && currentShipDef.vertexData.length > 0 && !isThargoidSelected()) {
+        // Check for multi-layer ship
+        if (currentShipDef.vertexLayers && currentShipDef.vertexLayers.length > 0 && !isThargoidSelected()) {
+            try {
+                // Load all layers
+                currentShipDef.vertexLayers.forEach(layer => {
+                    shapes.push({
+                        vertexData: JSON.parse(JSON.stringify(layer.vertexData)),
+                        fillColor: [...(layer.fillColor || [180, 180, 180])],
+                        strokeColor: [...(layer.strokeColor || [50, 50, 50])],
+                        strokeW: layer.strokeW || 1
+                    });
+                });
+                selectedShapeIndex = 0; // Select the first layer
+            } catch (e) {
+                console.error("ERROR processing vertexLayers for", currentShipKey, e);
+            }
+        } 
+        // Fallback to single vertexData if no vertexLayers or vertexLayers loading failed
+        else if (currentShipDef.vertexData && currentShipDef.vertexData.length > 0 && !isThargoidSelected() && shapes.length === 0) {
             try {
                 shapes.push({ // Create initial shape layer (deep copy)
                     vertexData: JSON.parse(JSON.stringify(currentShipDef.vertexData)),
@@ -375,9 +396,6 @@ function handleShipSelection() {
                 selectedShapeIndex = -1; currentShipDef = null; shapes = [];
                 descriptionText = "Error loading ship data.";
             }
-        } else if (!isThargoidSelected()) {
-            console.warn(`Loaded ship '${currentShipKey}' has no editable vertexData or is Thargoid view.`);
-            selectedShapeIndex = -1;
         }
         thargoidWarningSpan.style('display', isThargoidSelected() ? 'inline' : 'none');
     } else { // Handle "Select a Ship..."
@@ -504,7 +522,8 @@ function mousePressed() {
 
     // --- 3. Check for Shape Click (Selection / Drag Initiation) ---
     let clickedShapeIndex = -1; let clickedInsideSelectedShape = false;
-    for (let i = 0; i < shapes.length; i++) { // Check top-down
+    // Iterate from END to START to check top visual layer first
+    for (let i = shapes.length - 1; i >= 0; i--) { // Check top layer first (highest index)
         let currentShape = shapes[i];
         if (currentShape?.vertexData?.length >= 3 && isPointInPolygon(mx_shape_rel, my_shape_rel, currentShape.vertexData)) {
             clickedShapeIndex = i;
@@ -575,6 +594,7 @@ function mouseDragged() {
     else if (draggingShape && selectedShapeIndex !== -1 && shapes[selectedShapeIndex]?.vertexData && isEditable()) {
         let shape = shapes[selectedShapeIndex];
         let dx = mouseX - pmouseX; let dy = mouseY - pmouseY; // Frame delta
+        
         // Apply Axis Constraint Logic (Shift Key)
         if (keyIsDown(SHIFT)) {
             if (dragConstrainedAxis === null && distSq(mouseX, mouseY, dragShapeStartX, dragShapeStartY) > 25) {
@@ -583,10 +603,15 @@ function mouseDragged() {
             }
             if (dragConstrainedAxis === 'x') { dy = 0; } else if (dragConstrainedAxis === 'y') { dx = 0; }
         } else { dragConstrainedAxis = null; }
+        
         // Convert screen delta to relative delta and apply
         let deltaRelX = dx / interaction_r; let deltaRelY = dy / interaction_r;
+        
         for (let v of shape.vertexData) {
-            if (typeof v?.x === 'number' && typeof v?.y === 'number') { v.x += deltaRelX; v.y += deltaRelY; }
+            if (typeof v?.x === 'number' && typeof v?.y === 'number') { 
+                v.x += deltaRelX; 
+                v.y += deltaRelY; 
+            }
         }
     }
 }
@@ -715,8 +740,8 @@ function addNewShape() {
         vertexData: [{ x: -0.2, y: 0.2 }, { x: 0.2, y: 0.2 }, { x: 0, y: -0.2 }],
         fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1
     };
-    shapes.unshift(defaultShape); // Add to top
-    selectedShapeIndex = 0; selectedVertexIndices = []; // Select new shape
+    shapes.push(defaultShape); // Add to top (now the end of the array)
+    selectedShapeIndex = shapes.length - 1; // Select newly added shape
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') {
         currentShipKey = '--- New Blank ---'; currentShipDef = null;
     }
@@ -826,7 +851,7 @@ function exportDrawFunctionCode() {
     code.push(`function ${functionName}(s, thrusting = false) {`);
     code.push(`    let r = s / 2; // Calculate radius based on the desired draw size 's'`);
     code.push(``);
-    // Iterate shapes in reverse drawing order (bottom first)
+    // Iterate shapes in drawing order (bottom first)
     for (let i = shapes.length - 1; i >= 0; i--) {
         let shape = shapes[i];
         if (!shape?.vertexData || shape.vertexData.length < 2) continue;
@@ -861,6 +886,21 @@ function exportDrawFunctionCode() {
         } catch (e) { console.error("Error copying engine glow code:", e); code.push(`    // --- Error encountered trying to copy engine glow code ---`); code.push(``); }
     } else { code.push(`    // --- No engine glow defined for base (or custom ship) ---`); code.push(``); }
     code.push(`}`); code.push(`// --- End Format 2 ---`);
+    code.push(`// --- Format 3: vertexLayers Data for Multi-Layer Support ---`);
+    code.push(`vertexLayers: [`);
+    for (let i = 0; i < shapes.length; i++) {
+        let shape = shapes[i];
+        if (!shape?.vertexData || shape.vertexData.length < 2) continue;
+        
+        code.push(`    {`);
+        code.push(`        vertexData: [ ${shape.vertexData.map(v => `{ x: ${v.x.toFixed(4)}, y: ${v.y.toFixed(4)} }`).join(', ')} ],`);
+        code.push(`        fillColor: [${shape.fillColor ? shape.fillColor.map(c => Math.round(c)).join(', ') : '180, 180, 180'}],`);
+        code.push(`        strokeColor: [${shape.strokeColor ? shape.strokeColor.map(c => Math.round(c)).join(', ') : '50, 50, 50'}],`);
+        code.push(`        strokeW: ${typeof shape.strokeW === 'number' ? shape.strokeW.toFixed(2) : 1}`);
+        code.push(`    }${i < shapes.length - 1 ? ',' : ''}`);
+    }
+    code.push(`],`);
+    code.push(`// --- End Format 3 ---`);
     code.push(`// --- End Generated Function ---`); // Kept original ending comment
 
     saveStrings(code, `${functionName}_ExportData.js`, 'js'); // Update filename slightly

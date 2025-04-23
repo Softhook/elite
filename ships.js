@@ -4,15 +4,41 @@
 // MODIFIED FOR EDITOR: Includes vertexData array and updated draw functions.
 // VERSION WITH 10+15 NEW SHIP DESIGNS ADDED, Viper/Krait names reverted.
 
-// Helper function to draw shape from vertex data
-function drawShapeFromData(r, vertexData, fillCol, strokeCol, strokeWeightVal) {
-    if (fillCol) fill(fillCol); else noFill();
-    if (strokeCol) { stroke(strokeCol); strokeWeight(strokeWeightVal || 1); } else { noStroke(); }
-    beginShape();
-    for (let v of vertexData) {
-        vertex(v.x * r, v.y * r);
+// Enhanced helper function to draw shape from vertex data or layers
+function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrokeColor, defaultStrokeW) {
+    // Check if we have layers array (multi-layer ship)
+    if (Array.isArray(vertexDataOrLayers) && vertexDataOrLayers.length > 0 && 
+        vertexDataOrLayers[0].vertexData) {
+        
+        // Draw multiple layers in forward order (top layer first)
+        for (let i = 0; i < vertexDataOrLayers.length; i++) {
+            const layer = vertexDataOrLayers[i];
+            if (layer.vertexData && layer.vertexData.length > 0) {
+                fill(layer.fillColor || defaultFillColor);
+                stroke(layer.strokeColor || defaultStrokeColor);
+                strokeWeight(layer.strokeW || defaultStrokeW || 1);
+                beginShape();
+                for (let v of layer.vertexData) {
+                    vertex(v.x * r, v.y * r);
+                }
+                endShape(CLOSE);
+            }
+        }
+    } else {
+        // Original single-layer logic remains unchanged
+        if (defaultFillColor) fill(defaultFillColor); else noFill();
+        if (defaultStrokeColor) { 
+            stroke(defaultStrokeColor); 
+            strokeWeight(defaultStrokeW || 1); 
+        } else { 
+            noStroke(); 
+        }
+        beginShape();
+        for (let v of vertexDataOrLayers) {
+            vertex(v.x * r, v.y * r);
+        }
+        endShape(CLOSE);
     }
-    endShape(CLOSE);
 }
 
 // --- Ship Drawing Functions (Using vertexData) ---
@@ -21,40 +47,40 @@ function drawShapeFromData(r, vertexData, fillCol, strokeCol, strokeWeightVal) {
 
 function drawACAB(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ACAB;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawSidewinder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Sidewinder;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawCobraMkIII(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.CobraMkIII;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawViper(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Viper;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawPython(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Python;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawAnaconda(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Anaconda;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawAdder(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Adder;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawKraitMKI(s, thrusting = false) { 
      let r = s / 2; let def = SHIP_DEFINITIONS.KraitMKI; 
-     drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawKraitMKII(s, thrusting = false) { 
     let r = s / 2; let def = SHIP_DEFINITIONS.KraitMKII; 
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawThargoid(s, thrusting = false) { // (Original Thargoid)
@@ -74,105 +100,53 @@ function drawThargoid(s, thrusting = false) { // (Original Thargoid)
 
 function drawAspExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.AspExplorer;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawType6Transporter(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Type6Transporter;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawType9Heavy(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Type9Heavy;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawFederalAssaultShip(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.FederalAssaultShip;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawImperialCourier(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ImperialCourier;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawDiamondbackExplorer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.DiamondbackExplorer;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawFerDeLance(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.FerDeLance;
-
-    // --- Shape Layer 1 (Index 3 in editor) ---
-    fill(60, 65, 70);
-    stroke(140, 150, 160);
-    strokeWeight(max(0.5, 2.00));
-    beginShape();
-    vertex(r * 1.1000, r * 0.0000);
-    vertex(r * 0.2000, r * 0.5000);
-    vertex(r * -0.6000, r * 0.6000);
-    vertex(r * -0.9000, r * 0.2000);
-    vertex(r * -0.9000, r * -0.2000);
-    vertex(r * -0.6000, r * -0.6000);
-    vertex(r * 0.2000, r * -0.5000);
-    endShape(CLOSE);
-
-    // --- Shape Layer 2 (Index 2 in editor) ---
-    fill(150, 150, 180);
-    stroke(50, 50, 60);
-    strokeWeight(max(0.01));
-    beginShape();
-    vertex(r * -0.8998, r * -0.2009);
-    vertex(r * 0.0000, r * -0.2431);
-    vertex(r * -0.6013, r * -0.5970);
-    endShape(CLOSE);
-
-    // --- Shape Layer 3 (Index 1 in editor) ---
-    beginShape();
-    vertex(r * -0.8995, r * 0.2035);
-    vertex(r * -0.6020, r * 0.5957);
-    vertex(r * 0.0000, r * 0.3052);
-    endShape(CLOSE);
-
-    // --- Shape Layer 4 (Index 0 in editor) ---
-    beginShape();
-    vertex(r * 0.5349, r * 0.0000);
-    vertex(r * 0.2360, r * 0.1505);
-    vertex(r * 0.2360, r * -0.1505);
-    endShape(CLOSE);
-
-
-    //drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawKeelback(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Keelback;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawVulture(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Vulture;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 function drawImperialClipper(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ImperialClipper;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawShardInterceptor(s, thrusting = false) { // Alien 1
     let r = s / 2; let def = SHIP_DEFINITIONS.ShardInterceptor;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawBioFrigate(s, thrusting = false) { // Alien 2
     let r = s / 2; let def = SHIP_DEFINITIONS.BioFrigate;
-    // Organic colors
-    fill(def.fillColor[0] + sin(frameCount*0.8)*20, def.fillColor[1] + cos(frameCount*0.6)*15, def.fillColor[2]);
-    stroke(def.strokeColor[0], def.strokeColor[1] + sin(frameCount*0.5)*10, def.strokeColor[2]);
-    strokeWeight(def.strokeW);
-    // Draw with curves? For simplicity, use vertex data but imagine curves
-    beginShape();
-    curveVertex(def.vertexData[def.vertexData.length-1].x * r, def.vertexData[def.vertexData.length-1].y * r); // Repeat last for curve start
-    for (let v of def.vertexData) { curveVertex(v.x * r, v.y * r); }
-    curveVertex(def.vertexData[0].x * r, def.vertexData[0].y * r); // Repeat first for curve end
-    curveVertex(def.vertexData[1].x * r, def.vertexData[1].y * r); // Repeat second for curve end
-    endShape(CLOSE);
-    // Pulsating bio-luminescent glow
-    //if (thrusting) { fill(100, 255, 150, 100 + sin(frameCount*2)*50); noStroke(); ellipse(-r*0.9, 0, r*0.6, r*0.4); }
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawGeometricDrone(s, thrusting = false) { // Alien 3
@@ -186,7 +160,7 @@ function drawGeometricDrone(s, thrusting = false) { // Alien 3
 
 function drawMuleFreighter(s, thrusting = false) { // Small Transporter
     let r = s / 2; let def = SHIP_DEFINITIONS.MuleFreighter;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawProspectorMiner(s, thrusting = false) { // Miner
@@ -203,54 +177,53 @@ function drawProspectorMiner(s, thrusting = false) { // Miner
 
 function drawGnatInterceptor(s, thrusting = false) { // Light Fighter 1
     let r = s / 2; let def = SHIP_DEFINITIONS.GnatInterceptor;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    ddrawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.GladiusFighter;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawCenturionGunship(s, thrusting = false) { // Heavy Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.CenturionGunship;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawPathfinderSurvey(s, thrusting = false) { // Explorer 1
     let r = s / 2; let def = SHIP_DEFINITIONS.PathfinderSurvey;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
     // Implied Sensor dish
     noFill(); stroke(180, 180, 220); strokeWeight(1); arc(r*0.8, 0, r*0.4, r*0.8, -90, 90);
 }
 
 function drawNomadVoyager(s, thrusting = false) { // Explorer 2
     let r = s / 2; let def = SHIP_DEFINITIONS.NomadVoyager;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawStarlinerCruiser(s, thrusting = false) { // Trader/Passenger
     let r = s / 2; let def = SHIP_DEFINITIONS.StarlinerCruiser;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawJackalMultirole(s, thrusting = false) { // Multi-role
     let r = s / 2; let def = SHIP_DEFINITIONS.JackalMultirole;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawMantaHauler(s, thrusting = false) { // Unique 1
     let r = s / 2; let def = SHIP_DEFINITIONS.MantaHauler;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
-
-function drawHammerheadCorvette(s, thrusting = false) { // Unique 2
+function drawHammerheadCorvette(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.HammerheadCorvette;
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 
@@ -377,13 +350,54 @@ const SHIP_DEFINITIONS = {
         price: 15000,
         aiRoles: ["MILITARY"]
     },
-     "FerDeLance": {
+    "FerDeLance": {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Pulse Array"], // Luxury combat loadout
+        armament: ["Sniper Rail", "Force Blaster", "Pulse Array"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
-        drawFunction: drawFerDeLance, vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, { x: 0.2, y: -0.5 } ],
+        drawFunction: drawFerDeLance, 
+        // Original vertex data (for backward compatibility)
+        vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, 
+                    { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, 
+                    { x: 0.2, y: -0.5 } ],
+        // Add the new multi-layer format
+        vertexLayers: [
+            {
+                // Main hull (Layer 1)
+                vertexData: [ { x: 1.1000, y: 0.0000 }, { x: 0.2000, y: 0.5000 }, 
+                            { x: -0.6000, y: 0.6000 }, { x: -0.9000, y: 0.2000 }, 
+                            { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }, 
+                            { x: 0.2000, y: -0.5000 } ],
+                fillColor: [60, 65, 70],
+                strokeColor: [140, 150, 160],
+                strokeW: 2.00
+            },
+            {
+                // Detail triangle 1 (Layer 2)
+                vertexData: [ { x: -0.8998, y: -0.2009 }, { x: 0.0000, y: -0.2431 }, 
+                            { x: -0.6013, y: -0.5970 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.01
+            },
+            {
+                // Detail triangle 2 (Layer 3)
+                vertexData: [ { x: -0.8995, y: 0.2035 }, { x: -0.6020, y: 0.5957 }, 
+                            { x: 0.0000, y: 0.3052 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.01
+            },
+            {
+                // Detail triangle 3 (Layer 4)
+                vertexData: [ { x: 0.5349, y: 0.0000 }, { x: 0.2360, y: 0.1505 }, 
+                            { x: 0.2360, y: -0.1505 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.01
+            }
+        ],
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
         typicalCargo: ["Computers","Computers","Computers","Computers","Luxury Goods", "Weapons", "Narcotics"],
         price: 11700,
@@ -431,7 +445,27 @@ const SHIP_DEFINITIONS = {
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
         armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
-        drawFunction: drawHammerheadCorvette, vertexData: [ { x: 0.8888, y: 0.3500 }, { x: 0.5937, y: 0.4670 }, { x: 0.4300, y: 0.7285 }, { x: 0.1520, y: 0.8587 }, { x: -0.1612, y: 0.5488 }, { x: -0.9161, y: 0.4670 }, { x: -0.9159, y: 0.3625 }, { x: -0.5436, y: 0.1330 }, { x: -0.5436, y: -0.1330 }, { x: -0.9159, y: -0.3625 }, { x: -0.9202, y: -0.4650 }, { x: -0.1612, y: -0.5488 }, { x: 0.1520, y: -0.8587 }, { x: 0.4300, y: -0.7285 }, { x: 0.5978, y: -0.4650 }, { x: 0.8888, y: -0.3500 }, { x: 0.9388, y: 0.0000 } ],
+        drawFunction: drawHammerheadCorvette, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8888, y: 0.3500 }, { x: 0.5937, y: 0.4670 }, { x: 0.4300, y: 0.7285 }, { x: 0.1520, y: 0.8587 }, { x: -0.1612, y: 0.5488 }, { x: -0.9161, y: 0.4670 }, { x: -0.9159, y: 0.3625 }, { x: -0.5436, y: 0.1330 }, { x: -0.5436, y: -0.1330 }, { x: -0.9159, y: -0.3625 }, { x: -0.9202, y: -0.4650 }, { x: -0.1612, y: -0.5488 }, { x: 0.1520, y: -0.8587 }, { x: 0.4300, y: -0.7285 }, { x: 0.5978, y: -0.4650 }, { x: 0.8888, y: -0.3500 }, { x: 0.9388, y: 0.0000 } ],
+                fillColor: [70, 100, 130],
+                strokeColor: [150, 180, 210],
+                strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: 0.9000, y: 0.3371 }, { x: 1.0486, y: 0.1915 }, { x: 0.9343, y: 0.0143 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.10
+            },
+            {
+                vertexData: [ { x: 0.9142, y: -0.0057 }, { x: 1.0314, y: -0.1857 }, { x: 0.8914, y: -0.3515 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.10
+            }
+        ],
         fillColor: [70, 100, 130],
         strokeColor: [150, 180, 210],
         strokeW: 2.00, // Blue-grey
