@@ -363,13 +363,70 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Handles continuous key presses for movement. Normalizes angle. */
     handleInput() {
-        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { this.angle -= this.rotationSpeed; } // Radians
-        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { this.angle += this.rotationSpeed; } // Radians
-        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { this.thrust(); this.isThrusting = true; }
-        else { this.isThrusting = false; }
-        if (this.fireCooldown > 0) { this.fireCooldown -= deltaTime / 1000; }
+        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { // Left arrow or A
+            this.angle -= this.rotationSpeed;
+        }
+        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { // Right arrow or D
+            this.angle += this.rotationSpeed;
+        }
+        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { // Up arrow or W
+            this.isThrusting = true;
+            this.thrust();
+        }
+        // Add new reverse thrust control
+        else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) { // Down arrow or S
+            this.isThrusting = true;
+            this.reverseThrust();
+        }
+        else {
+            this.isThrusting = false;
+        }
+        if (this.fireCooldown > 0) {
+            this.fireCooldown -= deltaTime / 1000;
+        }
         this.angle %= TWO_PI;
         if (this.angle < 0) this.angle += TWO_PI;
+    }
+
+    /** 
+     * Applies reverse thrust (slower backward movement)
+     * Uses opposite direction from current facing angle.
+     */
+    reverseThrust() {
+        if (isNaN(this.angle)) {
+            console.error("Player.reverseThrust: this.angle is NaN!");
+            return;
+        }
+        
+        // Calculate force in opposite direction (angle + PI)
+        let reverseAngle = this.angle + PI;
+        let force = p5.Vector.fromAngle(reverseAngle);
+        
+        // Apply reduced force (60% of forward thrust)
+        force.mult(this.thrustForce * 0.6);
+        this.vel.add(force);
+        
+        // Create thrust particles at ship's front (since we're moving backward)
+        // This creates the visual effect of reverse thrusters
+        if (this.thrustManager) {
+            // Calculate spawn position at ship's front
+            const offset = this.size * 0.5;
+            const spawnPoint = p5.Vector.fromAngle(this.angle).mult(offset);
+            
+            // Use slightly different color for reverse thrust
+            const reverseColor = [200, 100, 255]; // Purplish reverse thrust
+            
+            // Add particles to thrust manager
+            if (typeof this.thrustManager.createThrust === 'function') {
+                // Position at front of ship, but particles will go opposite direction
+                this.thrustManager.createThrust(
+                    p5.Vector.add(this.pos, spawnPoint),
+                    reverseAngle, 
+                    this.size, 
+                    1 // Fewer particles for reverse thrust
+                );
+            }
+        }
     }
 
     /** Applies forward thrust force based on current facing angle (radians). */
