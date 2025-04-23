@@ -39,7 +39,9 @@ class Player {
         this.currentSystem = null; this.fireCooldown = 0;
         this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
         this.fireRate = this.currentWeapon.fireRate;
-        this.isThrusting = false; this.isWanted = false;
+        this.isThrusting = false; 
+        this.isReverseThrusting = false; // Add this line
+        this.isWanted = false;
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -369,6 +371,10 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { // Right arrow or D
             this.angle += this.rotationSpeed;
         }
+        
+        // Reset reverse thrust flag first
+        this.isReverseThrusting = false;
+        
         if (keyIsDown(UP_ARROW) || keyIsDown(87)) { // Up arrow or W
             this.isThrusting = true;
             this.thrust();
@@ -376,11 +382,13 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // Add new reverse thrust control
         else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) { // Down arrow or S
             this.isThrusting = true;
+            this.isReverseThrusting = true; // Set the flag to indicate reverse thrust
             this.reverseThrust();
         }
         else {
             this.isThrusting = false;
         }
+        
         if (this.fireCooldown > 0) {
             this.fireCooldown -= deltaTime / 1000;
         }
@@ -393,6 +401,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
      * Uses opposite direction from current facing angle.
      */
     reverseThrust() {
+        console.log("Reverse thrust activated"); // Debug output
+        
         if (isNaN(this.angle)) {
             console.error("Player.reverseThrust: this.angle is NaN!");
             return;
@@ -406,26 +416,55 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         force.mult(this.thrustForce * 0.6);
         this.vel.add(force);
         
-        // Create thrust particles at ship's front (since we're moving backward)
-        // This creates the visual effect of reverse thrusters
+        // Create thrust particles at ship's front sides for reverse thrusters
         if (this.thrustManager) {
-            // Calculate spawn position at ship's front
-            const offset = this.size * 0.5;
-            const spawnPoint = p5.Vector.fromAngle(this.angle).mult(offset);
+            // Move thrusters further out to the sides and forward
+            const offset = this.size * 0.7; // Position more in front of the ship
             
-            // Use slightly different color for reverse thrust
-            const reverseColor = [200, 100, 255]; // Purplish reverse thrust
+            // Left thruster: 45 degrees from center
+            const leftThrusterAngle = this.angle - PI/4;
+            const leftThrusterPos = p5.Vector.fromAngle(this.angle).mult(offset)
+                .add(p5.Vector.fromAngle(leftThrusterAngle).mult(this.size * 0.4));
             
-            // Add particles to thrust manager
-            if (typeof this.thrustManager.createThrust === 'function') {
-                // Position at front of ship, but particles will go opposite direction
-                this.thrustManager.createThrust(
-                    p5.Vector.add(this.pos, spawnPoint),
-                    reverseAngle, 
-                    this.size, 
-                    1 // Fewer particles for reverse thrust
-                );
-            }
+            // Right thruster: 45 degrees from center
+            const rightThrusterAngle = this.angle + PI/4;
+            const rightThrusterPos = p5.Vector.fromAngle(this.angle).mult(offset)
+                .add(p5.Vector.fromAngle(rightThrusterAngle).mult(this.size * 0.4));
+            
+            // CRITICAL FIX: Match the parameter signature of the standard createThrust() call
+            // Left thruster - use standard parameter structure
+            this.thrustManager.createThrust(
+                p5.Vector.add(this.pos, leftThrusterPos),
+                leftThrusterAngle,
+                this.size * 0.9  // Just pass position, angle and size
+            );
+            
+            // Right thruster - use standard parameter structure 
+            this.thrustManager.createThrust(
+                p5.Vector.add(this.pos, rightThrusterPos),
+                rightThrusterAngle,
+                this.size * 0.9
+            );
+            
+            // FALLBACK: Direct visual rendering if thrustManager isn't showing particles
+            // This will ensure there's always a visual indicator even if the thrust particles fail
+            push();
+            fill(255, 150, 255, 200); // Bright magenta with some transparency
+            noStroke();
+            
+            // Left thruster triangle
+            const leftPos = p5.Vector.add(this.pos, leftThrusterPos);
+            translate(leftPos.x, leftPos.y);
+            rotate(leftThrusterAngle);
+            triangle(0, 0, -10, -5, -10, 5);
+            
+            // Right thruster triangle
+            const rightPos = p5.Vector.add(this.pos, rightThrusterPos);
+            translate(rightPos.x - leftPos.x, rightPos.y - leftPos.y); // Relative translation
+            rotate(rightThrusterAngle - leftThrusterAngle); // Relative rotation
+            triangle(0, 0, -10, -5, -10, 5);
+            
+            pop();
         }
     }
 
@@ -463,8 +502,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // Update thrust particles
         this.thrustManager.update();
         
-        // Create thrust particles if thrusting
-        if (this.isThrusting) {
+        // Create thrust particles if thrusting - BUT ONLY FOR FORWARD THRUST
+        // We need to track whether we're in reverse thrust mode
+        if (this.isThrusting && !this.isReverseThrusting) {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
         
