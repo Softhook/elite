@@ -460,12 +460,13 @@ const SHIP_DEFINITIONS = {
                 strokeW: 0.10
             },
             {
-                vertexData: [ { x: 0.9142, y: -0.0057 }, { x: 1.0314, y: -0.1857 }, { x: 0.8914, y: -0.3515 } ],
+                vertexData: [ { x: 0.2799, y: -0.5028 }, { x: 0.6628, y: -1.1543 }, { x: 0.2571, y: -0.8486 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.10
             }
         ],
+
         fillColor: [70, 100, 130],
         strokeColor: [150, 180, 210],
         strokeW: 2.00, // Blue-grey
