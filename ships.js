@@ -614,7 +614,7 @@ const SHIP_DEFINITIONS = {
     "MuleFreighter": { // NEW - Small Transporter
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
         baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
-        baseHull: 70, baseShield: 40, shieldRecharge: 0.8, cargoCapacity: 20,
+        baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
         armament: [],
         costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
         drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
