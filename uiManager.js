@@ -119,6 +119,52 @@ class UIManager {
              text(`Mission: ${player.activeMission.title}`, width / 2, 15);
         }
 
+        // Display hull and shield status
+        const hullPercent = player.hull / player.maxHull;
+        const shieldPercent = player.shield / player.maxShield;
+
+        // Hull bar
+        const barWidth = 150;
+        const barHeight = 12;
+        const barX = width - 170;
+        const barY = 60;
+
+        // Add Shield bar first (appears above hull)
+        if (player.maxShield > 0) {
+            fill(20, 20, 60);
+            rect(barX, barY - 15, barWidth, barHeight);
+
+            fill(50, 100, 255);
+            rect(barX, barY - 15, barWidth * shieldPercent, barHeight);
+
+            stroke(100, 150, 255);
+            noFill();
+            rect(barX, barY - 15, barWidth, barHeight);
+
+            fill(255);
+            noStroke();
+            textAlign(RIGHT, CENTER);
+            textSize(12);
+            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 5, barY - 9);
+        }
+
+        // Draw hull bar
+        fill(60, 20, 20);
+        rect(barX, barY, barWidth, barHeight);
+
+        fill(255, 50, 50);
+        rect(barX, barY, barWidth * hullPercent, barHeight);
+
+        stroke(255, 100, 100);
+        noFill();
+        rect(barX, barY, barWidth, barHeight);
+
+        fill(255);
+        noStroke();
+        textAlign(RIGHT, CENTER);
+        textSize(12);
+        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 5, barY + 6);
+
         // Draw weapon selector bar
         this.drawWeaponSelector(player);
 

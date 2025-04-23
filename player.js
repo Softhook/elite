@@ -48,6 +48,11 @@ class Player {
         // Initialize thrust manager
         this.thrustManager = new ThrustManager();
 
+        // Add shield properties from ship definition
+        this.maxShield = shipDef.baseShield || 0;
+        this.shield = this.maxShield;
+        this.shieldRechargeRate = shipDef.shieldRecharge || 0;
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -265,7 +270,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.hull = def.baseHull;
         this.cargoCapacity = def.cargoCapacity;
         this.weaponSlots = def.weaponSlots;
-        // ...copy any other relevant properties...
+
+        // Update shield properties
+        this.maxShield = def.baseShield || 0;
+        this.shield = this.maxShield;
+        this.shieldRechargeRate = def.shieldRecharge || 0;
 
         // Load weapons from ship definition
         this.loadWeaponsFromShipDefinition(shipTypeName);
@@ -402,6 +411,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.fireCooldown > 0) {
             this.fireCooldown -= deltaTime / 1000;
         }
+
+        // Regenerate shields
+        if (this.shield < this.maxShield) {
+            // Scale by deltaTime for consistent recharge rate
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1; // Normalize to ~60fps
+            const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016; // Per-frame rate
+            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+        }
         
         // Remove the spacebar-specific firing code from here since we're handling it in draw()
         // This eliminates any potential inconsistency between the flag and actual key state
@@ -438,6 +455,23 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         rotate(this.angle);
         drawFunc(this.size, this.isThrusting); 
         pop();
+
+        // Draw shield effect if shields are active
+        if (this.shield > 0) {
+            push();
+            translate(this.pos.x, this.pos.y);
+            
+            // Shield appearance based on shield percentage
+            const shieldPercent = this.shield / this.maxShield;
+            const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
+            
+            noFill();
+            stroke(100, 180, 255, shieldAlpha);
+            strokeWeight(1.5);
+            ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+            
+            pop();
+        }
 
         // Draw force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
@@ -484,63 +518,32 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     /** Applies damage to the player's hull. */
     takeDamage(amount) {
         if (this.destroyed || amount <= 0) return;
-        this.hull -= amount;
-        console.log("Player took damage:", amount, "Current hull:", this.hull);
-        uiManager.addMessage(`Damage: ${amount}`);
-
+        
+        // If we have shields, damage them first
+        if (this.shield > 0) {
+            if (amount <= this.shield) {
+                // Shield absorbs all damage
+                this.shield -= amount;
+                uiManager.addMessage(`Shield damage: ${amount.toFixed(1)}`);
+                return;
+            } else {
+                // Shield is depleted, remaining damage goes to hull
+                const remainingDamage = amount - this.shield;
+                uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
+                this.shield = 0;
+                this.hull -= remainingDamage;
+            }
+        } else {
+            // No shields, damage hull directly
+            this.hull -= amount;
+            uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
+        }
+        
+        // Check for destruction
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-            this.explosionStartTime = millis();
-            this.exploding = true; // Flag to track explosion sequence
-            
-            // Create player explosion (larger, more dramatic)
-            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                // Main large explosion
-                this.currentSystem.addExplosion(
-                    this.pos.x,
-                    this.pos.y,
-                    this.size * 3, // Larger explosion
-                    [100, 150, 255]
-                );
-                
-                // Create cascading secondary explosions
-                for (let i = 0; i < 12; i++) { // More secondary explosions
-                    setTimeout(() => {
-                        if (this.currentSystem) {
-                            // Random offset explosions around ship
-                            this.currentSystem.addExplosion(
-                                this.pos.x + random(-this.size*1.2, this.size*1.2),
-                                this.pos.y + random(-this.size*1.2, this.size*1.2),
-                                this.size * random(0.7, 1.5), // Varied sizes
-                                [
-                                    random(100, 200), // Random blue tint
-                                    random(150, 255), 
-                                    random(200, 255)
-                                ]
-                            );
-                        }
-                    }, i * 120); // Staggered timing for cascade effect
-                }
-                
-                // CRITICAL: Delay game over screen until explosion sequence completes
-                setTimeout(() => {
-                    if (typeof gameStateManager !== "undefined" && gameStateManager) {
-                        gameStateManager.setState("GAME_OVER");
-                    } else {
-                        alert("Game Over! Your ship has been destroyed.");
-                        noLoop();
-                    }
-                }, 2000); // 2 second delay to allow explosion to finish
-            } else {
-                // Fallback if explosions not available
-                if (typeof gameStateManager !== "undefined" && gameStateManager) {
-                    gameStateManager.setState("GAME_OVER");
-                } else {
-                    alert("Game Over! Your ship has been destroyed.");
-                    noLoop();
-                }
-            }
+            gameStateManager.setState("GAME_OVER");
         }
     }
 
@@ -691,6 +694,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
+            shield: this.shield,
+            maxShield: this.maxShield,
+            shieldRechargeRate: this.shieldRechargeRate,
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -712,6 +718,10 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.credits = data.credits ?? 1000;
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
+
+        this.shield = data.shield !== undefined ? data.shield : this.maxShield;
+        this.maxShield = data.maxShield || this.maxShield;
+        this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
 
         // Set the weapon index if saved
         if (data.weaponIndex !== undefined && 

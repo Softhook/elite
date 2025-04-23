@@ -218,6 +218,11 @@ class Enemy {
 
         // Initialize attack cooldown
         this.attackCooldown = 0;
+
+        // Add shield properties
+        this.maxShield = shipDef.baseShield || 0;
+        this.shield = this.maxShield;
+        this.shieldRechargeRate = shipDef.shieldRecharge || 0;
     }
 
     // -----------------------------
@@ -272,6 +277,13 @@ class Enemy {
         // Process hauler attack cooldown
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaTime / 1000;
+        }
+
+        // Regenerate shields if not destroyed
+        if (this.shield < this.maxShield && !this.destroyed) {
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016;
+            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
 
         // For pirates: Look for cargo first if not already collecting
@@ -1810,6 +1822,23 @@ class Enemy {
             pop();
         }
 
+        // Draw shield effect separately (not rotated with ship)
+        if (this.shield > 0) {
+            push();
+            translate(this.pos.x, this.pos.y);
+
+            // Shield appearance based on percentage
+            const shieldPercent = this.shield / this.maxShield;
+            const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
+
+            noFill();
+            stroke(100, 180, 255, shieldAlpha);
+            strokeWeight(1.5);
+            ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+
+            pop();
+        }
+
         // --- DEBUG LINE ---
         if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
              push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
@@ -2012,38 +2041,58 @@ class Enemy {
      * @param {Object} attacker - Entity that caused the damage
      * @return {number} Remaining hull value
      */
-    takeDamage(amount, attacker = null) { 
-        if(this.destroyed || amount <= 0) return;
-        
-        this.hull -= amount; 
-        
+    takeDamage(amount, attacker = null) {
+        if (this.destroyed || amount <= 0) return 0;
+
+        let damageDealt = 0;
+
+        // If we have shields, damage them first
+        if (this.shield > 0) {
+            if (amount <= this.shield) {
+                // Shield absorbs all damage
+                this.shield -= amount;
+                damageDealt = amount;
+            } else {
+                // Shield is depleted, remaining damage goes to hull
+                const remainingDamage = amount - this.shield;
+                damageDealt = amount;
+                this.shield = 0;
+                this.hull -= remainingDamage;
+            }
+        } else {
+            // No shields, damage hull directly
+            this.hull -= amount;
+            damageDealt = amount;
+        }
+
         // Track who's attacking us
         if (attacker) {
             this.lastAttacker = attacker;
             this.targetSwitchCooldown = 0; // Allow immediate targeting of attackers
         }
-        
+
         // Chance to jettison cargo when hit hard enough
         if (amount > 5 && random() < 0.1) { // 10% chance
             this.jettisionCargo();
         }
-        
+
+        // Handle destruction
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
-            
+
             // Drop cargo on destruction
             this.dropCargo();
-            
+
             // Create explosion at destruction position
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
                 this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size, [200, 100, 30]);
             }
-            
-            //console.log(`${this.role} ${this.shipTypeName} destroyed!`);
+
             uiManager.addMessage(`${this.role} ${this.shipTypeName} destroyed`);
         }
-        return this.hull;
+
+        return damageDealt;
     }
 
     /**
@@ -2101,7 +2150,7 @@ class Enemy {
         this.currentState = newState;
         
         // Log state changes with informative context
-        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
+        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[AI_STATE[newState]]}`);
         
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);
