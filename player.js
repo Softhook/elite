@@ -608,7 +608,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                 // Delay GAME_OVER state change until after the explosion cascade
                 setTimeout(() => {
                     gameStateManager.setState("GAME_OVER");
-                }, 1500); // Increased delay to match explosion duration
+                }, 3000); // Increased delay to match explosion duration
 
             } else {
                 // Fallback if system not available - immediate game over
