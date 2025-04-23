@@ -93,11 +93,13 @@ class UIManager {
         noStroke(); 
         rect(0, 0, width, 40);
         
-        // Left side - System name
+        // Left side - System name with additional info
         fill(255); 
         textSize(14); 
         textAlign(LEFT, CENTER); 
-        text(`System: ${csName}`, 10, 20);
+        const systemType = player.currentSystem?.economyType || 'Unknown';
+        const secLevel = player.currentSystem?.securityLevel || 'Unknown';
+        text(`System: ${csName}            Economy: ${systemType}   Security: ${secLevel}`, 10, 20);
         
         // ALIGNED: Status elements at consistent vertical position
         const statusLineY = 20; // Central Y position for all status elements
