@@ -104,35 +104,23 @@ class UIManager {
         
         // Center - LEGAL status - aligned at statusLineY
         if (player.isWanted) {
-            // Draw warning background
-            fill(200, 0, 0);
-            rect(width/2 - 80, statusLineY - 10, 160, 20, 3);
             // Draw WANTED text
-            fill(255);
+            fill(255,0,0);
             textAlign(CENTER, CENTER);
             textSize(14);
             text("WANTED", width/2, statusLineY);
         } else {
             // Show "LEGAL" status when not wanted
-            fill(0, 100, 0);
-            rect(width/2 - 80, statusLineY - 10, 160, 20, 3);
-            fill(200, 255, 200);
+            fill(255);
             textAlign(CENTER, CENTER);
             textSize(14);
             text("LEGAL", width/2, statusLineY);
         }
         
-        // ALIGNED: Active mission title - at same statusLineY
-        if (player.activeMission?.title) {
-            fill(255, 180, 0); 
-            textAlign(LEFT, CENTER); 
-            textSize(14);
-            text(`Mission: ${player.activeMission.title}`, width/2 + 100, statusLineY);
-        }
-        
         // Right side - Ship info - aligned with statusLineY
+        fill(255);
         textAlign(RIGHT, CENTER);
-        text(`${shipName}   Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width-350, statusLineY);
+        text(`Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width-300, statusLineY);
         
         // === Shield and Hull bars integration in top bar ===
         const barWidth = 140;
@@ -185,8 +173,6 @@ class UIManager {
         textSize(12);
         text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 85, barMiddleY + barHeight/2 + 2);
         
-        // REMOVED: Fire cooldown bar (moved to drawWeaponSelector)
-        
         // Weapon selector (with integrated cooldown bar)
         this.drawWeaponSelector(player);
         
@@ -235,7 +221,7 @@ class UIManager {
             }
             text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
             
-            // ADDED: Draw cooldown bar for the selected weapon
+            // Draw cooldown bar for the selected weapon
             if (isSelected && player.fireCooldown > 0 && player.fireRate > 0) {
                 let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
                 fill(255, 50, 50, 200);
@@ -248,11 +234,32 @@ class UIManager {
             xPos += slotW + 5;
         });
         
-        // ADDED: Draw a global cooldown bar if needed (only when weapon has cooldown)
-        if (player.fireCooldown > 0 && player.fireRate > 0) {
-            let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
-            fill(255, 0, 0, 150);
-            rect(width/2 - 100, weaponBarY - 3, 200 * c, 3);
+        // NEW: Draw active mission on the RIGHT side of the weapon bar
+        if (player.activeMission?.title) {
+            const missionText = `Mission: ${player.activeMission.title}`;
+            
+            // Create a background for the mission text
+            const missionPadding = 10;
+            textSize(13);
+            const missionTextW = textWidth(missionText);
+            const missionBoxW = missionTextW + missionPadding * 2;
+            const missionBoxX = width - missionBoxW - 10; // 10px from right edge
+            
+            // Draw mission background
+            fill(0, 80, 140, 200); // Slightly brighter blue than weapon bar
+            stroke(0, 100, 180);
+            strokeWeight(1);
+            rect(missionBoxX, weaponBarY + 3, missionBoxW, weaponBarH - 6, 5);
+            
+            // Draw mission text
+            fill(255, 180, 0); // Gold text for mission
+            noStroke();
+            textAlign(LEFT, CENTER);
+            text(missionText, missionBoxX + missionPadding, weaponBarY + weaponBarH/2);
+            
+            // Optional: Add a small indicator icon
+            fill(255, 200, 0);
+            circle(missionBoxX + 6, weaponBarY + weaponBarH/2, 5);
         }
         
         pop();
