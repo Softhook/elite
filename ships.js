@@ -182,7 +182,7 @@ function drawGnatInterceptor(s, thrusting = false) { // Light Fighter 1
 
 function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
-    ddrawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
 function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
@@ -288,11 +288,15 @@ const SHIP_DEFINITIONS = {
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
-        baseHull: 500, baseShield: 150, shieldRecharge: 2.5, // Hull tanky, weak shields?
+        baseHull: 500, baseShield: 150, shieldRecharge: 2.5,
         armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
-        drawFunction: drawBioFrigate,       
-
+        drawFunction: drawBioFrigate,
+        
+        fillColor: [80, 140, 100],
+        strokeColor: [40, 80, 50],
+        strokeW: 2.50,
+        
         vertexLayers: [
             {
                 vertexData: [ { x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 } ],
