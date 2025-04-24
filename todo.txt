@@ -2,6 +2,12 @@
 
 ## Bugs and Issues
 
+make player wanted or not
+
+make shields levels work properly
+
+sideways kiting withe thrust
+
 i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
 
 put the messagses in teh corner with 10 lines
@@ -33,6 +39,10 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+editor ship centering
+editor mirror mode
+
+- alien attack behaviour aim and shoot
 - opposturnity, assasin, alien enemy beahviour
 - scanner upgrade to show helthbars and text for ships
 - blue line point to station

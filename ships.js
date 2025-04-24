@@ -687,7 +687,21 @@ const SHIP_DEFINITIONS = {
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
         armament: ["Heavy Cannon", "Arc Projector", "Mini-Turret"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
-        drawFunction: drawPython, vertexData: [ { x: 0.8, y: 0 }, { x: 0.6, y: 0.7 }, { x: -0.6, y: 0.9 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.6, y: -0.9 }, { x: 0.6, y: -0.7 } ],
+        drawFunction: drawPython,         
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 } ],
+                fillColor: [140, 140, 150],
+                strokeColor: [180, 180, 190],
+                strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: 0.6686, y: 0.0000 }, { x: 0.0000, y: 0.3646 }, { x: 0.0000, y: -0.3646 } ],
+                fillColor: [234, 26, 26],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals","Medicine", "Metals", "Chemicals"],
         price: 12600,
