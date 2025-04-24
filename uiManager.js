@@ -352,143 +352,169 @@ class UIManager {
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
         if (!market || !player || typeof market.getPrices !== 'function') { /* Draw error */ return; }
-        market.updatePlayerCargo(player.cargo); 
+        market.updatePlayerCargo(player.cargo);
         const commodities = market.getPrices();
-        this.marketButtonAreas = []; 
+        this.marketButtonAreas = [];
         this.marketBackButtonArea = {}; // Clear areas
-        
+
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([50,20,20,220], [255,100,100]);
-        
+
         // Title and player info
-        fill(255); textSize(24); textAlign(CENTER,TOP); 
+        fill(255); textSize(24); textAlign(CENTER,TOP);
         text(`Commodity Market - ${market.systemType || 'Unknown'}`, pX+pW/2, pY+20);
-        textSize(16); textAlign(LEFT,TOP); 
-        text(`Credits: ${player.credits}`, pX+30, pY+60); 
+        textSize(16); textAlign(LEFT,TOP);
+        text(`Credits: ${Math.floor(player.credits)}`, pX+30, pY+60); // Ensure credits are integer
         text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+85);
-        
+
         // Table setup
-        let sY = pY+130, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30; 
+        let sY = pY+130, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
         textAlign(CENTER,CENTER); textSize(14); fill(200);
-        
+
         // Column headers
-        text("Commodity", sX+cW*0.5, sY); 
-        text("Buy", sX+cW*1.5, sY); 
-        text("Sell", sX+cW*2.5, sY); 
+        text("Commodity", sX+cW*0.5, sY);
+        text("Buy", sX+cW*1.5, sY);
+        text("Sell", sX+cW*2.5, sY);
         text("Held", sX+cW*3.5, sY);
-        
+
         // Row setup
-        sY += 30; 
+        sY += 30;
         const rowH = 30;
-        const btnW = cW*0.65; 
+        const btnW = cW*0.65;
         const btnH = rowH*0.8;
-        
+
+        // --- Price Indicator Constants ---
+        const indicatorW = 15; // Width of the indicator bar area
+        const indicatorMaxH = rowH * 0.6; // Max height of the bar
+        const indicatorYOffset = (rowH - indicatorMaxH) / 2; // Center vertically
+        const maxDeviation = 0.5; // Max price deviation (e.g., 50%) for full bar height
+
         // Draw commodity rows
-        (commodities || []).forEach((comm, i) => { 
-            if (!comm) return; 
+        (commodities || []).forEach((comm, i) => {
+            if (!comm) return;
             let yP = sY+i*rowH;
-            let tY = yP+rowH/2; 
-            
+            let tY = yP+rowH/2;
+
+            // --- Alternating Row Background ---
+            if (i % 2 === 0) {
+                fill(0, 0, 0, 100); // Increased alpha
+            } else {
+                fill(80, 80, 80, 100); // Increased alpha and brightness difference
+            }
+            noStroke();
+            rect(sX, yP, tW, rowH); // Draw background for the data part of the row
+            // --- End Alternating Background ---
+
             // Commodity name and prices
-            fill(255); 
-            textAlign(LEFT,CENTER); 
-            text(comm.name||'?', sX+10, tY, cW-15); 
-            textAlign(RIGHT,CENTER); 
-            text(comm.buyPrice??'?', sX+cW*2-10, tY); 
-            text(comm.sellPrice??'?', sX+cW*3-10, tY); 
+            fill(255);
+            textAlign(LEFT,CENTER);
+            text(comm.name||'?', sX+10, tY, cW-15);
+            textAlign(RIGHT,CENTER);
+            text(comm.buyPrice??'?', sX+cW*2-10 - indicatorW, tY); // Shift price text left
+            text(comm.sellPrice??'?', sX+cW*3-10 - indicatorW, tY); // Shift price text left
             text(comm.playerStock??'?', sX+cW*4-10, tY);
-            
+
+            // --- Price Indicators ---
+            noStroke();
+            // Buy Price Indicator
+            if (comm.baseBuy > 0) {
+                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                let indicatorH = constrain(abs(buyDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
+                let indicatorX = sX + cW*2 - indicatorW - 5; // Position indicator to the right of text
+                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
+
+                if (buyDeviation > 0.05) { // Expensive (Red) - allow small tolerance
+                    fill(255, 50, 50); // Red
+                } else if (buyDeviation < -0.05) { // Cheap (Green)
+                    fill(50, 255, 50); // Green
+                } else { // Average (Neutral/No bar)
+                    fill(120); // Grey or transparent
+                    indicatorH = 1; // Minimal dot or line
+                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
+                }
+                 if (indicatorH > 0) { // Only draw if there's height
+                    rect(indicatorX, indicatorY, 3, indicatorH); // Draw thin bar
+                 }
+            }
+            // Sell Price Indicator
+            if (comm.baseSell > 0) {
+                let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
+                let indicatorH = constrain(abs(sellDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
+                let indicatorX = sX + cW*3 - indicatorW - 5; // Position indicator
+                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
+
+                if (sellDeviation > 0.05) { // Good Sell Price (Green)
+                    fill(50, 255, 50); // Green
+                } else if (sellDeviation < -0.05) { // Bad Sell Price (Red)
+                    fill(255, 50, 50); // Red
+                } else { // Average (Neutral/No bar)
+                    fill(120); // Grey or transparent
+                    indicatorH = 1; // Minimal dot or line
+                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
+                }
+                 if (indicatorH > 0) { // Only draw if there's height
+                    rect(indicatorX, indicatorY, 3, indicatorH); // Draw thin bar
+                 }
+            }
+            // --- End Price Indicators ---
+
+
+            // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
+            let btnStartX = sX + cW * 4.2; // Start position for buttons
+
             // Buy 1 button
-            let buy1X = sX+cW*4.2;
+            let buy1X = btnStartX;
             let buy1Y = yP+(rowH-btnH)/2;
-            fill(0,150,0); 
+            fill(0,150,0); stroke(0,200,0); strokeWeight(1);
             rect(buy1X, buy1Y, btnW, btnH, 3);
-            fill(255); 
-            textAlign(CENTER,CENTER); 
-            textSize(12); 
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
             text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
-            this.marketButtonAreas.push({
-                x: buy1X, 
-                y: buy1Y, 
-                w: btnW, 
-                h: btnH, 
-                action: 'buy', 
-                quantity: 1,
-                commodity: comm.name
-            });
-            
+            this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
+
             // Buy All button
-            let buyAllX = sX+cW*5.2;
-            let buyAllY = yP+(rowH-btnH)/2;
-            fill(0,180,0); 
+            let buyAllX = buy1X + btnW + 5; // Position relative to previous button
+            let buyAllY = buy1Y;
+            fill(0,180,0); stroke(0,220,0); strokeWeight(1);
             rect(buyAllX, buyAllY, btnW, btnH, 3);
-            fill(255); 
-            textAlign(CENTER,CENTER); 
-            textSize(12); 
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
             text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
-            this.marketButtonAreas.push({
-                x: buyAllX, 
-                y: buyAllY, 
-                w: btnW, 
-                h: btnH, 
-                action: 'buyAll',
-                commodity: comm.name
-            });
-            
+            this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
+
             // Sell 1 button
-            let sell1X = sX+cW*6.2;
-            let sell1Y = yP+(rowH-btnH)/2;
-            fill(150,0,0); 
+            let sell1X = buyAllX + btnW + 10; // Add more space before sell buttons
+            let sell1Y = buy1Y;
+            fill(150,0,0); stroke(200,0,0); strokeWeight(1);
             rect(sell1X, sell1Y, btnW, btnH, 3);
-            fill(255); 
-            textAlign(CENTER,CENTER); 
-            textSize(12); 
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
             text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-            this.marketButtonAreas.push({
-                x: sell1X, 
-                y: sell1Y, 
-                w: btnW, 
-                h: btnH, 
-                action: 'sell',
-                quantity: 1, 
-                commodity: comm.name
-            });
-            
+            this.marketButtonAreas.push({ x: sell1X, y: sell1Y, w: btnW, h: btnH, action: 'sell', quantity: 1, commodity: comm.name });
+
             // Sell All button
-            let sellAllX = sX+cW*7.2;
-            let sellAllY = yP+(rowH-btnH)/2;
-            fill(180,0,0); 
+            let sellAllX = sell1X + btnW + 5; // Position relative to previous button
+            let sellAllY = buy1Y;
+            fill(180,0,0); stroke(220,0,0); strokeWeight(1);
             rect(sellAllX, sellAllY, btnW, btnH, 3);
-            fill(255); 
-            textAlign(CENTER,CENTER); 
-            textSize(12); 
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
             text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-            this.marketButtonAreas.push({
-                x: sellAllX, 
-                y: sellAllY, 
-                w: btnW, 
-                h: btnH, 
-                action: 'sellAll',
-                commodity: comm.name
-            });
+            this.marketButtonAreas.push({ x: sellAllX, y: sellAllY, w: btnW, h: btnH, action: 'sellAll', commodity: comm.name });
         });
-        
+
         // Back button
         let backW = 100;
         let backH = 30;
         let backX = pX+pW/2-backW/2;
         let backY = pY+pH-backH-15;
-        fill(180,180,0); 
-        stroke(220,220,100); 
+        fill(180,180,0);
+        stroke(220,220,100); strokeWeight(1);
         rect(backX, backY, backW, backH, 5);
-        fill(0); 
-        textSize(16); 
-        textAlign(CENTER,CENTER); 
-        noStroke(); 
+        fill(0);
+        textSize(16);
+        textAlign(CENTER,CENTER);
+        noStroke();
         text("Back", backX+backW/2, backY+backH/2);
         this.marketBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
-        
+
         pop();
     }
 
@@ -815,16 +841,45 @@ class UIManager {
                 let mapY = mapCenterY + relY * this.minimapScale;
                 const iconHalfSize = 3; // Station is 6x6 rect
 
-                // *** Strict Boundary Check ***
-                if (isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize)) {
+                // --- NEW Station Clamping Logic ---
+                let drawX = mapX;
+                let drawY = mapY;
+                let isStationOnScreen = isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize);
+
+                if (!isStationOnScreen) {
+                    // Clamp the position to the minimap boundary
+                    // We slightly inset the clamping to keep the icon fully visible at the edge
+                    const inset = iconHalfSize + 1; // Inset by half size + border
+                    drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                    drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
+
+                    // If the original position was truly outside, draw it clamped.
+                    // This prevents icons near the edge but technically inside from being clamped.
+                    if (mapX < mapLeft || mapX > mapRight || mapY < mapTop || mapY > mapBottom) {
+                         // Draw the icon at the clamped position
+                         fill(0, 100, 255); // Slightly different blue for off-screen indicator? Or keep same.
+                         noStroke();
+                         rect(drawX - iconHalfSize, drawY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
+                    } else {
+                         // It was close to the edge but technically inside, draw normally
+                         fill(0, 0, 255); // Blue square for station
+                         noStroke();
+                         rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
+                    }
+
+                } else {
+                    // Station is fully on screen, draw normally
                     fill(0, 0, 255); // Blue square for station
+                    noStroke();
                     rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                 }
+                // --- End NEW Station Clamping Logic ---
             }
             // ---
 
             // --- Map and Draw Planets ---
             fill(150, 100, 50); // Brownish for planets
+            noStroke(); // Ensure planets don't have strokes
             (system.planets || []).forEach(planet => {
                 if (!planet?.pos) return;
                 let objX = planet.pos.x;
@@ -844,6 +899,7 @@ class UIManager {
 
             // --- Map and Draw Enemies ---
             fill(255, 0, 0); // Red for enemies
+            noStroke(); // Ensure enemies don't have strokes
             (system.enemies || []).forEach(enemy => {
                 if (!enemy?.pos || enemy.isDestroyed()) return;
                 let objX = enemy.pos.x;
@@ -861,10 +917,11 @@ class UIManager {
                     // Draw rotated triangle if fully within bounds
                     push();
                     translate(mapX, mapY);
-                    rotate(enemy.angle - PI / 2);  // PI/2 radians = 90 degrees
+                    rotate(enemy.angle - PI / 2);  // Align triangle with ship heading
                     triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8); // Triangle scaled roughly by half-extent
                     pop();
                 }
+                // Note: Enemies are NOT clamped to the edge in this version.
             });
             // ---
 
