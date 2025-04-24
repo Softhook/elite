@@ -302,25 +302,29 @@ class MissionGenerator {
         let quantity = floor(random(5, 16)); // Keep quantity range the same for now
 
         // --- Calculate Jumps Bonus (remains the same) ---
-        let jumpDistance = Infinity; const jumpRewardFactor = 250;
-        const originIndex = originSystem?.systemIndex; const destinationIndex = destinationInfo.system?.systemIndex;
+        let jumpDistance = Infinity;
+        const jumpRewardFactor = 250; // Base reward per jump
+        const originIndex = originSystem?.systemIndex;
+        const destinationIndex = destinationInfo.system?.systemIndex;
         if (typeof originIndex === 'number' && typeof destinationIndex === 'number') {
              try { jumpDistance = galaxy.getJumpDistance(originIndex, destinationIndex); }
              catch (e) { console.error("Err getJumpDistance:", e); jumpDistance = Infinity; }
         }
         if (!isFinite(jumpDistance) || jumpDistance <= 0) return null; // Skip if unreachable
 
-        // --- Calculate Reward (remains the same, based on jumps) ---
+        // --- Calculate Reward (ensure integer) ---
         // Find the base price of the cargo to add a value bonus
-        const marketRef = new Market('Default'); // Create temporary market to get base prices
-        const cargoData = marketRef.commodities.find(c => c.name === cargo);
-        const baseCargoValue = cargoData ? (cargoData.baseBuy + cargoData.baseSell) / 2 : 50; // Estimate value
+        const market = originStation?.market;
+        const cargoData = market?.commodities?.find(c => c.name === cargo);
+        const baseCargoValue = cargoData?.baseSell || 50; // Fallback value
 
-        let baseReward = 80;
-        let cargoBonus = quantity * floor(random(0.8, 1.2) * baseCargoValue * 0.2); // Bonus based on value
-        let jumpBonus = floor(jumpDistance * jumpRewardFactor * (1 + (jumpDistance - 1) * 0.2));
-        let reward = baseReward + cargoBonus + jumpBonus;
-        reward = max(150 + (jumpDistance * 50), floor(reward)); // Ensure minimum reward and integer
+        // Calculate reward: base + jump bonus + cargo value bonus + random element
+        let reward = 100 + // Base reward
+                     Math.floor(jumpDistance * jumpRewardFactor) + // Jump bonus (floored)
+                     Math.floor(quantity * baseCargoValue * 0.15) + // Cargo value bonus (floored)
+                     floor(random(50, 250)); // Random bonus (floored)
+
+        reward = Math.floor(reward); // Final floor just in case
 
         // --- Create Mission Object ---
         let jumpText = jumpDistance === 1 ? "1 jump" : `${jumpDistance} jumps`;
@@ -334,7 +338,6 @@ class MissionGenerator {
         });
     }
 
-    // ... (createIllegalDelivery and createBountyMission remain the same) ...
     /** Creates an Illegal Smuggling Mission */
      static createIllegalDelivery(originSystem, originStation, galaxy, player) {
         // Destination finding and security check remain the same
@@ -346,21 +349,28 @@ class MissionGenerator {
         let cargo = random(ILLEGAL_CARGO);
         let quantity = floor(random(3, 10));
 
-        // --- Calculate Jumps Bonus (remains the same) ---
-        let jumpDistance = Infinity; const jumpRewardFactor = 600;
-        const originIndex = originSystem?.systemIndex; const destinationIndex = destinationInfo.system?.systemIndex;
+        // --- Calculate Jumps Bonus ---
+        let jumpDistance = Infinity;
+        const jumpRewardFactor = 400; // Higher reward for illegal jumps
+        const originIndex = originSystem?.systemIndex;
+        const destinationIndex = destinationInfo.system?.systemIndex;
         if (typeof originIndex === 'number' && typeof destinationIndex === 'number') {
             try { jumpDistance = galaxy.getJumpDistance(originIndex, destinationIndex); }
             catch (e) { console.error("Err getJumpDistance (Illegal):", e); jumpDistance = Infinity; }
         }
         if (!isFinite(jumpDistance) || jumpDistance <= 0) return null;
 
-        // --- Calculate Reward (remains the same, based on jumps) ---
-        // Higher base value for illegal goods assumed
-        let baseReward = 400; let cargoBonus = quantity * floor(random(150, 350)); // Increased bonus range
-        let jumpBonus = floor(jumpDistance * jumpRewardFactor * (1 + (jumpDistance - 1) * 0.3));
-        let reward = baseReward + cargoBonus + jumpBonus;
-        reward = max(500 + (jumpDistance * 150), floor(reward)); // Ensure minimum reward and integer
+        // --- Calculate Reward (ensure integer) ---
+        const market = originStation?.market;
+        const cargoData = market?.commodities?.find(c => c.name === cargo); // Find base value if possible
+        const baseCargoValue = cargoData?.baseSell || 100; // Higher fallback for illegal goods
+
+        let reward = 300 + // Higher base reward
+                     Math.floor(jumpDistance * jumpRewardFactor) + // Jump bonus (floored)
+                     Math.floor(quantity * baseCargoValue * 0.25) + // Higher cargo value bonus (floored)
+                     floor(random(100, 500)); // Higher random bonus (floored)
+
+        reward = Math.floor(reward); // Final floor
 
         // --- Create Mission Object ---
         let jumpText = jumpDistance === 1 ? "1 jump" : `${jumpDistance} jumps`;
@@ -383,8 +393,12 @@ class MissionGenerator {
         if (originSystem.securityLevel === 'High') rewardPerKill *= 1.2;
         else if (originSystem.securityLevel === 'Low' || originSystem.securityLevel === 'Anarchy') rewardPerKill *= 0.8;
 
-        let totalReward = targetCount * floor(rewardPerKill); // Ensure integer
-        totalReward = max(400, floor(totalReward)); // Min bounty reward and integer
+        const baseBountyPerShip = 150;
+        const techLevelBonus = (originSystem.techLevel || 5) * 10;
+        const securityPenalty = (originSystem.securityLevel === 'High' ? -50 : (originSystem.securityLevel === 'Anarchy' ? 100 : 0));
+
+        let reward = Math.floor(targetCount * baseBountyPerShip + techLevelBonus + securityPenalty + random(50, 300));
+        reward = Math.max(100, Math.floor(reward)); // Ensure minimum reward, floor again
 
          return new Mission({
             type: MISSION_TYPE.BOUNTY_PIRATE,
@@ -392,7 +406,7 @@ class MissionGenerator {
             description: `Pirate activity in ${originSystem.name} requires intervention. Eliminate ${targetCount} pirate vessels operating within this system. Payment issued upon completion.`,
             originSystem: originSystem.name, originStation: originStation.name,
             destinationSystem: null, destinationStation: null, // Local mission
-            targetDesc: `${targetCount} Pirate vessels`, targetCount: targetCount, rewardCredits: totalReward, isIllegal: false,
+            targetDesc: `${targetCount} Pirate vessels`, targetCount: targetCount, rewardCredits: reward, isIllegal: false,
         });
      }
 
@@ -440,16 +454,11 @@ class MissionGenerator {
         
         // Calculate reward based on target system security and distance
         let jumpDistance = galaxy.getJumpDistance(originSystem.systemIndex, targetSystem.systemIndex);
-        let baseReward = 600;
-        let securityMultiplier = 1.0;
-        
-        if (targetSystem.securityLevel === 'High') securityMultiplier = 2.0;
-        else if (targetSystem.securityLevel === 'Medium') securityMultiplier = 1.5;
-        
-        let totalReward = floor(baseReward * targetCount * securityMultiplier * (1 + (jumpDistance * 0.3)));
-        
-        // Ensure minimum reward
-        totalReward = max(800, totalReward);
+        const baseBountyPerCop = 300; // Higher base for police
+        const techLevelBonus = (originSystem.techLevel || 5) * 15;
+
+        let reward = Math.floor(targetCount * baseBountyPerCop + techLevelBonus + random(200, 600));
+        reward = Math.max(250, Math.floor(reward)); // Ensure minimum reward, floor again
         
         // Create the mission object
         return new Mission({
@@ -462,7 +471,7 @@ class MissionGenerator {
             destinationStation: null, // No specific station required
             targetDesc: `${targetCount} Police vessels`, 
             targetCount: targetCount, 
-            rewardCredits: totalReward, 
+            rewardCredits: reward, 
             isIllegal: true, // This is definitely illegal
             completionFlagName: `copKillerMission_${targetSystem.name}_${targetCount}`
         });

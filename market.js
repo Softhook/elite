@@ -155,7 +155,7 @@ class Market {
         const comm = this.commodities.find(c => c.name === commodityName);
         if (!comm) { console.error(`BUY FAILED: Commodity ${commodityName} not found in market.`); return false; }
 
-        const cost = comm.buyPrice * quantity;
+        const cost = Math.floor(comm.buyPrice * quantity); // Floor the total cost
         const currentCargoAmount = player.getCargoAmount();
         const remainingCapacity = player.cargoCapacity - currentCargoAmount;
 
@@ -179,7 +179,7 @@ class Market {
         // --- If checks pass, proceed with transaction ---
         console.log("Checks passed. Attempting transaction...");
         console.log(`Spending ${cost} credits...`);
-        let spendSuccess = player.spendCredits(cost); // Attempt to deduct credits
+        let spendSuccess = player.spendCredits(cost); // Pass floored cost
         console.log(`player.spendCredits returned: ${spendSuccess}`);
 
         if (spendSuccess) {
@@ -220,11 +220,11 @@ class Market {
         }
 
         // --- If checks pass, proceed ---
-        const income = comm.sellPrice * quantity;
+        const income = Math.floor(comm.sellPrice * quantity); // Floor the total income
         console.log(`Attempting to sell ${quantity} ${commodityName} for ${income} credits.`);
 
         // Perform transaction: Add credits, remove cargo
-        player.addCredits(income);
+        player.addCredits(income); // Pass floored income
         player.removeCargo(commodityName, quantity);
         this.updatePlayerCargo(player.cargo); // Update market display
 

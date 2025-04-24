@@ -724,11 +724,33 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         return (d < radius && speed < 0.5);
     }
 
-    /** Adds credits. */
-    addCredits(amount) { if (typeof amount === 'number' && amount > 0 && isFinite(amount)) { this.credits += amount; } }
+    /** Adds credits. Ensures the amount is an integer. */
+    addCredits(amount) {
+        if (amount > 0) {
+            const integerAmount = Math.floor(amount); // Ensure amount is an integer
+            this.credits += integerAmount;
+            this.credits = Math.floor(this.credits); // Ensure total is integer
+            console.log(`Added ${integerAmount} credits. New balance: ${this.credits}`);
+            // Optionally update UI or trigger save
+        }
+    }
 
-    /** Subtracts credits. */
-    spendCredits(amount) { if (typeof amount === 'number' && amount > 0 && isFinite(amount) && amount <= this.credits) { this.credits -= amount; return true; } return false; }
+    /** Subtracts credits. Ensures the amount is an integer. Returns true if successful. */
+    spendCredits(amount) {
+        if (amount > 0) {
+            const integerAmount = Math.floor(amount); // Ensure amount is an integer
+            if (this.credits >= integerAmount) {
+                this.credits -= integerAmount;
+                this.credits = Math.floor(this.credits); // Ensure total is integer
+                console.log(`Spent ${integerAmount} credits. Remaining: ${this.credits}`);
+                return true; // Indicate success
+            } else {
+                console.log(`Failed to spend ${integerAmount} credits. Insufficient funds (${this.credits}).`);
+                return false; // Indicate failure
+            }
+        }
+        return false; // No amount to spend
+    }
 
     /** Calculates total cargo quantity. */
     getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
@@ -885,7 +907,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
         let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; }
         this.hull = data.hull !== undefined ? constrain(data.hull, 0, this.maxHull) : this.maxHull;
-        this.credits = data.credits ?? 1000;
+        this.credits = data.credits !== undefined ? Math.floor(data.credits) : 1000; // Ensure loaded credits are integer
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
 
