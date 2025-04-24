@@ -818,8 +818,6 @@ class UIManager {
         // ---
 
         // --- Helper function for strict boundary check ---
-        // Checks if the *entire* icon, defined by its center (x,y)
-        // and its half-width/half-height, fits within the map bounds.
         const isFullyWithinBounds = (x, y, halfWidth, halfHeight) => {
             return (
                 x - halfWidth >= mapLeft &&
@@ -841,45 +839,37 @@ class UIManager {
                 let mapY = mapCenterY + relY * this.minimapScale;
                 const iconHalfSize = 3; // Station is 6x6 rect
 
-                // --- NEW Station Clamping Logic ---
+                // --- Station Clamping Logic ---
                 let drawX = mapX;
                 let drawY = mapY;
                 let isStationOnScreen = isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize);
 
                 if (!isStationOnScreen) {
-                    // Clamp the position to the minimap boundary
-                    // We slightly inset the clamping to keep the icon fully visible at the edge
-                    const inset = iconHalfSize + 1; // Inset by half size + border
+                    const inset = iconHalfSize + 1;
                     drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
                     drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
 
-                    // If the original position was truly outside, draw it clamped.
-                    // This prevents icons near the edge but technically inside from being clamped.
                     if (mapX < mapLeft || mapX > mapRight || mapY < mapTop || mapY > mapBottom) {
-                         // Draw the icon at the clamped position
-                         fill(0, 100, 255); // Slightly different blue for off-screen indicator? Or keep same.
+                         fill(0, 100, 255); // Clamped color
                          noStroke();
                          rect(drawX - iconHalfSize, drawY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                     } else {
-                         // It was close to the edge but technically inside, draw normally
-                         fill(0, 0, 255); // Blue square for station
+                         fill(0, 0, 255); // Normal color (near edge but inside)
                          noStroke();
                          rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                     }
-
                 } else {
-                    // Station is fully on screen, draw normally
-                    fill(0, 0, 255); // Blue square for station
+                    fill(0, 0, 255); // Normal color (fully inside)
                     noStroke();
                     rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                 }
-                // --- End NEW Station Clamping Logic ---
+                // --- End Station Clamping Logic ---
             }
             // ---
 
             // --- Map and Draw Planets ---
             fill(150, 100, 50); // Brownish for planets
-            noStroke(); // Ensure planets don't have strokes
+            noStroke();
             (system.planets || []).forEach(planet => {
                 if (!planet?.pos) return;
                 let objX = planet.pos.x;
@@ -888,18 +878,16 @@ class UIManager {
                 let relY = objY - player.pos.y;
                 let mapX = mapCenterX + relX * this.minimapScale;
                 let mapY = mapCenterY + relY * this.minimapScale;
-                const iconRadius = 2; // Planet is 4x4 ellipse
-
-                // *** Strict Boundary Check ***
+                const iconRadius = 2;
                 if (isFullyWithinBounds(mapX, mapY, iconRadius, iconRadius)) {
-                    ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2); // Small dot for planet
+                    ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2);
                 }
             });
             // ---
 
             // --- Map and Draw Enemies ---
             fill(255, 0, 0); // Red for enemies
-            noStroke(); // Ensure enemies don't have strokes
+            noStroke();
             (system.enemies || []).forEach(enemy => {
                 if (!enemy?.pos || enemy.isDestroyed()) return;
                 let objX = enemy.pos.x;
@@ -908,22 +896,66 @@ class UIManager {
                 let relY = objY - player.pos.y;
                 let mapX = mapCenterX + relX * this.minimapScale;
                 let mapY = mapCenterY + relY * this.minimapScale;
-                // Approximate bounding box half-size for the triangle (max extent is ~3 pixels from center)
                 const iconHalfExtent = 3;
-
-                // *** Strict Boundary Check ***
-                // Use the approximate half-extent for the check
                 if (isFullyWithinBounds(mapX, mapY, iconHalfExtent, iconHalfExtent)) {
-                    // Draw rotated triangle if fully within bounds
                     push();
                     translate(mapX, mapY);
-                    rotate(enemy.angle - PI / 2);  // Align triangle with ship heading
-                    triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8); // Triangle scaled roughly by half-extent
+                    rotate(enemy.angle - PI / 2);
+                    triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8);
                     pop();
                 }
-                // Note: Enemies are NOT clamped to the edge in this version.
             });
             // ---
+
+            // --- Map and Draw Jump Zone ---
+            if (system.jumpZoneCenter && system.jumpZoneRadius > 0) {
+                let jzX = system.jumpZoneCenter.x;
+                let jzY = system.jumpZoneCenter.y;
+                let jzRadius = system.jumpZoneRadius;
+
+                let relX = jzX - player.pos.x;
+                let relY = jzY - player.pos.y;
+                let mapX = mapCenterX + relX * this.minimapScale;
+                let mapY = mapCenterY + relY * this.minimapScale;
+                let mapRadius = max(1, jzRadius * this.minimapScale);
+
+                // --- Clamping Logic & Drawing ---
+                const indicatorSize = 4; // Size of the small square/dot when clamped
+                const inset = indicatorSize / 2 + 1; // Inset needed for the small marker
+
+                // Check if the *center* is outside the boundary for the small marker
+                let isClamped = (mapX < mapLeft + inset || mapX > mapRight - inset || mapY < mapTop + inset || mapY > mapBottom - inset);
+
+                push();
+                strokeWeight(1);
+
+                if (isClamped) {
+                    // --- Draw Clamped Marker ---
+                    // Clamp the center position to the inset boundary
+                    let drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                    let drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
+
+                    fill(255, 255, 0, 220); // Solid yellow fill for clamped marker
+                    noStroke();
+                    // Draw a small square (like the station)
+                    rectMode(CENTER); // Draw rect from center
+                    rect(drawX, drawY, indicatorSize, indicatorSize);
+                    rectMode(CORNER); // Reset rectMode
+
+                } else {
+                    // --- Draw On-Screen Circle ---
+                    // Check if the full circle is within bounds (optional, for visual consistency)
+                    // let isCircleFullyVisible = isFullyWithinBounds(mapX, mapY, mapRadius, mapRadius);
+
+                    noFill();
+                    stroke(255, 255, 0, 200); // Yellow outline
+                    // Draw the circle outline using the original map position and scaled radius
+                    ellipse(mapX, mapY, mapRadius * 2);
+                }
+                pop();
+                // --- End Clamping & Drawing ---
+            }
+            // --- End Jump Zone Drawing ---
 
         } catch (e) {
             console.error("Error during minimap element drawing:", e);

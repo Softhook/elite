@@ -51,6 +51,15 @@ console.log("TRANSPORT_SHIPS:", TRANSPORT_SHIPS);
 console.log("MILITARY_SHIPS:", MILITARY_SHIPS);
 console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
 
+// --- Jump Zone Constants ---
+const JUMP_ZONE_DEFAULT_RADIUS = 500;
+const JUMP_ZONE_MIN_DIST_FROM_STATION = 5000;
+const JUMP_ZONE_MAX_DIST_FACTOR = 0.8; // Multiplied by despawnRadius
+const JUMP_ZONE_DRAW_RANGE_FACTOR = 8; // Multiplied by jumpZoneRadius
+const JUMP_ZONE_MAX_ALPHA = 200;
+const JUMP_ZONE_MIN_ALPHA = 20;
+// ---
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -95,6 +104,14 @@ class StarSystem {
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
         this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 10;
         this.despawnRadius = 2000; // Default, updated in initStaticElements based on screen size
+
+        // --- Jump Zone Properties ---
+        this.jumpZoneCenter = null; // p5.Vector, calculated in initStaticElements or loaded
+        this.jumpZoneRadius = JUMP_ZONE_DEFAULT_RADIUS;
+        // ---
+
+        // --- Add flag for static elements ---
+        this.staticElementsInitialized = false; // Track if initStaticElements has run
     }
 
     /**
@@ -102,6 +119,13 @@ class StarSystem {
      * MUST be called AFTER p5 setup is complete (e.g., from Galaxy.initGalaxySystems).
      */
     initStaticElements() {
+        // --- Add check to prevent re-initialization ---
+        if (this.staticElementsInitialized) {
+            console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
+            return;
+        }
+        // ---
+
         console.log(`      >>> ${this.name}: initStaticElements() Start (Seed: ${this.systemIndex})`);
 
         // Check if p5 functions are available before using them
@@ -114,15 +138,14 @@ class StarSystem {
         // --- Apply Seed for deterministic generation ---
         randomSeed(this.systemIndex);
 
-        // --- Create Station (Pass a generated name) ---
+        // --- Create Station (Initial position might be temporary) ---
         console.log("         Creating Station...");
-        let stationName = `${this.name} Hub`; // Example name generation: "Solara Hub"
+        let stationName = `${this.name} Hub`;
         try {
-             this.station = new Station(0, 0, this.actualEconomy, stationName); // Pass name here
-        } catch(e) {
-             console.error("         Error creating Station:", e);
-        }
-        console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`); // Log created station name
+             // Create station, potentially at 0,0 initially. Its position will be set later in createRandomPlanets.
+             this.station = new Station(0, 0, this.actualEconomy, stationName);
+        } catch(e) { console.error("         Error creating Station:", e); }
+        console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`);
 
         // --- Calculate Despawn Radius based on screen size ---
         try {
@@ -148,12 +171,40 @@ class StarSystem {
             }
         } catch(e) { console.error("Error generating background stars:", e); }
 
-        // --- Initialize Planets (Seeded) ---
-        try { this.createRandomPlanets(); } // Call method that uses seeded random
+        // --- Initialize Planets (This will also position the station) ---
+        try { this.createRandomPlanets(); }
         catch(e) { console.error("Error during createRandomPlanets call:", e); }
+
+        // --- Calculate Jump Zone Position (AFTER station position is set in createRandomPlanets) ---
+        if (this.jumpZoneCenter === null) { // Check if not already loaded from save data
+            if (this.station && this.station.pos) {
+                const maxJumpDist = this.despawnRadius * JUMP_ZONE_MAX_DIST_FACTOR;
+                const distFromStation = random(JUMP_ZONE_MIN_DIST_FROM_STATION, maxJumpDist);
+                const angleFromStation = random(TWO_PI); // Random direction from station
+
+                this.jumpZoneCenter = p5.Vector.add(
+                    this.station.pos,
+                    p5.Vector.fromAngle(angleFromStation).mult(distFromStation)
+                );
+                console.log(`         Jump Zone for ${this.name} calculated at ${this.jumpZoneCenter.x.toFixed(0)}, ${this.jumpZoneCenter.y.toFixed(0)} (Radius: ${this.jumpZoneRadius})`);
+            } else {
+                console.warn(`         Could not calculate Jump Zone for ${this.name}: Station or station position not available.`);
+                // Fallback: Place it far out at a random angle from origin (0,0)
+                const fallbackDist = 10000;
+                const fallbackAngle = random(TWO_PI);
+                this.jumpZoneCenter = createVector(cos(fallbackAngle) * fallbackDist, sin(fallbackAngle) * fallbackDist);
+            }
+        } else {
+             console.log(`         Jump Zone for ${this.name} loaded from save data.`);
+        }
+        // --- End Jump Zone Calculation ---
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         randomSeed(); // Reset to non-deterministic (time-based) random
+
+        // --- Set initialization flag ---
+        this.staticElementsInitialized = true;
+        // ---
 
         console.log(`      <<< ${this.name}: initStaticElements() Finished`); // Log completion
     }
@@ -201,6 +252,37 @@ class StarSystem {
             this.station.pos = p5.Vector.add(chosenPlanet.pos, offset);
         }
     } // End createRandomPlanets
+
+    /** Draws the Jump Zone marker if the player is close enough. Assumes called within translated space. */
+    drawJumpZone(playerPos) {
+        if (!this.jumpZoneCenter || this.jumpZoneRadius <= 0) return;
+
+        // Only draw if player is relatively close
+        const maxDrawDist = this.jumpZoneRadius * JUMP_ZONE_DRAW_RANGE_FACTOR;
+        const distToPlayer = dist(playerPos.x, playerPos.y, this.jumpZoneCenter.x, this.jumpZoneCenter.y);
+
+        if (distToPlayer < maxDrawDist) {
+            push();
+            // Style for the jump zone marker
+            noFill();
+            strokeWeight(3); // Make it reasonably thick
+
+            // Fade out as player gets further away
+            let alpha = map(distToPlayer, this.jumpZoneRadius, maxDrawDist, JUMP_ZONE_MAX_ALPHA, JUMP_ZONE_MIN_ALPHA);
+            alpha = constrain(alpha, JUMP_ZONE_MIN_ALPHA, JUMP_ZONE_MAX_ALPHA);
+            stroke(255, 255, 0, alpha); // Yellow, semi-transparent
+
+            // Draw the circle representing the zone boundary
+            ellipse(this.jumpZoneCenter.x, this.jumpZoneCenter.y, this.jumpZoneRadius * 2);
+
+            // Optional: Add a central marker or crosshair
+            const crossSize = min(this.jumpZoneRadius * 0.1, 50); // Size of the central cross
+            line(this.jumpZoneCenter.x - crossSize, this.jumpZoneCenter.y, this.jumpZoneCenter.x + crossSize, this.jumpZoneCenter.y);
+            line(this.jumpZoneCenter.x, this.jumpZoneCenter.y - crossSize, this.jumpZoneCenter.x, this.jumpZoneCenter.y + crossSize);
+
+            pop();
+        }
+    }
 
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
@@ -809,14 +891,13 @@ class StarSystem {
 
     /** Draws all system contents. */
     draw(playerRef) {
-        if (!playerRef || !playerRef.pos)
-            return;
-        
+        if (!playerRef || !playerRef.pos) return;
+
         push();
         let tx = width / 2 - playerRef.pos.x;
         let ty = height / 2 - playerRef.pos.y;
         translate(tx, ty);
-        
+
         // Calculate screen bounds once (with margin)
         const screenBounds = {
             left: -tx - 100,
@@ -824,20 +905,25 @@ class StarSystem {
             top: -ty - 100,
             bottom: -ty + height + 100
         };
-        
+
         // Draw background (always visible)
         this.drawBackground();
-        
+
+        // --- Draw Jump Zone ---
+        // Call this early so other objects draw on top if needed
+        this.drawJumpZone(playerRef.pos);
+        // ---
+
         // Draw station only if visible
         if (this.station && 
             this.isInView(this.station.pos.x, this.station.pos.y, 
                           this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
             this.station.draw();
         }
-        
+
         // Determine sun position using the first planet if it exists
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
-        
+
         // Draw only visible planets
         for (let i = 0; i < this.planets.length; i++) {
             const p = this.planets[i];
@@ -845,7 +931,7 @@ class StarSystem {
                 p.draw(sunPos);
             }
         }
-        
+
         // Draw only visible asteroids
         for (let i = 0; i < this.asteroids.length; i++) {
             const a = this.asteroids[i];
@@ -853,7 +939,7 @@ class StarSystem {
                 a.draw();
             }
         }
-        
+
         // Draw only visible cargo
         if (this.cargo && this.cargo.length > 0) {
             for (let i = 0; i < this.cargo.length; i++) {
@@ -863,7 +949,7 @@ class StarSystem {
                 }
             }
         }
-        
+
         // Draw only visible enemies
         for (let i = 0; i < this.enemies.length; i++) {
             const e = this.enemies[i];
@@ -871,7 +957,7 @@ class StarSystem {
                 e.draw();
             }
         }
-        
+
         // Draw only visible projectiles
         for (let i = 0; i < this.projectiles.length; i++) {
             const proj = this.projectiles[i];
@@ -879,16 +965,16 @@ class StarSystem {
                 proj.draw();
             }
         }
-        
+
         // Special effects culling
         if (this.beams && this.beams.length > 0) {
             this.drawBeamsWithCulling(screenBounds);
         }
-        
+
         if (this.forceWaves && this.forceWaves.length > 0) {
             this.drawForceWavesWithCulling(screenBounds);
         }
-        
+
         // Draw only visible explosions
         for (let i = 0; i < this.explosions.length; i++) {
             const exp = this.explosions[i];
@@ -896,10 +982,10 @@ class StarSystem {
                 exp.draw();
             }
         }
-        
+
         // Player is always drawn (center of view)
         playerRef.draw();
-        
+
         pop();
     }
 
@@ -1011,6 +1097,12 @@ class StarSystem {
             station: this.station && typeof this.station.toJSON === 'function'
                 ? this.station.toJSON()
                 : null,
+            // --- Add Jump Zone Data ---
+            jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
+            jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
+            jumpZoneRadius: this.jumpZoneRadius,
+            // ---
+            staticElementsInitialized: this.staticElementsInitialized // Save initialization state
         };
     }
 
@@ -1042,6 +1134,26 @@ class StarSystem {
         } else {
             sys.station = null;
         }
+
+        // --- Restore Jump Zone Data ---
+        if (data.jumpZoneCenterX !== null && data.jumpZoneCenterY !== null && typeof createVector === 'function') {
+            sys.jumpZoneCenter = createVector(data.jumpZoneCenterX, data.jumpZoneCenterY);
+        } else {
+            sys.jumpZoneCenter = null; // Ensure it's null if not saved properly or p5 not ready
+        }
+        sys.jumpZoneRadius = data.jumpZoneRadius || JUMP_ZONE_DEFAULT_RADIUS;
+        // ---
+
+        // --- Restore initialization state ---
+        // This prevents initStaticElements from running again if it already ran before saving
+        sys.staticElementsInitialized = data.staticElementsInitialized || false;
+        // ---
+
+        // NOTE: We do NOT call initStaticElements here because planets/station/jumpzone
+        // are being restored directly from JSON data. If initStaticElements *needs* to run
+        // on load for other reasons (like regenerating bgStars), the logic inside
+        // initStaticElements needs to be adjusted to skip regeneration of loaded elements.
+        // The current structure seems to load everything directly.
 
         return sys;
     }

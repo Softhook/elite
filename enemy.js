@@ -1545,14 +1545,28 @@ class Enemy {
 
     /** 
      * Sets a target position far away for Haulers leaving the system.
-     * @param {Object} system - The current star system
+     * MODIFIED: Now targets the system's jump zone if available.
+     * @param {Object} system - The current star system, expected to have jumpZoneCenter.
      */
     setLeavingSystemTarget(system) {
-        let angle = random(TWO_PI);
-        let dist = (system?.despawnRadius ?? 3000) * 1.5;
-        this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
-        this.changeState(AI_STATE.LEAVING_SYSTEM);
-        this.hasPausedNearStation = false;
+        if (system?.jumpZoneCenter) {
+            // --- Target the Jump Zone ---
+            this.patrolTargetPos = system.jumpZoneCenter.copy();
+            console.log(`Hauler ${this.shipTypeName} targeting Jump Zone at ${this.patrolTargetPos.x.toFixed(0)}, ${this.patrolTargetPos.y.toFixed(0)}`);
+        } else {
+            // --- Fallback: Target random point at edge ---
+            console.warn(`Hauler ${this.shipTypeName}: Jump Zone not found in system ${system?.name}. Using fallback edge target.`);
+            let angle = random(TWO_PI);
+            // Use a large distance, slightly beyond despawn radius
+            let dist = (system?.despawnRadius ?? 3000) * 1.5;
+            this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
+        }
+
+        // Ensure state is set correctly (might be redundant if called from changeState)
+        if (this.currentState !== AI_STATE.LEAVING_SYSTEM) {
+            this.changeState(AI_STATE.LEAVING_SYSTEM);
+        }
+        this.hasPausedNearStation = false; // Reset pause flag
     }
 
     /** 
@@ -2261,7 +2275,8 @@ class Enemy {
                 break;
                 
             case AI_STATE.LEAVING_SYSTEM:
-                this.setLeavingSystemTarget(this.currentSystem);
+                // Call the modified function to set the target (Jump Zone or fallback)
+                this.setLeavingSystemTarget(this.currentSystem); // Ensure currentSystem is valid
                 break;
                 
             case AI_STATE.COLLECTING_CARGO:
