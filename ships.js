@@ -45,11 +45,10 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
 
 // Original Ships 
 
-function drawDestoryer(s, thrusting = false) {
+function drawDestroyer(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.Destroyer;
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
-
 function drawACAB(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.ACAB;
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
@@ -239,12 +238,12 @@ function drawHammerheadCorvette(s, thrusting = false) {
 // Stores base stats AND VERTEX DATA for each ship type.
 const SHIP_DEFINITIONS = {
     "Destroyer": {
-        name: "Destoroyer", role: "Military", sizeCategory: "Large", size: 160,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
-        baseHull: 400, baseShield: 200, shieldRecharge: 1.0, cargoCapacity: 100,
+        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
+        baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
         armament: ["Disruptor","Twin Pulse","Force Blaster"],
         costCategory: "Low", description: "Standard Police.",
-        drawFunction: drawACAB,         vertexLayers: [
+        drawFunction: drawDestroyer,         vertexLayers: [
             {
                 vertexData: [ { x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 } ],
                 fillColor: [143, 143, 148],
