@@ -337,19 +337,28 @@ function loadGame() {
         const savedDataString = localStorage.getItem(SAVE_KEY); // Get saved data string
         if (savedDataString) { // Check if data exists
             try {
-                const saveData = JSON.parse(savedDataString); // Parse the JSON data
+                const saveData = JSON.parse(savedDataString);
                 console.log("Loading game data...");
-
-                // Load galaxy state first (current system index, visited status)
-                galaxy.currentSystemIndex = saveData.currentSystemIndex ?? 0; // Load index or default to 0
-                if (saveData.galaxyData) { 
-                    galaxy.loadSaveData(saveData.galaxyData); 
-                } else {
-                    console.warn("No galaxy data found in save!");
-                    return false; // Exit with failure if galaxy data missing
+                
+                // Load galaxy first
+                if (saveData.galaxyData) {
+                    galaxy.loadSaveData(saveData.galaxyData);
                 }
-
-                // Load player data
+                
+                // Ensure economy types are synchronized after loading
+                // This is the KEY FIX for the economy issue
+                console.log("Ensuring economy types are synchronized...");
+                if (galaxy.systems) {
+                    galaxy.systems.forEach(system => {
+                        // Use the setter method to properly update both system and market
+                        if (system && system.economyType) {
+                            system.setEconomyType(system.economyType);
+                            console.log(`Synchronized economy for ${system.name}: ${system.economyType}`);
+                        }
+                    });
+                }
+                
+                // Continue with loading player data
                 if (saveData.playerData) {
                     player.loadSaveData(saveData.playerData);
                 } else { 
@@ -379,8 +388,7 @@ function loadGame() {
                 return true;
 
             } catch (e) {
-                console.error("Error parsing or applying saved game data:", e);
-                localStorage.removeItem(SAVE_KEY);
+                console.error("Error loading game data:", e);
                 return false;
             }
         } else {

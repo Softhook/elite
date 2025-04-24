@@ -80,8 +80,8 @@ class StarSystem {
     constructor(name, economy, galaxyX, galaxyY, systemIndex, techLevel = 5, securityLevel = 'Medium') {
         console.log("StarSystem constructor called for", name);
         this.name = name;
-        this.actualEconomy = economy; // Store the actual randomly chosen economy internally.
-        this.economyType = "Unknown"; // Visible economy remains "Unknown" until discovered.
+        // SINGLE SOURCE OF TRUTH for economy type
+        this.economyType = economy;
         try { this.galaxyPos = createVector(galaxyX, galaxyY); } catch(e) { this.galaxyPos = {x: galaxyX, y: galaxyY}; } // Map position
         this.visited = false;
         this.systemIndex = systemIndex; // Used for seeding static elements
@@ -147,9 +147,15 @@ class StarSystem {
         console.log("         Creating Station...");
         let stationName = `${this.name} Hub`;
         try {
-             // Create station, potentially at 0,0 initially. Its position will be set later in createRandomPlanets.
-             this.station = new Station(0, 0, this.actualEconomy, stationName);
-        } catch(e) { console.error("         Error creating Station:", e); }
+            const stationX = random(-this.despawnRadius * 0.6, this.despawnRadius * 0.6);
+            const stationY = random(-this.despawnRadius * 0.6, this.despawnRadius * 0.6);
+            
+            // Pass the economy type from the system to the station
+            this.station = new Station(stationX, stationY, this.economyType, stationName);
+            
+        } catch(e) {
+            console.error("Error creating station:", e);
+        }
         console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`);
 
         // --- Calculate Despawn Radius based on screen size ---
@@ -380,7 +386,7 @@ class StarSystem {
         if (!player?.pos || this.enemies.length >= this.maxEnemies) return;
 
         let chosenRole, chosenShipTypeName;
-        const econ = (this.actualEconomy || this.economyType || "").toLowerCase();
+        const econ = (this.economyType || "").toLowerCase();
         const sec = (this.securityLevel || "").toLowerCase();
 
         // --- Special cases for economy ---
@@ -1107,8 +1113,7 @@ class StarSystem {
         return {
             name: this.name,
             economyType: this.economyType,
-            actualEconomy: this.actualEconomy, // <-- Add this line
-            galaxyPos: { x: this.galaxyPos.x, y: this.galaxyPos.y },
+            galaxyPos: { x: this.galaxyPos?.x || 0, y: this.galaxyPos?.y || 0 },
             systemIndex: this.systemIndex,
             techLevel: this.techLevel,
             securityLevel: this.securityLevel,
@@ -1134,7 +1139,7 @@ class StarSystem {
     static fromJSON(data) {
         const sys = new StarSystem(
             data.name,
-            data.actualEconomy || data.economyType, // <-- Use actualEconomy if present, fallback to economyType
+            data.economyType, // <-- Use economyType directly
             data.galaxyPos.x,
             data.galaxyPos.y,
             data.systemIndex,
@@ -1143,7 +1148,6 @@ class StarSystem {
         );
         sys.visited = data.visited;
         sys.economyType = data.economyType;
-        sys.actualEconomy = data.actualEconomy || data.economyType; // <-- Ensure it's set
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
 
         // Restore planets if present
@@ -1183,4 +1187,15 @@ class StarSystem {
         return sys;
     }
 
+    // Add this method to the StarSystem class - place it after constructor
+    setEconomyType(economyType) {
+        // Store the economy type in the system
+        this.economyType = economyType;
+        
+        // CRITICAL: Update market's economy type when system's type changes
+        if (this.station && this.station.market) {
+            this.station.market.systemType = economyType;
+            this.station.market.updatePrices();
+        }
+    }
 } // End of StarSystem Class

@@ -149,12 +149,11 @@ class Galaxy {
         if (this.systems.length > 0 && this.systems[this.currentSystemIndex]) {
             let startSystem = this.systems[this.currentSystemIndex];
             startSystem.visited = true;
-            startSystem.economyType = startSystem.actualEconomy;
-            if (startSystem.station && startSystem.station.market) {
-                startSystem.station.market.systemType = startSystem.economyType;
-                startSystem.station.market.updatePrices();
-            }
-            console.log(`   Galaxy.initGalaxySystems: Starting system set to ${startSystem.name} (Index ${this.currentSystemIndex}) and marked as discovered.`);
+            
+            // Use the setter method to ensure consistency
+            startSystem.setEconomyType(startSystem.economyType);
+            
+            console.log(`Galaxy.initGalaxySystems: Starting system set to ${startSystem.name} (Index ${this.currentSystemIndex}) and marked as discovered.`);
         } else {
             console.error("   Galaxy.initGalaxySystems: No valid starting system found after generation!");
         }

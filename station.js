@@ -1,14 +1,19 @@
 // ****** station.js ******
 
 class Station {
-    // Add 'name' parameter
-    constructor(worldX, worldY, systemType, name = "Station") { // Default name if not provided
-        this.pos = createVector(worldX, worldY); // Store world position
-        this.name = name; // <<< STORE THE NAME
+    constructor(worldX, worldY, systemType, name = "Station") {
+        this.pos = createVector(worldX, worldY);
+        this.name = name;
+        this.systemType = systemType; // Store economy type directly in Station
+        
+        // Create market with the system's economy type
+        this.market = new Market(systemType);
+        
+        // Set the system name in the market for better debugging
+        this.market.systemName = name.replace(" Hub", "");
+        
         this.size = 40; // Diameter
         this.dockingRadius = this.size * 1.5; // Docking trigger radius
-        // Use systemType for market, not name
-        this.market = new Market(systemType);
         this.color = color(180, 180, 200); // Visual color
         this.angle = 0; // Optional rotation angle
         this.rotationSpeed = 0.02; // Optional rotation speed

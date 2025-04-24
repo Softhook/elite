@@ -3,7 +3,10 @@
 class Market {
     constructor(systemType) {
         this.systemType = systemType;
-
+        
+        // Add a direct reference back to the system name for debugging
+        this.systemName = null; // Will be set by Station
+        
         // If Alien, no goods available
         if (systemType === 'Alien') {
             this.commodities = [];
