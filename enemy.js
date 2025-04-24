@@ -2153,18 +2153,12 @@ class Enemy {
                 // Credit the player for the kill
                 if (attacker.activeMission) {
                     // Update progress for bounty missions
-                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE && 
+                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
                         this.role === AI_ROLE.PIRATE) {
                         attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
                         console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                        // NOTE: Credits for the mission itself are awarded upon completion, not here.
                     }
-                }
-                
-                // Add credits to player for kill
-                const bounty = this.getBounty();
-                if (bounty > 0) {
-                    attacker.addCredits(bounty);
-                    uiManager.addMessage(`Bounty collected: ${bounty} credits`);
                 }
             }
         }
@@ -2172,33 +2166,6 @@ class Enemy {
         return { damage: damageDealt, shieldHit: shieldHit };
     }
 
-    /**
-     * Returns the bounty value for this enemy when destroyed
-     * @return {number} Bounty amount in credits
-     */
-    getBounty() {
-        // Base bounty on role and ship type
-        if (this.role === AI_ROLE.PIRATE) {
-            // Pirates have higher bounties
-            const shipSizeFactor = {
-                "Sidewinder": 50,
-                "Cobra": 125,
-                "Viper": 175,
-                "Python": 300,
-                "Anaconda": 500,
-                "KraitMKII": 350,
-                "Vulture": 250
-            };
-            
-            return shipSizeFactor[this.shipTypeName] || 100;
-        } else if (this.role === AI_ROLE.HOSTILE) {
-            // Hostile ships have moderate bounties
-            return 75;
-        }
-        
-        // No bounty for non-hostile ships
-        return 0;
-    }
 
     /**
      * Checks if ship has been destroyed
