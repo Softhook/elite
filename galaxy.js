@@ -3,19 +3,19 @@
 class Galaxy {
     // --- Static Definition for Economy Types and Colors ---
     static ECONOMY_DATA = {
-        "Industrial":   { color: [60, 120, 200, 180] }, // Blue
-        "Agricultural": { color: [180, 120, 40, 180] }, // Brown/Orange
-        "Mining":       { color: [160, 160, 170, 180] }, // Light Grey/Silver
-        "Refinery":     { color: [160, 40, 40, 180] },   // Maroon
-        "High Tech":    { color: [0, 200, 200, 180] },   // Cyan
-        "Tourism":      { color: [200, 80, 200, 180] },  // Purple/Pink
-        "Service":      { color: [200, 200, 200, 180] }, // Light Grey/White (Changed from Average)
-        "Military":     { color: [200, 50, 50, 180] },   // Red
-        "Offworld":     { color: [100, 180, 100, 180] }, // Light Green (Placeholder)
-        "Separatist":   { color: [200, 100, 0, 180] },   // Orange (Placeholder)
-        "Imperial":     { color: [218, 165, 32, 180] },  // Gold (Placeholder)
-        "Alien":        { color: [100, 50, 150, 180] },  // Dark Purple
-        "Default":      { color: [150, 150, 150, 180] }   // Default grey if type unknown
+        "Industrial":   { color: [60, 120, 200, 210] }, // Blue
+        "Agricultural": { color: [180, 120, 40, 210] }, // Brown/Orange
+        "Mining":       { color: [160, 160, 170, 210] }, // Light Grey/Silver
+        "Refinery":     { color: [160, 40, 40, 210] },   // Maroon
+        "High Tech":    { color: [0, 200, 200, 210] },   // Cyan
+        "Tourism":      { color: [200, 80, 200, 210] },  // Purple/Pink
+        "Service":      { color: [200, 255, 255, 210] }, // 
+        "Military":     { color: [200, 50, 50, 210] },   // Red
+        "Offworld":     { color: [100, 180, 100, 210] }, // Light Green (Placeholder)
+        "Separatist":   { color: [200, 100, 0, 210] },   // Orange (Placeholder)
+        "Imperial":     { color: [218, 165, 32, 210] },  // Gold (Placeholder)
+        "Alien":        { color: [100, 50, 150, 210] },  // Dark Purple
+        "Default":      { color: [150, 150, 150, 210] }   // Default grey if type unknown
         // Add other properties like typical exports/imports here later if desired
     };
     // --- End Static Definition ---

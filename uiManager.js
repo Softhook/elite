@@ -704,56 +704,65 @@ class UIManager {
             let nodeColor; // This will be a p5.Color object
             let textColor = color(255);
             let nodeStrokeWeight = 1;
-            let nodeStrokeColor = color(0); // Default dim connection color
+            // Initialize with the default dim stroke color
+            let nodeStrokeColor = color(100, 80, 150);
 
             // --- Determine Base Fill Color using Galaxy.getEconomyColor ---
             if (isCurrent) {
-                nodeColor = color(0, 255, 0, 200); // Green for current (override) - Keep slightly transparent
+                // Current system: Use its economy color, but ensure text is bright white
+                const colorArray = Galaxy.getEconomyColor(sysData.type);
+                const opaqueColorArray = [...colorArray];
+                opaqueColorArray[3] = 230; // Use same opacity as other visited systems
+                nodeColor = color(...opaqueColorArray);
+                textColor = color(255); // Ensure text is bright white
             } else if (!sysData.visited) {
                 nodeColor = color(80, 80, 80, 230); // Dark Grey for unvisited/undiscovered (More Opaque)
                 textColor = color(160); // Dimmer text for unvisited
             } else {
-                // Get color array from the static Galaxy method based on the system's type string
+                // Visited (but not current): Use its economy color
                 const colorArray = Galaxy.getEconomyColor(sysData.type);
-                // Modify the alpha value before creating the color object
-                const opaqueColorArray = [...colorArray]; // Create a copy
+                const opaqueColorArray = [...colorArray];
                 opaqueColorArray[3] = 230; // Set alpha to 230 (More Opaque)
-                nodeColor = color(...opaqueColorArray); // Create p5.Color object from the modified array
+                nodeColor = color(...opaqueColorArray);
             }
             // --- End Base Fill Color ---
 
             // --- Adjust Stroke/Text based on Jump Readiness and Reachability ---
             if (isCurrent) {
-                 // Current system: Thick White Outline
+                 // Current system: Thick White Outline (Stroke only)
                  nodeStrokeColor = color(255); // White stroke
                  nodeStrokeWeight = 4;         // Make it thick
-                 textColor = color(255);       // Ensure text is bright white
-                 // Keep the green fill color set earlier
+                 // Fill color and text color are already set above
             } else if (canJump && isReachable) {
-                 nodeStrokeColor = color(255);
-                 nodeStrokeWeight = 2;
-                 if (sysData.visited) textColor = color(255);
+                 // If player CAN jump and system IS reachable: White Outline (slightly thicker)
+                 nodeStrokeColor = color(255); // White outline
+                 nodeStrokeWeight = 2;         // Slightly thicker outline
+                 if (sysData.visited) textColor = color(255); // Bright text if visited
             } else if (!canJump && isReachable) {
-                 nodeColor = color(100, 100, 150, 150);
-                 textColor = color(180);
-                 nodeStrokeColor = color(150);
+                 // If player CANNOT jump but system IS reachable: Dimmed appearance
+                 //nodeColor = color(100, 100, 150, 150); // Override fill to dim blue/grey (alpha 150)
+                 textColor = color(180); // Dim text
+                 nodeStrokeColor = color(150); // Dim stroke
                  nodeStrokeWeight = 1;
             } else {
+                 // Not current, not reachable: Use default dim stroke color set earlier
+                 nodeStrokeColor = color(100, 80, 150); // Explicitly set default dim stroke
                  nodeStrokeWeight = 1;
             }
 
             // --- Highlight Selected System ---
-            // Only apply yellow highlight if the system is NOT the current one
+            // Apply thick yellow highlight if selected (and not current)
+            // This OVERRIDES previous stroke settings for the selected system.
             if (isSelected && !isCurrent) {
                  nodeStrokeColor = color(255, 255, 0); // Yellow outline for selected
-                 nodeStrokeWeight = 4;
+                 nodeStrokeWeight = 4;                 // Make it thick
             }
             // ---
 
             // Draw the ellipse
             strokeWeight(nodeStrokeWeight);
             stroke(nodeStrokeColor);
-            fill(nodeColor); // Use the p5.Color object determined above
+            fill(nodeColor);
             ellipse(sysData.x, sysData.y, nodeR * 2, nodeR * 2);
             // Store clickable area
             this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
@@ -858,8 +867,6 @@ class UIManager {
                  else if (!canJump) {
                      // If NOT in jump zone, ignore clicks on other systems
                      console.log(`    -> Click ignored: Must be in Jump Zone to select target.`);
-                     if (typeof uiManager !== 'undefined') uiManager.addMessage("Enter Jump Zone to select target.", color(255, 150, 150));
-                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                      return true; // Click handled (by ignoring)
                  }
                  // --- End Selection Restriction ---
