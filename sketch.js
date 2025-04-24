@@ -332,6 +332,7 @@ function saveGame() {
 
 function loadGame() {
     loadGameWasSuccessful = false; // Reset flag at start of load attempt
+    
     // Check if localStorage is supported and core objects exist
     if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
         const savedDataString = localStorage.getItem(SAVE_KEY); // Get saved data string
@@ -345,8 +346,8 @@ function loadGame() {
                     galaxy.loadSaveData(saveData.galaxyData);
                 }
                 
+                // Add this code right here - after galaxy load but before player load
                 // Ensure economy types are synchronized after loading
-                // This is the KEY FIX for the economy issue
                 console.log("Ensuring economy types are synchronized...");
                 if (galaxy.systems) {
                     galaxy.systems.forEach(system => {
@@ -358,16 +359,12 @@ function loadGame() {
                     });
                 }
                 
-                // Continue with loading player data
+                // Then load player data as you did before
                 if (saveData.playerData) {
                     player.loadSaveData(saveData.playerData);
-                } else { 
-                    console.warn("No player data found in save, applying defaults.");
-                    player.applyShipDefinition("Sidewinder");
-                    player.isWanted = false;
-                    return false; // Exit with failure if player data missing
                 }
-
+                
+                // Rest of your existing loadGame function...
                 // Verify systems were actually loaded
                 if (!galaxy.systems || galaxy.systems.length === 0) {
                     console.error("Galaxy systems array is empty after loading save!");
@@ -387,8 +384,8 @@ function loadGame() {
                 console.log("Game Loaded Successfully.");
                 return true;
 
-            } catch (e) {
-                console.error("Error loading game data:", e);
+            } catch (e) { 
+                console.error("Error parsing or applying saved game data:", e);
                 return false;
             }
         } else {
