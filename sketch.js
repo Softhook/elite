@@ -38,67 +38,57 @@ function setup() {
         noLoop(); // Stop the draw loop
         return;
     }
-    // console.log("SHIP_DEFINITIONS loaded successfully."); // Verbose log
 
     // --- Instantiate Core Game Objects ---
     // Create managers and the galaxy first
-    // console.log("Creating GameStateManager..."); // Verbose log
     gameStateManager = new GameStateManager();
-    // console.log("Creating Galaxy (empty systems)..."); // Verbose log
     galaxy = new Galaxy(); // Creates Galaxy object (systems array is initially empty)
-    // Create player (defaults to Sidewinder, constructor stores degrees)
-    // console.log("Creating Player..."); // Verbose log
     player = new Player();
-    // console.log("Creating UIManager..."); // Verbose log
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
 
-    // --- Initialize Galaxy Systems (Populate galaxy.systems array) ---
-    // This step calls StarSystem constructors which rely on p5 functions
-    // console.log("Calling galaxy.initGalaxySystems()..."); // Verbose log
-    if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
-        galaxy.initGalaxySystems();
-    } else {
-        console.error("FATAL ERROR: Galaxy object or initGalaxySystems method missing!");
-        noLoop(); return;
-    }
-    // console.log("Finished galaxy.initGalaxySystems()."); // Verbose log
-
     // --- Calculate Player Radian Properties ---
     // Now that p5 is ready, calculate radian speed based on degree definition
-    // console.log("Applying Player ship definition (calculates radians)..."); // Verbose log
     if (player && typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
     } else {
          console.error("FATAL ERROR: Player object or applyShipDefinition method missing!");
          noLoop(); return;
     }
-    // console.log("Finished applying Player definition."); // Verbose log
 
     // --- Load Saved Game Data (if exists) ---
-    // console.log("About to load game data..."); // Verbose log
+    console.log("Attempting to load game data...");
     loadGameWasSuccessful = loadGame(); // Attempt to load save data
-    // console.log(`loadGame completed, success=${loadGameWasSuccessful}.`); // Verbose log
+
+    // --- Initialize Galaxy Systems ONLY if no save data was loaded ---
+    if (!loadGameWasSuccessful) {
+        console.log("No save game found, generating procedural galaxy...");
+        if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
+            galaxy.initGalaxySystems();
+        } else {
+            console.error("FATAL ERROR: Galaxy object or initGalaxySystems method missing!");
+            noLoop(); return;
+        }
+    } else {
+        console.log("Save game loaded successfully, using saved galaxy data.");
+    }
 
     // --- Link Player to Current System & Run Initial Entry Logic ---
-    // console.log("Getting current system..."); // Verbose log
     const systemToStartIn = galaxy.getCurrentSystem(); // Get system based on load or default index
-    // console.log("Current system:", systemToStartIn ? systemToStartIn.name : "NULL"); // Verbose log
 
     if (systemToStartIn) {
         player.currentSystem = systemToStartIn; // Set player's current system reference
         systemToStartIn.player = player; // Assign the player to the system
         // If no save game was loaded, the starting system needs its initial setup
         if (!loadGameWasSuccessful) {
-            console.log("No save game found, running initial enterSystem for starting system..."); // Keep important log
+            console.log("Running initial enterSystem for starting system..."); 
             if (typeof systemToStartIn.enterSystem === 'function') {
                 systemToStartIn.enterSystem(player); // Spawn initial NPCs/Asteroids etc.
             } else {
                 console.error("ERROR: systemToStartIn object missing enterSystem method!");
             }
-            // console.log("Finished calling enterSystem."); // Verbose log
         } else {
-             console.log(`Player starting/loaded in system: ${player.currentSystem.name}`); // Log loaded system
+             console.log(`Player starting/loaded in system: ${player.currentSystem.name}`);
         }
     } else {
         // This is a critical failure if no starting system can be assigned
@@ -114,10 +104,8 @@ function setup() {
     // --- Set Initial Game State ---
     // If everything above succeeded and state is still LOADING, transition to IN_FLIGHT
     if (gameStateManager && gameStateManager.currentState === "LOADING") {
-         // console.log("Setup complete, setting initial state to IN_FLIGHT."); // Verbose log
-         gameStateManager.setState("IN_FLIGHT");
+         gameStateManager.setState("TITLE_SCREEN"); // Changed to start on title screen
     } else if (gameStateManager) {
-         // This might happen if loadGame somehow set a different state (e.g., DOCKED)
          console.log(`Setup complete, game state already set to: ${gameStateManager.currentState}.`);
     } else {
          console.error("Cannot set initial state - gameStateManager missing!");
@@ -354,43 +342,55 @@ function loadGame() {
 
                 // Load galaxy state first (current system index, visited status)
                 galaxy.currentSystemIndex = saveData.currentSystemIndex ?? 0; // Load index or default to 0
-                if (saveData.galaxyData) { galaxy.loadSaveData(saveData.galaxyData); } // Load visited flags
+                if (saveData.galaxyData) { 
+                    galaxy.loadSaveData(saveData.galaxyData); 
+                } else {
+                    console.warn("No galaxy data found in save!");
+                    return false; // Exit with failure if galaxy data missing
+                }
 
-                // Load player data (loadSaveData handles ship type, stats, pos, angle, etc.)
+                // Load player data
                 if (saveData.playerData) {
                     player.loadSaveData(saveData.playerData);
-                } else { // If no player data in save, initialize default player state
+                } else { 
                     console.warn("No player data found in save, applying defaults.");
-                    player.applyShipDefinition("Sidewinder"); // Ensure default ship defs applied
-                    player.isWanted = false; // Ensure default wanted status
-                    // Keep default pos/vel/etc. from constructor
+                    player.applyShipDefinition("Sidewinder");
+                    player.isWanted = false;
+                    return false; // Exit with failure if player data missing
                 }
 
-                // Link player object to the loaded system object (crucial)
+                // Verify systems were actually loaded
+                if (!galaxy.systems || galaxy.systems.length === 0) {
+                    console.error("Galaxy systems array is empty after loading save!");
+                    return false;
+                }
+
+                // Link player object to the loaded system object
                 player.currentSystem = galaxy.getCurrentSystem();
                 if (player.currentSystem) {
-                    player.currentSystem.player = player; // Assign the player to the system
+                    player.currentSystem.player = player;
                 } else {
                     console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                    return false;
                 }
 
-                loadGameWasSuccessful = true; // Mark load as successful
+                loadGameWasSuccessful = true;
                 console.log("Game Loaded Successfully.");
+                return true;
 
-            } catch (e) { // Catch errors during parsing or loading
+            } catch (e) {
                 console.error("Error parsing or applying saved game data:", e);
-                localStorage.removeItem(SAVE_KEY); // Clear corrupted data to prevent future errors
-                loadGameWasSuccessful = false;
+                localStorage.removeItem(SAVE_KEY);
+                return false;
             }
         } else {
-            console.log("No saved game found."); // Log if no save key exists
-            loadGameWasSuccessful = false;
+            console.log("No saved game found.");
+            return false;
         }
     } else {
         console.warn("Could not load game (LocalStorage missing or objects not ready).");
-        loadGameWasSuccessful = false;
+        return false;
     }
-    return loadGameWasSuccessful; // Return status
 }
 // --- End Save/Load ---
 
