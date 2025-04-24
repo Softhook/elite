@@ -8,6 +8,7 @@ const buildShipRoleArrays = () => {
     const TRANSPORT_SHIPS = [];
     const MILITARY_SHIPS = [];
     const ALIEN_SHIPS = [];
+    const EXPLORER_SHIPS = [];
     
     // Iterate through all ship definitions
     for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
@@ -20,6 +21,7 @@ const buildShipRoleArrays = () => {
         if (shipData.aiRoles.includes("TRANSPORT")) TRANSPORT_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("MILITARY")) MILITARY_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("ALIEN")) ALIEN_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("EXPLORER")) EXPLORER_SHIPS.push(shipKey);
     }
     
     return {
@@ -28,7 +30,8 @@ const buildShipRoleArrays = () => {
         HAULER_SHIPS,
         TRANSPORT_SHIPS,
         MILITARY_SHIPS,
-        ALIEN_SHIPS
+        ALIEN_SHIPS,
+        EXPLORER_SHIPS
     };
 };
 
@@ -39,7 +42,8 @@ const {
     HAULER_SHIPS, 
     TRANSPORT_SHIPS,
     MILITARY_SHIPS,
-    ALIEN_SHIPS
+    ALIEN_SHIPS,
+    EXPLORER_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify
@@ -50,6 +54,7 @@ console.log("HAULER_SHIPS:", HAULER_SHIPS);
 console.log("TRANSPORT_SHIPS:", TRANSPORT_SHIPS);
 console.log("MILITARY_SHIPS:", MILITARY_SHIPS);
 console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
+console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
 
 // --- Jump Zone Constants ---
 const JUMP_ZONE_DEFAULT_RADIUS = 500;
@@ -390,6 +395,26 @@ class StarSystem {
             } else {
                 chosenRole = AI_ROLE.POLICE;
                 chosenShipTypeName = "Viper";
+            }
+        } else if (econ === "offworld" || econ === "separatist") {
+            // Special distribution for offworld/separatist economies
+            const rand = random();
+            if (rand < 0.30) {
+                // 30% Explorer ships
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(EXPLORER_SHIPS);
+            } else if (rand < 0.50) {
+                // 20% Military ships
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(MILITARY_SHIPS);
+            } else if (rand < 0.65) {
+                // 15% Pirate ships
+                chosenRole = AI_ROLE.PIRATE;
+                chosenShipTypeName = random(PIRATE_SHIPS);
+            } else {
+                // 35% Hauler ships (remainder)
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(HAULER_SHIPS);
             }
         } else {
             // --- Standard spawn logic based on security ---
