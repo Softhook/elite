@@ -274,17 +274,13 @@ class UIManager {
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([20,20,50,220], [100,100,255]);
-        fill(255); textSize(24); textAlign(CENTER,TOP);
-        text(`Welcome to ${station.name || 'Station'}`, pX+pW/2, pY+20);
-
-        // System type and law level as before...
-        let system = galaxy?.getCurrentSystem();
-        let econ = system?.economyType || station.market.systemType || "Unknown";
-        let law = system?.securityLevel || "Unknown";
-        textSize(16); textAlign(CENTER,TOP);
-        text(`System Type: ${econ}   |   Law Level: ${law}`, pX+pW/2, pY+55);
-
-        let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+80, btnSp=btnH+15;
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const headerHeight = this.drawStationHeader("Station Services", station, player, system);
+        
+        // Rest of the menu with adjusted Y positions
+        let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_MARKET" },
             { text: "Mission Board", state: "VIEWING_MISSIONS" },
@@ -312,13 +308,15 @@ class UIManager {
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([60,30,30,230], [255,180,100]);
-        fill(255); textSize(24); textAlign(CENTER,TOP);
-        text("Ship Repairs", pX+pW/2, pY+20);
-
-        // Show current hull and max hull
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
+        
+        // Show current hull with adjusted Y position
         fill(220); textSize(18); textAlign(CENTER,TOP);
-        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+60);
-        text(`Credits: ${player.credits}`, pX+pW/2, pY+90);
+        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
 
         // Calculate repair costs
         let missing = player.maxHull - player.hull;
@@ -326,7 +324,7 @@ class UIManager {
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = halfRepair * 7;
 
-        let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+140, btnY2 = btnY1+btnH+20;
+        let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
 
         // 100% Repair Button
         fill(0,180,0); stroke(100,255,100); rect(btnX, btnY1, btnW, btnH, 5);
@@ -360,16 +358,19 @@ class UIManager {
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([50,20,20,220], [255,100,100]);
-
-        // Title and player info
-        fill(255); textSize(24); textAlign(CENTER,TOP);
-        text(`Commodity Market - ${market.systemType || 'Unknown'}`, pX+pW/2, pY+20);
-        textSize(16); textAlign(LEFT,TOP);
-        text(`Credits: ${Math.floor(player.credits)}`, pX+30, pY+60); // Ensure credits are integer
-        text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+85);
-
-        // Table setup
-        let sY = pY+130, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Commodity Market", station, player, system);
+        
+        // Cargo info - still important for market
+        textSize(16); 
+        textAlign(LEFT, TOP);
+        text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+headerHeight);
+        
+        // Table setup - adjusted Y position
+        let sY = pY+headerHeight+40, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
         textAlign(CENTER,CENTER); textSize(14); fill(200);
 
         // Column headers
@@ -520,139 +521,143 @@ class UIManager {
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
     drawMissionBoard(missions, selectedIndex, player) {
-        //console.log("[MissionBoard] missions:", missions, "selectedIndex:", selectedIndex, "player.activeMission:", player?.activeMission);
-         if (!player) { console.warn("drawMissionBoard missing player"); return; }
-         this.missionListButtonAreas = []; this.missionDetailButtonAreas = {}; // Clear areas
+        if (!player) { console.warn("drawMissionBoard missing player"); return; }
+        this.missionListButtonAreas = []; 
+        this.missionDetailButtonAreas = {}; // Clear areas
 
-         // --- Get Context ---
-         const currentSystem = galaxy?.getCurrentSystem();
-         const currentStation = currentSystem?.station;
-         const activeMission = player.activeMission; // Get the active mission directly
-         const selectedMissionFromList = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
+        // --- Get Context ---
+        const currentSystem = galaxy?.getCurrentSystem();
+        const currentStation = currentSystem?.station;
+        const activeMission = player.activeMission; // Get the active mission directly
+        const selectedMissionFromList = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
 
-         // Determine which mission's details to display in the right panel
-         let missionToShowDetails = null;
-         if (activeMission) {
-             missionToShowDetails = activeMission; // Always prioritize showing the active mission
-         } else if (selectedMissionFromList) {
-             missionToShowDetails = selectedMissionFromList; // Show selected available mission if no active one
-         }
-         // --- End Context ---
+        // Determine which mission's details to display in the right panel
+        let missionToShowDetails = null;
+        if (activeMission) {
+            missionToShowDetails = activeMission; // Always prioritize showing the active mission
+        } else if (selectedMissionFromList) {
+            missionToShowDetails = selectedMissionFromList; // Show selected available mission if no active one
+        }
+        // --- End Context ---
 
-         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-         push(); // Isolate drawing
-         this.drawPanelBG([20,50,20,220], [100,255,100]);
-         fill(255); textSize(24); textAlign(CENTER,TOP); text("Station Mission Board", pX+pW/2, pY+20);
-         // --- Layout ---
-         let listW = pW*0.4, detailX = pX+listW+10, detailW = pW-listW-20; let cY = pY+60, cH = pH-110;
-         let btnDetailW = 120; let btnDetailH = 30; let btnDetailY = pY + pH - btnDetailH - 15; // Button layout constants
-
-
-         // --- List Section (always shows available missions) ---
-         fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
-         let listSY = cY+10, entryH=35, spacing=5;
-         if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(14); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
-         else {
-             missions.forEach((m, i) => {
-                 if (!m?.getSummary) return;
-                 let mY=listSY+i*(entryH+spacing);
-                 if(mY+entryH > cY+cH) return; // Don't draw off panel
-
-                 // Highlight based on selectedIndex, REGARDLESS of what's in detail panel
-                 if(i === selectedIndex) {
-                      fill(80,100,80,200);stroke(150,255,150);strokeWeight(1);
-                 } else {
-                      fill(40,60,40,180); noStroke();
-                 }
-                 rect(pX+10, mY, listW-20, entryH, 3);
-
-                 // Dim text if this mission is the active one (can't select it again)
-                 if (activeMission && activeMission.id === m.id) {
-                     fill(150); // Greyed out text
-                 } else {
-                     fill(220); // Normal text color
-                 }
-                 textSize(12); textAlign(LEFT,CENTER); noStroke();
-                 text(m.getSummary(), pX+20, mY+entryH/2, listW-40);
-                 // Store clickable area for list item (used for highlighting)
-                 this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i});
-             });
-         }
-         // --- End List Section ---
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        push(); // Isolate drawing
+        this.drawPanelBG([20,50,20,220], [100,255,100]);
+        
+        // Use the standardized header
+        const headerHeight = this.drawStationHeader("Mission Board", currentStation, player, currentSystem);
+        
+        // --- Layout with adjusted Y position ---
+        let listW = pW*0.4, detailX = pX+listW+10, detailW = pW-listW-20; 
+        let cY = pY+headerHeight, cH = pH-headerHeight-50;
+        let btnDetailW = 120; let btnDetailH = 30; let btnDetailY = pY + pH - btnDetailH - 15; // Button layout constants
 
 
-         // --- Detail Section ---
-         fill(0,0,0,100); noStroke(); rect(detailX, cY, detailW-5, cH); // Detail BG
+        // --- List Section (always shows available missions) ---
+        fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
+        let listSY = cY+10, entryH=35, spacing=5;
+        if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(14); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
+        else {
+            missions.forEach((m, i) => {
+                if (!m?.getSummary) return;
+                let mY=listSY+i*(entryH+spacing);
+                if(mY+entryH > cY+cH) return; // Don't draw off panel
 
-         if (missionToShowDetails) { // If we determined a mission to show details for...
-             // Draw the mission text details
-             fill(230); textSize(14); textAlign(LEFT,TOP); textLeading(18); text(missionToShowDetails.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30);
+                // Highlight based on selectedIndex, REGARDLESS of what's in detail panel
+                if(i === selectedIndex) {
+                     fill(80,100,80,200);stroke(150,255,150);strokeWeight(1);
+                } else {
+                     fill(40,60,40,180); noStroke();
+                }
+                rect(pX+10, mY, listW-20, entryH, 3);
 
-             // --- Determine Detail Buttons ---
-             let actionBtnX = detailX + detailW / 2 - btnDetailW - 10; // Position for Accept/Complete/Abandon
-             let backBtnX = detailX + detailW / 2 + 10;                 // Position for Back
-             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }}; // Back button always available when details shown
-
-             if (activeMission && missionToShowDetails.id === activeMission.id) {
-                 // --- The mission shown IS the Player's ACTIVE Mission ---
-                 let canCompleteHere = false;
-                 // Check delivery completion conditions
-                 if ((activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
-                     currentSystem && currentStation && activeMission.destinationSystem === currentSystem.name &&
-                     activeMission.destinationStation === currentStation.name &&
-                     player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity))
-                 { canCompleteHere = true; }
-                 // Add other station-based completion checks here (e.g., bounty turn-in if required)
-
-                 // Show Complete or Abandon
-                 if (canCompleteHere) {
-                     fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                     fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                     this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
-                 } else {
-                     fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                     fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                     this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
-                 }
-
-             } else if (!activeMission && missionToShowDetails) {
-                 // --- The mission shown is AVAILABLE (and player has no active mission) ---
-                 fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                 fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                 this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
-             } else {
-                 // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission (selected from list)
-                 // Or, somehow missionToShowDetails is set but doesn't fit the above.
-                 // In this scenario, we shouldn't allow accepting. Show "Unavailable".
-                 fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                 fill(150); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                 this.missionDetailButtonAreas['accept'] = null; // Ensure accept is not clickable
-                 this.missionDetailButtonAreas['complete'] = null;
-                 this.missionDetailButtonAreas['abandon'] = null;
-             }
-
-             // Draw Back button (common if any details are shown)
-             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-             fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
-             // Area for 'back' button already stored
-
-         } else { // No mission active AND none selected from the list
-             fill(180); textSize(14); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
-             // Only show a Back button, centered
-             let backBtnX = pX + pW / 2 - btnDetailW / 2; // Center the single back button
-             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-             fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
-             // Define button areas: only 'back' is active
-             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null };
-         }
-         // --- End Detail Section Logic ---
+                // Dim text if this mission is the active one (can't select it again)
+                if (activeMission && activeMission.id === m.id) {
+                    fill(150); // Greyed out text
+                } else {
+                    fill(220); // Normal text color
+                }
+                textSize(12); textAlign(LEFT,CENTER); noStroke();
+                text(m.getSummary(), pX+20, mY+entryH/2, listW-40);
+                // Store clickable area for list item (used for highlighting)
+                this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i});
+            });
+        }
+        // --- End List Section ---
 
 
-         // --- Active Mission Info Bar at the very bottom ---
-         // This remains useful as a quick reminder, even if details are shown above
-         if (player.activeMission?.title) { fill(0,0,0,180);stroke(255,150,0);strokeWeight(1); let ay=pY+pH+5, ah=30; rect(pX,ay,pW,ah); fill(255,180,0);noStroke();textSize(14);textAlign(LEFT,CENTER); text(`Active: ${player.activeMission.title}`, pX+15, ay+ah/2, pW-30); }
+        // --- Detail Section ---
+        fill(0,0,0,100); noStroke(); rect(detailX, cY, detailW-5, cH); // Detail BG
 
-         pop(); // Restore drawing styles
+        if (missionToShowDetails) { // If we determined a mission to show details for...
+            // Draw the mission text details
+            fill(230); textSize(14); textAlign(LEFT,TOP); textLeading(18); text(missionToShowDetails.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30);
+
+            // --- Determine Detail Buttons ---
+            let actionBtnX = detailX + detailW / 2 - btnDetailW - 10; // Position for Accept/Complete/Abandon
+            let backBtnX = detailX + detailW / 2 + 10;                 // Position for Back
+            this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }}; // Back button always available when details shown
+
+            if (activeMission && missionToShowDetails.id === activeMission.id) {
+                // --- The mission shown IS the Player's ACTIVE Mission ---
+                let canCompleteHere = false;
+                // Check delivery completion conditions
+                if ((activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
+                    currentSystem && currentStation && activeMission.destinationSystem === currentSystem.name &&
+                    activeMission.destinationStation === currentStation.name &&
+                    player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity))
+                { canCompleteHere = true; }
+                // Add other station-based completion checks here (e.g., bounty turn-in if required)
+
+                // Show Complete or Abandon
+                if (canCompleteHere) {
+                    fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                    fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                    this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                } else {
+                    fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                    fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                    this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                }
+
+            } else if (!activeMission && missionToShowDetails) {
+                // --- The mission shown is AVAILABLE (and player has no active mission) ---
+                fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+            } else {
+                // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission (selected from list)
+                // Or, somehow missionToShowDetails is set but doesn't fit the above.
+                // In this scenario, we shouldn't allow accepting. Show "Unavailable".
+                fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                fill(150); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                this.missionDetailButtonAreas['accept'] = null; // Ensure accept is not clickable
+                this.missionDetailButtonAreas['complete'] = null;
+                this.missionDetailButtonAreas['abandon'] = null;
+            }
+
+            // Draw Back button (common if any details are shown)
+            fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+            fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+            // Area for 'back' button already stored
+
+        } else { // No mission active AND none selected from the list
+            fill(180); textSize(14); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
+            // Only show a Back button, centered
+            let backBtnX = pX + pW / 2 - btnDetailW / 2; // Center the single back button
+            fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+            fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+            // Define button areas: only 'back' is active
+            this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null };
+        }
+        // --- End Detail Section Logic ---
+
+
+        // --- Active Mission Info Bar at the very bottom ---
+        // This remains useful as a quick reminder, even if details are shown above
+        if (player.activeMission?.title) { fill(0,0,0,180);stroke(255,150,0);strokeWeight(1); let ay=pY+pH+5, ah=30; rect(pX,ay,pW,ah); fill(255,180,0);noStroke();textSize(14);textAlign(LEFT,CENTER); text(`Active: ${player.activeMission.title}`, pX+15, ay+ah/2, pW-30); }
+
+        pop(); // Restore drawing styles
     } // --- END drawMissionBoard ---
 
     /** Draws the Galaxy Map screen */
@@ -1343,13 +1348,15 @@ class UIManager {
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([30,30,60,230], [100,200,255]);
-        fill(255); textSize(24); textAlign(CENTER,TOP);
-        text("Shipyard", pX+pW/2, pY+20);
-
-        // List all ships from SHIP_DEFINITIONS
-        let ships = Object.values(SHIP_DEFINITIONS);
-        let rowH = 40, startY = pY+60, visibleRows = floor((pH-120)/rowH);
-        let totalRows = ships.length;
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
+        
+        // List ships with adjusted Y position
+        let rowH = 40, startY = pY+headerHeight, visibleRows = floor((pH-headerHeight-60)/rowH);
+        let totalRows = Object.values(SHIP_DEFINITIONS).length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
 
@@ -1361,7 +1368,7 @@ class UIManager {
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(16);
         for (let i = firstRow; i < lastRow; i++) {
-            let ship = ships[i];
+            let ship = Object.values(SHIP_DEFINITIONS)[i];
             let y = startY + (i-firstRow)*rowH;
             fill(60,60,100); stroke(120,180,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
@@ -1402,15 +1409,18 @@ class UIManager {
         if (!player) return;
         this.upgradeListAreas = [];
         push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        
+       const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([40,30,60,230], [200,100,255]);
-        fill(255); textSize(24); textAlign(CENTER,TOP);
-        text("Upgrades", pX+pW/2, pY+20);
-
-        // Use the global WEAPON_UPGRADES array
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Upgrades", station, player, system);
+        
+        // Use the global WEAPON_UPGRADES array with adjusted Y position
         const upgrades = WEAPON_UPGRADES;
-        let rowH = 38, startY = pY+60;
-        let visibleRows = floor((pH-120)/rowH);
+        let rowH = 40, startY = pY+headerHeight, visibleRows = floor((pH-headerHeight-60)/rowH);
         let totalRows = upgrades.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
@@ -1567,6 +1577,40 @@ class UIManager {
                 }
                 break;
         }
+    }
+
+    /** Draws a standardized header for all station UI screens */
+    drawStationHeader(title, station, player, system) {
+        if (!station || !player) return 0;
+        
+        const {x: pX, y: pY, w: pW} = this.getPanelRect();
+        const headerHeight = 100; // Standard header height
+        
+        // Title (specific to each screen)
+        fill(255); 
+        textSize(24); 
+        textAlign(CENTER, TOP);
+        text(title, pX + pW/2, pY + 20);
+        
+        // Station name, economy type and security level
+        textSize(16); 
+        textAlign(CENTER, TOP);
+        const stationName = station.name || "Unknown Station";
+        const systemName = system?.name || "Unknown System";
+        text(`${stationName} - ${systemName}`, pX + pW/2, pY + 50);
+        
+        // Economy and Security
+        const econ = system?.economyType || station.market?.systemType || "Unknown";
+        const law = system?.securityLevel || "Unknown";
+        textSize(14);
+        text(`Economy: ${econ}   |   Security: ${law}`, pX + pW/2, pY + 70);
+        
+        // Credits (right-aligned)
+        textAlign(RIGHT, TOP);
+        fill(220, 220, 100); // Gold color for credits
+        text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
+        
+        return headerHeight; // Return the height used by header
     }
 
 } // End of UIManager Class
