@@ -1,6 +1,25 @@
 // ****** Galaxy.js ******
 
 class Galaxy {
+    // --- Static Definition for Economy Types and Colors ---
+    static ECONOMY_DATA = {
+        "Industrial":   { color: [60, 120, 200, 180] }, // Blue
+        "Agricultural": { color: [180, 120, 40, 180] }, // Brown/Orange
+        "Mining":       { color: [160, 160, 170, 180] }, // Light Grey/Silver
+        "Refinery":     { color: [160, 40, 40, 180] },   // Maroon
+        "High Tech":    { color: [0, 200, 200, 180] },   // Cyan
+        "Tourism":      { color: [200, 80, 200, 180] },  // Purple/Pink
+        "Service":      { color: [200, 200, 200, 180] }, // Light Grey/White (Changed from Average)
+        "Military":     { color: [200, 50, 50, 180] },   // Red
+        "Offworld":     { color: [100, 180, 100, 180] }, // Light Green (Placeholder)
+        "Separatist":   { color: [200, 100, 0, 180] },   // Orange (Placeholder)
+        "Imperial":     { color: [218, 165, 32, 180] },  // Gold (Placeholder)
+        "Alien":        { color: [100, 50, 150, 180] },  // Dark Purple
+        "Default":      { color: [150, 150, 150, 180] }   // Default grey if type unknown
+        // Add other properties like typical exports/imports here later if desired
+    };
+    // --- End Static Definition ---
+
     // ... (constructor remains the same) ...
 
     initGalaxySystems() {
@@ -22,14 +41,11 @@ class Galaxy {
         const nameSuffixes = ["", "a", "i", "o", "us", "is", " Prime", " Minor", " Major", " Gateway", " Reach", " Verge", " Drift", " Abyss", " Point", " Outpost", " Landing", " VII", " IX", " IV"];
         const singleNames = ["Bastion", "Terminus", "Horizon", "Lewes", "Amhurst", "Elysium", "Crucible", "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"];
         const generatedNames = new Set();
-        const economyTypes = [
-            "Industrial", "Agricultural", "Mining", 
-            "Refinery", "High Tech", "Tourism", "Service",
-            "Military", "Offworld", "Separatist", "Imperial", "Alien" 
-            // ^^ Fixed spelling from "Seperatist" to "Separatist"
-        ];
-        const securityLevels = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
 
+        // --- Use Economy Data ---
+        const economyTypeNames = Object.keys(Galaxy.ECONOMY_DATA).filter(k => k !== 'Default'); // Get type names from the static data, exclude Default
+        const securityLevels = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
+        // ---
 
         console.log(`   Attempting to place ${NUM_SYSTEMS} systems...`);
         for (let i = 0; i < NUM_SYSTEMS; i++) {
@@ -91,13 +107,14 @@ class Galaxy {
                 systemY = systemY === -1 ? random(PLACEMENT_BORDER, height - PLACEMENT_BORDER) : systemY;
             }
 
-            // 3. Assign Economy/Security/Tech (logic remains the same)
-            const economy = random(economyTypes);
+            // 3. Assign Economy/Security/Tech
+            const economy = random(economyTypeNames); // Select a random economy NAME
             const security = random(securityLevels);
             const techLevel = floor(random(2, 9));
 
-            // 4. Create StarSystem Object (logic remains the same)
+            // 4. Create StarSystem Object
             try {
+                // Pass the economy NAME to the constructor
                 let newSystem = new StarSystem(systemName, economy, systemX, systemY, i, techLevel, security);
                 if (newSystem) { this.systems.push(newSystem); }
                 else { console.error(`!!! FAILED to create StarSystem object for index ${i} (${systemName})`); }
@@ -449,5 +466,11 @@ class Galaxy {
             return null; // Return null for invalid indices
         }
     }
+
+    // --- Helper to get color (can be static or instance method) ---
+    static getEconomyColor(typeName) {
+        return Galaxy.ECONOMY_DATA[typeName]?.color || Galaxy.ECONOMY_DATA['Default'].color;
+    }
+    // ---
 
 } // End Galaxy Class

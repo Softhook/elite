@@ -699,23 +699,26 @@ class UIManager {
 
             let isCurrent = (i === currentIdx);
             let isSelected = (i === this.selectedSystemIndex);
-            // --- Determine reachability based on connections AND fuel (if galaxy.getReachableSystems considers fuel) ---
-            // Assuming reachable already filters by fuel/connection
             let isReachable = reachable.includes(i);
 
-            let nodeColor;
+            let nodeColor; // This will be a p5.Color object
             let textColor = color(255);
             let nodeStrokeWeight = 1;
             let nodeStrokeColor = color(100, 80, 150); // Default dim connection color
 
-            // --- Determine Base Color ---
+            // --- Determine Base Fill Color using Galaxy.getEconomyColor ---
             if (isCurrent) {
-                nodeColor = color(0, 255, 0, 200); // Green for current
-            } else if (sysData.visited) {
-                nodeColor = color(255, 255, 0, 180); // Yellow fill for visited
+                nodeColor = color(0, 255, 0, 200); // Green for current (override)
+            } else if (!sysData.visited) {
+                nodeColor = color(80, 80, 80, 180); // Dark Grey for unvisited/undiscovered
+                textColor = color(160); // Dimmer text for unvisited
             } else {
-                nodeColor = color(0, 0, 255, 180); // Blue fill for unvisited
+                // Get color array from the static Galaxy method based on the system's type string
+                const colorArray = Galaxy.getEconomyColor(sysData.type);
+                nodeColor = color(...colorArray); // Create p5.Color object from the array
             }
+            // --- End Base Fill Color ---
+
 
             // --- Adjust Stroke/Text based on Jump Readiness and Reachability ---
             if (isCurrent) {
@@ -725,18 +728,22 @@ class UIManager {
                  // If player CAN jump and system IS reachable: Bright Yellow Outline
                  nodeStrokeColor = color(255, 255, 0);
                  nodeStrokeWeight = 2;
-                 // Keep base fill color (blue or yellow based on visited)
+                 // Keep base fill color determined above
+                 // Ensure text is bright for reachable/visited
+                 if (sysData.visited) textColor = color(255);
             } else if (!canJump && isReachable) {
                  // If player CANNOT jump but system IS reachable: Dimmed appearance
-                 nodeColor = color(100, 100, 150, 150); // Override fill to dim blue/grey
-                 textColor = color(180);
+                 // Override fill color to standard dim blue/grey REGARDLESS of economy/visited status
+                 nodeColor = color(100, 100, 150, 150); // Override the economy color
+                 textColor = color(180); // Dim text
                  nodeStrokeColor = color(150); // Dim stroke
                  nodeStrokeWeight = 1;
             } else {
                  // Not current, not reachable (or canJump is false and not reachable)
                  // Use default dim stroke color
                  nodeStrokeWeight = 1;
-                 // Keep base fill color
+                 // Keep base fill color determined above
+                 // Keep text color (might be dimmed if unvisited)
             }
 
             // --- Highlight Selected System ---
@@ -749,7 +756,7 @@ class UIManager {
             // Draw the ellipse
             strokeWeight(nodeStrokeWeight);
             stroke(nodeStrokeColor);
-            fill(nodeColor);
+            fill(nodeColor); // Use the p5.Color object determined above
             ellipse(sysData.x, sysData.y, nodeR * 2, nodeR * 2);
             // Store clickable area
             this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
@@ -758,14 +765,12 @@ class UIManager {
             fill(textColor); noStroke(); textAlign(CENTER, TOP); textSize(12);
             text(sysData.name, sysData.x, sysData.y + nodeR + 5);
             textSize(10);
+            // Show type/security only if visited or current
             if (sysData.visited || isCurrent) {
                 text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
-                // --- Add security level below type ---
                 const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
                 fill(200, 200, 100); // Gold/yellow for visibility
                 text(`Law: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
-            } else {
-                text(`(Unknown)`, sysData.x, sysData.y + nodeR + 20);
             }
         });
         // --- End Draw System Nodes ---
@@ -783,11 +788,16 @@ class UIManager {
         // ---
 
         // --- Draw Jump Button ---
-        // Logic remains the same: Show if a reachable system (not current) is selected
+        // Show only if a reachable system (not current) is selected AND player is in the jump zone
         this.jumpButtonArea = { x: 0, y: 0, w: 0, h: 0 }; // Reset button area
-        if (this.selectedSystemIndex !== -1 && this.selectedSystemIndex !== currentIdx && reachable.includes(this.selectedSystemIndex)) {
+        if (canJump &&
+            this.selectedSystemIndex !== -1 &&
+            this.selectedSystemIndex !== currentIdx &&
+            reachable.includes(this.selectedSystemIndex))
+        {
             let btnW = 150, btnH = 40, btnX = width / 2 - btnW / 2, btnY = height - btnH - 20;
-            fill(0, 180, 255); // Blue jump button
+            // Use a brighter blue when jump is possible
+            fill(0, 200, 255); stroke(150, 255, 255); strokeWeight(1);
             rect(btnX, btnY, btnW, btnH, 5);
             fill(0); textSize(18); textAlign(CENTER, CENTER); noStroke(); // Black text
             text(`Jump`, btnX + btnW / 2, btnY + btnH / 2);
@@ -797,7 +807,12 @@ class UIManager {
 
         // --- Instructions ---
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        text("Click reachable system (yellow outline) to select, then click JUMP.", width / 2, height - 70);
+        // Adjust instruction text slightly based on canJump status
+        if (canJump) {
+            text("Click reachable system (yellow outline) to select, then click JUMP.", width / 2, height - 70);
+        } else {
+            text("Enter Jump Zone, then click reachable system to select.", width / 2, height - 70);
+        }
         text("Press 'M' or 'ESC' to return to flight.", width / 2, height - 5);
         // ---
 
