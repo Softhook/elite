@@ -671,7 +671,7 @@ class UIManager {
         background(10, 0, 20); // Dark space background
 
         // --- Draw Connections (Lines) ---
-        stroke(100, 80, 150, 150); // Connection line color
+        stroke(150, 150, 200, 200); // Brighter connection line color
         strokeWeight(1);
         // Iterate through each system to draw its connections
         for (let i = 0; i < galaxy.systems.length; i++) {
@@ -704,52 +704,49 @@ class UIManager {
             let nodeColor; // This will be a p5.Color object
             let textColor = color(255);
             let nodeStrokeWeight = 1;
-            let nodeStrokeColor = color(100, 80, 150); // Default dim connection color
+            let nodeStrokeColor = color(0); // Default dim connection color
 
             // --- Determine Base Fill Color using Galaxy.getEconomyColor ---
             if (isCurrent) {
-                nodeColor = color(0, 255, 0, 200); // Green for current (override)
+                nodeColor = color(0, 255, 0, 200); // Green for current (override) - Keep slightly transparent
             } else if (!sysData.visited) {
-                nodeColor = color(80, 80, 80, 180); // Dark Grey for unvisited/undiscovered
+                nodeColor = color(80, 80, 80, 230); // Dark Grey for unvisited/undiscovered (More Opaque)
                 textColor = color(160); // Dimmer text for unvisited
             } else {
                 // Get color array from the static Galaxy method based on the system's type string
                 const colorArray = Galaxy.getEconomyColor(sysData.type);
-                nodeColor = color(...colorArray); // Create p5.Color object from the array
+                // Modify the alpha value before creating the color object
+                const opaqueColorArray = [...colorArray]; // Create a copy
+                opaqueColorArray[3] = 230; // Set alpha to 230 (More Opaque)
+                nodeColor = color(...opaqueColorArray); // Create p5.Color object from the modified array
             }
             // --- End Base Fill Color ---
 
-
             // --- Adjust Stroke/Text based on Jump Readiness and Reachability ---
             if (isCurrent) {
-                 nodeStrokeColor = color(255); // Bright stroke for current
-                 nodeStrokeWeight = 2;
+                 // Current system: Thick White Outline
+                 nodeStrokeColor = color(255); // White stroke
+                 nodeStrokeWeight = 4;         // Make it thick
+                 textColor = color(255);       // Ensure text is bright white
+                 // Keep the green fill color set earlier
             } else if (canJump && isReachable) {
-                 // If player CAN jump and system IS reachable: Bright Yellow Outline
-                 nodeStrokeColor = color(255, 255, 0);
+                 nodeStrokeColor = color(255);
                  nodeStrokeWeight = 2;
-                 // Keep base fill color determined above
-                 // Ensure text is bright for reachable/visited
                  if (sysData.visited) textColor = color(255);
             } else if (!canJump && isReachable) {
-                 // If player CANNOT jump but system IS reachable: Dimmed appearance
-                 // Override fill color to standard dim blue/grey REGARDLESS of economy/visited status
-                 nodeColor = color(100, 100, 150, 150); // Override the economy color
-                 textColor = color(180); // Dim text
-                 nodeStrokeColor = color(150); // Dim stroke
+                 nodeColor = color(100, 100, 150, 150);
+                 textColor = color(180);
+                 nodeStrokeColor = color(150);
                  nodeStrokeWeight = 1;
             } else {
-                 // Not current, not reachable (or canJump is false and not reachable)
-                 // Use default dim stroke color
                  nodeStrokeWeight = 1;
-                 // Keep base fill color determined above
-                 // Keep text color (might be dimmed if unvisited)
             }
 
             // --- Highlight Selected System ---
-            if (isSelected) {
-                 nodeStrokeColor = color(255, 100, 255); // Magenta outline for selected
-                 nodeStrokeWeight = 3;
+            // Only apply yellow highlight if the system is NOT the current one
+            if (isSelected && !isCurrent) {
+                 nodeStrokeColor = color(255, 255, 0); // Yellow outline for selected
+                 nodeStrokeWeight = 4;
             }
             // ---
 
@@ -775,17 +772,7 @@ class UIManager {
         });
         // --- End Draw System Nodes ---
 
-        // --- Display Jump Zone Message ---
-        if (!canJump) {
-            push();
-            fill(255, 80, 80, 220); // Reddish warning color
-            textSize(18);
-            textAlign(CENTER, BOTTOM);
-            noStroke();
-            text("Must be in designated Jump Zone to initiate hyperspace jump.", width / 2, height - 20);
-            pop();
-        }
-        // ---
+
 
         // --- Draw Jump Button ---
         // Show only if a reachable system (not current) is selected AND player is in the jump zone
@@ -809,12 +796,11 @@ class UIManager {
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
         // Adjust instruction text slightly based on canJump status
         if (canJump) {
-            text("Click reachable system (yellow outline) to select, then click JUMP.", width / 2, height - 70);
+            text("Click reachable system.", width / 2, height - 70);
         } else {
-            text("Enter Jump Zone, then click reachable system to select.", width / 2, height - 70);
+            text("Fly to Jump Zone in current system.", width / 2, height - 70);
         }
-        text("Press 'M' or 'ESC' to return to flight.", width / 2, height - 5);
-        // ---
+
 
         pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
@@ -861,21 +847,34 @@ class UIManager {
                  const clickedSys = galaxy.systems[clickedIndex]; // Get system object
                  console.log(`  Node clicked: ${clickedSys?.name || 'N/A'} (Index: ${clickedIndex})`);
 
-                 // Allow selection only if the system is reachable
-                 if (reachable.includes(clickedIndex)) {
+                 if (clickedIndex === galaxy.currentSystemIndex) {
+                     // Always allow clicking the current system to deselect
+                     console.log(`    -> Clicked current system. Deselecting.`);
+                     this.selectedSystemIndex = -1;
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('click_off'); // Different sound?
+                     return true;
+                 }
+                 // --- Selection Restriction ---
+                 else if (!canJump) {
+                     // If NOT in jump zone, ignore clicks on other systems
+                     console.log(`    -> Click ignored: Must be in Jump Zone to select target.`);
+                     if (typeof uiManager !== 'undefined') uiManager.addMessage("Enter Jump Zone to select target.", color(255, 150, 150));
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                     return true; // Click handled (by ignoring)
+                 }
+                 // --- End Selection Restriction ---
+                 else if (reachable.includes(clickedIndex)) {
+                     // If IN jump zone and system is reachable, allow selection
                      console.log(`    -> System is reachable. Selecting index: ${clickedIndex}`);
                      this.selectedSystemIndex = clickedIndex; // SELECT the system
-                     if (typeof soundManager !== 'undefined') soundManager.playSound('click'); // Feedback for selection
-                 } else if (clickedIndex === galaxy.currentSystemIndex) {
-                     console.log(`    -> Clicked current system. Deselecting.`);
-                     this.selectedSystemIndex = -1; // Clicking current system deselects
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                  } else {
+                     // If IN jump zone but system is NOT reachable
                      console.log(`    -> System is NOT reachable. Selection ignored.`);
-                     // Optional: Add message "Cannot select: Route unavailable" or similar
                      if (typeof uiManager !== 'undefined') uiManager.addMessage("Route unavailable.", color(255, 150, 150));
                      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                  }
-                 return true; // Click was handled (either selected, deselected, or ignored with feedback)
+                 return true; // Click was handled
              }
         }
 
@@ -1100,7 +1099,7 @@ class UIManager {
         this.fpsValues.push(currentFps);
         
         // Keep the samples array at desired length
-        while (this.fpsValues.length > this.fpsMaxSamples) {
+        while (this.fpsValues.length > 10) {
             this.fpsValues.shift(); // Remove oldest sample
         }
         
