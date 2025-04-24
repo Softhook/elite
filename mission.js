@@ -12,6 +12,8 @@ const MISSION_TYPE = {
     // COURIER: 'Courier (Data Delivery)',
     // MINING: 'Mining Contract',
     // RESCUE: 'Search and Rescue',
+    //ESCORT: 'Escort Mission',
+    // EXPLORATION: 'Exploration'
 };
 
 class Mission {
