@@ -614,7 +614,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawMantaHauler, vertexData: [ {x:0.8, y:0}, {x:0.2, y:0.3}, {x:-0.6, y:0.9}, {x:-0.9, y:0.7}, {x:-1.0, y:0}, {x:-0.9, y:-0.7}, {x:-0.6, y:-0.9}, {x:0.2, y:-0.3} ],
         fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
-        price: 8750,
+        price: 20000,
         aiRoles: ["HAULER"]
     },
     "MuleFreighter": { // NEW - Small Transporter
@@ -765,7 +765,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
         typicalCargo: ["Food","Textiles", "Minerals", "Metals", "Machinery"],
-        price: 4200,
+        price: 10000,
         aiRoles: ["HAULER"]
     },
      "Type9Heavy": {

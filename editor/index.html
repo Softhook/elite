@@ -7,7 +7,8 @@
     <!-- Load p5.js Core -->
     <script src="../libraries/p5.min.js"></script>
     <!-- Load your custom ship definitions -->
-    <script src="../ships.js"></script> <!-- Make sure this points to your modified ships.js -->
+    <script src="../ships.js"></script>
+    <script src="shipComparer.js"></script> <!-- Add this line -->
     <!-- Load your editor logic -->
     <script src="editor.js"></script> <!-- Make sure this points to the latest editor.js -->
     <style>
@@ -69,6 +70,10 @@
             color: #444;
             box-sizing: border-box; /* Include padding/border in width */
         }
+
+        /* Basic Tab Styling */
+        #compareTabs .tabButton { padding: 5px 10px; border: 1px solid #ccc; background-color: #eee; cursor: pointer; }
+        #compareTabs .tabButton.active { background-color: #fff; border-bottom: 1px solid #fff; }
     </style>
 </head>
 <body>
@@ -79,6 +84,7 @@
         <label for="shipSelect">Load Base:</label>
         <select id="shipSelect"></select>
         <button id="exportButton">Export Draw Function</button>
+        <button id="compareShipsButton">Compare Ships</button>
     </div>
 
 
@@ -115,7 +121,37 @@
         <span id="thargoidWarning">(Thargoid shape is complex and not directly editable here)</span>
     </div>
 
-    
+    <!-- Ship Comparison Graph Container (Initially Hidden) -->
+    <div id="shipComparisonGraph" style="display: none; position: fixed; top: 50px; left: 50px; width: 80%; height: 80%; background-color: rgba(245, 245, 245, 0.95); border: 1px solid #ccc; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); z-index: 1000; padding: 15px; box-sizing: border-box; overflow: hidden; font-family: sans-serif;">
+        <button id="closeCompareGraphButton" style="position: absolute; top: 5px; right: 5px;">X</button>
+        <h3>Ship Property Comparison</h3>
+
+        <!-- Tabs -->
+        <div id="compareTabs" style="margin-bottom: 10px;">
+            <button class="tabButton active" data-tab="performance">Performance</button>
+            <button class="tabButton" data-tab="combat">Combat</button>
+            <button class="tabButton" data-tab="economy">Economy</button>
+            <button class="tabButton" data-tab="custom">Custom</button>
+        </div>
+
+        <!-- Axis Selectors -->
+        <div style="margin-bottom: 10px;">
+            <label for="xAxisSelect">X-Axis:</label>
+            <select id="xAxisSelect"></select>
+            <label for="yAxisSelect" style="margin-left: 20px;">Y-Axis:</label>
+            <select id="yAxisSelect"></select>
+            <span id="logScaleCheckboxSpan" style="margin-left: 20px;">
+                <input type="checkbox" id="logScaleXCheckbox"> <label for="logScaleXCheckbox">Log X</label>
+                <input type="checkbox" id="logScaleYCheckbox"> <label for="logScaleYCheckbox">Log Y</label>
+            </span>
+        </div>
+
+        <!-- Graph Area -->
+        <div id="graphArea" style="position: relative; width: calc(100% - 30px); height: calc(100% - 120px); background-color: white; border: 1px solid #aaa;">
+            <canvas id="graphCanvas" style="position: absolute; top: 0; left: 0;"></canvas>
+            <div id="graphTooltip" style="position: absolute; display: none; background-color: rgba(0, 0, 0, 0.7); color: white; padding: 5px; border-radius: 3px; font-size: 12px; pointer-events: none;"></div>
+        </div>
+    </div>
 
 </body>
 </html>

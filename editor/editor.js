@@ -20,6 +20,8 @@ let zoomOutButton;
 let descriptionDiv;
 let straightenButton;
 let undoButton;
+let compareShipsButton;
+let shipComparer = null; // Instance of the comparer class
 
 let currentShipKey = null; // Key ("Sidewinder", "CobraMkIII", etc.) or "--- New Blank ---"
 let currentShipDef = null; // The original definition object (if loaded)
@@ -104,6 +106,7 @@ function setup() {
     descriptionDiv = select('#shipDescriptionArea');
     straightenButton = select('#straightenButton');
     undoButton = select('#undoButton');
+    compareShipsButton = select('#compareShipsButton'); // Add this
 
     // --- Populate Ship Dropdown ---
     shipSelector.option('Select a Ship...');
@@ -122,7 +125,23 @@ function setup() {
     if (strokeWeightInput) strokeWeightInput.input(updateSelectedShapeStrokeWeight); else console.error("Stroke weight input not found");
     if (straightenButton) straightenButton.mousePressed(handleStraightenClick); else console.error("Straighten button not found");
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
+    if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (descriptionDiv === null) { console.error("Description Div (#shipDescriptionArea) not found!"); }
+
+    // --- Instantiate ShipComparer AFTER SHIP_DEFINITIONS is ready ---
+    if (typeof SHIP_DEFINITIONS !== 'undefined' && Object.keys(SHIP_DEFINITIONS).length > 0) {
+         try {
+            shipComparer = new ShipComparer(SHIP_DEFINITIONS);
+            shipComparer.init();
+            console.log("ShipComparer initialized.");
+         } catch (e) {
+             console.error("Failed to initialize ShipComparer:", e);
+             if(compareShipsButton?.elt) compareShipsButton.elt.disabled = true; // Disable button if init fails
+         }
+    } else {
+        console.error("SHIP_DEFINITIONS not ready for ShipComparer initialization.");
+         if(compareShipsButton?.elt) compareShipsButton.elt.disabled = true;
+    }
 
     // --- Initialize State ---
     handleShipSelection(); // Load initial state (or blank)
@@ -979,3 +998,16 @@ function rgbToHex(rgb) {
 
 // --- Log successful load ---
 console.log("editor.js loaded successfully with all features (v3 - Correct Drag Undo).");
+
+// --- Add this new function ---
+function toggleShipComparer() {
+    if (shipComparer) {
+        if (shipComparer.graphVisible) {
+            shipComparer.hide();
+        } else {
+            shipComparer.show();
+        }
+    } else {
+        console.error("ShipComparer is not initialized.");
+    }
+}

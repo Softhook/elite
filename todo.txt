@@ -4,9 +4,8 @@
 
 make player wanted or not
 
-make shields levels work properly
+make recharge shields levels work properly
 
-sideways kiting withe thrust
 
 i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
 
@@ -39,9 +38,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
-editor ship centering
-editor mirror mode
-
+- sideways kiting with thrust
+- Add elite achievements system
 - alien attack behaviour aim and shoot
 - opposturnity, assasin, alien enemy beahviour
 - scanner upgrade to show helthbars and text for ships
@@ -55,6 +53,10 @@ editor mirror mode
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters
 
+
+## Editor
+- editor ship centering
+- editor mirror editing mode
 
 ## Graphics and UI Improvements
 
@@ -82,9 +84,8 @@ editor mirror mode
 ## Mission and Content
 
 - Add more varied mission types:
-  - Escort missions
   - Rescue missions
-  - Exploration missions
+  - Exploration missions - find specific named planet or hidden base ona planet
   - Assassination contracts
   - Mining contracts
   - Salvage operations
@@ -96,16 +97,6 @@ editor mirror mode
 - Add randomized news and galactic events
 - Implement alien invasion scenarios
 
-## Advanced Features
-
-- Add planetary landings and surface exploration
-- Implement procedural planet surface generation
-- Create space station construction and ownership
-- Add player fleet management
-- Add multiplayer capabilities
-- Add elite achievements system
-- Create advanced navigation with autopilot options
-
 ## Technical Improvements
 
 - Optimize rendering for large numbers of objects
@@ -115,3 +106,12 @@ editor mirror mode
 - Add proper error handling and recovery
 - Implement sound effects and music system
 - Add settings menu with graphics options
+
+## Future / Advanced Features
+
+- Add planetary landings and surface exploration
+- Implement procedural planet surface generation
+- Create space station construction and ownership
+- Add player fleet management
+- Add multiplayer capabilities
+- Create advanced navigation with autopilot options
