@@ -807,7 +807,7 @@ class UIManager {
         if (canJump) {
             text("Click reachable system.", width / 2, height - 70);
         } else {
-            text("Fly to Jump Zone in current system.", width / 2, height - 70);
+            text("Fly to Jump Zone.", width / 2, height - 70);
         }
 
 
