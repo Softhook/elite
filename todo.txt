@@ -2,6 +2,10 @@
 
 ## Bugs and Issues
 
+
+currently the player can use the galaxy map to jump from anywhere. I would like the player to have the same restriction as the hauler ships that have a defined jump zone that they can sue to leave the system.
+
+there needs to be a defined jump zone that is shown in the world and on the minimap that is saved for each system. The jump zone needs to be the same as the leaving system area for the ai behaviour. the player cant jump without being in that zone.
 make player wanted or not
 
 make recharge shields levels work properly

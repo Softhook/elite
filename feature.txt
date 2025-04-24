@@ -1,0 +1,83 @@
+Okay, here is a specification document outlining the requirements and implementation plan for the variable jump zone feature.
+
+**Feature Specification: Variable Jump Zones**
+
+**1. Goal:**
+
+To restrict the player's ability to initiate hyperspace jumps to designated "Jump Zones" within each star system. These zones will have variable positions relative to the system's station, ensuring players must travel to a specific area before jumping. This aligns player jump mechanics with the existing AI hauler departure behavior.
+
+**2. Requirements:**
+
+*   **Jump Restriction:** The player must be physically located within the designated Jump Zone of the current star system to initiate a hyperspace jump via the Galaxy Map.
+*   **Zone Definition:** Each star system must have exactly one Jump Zone defined.
+*   **Variable Positioning:**
+    *   The Jump Zone's center position must be calculated relative to the system's primary space station (`system.station.pos`).
+    *   The direction (angle) from the station to the Jump Zone center must be variable and determined deterministically by the system's seed.
+    *   The distance from the station to the Jump Zone center must be variable within a defined range (e.g., between a minimum safe distance and slightly less than the system's despawn radius), determined deterministically by the system's seed.
+*   **Zone Size:** The Jump Zone will have a fixed radius (e.g., 500 units).
+*   **Determinism:** The Jump Zone's position and radius must be consistent for a given star system across game sessions (based on the system's index/seed).
+*   **AI Alignment:** AI Haulers in the `LEAVING_SYSTEM` state should target the center of this same Jump Zone for their departure.
+*   **Visualization (Main View):** The Jump Zone should be visually represented in the main game view when the player is relatively close to it (e.g., a large, semi-transparent yellow circle).
+*   **Visualization (Minimap):** An indicator for the Jump Zone should be displayed on the minimap and clamped to the edge if off-screen, similar to the station icon.
+*   **UI Feedback:** The Galaxy Map interface must clearly indicate whether the player is currently able to jump (i.e., within the zone) and provide feedback if a jump attempt is made outside the zone.
+*   **Persistence:** The calculated Jump Zone parameters must be saved and loaded with the star system data.
+
+**3. Implementation Plan & Code Changes:**
+
+*   **`StarSystem.js`:**
+    *   **Properties:** Add new class properties:
+        *   `jumpZoneCenter` (p5.Vector, initialized to `null`)
+        *   `jumpZoneRadius` (Number, initialized to `0`)
+    *   **`initStaticElements()`:**
+        *   **Ensure Station Position:** Confirm `this.station.pos` is calculated *before* the jump zone logic.
+        *   **Calculate Angle:** Use `random(TWO_PI)` after `randomSeed(this.systemIndex)` to get a deterministic angle relative to the station.
+        *   **Calculate Distance:** Define `minJumpDist` (e.g., 5000) and `maxJumpDist` (e.g., `this.despawnRadius * 0.8`). Use `random(minJumpDist, maxJumpDist)` to get a deterministic distance.
+        *   **Calculate Center:** `this.jumpZoneCenter = p5.Vector.add(this.station.pos, p5.Vector.fromAngle(angleFromStation).mult(distFromStation));`
+        *   **Set Radius:** `this.jumpZoneRadius = 500;` (or desired fixed value).
+    *   **`draw(playerRef)`:**
+        *   Add logic to draw the Jump Zone visual marker (e.g., `noFill(); stroke(255, 255, 0, 150); ellipse(this.jumpZoneCenter.x, this.jumpZoneCenter.y, this.jumpZoneRadius * 2);`).
+        *   Only draw if the player is within a certain range of the zone to avoid clutter (`dist(playerRef.pos.x, ..., this.jumpZoneCenter.x, ...) < this.jumpZoneRadius * 5`). Remember to account for camera translation.
+    *   **`toJSON()` / `fromJSON()`:**
+        *   Modify these methods to include `jumpZoneCenter` (serialized as `{x, y}`) and `jumpZoneRadius` in the saved/loaded system data.
+
+*   **`GameStateManager.js`:**
+    *   **Helper Function (Recommended):** Create `isPlayerInJumpZone(player, system)`:
+        *   Takes `player` and `system` objects.
+        *   Checks if `system.jumpZoneCenter` exists.
+        *   Calculates `dist(player.pos.x, player.pos.y, system.jumpZoneCenter.x, system.jumpZoneCenter.y)`.
+        *   Returns `true` if distance <= `system.jumpZoneRadius`, otherwise `false`.
+    *   **`startJump(targetIndex)`:**
+        *   At the beginning of the function, get the current `player` and `currentSystem`.
+        *   Call `if (!isPlayerInJumpZone(player, currentSystem)) { ... }`.
+        *   Inside the `if` block: Call `uiManager.addMessage(...)`, potentially `soundManager.playSound('error')`, and `return;` to abort the jump.
+
+*   **`UIManager.js`:**
+    *   **`drawMinimap(player, system)`:**
+        *   Add logic to draw the Jump Zone indicator.
+        *   Calculate the relative position (`relX`, `relY`) of `system.jumpZoneCenter` to `player.pos`.
+        *   Calculate the scaled map position (`mapX`, `mapY`) and radius (`mapRadius`).
+        *   Implement clamping logic similar to the station icon if the zone center is off the minimap bounds.
+        *   Draw a visual marker (e.g., `noFill(); stroke(255, 255, 0, 200); ellipse(clampedX, clampedY, mapRadius * 2);`).
+    *   **`drawGalaxyMap(galaxy, player)`:**
+        *   Call `isPlayerInJumpZone(player, galaxy.getCurrentSystem())`.
+        *   If `false`:
+            *   Draw system nodes differently (e.g., dimmed color).
+            *   Display a persistent message like "Must be in Jump Zone to initiate jump".
+    *   **`handleGalaxyMapClicks(mouseX, mouseY, galaxy, player)`:**
+        *   Inside the loop checking node clicks (`dist(...) < nodeRadius`), add an initial check: `if (!isPlayerInJumpZone(player, galaxy.getCurrentSystem())) { return true; }` before proceeding to call `gameStateManager.startJump`. This prevents the jump attempt if outside the zone.
+
+*   **`Enemy.js`:**
+    *   **`setLeavingSystemTarget(system)`:**
+        *   Modify this method (used by Haulers in `LEAVING_SYSTEM` state).
+        *   Instead of calculating a far-off point, set the target directly: `this.targetPos = system.jumpZoneCenter.copy();`.
+
+**4. Testing Considerations:**
+
+*   Verify jump zone generation is deterministic for each system seed.
+*   Confirm zone positions are variable relative to the station and within distance constraints.
+*   Test that jumps can only be initiated from within the zone.
+*   Check that appropriate feedback messages are displayed when attempting to jump outside the zone.
+*   Ensure AI haulers correctly target the jump zone center when leaving.
+*   Verify the jump zone visualization appears correctly in the main view and on the minimap (including clamping).
+*   Confirm the Galaxy Map UI correctly reflects jump readiness and prevents clicks when outside the zone.
+*   Test saving and loading a game preserves the jump zone location for visited systems.
