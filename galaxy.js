@@ -435,4 +435,19 @@ class Galaxy {
         });
     }
 
+    /**
+     * Returns the StarSystem object at the specified index.
+     * Includes basic bounds checking.
+     * @param {number} index - The index of the system to retrieve.
+     * @returns {StarSystem|null} The StarSystem object or null if the index is invalid.
+     */
+    getSystemByIndex(index) {
+        if (index >= 0 && index < this.systems.length) {
+            return this.systems[index];
+        } else {
+            console.error(`Galaxy.getSystemByIndex: Invalid index ${index} requested.`);
+            return null; // Return null for invalid indices
+        }
+    }
+
 } // End Galaxy Class

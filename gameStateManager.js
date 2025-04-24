@@ -1,5 +1,53 @@
 // ****** gameStateManager.js ******
 
+// ... (Import statements or existing global variables like uiManager, soundManager, player, galaxy) ...
+
+/**
+ * Checks if the player is within the designated jump zone of the given system.
+ * @param {Player} playerObj - The player object.
+ * @param {StarSystem} systemObj - The system object.
+ * @returns {boolean} True if the player is in the jump zone, false otherwise.
+ */
+function isPlayerInJumpZone(playerObj, systemObj) {
+    // --- Debug Logging ---
+    const funcCaller = (new Error()).stack.split('\n')[2].trim().split(' ')[1]; // Get caller function name
+    console.log(`[isPlayerInJumpZone called by ${funcCaller}]`);
+    // ---
+
+    if (!playerObj?.pos) {
+        console.log("  Check Failed: Invalid playerObj.pos");
+        return false;
+    }
+    if (!systemObj?.jumpZoneCenter) {
+        console.log("  Check Failed: Invalid systemObj.jumpZoneCenter");
+        return false;
+    }
+    if (!(systemObj.jumpZoneRadius > 0)) { // Check radius is positive number
+        console.log(`  Check Failed: Invalid systemObj.jumpZoneRadius: ${systemObj.jumpZoneRadius}`);
+        return false;
+    }
+
+    const pX = playerObj.pos.x;
+    const pY = playerObj.pos.y;
+    const zX = systemObj.jumpZoneCenter.x;
+    const zY = systemObj.jumpZoneCenter.y;
+    const radius = systemObj.jumpZoneRadius;
+
+    const distanceSq = (pX - zX) ** 2 + (pY - zY) ** 2;
+    const radiusSq = radius ** 2;
+    const isInZone = distanceSq <= radiusSq;
+
+    // --- Debug Logging ---
+    console.log(`  Player Pos: (${pX.toFixed(1)}, ${pY.toFixed(1)})`);
+    console.log(`  Zone Center: (${zX.toFixed(1)}, ${zY.toFixed(1)})`);
+    console.log(`  Zone Radius: ${radius.toFixed(1)}`);
+    console.log(`  DistanceSq: ${distanceSq.toFixed(1)}, RadiusSq: ${radiusSq.toFixed(1)}`);
+    console.log(`  Result: ${isInZone}`);
+    // ---
+
+    return isInZone;
+}
+
 class GameStateManager {
     /**
      * Manages the overall game state and transitions.
@@ -265,12 +313,77 @@ class GameStateManager {
     } // End of draw method
 
 
-    /** Initiates the jump sequence. */
+    /**
+     * Initiates the jump sequence to a target system index.
+     * Now checks if the player is in the jump zone first.
+     * @param {number} targetIndex - The index of the target system in the galaxy.
+     */
     startJump(targetIndex) {
-        if (galaxy && targetIndex >= 0 && targetIndex < galaxy.systems.length && targetIndex !== galaxy.currentSystemIndex) {
-            this.jumpTargetSystemIndex = targetIndex; this.jumpChargeTimer = 0; this.setState("JUMPING");
-            // console.log(`Jump initiated to system index: ${targetIndex} (${galaxy.systems[targetIndex]?.name})`); // Optional log
-        } else { console.warn(`Invalid jump target selected (${targetIndex}) or already in target system.`); }
+        console.log(`[startJump] Attempting jump to system index: ${targetIndex}`);
+        const currentSystem = galaxy.getCurrentSystem();
+        const targetSystem = galaxy.getSystemByIndex(targetIndex);
+
+        // --- ADDED: Log state right before the check ---
+        console.log(`[startJump] Checking jump zone status...`);
+        const isInZone = isPlayerInJumpZone(player, currentSystem);
+        console.log(`[startJump] Result of isPlayerInJumpZone: ${isInZone}`);
+        // ---
+
+        // --- Jump Zone Restriction Check ---
+        if (!isInZone) {
+            console.log("[startJump] Jump aborted: Player not in Jump Zone.");
+            // Use uiManager and soundManager if they are accessible here
+            // Assuming they are global or passed to GameStateManager
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage("Cannot initiate jump: Must be in designated Jump Zone.", color(255, 100, 100));
+            }
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                soundManager.playSound('error'); // Or a specific 'cannot jump' sound
+            }
+            // Important: Abort the jump process
+            return;
+        }
+        // --- End Jump Zone Check ---
+
+        // --- Basic Target Validation ---
+        if (targetIndex === null || targetIndex === undefined || targetIndex < 0 || targetIndex >= galaxy.systems.length) {
+            console.error("[startJump] Invalid target system index:", targetIndex);
+            if (typeof uiManager !== 'undefined') uiManager.addMessage("Error: Invalid jump target selected.", color(255, 0, 0));
+            return;
+        }
+
+        if (targetIndex === galaxy.currentSystemIndex) {
+            console.log("[startJump] Cannot jump to the current system.");
+            if (typeof uiManager !== 'undefined') uiManager.addMessage("Cannot jump to the current system.", color(255, 200, 0));
+            return;
+        }
+        // --- End Basic Target Validation ---
+
+        // --- Connection Check ---
+        if (!currentSystem || !currentSystem.connectedSystemIndices.includes(targetIndex)) {
+             console.log(`[startJump] Jump failed: No connection from ${currentSystem?.name} to system index ${targetIndex}.`);
+             if (typeof uiManager !== 'undefined') uiManager.addMessage("Cannot jump: No direct route to that system.", color(255, 100, 100));
+             return;
+        }
+        // --- End Connection Check ---
+
+        // --- REMOVED Fuel Check ---
+        // const jumpDistance = dist(currentSystem.galaxyPos.x, currentSystem.galaxyPos.y, targetSystem.galaxyPos.x, targetSystem.galaxyPos.y);
+        // const fuelNeeded = player.calculateFuelNeeded(jumpDistance); // Assuming Player has this method
+        //
+        // if (player.fuel < fuelNeeded) {
+        //     console.log(`[startJump] Jump failed: Insufficient fuel. Needed ${fuelNeeded.toFixed(1)}, Have ${player.fuel.toFixed(1)}`);
+        //     if (typeof uiManager !== 'undefined') uiManager.addMessage(`Insufficient fuel: Need ${fuelNeeded.toFixed(1)} units.`, color(255, 100, 100));
+        //      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+        //     return;
+        // }
+        // --- End REMOVED Fuel Check ---
+
+        console.log(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
+        this.jumpTargetSystemIndex = targetIndex;
+        this.jumpChargeTimer = 0; // Reset timer
+        this.setState("JUMPING");
+        if (typeof soundManager !== 'undefined') soundManager.playSound('jump_charge'); // Start charging sound
     }
 
     /** Fetches missions for the current station and stores them for display. */

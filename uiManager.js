@@ -664,6 +664,9 @@ class UIManager {
         const currentIdx = galaxy.currentSystemIndex;
         const reachable = galaxy.getReachableSystems(); // Now gets indices based on actual connections
 
+        const currentSystem = galaxy.getCurrentSystem();
+        const canJump = isPlayerInJumpZone(player, currentSystem); // Use the helper function
+
         push(); // Isolate map drawing
         background(10, 0, 20); // Dark space background
 
@@ -689,38 +692,70 @@ class UIManager {
         }
         // --- End Draw Connections ---
 
-
         // --- Draw System Nodes ---
         const nodeR = 15; // Radius for clickable area and drawing
-        systems.forEach((sysData, i) => { // Use the data from getSystemDataForMap which includes index 'i'
-            if (!sysData) return; // Skip if system data is invalid
+        systems.forEach((sysData, i) => {
+            if (!sysData) return;
 
             let isCurrent = (i === currentIdx);
             let isSelected = (i === this.selectedSystemIndex);
-            let isReachable = reachable.includes(i); // Check if this system index is in the reachable list
+            // --- Determine reachability based on connections AND fuel (if galaxy.getReachableSystems considers fuel) ---
+            // Assuming reachable already filters by fuel/connection
+            let isReachable = reachable.includes(i);
 
-            // Node Fill Color
-            if (isCurrent) fill(0, 255, 0);      // Green for current
-            else if (isSelected) fill(255, 255, 0); // Yellow for selected
-            else if (sysData.visited) fill(150, 150, 200); // Light Blue/Grey for visited
-            else fill(80, 80, 100);           // Dark Grey for unvisited
+            let nodeColor;
+            let textColor = color(255);
+            let nodeStrokeWeight = 1;
+            let nodeStrokeColor = color(100, 80, 150); // Default dim connection color
 
-            // Node Stroke (Outline)
-            if (isReachable && !isCurrent) { // Highlight reachable systems (that aren't the current one)
-                stroke(200, 200, 0); // Yellow outline
-                strokeWeight(2);
+            // --- Determine Base Color ---
+            if (isCurrent) {
+                nodeColor = color(0, 255, 0, 200); // Green for current
+            } else if (sysData.visited) {
+                nodeColor = color(255, 255, 0, 180); // Yellow fill for visited
             } else {
-                stroke(200);        // Default grey outline
-                strokeWeight(1);
+                nodeColor = color(0, 0, 255, 180); // Blue fill for unvisited
             }
 
+            // --- Adjust Stroke/Text based on Jump Readiness and Reachability ---
+            if (isCurrent) {
+                 nodeStrokeColor = color(255); // Bright stroke for current
+                 nodeStrokeWeight = 2;
+            } else if (canJump && isReachable) {
+                 // If player CAN jump and system IS reachable: Bright Yellow Outline
+                 nodeStrokeColor = color(255, 255, 0);
+                 nodeStrokeWeight = 2;
+                 // Keep base fill color (blue or yellow based on visited)
+            } else if (!canJump && isReachable) {
+                 // If player CANNOT jump but system IS reachable: Dimmed appearance
+                 nodeColor = color(100, 100, 150, 150); // Override fill to dim blue/grey
+                 textColor = color(180);
+                 nodeStrokeColor = color(150); // Dim stroke
+                 nodeStrokeWeight = 1;
+            } else {
+                 // Not current, not reachable (or canJump is false and not reachable)
+                 // Use default dim stroke color
+                 nodeStrokeWeight = 1;
+                 // Keep base fill color
+            }
+
+            // --- Highlight Selected System ---
+            if (isSelected) {
+                 nodeStrokeColor = color(255, 100, 255); // Magenta outline for selected
+                 nodeStrokeWeight = 3;
+            }
+            // ---
+
             // Draw the ellipse
+            strokeWeight(nodeStrokeWeight);
+            stroke(nodeStrokeColor);
+            fill(nodeColor);
             ellipse(sysData.x, sysData.y, nodeR * 2, nodeR * 2);
             // Store clickable area
             this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
 
             // Draw Text Labels
-            fill(255); noStroke(); textAlign(CENTER, TOP); textSize(12);
+            fill(textColor); noStroke(); textAlign(CENTER, TOP); textSize(12);
             text(sysData.name, sysData.x, sysData.y + nodeR + 5);
             textSize(10);
             if (sysData.visited || isCurrent) {
@@ -735,6 +770,17 @@ class UIManager {
         });
         // --- End Draw System Nodes ---
 
+        // --- Display Jump Zone Message ---
+        if (!canJump) {
+            push();
+            fill(255, 80, 80, 220); // Reddish warning color
+            textSize(18);
+            textAlign(CENTER, BOTTOM);
+            noStroke();
+            text("Must be in designated Jump Zone to initiate hyperspace jump.", width / 2, height - 20);
+            pop();
+        }
+        // ---
 
         // --- Draw Jump Button ---
         // Logic remains the same: Show if a reachable system (not current) is selected
@@ -757,6 +803,72 @@ class UIManager {
 
         pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
+
+    /** Handles clicks on the galaxy map */
+    handleGalaxyMapClicks(mouseX, mouseY, galaxy, player, gameStateManager) {
+        if (!galaxy || !player) return false;
+
+        const currentSystem = galaxy.getCurrentSystem();
+        const canJump = isPlayerInJumpZone(player, currentSystem); // Check jump zone status
+        const reachable = galaxy.getReachableSystems(); // Get reachable systems for click logic
+
+        // --- Debug Logging ---
+        console.log(`[handleGalaxyMapClicks] 'canJump' evaluated as: ${canJump}`);
+        // ---
+
+        // Check Jump button first
+        if (this.isClickInArea(mouseX, mouseY, this.jumpButtonArea)) {
+            console.log("  Jump button clicked.");
+            // Ensure a system is selected and it's reachable
+            if (this.selectedSystemIndex !== -1 && reachable.includes(this.selectedSystemIndex)) {
+                if (canJump) { // Double-check canJump status for the button action
+                    console.log("    Attempting jump via button...");
+                    gameStateManager.startJump(this.selectedSystemIndex);
+                    // Optional: Deselect after initiating jump? Or keep selected?
+                    // this.selectedSystemIndex = -1;
+                } else {
+                    // This case should ideally not happen if the button is only drawn when canJump allows selection,
+                    // but keep as a safeguard.
+                    console.log("    Jump button ignored: Player not in Jump Zone (safeguard check).");
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+            } else {
+                 console.log(`    Jump button ignored: No valid system selected (${this.selectedSystemIndex}) or not reachable.`);
+            }
+            return true; // Click was on the button area
+        }
+
+        // Check system nodes for SELECTION
+        for (const area of this.galaxyMapNodeAreas) { // Use the pre-calculated areas
+             let d = dist(mouseX, mouseY, area.x, area.y);
+             if (d < area.radius) {
+                 const clickedIndex = area.index;
+                 const clickedSys = galaxy.systems[clickedIndex]; // Get system object
+                 console.log(`  Node clicked: ${clickedSys?.name || 'N/A'} (Index: ${clickedIndex})`);
+
+                 // Allow selection only if the system is reachable
+                 if (reachable.includes(clickedIndex)) {
+                     console.log(`    -> System is reachable. Selecting index: ${clickedIndex}`);
+                     this.selectedSystemIndex = clickedIndex; // SELECT the system
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('click'); // Feedback for selection
+                 } else if (clickedIndex === galaxy.currentSystemIndex) {
+                     console.log(`    -> Clicked current system. Deselecting.`);
+                     this.selectedSystemIndex = -1; // Clicking current system deselects
+                 } else {
+                     console.log(`    -> System is NOT reachable. Selection ignored.`);
+                     // Optional: Add message "Cannot select: Route unavailable" or similar
+                     if (typeof uiManager !== 'undefined') uiManager.addMessage("Route unavailable.", color(255, 150, 150));
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                 }
+                 return true; // Click was handled (either selected, deselected, or ignored with feedback)
+             }
+        }
+
+        // If click wasn't on button or any node, deselect
+        // console.log("Clicked empty space on map. Deselecting.");
+        // this.selectedSystemIndex = -1; // Optional: Deselect on empty space click?
+        return false; // Click not handled by map elements
+    }
 
     /** Draws the Game Over overlay screen */
     drawGameOverScreen() {
@@ -1191,7 +1303,7 @@ class UIManager {
             return false;
         }
         // --- GALAXY_MAP State ---
-        else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy); }
+        else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); }
         // --- GAME_OVER State ---
         else if (currentState === "GAME_OVER") { window.location.reload(); return true; }
 
@@ -1202,38 +1314,6 @@ class UIManager {
     isClickInArea(mx, my, area) {
         return area && area.w > 0 && area.h > 0 && mx > area.x && mx < area.x + area.w && my > area.y && my < area.y + area.h;
     }
-
-    /** Helper function specifically for handling clicks on the Galaxy Map */
-    handleGalaxyMapClicks(mx, my, galaxy){
-        if (!galaxy) return false;
-        // Check Jump button first
-        if (this.isClickInArea(mx, my, this.jumpButtonArea)) {
-            if (this.selectedSystemIndex !== -1 && galaxy.getReachableSystems().includes(this.selectedSystemIndex)) { // Double check reachability
-                if (gameStateManager) gameStateManager.startJump(this.selectedSystemIndex);
-                this.selectedSystemIndex = -1; // Clear selection after initiating jump
-            }
-            return true; // Click was on the jump button area
-        }
-        // Check system nodes
-        for (const node of this.galaxyMapNodeAreas) {
-            if (!node) continue;
-            if (dist(mx, my, node.x, node.y) < node.radius) {
-                const reachableSystems = galaxy.getReachableSystems();
-                const currentIdx = galaxy.currentSystemIndex;
-                // Select if reachable and not current
-                if (node.index !== currentIdx && reachableSystems.includes(node.index)) {
-                    this.selectedSystemIndex = node.index;
-                } else {
-                    // Clicking current system or unreachable system clears selection
-                    this.selectedSystemIndex = -1;
-                }
-                return true; // Click was on a node
-            }
-        }
-        // Click was not on jump button or any node
-        this.selectedSystemIndex = -1; // Clear selection if clicking empty space
-        return false; // Allow click to pass through if needed elsewhere? For now, false.
-    } // End handleGalaxyMapClicks
 
     /** Draws the Shipyard Menu (when state is VIEWING_SHIPYARD) */
     drawShipyardMenu(player) {
