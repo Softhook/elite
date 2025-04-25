@@ -1044,358 +1044,316 @@ class Enemy {
 
     /** Hauler AI Logic - Moves between station and system edge. */
     updateHaulerAI(system) {
-        // ADD THIS SECTION: Check for attackers at the beginning of the method
-        // regardless of current state
-        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
-            this.currentState !== AI_STATE.APPROACHING && 
+        // Check for attackers FIRST
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
+            this.currentState !== AI_STATE.FLEEING && // Don't interrupt fleeing
+            this.currentState !== AI_STATE.APPROACHING && // Don't interrupt combat
             this.currentState !== AI_STATE.ATTACK_PASS &&
             this.currentState !== AI_STATE.REPOSITIONING &&
-            this.currentState !== AI_STATE.FLEEING &&
-            (!this.attackCooldown || this.attackCooldown <= 0)) {  // Add this line
-            
+            (!this.attackCooldown || this.attackCooldown <= 0)) {
+
             const attackerDistance = this.distanceTo(this.lastAttacker);
-            
             if (attackerDistance < this.detectionRange * 1.2) {
-                // Store current hauler state to return to later
+                // Store current state before switching to combat/fleeing
                 this.previousHaulerState = this.currentState;
                 this.previousTargetPos = this.patrolTargetPos ? this.patrolTargetPos.copy() : null;
-                
-                // Temporarily switch to combat mode
-                console.log(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
-                this.target = this.lastAttacker;
-                this.changeState(AI_STATE.APPROACHING);
-                this.haulerCombatTimer = 10.0; // Set timer to return to hauling
-                
-                // Add a message to UI for player feedback
-                if (uiManager && typeof uiManager.addMessage === 'function') {
-                    uiManager.addMessage(`${this.shipTypeName} retaliating against attack`);
+
+                // Decide whether to fight or flee based on hull
+                if (this.hull < this.maxHull * 0.5) { // Flee if below 50% hull
+                    console.log(`Hauler ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
+                    this.target = this.lastAttacker;
+                    this.changeState(AI_STATE.FLEEING);
+                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
+                    // Apply immediate velocity boost away
+                    if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+                    this.attackCooldown = 15.0; // Cooldown before being provoked again
+                    return; // Skip normal logic
+                } else { // Retaliate if hull is okay
+                    console.log(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
+                    this.target = this.lastAttacker;
+                    this.changeState(AI_STATE.APPROACHING);
+                    this.haulerCombatTimer = 10.0; // Timer to return to hauling
+                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`);
+                    // Fall through to combat logic handling below
                 }
             }
         }
 
-        // Then continue with existing combat state check and normal hauler logic
-        if ((this.currentState === AI_STATE.APPROACHING || 
-             this.currentState === AI_STATE.ATTACK_PASS ||
-             this.currentState === AI_STATE.REPOSITIONING) && 
-            this.haulerCombatTimer !== undefined) {
-            
-            // Update the combat timer
-            this.haulerCombatTimer -= deltaTime / 1000;
-            
-            // Check hull status - flee if heavily damaged
-            if (this.hull < this.maxHull * 0.4 && 
-                this.currentState !== AI_STATE.FLEEING) {
-                console.log(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
-                
-                // Change to actual fleeing state
-                this.changeState(AI_STATE.FLEEING);
-                
-                // Apply immediate velocity away from the threat
-                if (this.target && this.target.pos) {
-                    let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize();
-                    this.vel.add(escapeDir.mult(this.maxSpeed * 0.8));
+        // Handle Combat/Fleeing states first if active
+        if (this.currentState === AI_STATE.FLEEING ||
+            this.currentState === AI_STATE.APPROACHING ||
+            this.currentState === AI_STATE.ATTACK_PASS ||
+            this.currentState === AI_STATE.REPOSITIONING)
+        {
+            // If in combat state, check combat timer
+            if (this.haulerCombatTimer !== undefined && this.currentState !== AI_STATE.FLEEING) {
+                this.haulerCombatTimer -= deltaTime / 1000;
+                if (this.haulerCombatTimer <= 0) {
+                    console.log(`Hauler ${this.shipTypeName} disengaging from combat.`);
+                    this.haulerCombatTimer = undefined; // Clear timer
+                    this.lastAttacker = null; // Forget attacker
+                    this.target = null; // Clear target
+                    // Return to previous state or default
+                    this.changeState(this.previousHaulerState || AI_STATE.PATROLLING);
+                    this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy(); // Restore patrol target
+                    // Don't run combat AI this frame if disengaging
+                    this.performRotationAndThrust(this.patrolTargetPos); // Move towards patrol target
+                    this.updatePhysics();
+                    return;
                 }
-                
-                return; // Skip other combat logic
             }
-            
-            // Original combat handling code continues...
-            this.updateCombatAI(system);
-            return;
+
+            // Check hull status - flee if heavily damaged during combat
+            if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
+                console.log(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
+                this.target = this.lastAttacker || this.target; // Ensure we flee from *something*
+                this.changeState(AI_STATE.FLEEING);
+                if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+                // Fleeing logic will be handled below or in next frame's state check
+            }
+
+            // If still in combat or now fleeing, use appropriate AI
+            if (this.currentState === AI_STATE.FLEEING) {
+                this.updateFleeingAI(system);
+            } else {
+                this.updateCombatAI(system);
+            }
+            this.updatePhysics(); // Ensure physics update happens
+            return; // Don't execute normal hauler logic
         }
-        
-        // Original hauler logic for normal operations...
+
+
+        // --- Normal Hauler Logic (Patrolling, Near Station, Leaving) ---
         let desiredMovementTargetPos = null;
+        let shouldMove = true; // Flag to control movement at the end
+
         switch (this.currentState) {
-            case AI_STATE.PATROLLING: 
-                // Existing patrolling code... 
-                if (!this.patrolTargetPos) { 
-                    this.patrolTargetPos = system?.station?.pos?.copy(); 
-                } 
-                desiredMovementTargetPos = this.patrolTargetPos; 
-                if (!desiredMovementTargetPos) { 
-                    this.setLeavingSystemTarget(system); 
-                    desiredMovementTargetPos = this.patrolTargetPos; 
-                    break; 
-                } 
-                let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
-                if (dS < this.stationProximityThreshold) { 
-                    this.changeState(AI_STATE.NEAR_STATION); 
-                } 
-                break;
-                
-            case AI_STATE.NEAR_STATION: 
-                // Existing near station code... 
-                this.vel.mult(0.8); 
-                this.nearStationTimer -= deltaTime / 1000; 
-                if (this.nearStationTimer <= 0 && !this.hasPausedNearStation) { 
-                    this.hasPausedNearStation = true; 
-                    this.changeState(AI_STATE.LEAVING_SYSTEM); 
-                    desiredMovementTargetPos = this.patrolTargetPos; 
-                } 
-                break;
-                
-            case AI_STATE.LEAVING_SYSTEM: 
-                // Existing leaving system code... 
-                if (!this.patrolTargetPos) { 
-                    this.setLeavingSystemTarget(system); 
-                } 
-                desiredMovementTargetPos = this.patrolTargetPos; 
-                if (!desiredMovementTargetPos) break; 
-                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y); 
-                if (dE < 150) { 
-                    this.destroyed = true; 
-                } 
-                break;
-                
-            case AI_STATE.FLEEING:
-                // Handle fleeing directly in hauler update loop
-                if (this.target && this.target.pos) {
-                    // Calculate escape vector away from threat
-                    const escapeVector = p5.Vector.sub(this.pos, this.target.pos);
-                    escapeVector.normalize().mult(2000);
-                    const escapeTargetPos = p5.Vector.add(this.pos, escapeVector);
-                    
-                    // Use strong thrust to escape
-                    const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
-                    
-                    // Apply extra thrust when generally pointing in escape direction
-                    const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
-                    if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
-                        this.thrustForward(fleeThrustMultiplier); // Apply thrust when fleeing
+            case AI_STATE.PATROLLING:
+                this.target = null; // Ensure target is null when patrolling
+                let isTargetingStation = false; // Flag to know if the station is the intended target
+
+                if (!this.patrolTargetPos) {
+                    // Default to station if available, otherwise prepare to leave
+                    if (system?.station?.pos) {
+                        this.patrolTargetPos = system.station.pos.copy();
+                        isTargetingStation = true; // Mark that we are initially targeting the station
+                    } else {
+                        // No station, immediately try to leave
+                        this.changeState(AI_STATE.LEAVING_SYSTEM);
+                        shouldMove = false; // Don't move this frame, let LEAVING_SYSTEM entry handle it
+                        break; // Exit switch
                     }
-                    
-                    // Add randomness to make escape path less predictable
-                    if (frameCount % 20 === 0) {
-                        this.vel.add(p5.Vector.random2D().mult(0.5));
-                    }
-                    
-                    // Check if we've escaped far enough
-                    const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
-                    if (!this.isTargetValid(this.target) || 
-                        this.distanceTo(this.target) > escapeDistanceThreshold) {
-                        console.log(`${this.shipTypeName} escaped successfully!`);
-                        
-                        // Add long cooldown before we can be provoked again
-                        this.attackCooldown = 20.0;
-                        this.lastAttacker = null; // Reset attacker reference
-                        
-                        // Return to normal hauling
-                        if (this.previousHaulerState) {
-                            this.changeState(this.previousHaulerState);
-                        } else {
-                            this.changeState(AI_STATE.PATROLLING);
-                        }
-                    }
-                    
-                    // Skip the normal movement code below
-                    return;
                 } else {
-                    // No valid target to flee from, return to normal
-                    this.changeState(AI_STATE.PATROLLING);
-                    return;
+                    // If patrolTargetPos already exists, check if it's the station
+                    if (system?.station?.pos && this.patrolTargetPos.dist(system.station.pos) < 1) {
+                         isTargetingStation = true;
+                    }
                 }
-                
-            default: 
-                // Existing default code... 
-                if(system?.station?.pos) { 
-                    this.patrolTargetPos = system.station.pos.copy(); 
-                    this.changeState(AI_STATE.PATROLLING); 
-                } else { 
-                    this.changeState(AI_STATE.LEAVING_SYSTEM); 
-                } 
+
+                desiredMovementTargetPos = this.patrolTargetPos;
+
+                // Check distance to current patrol target using p5.dist() directly
+                // FIX: Use p5.dist() instead of this.distanceTo()
+                let dS = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
+
+                if (dS < this.stationProximityThreshold) {
+                    // If we are close AND our intended target was the station, transition
+                    if (isTargetingStation) {
+                         console.log(`Hauler ${this.shipTypeName} arriving near station (Dist: ${dS.toFixed(1)}).`);
+                         this.changeState(AI_STATE.NEAR_STATION);
+                         shouldMove = false; // Stop moving this frame, let NEAR_STATION handle braking/waiting
+                    } else {
+                         // Reached a non-station patrol point.
+                         // For now, just treat it like arriving at the station for simplicity.
+                         // Could add logic here later to pick a new patrol point or head towards station.
+                         console.log(`Hauler ${this.shipTypeName} arriving near patrol point (Dist: ${dS.toFixed(1)}). Treating as station arrival.`);
+                         this.changeState(AI_STATE.NEAR_STATION);
+                         shouldMove = false;
+                    }
+                }
+                break;
+
+            case AI_STATE.NEAR_STATION:
+                this.target = null; // Ensure target is null when near station
+                this.vel.mult(0.8); // Apply braking continuously while near station
+                shouldMove = false; // Don't actively thrust, just brake and wait
+
+                if (this.nearStationTimer === undefined || this.nearStationTimer === null) {
+                    this.nearStationTimer = this.stationPauseDuration; // Init timer if needed
+                    console.log(`Hauler ${this.shipTypeName} starting pause near station for ${this.nearStationTimer.toFixed(1)}s`);
+                }
+
+                this.nearStationTimer -= deltaTime / 1000;
+
+                if (this.nearStationTimer <= 0) {
+                    console.log(`Hauler ${this.shipTypeName} finished pause, preparing to leave.`);
+                    this.changeState(AI_STATE.LEAVING_SYSTEM);
+                    // Movement target will be set by onStateEntry(LEAVING_SYSTEM) next frame
+                }
+                break;
+
+            case AI_STATE.LEAVING_SYSTEM:
+                this.target = null; // Ensure target is null when leaving
+                desiredMovementTargetPos = this.patrolTargetPos;
+                if (!desiredMovementTargetPos) {
+                     console.warn(`Hauler ${this.shipTypeName} in LEAVING_SYSTEM state has no patrolTargetPos! Attempting recovery.`);
+                     this.setLeavingSystemTarget(system);
+                     desiredMovementTargetPos = this.patrolTargetPos;
+                     if (!desiredMovementTargetPos) {
+                         shouldMove = false;
+                         break;
+                     }
+                }
+
+                // --- DETAILED DEBUG LOGGING ---
+                console.log(`--- Hauler Leaving Check: ${this.shipTypeName} ---`);
+                console.log(`   Current Pos: (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)})`);
+                console.log(`   Target Pos (Jump Zone/Edge): (${desiredMovementTargetPos.x.toFixed(1)}, ${desiredMovementTargetPos.y.toFixed(1)})`);
+
+                // Calculate distance to target (Jump Zone/Edge)
+                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
+                console.log(`   Distance to Target (dE): ${dE.toFixed(1)}`);
+
+                // Check if out of bounds
+                let distFromOriginSq = this.pos.magSq();
+                let despawnRadius = (system?.despawnRadius ?? 3000); // Use default if undefined
+                let despawnRadiusSq = sq(despawnRadius * 1.1);
+                const isOutOfBounds = distFromOriginSq > despawnRadiusSq;
+
+                console.log(`   Dist from Origin Sq: ${distFromOriginSq.toFixed(1)}`);
+                console.log(`   Despawn Radius Sq (incl. buffer): ${despawnRadiusSq.toFixed(1)} (Radius: ${despawnRadius.toFixed(1)})`);
+                console.log(`   isOutOfBounds Check: ${isOutOfBounds}`);
+                // --- END DETAILED DEBUG LOGGING ---
+
+                // --- Original Exit Condition ---
+                // Exit if:
+                // 1. Arrived at the jump zone target (dE < 150)
+                // OR
+                // 2. Exceeded despawn radius
+                if (dE < 150 || isOutOfBounds) {
+                    this.destroyed = true;
+                    let reason = (dE < 150) ? "Reached Target" : "Out of Bounds";
+                    // This log confirms the condition was met
+                    console.log(`Hauler ${this.shipTypeName} left the system (Reason: ${reason}).`);
+                    shouldMove = false;
+                }
+                break; // End LEAVING_SYSTEM case
+
+            default:
+                this.target = null;
+                console.log(`Hauler ${this.shipTypeName} in unexpected state ${this.currentState}. Resetting.`);
+                if(system?.station?.pos) {
+                    this.patrolTargetPos = system.station.pos.copy();
+                    this.changeState(AI_STATE.PATROLLING);
+                } else {
+                    this.changeState(AI_STATE.LEAVING_SYSTEM);
+                }
+                shouldMove = false;
                 break;
         }
-        
-        // Existing movement code...
-        this.performRotationAndThrust(desiredMovementTargetPos);
+
+        if (shouldMove) {
+            this.performRotationAndThrust(desiredMovementTargetPos);
+        }
+        this.updatePhysics();
     }
 
     /** Transport AI Logic - Moves between two endpoints. */
     updateTransportAI(system) {
         if (!system) return;
-        
-        // Add attack response logic for transports
-        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
+
+        // Check for attackers FIRST
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
             this.currentState !== AI_STATE.FLEEING &&
             (!this.attackCooldown || this.attackCooldown <= 0)) {
-            
+
             const attackerDistance = this.distanceTo(this.lastAttacker);
-            
             if (attackerDistance < this.detectionRange * 1.5) {
-                // Store current state to return to later
+                // Store current state before fleeing
                 this.previousTransportState = this.currentState;
                 this.previousRoutePoints = this.routePoints ? [...this.routePoints] : null;
                 this.previousRouteIndex = this.currentRouteIndex;
-                
-                // Unlike haulers, transports should immediately flee (no combat)
+
                 console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
                 this.target = this.lastAttacker; // Set attacker as target to flee from
                 this.changeState(AI_STATE.FLEEING);
-                
-                // Add a message to UI for player feedback
-                if (uiManager && typeof uiManager.addMessage === 'function') {
-                    uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
-                }
-                
-                // Apply immediate velocity boost away from attacker
-                if (this.target && this.target.pos) {
-                    let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize();
-                    this.vel.add(escapeDir.mult(this.maxSpeed * 0.9));
-                }
-                
-                // Set cooldown to prevent immediate re-engagement
+                if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
+                if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.9)); }
                 this.attackCooldown = 15.0;
-                return; // Skip normal transport behavior
+                // Fleeing logic is handled below or in next frame's state check
             }
         }
-        
-        // Check if we're fleeing
+
+        // Handle Fleeing state
         if (this.currentState === AI_STATE.FLEEING) {
-            if (this.target && this.target.pos) {
-                // Calculate escape vector away from threat
-                this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-                this.tempVector.normalize().mult(2000);
-                const escapeTargetPos = createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
-                
-                // Use strong thrust to escape
-                const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
-                
-                // Apply extra thrust when pointed in escape direction
-                const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
-                if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
-                    this.thrustForward(fleeThrustMultiplier); // Apply thrust when fleeing
-                }
-                
-                // Add more randomness to make transport escape harder to predict
-                if (frameCount % 15 === 0) {
-                    this.vel.add(p5.Vector.random2D().mult(0.8));
-                }
-                
-                // Check if we've escaped far enough
-                const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
-                if (!this.isTargetValid(this.target) || 
-                    this.distanceTo(this.target) > escapeDistanceThreshold) {
-                    console.log(`Transport ${this.shipTypeName} escaped successfully!`);
-                    
-                    // Add long cooldown before we can be provoked again
-                    this.attackCooldown = 30.0; // Longer than haulers
-                    this.lastAttacker = null; // Reset attacker reference
-                    
-                    // Return to normal transport route
-                    if (this.previousTransportState) {
-                        this.changeState(this.previousTransportState);
-                        // Restore previous route if needed
-                        if (this.previousRoutePoints) {
-                            this.routePoints = this.previousRoutePoints;
-                            this.currentRouteIndex = this.previousRouteIndex;
-                        }
-                    } else {
-                        this.changeState(AI_STATE.TRANSPORTING);
-                    }
-                }
-                
-                // Handle physics in fleeing state
-                this.vel.mult(this.drag);
-                this.vel.limit(this.maxSpeed * 1.2); // Allow slightly higher speed when fleeing
-                this.pos.add(this.vel);
-                return; // Skip normal transport behavior
-            } else {
-                // No valid target to flee from, return to normal
-                this.changeState(AI_STATE.TRANSPORTING);
-            }
+             this.updateFleeingAI(system); // Use centralized fleeing logic
+             this.updatePhysics(); // Ensure physics update happens
+             return; // Skip normal transport behavior
         }
-        
-        // Original transport logic continues...
+
+        // --- Normal Transport Logic ---
+        this.target = null; // Ensure target is null during normal transport
+
         // Define routePoints if not yet set:
+        // ... (existing route point setup logic) ...
         if (!this.routePoints) {
-            let pts = [];
-            if (system.planets && system.planets.length > 1) {
-                let candidateIndices = [];
-                for (let i = 1; i < system.planets.length; i++) {
-                    candidateIndices.push(i);
-                }
-                if (candidateIndices.length >= 2) {
-                    let shuffled = shuffle(candidateIndices, true);
-                    pts.push(system.planets[shuffled[0]].pos.copy());
-                    pts.push(system.planets[shuffled[1]].pos.copy());
-                } else {
-                    pts.push(system.planets[1].pos.copy());
-                    pts.push(system.station ? system.station.pos.copy() : p5.Vector.add(system.planets[1].pos, createVector(300, 0)));
-                }
-            } else if (system.station) {
-                pts.push(system.station.pos.copy());
-                pts.push(p5.Vector.add(system.station.pos, createVector(300, 0)));
-            } else {
-                pts.push(createVector(0, 0));
-                pts.push(createVector(300, 300));
-            }
-            this.routePoints = pts;
-            // Start with destination index 1
-            this.currentRouteIndex = 1;
-            // Reset wait timer when first setting route.
-            this.waitTimer = 0;
-            console.log(`Transporter ${this.shipTypeName} route set to endpoints: (${pts[0].x.toFixed(1)}, ${pts[0].y.toFixed(1)}) and (${pts[1].x.toFixed(1)}, ${pts[1].y.toFixed(1)})`);
+            // ... (code to set this.routePoints, this.currentRouteIndex, this.waitTimer) ...
+             let pts = [];
+             // ... (logic to find two points, e.g., planets or station) ...
+             // Example:
+             if (system.planets && system.planets.length > 1) {
+                 pts.push(system.planets[0].pos.copy()); // Assuming planet 0 exists
+                 pts.push(system.planets[1].pos.copy()); // Assuming planet 1 exists
+             } else if (system.station) {
+                 pts.push(system.station.pos.copy());
+                 pts.push(p5.Vector.add(system.station.pos, createVector(random(-500, 500), random(-500, 500)))); // Point near station
+             } else { // Fallback
+                 pts.push(createVector(0,0)); pts.push(createVector(500,0));
+             }
+             this.routePoints = pts;
+             this.currentRouteIndex = 1; // Start moving towards the second point
+             this.waitTimer = 0;
+             console.log(`Transporter ${this.shipTypeName} route set.`);
         }
-        
+
+
         let destination = this.routePoints[this.currentRouteIndex];
-        
-        // Reuse the tempVector to avoid creating new vectors
+
+        // ... (existing movement logic towards destination) ...
         this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
         let distance = this.tempVector.mag();
-        this.tempVector.normalize();
-        let targetAngle = this.tempVector.heading();
-        
-        // FIX: Use the rotateTowards method for consistency
-        this.rotateTowards(targetAngle);
-        
-        // FIX: Make sure angle difference is properly normalized before comparison
-        let angleDiff = targetAngle - this.angle;
-        angleDiff = ((angleDiff % TWO_PI) + TWO_PI) % TWO_PI;
-        if (angleDiff > PI) angleDiff -= TWO_PI;
-        
-        if (abs(angleDiff) < this.angleTolerance) {
-            this.thrustForward();
-        }
-        
+        // ... (rest of movement, arrival check, wait timer, destination switching) ...
+
         // Arrival behavior:
-        const arrivalThreshold = 20;     // Consider "arrived" if within 20 units
-        const slowSpeedThreshold = 0.1;    // And if nearly stopped
+        const arrivalThreshold = 30; // Increased threshold slightly
+        const slowSpeedThreshold = 0.2;
         if (distance > arrivalThreshold) {
-            // Not yet near destination: reset waitTimer and thrust toward destination.
-            if (this.waitTimer !== 0) {
-                console.log(`Transporter ${this.shipTypeName} resuming travel (distance: ${distance.toFixed(2)})`);
-            }
-            this.waitTimer = 0;
-            let thrustVec = p5.Vector.fromAngle(this.angle);
-            thrustVec.mult(this.thrustForce);
-            this.vel.add(thrustVec);
+            // Move towards destination
+            if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
+            this.performRotationAndThrust(destination); // Use helper
         } else {
             // Arrival detected: apply braking.
             this.vel.mult(0.8);
-            // If close enough OR moving very slowly, start counting down a wait timer.
-            if (distance < arrivalThreshold || this.vel.mag() < slowSpeedThreshold) {
+            // If close enough AND moving very slowly, start/continue wait timer.
+            if (this.vel.mag() < slowSpeedThreshold) {
                 if (this.waitTimer === 0) {
-                    this.waitTimer = random(1000, 3600); // wait duration in milliseconds
-                    console.log(`Transporter ${this.shipTypeName} arrived. Waiting for ${(this.waitTimer / 1000).toFixed(2)}s before turning.`);
+                    this.waitTimer = random(1500, 4000); // Wait 1.5-4s
+                    console.log(`Transporter ${this.shipTypeName} arrived. Waiting.`);
                 } else {
                     this.waitTimer -= deltaTime;
                     if (this.waitTimer <= 0) {
                         // Switch destination.
                         this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
-                        console.log(`Transporter ${this.shipTypeName} switching destination to endpoint ${this.currentRouteIndex} at (${this.routePoints[this.currentRouteIndex].x.toFixed(1)}, ${this.routePoints[this.currentRouteIndex].y.toFixed(1)})`);
+                        console.log(`Transporter ${this.shipTypeName} switching destination.`);
                         this.waitTimer = 0;
-                        // Optionally reset velocity for a fresh start.
-                        this.vel.set(0, 0);
+                        this.vel.set(0, 0); // Reset velocity
                     }
                 }
             }
         }
-        
-        // Apply drag and update position.
-        this.vel.mult(this.drag);
-        this.vel.limit(this.maxSpeed);
-        this.pos.add(this.vel);
+
+        // Apply physics
+        this.updatePhysics(); // Use centralized physics update
     }
 
     /** Handles cargo collection AI */
@@ -1509,6 +1467,95 @@ class Enemy {
         }
         
         return true; // Still collecting
+    }
+
+    /**
+     * Centralized AI Logic for Fleeing behavior.
+     * @param {Object} system - The current star system.
+     */
+    updateFleeingAI(system) {
+        // Ensure we have a target to flee from
+        if (!this.isTargetValid(this.target)) {
+            // No valid attacker to flee from, maybe they were destroyed or left?
+            console.log(`${this.shipTypeName} lost target while fleeing. Returning to normal.`);
+            this.lastAttacker = null; // Clear attacker
+            this.fleeStartTime = null; // Reset flee timer
+            // Determine state to return to based on role
+            let returnState = AI_STATE.IDLE; // Default fallback
+            if (this.role === AI_ROLE.POLICE) returnState = AI_STATE.PATROLLING;
+            else if (this.role === AI_ROLE.HAULER) returnState = this.previousHaulerState || AI_STATE.PATROLLING;
+            else if (this.role === AI_ROLE.TRANSPORT) returnState = this.previousTransportState || AI_STATE.TRANSPORTING;
+            this.changeState(returnState);
+            // Restore previous route for transport if applicable
+            if (this.role === AI_ROLE.TRANSPORT && this.previousRoutePoints) {
+                 this.routePoints = this.previousRoutePoints;
+                 this.currentRouteIndex = this.previousRouteIndex;
+            }
+            return; // Exit fleeing logic
+        }
+
+        // Initialize flee timer if needed
+        if (!this.fleeStartTime) {
+            this.fleeStartTime = millis();
+            this.fleeMinDuration = FLEE_MIN_DURATION_MS; // Use constant
+        }
+
+        // Calculate escape vector (away from target)
+        // Use tempVector for calculation
+        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+        // Aim far away, but use a reasonable intermediate point for navigation
+        this.tempVector.normalize().mult(this.detectionRange * 3); // Aim 3x detection range away
+        // Use tempVector2 for the target position to avoid creating a new vector
+        let escapeTargetPos = p5.Vector.add(this.pos, this.tempVector); // Calculate escape point
+
+        // Rotate and thrust towards the escape point
+        const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
+
+        // Apply extra thrust based on role or general flee multiplier
+        const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
+        // Apply extra thrust more consistently when fleeing, even if not perfectly aligned initially
+        this.thrustForward(fleeThrustMultiplier);
+
+        // Add randomness (optional, can make path less predictable)
+        if (frameCount % 30 === 0) { // Less frequent randomness
+            // Use tempVector for random direction
+            this.tempVector.set(random(-1, 1), random(-1, 1)).normalize().mult(0.3); // Smaller random push
+            this.vel.add(this.tempVector);
+        }
+
+        // --- Check Exit Conditions ---
+        const timeInFlee = millis() - (this.fleeStartTime || 0);
+        // Role-specific escape distance threshold
+        const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
+        const distanceToAttacker = this.distanceTo(this.target);
+
+        if (timeInFlee > this.fleeMinDuration && distanceToAttacker > escapeDistanceThreshold)
+        {
+            console.log(`${this.shipTypeName} escaped successfully!`);
+            this.attackCooldown = (this.role === AI_ROLE.TRANSPORT || this.role === AI_ROLE.HAULER) ? 30.0 : 20.0; // Role-specific cooldown
+            this.lastAttacker = null; // Forget attacker
+            this.fleeStartTime = null; // Reset flee timer
+
+            // Determine state to return to based on role
+            let returnState = AI_STATE.IDLE; // Default fallback
+            if (this.role === AI_ROLE.POLICE) returnState = AI_STATE.PATROLLING;
+            else if (this.role === AI_ROLE.HAULER) returnState = this.previousHaulerState || AI_STATE.PATROLLING;
+            else if (this.role === AI_ROLE.TRANSPORT) returnState = this.previousTransportState || AI_STATE.TRANSPORTING;
+
+            // Ensure we don't return to a combat state accidentally
+            if (returnState === AI_STATE.APPROACHING || returnState === AI_STATE.ATTACK_PASS || returnState === AI_STATE.REPOSITIONING) {
+                 returnState = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER) ? AI_STATE.PATROLLING : AI_STATE.TRANSPORTING; // Default transport to TRANSPORTING
+            }
+
+            this.changeState(returnState);
+            // Restore previous route for transport if applicable
+            if (this.role === AI_ROLE.TRANSPORT && this.previousRoutePoints) {
+                 this.routePoints = this.previousRoutePoints;
+                 this.currentRouteIndex = this.previousRouteIndex;
+                 console.log(`Transport ${this.shipTypeName} resuming previous route.`);
+            }
+        }
+        // Note: updatePhysics() is called after this method in the main update loop or role-specific AI
     }
 
     // -----------------------
@@ -1882,13 +1929,12 @@ class Enemy {
         }
 
         // --- Start Ship Drawing Block ---
-        push(); // Isolate all transformations for the ship and its immediate UI
-        translate(this.pos.x, this.pos.y); // Move origin to the ship's center
+        push();
+        translate(this.pos.x, this.pos.y);
 
         // --- Draw Info Label (BEFORE rotation) ---
-        // Draw the label relative to the translated origin (0,0), but before rotating the canvas
         if (!this.destroyed) {
-            push(); // Isolate label drawing settings
+            push();
             textAlign(CENTER, BOTTOM);
             textSize(12);
             fill(255);
@@ -1897,7 +1943,32 @@ class Enemy {
             let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
             let targetLabel = "None"; // Default
 
-            if (this.target) { // Check if target exists
+            // --- State-Based Target Labeling (for non-combat roles) ---
+            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
+                // Check if patrol target is the station
+                if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
+                    this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
+                    targetLabel = "Station";
+                } else {
+                    targetLabel = "Patrol Point"; // Or just "Patrolling"
+                }
+            } else if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                 // Check if patrol target is the jump zone
+                 if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
+                     this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
+                     targetLabel = "Jump Zone";
+                 } else {
+                     targetLabel = "System Edge"; // Fallback if jump zone unknown/not targeted
+                 }
+            } else if (this.currentState === AI_STATE.TRANSPORTING) {
+                 // Could add logic here to identify destination type (planet/station)
+                 targetLabel = "Delivery"; // Simple label for now
+            }
+            // --- End State-Based Labeling ---
+
+            // --- Fallback to this.target if no state-based label was set ---
+            // (Or if in a combat/other state where this.target is relevant)
+            else if (this.target) { // Check if target exists
                 if (this.currentState === AI_STATE.COLLECTING_CARGO && this.target instanceof Cargo) {
                     targetLabel = `Cargo (${this.target.type})`;
                 } else if (this.target instanceof Player) {
@@ -1907,29 +1978,27 @@ class Enemy {
                 } else if (this.target instanceof Cargo) {
                      targetLabel = `Cargo (${this.target.type})`;
                 } else {
-                    targetLabel = this.target.name || this.target.constructor.name || "Unknown";
+                    // Check for Station/Planet if targeted directly (less common now)
+                    if (this.target.constructor.name === 'Station') targetLabel = "Station";
+                    else if (this.target.constructor.name === 'Planet') targetLabel = this.target.name || "Planet";
+                    else targetLabel = this.target.name || this.target.constructor.name || "Unknown";
                 }
-            } // targetLabel remains "None" if this.target is null
+            } // targetLabel remains "None" if this.target is null and no state-based label applied
 
             let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
-            // Draw text relative to the translated origin (0,0), offset vertically
-            text(label, 0, -this.size / 2 - 15); // Position above the ship's center (0,0)
+            text(label, 0, -this.size / 2 - 15);
 
-            pop(); // Restore previous drawing settings for the label
+            pop();
         }
         // --- End Info Label ---
 
-
-        // --- Draw Ship Body (AFTER label, apply rotation) ---
-        rotate(this.angle); // Apply rotation ONLY for the ship body
+        rotate(this.angle);
 
         fill(this.p5FillColor); stroke(this.p5StrokeColor);
         strokeWeight(1);
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
         try { drawFunc(this.size, showThrust); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
-        // --- End Draw Ship Body ---
-
 
         // --- Draw Health Bar (AFTER rotation, relative to 0,0) ---
         if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {
@@ -1956,10 +2025,7 @@ class Enemy {
         }
         // --- End Health Bar ---
 
-
-        pop(); // End Ship Drawing Block (translate, rotate)
-        // --- End Ship Drawing Block ---
-
+        pop(); // End Ship Drawing Block
 
         // --- Draw Shield Effect (Separate transformation) ---
         if (!this.destroyed && this.shield > 0) {
@@ -1980,7 +2046,6 @@ class Enemy {
             pop(); // End shield drawing
         }
         // --- End Shield Effect ---
-
 
         // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
         // These use absolute coordinates or manage their own transformations
@@ -2308,7 +2373,7 @@ class Enemy {
         this.currentState = newState;
         
         // Log state changes with informative context
-        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[AI_STATE[newState]]}`);
+        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);
@@ -2341,14 +2406,14 @@ class Enemy {
                 break;
                 
             case AI_STATE.NEAR_STATION:
-                // Initialize station timer
+                // Reset timer on entry
                 this.nearStationTimer = this.stationPauseDuration;
-                this.vel.mult(0.1); // Slow down immediately
+                this.vel.mult(0.1); // Apply strong initial brake
                 break;
                 
             case AI_STATE.LEAVING_SYSTEM:
-                // Call the modified function to set the target (Jump Zone or fallback)
-                this.setLeavingSystemTarget(this.currentSystem); // Ensure currentSystem is valid
+                this.setLeavingSystemTarget(this.currentSystem);
+                this.nearStationTimer = null; // Clear station timer
                 break;
                 
             case AI_STATE.COLLECTING_CARGO:
@@ -2377,8 +2442,16 @@ class Enemy {
                 this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
                 break;
 
+            case AI_STATE.NEAR_STATION:
+                // Clear timer on exit
+                this.nearStationTimer = null;
+                break;
+
             case AI_STATE.FLEEING:
                 this.fleeStartTime = null;
+                break;
+
+            case AI_STATE.LEAVING_SYSTEM:
                 break;
         }
     }

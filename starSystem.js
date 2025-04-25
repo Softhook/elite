@@ -108,7 +108,7 @@ class StarSystem {
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
         this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 10;
-        this.despawnRadius = 2000; // Default, updated in initStaticElements based on screen size
+        this.despawnRadius = 10000; // Default, updated in initStaticElements based on screen size
 
         // --- Jump Zone Properties ---
         this.jumpZoneCenter = null; // p5.Vector, calculated in initStaticElements or loaded
@@ -158,12 +158,13 @@ class StarSystem {
         }
         console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`);
 
-        // --- Calculate Despawn Radius based on screen size ---
+        // --- Set a fixed large Despawn Radius ---
         try {
-            this.despawnRadius = max(width, height) * 2.0;
+            this.despawnRadius = 10000; // Set a fixed large radius
+            console.log(`         Despawn Radius set to fixed value: ${this.despawnRadius}`); // Add log
         } catch(e) {
-            console.error("         Error getting width/height/max for despawnRadius:", e);
-            this.despawnRadius = 2000; // Use default fallback
+            console.error("         Error setting fixed despawnRadius:", e);
+            this.despawnRadius = 10000; // Use fixed fallback
         }
 
         // --- Seeded Visual Background Elements ---
