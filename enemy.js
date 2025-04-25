@@ -1911,11 +1911,6 @@ class Enemy {
     draw() {
         if (this.destroyed || isNaN(this.angle)) return;
 
-        // Draw thrust particles BEHIND the ship
-        push();
-        translate(this.pos.x, this.pos.y); // Translate to ship position for particles
-        this.thrustManager.draw();
-        pop();
 
         if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
         if (!this.p5FillColor || !this.p5StrokeColor) { return; }
@@ -1927,6 +1922,13 @@ class Enemy {
             push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop();
             return;
         }
+
+        // Draw thrust particles BEHIND the ship
+        //push();
+        //translate(this.pos.x, this.pos.y); // Translate to ship position for particles
+        this.thrustManager.draw();
+        //pop();
+
 
         // --- Start Ship Drawing Block ---
         push();
