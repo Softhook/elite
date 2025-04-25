@@ -3,6 +3,8 @@
 // --- Ship Definitions and Drawing Functions are loaded from ships.js ---
 // Ensure ships.js is included BEFORE this file in index.html
 
+const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
+
 // --- Global Variables ---
 let player;                 // The player object
 let galaxy;                 // The galaxy object containing star systems

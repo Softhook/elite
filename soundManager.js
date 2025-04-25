@@ -4,6 +4,7 @@
  */
 class SoundManager {
     constructor() {
+        console.log("SoundManager constructor called.");
         this.sounds = {}; // To store pre-generated Audio objects
         this.soundDefinitions = {
             // --- Define your sounds here ---
@@ -36,7 +37,7 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 16
               },
-            pickupCoin: { // Example using a preset name
+            pickupCoin: {
                 preset: "pickupCoin",
                 sound_vol: 0.2
             },
@@ -65,7 +66,7 @@ class SoundManager {
                 "p_lpf_resonance": 0,
                 "p_hpf_freq": 0,
                 "p_hpf_ramp": 0,
-                "sound_vol": 0.25,
+                "sound_vol": 0.3,
                 "sample_rate": 44100,
                 "sample_size": 8
               },
@@ -94,7 +95,7 @@ class SoundManager {
                 "p_lpf_resonance": 0,
                 "p_hpf_freq": 0,
                 "p_hpf_ramp": 0,
-                "sound_vol": 0.25,
+                "sound_vol": 0.4,
                 "sample_rate": 44100,
                 "sample_size": 8
               },
@@ -126,9 +127,16 @@ class SoundManager {
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
                 "sample_size": 8
-              }
-            // Add more sound definitions here...
-            // e.g., hitHurt, jump, powerUp, etc.
+              },
+            click: {
+                preset: "hitHurt",
+                sound_vol: 0.15
+            },
+            click_off: {
+                preset: "hitHurt",
+                p_base_freq: 0.4,
+                sound_vol: 0.1
+            },
         };
 
         this.initSounds();
@@ -144,101 +152,225 @@ class SoundManager {
             return;
         }
 
-        console.log("Initializing SoundManager...");
+        console.log("SoundManager initSounds starting. Audio Context State:", getAudioContext().state);
+        console.log("Initializing SoundManager sounds (Normal & Quiet versions)...");
         for (const name in this.soundDefinitions) {
             try {
-                const definition = this.soundDefinitions[name];
-                // If definition uses a preset name, generate from that
-                if (definition.preset && typeof definition.preset === 'string') {
-                     // Generate requires the preset name directly
-                     // We'll store the generated data and create an Audio object from it
-                     const soundData = sfxr.generate(definition.preset);
-                     // Apply volume override if present
-                     if (definition.sound_vol !== undefined) {
-                         soundData.sound_vol = definition.sound_vol;
-                     }
-                     this.sounds[name] = sfxr.toAudio(soundData);
-                     console.log(`   Generated sound '${name}' from preset '${definition.preset}'`);
-                } else {
-                    // Otherwise, generate from the full parameter object
-                    this.sounds[name] = sfxr.toAudio(definition);
-                    console.log(`   Generated sound '${name}' from custom parameters.`);
+                const originalDefinition = this.soundDefinitions[name];
+                // Ensure base volume exists in the original definition
+                if (originalDefinition.sound_vol === undefined) {
+                    originalDefinition.sound_vol = 0.25; // Default if not specified
                 }
+
+                this.sounds[name] = {
+                    definition: originalDefinition, // Store original for reference
+                    audioNormal: null,
+                    audioQuiet: null
+                };
+
+                let generatedAudioNormal = null;
+                let generatedAudioQuiet = null;
+
+                // --- Generate Normal Volume Sound ---
+                console.log(`   Generating '${name}' (Normal)...`);
+                if (originalDefinition.preset && typeof originalDefinition.preset === 'string') {
+                    // Use a temporary object for generation to avoid modifying originalDefinition
+                    let tempParamsNormal = { ...originalDefinition };
+                    const soundDataNormal = sfxr.generate(tempParamsNormal.preset);
+                    soundDataNormal.sound_vol = tempParamsNormal.sound_vol; // Apply defined volume
+                    generatedAudioNormal = sfxr.toAudio(soundDataNormal);
+                } else {
+                    // Custom params - sfxr.toAudio uses the definition directly
+                    generatedAudioNormal = sfxr.toAudio(originalDefinition);
+                }
+
+                // Validate Normal Audio
+                // --- ADJUSTED VALIDATION: Accept any object with a .play() method ---
+                if (generatedAudioNormal && typeof generatedAudioNormal.play === 'function') {
+                    this.sounds[name].audioNormal = generatedAudioNormal;
+                    // Log whether it looks like a standard element or not
+                    if (typeof generatedAudioNormal.volume !== 'undefined') {
+                        console.log(`      -> Normal Audio object for '${name}' seems valid (Standard HTMLAudioElement).`);
+                    } else {
+                        console.log(`      -> Normal Audio object for '${name}' seems valid (Custom sfxr object with play method).`);
+                    }
+                } else {
+                    console.error(`   Failed to create a playable Normal Audio object for '${name}'. Object received:`, generatedAudioNormal);
+                }
+
+                // --- Generate Quiet Volume Sound ---
+                console.log(`   Generating '${name}' (Quiet)...`);
+                // Create a deep copy for modification if it's custom params
+                // For presets, we modify the generated soundData volume
+                let quietVolume = constrain(originalDefinition.sound_vol * OFFSCREEN_VOLUME_REDUCTION_FACTOR, 0.0, 1.0);
+
+                if (originalDefinition.preset && typeof originalDefinition.preset === 'string') {
+                    // Re-generate using the preset but override volume
+                    let tempParamsQuiet = { ...originalDefinition }; // Use copy
+                    const soundDataQuiet = sfxr.generate(tempParamsQuiet.preset);
+                    soundDataQuiet.sound_vol = quietVolume; // Apply REDUCED volume
+                    generatedAudioQuiet = sfxr.toAudio(soundDataQuiet);
+                } else {
+                    // Custom params: Create a copy and modify its volume
+                    let quietDefinition = { ...originalDefinition }; // Shallow copy is enough here
+                    quietDefinition.sound_vol = quietVolume; // Apply REDUCED volume
+                    generatedAudioQuiet = sfxr.toAudio(quietDefinition);
+                }
+
+                // Validate Quiet Audio
+                // --- ADJUSTED VALIDATION: Accept any object with a .play() method ---
+                if (generatedAudioQuiet && typeof generatedAudioQuiet.play === 'function') {
+                    this.sounds[name].audioQuiet = generatedAudioQuiet;
+                    // Log whether it looks like a standard element or not
+                    let quietVolumeLog = constrain(originalDefinition.sound_vol * OFFSCREEN_VOLUME_REDUCTION_FACTOR, 0.0, 1.0);
+                    if (typeof generatedAudioQuiet.volume !== 'undefined') {
+                         console.log(`      -> Quiet Audio object for '${name}' seems valid (Standard HTMLAudioElement, Vol: ${quietVolumeLog.toFixed(2)}).`);
+                    } else {
+                         console.log(`      -> Quiet Audio object for '${name}' seems valid (Custom sfxr object with play method, Target Vol: ${quietVolumeLog.toFixed(2)}).`);
+                    }
+                } else {
+                    console.error(`   Failed to create a playable Quiet Audio object for '${name}'. Object received:`, generatedAudioQuiet);
+                }
+
             } catch (error) {
-                console.error(`SoundManager Error: Failed to generate sound '${name}':`, error);
+                console.error(`SoundManager Error: Failed during generation for sound '${name}':`, error);
+                // If a catastrophic error occurs, we might still want to delete,
+                // but let's keep the entry even then for now to avoid the 'not found' warning.
             }
         }
-        console.log("SoundManager initialization complete.");
+        console.log("SoundManager initSounds finished. Generated sounds entries:", Object.keys(this.sounds).length);
+        // console.log("Generated sound objects:", this.sounds); // This might be too verbose now
     }
 
     /**
-     * Plays the sound associated with the given name.
-     * @param {string} name - The name of the sound effect to play (e.g., 'laserShoot').
+     * Plays a sound originating from a specific world location.
+     * Volume is reduced if the source is off-screen relative to the listener.
+     * @param {string} name - The name of the sound effect.
+     * @param {number} sourceX - World X coordinate of the sound source.
+     * @param {number} sourceY - World Y coordinate of the sound source.
+     * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
-    playSound(name) {
-        if (typeof sfxr === 'undefined') {
-            // console.warn("SoundManager: sfxr not loaded, cannot play sound.");
-            return; // Silently fail if sfxr isn't ready
+    playWorldSound(name, sourceX, sourceY, listenerPos) {
+        if (typeof sfxr === 'undefined') return;
+
+        const soundEntry = this.sounds[name];
+        // Check if the entry exists at all
+        if (!soundEntry) {
+            console.warn(`playWorldSound: Sound entry '${name}' not found.`);
+            return;
         }
 
-        const audio = this.sounds[name];
-        if (audio && typeof audio.play === 'function') {
-            // console.log(`Playing sound: ${name}`); // Optional log
-            // Ensure the sound is rewound before playing if needed,
-            // though sfxr.toAudio usually handles this.
-            // audio.currentTime = 0; // Might not be necessary or supported by sfxr's Audio object
-            audio.play();
+        // --- Visibility Check ---
+        let isVisible = true;
+        let reason = "Default (On-Screen/No Check)";
+        if (listenerPos && typeof width !== 'undefined' && typeof height !== 'undefined') {
+            let tx = width / 2 - listenerPos.x; let ty = height / 2 - listenerPos.y;
+            const screenLeft = -tx; const screenRight = -tx + width;
+            const screenTop = -ty; const screenBottom = -ty + height;
+            isVisible = (sourceX >= screenLeft && sourceX <= screenRight &&
+                         sourceY >= screenTop  && sourceY <= screenBottom);
+            reason = isVisible ? "On-Screen" : "Off-Screen";
+        } else { reason = "Check Failed"; }
+        // --- End Visibility Check ---
+
+        // --- Select Audio Object ---
+        let audioToPlay = null;
+        let versionSelected = "None";
+        if (isVisible) {
+            audioToPlay = soundEntry.audioNormal;
+            versionSelected = "Normal";
         } else {
-            console.warn(`SoundManager: Sound '${name}' not found or invalid.`);
+            // Prefer quiet version, but fall back to normal if quiet failed to generate
+            audioToPlay = soundEntry.audioQuiet || soundEntry.audioNormal;
+            versionSelected = soundEntry.audioQuiet ? "Quiet" : "Normal (Fallback)";
+        }
+        // --- End Select Audio Object ---
+
+        // Check if a valid audio object was selected/generated
+        // --- Keep this check ---
+        if (!audioToPlay || typeof audioToPlay.play !== 'function') {
+             console.warn(`playWorldSound: No valid audio object ('${versionSelected}') found for '${name}' (Visible: ${isVisible}).`);
+             return;
+        }
+
+        // --- Log Selection ---
+        // Get base volume from original definition for logging comparison
+        const baseVolume = soundEntry.definition.sound_vol || 0.25;
+        // Determine the INTENDED volume based on visibility for logging purposes
+        const intendedVolume = isVisible ? baseVolume : constrain(baseVolume * OFFSCREEN_VOLUME_REDUCTION_FACTOR, 0.0, 1.0);
+        console.log(`playWorldSound: '${name}' | Status: ${reason} | Selected: ${versionSelected} | BaseVol: ${baseVolume.toFixed(2)} | IntendedVol: ${intendedVolume.toFixed(2)}`);
+        // --- End Log Selection ---
+
+        try {
+            // --- Play the selected pre-generated sound ---
+            // Volume was set during generation (either via .sound_vol or .setVolume implicitly by sfxr)
+            audioToPlay.currentTime = 0; // Attempt to reset time (might not work on custom object)
+            audioToPlay.play();
+        } catch (e) {
+            console.error(`SoundManager: Error playing sound "${name}" (${versionSelected}):`, e);
         }
     }
 
     /**
-     * Plays an explosion sound, potentially varying based on size.
-     * @param {number} [size=30] - An optional size parameter to influence sound choice.
+     * Plays a UI or non-positioned sound at its base volume.
+     * @param {string} name - The name of the sound effect.
+     * @param {number} [volMultiplier=1.0] - Optional multiplier for the base volume.
      */
-    playExplosion(size = 30) {
+    playSound(name, volMultiplier = 1.0) {
+        // This plays UI sounds etc. Always use the 'Normal' version.
+        if (typeof sfxr === 'undefined') return;
+
+        const soundEntry = this.sounds[name];
+        // Check if entry and the 'Normal' audio exist and are playable
+        if (!soundEntry || !soundEntry.audioNormal || typeof soundEntry.audioNormal.play !== 'function') {
+            console.warn(`playSound: Sound '${name}' (Normal) not found or is not playable.`);
+            return;
+        }
+
+        const audioToPlay = soundEntry.audioNormal; // Always use normal for non-world sounds
+
+        try {
+            // Apply optional multiplier if needed
+            // This might only work reliably if it's a standard HTMLAudioElement
+            if (typeof audioToPlay.volume !== 'undefined' && volMultiplier !== 1.0) {
+                const baseVol = soundEntry.definition.sound_vol || 0.25; // Use definition vol as base
+                const finalVolume = constrain(baseVol * volMultiplier, 0.0, 1.0);
+                audioToPlay.volume = finalVolume;
+                console.log(`playSound: Applied volume multiplier ${volMultiplier} to '${name}'. New vol: ${finalVolume.toFixed(2)}`);
+            } else if (volMultiplier !== 1.0) {
+                console.warn(`playSound: Cannot apply volume multiplier to non-standard audio object for '${name}'.`);
+                // If it's the custom object, we might try its setVolume if needed, but let's skip for now.
+            }
+
+            audioToPlay.currentTime = 0; // Attempt reset
+            audioToPlay.play();
+
+            // Optional: Reset volume if it's a standard object and multiplier was used
+            // if (typeof audioToPlay.volume !== 'undefined' && volMultiplier !== 1.0) {
+            //     audioToPlay.volume = soundEntry.definition.sound_vol || 0.25;
+            // }
+
+        } catch (e) {
+            console.error(`SoundManager: Error playing sound "${name}" (Normal):`, e);
+        }
+    }
+
+    /**
+     * Plays an explosion sound, adjusting volume based on world position.
+     * @param {number} size - Size parameter to influence sound choice.
+     * @param {number} sourceX - World X coordinate of the explosion.
+     * @param {number} sourceY - World Y coordinate of the explosion.
+     * @param {p5.Vector} listenerPos - The world position of the listener (player).
+     */
+    playExplosion(size = 30, sourceX, sourceY, listenerPos) {
+        if (!listenerPos) {
+             console.warn("SoundManager.playExplosion: listenerPos is required.");
+             return;
+        }
         if (size > 60) {
-            this.playSound('explosionLarge');
+            this.playWorldSound('explosionLarge', sourceX, sourceY, listenerPos);
         } else {
-            this.playSound('explosionSmall');
+            this.playWorldSound('explosionSmall', sourceX, sourceY, listenerPos);
         }
     }
-
-    // Add more specific play methods as needed, e.g., playHit(), playPowerup()
 }
-
-// --- Example Usage (in sketch.js) ---
-
-/*
-// In sketch.js global scope:
-let soundManager;
-
-// In setup():
-function setup() {
-    // ... other setup ...
-    soundManager = new SoundManager(); // Create the manager
-    // ... rest of setup ...
-}
-
-// In places where sounds are needed:
-function mousePressed() {
-    if (soundManager) {
-        soundManager.playSound('laserShoot');
-        // Or soundManager.playSound('pickupCoin');
-    }
-}
-
-// Example in Explosion class constructor:
-class Explosion {
-    constructor(x, y, size, baseColor) {
-        // ... other constructor logic ...
-
-        // Play sound via the manager
-        if (soundManager) { // Check if manager exists
-            soundManager.playExplosion(size);
-        }
-    }
-    // ... rest of Explosion class ...
-}
-*/

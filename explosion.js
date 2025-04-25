@@ -18,9 +18,10 @@ class Explosion {
         this.generateParticles();
         this.generateDebris();
         
-        // Sound effect (if available)
-        if (typeof soundManager !== 'undefined' && soundManager?.playExplosion) {
-            soundManager.playExplosion(size);
+        // Play sound via the manager, passing position and listener
+        // Ensure 'player' global object is accessible
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos);
         }
 
     }

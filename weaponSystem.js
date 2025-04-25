@@ -115,9 +115,9 @@ class WeaponSystem {
         );
         system.addProjectile(proj);
         
-        // Play laser sound
-        if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('laser');
+        // Play laser sound using playWorldSound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
         }
     }
 
@@ -175,9 +175,9 @@ class WeaponSystem {
             system.addProjectile(proj);
         }
         
-        // Play laser sound once for all projectiles
-        if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('laser');
+        // Play laser sound using playWorldSound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
         }
     }
 
@@ -242,6 +242,11 @@ class WeaponSystem {
                 system,
                 owner.currentWeapon?.color || [255, 0, 0]
             );
+        }
+
+        // Play sound using playWorldSound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
         }
     }
     
