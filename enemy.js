@@ -32,6 +32,31 @@ for (const [k, v] of Object.entries(AI_STATE)) {
     AI_STATE_NAME[v] = k;
 }
 
+// --- AI Tuning Constants ---
+const TIGHT_ANGLE_RAD = 0.17;  // ~10 degrees for weapon selection
+const WIDE_ANGLE_RAD = 0.52;   // ~30 degrees for weapon selection
+const CLOSE_RANGE_MULT = 0.4; // Multiplier of visualFiringRange
+const MEDIUM_RANGE_MULT = 0.7; // Multiplier of visualFiringRange
+const POLICE_WANTED_BASE_SCORE = 100;
+const PIRATE_CARGO_BASE_SCORE = 30;
+const PIRATE_CARGO_MULT = 1.5;
+const RETALIATION_SCORE_BONUS = 60;
+const FLEE_THRUST_MULT_TRANSPORT = 1.8;
+const FLEE_THRUST_MULT_DEFAULT = 1.5;
+const FLEE_MIN_DURATION_MS = 2000;
+const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
+const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
+const TARGET_SCORE_BASE_WANTED = 100;   // Base score for police targeting wanted
+const TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
+const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
+const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
+const TARGET_SCORE_PIRATE_PREY_HAULER = 15; // Score for targeting haulers/transports
+const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
+const TARGET_SCORE_RETALIATION_HAULER = 80; // Score for hauler/transport retaliation
+const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
+const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
+const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
+
 class Enemy {
     // ---------------------------------
     // --- Constructor & Initialization
@@ -380,185 +405,220 @@ class Enemy {
      * @return {boolean} Whether a valid target was found
      */
     updateTargeting(system) {
-        // Update cooldown timer
-        if (this.targetSwitchCooldown > 0) {
-            this.targetSwitchCooldown -= deltaTime / 1000;
+        let bestScore = TARGET_SCORE_INVALID;
+        let bestTarget = null;
+        let currentTargetScore = TARGET_SCORE_INVALID;
+
+        // --- Evaluate Current Target ---
+        if (this.isTargetValid(this.target)) {
+            currentTargetScore = this.evaluateTargetScore(this.target, system);
+            bestScore = currentTargetScore;
+            bestTarget = this.target;
+        } else {
+            // Current target is invalid, reset it before evaluating others
+            this.target = null;
         }
-        
-        // If we've been attacked, consider retaliating
-        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) && 
-            this.targetSwitchCooldown <= 0) {
-            
-            const attackerDistance = this.distanceTo(this.lastAttacker);
-            const attackerIsThreat = this.lastAttacker.hull > this.hull * 0.3; // Only worry about threats
-            
-            // Different rules for different roles
-            if (this.role === AI_ROLE.PIRATE && attackerDistance < this.detectionRange * 1.5) {
-                // Pirates more likely to retaliate against attackers
-                console.log(`Pirate ${this.shipTypeName} responding to attack from ${this.lastAttacker.shipTypeName}`);
-                this.target = this.lastAttacker;
-                this.changeState(AI_STATE.APPROACHING);
-                this.targetSwitchCooldown = 2.0;
-                return true;
-            } else if (this.role === AI_ROLE.POLICE && attackerDistance < this.detectionRange && attackerIsThreat) {
-                // Police will attack threats more cautiously
-                if (this.lastAttacker.isWanted) {
-                    console.log(`Police ${this.shipTypeName} pursuing wanted attacker ${this.lastAttacker.shipTypeName}`);
-                    this.target = this.lastAttacker;
-                    this.changeState(AI_STATE.APPROACHING);
-                    this.targetSwitchCooldown = 1.5;
-                    return true;
-                }
-            } else if (this.role === AI_ROLE.HAULER && 
-                       attackerDistance < this.detectionRange &&
-                       (!this.attackCooldown || this.attackCooldown <= 0)) {
-                // Haulers should always respond to attacks, regardless of threat level
-                
-                // Store current hauler state to return to later
-                this.previousHaulerState = this.currentState;
-                this.previousTargetPos = this.patrolTargetPos ? this.patrolTargetPos.copy() : null;
-                
-                // Temporarily switch to combat mode
-                console.log(`Hauler ${this.shipTypeName} defending against attack from ${this.lastAttacker.shipTypeName}`);
-                this.target = this.lastAttacker;
-                this.changeState(AI_STATE.APPROACHING);
-                this.targetSwitchCooldown = 3.0; // Longer cooldown - haulers aren't combat ships
-                this.haulerCombatTimer = 10.0; // Set timer to return to hauling
-                return true;
+
+        // --- Evaluate Last Attacker ---
+        if (this.lastAttacker && this.lastAttacker !== bestTarget && this.isTargetValid(this.lastAttacker)) {
+            const attackerScore = this.evaluateTargetScore(this.lastAttacker, system);
+            if (attackerScore > bestScore) {
+                bestScore = attackerScore;
+                bestTarget = this.lastAttacker;
             }
         }
-        
-        // Pirates proactively hunt the player
-        if (this.role === AI_ROLE.PIRATE &&
-            (this.currentState === AI_STATE.IDLE || !this.isTargetValid(this.target)) &&
-            this.isTargetValid(system.player)) {
-            
-            const playerDistance = this.distanceTo(system.player);
-            const playerValue = system.player.credits > 10000 ? 1.5 : 1.0; // More interested in wealthy players
-            
-            if (playerDistance < this.detectionRange * playerValue) {
-                if (!this.hasLoggedPlayerTargeting || this.target !== system.player) {
-                    console.log(`Pirate ${this.shipTypeName} actively targeting Player at distance ${playerDistance.toFixed(2)}`);
-                    this.hasLoggedPlayerTargeting = true;
-                }
-                
-                this.target = system.player;
-                this.changeState(AI_STATE.APPROACHING);
-                this.targetSwitchCooldown = 1.0;
-                return true;
+
+        // --- Evaluate Player ---
+        const playerRef = system.player; // Assuming player is accessible via system
+        if (playerRef && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
+            const playerScore = this.evaluateTargetScore(playerRef, system);
+            if (playerScore > bestScore) {
+                bestScore = playerScore;
+                bestTarget = playerRef;
             }
         }
-        
-        // Reset player targeting log flag when we change targets
-        if (this.target !== system.player) {
-            this.hasLoggedPlayerTargeting = false;
-        }
-        
-        // Target switching logic - possibly switch to a better target
-        if (this.isTargetValid(this.target) && this.targetSwitchCooldown <= 0) {
-            // Check for better targets
-            let bestTarget = this.target;
-            let bestScore = this.evaluateTargetScore(this.target, system); // Pass system here
-            
-            // Consider the player
-            if (this.isTargetValid(system.player) && this.target !== system.player) {
-                const playerScore = this.evaluateTargetScore(system.player, system) * 1.2; // Pass system here
-                if (playerScore > bestScore) {
-                    bestTarget = system.player;
-                    bestScore = playerScore;
+
+        // --- Evaluate Other Enemies (Potential Targets) ---
+        // Only evaluate other enemies if not Police or Hauler/Transport (unless attacked)
+        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE); // Extend this if other roles should fight each other
+        if (canTargetOtherEnemies && system.enemies) {
+            for (const otherEnemy of system.enemies) {
+                if (otherEnemy === this || otherEnemy === bestTarget || !this.isTargetValid(otherEnemy)) {
+                    continue;
+                }
+                const enemyScore = this.evaluateTargetScore(otherEnemy, system);
+                if (enemyScore > bestScore) {
+                    bestScore = enemyScore;
+                    bestTarget = otherEnemy;
                 }
             }
-            
-            // Consider other enemies
-            if (system.enemies && system.enemies.length > 0) {
-                for (const enemy of system.enemies) {
-                    // Skip ourselves and invalid targets
-                    if (enemy === this || !this.isTargetValid(enemy)) continue;
-                    
-                    // Skip non-wanted ships for police
-                    if (this.role === AI_ROLE.POLICE && !enemy.isWanted) continue;
-                    
-                    const enemyScore = this.evaluateTargetScore(enemy, system); // Pass system here
-                    if (enemyScore > bestScore) {
-                        bestTarget = enemy;
-                        bestScore = enemyScore;
-                    }
-                }
-            }
-            
-            // Switch to best target if it's different
-            if (bestTarget !== this.target) {
-                console.log(`${this.shipTypeName} switching target to ${bestTarget.shipTypeName || 'Player'} (score: ${bestScore.toFixed(1)})`);
-                this.target = bestTarget;
-                this.targetSwitchCooldown = 2.0;
-            }
         }
-        
-        return this.isTargetValid(this.target);
+
+        // --- Evaluate Cargo (Pirates Only) ---
+        if (this.role === AI_ROLE.PIRATE && system.cargo) {
+             for (const cargoItem of system.cargo) {
+                 if (!cargoItem.collected && cargoItem !== bestTarget) {
+                     const cargoScore = this.evaluateTargetScore(cargoItem, system);
+                     if (cargoScore > bestScore) {
+                         bestScore = cargoScore;
+                         bestTarget = cargoItem;
+                     }
+                 }
+             }
+        }
+
+
+        // --- Final Decision ---
+        // Only assign a target if a score significantly above invalid was found.
+        // Using > 0 ensures only positively evaluated targets are kept.
+        if (bestTarget && bestScore > 0) {
+             // Did the target change, or did the score significantly improve?
+             const scoreThresholdForChange = 5; // Prevent rapid flipping for minor score changes
+             if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
+                 this.target = bestTarget;
+                 // console.log(`${this.shipTypeName} new target: ${bestTarget?.constructor?.name} ${bestTarget?.role || ''} (Score: ${bestScore.toFixed(1)})`); // Debug
+                 return true; // Target acquired or changed
+             }
+             // Keep current target if score isn't much better
+             return this.target !== null;
+
+        } else {
+             // No suitable target found or best target score is too low.
+             if (this.target !== null) {
+                 // console.log(`${this.shipTypeName} lost target or no suitable target found.`); // Debug
+                 this.target = null; // Explicitly set to null
+             }
+             return false; // No valid target
+        }
     }
 
     /**
-     * Evaluate how attractive a target is based on various factors
-     * Higher score = more attractive target
-     * @param {Object} target - The target to evaluate
-     * @param {Object} system - The current star system
-     * @return {number} A score representing target attractiveness
+     * Evaluate how attractive a target is based on various factors.
+     * Higher score = more attractive target. Score starts at 0.
+     * @param {Object} target - The target to evaluate (Player, Enemy, Cargo, etc.).
+     * @param {Object} system - The current star system.
+     * @return {number} A score representing target attractiveness, or TARGET_SCORE_INVALID if invalid/ignored.
      */
     evaluateTargetScore(target, system) {
-        if (!this.isTargetValid(target)) return 0;
-        
-        let score = 100; // Base score
-        
-        // Distance factor - closer targets are more attractive
-        const distance = this.distanceTo(target);
-        score -= distance * 0.1; // Reduce score based on distance
-        
-        // Hull factor - weaker targets are more attractive
-        if (target.hull !== undefined && target.maxHull !== undefined) {
-            const hullPercent = target.hull / target.maxHull;
-            score += (1 - hullPercent) * 30; // Up to 30 points for damaged targets
+        // --- Initial Validation ---
+        // Immediately discard invalid targets or self-targeting.
+        if (!this.isTargetValid(target) || target === this) {
+            return TARGET_SCORE_INVALID;
         }
-        
-        // Role-specific factors
-        if (this.role === AI_ROLE.PIRATE) {
-            // Pirates prefer valuable targets
-            if (target === system.player) {
-                // Players with cargo are more attractive
-                if (target.cargo && target.cargo.length > 0) {
-                    score += target.cargo.length * 10;
-                }
-                
-                // Damaged players are more attractive
-                if (target.hull < target.maxHull * 0.5) {
-                    score += 30;
-                }
-            } else if (target.role === AI_ROLE.HAULER) {
-                // Haulers might have valuable cargo
-                score += 20;
-            } else if (target.role === AI_ROLE.POLICE) {
-                // Pirates generally avoid police unless they attacked first
-                score -= 30;
-                
-                // Unless this police attacked us
-                if (target === this.lastAttacker) {
-                    score += 50;
-                }
-            }
-        } else if (this.role === AI_ROLE.POLICE) {
-            // Police prioritize wanted ships
+
+        let score = 0; // START SCORE AT ZERO.
+        let isPotentiallyInteresting = false; // Flag: Did role logic find a reason to engage?
+
+        // --- Role-Specific Scoring ---
+        // Determine the base score and if the target is interesting based on *this* enemy's role.
+
+        // 1. Police Logic: Only interested in wanted targets.
+        if (this.role === AI_ROLE.POLICE) {
             if (target.isWanted) {
-                score += 50;
-                
-                // Even more if they're actively committing crimes
+                score = TARGET_SCORE_BASE_WANTED; // High base score for wanted targets.
                 if (target.role === AI_ROLE.PIRATE) {
-                    score += 20;
+                    score += TARGET_SCORE_WANTED_PIRATE_BONUS; // Bonus for wanted pirates.
                 }
+                // Future: Bonus if target attacked police recently?
+                isPotentiallyInteresting = true;
             } else {
-                // Police should ignore non-wanted ships
-                score = 0;
+                // Police STRICTLY ignore non-wanted targets.
+                return TARGET_SCORE_INVALID;
             }
         }
-        
+        // 2. Pirate Logic: Interested in cargo, vulnerable targets, or retaliation.
+        else if (this.role === AI_ROLE.PIRATE) {
+            // a) Target Player? Check cargo and if player attacked us.
+            if (target instanceof Player) {
+                // Use getCargoAmount if available, otherwise fallback (adjust if needed)
+                const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
+                const cargoCapacity = target.cargoCapacity || 1; // Avoid division by zero.
+                // Significant score only if player has decent cargo.
+                if (cargoAmount > 5 || (cargoAmount / cargoCapacity) > 0.15) {
+                    score += TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
+                    isPotentiallyInteresting = true;
+                }
+                // Retaliation is high priority.
+                if (target === this.lastAttacker) {
+                    score += TARGET_SCORE_RETALIATION_PIRATE; // Strong incentive to fight back.
+                    isPotentiallyInteresting = true;
+                }
+                // If player has no cargo and didn't attack, they are not interesting.
+                // Score remains 0 unless retaliation applies.
+
+            }
+            // b) Target Haulers/Transports? These are potential prey.
+            else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                score += TARGET_SCORE_PIRATE_PREY_HAULER; // Base score for potential prey.
+                isPotentiallyInteresting = true;
+            }
+            // c) Target other Pirates? Only if attacked.
+            else if (target.role === AI_ROLE.PIRATE && target === this.lastAttacker) {
+                 score += TARGET_SCORE_RETALIATION_PIRATE * 0.8; // Retaliate against other pirates (slightly less than vs player).
+                 isPotentiallyInteresting = true;
+            }
+            // d) Avoid Police unless attacked.
+            else if (target.role === AI_ROLE.POLICE) {
+                if (target === this.lastAttacker) {
+                    score += TARGET_SCORE_RETALIATION_PIRATE * 0.7; // Retaliate against police if attacked (risky).
+                    isPotentiallyInteresting = true;
+                } else {
+                     return TARGET_SCORE_INVALID; // Avoid police otherwise.
+                }
+            }
+            // e) Target Cargo? (Added logic)
+            else if (target instanceof Cargo) {
+                 score += 5 + (target.quantity || 1); // Small base score + quantity bonus.
+                 isPotentiallyInteresting = true;
+            }
+        }
+        // 3. Hauler / Transport Logic: Only interested if attacked.
+        else if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
+            // ONLY target if attacked.
+            if (target === this.lastAttacker) {
+                score = TARGET_SCORE_RETALIATION_HAULER; // High score to focus on attacker (triggers flee/retaliate state).
+                isPotentiallyInteresting = true;
+            } else {
+                // Ignore everyone else.
+                return TARGET_SCORE_INVALID;
+            }
+        }
+        // 4. Other Roles (if added later) - default ignore.
+        else {
+             return TARGET_SCORE_INVALID;
+        }
+
+        // --- General Modifiers (Applied only if target is potentially interesting) ---
+        if (isPotentiallyInteresting) {
+            // a) Distance factor: Closer targets are more attractive.
+            const distance = this.distanceTo(target);
+            if (distance > 0) {
+                 // Apply penalty, ensure it doesn't completely negate base score unless very far.
+                 score -= distance * TARGET_SCORE_DISTANCE_PENALTY_MULT;
+            }
+
+            // b) Hull factor: Weaker targets are more attractive.
+            // Check if target has hull properties before accessing.
+            if (target.hull !== undefined && target.maxHull !== undefined && target.maxHull > 0) {
+                const hullPercent = target.hull / target.maxHull;
+                // Add bonus for damaged targets, max bonus capped.
+                score += Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, (1 - hullPercent) * TARGET_SCORE_HULL_DAMAGE_MULT);
+            }
+
+            // Ensure score doesn't become negative due to distance/hull unless intended.
+            // If the role logic decided it was interesting, keep score at least 0.
+            if (score < 0) {
+                 score = 0;
+            }
+        } else {
+             // If no role logic found a reason to engage, it's not interesting.
+             return TARGET_SCORE_INVALID;
+        }
+
+        // Debug log (optional)
+        // const targetName = target instanceof Player ? "Player" : (target.shipTypeName || target.constructor.name);
+        // console.log(`Target: ${targetName}, Role: ${target?.role || 'N/A'}, Score: ${score.toFixed(1)}`);
+
         return score;
     }
 
@@ -581,9 +641,9 @@ class Enemy {
             let score = 0;
             
             // Range considerations
-            const isLongRange = distanceToTarget > this.firingRange * 0.7;
-            const isMediumRange = distanceToTarget > this.firingRange * 0.4 && distanceToTarget <= this.firingRange * 0.7;
-            const isShortRange = distanceToTarget <= this.firingRange * 0.4;
+            const isLongRange = distanceToTarget > this.visualFiringRange * MEDIUM_RANGE_MULT;
+            const isMediumRange = distanceToTarget > this.visualFiringRange * CLOSE_RANGE_MULT && distanceToTarget <= this.visualFiringRange * MEDIUM_RANGE_MULT;
+            const isShortRange = distanceToTarget <= this.visualFiringRange * CLOSE_RANGE_MULT;
             
             // Score based on weapon type and range
             if (weapon.type.includes('beam') && isLongRange) {
@@ -786,7 +846,7 @@ class Enemy {
                 // Add a minimum flee time to prevent premature exit
                 if (!this.fleeStartTime) {
                     this.fleeStartTime = millis();
-                    this.fleeMinDuration = 2000; // Minimum 2 seconds of fleeing
+                    this.fleeMinDuration = FLEE_MIN_DURATION_MS; // Use constant
                 }
                 
                 // When fleeing, move away from attacker and increase speed
@@ -797,7 +857,8 @@ class Enemy {
                     
                     // Apply stronger thrust for escape
                     this.performRotationAndThrust(this.escapeTarget);
-                    this.thrustForward(1.2);  // Apply extra thrust when fleeing
+                    const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
+                    this.thrustForward(fleeThrustMultiplier);  // Apply extra thrust when fleeing
                     
                     // Add some randomness to make escape path less predictable
                     if (frameCount % 20 === 0) {
@@ -807,9 +868,10 @@ class Enemy {
                 
                 // Only exit FLEEING when truly safe AND minimum flee time has passed
                 const timeInFlee = millis() - (this.fleeStartTime || 0);
+                const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
                 if (timeInFlee > this.fleeMinDuration && 
                     (!this.isTargetValid(this.target) || 
-                     this.distanceTo(this.target) > this.detectionRange * 2.0)) {
+                     this.distanceTo(this.target) > escapeDistanceThreshold)) {
                     
                     console.log(`${this.shipTypeName} escaped successfully!`);
                     
@@ -1098,8 +1160,9 @@ class Enemy {
                     const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
                     
                     // Apply extra thrust when generally pointing in escape direction
+                    const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
                     if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
-                        this.thrustForward(1.5); // 50% more thrust when fleeing
+                        this.thrustForward(fleeThrustMultiplier); // Apply thrust when fleeing
                     }
                     
                     // Add randomness to make escape path less predictable
@@ -1108,8 +1171,9 @@ class Enemy {
                     }
                     
                     // Check if we've escaped far enough
+                    const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
                     if (!this.isTargetValid(this.target) || 
-                        this.distanceTo(this.target) > this.detectionRange * 2.5) {
+                        this.distanceTo(this.target) > escapeDistanceThreshold) {
                         console.log(`${this.shipTypeName} escaped successfully!`);
                         
                         // Add long cooldown before we can be provoked again
@@ -1198,8 +1262,9 @@ class Enemy {
                 const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
                 
                 // Apply extra thrust when pointed in escape direction
+                const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
                 if (Math.abs(angleToEscape) < this.angleTolerance * 2) {
-                    this.thrustForward(1.8); // 80% more thrust when fleeing (more than haulers)
+                    this.thrustForward(fleeThrustMultiplier); // Apply thrust when fleeing
                 }
                 
                 // Add more randomness to make transport escape harder to predict
@@ -1208,8 +1273,9 @@ class Enemy {
                 }
                 
                 // Check if we've escaped far enough
+                const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
                 if (!this.isTargetValid(this.target) || 
-                    this.distanceTo(this.target) > this.detectionRange * 3.0) {
+                    this.distanceTo(this.target) > escapeDistanceThreshold) {
                     console.log(`Transport ${this.shipTypeName} escaped successfully!`);
                     
                     // Add long cooldown before we can be provoked again
@@ -1657,10 +1723,9 @@ class Enemy {
     canFireAtTarget(targetAngle) {
         const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
         const angleDiff = this.getAngleDifference(targetAngle);
-        const firingAngleTolerance = 0.52;
         
         return this.currentState !== AI_STATE.IDLE && 
-               (isTurretWeapon || Math.abs(angleDiff) < firingAngleTolerance);
+               (isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Use constant
     }
 
     /** 
@@ -1795,7 +1860,7 @@ class Enemy {
     // --- Rendering ---
     // -----------------
     
-    /** Draws the enemy ship using its defined draw function and role-based stroke. */
+    /** Draws the enemy ship using its specific draw function and adds UI elements. */
     draw() {
         if (this.destroyed || isNaN(this.angle)) return;
 
@@ -1913,48 +1978,42 @@ class Enemy {
             pop();
         }
 
-        // Draw always-horizontal info label above the ship
+        // --- Draw UI Elements (Health Bar, Label) ---
         if (!this.destroyed) {
+            // --- Health Bar ---
+            // ... (existing health bar logic) ...
+
+            // --- Info Label ---
             push();
             textAlign(CENTER, BOTTOM);
             textSize(12);
             fill(255);
             noStroke();
-            // Get state name from AI_STATE value
-            let stateKey = Object.keys(AI_STATE).find(k => AI_STATE[k] === this.currentState) || "";
-            let targetLabel = "";
-            
-            if (this.currentState === AI_STATE.COLLECTING_CARGO && this.cargoTarget) {
-                targetLabel = "Cargo";
-            } else if (this.target && this.target.shipTypeName) {
-                targetLabel = this.target.shipTypeName;
-            } else {
-                targetLabel = "None";
-            }
-            
-            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
-            text(label, this.pos.x, this.pos.y - this.size / 2 - 5);
-            pop();
-        }
 
-        // Draw weapon range indicator in combat (debug)
-        if (this.currentWeapon && this.target && 
-            (this.currentState === AI_STATE.APPROACHING || 
-             this.currentState === AI_STATE.ATTACK_PASS)) {
-            
-            push();
-            stroke(200, 200, 0, 100);
-            noFill();
-            strokeWeight(1);
-            let effectiveRange = this.firingRange;
-            
-            // Adjust range circle based on weapon type
-            if (this.currentWeapon.type === 'beam') effectiveRange *= 1.2;
-            else if (this.currentWeapon.type === 'missile') effectiveRange *= 1.3;
-            else if (this.currentWeapon.type === 'turret') effectiveRange *= 0.8;
-            
-            circle(this.pos.x, this.pos.y, effectiveRange * 2);
-            pop();
+            let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
+            let targetLabel = "None"; // Default to "None"
+
+            // Check if target exists before trying to identify it
+            if (this.target) {
+                if (this.currentState === AI_STATE.COLLECTING_CARGO && this.target instanceof Cargo) {
+                    targetLabel = `Cargo (${this.target.type})`;
+                } else if (this.target instanceof Player) {
+                    targetLabel = "Player";
+                } else if (this.target instanceof Enemy && this.target.shipTypeName) {
+                    targetLabel = this.target.shipTypeName;
+                } else if (this.target instanceof Cargo) { // Fallback if not in COLLECTING state but targeting cargo
+                     targetLabel = `Cargo (${this.target.type})`;
+                } else {
+                    // Fallback for other potential target types (Station, Planet?)
+                    targetLabel = this.target.name || this.target.constructor.name || "Unknown";
+                }
+            } // If this.target is null, targetLabel remains "None"
+
+            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
+            // Adjust position relative to the ship's center (0,0 after translate)
+            text(label, 0, -this.size / 2 - 15); // Position above the ship
+
+            pop(); // Restore previous drawing settings for the label
         }
 
         // Draw effective weapon range indicator in combat (debug)
