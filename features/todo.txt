@@ -2,9 +2,9 @@
 
 ## Bugs and Issues
 
+weapon selection is wrong
 
-
-make recharge shields speed faster
+I AM NOt SURE IF THE BOUNTY IS counting old kills
 
 i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
 asteroids not behaving right
@@ -37,6 +37,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 - sideways kiting with thrust
 - temporary speed burst
+
 - Add elite achievements system
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour

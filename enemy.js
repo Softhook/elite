@@ -122,7 +122,8 @@ class Enemy {
         this.target = playerRef; this.currentState = AI_STATE.IDLE; // Default state
         this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed
         // AI Tuning Parameters
-        this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
+        this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.visualFiringRange = this.firingRange; // Initialize with base range for drawing
+        this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
 
         // --- Weapon Assignment Based on Ship Definition ---
         this.fireCooldown = random(1.0, 2.5);
@@ -1676,7 +1677,7 @@ class Enemy {
         this.selectBestWeapon(distanceToTarget);
         
         // Adjust firing range based on weapon type
-        let effectiveFiringRange = this.firingRange;
+        let effectiveFiringRange = this.firingRange; // Local variable for firing logic
         if (this.currentWeapon) {
             switch (this.currentWeapon.type) {
                 case 'beam':
@@ -1686,12 +1687,14 @@ class Enemy {
                     effectiveFiringRange *= 1.3; // Missiles have even longer range
                     break;
                 case 'turret':
-                    effectiveFiringRange *= 0.9; // Turrets have slightly shorter range
+                    effectiveFiringRange *= 0.8; // Turrets have slightly shorter range
                     break;
             }
         }
-        
+        this.visualFiringRange = effectiveFiringRange; // Store the calculated range for drawing
+
         // Enhanced firing logic with weapon-specific behaviors
+        // Uses the LOCAL effectiveFiringRange for the decision, behavior unchanged
         if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
             // Check if we can fire at the target
             if (this.canFireAtTarget(shootingAngle)) {
@@ -1940,7 +1943,7 @@ class Enemy {
              this.currentState === AI_STATE.ATTACK_PASS)) {
             
             push();
-            stroke(200, 200, 0, 50);
+            stroke(200, 200, 0, 100);
             noFill();
             strokeWeight(1);
             let effectiveRange = this.firingRange;
@@ -1948,9 +1951,25 @@ class Enemy {
             // Adjust range circle based on weapon type
             if (this.currentWeapon.type === 'beam') effectiveRange *= 1.2;
             else if (this.currentWeapon.type === 'missile') effectiveRange *= 1.3;
-            else if (this.currentWeapon.type === 'turret') effectiveRange *= 0.9;
+            else if (this.currentWeapon.type === 'turret') effectiveRange *= 0.8;
             
             circle(this.pos.x, this.pos.y, effectiveRange * 2);
+            pop();
+        }
+
+        // Draw effective weapon range indicator in combat (debug)
+        // Use the stored this.visualFiringRange
+        if (this.currentWeapon && this.target && this.isTargetValid(this.target) &&
+            (this.currentState === AI_STATE.APPROACHING ||
+             this.currentState === AI_STATE.ATTACK_PASS ||
+             this.currentState === AI_STATE.REPOSITIONING)) {
+
+            push();
+            stroke(200, 200, 0, 100); // Yellow, semi-transparent
+            noFill();
+            strokeWeight(1);
+            // Draw circle using the visualFiringRange property
+            circle(this.pos.x, this.pos.y, this.visualFiringRange * 2);
             pop();
         }
     }
