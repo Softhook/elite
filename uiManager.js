@@ -318,17 +318,17 @@ class UIManager {
         fill(220); textSize(18); textAlign(CENTER,TOP);
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
 
-        // Calculate repair costs
+        // Calculate repair costs - with Math.floor to ensure integers
         let missing = player.maxHull - player.hull;
-        let fullCost = missing * 10;
+        let fullCost = Math.floor(missing * 10);
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
-        let halfCost = halfRepair * 7;
+        let halfCost = Math.floor(halfRepair * 7);
 
         let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
 
         // 100% Repair Button
         fill(0,180,0); stroke(100,255,100); rect(btnX, btnY1, btnW, btnH, 5);
-        fill(255); textSize(18); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(18); textAlign(CENTER,CENTER); noStroke();
         text(`Full Repair (${fullCost} cr)`, btnX+btnW/2, btnY1+btnH/2);
         this.repairsFullButtonArea = {x:btnX, y:btnY1, w:btnW, h:btnH};
 
@@ -364,20 +364,15 @@ class UIManager {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Commodity Market", station, player, system);
         
-        // Cargo info - still important for market
-        textSize(16); 
-        textAlign(LEFT, TOP);
-        text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX+30, pY+headerHeight);
-        
         // Table setup - adjusted Y position
         let sY = pY+headerHeight+40, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
         textAlign(CENTER,CENTER); textSize(14); fill(200);
 
         // Column headers
-        text("Commodity", sX+cW*0.5, sY);
-        text("Buy", sX+cW*1.5, sY);
-        text("Sell", sX+cW*2.5, sY);
-        text("Held", sX+cW*3.5, sY);
+        text("Commodity", sX+cW*0.3, sY);
+        text("Buy", sX+cW*1.8, sY);
+        text("Sell", sX+cW*2.8, sY);
+        text("Cargo Hold", sX+cW*3.8, sY);
 
         // Row setup
         sY += 30;
@@ -1592,24 +1587,24 @@ class UIManager {
         textAlign(CENTER, TOP);
         text(title, pX + pW/2, pY + 20);
         
-        // Station name, economy type and security level
+        // Station name, economy type and security level (left aligned)
         textSize(16); 
-        textAlign(CENTER, TOP);
+        textAlign(LEFT, TOP);
         const stationName = station.name || "Unknown Station";
         const systemName = system?.name || "Unknown System";
-        text(`${stationName} - ${systemName}`, pX + pW/2, pY + 50);
+        text(`${stationName} - ${systemName}`, pX+20, pY + 20);
         
-        // Economy and Security
+        // Economy and Security (left aligned)
         const econ = system?.economyType || station.market?.systemType || "Unknown";
         const law = system?.securityLevel || "Unknown";
         textSize(14);
-        text(`Economy: ${econ}   |   Security: ${law}`, pX + pW/2, pY + 70);
+        text(`Economy: ${econ}   |   Security: ${law}`, pX +20, pY + 45);
         
         // Credits (right-aligned)
         textAlign(RIGHT, TOP);
-        fill(220, 220, 100); // Gold color for credits
         text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
-        
+        text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, pX + pW - 30, pY + 45);
+
         return headerHeight; // Return the height used by header
     }
 
