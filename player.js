@@ -521,7 +521,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.shield < this.maxShield && timeSinceShieldHit > this.shieldRechargeDelay) {
             // Scale by deltaTime for consistent recharge rate
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1; // Normalize to ~60fps
-            const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016; // Per-frame rate
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
         

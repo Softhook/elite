@@ -4,6 +4,7 @@
 // Ensure ships.js is included BEFORE this file in index.html
 
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
+const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
 
 // --- Global Variables ---
 let player;                 // The player object

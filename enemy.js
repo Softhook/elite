@@ -290,7 +290,7 @@ class Enemy {
         const timeSinceShieldHit = millis() - this.lastShieldHitTime;
         if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
-            const rechargeAmount = this.shieldRechargeRate * timeScale * 0.016;
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
 
