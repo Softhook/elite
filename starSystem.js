@@ -171,8 +171,8 @@ class StarSystem {
         try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
         try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
 
-        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 100; // Default star count
-        try { numBgStars = floor(random(250, 400)); } catch(e) {} // Use default on error
+        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 10000; // Default star count
+        try { numBgStars = floor(random(1000, 10000)); } catch(e) {} // Use default on error
         try { // Generate background stars using seeded random
             for (let i = 0; i < numBgStars; i++) {
                 this.bgStars.push({
