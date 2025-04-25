@@ -4,13 +4,9 @@
 
 
 
-make recharge shields levels work properly
-
+make recharge shields speed faster
 
 i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
-
-put the messagses in teh corner with 10 lines
-
 asteroids not behaving right
 
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
@@ -39,8 +35,9 @@ Solution: Implement more precise hitbox system using ship vertex data
 ## Core Gameplay Enhancements
 
 - sideways kiting with thrust
+- temporary speed burst
 - Add elite achievements system
-- alien attack behaviour aim and shoot
+- alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
 - scanner upgrade to show helthbars and text for ships
 - blue line point to station
@@ -61,18 +58,20 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Graphics and UI Improvements
 
+- warning sound when health is low
+- generate names for all the planets
+- put the messagses in teh corner with 10 lines
 - weapon names clarify
 - better title screen
 - add some space features nebula, moons
 - Redesign space station
 - Add proper 3D ship models (even if sprite-based)
-- Add engine thrust visualization for all ships
-- Improve HUD with radar and target information
-- Add system for ship damage visualization on hulls
+- Improve target information
 - Improve galaxy map interface with route planning
 
 ## Economy and Progression
 
+- fuel for jumping sold at stations - varies a lot in cost
 - Implement more sophisticated economic simulation
 - Add price fluctuations based on supply/demand
 - Implement market events (shortages, surpluses)

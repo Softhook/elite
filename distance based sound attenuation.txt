@@ -1,0 +1,51 @@
+Feature: Distance-Based Sound Attenuation (Off-Screen Sound Reduction)
+
+1. Description: This feature aims to enhance audio immersion and reduce audio clutter by dynamically adjusting the volume of sound effects based on their origin relative to the player's viewport. Sounds originating from locations currently visible on the screen will play at their normal volume, while sounds originating off-screen will be played at a reduced volume. This provides a subtle sense of distance and directionality for world events.
+
+2. Requirements:
+
+World-Based Sounds Only: The volume reduction should only apply to sounds explicitly triggered with world coordinates (e.g., weapon fire, explosions, asteroid impacts). UI sounds (button clicks, menu transitions) or ambient background sounds should not be affected.
+Viewport Check: The system must determine if the sound's source coordinates (sourceX, sourceY) fall within the current screen boundaries, calculated relative to the listener's (player's) world position (listenerPos).
+Volume Reduction: Sounds originating outside the calculated viewport must have their playback volume reduced by a configurable factor (e.g., 50%).
+Normal Volume On-Screen: Sounds originating inside the viewport must play at their base volume as defined in SoundManager.soundDefinitions.
+Configurable Factor: The amount of volume reduction for off-screen sounds should be easily adjustable via a constant (e.g., OFFSCREEN_VOLUME_REDUCTION_FACTOR).
+Graceful Handling: The system should handle cases where listener position or screen dimensions might be temporarily unavailable, defaulting to the sound's base volume in such scenarios.
+3. Potential Effects & Benefits:
+
+Improved Immersion: Creates a more believable soundscape where distant events sound quieter.
+Reduced Audio Clutter: Lessens the impact of numerous off-screen sound effects during busy scenes (e.g., large battles).
+Subtle Directional Cues: Players might subconsciously notice the volume difference, giving a hint about off-screen action.
+Focus on Player Action: Prioritizes sounds occurring closer to the player's immediate view.
+4. Implementation Plan:
+
+Constants: Define OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.5; (or similar) globally (e.g., in sketch.js).
+SoundManager.js:
+Implement playWorldSound(name, sourceX, sourceY, listenerPos):
+Retrieve the sound definition and base volume (sound_vol).
+Check if listenerPos, width, and height are valid.
+Calculate screen boundaries in world coordinates:
+tx = width / 2 - listenerPos.x;
+ty = height / 2 - listenerPos.y;
+screenLeft = -tx; screenRight = -tx + width;
+screenTop = -ty; screenBottom = -ty + height;
+Determine isVisible = (sourceX >= screenLeft && ... && sourceY <= screenBottom).
+Set targetVolume = isVisible ? baseVolume : baseVolume * OFFSCREEN_VOLUME_REDUCTION_FACTOR;
+Get the Audio object via getAudio(name) (handling caching/generation).
+Set audio.volume = constrain(targetVolume, 0.0, 1.0);
+Call audio.play(), wrapped in a try-catch block.
+Ensure getAudioContext().state === 'running' check is present.
+Modify playExplosion(size, sourceX, sourceY, listenerPos):
+Update the signature to accept position and listener.
+Change internal playSound calls to this.playWorldSound('explosionLarge', sourceX, sourceY, listenerPos) or ...('explosionSmall', ...).
+Retain playSound(name) for UI and non-positioned sounds.
+Sound Trigger Points:
+WeaponSystem.js: In methods like fireProjectile, fireBeam, fireSpread, fireStraight, fireTurret, replace soundManager.playSound('laser') with soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);. Ensure player.pos is accessible (likely via the global player object).
+Explosion.js: In the constructor, change the sound call to soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos);. Ensure player.pos is accessible.
+Other World Sounds: Identify and update any other sounds tied to world locations (e.g., potential asteroid collision sounds).
+5. Potential Problems & Issues:
+
+Listener Position Availability: The global player object needs to be consistently accessible and have a valid pos property whenever playWorldSound is called from various classes.
+Performance: The added calculations (bounds check, multiplication) per sound are minimal and unlikely to cause performance issues unless an extreme number of sounds are triggered simultaneously.
+Sharp Volume Cutoff: The current plan implements a binary on-screen/off-screen check. This results in a sudden volume change as sources cross the screen edge. A smoother falloff based on distance could be implemented but adds complexity.
+Camera Zoom: If camera zoom functionality is added later, the calculation of screen boundaries within playWorldSound will need to incorporate the zoom factor to remain accurate.
+Audio Context Readiness: The check for getAudioContext().state === 'running' is important, especially on browsers requiring user interaction before audio can play. Ensure this check doesn't prevent intended sounds after interaction has occurred.
