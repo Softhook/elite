@@ -26,7 +26,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Fix AI behavior inconsistencies and edge cases
 - Improve enemy targeting and combat decisions
 - Fix potential memory leaks with explosion particles
-- Improve handling of edge cases in the solar system generation
 
 - Alien ships should not be vailable to buy
 
@@ -46,7 +45,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Implement asteroid mining gameplay
 - Add salvaging mechanics for destroyed ships
 - Add smuggling mechanics with scanning gameplay
-- Add ship fuel management and refueling
+
+
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters
 - limit the amount of goods aer availbe at certain planets based on their econmy
@@ -58,6 +58,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Graphics and UI Improvements
 
+- more weapon sounds
 - warning sound when health is low
 - generate names for all the planets
 - put the messagses in teh corner with 10 lines
@@ -71,7 +72,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Economy and Progression
 
-- fuel for jumping sold at stations - varies a lot in cost
+- Hyperspace fuel for jumping sold at stations - varies a lot in cost
 - Implement more sophisticated economic simulation
 - Add price fluctuations based on supply/demand
 - Implement market events (shortages, surpluses)

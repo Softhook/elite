@@ -19,6 +19,7 @@ let zoomInButton;
 let zoomOutButton;
 let descriptionDiv;
 let straightenButton;
+let centerDesignButton; // <-- Add this variable
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
@@ -105,6 +106,7 @@ function setup() {
     zoomOutButton = select('#zoomOutButton');
     descriptionDiv = select('#shipDescriptionArea');
     straightenButton = select('#straightenButton');
+    centerDesignButton = select('#centerDesignButton'); // <-- Get reference
     undoButton = select('#undoButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
 
@@ -124,6 +126,7 @@ function setup() {
     if (strokeColorPicker) strokeColorPicker.input(updateSelectedShapeStroke); else console.error("Stroke picker not found");
     if (strokeWeightInput) strokeWeightInput.input(updateSelectedShapeStrokeWeight); else console.error("Stroke weight input not found");
     if (straightenButton) straightenButton.mousePressed(handleStraightenClick); else console.error("Straighten button not found");
+    if (centerDesignButton) centerDesignButton.mousePressed(centerDesign); else console.error("Center Design button not found"); // <-- Attach listener
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (descriptionDiv === null) { console.error("Description Div (#shipDescriptionArea) not found!"); }
@@ -767,11 +770,13 @@ function keyReleased() {
 function updateUIControls() {
     let editable = isEditable();
     let shapeSelected = selectedShapeIndex !== -1 && editable && shapes[selectedShapeIndex];
+    let hasShapes = shapes.length > 0 && editable; // Check if there are any editable shapes
 
     // Enable/disable buttons based on state
     if (addShapeButton?.elt) addShapeButton.elt.disabled = !editable && currentShipKey !== '--- New Blank ---';
     if (exportButton?.elt) exportButton.elt.disabled = shapes.length === 0 && !isThargoidSelected();
     if (straightenButton?.elt) straightenButton.elt.disabled = !shapeSelected;
+    if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes; // <-- Update this button's state
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
 
     // Disable editing tools if no editable shape is selected
@@ -911,6 +916,64 @@ function straightenMirroredVertices(shape, threshold) {
     }
     if (adjustmentsMade > 0) console.log(`Straighten Symmetry: Made ${adjustmentsMade} adjustments.`);
     else console.log("Straighten Symmetry: No adjustments needed.");
+}
+
+/**
+ * Calculates the geometric center of all vertices across all shapes
+ * and translates all vertices to make this center (0,0).
+ */
+function centerDesign() {
+    if (!isEditable() || shapes.length === 0) {
+        console.log("Center Design: No editable shapes to center.");
+        return;
+    }
+
+    let totalX = 0;
+    let totalY = 0;
+    let vertexCount = 0;
+
+    // Calculate the sum of all vertex coordinates
+    for (const shape of shapes) {
+        if (shape?.vertexData) {
+            for (const vertex of shape.vertexData) {
+                if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
+                    totalX += vertex.x;
+                    totalY += vertex.y;
+                    vertexCount++;
+                }
+            }
+        }
+    }
+
+    if (vertexCount === 0) {
+        console.log("Center Design: No valid vertices found.");
+        return;
+    }
+
+    // Calculate the average position (geometric center)
+    const avgX = totalX / vertexCount;
+    const avgY = totalY / vertexCount;
+
+    // Check if centering is needed (avoid tiny adjustments)
+    if (Math.abs(avgX) < 1e-6 && Math.abs(avgY) < 1e-6) {
+        console.log("Center Design: Design is already centered.");
+        return;
+    }
+
+    console.log(`Center Design: Shifting by (${-avgX.toFixed(4)}, ${-avgY.toFixed(4)})`);
+    saveStateForUndo(); // Save state BEFORE applying the shift
+
+    // Apply the translation to all vertices
+    for (const shape of shapes) {
+        if (shape?.vertexData) {
+            for (const vertex of shape.vertexData) {
+                 if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
+                    vertex.x -= avgX;
+                    vertex.y -= avgY;
+                 }
+            }
+        }
+    }
 }
 
 // Inside editor.js
