@@ -33,6 +33,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+- special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
+
 - sideways kiting with thrust
 - temporary speed burst
 - Add elite achievements system

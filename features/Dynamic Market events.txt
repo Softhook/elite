@@ -1,0 +1,79 @@
+Feature Name: Dynamic Market Events
+
+2. Description: Introduces temporary, system-specific events (e.g., Famine, Uprising, Boom) that dynamically alter the buy and sell prices of certain commodities at the local station market. These events create emergent trading opportunities and risks, making the galaxy feel more alive and reactive.
+
+3. Requirements:
+
+Event Triggers: Events should trigger periodically in star systems based on defined probabilities and potential preconditions (e.g., economy type, security level).
+System Specificity: An active event affects a series of 5 connected systems
+Duration: Events last for a variable, predefined duration.
+Exclusivity: (Typically) Only one major market event should be active in a single system at any given time.
+Persistence: Active events and their remaining durations must be saved and loaded with the game state.
+
+4. Interactions:
+
+Event Start:
+The EventManager periodically checks systems and may trigger a new event based on probability and conditions.
+An ActiveEventInstance is created, linking to an EventDefinition, storing the affected system, start time, and calculated end time.
+If the player is in the affected system, a message appears announcing the event (e.g., "Severe famine grips Zaonce!").
+Market Interaction:
+When the player views the market screen in an affected system:
+The event's description is displayed.
+Commodity prices are calculated based on the base economy and then modified by the event's multipliers.
+Affected commodity prices are visually highlighted (e.g., color-coded, icons) to indicate the price change (favorable/unfavorable).
+During Event:
+Players can buy/sell commodities at the event-modified prices, potentially leading to significant profits or losses compared to normal market rates.
+Event End:
+When the event's endTime is reached, the EventManager removes the ActiveEventInstance.
+Market prices in the affected system immediately revert to their normal, economy-based values.
+If the player is in the affected system, a message may appear announcing the event's conclusion (e.g., "The famine in Zaonce has ended.").
+
+5. Feedback:
+
+UI - Market Screen:
+Display the active event's description prominently.
+Highlight affected commodity names or prices (e.g., green for better player prices, red for worse). Use icons (⬆/⬇) for clarity.
+UI - Galaxy Map (Optional):
+Display a small icon next to system names on the map that currently have an active market event. Tooltip could show the event type.
+UI - Messages:
+Use the scrolling message system (UIManager.addMessage) to inform the player when an event starts or ends in their current system.
+
+6. Things to Watch Out For:
+
+Balance: Event multipliers and durations need careful tuning to create meaningful opportunities without breaking the economy. Avoid making events too frequent or too impactful initially.
+Exploitability: Ensure event timing and effects are consistent and not easily manipulated (e.g., by rapid saving/loading, though millis() helps).
+Clarity: The UI must clearly communicate why prices are different (the event description) and which prices are affected.
+Complexity: Start with a few distinct event types before adding many subtle variations.
+Saving/Loading: Robustly save and load the state of active events, including their type, affected system, and remaining duration (or end time). Ensure timers resume correctly after loading.
+Performance: The EventManager.update() logic should be efficient, especially the triggering checks if run frequently or across many systems simultaneously.
+
+7. Implementation Plan:
+
+Data Structures:
+Define EVENT_DEFINITIONS (global constant array/object) with type, description, commodityEffects (array of { commodityName, buyPriceMultiplier, sellPriceMultiplier }), durationRange, triggerConditions, probabilityWeight.
+Define the structure for ActiveEventInstance (eventTypeId, affectedSystemIndex, startTime, endTime).
+EventManager Class (New):
+Create the class to hold eventDefinitions and activeEvents (array).
+Implement update(): Handles periodic triggering checks (roll dice per system, check conditions, select event, create instance) and expiration checks (remove old events). Use millis() for timing.
+Implement getActiveEventForSystem(systemIndex): Returns the active event instance or null.
+Implement getEventPriceModifiers(systemIndex, commodityName): Checks the active event for the system and returns { buyMultiplier, sellMultiplier } (defaulting to 1 if no effect).
+Implement saveData()/loadData(): Saves/loads activeEvents (storing essential info like type ID, system index, end time).
+Integration - sketch.js:
+Instantiate eventManager globally in setup().
+Call eventManager.update() in the main draw() loop (within appropriate game state).
+Integrate eventManager.saveData()/loadData() into saveGame()/loadGame().
+Integration - StarSystem.js:
+(Optional but recommended) Add currentEventId property, managed by EventManager. Save/load this.
+Integration - Market.js:
+Modify updatePrices() or the price calculation logic.
+Get event modifiers: Either receive them as arguments or call eventManager.getEventPriceModifiers(this.systemIndex, commodityName).
+Apply multipliers after base price calculation: price *= modifier;.
+UI - UIManager.js:
+Modify drawMarketScreen():
+Get the active event for the current system using eventManager.getActiveEventForSystem().
+If an event exists, display its description.
+When drawing each commodity row, get its specific modifiers using eventManager.getEventPriceModifiers().
+Apply visual highlighting (color, icons) based on the modifiers.
+Modify drawGalaxyMap() (Optional): Add event icons to systems.
+Ensure addMessage() is accessible for EventManager to post notifications.
+Tuning & Testing: Add 2-3 initial event types (e.g., Famine, Boom). Playtest extensively, adjusting probabilities, durations, and multipliers for balance and fun.

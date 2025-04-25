@@ -1,0 +1,85 @@
+1. Feature Name: Temporary Speed Boost (Player Ability)
+
+2. Description: Provides the player's ship with a short burst of increased maximum speed and thrust acceleration. This ability can be activated manually, lasts for a fixed duration, and requires a cooldown period before it can be used again. It's intended as a tactical option for escaping danger, closing distances quickly, or performing rapid maneuvers.
+
+3. Requirements:
+
+Activation Key: 'E' key.
+Game State: Can only be activated when the player is in the "IN_FLIGHT" game state.
+Cooldown: The ability cannot be activated if it is currently on cooldown.
+Resource Cost: (Initially None) - No fuel or energy cost for the MVP version. This could be added later for balance.
+4. Interactions:
+
+Activation: Player presses the 'E' key while in flight and not on cooldown.
+The ship's maxSpeed is temporarily multiplied by BOOST_SPEED_MULTIPLIER.
+The ship's thrustForce is temporarily multiplied by BOOST_THRUST_MULTIPLIER.
+A timer starts for BOOST_DURATION.
+A cooldown timer starts, ending BOOST_COOLDOWN milliseconds after the boost duration finishes.
+Visual and audio feedback for boost start is triggered.
+UI indicator updates to "Active".
+During Boost:
+Player controls (thrust, rotation) function as normal, but forward thrust is more powerful, and the speed cap is higher.
+Thrust particle effects are enhanced.
+Boost End (Duration Expires):
+maxSpeed and thrustForce return to their normal values.
+Visual and audio feedback for boost end is triggered.
+UI indicator updates to "Cooldown" and shows remaining cooldown time.
+Cooldown Period:
+The 'E' key has no effect.
+The UI indicator shows the remaining cooldown time.
+Cooldown End:
+The ability becomes available again.
+UI indicator updates to "Ready".
+State Change: If the player's game state changes from "IN_FLIGHT" (e.g., to "DOCKED", "JUMPING", "GAME_OVER") while the boost is active, the boost effect should immediately terminate, and stats should return to normal. The cooldown should still apply as if the boost had ended naturally.
+5. Feedback:
+
+Visual:
+Thrust Particles: During boost, engine thrust particles become noticeably more intense (e.g., brighter color, larger size, higher emission rate).
+
+Audio:
+Boost Start: A distinct sound effect plays upon activation (boost_start).
+Boost End: A distinct sound effect plays upon deactivation or duration expiry (boost_end).
+(Optional): A subtle looping sound or change in engine hum while boosting.
+
+UI (HUD):
+An indicator clearly shows the boost status: "Ready", "Active" (with remaining duration), or "Cooldown" (with remaining time). A simple progress bar for duration/cooldown is recommended.
+6. Things to Watch Out For:
+
+Balance: The duration, cooldown, speed multiplier, and thrust multiplier values need careful tuning. Too powerful, and it trivializes combat/travel; too weak, and it's useless.
+Collision: Increased speed makes collisions more likely and potentially more severe. Ensure collision detection keeps up.
+State Transitions: Ensure the boost correctly deactivates when docking, jumping, dying, etc., to prevent unexpected behavior.
+Input Spam: The cooldown prevents spamming, but ensure activation logic is robust.
+Performance: Enhanced particle effects could impact performance; optimize if necessary.
+Exploitability: Ensure the cooldown timer cannot be bypassed (e.g., by saving/loading - though this is less likely with millis() based timers).
+7. Implementation Plan:
+
+Constants & State (player.js -> Player class):
+Define constants: BOOST_DURATION, BOOST_COOLDOWN, BOOST_SPEED_MULTIPLIER, BOOST_THRUST_MULTIPLIER.
+Add state variables: isBoosting (boolean, default false), boostEndTime (number, default 0), boostCooldownEndTime (number, default 0).
+Activation/Deactivation Methods (player.js -> Player class):
+Create activateBoost(): Checks cooldown (millis() < boostCooldownEndTime) and isBoosting. If clear, sets isBoosting = true, calculates and sets boostEndTime and boostCooldownEndTime. Triggers start feedback (sound).
+Create deactivateBoost(): Sets isBoosting = false. Triggers end feedback (sound).
+Apply Effects (player.js -> Player class):
+In update():
+Add check: if (this.isBoosting && millis() >= this.boostEndTime) { this.deactivateBoost(); }
+Modify velocity limit: this.vel.limit(this.isBoosting ? this.maxSpeed * BOOST_SPEED_MULTIPLIER : this.maxSpeed);
+In thrust() (or wherever forward thrust force is applied):
+Modify force calculation: force.mult(this.isBoosting ? this.thrustForce * BOOST_THRUST_MULTIPLIER : this.thrustForce);
+Input Handling (sketch.js):
+In keyPressed(): Add else if ((key === 'e' || key === 'E') && gameStateManager.currentState === GAME_STATE.IN_FLIGHT) { player.activateBoost(); }
+State Management (gameStateManager.js):
+In setState(newState): If newState is not GAME_STATE.IN_FLIGHT and player.isBoosting is true, call player.deactivateBoost().
+Feedback - Audio (soundManager.js):
+Add definitions for boost_start and boost_end sounds in soundDefinitions.
+Call soundManager.playSound('boost_start') in activateBoost.
+Call soundManager.playSound('boost_end') in deactivateBoost.
+Feedback - Visual (thrustParticles.js / player.js):
+Modify ThrustManager.createThrust (or equivalent) to accept an isBoosting parameter.
+Inside createThrust, adjust particle properties (color, size, lifetime, count) if isBoosting is true.
+In Player.thrust(), pass this.isBoosting to the particle creation function.
+Feedback - UI (uiManager.js):
+In drawHUD():
+Get boost state from player (isBoosting, boostCooldownEndTime).
+Calculate remaining times using millis().
+Draw text/indicator showing "Ready", "Active [|||| ]", or "Cooldown [|| ]".
+Tuning: Playtest and adjust the constant values (BOOST_DURATION, BOOST_COOLDOWN, multipliers) for balance.
