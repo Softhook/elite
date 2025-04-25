@@ -11,7 +11,7 @@ i would all weapons to be able to damage asteroids. why is starsystem only check
 
 put the messagses in teh corner with 10 lines
 
-limit the amount of goods aer availbe at certain planets based on their econmy
+asteroids not behaving right
 
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
 Issue: When buying weapons, it currently just overwrites the first weapon slot
@@ -52,6 +52,7 @@ Solution: Implement more precise hitbox system using ship vertex data
 - Add ship fuel management and refueling
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters
+- limit the amount of goods aer availbe at certain planets based on their econmy
 
 
 ## Editor
