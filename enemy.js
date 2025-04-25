@@ -1865,173 +1865,167 @@ class Enemy {
         if (this.destroyed || isNaN(this.angle)) return;
 
         // Draw thrust particles BEHIND the ship
+        push();
+        translate(this.pos.x, this.pos.y); // Translate to ship position for particles
         this.thrustManager.draw();
+        pop();
 
-        if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); } // Attempt init if needed
-        if (!this.p5FillColor || !this.p5StrokeColor) { return; } // Skip draw if colors still bad
+        if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
+        if (!this.p5FillColor || !this.p5StrokeColor) { return; }
 
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; const drawFunc = shipDef?.drawFunction;
-        // Use a more specific check for the function
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        const drawFunc = shipDef?.drawFunction;
         if (typeof drawFunc !== 'function') {
             console.error(`Enemy draw: No draw function for ${this.shipTypeName}`);
-            push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop(); // Draw fallback red circle
+            push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop();
             return;
         }
 
-        push(); translate(this.pos.x, this.pos.y); rotate(this.angle); // Already in radians
-        // Use initialized p5.Color objects
-        fill(this.p5FillColor); stroke(this.p5StrokeColor);
-        strokeWeight(1);
-        let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        try { drawFunc(this.size, showThrust); } // Call specific draw function
-        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
-        pop();
+        // --- Start Ship Drawing Block ---
+        push(); // Isolate all transformations for the ship and its immediate UI
+        translate(this.pos.x, this.pos.y); // Move origin to the ship's center
 
-        // --- Draw Health Bar (only when damaged) ---
-        if (this.hull < this.maxHull && this.maxHull > 0) {
-            let healthPercent = this.hull / this.maxHull;
-            let barW = this.size * 0.9; // Make slightly wider than for asteroids
-            let barH = 6;
-            let barX = this.pos.x - barW / 2;
-            let barY = this.pos.y + this.size/2 + 5; // Position above ship
-
-            push();
-            noStroke();
-            // Red background
-            fill(255, 0, 0);
-            rect(barX, barY, barW, barH);
-            // Green health remaining
-            fill(0, 255, 0);
-            rect(barX, barY, barW * healthPercent, barH);
-            
-            // Optional: Add black outline for better visibility
-            stroke(0);
-            strokeWeight(1);
-            noFill();
-            rect(barX, barY, barW, barH);
-            pop();
-        }
-
-        // Draw shield effect separately (not rotated with ship)
-        if (this.shield > 0) {
-            push();
-            translate(this.pos.x, this.pos.y);
-
-            // Shield appearance based on percentage
-            const shieldPercent = this.shield / this.maxShield;
-            const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
-
-            noFill();
-            stroke(100, 180, 255, shieldAlpha);
-            strokeWeight(1.5);
-            ellipse(0, 0, this.size * 1.3, this.size * 1.3);
-
-            // Add shield hit visual effect
-            if (millis() - this.shieldHitTime < 300) {
-                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
-                stroke(150, 220, 255, hitOpacity);
-                strokeWeight(3);
-                ellipse(0, 0, this.size * 1.4, this.size * 1.4);
-            }
-
-            pop();
-        }
-
-        // --- DEBUG LINE ---
-        if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
-             push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
-        }
-
-        // Draw force wave effect
-        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
-            const timeSinceForce = millis() - this.lastForceWave.time;
-            const alpha = map(timeSinceForce, 0, 300, 200, 0);
-            
-            push();
-            translate(this.pos.x, this.pos.y);
-            noFill();
-            strokeWeight(3);
-            stroke(this.lastForceWave.color[0], 
-                   this.lastForceWave.color[1], 
-                   this.lastForceWave.color[2], 
-                   alpha);
-            
-            // Expanding circle at ship
-            const radius = map(timeSinceForce, 0, 300, 10, 40);
-            circle(0, 0, radius * 2);
-            pop();
-        }
-
-        // Draw beam if recently fired
-        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
-            push();
-            stroke(this.lastBeam.color);
-            strokeWeight(3);
-            line(this.lastBeam.start.x, this.lastBeam.start.y, 
-                 this.lastBeam.end.x, this.lastBeam.end.y);
-            
-            // Add a glow effect
-            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100);
-            strokeWeight(6);
-            line(this.lastBeam.start.x, this.lastBeam.start.y, 
-                 this.lastBeam.end.x, this.lastBeam.end.y);
-            pop();
-        }
-
-        // --- Draw UI Elements (Health Bar, Label) ---
+        // --- Draw Info Label (BEFORE rotation) ---
+        // Draw the label relative to the translated origin (0,0), but before rotating the canvas
         if (!this.destroyed) {
-            // --- Health Bar ---
-            // ... (existing health bar logic) ...
-
-            // --- Info Label ---
-            push();
+            push(); // Isolate label drawing settings
             textAlign(CENTER, BOTTOM);
             textSize(12);
             fill(255);
             noStroke();
 
             let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
-            let targetLabel = "None"; // Default to "None"
+            let targetLabel = "None"; // Default
 
-            // Check if target exists before trying to identify it
-            if (this.target) {
+            if (this.target) { // Check if target exists
                 if (this.currentState === AI_STATE.COLLECTING_CARGO && this.target instanceof Cargo) {
                     targetLabel = `Cargo (${this.target.type})`;
                 } else if (this.target instanceof Player) {
                     targetLabel = "Player";
                 } else if (this.target instanceof Enemy && this.target.shipTypeName) {
                     targetLabel = this.target.shipTypeName;
-                } else if (this.target instanceof Cargo) { // Fallback if not in COLLECTING state but targeting cargo
+                } else if (this.target instanceof Cargo) {
                      targetLabel = `Cargo (${this.target.type})`;
                 } else {
-                    // Fallback for other potential target types (Station, Planet?)
                     targetLabel = this.target.name || this.target.constructor.name || "Unknown";
                 }
-            } // If this.target is null, targetLabel remains "None"
+            } // targetLabel remains "None" if this.target is null
 
             let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
-            // Adjust position relative to the ship's center (0,0 after translate)
-            text(label, 0, -this.size / 2 - 15); // Position above the ship
+            // Draw text relative to the translated origin (0,0), offset vertically
+            text(label, 0, -this.size / 2 - 15); // Position above the ship's center (0,0)
 
             pop(); // Restore previous drawing settings for the label
         }
+        // --- End Info Label ---
 
-        // Draw effective weapon range indicator in combat (debug)
-        // Use the stored this.visualFiringRange
+
+        // --- Draw Ship Body (AFTER label, apply rotation) ---
+        rotate(this.angle); // Apply rotation ONLY for the ship body
+
+        fill(this.p5FillColor); stroke(this.p5StrokeColor);
+        strokeWeight(1);
+        let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
+        try { drawFunc(this.size, showThrust); } // Call specific draw function
+        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+        // --- End Draw Ship Body ---
+
+
+        // --- Draw Health Bar (AFTER rotation, relative to 0,0) ---
+        if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {
+            // Rotate canvas back temporarily to draw horizontal bar
+            push();
+            rotate(-this.angle); // Counter-rotate
+
+            let healthPercent = this.hull / this.maxHull;
+            let barW = this.size * 0.9;
+            let barH = 6;
+            // Position relative to the translated origin (0,0), offset below
+            let barX = -barW / 2;
+            let barY = this.size / 2 + 5;
+
+            noStroke();
+            fill(255, 0, 0); // Red background
+            rect(barX, barY, barW, barH);
+            fill(0, 255, 0); // Green health remaining
+            rect(barX, barY, barW * healthPercent, barH);
+            stroke(0); strokeWeight(1); noFill(); // Black outline
+            rect(barX, barY, barW, barH);
+
+            pop(); // Restore rotation state (ship is still rotated)
+        }
+        // --- End Health Bar ---
+
+
+        pop(); // End Ship Drawing Block (translate, rotate)
+        // --- End Ship Drawing Block ---
+
+
+        // --- Draw Shield Effect (Separate transformation) ---
+        if (!this.destroyed && this.shield > 0) {
+            push(); // Isolate shield drawing
+            translate(this.pos.x, this.pos.y); // Translate to ship center
+
+            const shieldPercent = this.shield / this.maxShield;
+            const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
+            noFill(); stroke(100, 180, 255, shieldAlpha); strokeWeight(1.5);
+            ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+
+            // Shield hit visual effect
+            if (millis() - this.shieldHitTime < 300) {
+                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
+                stroke(150, 220, 255, hitOpacity); strokeWeight(3);
+                ellipse(0, 0, this.size * 1.4, this.size * 1.4);
+            }
+            pop(); // End shield drawing
+        }
+        // --- End Shield Effect ---
+
+
+        // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
+        // These use absolute coordinates or manage their own transformations
+
+        // DEBUG LINE
+        if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
+             push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+        }
+
+        // Force wave effect
+        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+            const timeSinceForce = millis() - this.lastForceWave.time;
+            const alpha = map(timeSinceForce, 0, 300, 200, 0);
+            push();
+            translate(this.pos.x, this.pos.y); // Use absolute position
+            noFill(); strokeWeight(3);
+            stroke(this.lastForceWave.color[0], this.lastForceWave.color[1], this.lastForceWave.color[2], alpha);
+            const radius = map(timeSinceForce, 0, 300, 10, 40);
+            circle(0, 0, radius * 2);
+            pop();
+        }
+
+        // Beam effect
+        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
+            push();
+            stroke(this.lastBeam.color); strokeWeight(3);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
+            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100); strokeWeight(6);
+            line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
+            pop();
+        }
+
+        // Weapon range indicator
         if (this.currentWeapon && this.target && this.isTargetValid(this.target) &&
             (this.currentState === AI_STATE.APPROACHING ||
              this.currentState === AI_STATE.ATTACK_PASS ||
              this.currentState === AI_STATE.REPOSITIONING)) {
-
             push();
-            stroke(200, 200, 0, 100); // Yellow, semi-transparent
-            noFill();
-            strokeWeight(1);
-            // Draw circle using the visualFiringRange property
-            circle(this.pos.x, this.pos.y, this.visualFiringRange * 2);
+            stroke(200, 200, 0, 100); noFill(); strokeWeight(1);
+            circle(this.pos.x, this.pos.y, this.visualFiringRange * 2); // Use absolute position
             pop();
         }
-    }
+        // --- End Other Effects ---
+
+    } // End draw()
 
     // ------------------
     // --- Cargo Handling ---
