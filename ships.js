@@ -229,7 +229,10 @@ function drawHammerheadCorvette(s, thrusting = false) {
     let r = s / 2; let def = SHIP_DEFINITIONS.HammerheadCorvette;
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
-
+function drawHummingbird(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HummingBird;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
 
 // --- End Ship Drawing Functions ---
 
@@ -858,6 +861,30 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 8000,
+        aiRoles: ["MILITARY"]
+    },
+    "HummingBird": {
+        name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster"], // All-out attack fighter
+        costCategory: "Low", description: "Agile fighter with forward-swept wings.",
+        drawFunction: drawHummingbird, 
+        
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0649, y: 0.0000 }, { x: 0.0531, y: 0.3805 }, { x: 0.0531, y: 1.0132 }, { x: -0.4352, y: 1.1822 }, { x: -0.2221, y: 0.3415 }, { x: -0.5138, y: 0.2472 }, { x: -0.5138, y: -0.2472 }, { x: -0.2221, y: -0.3415 }, { x: -0.4352, y: -1.1822 }, { x: 0.0531, y: -1.0132 }, { x: 0.0531, y: -0.3805 }, { x: 1.0649, y: 0.0000 } ],
+                fillColor: [8, 210, 4],
+                strokeColor: [138, 138, 138],
+                strokeW: 0.50
+            }
+        ],
+
+        fillColor: [210, 190, 80],
+        strokeColor: [120, 100, 30],
+        strokeW: 1.00,
+        typicalCargo: ["Computers"],
+        price: 6000,
         aiRoles: ["MILITARY"]
     },
 };
