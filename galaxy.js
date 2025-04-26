@@ -227,8 +227,18 @@ class Galaxy {
                     console.warn(`   Could not add connection between ${i} (${systemA.name}) and ${neighborIndex} (${systemB?.name || 'Invalid'}) due to invalid system B or its connection array.`);
                 }
             });
+
+            // Move this INSIDE the loop - the bidirectional check needs the 'i' variable
+            systemA.connectedSystemIndices.forEach(connectedIndex => {
+                // Ensure the reverse connection exists
+                if (!this.systems[connectedIndex].connectedSystemIndices.includes(i)) {
+                    console.warn(`Adding missing reverse connection from ${connectedIndex} to ${i}`);
+                    this.systems[connectedIndex].connectedSystemIndices.push(i);
+                }
+            });
         }
-         console.log("   Finished generating galaxy connections.");
+
+        console.log("   Finished generating galaxy connections.");
          // Optional: Log connections for debugging
          // this.systems.forEach((sys, idx) => { console.log(`   System ${idx} (${sys?.name}) connections: [${sys?.connectedSystemIndices?.join(',')}]`); });
     } // --- End generateConnections ---
@@ -255,10 +265,15 @@ class Galaxy {
 
     /** Handles the jump process to a new star system. */
     jumpToSystem(targetIndex) {
+        // Get current system and check connections
+        const currentSystemIndex = this.currentSystemIndex;
         const reachable = this.getReachableSystems();
+        
+        // ENFORCE connection check
         if (!reachable.includes(targetIndex)) {
-             console.warn(`Attempted jump to unconnected system index: ${targetIndex}. Allowed: [${reachable.join(', ')}]`);
-             return;
+            console.warn(`Attempted jump to unconnected system index: ${targetIndex}. Allowed: [${reachable.join(', ')}]`);
+            if (uiManager) uiManager.addMessage("Jump failed: System not in range", [255, 100, 100]);
+            return false; // Add explicit return to prevent jump
         }
 
         if (targetIndex >= 0 && targetIndex < this.systems.length && targetIndex !== this.currentSystemIndex) {

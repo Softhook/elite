@@ -66,6 +66,11 @@ class GameStateManager {
         
         // Add property to track jumping animation
         this.isJumpCharging = false;
+
+        // Add to constructor
+this.jumpFadeState = "NONE"; // NONE, FADE_OUT, WHITE_HOLD, FADE_IN
+this.jumpFadeOpacity = 0;
+this.jumpWhiteHoldTime = 1.0; // seconds
     }
 
     /**
@@ -187,18 +192,56 @@ class GameStateManager {
                 
                 // Complete jump when timer reaches duration
                 if (this.jumpChargeTimer >= this.jumpChargeDuration) {
-                    // Execute the actual jump
-                    galaxy.jumpToSystem(this.jumpTargetSystemIndex);
-                    player.currentSystem = galaxy.getCurrentSystem();
-                    player.vel.mult(0.3); // Reduce velocity after jump
-                    this.jumpChargeTimer = 0;
-                    this.isJumpCharging = false;
-                    this.setState("IN_FLIGHT");
-                    // Notify player of jump completion
-                    if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
+                    this.jumpFadeState = "FADE_OUT"; // Begin transition
+                    // Don't actually jump yet - wait for white screen
+                }
+
+                // Add fade state handling
+                if (this.jumpFadeState === "FADE_OUT") {
+                    this.jumpFadeOpacity += 0.03;
+                    if (this.jumpFadeOpacity >= 1) {
+                        // Execute jump during full white
+                        galaxy.jumpToSystem(this.jumpTargetSystemIndex);
+                        player.currentSystem = galaxy.getCurrentSystem();
+                        player.vel.mult(0.3); // Reduce velocity after jump
+                        this.jumpChargeTimer = 0;
+                        this.isJumpCharging = false;
+                        this.jumpFadeState = "WHITE_HOLD";
+                        // Notify player of jump completion
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
+                        }
                     }
                 }
+                // Add WHITE_HOLD and FADE_IN states...
+                // Handle the WHITE_HOLD state - maintain full white screen for a moment
+                else if (this.jumpFadeState === "WHITE_HOLD") {
+                    // Track time in the white hold state
+                    if (!this.jumpWhiteHoldTimer) {
+                        this.jumpWhiteHoldTimer = 0;
+                    }
+                    this.jumpWhiteHoldTimer += deltaTime / 1000;
+                    
+                    // Transition to fade-in after holding for the specified duration
+                    if (this.jumpWhiteHoldTimer >= this.jumpWhiteHoldTime) {
+                        this.jumpFadeState = "FADE_IN";
+                        console.log("Jump transition: WHITE_HOLD → FADE_IN");
+                    }
+                }
+                // Handle the FADE_IN state - gradually decrease opacity back to normal
+                else if (this.jumpFadeState === "FADE_IN") {
+                    // Gradually decrease opacity (fade back from white)
+                    this.jumpFadeOpacity -= 0.02 * (deltaTime / 16);
+                    
+                    // Transition back to normal gameplay when fully faded in
+                    if (this.jumpFadeOpacity <= 0) {
+                        this.jumpFadeOpacity = 0;
+                        this.jumpFadeState = "NONE";
+                        this.setState("IN_FLIGHT");
+                        console.log("Jump transition complete: FADE_IN → IN_FLIGHT");
+                    }
+                }
+
                 break;
 
              case "GAME_OVER":
@@ -310,6 +353,15 @@ class GameStateManager {
                      } catch (e) {
                          console.error("Error drawing jump UI:", e);
                      }
+                 }
+
+                 // Add to draw method for JUMPING case
+                 if (this.jumpFadeState !== "NONE") {
+                     push();
+                     fill(255, 255, 255, this.jumpFadeOpacity * 255);
+                     noStroke();
+                     rect(0, 0, width, height);
+                     pop();
                  }
                  break; // End JUMPING case
             // --- END CORRECTION ---

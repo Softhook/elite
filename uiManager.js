@@ -685,7 +685,16 @@ class UIManager {
                 if (j > i) {
                     const systemB = galaxy.systems[j];
                     if (systemB?.galaxyPos) { // Check if target system is valid
-                        line(systemA.galaxyPos.x, systemA.galaxyPos.y, systemB.galaxyPos.x, systemB.galaxyPos.y);
+                        let x1 = systemA.galaxyPos.x;
+                        let y1 = systemA.galaxyPos.y;
+                        let x2 = systemB.galaxyPos.x;
+                        let y2 = systemB.galaxyPos.y;
+
+                        // When drawing connection lines, verify against the actual connections
+                        if (galaxy.systems[i].connectedSystemIndices.includes(j)) {
+                            // Draw connection only if it exists in the data structure
+                            line(x1, y1, x2, y2);
+                        }
                     }
                 }
             });
@@ -1402,7 +1411,7 @@ class UIManager {
     /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
         if (!player) return;
-        this.upgradeListAreas = [];
+        thisupgradeListAreas = [];
         push();
         
        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
