@@ -279,7 +279,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 12,
         armament: ["Twin Pulse"],
         costCategory: "Low", description: "Standard Police.",
-        drawFunction: drawACAB, vertexData: [ { x: 0.8969, y: 0.0000 }, { x: 0.1469, y: 0.4929 }, { x: -0.6673, y: 0.6286 }, { x: -0.6031, y: 0.0000 }, { x: -0.6673, y: -0.6286 }, { x: 0.1469, y: -0.4929 } ],
+        drawFunction: drawACAB, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.7821, y: 0.0000 }, { x: 0.0321, y: 0.4929 }, { x: -0.7821, y: 0.6286 }, { x: -0.7179, y: 0.0000 }, { x: -0.7821, y: -0.6286 }, { x: 0.0321, y: -0.4929 } ],
+                fillColor: [100, 150, 200],
+                strokeColor: [151, 181, 196],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [100, 150, 200],
         strokeColor: [151, 181, 196],
         strokeW: 1.00,
@@ -293,7 +301,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
         armament: ["Pulse Laser"],
         costCategory: "Low", description: "Affordable entry-level freighter or explorer.",
-        drawFunction: drawAdder, vertexData: [ { x: 0.8, y: 0 }, { x: 0.2, y: 0.8 }, { x: -0.9, y: 0.7 }, { x: -0.7, y: 0 }, { x: -0.9, y: -0.9 }, { x: 0.1, y: -0.7 } ],
+        drawFunction: drawAdder, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 } ],
+                fillColor: [160, 160, 140],
+                strokeColor: [200, 200, 180],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
         typicalCargo: ["Food", "Textiles", "Minerals"],
         price: 2700,
@@ -305,7 +321,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 400, baseShield: 350, shieldRecharge: 0.7, cargoCapacity: 150,
         armament: ["Force Blaster"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
-        drawFunction: drawAnaconda, vertexData: [ { x: 1.2, y: 0 }, { x: 0.9, y: 0.3 }, { x: -0.9, y: 0.4 }, { x: -1.1, y: 0.2 }, { x: -1.1, y: -0.2 }, { x: -0.9, y: -0.4 }, { x: 0.9, y: -0.3 } ],
+        drawFunction: drawAnaconda, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.1500, y: 0.0000 }, { x: 0.8500, y: 0.3000 }, { x: -0.9500, y: 0.4000 }, { x: -1.1500, y: 0.2000 }, { x: -1.1500, y: -0.2000 }, { x: -0.9500, y: -0.4000 }, { x: 0.8500, y: -0.3000 } ],
+                fillColor: [80, 90, 100],
+                strokeColor: [150, 160, 170],
+                strokeW: 2.50
+            }
+        ],
         fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery","Minerals"],
         price: 12000,
@@ -317,7 +341,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
         armament: ["Beam Laser", "Twin Pulse"],
         costCategory: "Medium-High", description: "Iconic explorer with excellent visibility and jump range.",
-        drawFunction: drawAspExplorer, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.4127, y: 0.5133 }, { x: -0.4250, y: 0.8750 }, { x: -0.9000, y: 0.3000 }, { x: -0.9000, y: -0.3000 }, { x: -0.4250, y: -0.8750 }, { x: 0.4127, y: -0.5133 } ],
+        drawFunction: drawAspExplorer, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 } ],
+                fillColor: [200, 180, 80],
+                strokeColor: [100, 90, 40],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [200, 180, 80],
         strokeColor: [100, 90, 40],
         strokeW: 1.50,
@@ -385,7 +417,15 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
-        vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.5270 }, { x: -0.5045, y: 0.5634 }, { x: -0.5000, y: 0.2000 }, { x: -0.7734, y: 0.1770 }, { x: -0.7734, y: -0.1770 }, { x: -0.5000, y: -0.2000 }, { x: -0.5045, y: -0.5634 }, { x: 0.3000, y: -0.5270 } ],
+
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 } ],
+                fillColor: [100, 150, 200],
+                strokeColor: [200, 220, 255],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [100, 150, 200],
         strokeColor: [200, 220, 255],
         strokeW: 1.50,
@@ -399,7 +439,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
         armament: ["Beam Laser", "Double Shot"], // Explorer with some punch
         costCategory: "Medium", description: "Utilitarian explorer known for good heat management.",
-        drawFunction: drawDiamondbackExplorer, vertexData: [ { x: 1.0, y: 0 }, { x: 0.2, y: 0.4 }, { x: -0.5, y: 0.9 }, { x: -0.9, y: 0.5 }, { x: -0.8, y: 0 }, { x: -0.9, y: -0.5 }, { x: -0.5, y: -0.9 }, { x: 0.2, y: -0.4 } ],
+        drawFunction: drawDiamondbackExplorer, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9500, y: 0.0000 }, { x: 0.1500, y: 0.4000 }, { x: -0.5500, y: 0.9000 }, { x: -0.9500, y: 0.5000 }, { x: -0.8500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.5500, y: -0.9000 }, { x: 0.1500, y: -0.4000 } ],
+                fillColor: [100, 110, 90],
+                strokeColor: [160, 170, 150],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 6500,
@@ -419,19 +467,19 @@ const SHIP_DEFINITIONS = {
         
         vertexLayers: [
             {
-                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.5000 }, { x: -0.2000, y: 0.6000 }, { x: -0.8000, y: 0.8000 }, { x: -1.0000, y: 0.4000 }, { x: -1.0000, y: -0.4000 }, { x: -0.8000, y: -0.8000 }, { x: -0.2000, y: -0.6000 }, { x: 0.7000, y: -0.5000 } ],
+                vertexData: [ { x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.5000 }, { x: -0.1500, y: 0.6000 }, { x: -0.7500, y: 0.8000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.7500, y: -0.8000 }, { x: -0.1500, y: -0.6000 }, { x: 0.7500, y: -0.5000 } ],
                 fillColor: [110, 120, 130],
                 strokeColor: [180, 190, 200],
                 strokeW: 2.00
             },
             {
-                vertexData: [ { x: -0.7567, y: -0.3486 }, { x: 0.7567, y: -0.3486 }, { x: -0.6661, y: -0.5037 } ],
+                vertexData: [ { x: -0.7067, y: -0.3486 }, { x: 0.8067, y: -0.3486 }, { x: -0.6161, y: -0.5037 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.01
             },
             {
-                vertexData: [ { x: -0.7339, y: 0.3453 }, { x: 0.7405, y: 0.3453 }, { x: -0.6367, y: 0.4955 } ],
+                vertexData: [ { x: -0.6839, y: 0.3453 }, { x: 0.7905, y: 0.3453 }, { x: -0.5867, y: 0.4955 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.01
@@ -449,42 +497,27 @@ const SHIP_DEFINITIONS = {
         armament: ["Sniper Rail", "Force Blaster", "Pulse Array"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
-        // Original vertex data (for backward compatibility)
-        vertexData: [ { x: 1.1, y: 0 }, { x: 0.2, y: 0.5 }, { x: -0.6, y: 0.6 }, 
-                    { x: -0.9, y: 0.2 }, { x: -0.9, y: -0.2 }, { x: -0.6, y: -0.6 }, 
-                    { x: 0.2, y: -0.5 } ],
-        // Add the new multi-layer format
         vertexLayers: [
             {
-                // Main hull (Layer 1)
-                vertexData: [ { x: 1.1000, y: 0.0000 }, { x: 0.2000, y: 0.5000 }, 
-                            { x: -0.6000, y: 0.6000 }, { x: -0.9000, y: 0.2000 }, 
-                            { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }, 
-                            { x: 0.2000, y: -0.5000 } ],
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 } ],
                 fillColor: [60, 65, 70],
                 strokeColor: [140, 150, 160],
                 strokeW: 2.00
             },
             {
-                // Detail triangle 1 (Layer 2)
-                vertexData: [ { x: -0.8998, y: -0.2009 }, { x: 0.0000, y: -0.2431 }, 
-                            { x: -0.6013, y: -0.5970 } ],
+                vertexData: [ { x: -0.9998, y: -0.2009 }, { x: -0.1000, y: -0.2431 }, { x: -0.7013, y: -0.5970 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.01
             },
             {
-                // Detail triangle 2 (Layer 3)
-                vertexData: [ { x: -0.8995, y: 0.2035 }, { x: -0.6020, y: 0.5957 }, 
-                            { x: 0.0000, y: 0.3052 } ],
+                vertexData: [ { x: -0.9995, y: 0.2035 }, { x: -0.7020, y: 0.5957 }, { x: -0.1000, y: 0.3052 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.01
             },
             {
-                // Detail triangle 3 (Layer 4)
-                vertexData: [ { x: 0.5349, y: 0.0000 }, { x: 0.2360, y: 0.1505 }, 
-                            { x: 0.2360, y: -0.1505 } ],
+                vertexData: [ { x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 } ],
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.01
@@ -513,7 +546,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Twin Pulse"], // Fast attack loadout
         costCategory: "Medium", description: "Balanced space superiority fighter. Agile and well-armed.",
-        drawFunction: drawGladiusFighter, vertexData: [ {x:1.1, y:0}, {x:0.3, y:0.4}, {x:-0.2, y:0.7}, {x:-0.9, y:0.5}, {x:-1.0, y:0}, {x:-0.9, y:-0.5}, {x:-0.2, y:-0.7}, {x:0.3, y:-0.4} ],
+        drawFunction: drawGladiusFighter, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 } ],
+                fillColor: [190, 195, 200],
+                strokeColor: [120, 125, 140],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 7000,
@@ -540,25 +581,25 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [
             {
-                vertexData: [ { x: 0.8888, y: 0.3500 }, { x: 0.5937, y: 0.4670 }, { x: 0.4300, y: 0.7285 }, { x: 0.1520, y: 0.8587 }, { x: -0.1612, y: 0.5488 }, { x: -0.9161, y: 0.4670 }, { x: -0.9159, y: 0.3625 }, { x: -0.5436, y: 0.1330 }, { x: -0.5436, y: -0.1330 }, { x: -0.9159, y: -0.3625 }, { x: -0.9202, y: -0.4650 }, { x: -0.1612, y: -0.5488 }, { x: 0.1520, y: -0.8587 }, { x: 0.4300, y: -0.7285 }, { x: 0.5978, y: -0.4650 }, { x: 0.8888, y: -0.3500 }, { x: 0.9388, y: 0.0000 } ],
+                vertexData: [ { x: 0.8795, y: 0.3500 }, { x: 0.5844, y: 0.4670 }, { x: 0.4207, y: 0.7285 }, { x: 0.1427, y: 0.8587 }, { x: -0.1705, y: 0.5488 }, { x: -0.9254, y: 0.4670 }, { x: -0.9252, y: 0.3625 }, { x: -0.5529, y: 0.1330 }, { x: -0.5529, y: -0.1330 }, { x: -0.9252, y: -0.3625 }, { x: -0.9295, y: -0.4650 }, { x: -0.1705, y: -0.5488 }, { x: 0.1427, y: -0.8587 }, { x: 0.4207, y: -0.7285 }, { x: 0.5885, y: -0.4650 }, { x: 0.8795, y: -0.3500 }, { x: 0.9295, y: 0.0000 } ],
                 fillColor: [70, 100, 130],
                 strokeColor: [150, 180, 210],
                 strokeW: 2.00
             },
             {
-                vertexData: [ { x: 0.1514, y: -0.7686 }, { x: 0.3629, y: -0.6314 }, { x: 0.0000, y: -0.4986 }, { x: 0.0000, y: -0.4986 } ],
+                vertexData: [ { x: 0.1421, y: -0.7686 }, { x: 0.3536, y: -0.6314 }, { x: -0.0093, y: -0.4986 }, { x: -0.0093, y: -0.4986 } ],
                 fillColor: [180, 180, 80],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.10
             },
             {
-                vertexData: [ { x: 0.0000, y: 0.4871 }, { x: 0.0000, y: 0.4871 }, { x: 0.3957, y: 0.6086 }, { x: 0.1714, y: 0.7857 } ],
+                vertexData: [ { x: -0.0093, y: 0.4871 }, { x: -0.0093, y: 0.4871 }, { x: 0.3864, y: 0.6086 }, { x: 0.1621, y: 0.7857 } ],
                 fillColor: [180, 180, 80],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.10
             },
             {
-                vertexData: [ { x: 0.3390, y: 0.2149 }, { x: 0.5773, y: 0.2548 }, { x: 0.7510, y: 0.0000 }, { x: 0.5773, y: -0.2548 }, { x: 0.3390, y: -0.2149 } ],
+                vertexData: [ { x: 0.3297, y: 0.2149 }, { x: 0.5680, y: 0.2548 }, { x: 0.7417, y: 0.0000 }, { x: 0.5680, y: -0.2548 }, { x: 0.3297, y: -0.2149 } ],
                 fillColor: [180, 180, 80],
                 strokeColor: [50, 50, 60],
                 strokeW: 1.00
@@ -578,7 +619,21 @@ const SHIP_DEFINITIONS = {
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
         armament: ["Arc Projector", "Mini-Turret", "Beam Laser"], // Elegant, balanced
         costCategory: "High", description: "Elegant and fast Imperial ship, excels in straight lines.",
-        drawFunction: drawImperialClipper, vertexData: [ { x: 1.1, y: 0 }, { x: 0.7, y: 0.2 }, { x: 0.1, y: 0.9 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.4 }, { x: -1.0, y: -0.4 }, { x: -0.8, y: -0.8 }, { x: 0.1, y: -0.9 }, { x: 0.7, y: -0.2 } ],
+        drawFunction: drawImperialClipper, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 } ],
+                fillColor: [220, 225, 230],
+                strokeColor: [100, 150, 200],
+                strokeW: 1.50
+            },
+            {
+                vertexData: [ { x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.50
+            }
+        ],
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 12600,
@@ -590,7 +645,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
         armament: ["Pulse Array", "Beam Laser"], // Elegant, refined
         costCategory: "Medium", description: "Fast, sleek Imperial ship with strong shields for its size.",
-        drawFunction: drawImperialCourier, vertexData: [ { x: 1.0, y: 0 }, { x: 0.4, y: 0.3 }, { x: -0.5, y: 0.5 }, { x: -0.9, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.9, y: -0.4 }, { x: -0.5, y: -0.5 }, { x: 0.4, y: -0.3 } ],
+        drawFunction: drawImperialCourier, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 } ],
+                fillColor: [210, 215, 220],
+                strokeColor: [80, 130, 180],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 5460,
@@ -602,7 +665,17 @@ const SHIP_DEFINITIONS = {
         baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
         armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
         costCategory: "Medium", description: "Adaptable, angular multi-purpose vessel.",
-        drawFunction: drawJackalMultirole, vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.5000 }, { x: -0.2000, y: 0.8000 }, { x: -0.8000, y: 0.6000 }, { x: -0.4103, y: 0.1697 }, { x: -0.4103, y: -0.1697 }, { x: -0.8000, y: -0.6000 }, { x: -0.2000, y: -0.8000 }, { x: 0.5000, y: -0.5000 } ],
+        drawFunction: drawJackalMultirole, 
+
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.4000, y: 0.5000 }, { x: -0.3000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.5103, y: 0.1697 }, { x: -0.5103, y: -0.1697 }, { x: -0.9000, y: -0.6000 }, { x: -0.3000, y: -0.8000 }, { x: 0.4000, y: -0.5000 } ],
+                fillColor: [170, 160, 150],
+                strokeColor: [90, 80, 70],
+                strokeW: 1.50
+            }
+        ],
+
         fillColor: [170, 160, 150],
         strokeColor: [90, 80, 70],
         strokeW: 1.50, // Sandy grey
@@ -616,7 +689,16 @@ const SHIP_DEFINITIONS = {
         baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
         armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
         costCategory: "Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
-        drawFunction: drawKeelback, vertexData: [ { x: 0.6302, y: 0.0000 }, { x: 0.5000, y: 0.5114 }, { x: -0.2000, y: 0.6114 }, { x: -0.8000, y: 0.8114 }, { x: -1.0033, y: 0.5917 }, { x: -0.5571, y: 0.2745 }, { x: -0.7905, y: 0.1373 }, { x: -0.7839, y: -0.1373 }, { x: -0.5571, y: -0.2745 }, { x: -1.0033, y: -0.5917 }, { x: -0.8000, y: -0.8114 }, { x: -0.2000, y: -0.6114 }, { x: 0.5000, y: -0.5114 } ],
+        drawFunction: drawKeelback, 
+        
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8168, y: 0.0000 }, { x: 0.6865, y: 0.5114 }, { x: -0.0134, y: 0.6114 }, { x: -0.6135, y: 0.8114 }, { x: -0.8168, y: 0.5917 }, { x: -0.3705, y: 0.2745 }, { x: -0.6039, y: 0.1373 }, { x: -0.5974, y: -0.1373 }, { x: -0.3705, y: -0.2745 }, { x: -0.8168, y: -0.5917 }, { x: -0.6135, y: -0.8114 }, { x: -0.0134, y: -0.6114 }, { x: 0.6865, y: -0.5114 } ],
+                fillColor: [180, 150, 80],
+                strokeColor: [100, 80, 40],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [180, 150, 80],
         strokeColor: [100, 80, 40],
         strokeW: 1.50,
@@ -631,7 +713,15 @@ const SHIP_DEFINITIONS = {
         armament: ["Pulse Laser"],
         costCategory: "High", description: "Fighter popular with pirates.",
         drawFunction: drawKraitMKI,
-        vertexData: [ { x: 0.4629, y: 0.0000 }, { x: 0.1200, y: 0.4186 }, { x: -0.6914, y: 0.4186 }, { x: -0.6914, y: -0.4071 }, { x: 0.1200, y: -0.4071 } ],
+
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.5772, y: -0.0058 }, { x: 0.2343, y: 0.4129 }, { x: -0.5772, y: 0.4129 }, { x: -0.5772, y: -0.4129 }, { x: 0.2343, y: -0.4129 } ],
+                fillColor: [100, 120, 100],
+                strokeColor: [140, 160, 140],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [100, 120, 100],
         strokeColor: [140, 160, 140],
         strokeW: 1.50,
@@ -646,8 +736,16 @@ const SHIP_DEFINITIONS = {
         baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
         armament: ["Mini-Turret"], // Combat focused Pirate
         costCategory: "High", description: "Multi-role ship, popular with pirates.",
-        drawFunction: drawKraitMKII, // Uses the same draw function
-         vertexData: [ { x: 1, y: 0 }, { x: 0.6, y: 0.5 }, { x: -0.4, y: 0.6 }, { x: -0.9, y: 0.4 }, { x: -0.9, y: -0.4 }, { x: -0.4, y: -0.6 }, { x: 0.6, y: -0.5 } ],
+        drawFunction: drawKraitMKII, 
+        
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9500, y: 0.0000 }, { x: 0.5500, y: 0.5000 }, { x: -0.4500, y: 0.6000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.4500, y: -0.6000 }, { x: 0.5500, y: -0.5000 } ],
+                fillColor: [100, 120, 100],
+                strokeColor: [140, 160, 140],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
         typicalCargo: ["Food","Minerals"],
         price: 6000,
@@ -659,7 +757,21 @@ const SHIP_DEFINITIONS = {
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
         armament: ["Mini-Turret", "Force Blaster"], // Defensive
         costCategory: "Medium-High", description: "Extremely wide cargo ship, resembling a manta ray.",
-        drawFunction: drawMantaHauler, vertexData: [ {x:0.8, y:0}, {x:0.2, y:0.3}, {x:-0.6, y:0.9}, {x:-0.9, y:0.7}, {x:-1.0, y:0}, {x:-0.9, y:-0.7}, {x:-0.6, y:-0.9}, {x:0.2, y:-0.3} ],
+        drawFunction: drawMantaHauler, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 } ],
+                fillColor: [60, 80, 90],
+                strokeColor: [130, 160, 180],
+                strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: 0.0560, y: 0.1290 }, { x: 0.3195, y: 0.0000 }, { x: 0.0560, y: -0.1290 } ],
+                fillColor: [250, 250, 255],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
         price: 20000,
@@ -671,7 +783,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
         armament: [],
         costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
-        drawFunction: drawMuleFreighter, vertexData: [ {x:0.6, y:0.7}, {x:-0.8, y:0.8}, {x:-1.0, y:0.4}, {x:-1.0, y:-0.5}, {x:-0.7, y:-0.9}, {x:0.6, y:-0.8} ], // Asymmetric block
+        drawFunction: drawMuleFreighter, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 } ],
+                fillColor: [140, 130, 120],
+                strokeColor: [80, 75, 70],
+                strokeW: 1.20
+            }
+        ],
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
         price: 2660,
@@ -683,7 +803,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
         armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
         costCategory: "High", description: "Self-sufficient long-range vessel built for endurance.",
-        drawFunction: drawNomadVoyager, vertexData: [ {x:0.9, y:0}, {x:0.7, y:0.5}, {x:0.1, y:0.8}, {x:-0.8, y:0.7}, {x:-1.1, y:0}, {x:-0.8, y:-0.7}, {x:0.1, y:-0.8}, {x:0.7, y:-0.5} ], // Rounded, pod-like
+        drawFunction: drawNomadVoyager, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 } ],
+                fillColor: [200, 200, 190],
+                strokeColor: [100, 100, 90],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 9360,
@@ -699,13 +827,13 @@ const SHIP_DEFINITIONS = {
         
         vertexLayers: [
             {
-                vertexData: [ { x: 1.2000, y: 0.0000 }, { x: 0.8000, y: 0.2000 }, { x: -0.5000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.5000 }, { x: 0.8000, y: -0.2000 } ],
+                vertexData: [ { x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2000 }, { x: -0.6000, y: 0.5000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.7000, y: -0.2000 } ],
                 fillColor: [130, 160, 170],
                 strokeColor: [200, 230, 240],
                 strokeW: 1.20
             },
             {
-                vertexData: [ { x: -0.1751, y: -0.5092 }, { x: -0.1751, y: 0.5092 }, { x: 0.0000, y: 0.7714 }, { x: 0.0000, y: -0.7714 } ],
+                vertexData: [ { x: -0.2751, y: -0.5092 }, { x: -0.2751, y: 0.5092 }, { x: -0.1000, y: 0.7714 }, { x: -0.1000, y: -0.7714 } ],
                 fillColor: [30, 77, 46],
                 strokeColor: [50, 50, 60],
                 strokeW: 1.00
@@ -723,7 +851,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
         armament: [],
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
-        drawFunction: drawProspectorMiner, vertexData: [ {x:0.6, y:0}, {x:0.4, y:0.8}, {x:-0.4, y:0.9}, {x:-0.9, y:0.6}, {x:-1.0, y:-0.3}, {x:-0.9, y:-0.6}, {x:-0.4, y:-0.9}, {x:0.4, y:-0.8} ], // Bulky, functional
+        drawFunction: drawProspectorMiner, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.6000, y: 0.8000 }, { x: -0.2000, y: 0.9000 }, { x: -0.7000, y: 0.6000 }, { x: -0.8000, y: -0.3000 }, { x: -0.7000, y: -0.6000 }, { x: -0.2000, y: -0.9000 }, { x: 0.6000, y: -0.8000 } ],
+                fillColor: [180, 170, 160],
+                strokeColor: [100, 95, 90],
+                strokeW: 1.80
+            }
+        ],
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
         typicalCargo: ["Minerals"],
         price: 7000,
@@ -738,16 +874,10 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawPython,         
         vertexLayers: [
             {
-                vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 } ],
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 } ],
                 fillColor: [140, 140, 150],
                 strokeColor: [180, 180, 190],
                 strokeW: 2.00
-            },
-            {
-                vertexData: [ { x: 0.6686, y: 0.0000 }, { x: 0.0000, y: 0.3646 }, { x: 0.0000, y: -0.3646 } ],
-                fillColor: [234, 26, 26],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
         fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
@@ -761,7 +891,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Fast alien fighter composed of sharp, crystalline structures.",
-        drawFunction: drawShardInterceptor, vertexData: [ { x: 1.0831, y: 0.0000 }, { x: 0.4335, y: 0.2433 }, { x: -0.1945, y: 0.1331 }, { x: -0.7955, y: 0.8065 }, { x: -1.2651, y: 0.4935 }, { x: -0.7083, y: 0.0000 }, { x: -1.2651, y: -0.4935 }, { x: -0.7955, y: -0.8065 }, { x: -0.1945, y: -0.1331 }, { x: 0.4335, y: -0.2433 } ],
+        drawFunction: drawShardInterceptor, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.1741, y: 0.0000 }, { x: 0.5245, y: 0.2433 }, { x: -0.1035, y: 0.1331 }, { x: -0.7045, y: 0.8065 }, { x: -1.1741, y: 0.4935 }, { x: -0.6173, y: 0.0000 }, { x: -1.1741, y: -0.4935 }, { x: -0.7045, y: -0.8065 }, { x: -0.1035, y: -0.1331 }, { x: 0.5245, y: -0.2433 } ],
+                fillColor: [180, 180, 240],
+                strokeColor: [240, 240, 255],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [180, 180, 240],
         strokeColor: [240, 240, 255],
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
@@ -787,7 +925,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
         armament: ["Mini-Turret", "Force Blaster"], // Defensive passenger ship
         costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
-        drawFunction: drawStarlinerCruiser, vertexData: [ {x:1.2, y:0}, {x:1.0, y:0.2}, {x:-0.9, y:0.3}, {x:-1.1, y:0.1}, {x:-1.1, y:-0.1}, {x:-0.9, y:-0.3}, {x:1.0, y:-0.2} ], // Elongated
+        drawFunction: drawStarlinerCruiser, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 } ],
+                fillColor: [230, 230, 235],
+                strokeColor: [180, 180, 200],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine","Food", "Medicine"],
         price: 11000,
@@ -810,7 +956,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 100, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
         costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
-        drawFunction: drawType6Transporter, vertexData: [ { x: 0.7, y: 0.3 }, { x: 0.7, y: 0.7 }, { x: -0.8, y: 0.8 }, { x: -1.0, y: 0.6 }, { x: -1.0, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.7, y: -0.7 }, { x: 0.7, y: -0.3 } ],
+        drawFunction: drawType6Transporter, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.8500, y: 0.3000 }, { x: 0.8500, y: 0.7000 }, { x: -0.6500, y: 0.8000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.6500, y: -0.8000 }, { x: 0.8500, y: -0.7000 }, { x: 0.8500, y: -0.3000 } ],
+                fillColor: [210, 160, 70],
+                strokeColor: [120, 90, 40],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
         typicalCargo: ["Food","Textiles", "Minerals", "Metals", "Machinery"],
         price: 10000,
@@ -822,7 +976,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
-        drawFunction: drawType9Heavy, vertexData: [ { x: 0.8208, y: 0.2000 }, { x: 0.7000, y: 0.8000 }, { x: -0.8000, y: 0.9000 }, { x: -1.0000, y: 0.8000 }, { x: -1.0000, y: -0.8000 }, { x: -0.8000, y: -0.9000 }, { x: 0.7000, y: -0.8000 }, { x: 0.8208, y: -0.2000 } ],
+        drawFunction: drawType9Heavy, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9104, y: 0.2000 }, { x: 0.7896, y: 0.8000 }, { x: -0.7104, y: 0.9000 }, { x: -0.9104, y: 0.8000 }, { x: -0.9104, y: -0.8000 }, { x: -0.7104, y: -0.9000 }, { x: 0.7896, y: -0.8000 }, { x: 0.9104, y: -0.2000 } ],
+                fillColor: [190, 140, 60],
+                strokeColor: [110, 80, 30],
+                strokeW: 2.50
+            }
+        ],
         fillColor: [190, 140, 60],
         strokeColor: [110, 80, 30],
         strokeW: 2.50,
@@ -837,7 +999,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Twin Pulse"], // Fast fighter
         costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
         drawFunction: drawViper,
-        vertexData: [ { x: 1.1, y: 0 }, { x: -0.6, y: 0.5 }, { x: -1, y: 0.3 }, { x: -1, y: -0.3 }, { x: -0.6, y: -0.5 } ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 } ],
+                fillColor: [210, 210, 220],
+                strokeColor: [100, 100, 150],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
         price: 6000,
@@ -849,7 +1018,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
         armament: ["Heavy Cannon", "Burst Blaster"], // Aggressive fighter
         costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
-        drawFunction: drawVulture, vertexData: [ { x: 0.8001, y: 0.0951 }, { x: -0.1201, y: 0.3805 }, { x: -0.2033, y: 1.0132 }, { x: -0.7000, y: 1.1822 }, { x: -0.7456, y: 0.4692 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7456, y: -0.4692 }, { x: -0.7000, y: -1.1822 }, { x: -0.2033, y: -1.0132 }, { x: -0.1201, y: -0.3805 }, { x: 0.8001, y: -0.0951 } ],
+        drawFunction: drawVulture, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 } ],
+                fillColor: [210, 4, 4],
+                strokeColor: [138, 138, 138],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [210, 4, 4],
         strokeColor: [138, 138, 138],
         strokeW: 1.50,
@@ -863,7 +1040,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster"], // All-out attack fighter
         costCategory: "Low", description: "Aggressive, agile fighter with forward-swept wings.",
-        drawFunction: drawWaspAssault, vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.1473, y: 0.3081 }, { x: -0.3146, y: 0.9825 }, { x: -0.5494, y: 0.9822 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.5494, y: -0.9822 }, { x: -0.3146, y: -0.9825 }, { x: -0.1473, y: -0.3081 } ],
+        drawFunction: drawWaspAssault, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 } ],
+                fillColor: [210, 190, 80],
+                strokeColor: [120, 100, 30],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [210, 190, 80],
         strokeColor: [120, 100, 30],
         strokeW: 1.00,
@@ -881,7 +1066,7 @@ const SHIP_DEFINITIONS = {
         
         vertexLayers: [
             {
-                vertexData: [ { x: 1.0649, y: 0.0000 }, { x: 0.0531, y: 0.3805 }, { x: 0.0531, y: 1.0132 }, { x: -0.4352, y: 1.1822 }, { x: -0.2221, y: 0.3415 }, { x: -0.5138, y: 0.2472 }, { x: -0.5138, y: -0.2472 }, { x: -0.2221, y: -0.3415 }, { x: -0.4352, y: -1.1822 }, { x: 0.0531, y: -1.0132 }, { x: 0.0531, y: -0.3805 }, { x: 1.0649, y: 0.0000 } ],
+                vertexData: [ { x: 0.7893, y: 0.0000 }, { x: -0.2224, y: 0.3805 }, { x: -0.2224, y: 1.0132 }, { x: -0.7107, y: 1.1822 }, { x: -0.4976, y: 0.3415 }, { x: -0.7893, y: 0.2472 }, { x: -0.7893, y: -0.2472 }, { x: -0.4976, y: -0.3415 }, { x: -0.7107, y: -1.1822 }, { x: -0.2224, y: -1.0132 }, { x: -0.2224, y: -0.3805 }, { x: 0.7893, y: 0.0000 } ],
                 fillColor: [8, 210, 4],
                 strokeColor: [138, 138, 138],
                 strokeW: 0.50
