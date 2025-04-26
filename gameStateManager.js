@@ -60,8 +60,8 @@ class GameStateManager {
         // Jump state variables
         this.jumpTargetSystemIndex = -1;
         
-        // Modify jump charge duration (increase from 1.5 seconds to 4 seconds)
-        this.jumpChargeDuration = 4.0; // seconds (was 1.5)
+        // Modify jump charge duration (increase from 1.5 seconds to 10 seconds)
+        this.jumpChargeDuration = 10.0; // seconds (was 1.5)
         this.jumpChargeTimer = 0;
         
         // Add property to track jumping animation
