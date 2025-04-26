@@ -52,7 +52,7 @@ const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
 const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
 const TARGET_SCORE_PIRATE_PREY_HAULER = 40; // Score for targeting haulers/transports
 const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
-const TARGET_SCORE_RETALIATION_HAULER = 20; // Score for hauler/transport retaliation
+const TARGET_SCORE_RETALIATION_HAULER = 40; // Score for hauler/transport retaliation
 const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
 const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
 const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
@@ -1206,35 +1206,22 @@ class Enemy {
                 }
 
                 // --- DETAILED DEBUG LOGGING ---
-                console.log(`--- Hauler Leaving Check: ${this.shipTypeName} ---`);
-                console.log(`   Current Pos: (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)})`);
-                console.log(`   Target Pos (Jump Zone/Edge): (${desiredMovementTargetPos.x.toFixed(1)}, ${desiredMovementTargetPos.y.toFixed(1)})`);
+              //  console.log(`--- Hauler Leaving Check: ${this.shipTypeName} ---`);
+              //  console.log(`   Current Pos: (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)})`);
+              //  console.log(`   Target Pos (Jump Zone/Edge): (${desiredMovementTargetPos.x.toFixed(1)}, ${desiredMovementTargetPos.y.toFixed(1)})`);
 
                 // Calculate distance to target (Jump Zone/Edge)
                 let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
-                console.log(`   Distance to Target (dE): ${dE.toFixed(1)}`);
+              //  console.log(`   Distance to Target (dE): ${dE.toFixed(1)}`);
 
-                // Check if out of bounds
-                let distFromOriginSq = this.pos.magSq();
-                let despawnRadius = (system?.despawnRadius ?? 3000); // Use default if undefined
-                let despawnRadiusSq = sq(despawnRadius * 1.1);
-                const isOutOfBounds = distFromOriginSq > despawnRadiusSq;
 
-                console.log(`   Dist from Origin Sq: ${distFromOriginSq.toFixed(1)}`);
-                console.log(`   Despawn Radius Sq (incl. buffer): ${despawnRadiusSq.toFixed(1)} (Radius: ${despawnRadius.toFixed(1)})`);
-                console.log(`   isOutOfBounds Check: ${isOutOfBounds}`);
-                // --- END DETAILED DEBUG LOGGING ---
-
-                // --- Original Exit Condition ---
+                // ---  Exit Condition ---
                 // Exit if:
                 // 1. Arrived at the jump zone target (dE < 150)
-                // OR
-                // 2. Exceeded despawn radius
-                if (dE < 150 || isOutOfBounds) {
+                if (dE < 150) {
                     this.destroyed = true;
-                    let reason = (dE < 150) ? "Reached Target" : "Out of Bounds";
                     // This log confirms the condition was met
-                    console.log(`Hauler ${this.shipTypeName} left the system (Reason: ${reason}).`);
+                    console.log(`Hauler ${this.shipTypeName} left the system.`);
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case

@@ -532,7 +532,11 @@ class StarSystem {
                     if (reward > 0) playerRef.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
-                let dE = dist(enemy.pos.x, enemy.pos.y, playerRef.pos.x, playerRef.pos.y); if (dE > this.despawnRadius * 1.1) this.enemies.splice(i, 1);
+
+                if (this.shouldDespawnEntity(enemy, 1.1)) {
+                    this.enemies.splice(i, 1);
+                    continue;
+                }
             }
 
             // --- Update Asteroids & Handle Destruction/Despawn ---
@@ -540,7 +544,11 @@ class StarSystem {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
                 if (asteroid.isDestroyed()) { playerRef.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
-                let dA = dist(asteroid.pos.x, asteroid.pos.y, playerRef.pos.x, playerRef.pos.y); if (dA > this.despawnRadius * 1.2) this.asteroids.splice(i, 1);
+
+                if (this.shouldDespawnEntity(asteroid, 1.2)) {
+                    this.asteroids.splice(i, 1);
+                    continue;
+                }
             }
 
             // --- Update Projectiles (Ensure proj.update() is called) ---
@@ -1209,5 +1217,24 @@ class StarSystem {
             this.station.market.systemType = economyType;
             this.station.market.updatePrices();
         }
+    }
+
+    /**
+     * Checks if an entity should be despawned based on distance from player
+     * @param {Object} entity - The entity to check (must have pos property)
+     * @param {number} [factorMultiplier=1.1] - Optional multiplier for despawn radius
+     * @return {boolean} Whether the entity should be despawned
+     */
+    shouldDespawnEntity(entity, factorMultiplier = 1.1) {
+        if (!entity?.pos || !this.player?.pos) return false;
+        
+        // Use p5.js dist() function instead of distSq
+        const distance = dist(
+            entity.pos.x, entity.pos.y, 
+            this.player.pos.x, this.player.pos.y
+        );
+        const despawnDistance = this.despawnRadius * factorMultiplier;
+        
+        return distance > despawnDistance;
     }
 } // End of StarSystem Class
