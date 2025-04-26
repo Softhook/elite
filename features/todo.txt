@@ -37,11 +37,18 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+the collission bounce off is too much and smaller size ships should bounce more
+
+some weapons better than lasers than hull
+weapon range weapon speed
+
 - Instea dof speratit call them alliance that are at war with imperial.
 divide ships into imperial vs. alliance
 
 
 - special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
+
+atopilot to station and jump zone
 
 - sideways kiting with thrust
 - temporary speed burst
@@ -49,12 +56,9 @@ divide ships into imperial vs. alliance
 - Add elite achievements system
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
-- scanner upgrade to show helthbars and text for ships
-- blue line point to station
-- Implement visual starfield distortion during hyperjump
+
 - Add more varied asteroid field generation
 - Implement asteroid mining gameplay
-- Add salvaging mechanics for destroyed ships
 - Add smuggling mechanics with scanning gameplay
 
 
@@ -69,6 +73,8 @@ divide ships into imperial vs. alliance
 
 ## Graphics and UI Improvements
 
+- mulitple thurst ports on large ships
+- Implement visual starfield distortion during hyperjump
 - more weapon sounds
 - warning sound when health is low
 - generate names for all the planets
@@ -79,7 +85,6 @@ divide ships into imperial vs. alliance
 - Redesign space station
 - Add proper 3D ship models (even if sprite-based)
 - Improve target information
-- Improve galaxy map interface with route planning
 
 ## Economy and Progression
 
@@ -114,10 +119,6 @@ divide ships into imperial vs. alliance
 - Optimize rendering for large numbers of objects
 - Implement spatial partitioning for collision detection
 - Add serialization for all game objects
-- Improve game state management
-- Add proper error handling and recovery
-- Implement sound effects and music system
-- Add settings menu with graphics options
 
 ## Future / Advanced Features
 

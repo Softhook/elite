@@ -976,6 +976,39 @@ function centerDesign() {
     }
 }
 
+function centerDesignByBoundingBox() {
+    // Find min and max coordinates
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+    
+    for (const shape of shapes) {
+        if (shape?.vertexData) {
+            for (const vertex of shape.vertexData) {
+                if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
+                    minX = Math.min(minX, vertex.x);
+                    minY = Math.min(minY, vertex.y);
+                    maxX = Math.max(maxX, vertex.x);
+                    maxY = Math.max(maxY, vertex.y);
+                }
+            }
+        }
+    }
+    
+    // Center of bounding box
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // Apply shift
+    for (const shape of shapes) {
+        if (shape?.vertexData) {
+            for (const vertex of shape.vertexData) {
+                vertex.x -= centerX;
+                vertex.y -= centerY;
+            }
+        }
+    }
+}
+
 // Inside editor.js
 function exportDrawFunctionCode() {
     // Get base name for the export
@@ -1060,7 +1093,7 @@ function rgbToHex(rgb) {
 }
 
 // --- Log successful load ---
-console.log("editor.js loaded successfully with all features (v3 - Correct Drag Undo).");
+console.log("editor.js loaded successfully with all features (v3 - Correct Drag Undo Timing).");
 
 // --- Add this new function ---
 function toggleShipComparer() {

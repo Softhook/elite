@@ -246,7 +246,7 @@ class WeaponSystem {
 
         // Play sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
+            soundManager.playWorldSound('beam', owner.pos.x, owner.pos.y, player.pos);
         }
     }
     

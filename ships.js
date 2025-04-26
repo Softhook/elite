@@ -362,7 +362,15 @@ const SHIP_DEFINITIONS = {
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
-        drawFunction: drawCenturionGunship, vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.7000, y: 0.4000 }, { x: 0.0000, y: 0.5048 }, { x: 0.3967, y: 0.6548 }, { x: 0.3896, y: 0.8786 }, { x: -0.7000, y: 0.9000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.7000, y: -0.9000 }, { x: 0.3896, y: -0.8786 }, { x: 0.3967, y: -0.6548 }, { x: 0.0000, y: -0.5048 }, { x: 0.7000, y: -0.4000 } ],
+        drawFunction: drawCenturionGunship, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9229, y: 0.0000 }, { x: 0.7387, y: 0.4000 }, { x: 0.0673, y: 0.5048 }, { x: 0.4354, y: 0.6548 }, { x: 0.2314, y: 0.8786 }, { x: -0.5788, y: 0.8810 }, { x: -0.9613, y: 0.6000 }, { x: -0.7882, y: 0.0000 }, { x: -0.9613, y: -0.6000 }, { x: -0.5788, y: -0.8810 }, { x: 0.2314, y: -0.8786 }, { x: 0.4354, y: -0.6548 }, { x: 0.0673, y: -0.5048 }, { x: 0.7387, y: -0.4000 } ],
+                fillColor: [100, 105, 115],
+                strokeColor: [160, 165, 175],
+                strokeW: 1.20
+            }
+        ],
         fillColor: [100, 105, 115],
         strokeColor: [160, 165, 175],
         strokeW: 2.20,

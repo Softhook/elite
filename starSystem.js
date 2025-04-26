@@ -734,14 +734,25 @@ class StarSystem {
                     player.takeDamage(collisionDamage);
                     enemy.takeDamage(collisionDamage);
                     
-                    // Apply physics push
-                    let pushVector = p5.Vector.sub(enemy.pos, player.pos).normalize().mult(5);
-                    player.vel.sub(pushVector);
-                    enemy.vel.add(pushVector);
+                    // Apply physics push based on relative mass/size
+                    const playerMass = player.size * player.size;
+                    const enemyMass = enemy.size * enemy.size;
+                    const totalMass = playerMass + enemyMass;
+
+                    // Calculate impulse - smaller ships get pushed more
+                    const playerImpulseFactor = 3 * (enemyMass / totalMass);
+                    const enemyImpulseFactor = 3 * (playerMass / totalMass);
+
+                    // Create normalized collision vector
+                    let pushVector = p5.Vector.sub(enemy.pos, player.pos).normalize();
+
+                    // Apply appropriate impulse to each ship
+                    player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
+                    enemy.vel.add(pushVector.copy().mult(enemyImpulseFactor));
                 }
             }
             
-            // Player vs Asteroids
+            // Player vs Asteroids collision
             for (let asteroid of this.asteroids) {
                 if (asteroid.isDestroyed()) continue;
                 if (player.checkCollision(asteroid)) {
@@ -751,10 +762,21 @@ class StarSystem {
                     player.takeDamage(collisionDamage);
                     asteroid.takeDamage(20); // Fixed damage to asteroid
                     
-                    // Apply physics push
-                    let pushVector = p5.Vector.sub(asteroid.pos, player.pos).normalize().mult(3);
-                    player.vel.sub(pushVector);
-                    asteroid.vel.add(pushVector.mult(0.5)); // Asteroids move less
+                    // Apply physics push based on relative mass/size
+                    const playerMass = player.size * player.size;
+                    const asteroidMass = asteroid.size * asteroid.size;
+                    const totalMass = playerMass + asteroidMass;
+
+                    // Calculate impulse factors
+                    const playerImpulseFactor = 2 * (asteroidMass / totalMass);
+                    const asteroidImpulseFactor = 2 * (playerMass / totalMass);
+
+                    // Create normalized collision vector
+                    let pushVector = p5.Vector.sub(asteroid.pos, player.pos).normalize();
+
+                    // Apply impulses
+                    player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
+                    asteroid.vel.add(pushVector.copy().mult(asteroidImpulseFactor));
                 }
             }
             
