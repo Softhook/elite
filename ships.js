@@ -851,15 +851,8 @@ const SHIP_DEFINITIONS = {
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
         armament: [],
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
-        drawFunction: drawProspectorMiner, 
-        vertexLayers: [
-            {
-                vertexData: [ { x: 0.8000, y: 0.0000 }, { x: 0.6000, y: 0.8000 }, { x: -0.2000, y: 0.9000 }, { x: -0.7000, y: 0.6000 }, { x: -0.8000, y: -0.3000 }, { x: -0.7000, y: -0.6000 }, { x: -0.2000, y: -0.9000 }, { x: 0.6000, y: -0.8000 } ],
-                fillColor: [180, 170, 160],
-                strokeColor: [100, 95, 90],
-                strokeW: 1.80
-            }
-        ],
+        drawFunction: drawProspectorMiner, vertexData: [ {x:0.6, y:0}, {x:0.4, y:0.8}, {x:-0.4, y:0.9}, {x:-0.9, y:0.6}, {x:-1.0, y:-0.3}, {x:-0.9, y:-0.6}, {x:-0.4, y:-0.9}, {x:0.4, y:-0.8} ], // Bulky, functional
+
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
         typicalCargo: ["Minerals"],
         price: 7000,

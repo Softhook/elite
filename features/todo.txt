@@ -4,8 +4,6 @@
 
 
 
-world is too big now
-
 weapon selection is wrong
 
 I AM NOt SURE IF THE BOUNTY IS counting old kills
@@ -37,7 +35,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
-the collission bounce off is too much and smaller size ships should bounce more
 
 some weapons better than lasers than hull
 weapon range weapon speed

@@ -808,6 +808,28 @@ class StarSystem {
     checkProjectileCollisions(player) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
+
+
+        // Check against asteroids
+        for (let j = this.asteroids.length - 1; j >= 0; j--) {
+            const asteroid = this.asteroids[j];
+            if (!asteroid || asteroid.isDestroyed()) continue;
+            
+            if (asteroid.checkCollision(proj)) {
+                // FIXED: Apply damage to asteroid based on projectile damage
+                asteroid.takeDamage(proj.damage || 1);
+                // Remove projectile after hit
+                this.projectiles.splice(i, 1);
+                
+                // Create effect at collision point
+                this.addExplosion(proj.pos.x, proj.pos.y, 3, proj.color || color(255, 100, 0));
+                
+
+                hit = true;
+                break;
+            }
+        }
+        
             
             // For player hits:
             if (proj.owner instanceof Enemy && proj.checkCollision(player)) {
