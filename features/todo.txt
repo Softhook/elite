@@ -2,11 +2,19 @@
 
 ## Bugs and Issues
 
-
+completed missions should not show the accept buttond just back
+mission greyed out
 
 weapon selection is wrong
 
+open inventoy mid flight
+
+charge up jump drive
+
+cargo update needs to be called - not spining
+
 I AM NOt SURE IF THE BOUNTY IS counting old kills
+reset the killswa
 
 i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
 asteroids not behaving right

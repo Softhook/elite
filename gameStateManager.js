@@ -59,13 +59,13 @@ class GameStateManager {
         this.previousState = null;     // Track previous state for transition logic
         // Jump state variables
         this.jumpTargetSystemIndex = -1;
+        
+        // Modify jump charge duration (increase from 1.5 seconds to 4 seconds)
+        this.jumpChargeDuration = 4.0; // seconds (was 1.5)
         this.jumpChargeTimer = 0;
-        this.jumpChargeDuration = 1.5; // seconds
-        // Mission Board state variables
-        this.currentStationMissions = []; // Cache missions currently shown on board
-        this.selectedMissionIndex = -1; // Index of the highlighted mission in the list (-1 for none)
-        // Market state variables (optional - for highlighting items etc.)
-        this.selectedMarketItemIndex = -1;
+        
+        // Add property to track jumping animation
+        this.isJumpCharging = false;
     }
 
     /**
@@ -167,10 +167,37 @@ class GameStateManager {
                 break;
 
             case "JUMPING":
-                if (!galaxy || this.jumpTargetSystemIndex < 0 || this.jumpTargetSystemIndex >= galaxy.systems.length) { this.setState("IN_FLIGHT"); break; } // Validate jump state
-                this.jumpChargeTimer += deltaTime / 1000; // Increment timer
-                if (this.jumpChargeTimer >= this.jumpChargeDuration) { // Check if jump complete
-                    galaxy.jumpToSystem(this.jumpTargetSystemIndex); this.setState("IN_FLIGHT"); saveGame();
+                if (!galaxy || this.jumpTargetSystemIndex < 0 || this.jumpTargetSystemIndex >= galaxy.systems.length) {
+                    this.setState("IN_FLIGHT");
+                    return;
+                }
+                
+                // Update jump charge timer
+                this.jumpChargeTimer += deltaTime / 1000;
+                
+                // KEY CHANGE: Continue updating the player and system during jump charge
+                if (player && currentSystem) {
+                    // Let the player still control the ship while charging
+                    player.handleInput();
+                    player.update();
+                    
+                    // Update system entities but prevent new spawns during jump
+                    currentSystem.update(player);
+                }
+                
+                // Complete jump when timer reaches duration
+                if (this.jumpChargeTimer >= this.jumpChargeDuration) {
+                    // Execute the actual jump
+                    galaxy.jumpToSystem(this.jumpTargetSystemIndex);
+                    player.currentSystem = galaxy.getCurrentSystem();
+                    player.vel.mult(0.3); // Reduce velocity after jump
+                    this.jumpChargeTimer = 0;
+                    this.isJumpCharging = false;
+                    this.setState("IN_FLIGHT");
+                    // Notify player of jump completion
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
+                    }
                 }
                 break;
 
@@ -367,21 +394,10 @@ class GameStateManager {
         }
         // --- End Connection Check ---
 
-        // --- REMOVED Fuel Check ---
-        // const jumpDistance = dist(currentSystem.galaxyPos.x, currentSystem.galaxyPos.y, targetSystem.galaxyPos.x, targetSystem.galaxyPos.y);
-        // const fuelNeeded = player.calculateFuelNeeded(jumpDistance); // Assuming Player has this method
-        //
-        // if (player.fuel < fuelNeeded) {
-        //     console.log(`[startJump] Jump failed: Insufficient fuel. Needed ${fuelNeeded.toFixed(1)}, Have ${player.fuel.toFixed(1)}`);
-        //     if (typeof uiManager !== 'undefined') uiManager.addMessage(`Insufficient fuel: Need ${fuelNeeded.toFixed(1)} units.`, color(255, 100, 100));
-        //      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-        //     return;
-        // }
-        // --- End REMOVED Fuel Check ---
-
         console.log(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
         this.jumpTargetSystemIndex = targetIndex;
         this.jumpChargeTimer = 0; // Reset timer
+        this.isJumpCharging = true; // Set the flag
         this.setState("JUMPING");
         if (typeof soundManager !== 'undefined') soundManager.playSound('jump_charge'); // Start charging sound
     }
