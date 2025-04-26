@@ -630,6 +630,8 @@ class StarSystem {
             this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(playerRef); this.enemySpawnTimer = 0; }
             this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(playerRef); this.asteroidSpawnTimer = 0; }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
+
+        //console.log(`[UPDATE] Projectiles remaining: ${this.projectiles.length}`);
     } // End update
 
     updateBeams() {
@@ -894,7 +896,7 @@ class StarSystem {
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {
         if (proj) {
-            //console.log("Adding projectile", proj);
+            //console.log(`[ADD] Projectile added. Count: ${this.projectiles.length + 1}`);
             this.projectiles.push(proj);
         }
     }

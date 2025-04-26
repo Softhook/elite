@@ -85,12 +85,19 @@ class Projectile {
     
     // Define isOffScreen to return true only if the projectile is really far out in world space.
     isOffScreen() {
-        const bound = 10000; 
-        return (
-            this.pos.x < -bound ||
-            this.pos.x > bound ||
-            this.pos.y < -bound ||
-            this.pos.y > bound
-        );
+        // Don't use raw screen coordinates - we need to account for camera position
+        const playerPos = this.system?.player?.pos || createVector(0, 0);
+        
+        // Calculate screen coordinates relative to player/camera
+        const screenX = width/2 + (this.pos.x - playerPos.x);
+        const screenY = height/2 + (this.pos.y - playerPos.y);
+        
+        // Add generous margins
+        const margin = 100; // Much larger than projectile size
+        
+        return (screenX < -margin || 
+                screenX > width + margin || 
+                screenY < -margin || 
+                screenY > height + margin);
     }
 }

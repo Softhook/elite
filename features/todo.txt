@@ -2,6 +2,10 @@
 
 ## Bugs and Issues
 
+
+
+world is too big now
+
 weapon selection is wrong
 
 I AM NOt SURE IF THE BOUNTY IS counting old kills
@@ -32,6 +36,10 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 
 ## Core Gameplay Enhancements
+
+- Instea dof speratit call them alliance that are at war with imperial.
+divide ships into imperial vs. alliance
+
 
 - special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
 
