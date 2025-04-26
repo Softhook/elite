@@ -547,7 +547,13 @@ class StarSystem {
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
                 let proj = this.projectiles[i];
                 proj.update();
-                if (proj.lifespan <= 0 || proj.isOffScreen()) {
+                
+                if (proj.lifespan <= 0) {
+                    //console.log("Projectile removed: lifespan expired");
+                    this.projectiles.splice(i, 1);
+                } 
+                else if (proj.isOffScreen()) {
+                    //console.log("Projectile removed: off-screen at", proj.pos.x.toFixed(0), proj.pos.y.toFixed(0));
                     this.projectiles.splice(i, 1);
                 }
             }
@@ -896,7 +902,10 @@ class StarSystem {
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {
         if (proj) {
-            //console.log(`[ADD] Projectile added. Count: ${this.projectiles.length + 1}`);
+            // Add this line to set the system reference
+            proj.system = this;
+            
+          //  console.log(`[ADD] Projectile added. Count: ${this.projectiles.length + 1}`);
             this.projectiles.push(proj);
         }
     }
