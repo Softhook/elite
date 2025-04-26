@@ -126,7 +126,7 @@ function setup() {
     if (strokeColorPicker) strokeColorPicker.input(updateSelectedShapeStroke); else console.error("Stroke picker not found");
     if (strokeWeightInput) strokeWeightInput.input(updateSelectedShapeStrokeWeight); else console.error("Stroke weight input not found");
     if (straightenButton) straightenButton.mousePressed(handleStraightenClick); else console.error("Straighten button not found");
-    if (centerDesignButton) centerDesignButton.mousePressed(centerDesign); else console.error("Center Design button not found"); // <-- Attach listener
+    if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (descriptionDiv === null) { console.error("Description Div (#shipDescriptionArea) not found!"); }
@@ -517,10 +517,11 @@ function mousePressed() {
         let selectedShape = shapes[selectedShapeIndex];
         for (let i = 0; i < selectedShape.vertexData.length; i++) {
             let v = selectedShape.vertexData[i];
-            if (typeof v?.x !== 'number' || typeof v?.y !== 'number') continue;
-            let screenX = v.x * interaction_r; let screenY = v.y * interaction_r;
-            if (distSq(mx_rel, my_rel, screenX, screenY) < grabRadius ** 2) {
-                clickedVertexHandleIndex = i; break;
+            if (typeof v?.x === 'number' && typeof v?.y === 'number') {
+                let screenX = v.x * interaction_r; let screenY = v.y * interaction_r;
+                if (distSq(mx_rel, my_rel, screenX, screenY) < grabRadius ** 2) {
+                    clickedVertexHandleIndex = i; break;
+                }
             }
         }
     }
@@ -977,6 +978,11 @@ function centerDesign() {
 }
 
 function centerDesignByBoundingBox() {
+    if (!isEditable() || shapes.length === 0) {
+        console.log("Center Design: No editable shapes to center.");
+        return;
+    }
+    
     // Find min and max coordinates
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
@@ -998,7 +1004,16 @@ function centerDesignByBoundingBox() {
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
     
-    // Apply shift
+    // Check if centering is needed
+    if (Math.abs(centerX) < 1e-6 && Math.abs(centerY) < 1e-6) {
+        console.log("Center Design: Design is already centered.");
+        return;
+    }
+    
+    console.log(`Center Design: Shifting by (${-centerX.toFixed(4)}, ${-centerY.toFixed(4)})`);
+    saveStateForUndo(); // Save state BEFORE applying the shift
+    
+    // Apply the translation to all vertices
     for (const shape of shapes) {
         if (shape?.vertexData) {
             for (const vertex of shape.vertexData) {
