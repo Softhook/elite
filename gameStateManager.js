@@ -98,7 +98,7 @@ this.jumpWhiteHoldTime = 1.0; // seconds
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             console.log("Undocking! Applying position offset.");
             if (player) {
-                const offsetMultiplier = 3.5; const offsetDistance = player.size * offsetMultiplier;
+                const offsetMultiplier = 10; const offsetDistance = player.size * offsetMultiplier;
                 let undockOffset = createVector(0, -offsetDistance); // Simple 'up' offset
                 player.pos.add(undockOffset); player.vel.mult(0);
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
