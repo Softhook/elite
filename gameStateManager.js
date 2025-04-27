@@ -71,6 +71,9 @@ class GameStateManager {
 this.jumpFadeState = "NONE"; // NONE, FADE_OUT, WHITE_HOLD, FADE_IN
 this.jumpFadeOpacity = 0;
 this.jumpWhiteHoldTime = 1.0; // seconds
+
+// Add an overlay flag for the inventory screen
+this.showingInventory = false;
     }
 
     /**
@@ -389,6 +392,11 @@ this.jumpWhiteHoldTime = 1.0; // seconds
                  background(255,0,0); fill(0); textAlign(CENTER,CENTER); textSize(20); text(`Error: Unknown game state "${this.currentState}"`, width/2, height/2);
                  break;
         }
+
+        // Draw inventory screen on top if it's showing (during IN_FLIGHT)
+        if (this.currentState==="IN_FLIGHT" && this.showingInventory) {
+  inventoryScreen.draw(player);
+}
     } // End of draw method
 
 
@@ -489,5 +497,14 @@ this.jumpWhiteHoldTime = 1.0; // seconds
         // ...other data as needed...
         return true;
     }
+
+    // Add a method to toggle the inventory screen
+toggleInventory() {
+    if (this.currentState === "IN_FLIGHT") {
+        this.showingInventory = !this.showingInventory;
+        return true;
+    }
+    return false;
+}
 
 } // End of GameStateManager Class

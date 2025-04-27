@@ -506,8 +506,8 @@ class StarSystem {
     }
 
     /** Updates all system entities. */
-    update(playerRef) {
-        if (!playerRef || !playerRef.pos) return;
+    update(player) {
+        if (!player || !player.pos) return;
         try {
             // Update Enemies & Check Bounty Progress
             for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -517,18 +517,18 @@ class StarSystem {
                     let reward = 0; if (enemy.role !== AI_ROLE.HAULER) reward = 25;
                     // --- Check Active Bounty Mission & AUTO-COMPLETE ---
                     // Check using safe access ?. and correct types
-                    if (playerRef.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
-                        playerRef.activeMission.progressCount++;
-                        console.log(`Bounty progress: ${playerRef.activeMission.progressCount}/${playerRef.activeMission.targetCount}`);
-                        if (playerRef.activeMission.progressCount >= playerRef.activeMission.targetCount) {
+                    if (player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
+                        player.activeMission.progressCount++;
+                        console.log(`Bounty progress: ${player.activeMission.progressCount}/${player.activeMission.targetCount}`);
+                        if (player.activeMission.progressCount >= player.activeMission.targetCount) {
                              console.log("Bounty mission target count met! Completing mission...");
                              // Call player.completeMission WITHOUT system/station args for auto-complete
-                             playerRef.completeMission(); // <<< Use simpler call for auto-complete
+                             player.completeMission(); // <<< Use simpler call for auto-complete
                              reward = 0; // Don't give base reward if mission completed
                         }
                     }
                     // --- End Bounty Check ---
-                    if (reward > 0) playerRef.addCredits(reward);
+                    if (reward > 0) player.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
 
@@ -542,7 +542,7 @@ class StarSystem {
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
-                if (asteroid.isDestroyed()) { playerRef.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
+                if (asteroid.isDestroyed()) { player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
 
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
                     this.asteroids.splice(i, 1);
@@ -566,6 +566,22 @@ class StarSystem {
             }
             // --- End Projectile Loop ---
 
+            // Update cargo items and handle collection
+            if (this.cargo && this.cargo.length > 0) {
+                for (let i = this.cargo.length - 1; i >= 0; i--) {
+                    const cargo = this.cargo[i];
+                    cargo.update();
+                    
+                    // Remove collected or expired cargo
+                    if (cargo.collected || cargo.isExpired()) {
+                        this.cargo.splice(i, 1);
+                    }
+                }
+                
+                // Check for cargo collection by player
+                this.handleCargoCollection();
+            }
+
             // Update Beams
             this.updateBeams && this.updateBeams();
 
@@ -577,7 +593,7 @@ class StarSystem {
                 wave.radius += wave.growRate;
                 
                 // Check for collisions with enemies (if player's wave)
-                if (wave.owner === playerRef) {
+                if (wave.owner === player) {
                     for (const enemy of this.enemies) {
                         // Skip if already processed this enemy
                         if (wave.processed[enemy.id]) continue;
@@ -605,14 +621,15 @@ class StarSystem {
                         }
                     }
                 }
+
                 
                 // Check collision with player (if enemy's wave)
-                if (wave.owner !== playerRef && playerRef && !wave.processed['player']) {
-                    const dist = p5.Vector.dist(wave.pos, playerRef.pos);
-                    if (dist < wave.radius + playerRef.size/2) {
-                        const falloff = 1 - (dist / (wave.radius + playerRef.size/2));
+                if (wave.owner !== player && player && !wave.processed['player']) {
+                    const dist = p5.Vector.dist(wave.pos, player.pos);
+                    if (dist < wave.radius + player.size/2) {
+                        const falloff = 1 - (dist / (wave.radius + player.size/2));
                         const dmg = Math.max(1, Math.floor(wave.damage * falloff));
-                        playerRef.takeDamage(dmg);
+                        player.takeDamage(dmg);
                         wave.processed['player'] = true;
                         console.log(`Enemy force wave hit player for ${dmg} damage`);
                     }
@@ -633,15 +650,12 @@ class StarSystem {
             }
 
             // Collision Checks
-            this.checkCollisions(playerRef);
-            this.checkProjectileCollisions(playerRef); // Added call to new method
-
-            // Cargo collection and updates
-            this.handleCargoCollection();
+            this.checkCollisions(player);
+            this.checkProjectileCollisions(player); // Added call to new method
 
             // Spawning Timers
-            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(playerRef); this.enemySpawnTimer = 0; }
-            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(playerRef); this.asteroidSpawnTimer = 0; }
+            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(player); this.enemySpawnTimer = 0; }
+            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(player); this.asteroidSpawnTimer = 0; }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
 
         //console.log(`[UPDATE] Projectiles remaining: ${this.projectiles.length}`);
@@ -896,55 +910,36 @@ class StarSystem {
      * Handles player collecting cargo in the system
      */
     handleCargoCollection() {
+        const player = this.player;
+        
+        if (!player) return;
+        
         for (let i = this.cargo.length - 1; i >= 0; i--) {
             const cargo = this.cargo[i];
             
-            if (cargo.collected || cargo.isExpired()) {
-                // Remove collected or expired cargo
-                this.cargo.splice(i, 1);
-                continue;
-            }
-            
-            if (cargo.checkCollision(this.player)) {
-                // Try to add the cargo to player's hold
-                const result = this.player.addCargo(cargo.type, cargo.quantity, true);
+            if (cargo.checkCollision(player)) {
+                // Add cargo to player's inventory
+                const success = player.addCargo(cargo.type, cargo.quantity);
                 
-                if (result.success) {
-                    // Calculate value based on amount actually collected
-                    const value = Math.floor((cargo.getValue() / cargo.quantity) * result.added);
+                if (success.success) {
+                    // Mark as collected so it gets removed next update
+                    cargo.collected = true;
                     
-                    // Add success message
-                    if (result.added === cargo.quantity) {
-                        // Collected everything
-                        uiManager.addMessage(`Collected ${result.added}t of ${cargo.type}. Value: ${value}cr`);
-                        this.player.addCredits(value);
-                        cargo.collected = true;
-                    } else {
-                        // Collected partial amount
-                        uiManager.addMessage(`Collected ${result.added}t of ${cargo.type}. Cargo hold full!`);
-                        this.player.addCredits(value);
-                        
-                        // Update cargo container with remaining amount
-                        cargo.quantity -= result.added;
-                        
-                        // Play a different sound for partial collection
-                        if (typeof soundManager !== 'undefined') {
-                            soundManager.playSound('pickupCoin', 0.7, 0.8); // Lower volume to indicate partial pickup
+                    // Optional: Award credits based on cargo value
+                    const value = cargo.getValue ? cargo.getValue() : 0;
+                    if (value > 0) player.addCredits(value);
+                    
+                    // Show message in UI
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Collected ${success.added} ${cargo.type}`);
+                        if (value > 0) {
+                            uiManager.addMessage(`+${value} credits`);
                         }
-                        continue; // Don't remove the cargo container yet
                     }
-                    
-                    // Play collection sound
-                    if (typeof soundManager !== 'undefined') {
-                        soundManager.playSound('pickupCoin');
-                    }
-                } else {
-                    // Cargo hold is full
-                    uiManager.addMessage('Cargo hold full!');
-                    
-                    // Play error sound
-                    if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                        soundManager.playSound('error');
+                } else if (success.reason === 'CARGO_FULL') {
+                    // Optional: Show message about cargo hold being full
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Cargo hold full!`);
                     }
                 }
             }
