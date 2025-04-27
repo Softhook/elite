@@ -2,18 +2,18 @@
 
 // Define Mission Types using a constant object for better readability and safety
 const MISSION_TYPE = {
-    DELIVERY_LEGAL: 'delivery_legal',
-    DELIVERY_ILLEGAL: 'delivery_illegal',
-    BOUNTY_PIRATE: 'bounty_pirate',
-    BOUNTY_POLICE: 'bounty_police', // Add this new type
-    // Add more types as needed:
-    // ASSASSINATION_CLEAN: 'Assassination (Clean Target)',
-    // ASSASSINATION_WANTED: 'Assassination (Criminal)',
-    // COURIER: 'Courier (Data Delivery)',
-    // MINING: 'Mining Contract',
-    // RESCUE: 'Search and Rescue',
+    DELIVERY_LEGAL: 'Legal delivery',
+    DELIVERY_ILLEGAL: 'Illegal delivery',
+    BOUNTY_PIRATE: 'Bounty',
+    BOUNTY_POLICE: 'Bounty', // Add this new type
+    //ASSASSINATION_CLEAN: 'Official Assassination',
+    //ASSASSINATION_WANTED: 'Political Assassination',
+    //COURIER: 'Courier (Highspeed Delivery)',
+    //MINING: 'Mining Contract',
+    //RESCUE: 'Search and Rescue',
+    //CLEARANCE: '',
     //ESCORT: 'Escort Mission',
-    // EXPLORATION: 'Exploration'
+    //EXPLORATION: 'Exploration'
 };
 
 class Mission {

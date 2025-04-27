@@ -2,8 +2,6 @@
 
 ## Bugs and Issues
 
-stars are not being drawn
-
 weapon selection is wrong
 
 
@@ -12,8 +10,6 @@ cargo update needs to be called - not spining
 I AM NOt SURE IF THE BOUNTY IS counting old kills
 reset the killswa
 
-i would all weapons to be able to damage asteroids. why is starsystem only checking for projectiles and not oter weapons?
-asteroids not behaving right
 
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
 Issue: When buying weapons, it currently just overwrites the first weapon slot
@@ -39,13 +35,17 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+planets have their own screen assocaited where it is possible to explre the planet. find things
+mine the planet
+
+mimitary bases on planets
+mining sites on planets
 
 spawning events. 
-- aline raid - aliens appearing in military system
+- alien raid - aliens appearing in military system
 lots of piratiese attacking haulers
 lots of asteroids
-
-open inventoy mid flight
+- Add more varied asteroid field generation
 
 some weapons better than lasers than hull
 weapon range weapon speed
@@ -56,7 +56,6 @@ divide ships into imperial vs. alliance
 
 - special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
 
-atopilot to station and jump zone
 
 - sideways kiting with thrust
 - temporary speed burst
@@ -65,7 +64,7 @@ atopilot to station and jump zone
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
 
-- Add more varied asteroid field generation
+
 - Implement asteroid mining gameplay
 - Add smuggling mechanics with scanning gameplay
 
@@ -76,7 +75,7 @@ atopilot to station and jump zone
 
 
 ## Editor
-- editor ship centering
+
 - editor mirror editing mode
 
 ## Graphics and UI Improvements
