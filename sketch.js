@@ -22,7 +22,7 @@ let font;
 // Runs once at the beginning when the sketch starts.
 function setup() {
 
-    font = loadFont('/libraries/Frontier.ttf');
+    font = loadFont('libraries/Frontier.ttf');
 
     soundManager = new SoundManager(); // Create the manager
     // Create the canvas to fill the browser window
