@@ -1,16 +1,24 @@
 // ****** market.js ******
 
+// Debug flag to control logging verbosity
+const MARKET_DEBUG = false; // Set to true during development
+
+// Constants for price calculations
+const PRODUCTION_DISCOUNT_BUY = 0.7;   // Systems produce goods at discount
+const PRODUCTION_DISCOUNT_SELL = 0.8;  // Selling price for produced goods
+const IMPORT_PREMIUM_BUY = 1.2;        // Systems import needed goods at premium
+const IMPORT_PREMIUM_SELL = 1.1;       // Selling price for imported goods
+const SELL_RATIO_SAFETY = 0.8;         // Ensure sell price is at most this % of buy price
+
 class Market {
     constructor(systemType) {
         this.systemType = systemType;
-        
-        // Add a direct reference back to the system name for debugging
         this.systemName = null; // Will be set by Station
         
-        // If Alien, no goods available
+        // If Alien, no goods available - return early
         if (systemType === 'Alien') {
             this.commodities = [];
-            console.log("Market initialized for Alien system: No goods available.");
+            if (MARKET_DEBUG) console.log("Market initialized for Alien system: No goods available.");
             return;
         }
 
@@ -18,120 +26,159 @@ class Market {
             // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock
             // Basic Goods
             { name: 'Food',           baseBuy: 10,   baseSell: 8,    buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
+            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
             // Industrial Goods
             { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
             // Raw Materials
-            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
-            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
-            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
+            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
             // Tech Goods
             { name: 'Computers',      baseBuy: 250,  baseSell: 220,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
             { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
+            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
             // Luxury Goods
-            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0 }, // Added
-            // Add Slaves, Weapons, Narcotics if needed for illegal market later
+            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
         ];
-        // Assign a placeholder for 'Raw Materials' if needed generically, though specific types are better
-        // Example: { name: 'Raw Materials', baseBuy: 30, baseSell: 25, buyPrice: 0, sellPrice: 0, playerStock: 0 }
 
         this.updatePrices();
-        console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`);
+        if (MARKET_DEBUG) console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`);
     }
 
     // Price adjustment based on economy type
     updatePrices() {
-        console.log(` -> Updating prices for: ${this.systemType}`);
+        // Skip if no commodities (for Alien systems)
+        if (!this.commodities || this.commodities.length === 0) return;
+        
+        if (MARKET_DEBUG) console.log(` -> Updating prices for: ${this.systemType}`);
+        
         this.commodities.forEach(comm => {
             // Reset to base prices before applying adjustments
             comm.buyPrice = comm.baseBuy;
             comm.sellPrice = comm.baseSell;
-            let caseHit = 'default';
-
-            // Apply adjustments based on system economy
-            // Lower buy/sell price means the system PRODUCES it (cheap supply)
-            // Higher buy/sell price means the system NEEDS it (high demand)
+            
+            // Apply system economy adjustments using constants instead of magic numbers
             switch (this.systemType) {
                 case 'Agricultural':
-                    caseHit = 'Agricultural'; // Produces Food, Textiles. Needs Machinery, Chemicals, Medicine.
-                    if (['Food', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
-                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
+                    if (['Food', 'Textiles'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Industrial':
-                    caseHit = 'Industrial'; // Produces Machinery. Needs Food, Metals, Minerals, Chemicals.
                     if (comm.name === 'Machinery') { comm.buyPrice *= 0.8; comm.sellPrice *= 0.9; }
                     if (['Food', 'Metals', 'Minerals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; } // Slight need for tech
+                    if (['Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
                     break;
                 case 'Mining':
-                    caseHit = 'Mining';
-                    if (['Metals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
+                    if (['Metals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; }
                     if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
                     break;
                 case 'Military':
-                    caseHit = 'Military';
                     if (['Machinery', 'Metals', 'Computers', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
                     if (['Luxury Goods', 'Textiles', 'Food'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
                     break;
                 case 'Offworld':
-                    caseHit = 'Offworld';
                     if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
                     if (['Food', 'Textiles', 'Metals'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
                     break;
                 case 'Alien':
-                    caseHit = 'Alien';
                     if (['Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.5; comm.sellPrice *= 0.6; }
                     if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 2.0; comm.sellPrice *= 1.8; }
                     break;
                 case 'Refinery':
-                    caseHit = 'Refinery'; // Produces Metals, Chemicals. Needs Minerals, Machinery, Food.
                     if (['Metals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.75; comm.sellPrice *= 0.85; }
                     if (['Minerals', 'Machinery', 'Food', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.25; comm.sellPrice *= 1.15; }
                     break;
                 case 'High Tech':
-                    caseHit = 'High Tech'; // Produces Computers, Medicine, Adv Components. Needs Food, Metals, Chemicals, Luxury.
                     if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
                     if (['Food', 'Metals', 'Chemicals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
-                    if (['Luxury Goods'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; } // Slightly higher demand
+                    if (['Luxury Goods'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
                     break;
                 case 'Tourism':
-                    caseHit = 'Tourism'; // Needs Food, Medicine, Luxury Goods, Textiles.
                     if (['Food', 'Medicine', 'Luxury Goods', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.5; comm.sellPrice *= 1.4; } // No production
+                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.5; comm.sellPrice *= 1.4; }
                     break; // <--- THIS IS IMPORTANT
                 case 'Service':
-                    caseHit = 'Service'; // Needs Food, Computers, Machinery, Medicine, Textiles.
                     if (['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; } // No production
+                    if (['Metals', 'Minerals', 'Chemicals', 'Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
                     break;
                 case 'Separatist':
-                    caseHit = 'Separatist'; // Produces Weapons, Machinery. Needs Metals, Food, Medicine
                     if (['Machinery', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.9; }
                     if (['Metals', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
-                    // Military goods (if implemented) would be produced here
                     if (['Computers'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
                     break;
                 case 'Imperial':
-                    caseHit = 'Imperial'; // Produces Luxury Goods, Adv Components. Needs Food, Textiles, Metals
                     if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) { comm.buyPrice *= 0.6; comm.sellPrice *= 0.7; }
                     if (['Food', 'Textiles', 'Metals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Medicine'].includes(comm.name)) { comm.buyPrice *= 0.9; comm.sellPrice *= 0.95; } // Decent medical care
+                    if (['Medicine'].includes(comm.name)) { comm.buyPrice *= 0.9; comm.sellPrice *= 0.95; }
                     break;
                 default:
-                    caseHit = 'default';
-                    console.warn(`Market: Unhandled or default economy type '${this.systemType}' - using base prices.`);
+                    if (MARKET_DEBUG) console.warn(`Market: Unhandled economy type '${this.systemType}' - using base prices.`);
                     break;
             }
-            // Ensure prices are integers and non-negative, avoid zero prices
+            
+            // CRITICAL SAFETY CHECK: Ensure sell price is always lower than buy price
+            if (comm.sellPrice >= comm.buyPrice) {
+                comm.sellPrice = Math.floor(comm.buyPrice * SELL_RATIO_SAFETY);
+            }
+            
+            // Ensure prices are integers and never zero
             comm.buyPrice = max(1, floor(comm.buyPrice));
             comm.sellPrice = max(1, floor(comm.sellPrice));
-            // console.log(`     -> ${comm.name}: Buy=${comm.buyPrice}, Sell=${comm.sellPrice} (Case: ${caseHit})`);
         });
-        console.log(` <- Prices updated.`);
+        
+        if (MARKET_DEBUG) console.log(` <- Prices updated.`);
     }
 
-    // --- updatePlayerCargo, buy, sell, getPrices remain the same ---
+    // Handles player attempt to sell commodities
+    sell(commodityName, quantity, player) {
+        if (MARKET_DEBUG) console.log(`--- Market.sell Attempt: ${commodityName}, Qty: ${quantity} ---`);
+
+        // CRITICAL NEW CHECK: Prevent selling mission cargo
+        if (player.activeMission?.cargoType === commodityName) {
+            console.log("SELL FAILED: Cannot sell mission cargo");
+            return false;
+        }
+
+        // Essential checks
+        if (!player) { console.error("SELL FAILED: Player missing"); return false; }
+        if (quantity <= 0) { return false; }
+
+        const comm = this.commodities.find(c => c.name === commodityName);
+        if (!comm) { console.error(`SELL FAILED: ${commodityName} not found`); return false; }
+
+        // Check cargo amount
+        const itemInCargo = player.cargo.find(item => item && item.name === commodityName);
+        if (!itemInCargo || itemInCargo.quantity < quantity) {
+            return false;
+        }
+
+        // Perform transaction
+        const income = Math.floor(comm.sellPrice * quantity);
+        player.addCredits(income);
+        player.removeCargo(commodityName, quantity);
+        this.updatePlayerCargo(player.cargo);
+
+        // Save less frequently - only on larger transactions
+        if (income > 100 && typeof saveGame === 'function') {
+            saveGame();
+        }
+        
+        return true;
+    }
+
+    // Returns a copy of commodities with current prices
+    getPrices() {
+        // More efficient than JSON.parse/stringify for shallow copies
+        return this.commodities.map(c => ({...c}));
+    }
+
+    // --- updatePlayerCargo, buy, getPrices remain the same ---
     // Updates the 'playerStock' field for market display based on player's cargo
     updatePlayerCargo(playerCargo) {
         if (!Array.isArray(playerCargo)) {
@@ -201,50 +248,6 @@ class Market {
             console.error(`BUY FAILED: player.spendCredits(${cost}) failed unexpectedly even though checks passed.`);
             return false; // Indicate failed purchase
         }
-    }
-
-    // Handles player attempt to sell commodities
-    sell(commodityName, quantity, player) {
-        console.log(`--- Market.sell Attempt ---`);
-        console.log(`Item: ${commodityName}, Qty: ${quantity}`);
-
-        // Essential checks
-        if (!player) { console.error("SELL FAILED: Player object missing."); return false; }
-        if (quantity <= 0) { console.log("SELL FAILED: Quantity <= 0."); return false; }
-
-        const comm = this.commodities.find(c => c.name === commodityName);
-        if (!comm) { console.error(`SELL FAILED: Commodity ${commodityName} not found in market.`); return false; }
-
-        // Check if player actually has enough of the item
-        const itemInCargo = player.cargo.find(item => item && item.name === commodityName); // Added check for item
-        if (!itemInCargo || itemInCargo.quantity < quantity) {
-            console.log(`SELL FAILED: Not enough ${commodityName} in cargo (Have: ${itemInCargo ? itemInCargo.quantity : 0}, Need: ${quantity})`);
-            return false;
-        }
-
-        // --- If checks pass, proceed ---
-        const income = Math.floor(comm.sellPrice * quantity); // Floor the total income
-        console.log(`Attempting to sell ${quantity} ${commodityName} for ${income} credits.`);
-
-        // Perform transaction: Add credits, remove cargo
-        player.addCredits(income); // Pass floored income
-        player.removeCargo(commodityName, quantity);
-        this.updatePlayerCargo(player.cargo); // Update market display
-
-        console.log(`--- Market.sell SUCCESS ---`);
-        // Consider saving game state after a successful trade
-        if (typeof saveGame === 'function') {
-            saveGame();
-        }
-        return true; // Indicate successful sale
-    }
-
-    // Returns the list of commodities with current prices and player stock
-    getPrices() {
-        // Return a deep copy to prevent external modification of market state
-        return JSON.parse(JSON.stringify(this.commodities));
-        // Or just return the reference if performance is critical and external mutation isn't a concern:
-        // return this.commodities;
     }
 
 } // End of Market Class

@@ -2,9 +2,6 @@
 
 ## Bugs and Issues
 
-completed missions should not show the accept buttond just back
-mission greyed out
-
 weapon selection is wrong
 
 open inventoy mid flight
