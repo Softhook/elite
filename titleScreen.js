@@ -130,6 +130,7 @@ class TitleScreen {
         text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
         text("1-9 - Switch weapons", textX, textY); textY += lineHeight;
         text("M - Galaxy map", textX, textY); textY += lineHeight;
+        text("H and J - AutoPilot to Station or Jump Zone", textX, textY); textY += lineHeight;
         text("Mouse to target beam weapons", textX, textY); textY += lineHeight * 2;
 
         // Gameplay tips
