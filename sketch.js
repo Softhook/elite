@@ -250,6 +250,24 @@ function keyPressed() {
             }
         }
     }
+
+        // Autopilot controls - with improved debugging
+        if (gameStateManager && gameStateManager.currentState === "IN_FLIGHT" && player && !player.destroyed) {
+            // H key - autopilot to station
+            if (key.toLowerCase() === 'h') {
+                console.log("H key detected - toggling station autopilot");
+                player.toggleAutopilot('station');
+                return false; // Prevent default browser behavior
+            }
+            
+            // J key - autopilot to jump zone
+            if (key.toLowerCase() === 'j') {
+                console.log("J key detected - toggling jump zone autopilot");
+                player.toggleAutopilot('jumpzone');
+                return false; // Prevent default browser behavior
+            }
+        }
+    
     // DEBUG: Clear Save Data (Shift + C key)
     // if (key === 'c' || key === 'C') {
     //     if (keyIsDown(SHIFT)) {

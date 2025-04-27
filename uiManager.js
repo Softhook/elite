@@ -267,6 +267,24 @@ class UIManager {
             fill(255, 200, 0);
             circle(missionBoxX + 6, weaponBarY + weaponBarH/2, 5);
         }
+
+                // Add Autopilot status indicator below weapon bar
+                if (player.autopilotEnabled) {
+                    const target = player.autopilotTarget === 'station' ? 'STATION' : 'JUMP ZONE';
+                    const autopilotY = 45 + 24 + 5; // Position below weapon bar
+                    
+                    // Draw autopilot indicator background
+                    fill(40, 80, 120, 200);
+                    noStroke();
+                    rect(0, autopilotY, width, 20);
+                    
+                    // Draw autopilot text
+                    textAlign(CENTER, CENTER);
+                    textSize(20);
+                    fill(255, 255, 100);
+                    text(`AUTOPILOT ENGAGED: ${target} — [${player.autopilotTarget === 'station' ? 'H' : 'J'} to disable]`, width/2, autopilotY + 10);
+                }
+                
         
         pop();
     }

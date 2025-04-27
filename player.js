@@ -31,6 +31,15 @@ class Player {
         this.maxHull = shipDef.baseHull;
         this.cargoCapacity = shipDef.cargoCapacity;
 
+
+        // Autopilot properties
+        this.autopilotEnabled = false;
+        this.autopilotTarget = null; // 'station' or 'jumpzone'
+        this.autopilotThrottleMultiplier = 0.8; // Conservative speed for safety
+        this.autopilotRotationMultiplier = 0.9; // Slightly reduced rotation speed
+        this.lastDamageTime = 0; // Track when player was last hit
+
+
         // --- Initialize Radian properties (calculated AFTER constructor) ---
         this.rotationSpeed = 0; // RADIANS per frame
 
@@ -524,6 +533,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             this.fireCooldown -= deltaTime / 1000;
         }
 
+        // Either handle autopilot OR normal input, never both
+        if (this.autopilotEnabled) {
+                    this.updateAutopilot();
+        }
+
         // Regenerate shields only after recharge delay has passed
         const timeSinceShieldHit = millis() - this.lastShieldHitTime;
         if (this.shield < this.maxShield && timeSinceShieldHit > this.shieldRechargeDelay) {
@@ -928,6 +942,155 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (found) {
             this.currentWeapon = found;
             this.fireRate = found.fireRate;
+        }
+    }
+
+          /**
+     * Toggles autopilot to the requested target
+     * @param {string} target - 'station' or 'jumpzone'
+     */
+          toggleAutopilot(target) {
+            console.log(`toggleAutopilot called with target: ${target}`);
+            console.log(`Current autopilot state: ${this.autopilotEnabled ? 'enabled' : 'disabled'}, target: ${this.autopilotTarget || 'none'}`);
+            
+            // If already headed to this target, disable autopilot
+            if (this.autopilotEnabled && this.autopilotTarget === target) {
+                console.log("Same target detected - disabling autopilot");
+                this.disableAutopilot();
+                return;
+            }
+            
+            // Otherwise, enable autopilot to the requested target
+            this.autopilotEnabled = true;
+            this.autopilotTarget = target;
+            
+            // Make sure current system is defined
+            if (!this.currentSystem) {
+                console.error("Cannot enable autopilot: currentSystem is undefined");
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot error: System data unavailable");
+                return;
+            }
+            
+            console.log(`Autopilot enabled: Flying to ${target}`);
+            if (uiManager) uiManager.addMessage(`Autopilot engaged: ${target === 'station' ? 'Station' : 'Jump Zone'}`);
+        }
+    
+        /** Disables autopilot - Ensures NO lingering effects */
+        disableAutopilot() {
+        if (this.autopilotEnabled) {
+            console.log("Autopilot disabled");
+            this.autopilotEnabled = false;
+            this.autopilotTarget = null;
+            
+            // Reset critical flags when disabling autopilot
+            this.isThrusting = false;        // Ensure thrusting is stopped
+            
+            // DON'T modify fireCooldown or any other base ship properties
+            
+            // Only track when autopilot was disabled
+            this.lastDisableTime = millis();
+        }
+    }
+    
+    /**
+     * Processes autopilot logic during update
+     */
+    updateAutopilot() {
+        if (!this.autopilotEnabled || !this.currentSystem) return;
+        
+        // Disable autopilot if player was recently damaged
+        if (millis() - this.lastDamageTime < 500) {
+            console.log("Autopilot disabled: Recent damage detected");
+            this.disableAutopilot();
+            if (uiManager) uiManager.addMessage("Autopilot disengaged: Damage detected");
+            return;
+        }
+        
+        let targetPos;
+        
+        // Determine target position based on autopilot target
+        if (this.autopilotTarget === 'station') {
+            // Target the station if it exists
+            if (!this.currentSystem.station || !this.currentSystem.station.pos) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: No station in system");
+                return;
+            }
+            targetPos = this.currentSystem.station.pos.copy();
+            
+            // Disable if we're very close to station
+            const stationDistance = p5.Vector.dist(this.pos, targetPos);
+            if (stationDistance < this.currentSystem.station.size * 2) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: Approaching station");
+                return;
+            }
+        } 
+        else if (this.autopilotTarget === 'jumpzone') {
+            // Target the jump zone if it exists
+            if (!this.currentSystem.jumpZoneCenter) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: No jump zone found");
+                return;
+            }
+            targetPos = this.currentSystem.jumpZoneCenter.copy();
+            
+            // Disable if we're in the jump zone
+            const jumpZoneDistance = p5.Vector.dist(this.pos, targetPos);
+            if (jumpZoneDistance < this.currentSystem.jumpZoneRadius * 0.8) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: Jump zone reached");
+                return;
+            }
+        }
+        
+        if (!targetPos) {
+            this.disableAutopilot();
+            return;
+        }
+        
+        // --- AUTOPILOT STEERING AND THRUST LOGIC ---
+        // Calculate direction to target
+        const toTarget = p5.Vector.sub(targetPos, this.pos);
+        const targetAngle = toTarget.heading();
+        
+        // Normalize angles for comparison
+        let angleDiff = targetAngle - this.angle;
+        if (angleDiff > PI) angleDiff -= TWO_PI;
+        if (angleDiff < -PI) angleDiff += TWO_PI;
+        
+        // Rotate towards target - Using FIXED values independent of player's rotation speed
+        const AUTOPILOT_ROTATION_RATE = 0.03; // Fixed rotation speed for autopilot
+        if (abs(angleDiff) > 0.05) {
+            if (angleDiff > 0) {
+                this.angle += AUTOPILOT_ROTATION_RATE;
+            } else {
+                this.angle -= AUTOPILOT_ROTATION_RATE;
+            }
+        }
+        
+        // Apply thrust if roughly facing the right direction
+        if (abs(angleDiff) < 0.3) {
+            // Use fixed thrust value independent of player's thrustForce
+            const AUTOPILOT_THRUST = 0.25; // Fixed thrust amount for autopilot
+            
+            let force = p5.Vector.fromAngle(this.angle);
+            force.mult(AUTOPILOT_THRUST);
+            this.vel.add(force);
+            
+            // FIXED: Use the correct angle parameter - DON'T subtract PI here
+            if (this.thrustManager) {
+                this.thrustManager.createThrust(
+                    this.pos,
+                    this.angle,  // Use facing angle, not reversed
+                    this.size
+                );
+            }
+            
+            this.isThrusting = true;
+        } else {
+            this.isThrusting = false;
         }
     }
 
