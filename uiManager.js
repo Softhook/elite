@@ -554,33 +554,62 @@ class UIManager {
 
         // --- List Section (always shows available missions) ---
         fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
-        let listSY = cY+10, entryH=35, spacing=5;
-        if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(20); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
-        else {
-            missions.forEach((m, i) => {
-                if (!m?.getSummary) return;
-                let mY=listSY+i*(entryH+spacing);
-                if(mY+entryH > cY+cH) return; // Don't draw off panel
 
-                // Highlight based on selectedIndex, REGARDLESS of what's in detail panel
-                if(i === selectedIndex) {
-                     fill(80,100,80,200);stroke(150,255,150);strokeWeight(1);
+        if (!Array.isArray(missions) || missions.length === 0) {
+            fill(180); textSize(20); textAlign(CENTER,CENTER); 
+            text("No missions available.", pX+listW/2, cY+cH/2);
+        } else {
+            this.missionListButtonAreas = []; // Reset clickable areas
+            let currentY = cY + 10; // Starting Y position
+            const spacing = 5;
+            
+            // Process each mission
+            for (let i = 0; i < missions.length; i++) {
+                const m = missions[i];
+                if (!m?.getSummary) continue;
+                
+                // Get mission text and calculate its space requirements
+                const missionText = m.getSummary();
+                textSize(20);
+                const availableWidth = listW - 40;
+                const approxCharsPerLine = 30; // Rough estimate
+                const textLines = Math.ceil(missionText.length / approxCharsPerLine);
+                const minHeight = 35;
+                const heightPerLine = 20;
+                const buttonHeight = Math.max(minHeight, textLines * heightPerLine);
+                
+                // Skip if would extend beyond panel
+                if (currentY + buttonHeight > cY + cH) break;
+                
+                // Background
+                if (i === selectedIndex) {
+                    fill(80,100,80,200); stroke(150,255,150); strokeWeight(1);
                 } else {
-                     fill(40,60,40,180); noStroke();
+                    fill(40,60,40,180); noStroke();
                 }
-                rect(pX+10, mY, listW-20, entryH, 3);
-
-                // Dim text if this mission is the active one (can't select it again)
+                rect(pX+10, currentY, listW-20, buttonHeight, 3);
+                
+                // Text
                 if (activeMission && activeMission.id === m.id) {
-                    fill(150); // Greyed out text
+                    fill(150); // Greyed out for active mission
                 } else {
-                    fill(220); // Normal text color
+                    fill(220); // Normal color
                 }
-                textSize(20); textAlign(LEFT,CENTER); noStroke();
-                text(m.getSummary(), pX+20, mY+entryH/2, listW-40);
-                // Store clickable area for list item (used for highlighting)
-                this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i});
-            });
+                textSize(20); textAlign(LEFT, CENTER); noStroke();
+                text(missionText, pX+20, currentY + buttonHeight/2, listW-40);
+                
+                // Store clickable area
+                this.missionListButtonAreas.push({
+                    x: pX+10,
+                    y: currentY,
+                    w: listW-20,
+                    h: buttonHeight,
+                    index: i
+                });
+                
+                // Move to next position
+                currentY += buttonHeight + spacing;
+            }
         }
         // --- End List Section ---
 
@@ -1382,7 +1411,7 @@ class UIManager {
             fill(60,60,100); stroke(120,180,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
             let price = ship.price;
-            text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr`, pX+30, y+rowH/2);
+            text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr       ${ship.description}`, pX+30, y+rowH/2);
             this.shipyardListAreas.push({
                 x: pX+20, y: y, w:pW-40, h:rowH-6,
                 shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], // The actual key
@@ -1449,7 +1478,7 @@ class UIManager {
             fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
             text(
-                `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}  |  Price: ${upg.price}cr  |  ${upg.desc}`,
+                `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}  |  Price: ${upg.price}cr       ${upg.desc}`,
                 pX+30, y+rowH/2
             );
             this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
@@ -1509,8 +1538,9 @@ class UIManager {
 
         push();
         textAlign(CENTER, BOTTOM);
+        textFont(font);
         textSize(20);
-        fill(255);
+        fill(200);
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
             text(
