@@ -40,6 +40,11 @@ Solution: Implement more precise hitbox system using ship vertex data
 ## Core Gameplay Enhancements
 
 
+spawning events. 
+- aline raid - aliens appearing in military system
+lots of piratiese attacking haulers
+lots of asteroids
+
 open inventoy mid flight
 
 some weapons better than lasers than hull
