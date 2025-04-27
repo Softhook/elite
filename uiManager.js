@@ -768,6 +768,7 @@ class UIManager {
             // Apply thick yellow highlight if selected (and not current)
             // This OVERRIDES previous stroke settings for the selected system.
             if (isSelected && !isCurrent) {
+                 nodeStrokeColor = color(255, 255, 0); // Yellow outline for selected
                  nodeStrokeWeight = 4;                 // Make it thick
             }
             // ---
@@ -1374,7 +1375,7 @@ class UIManager {
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(16);
+        textSize(20);
         for (let i = firstRow; i < lastRow; i++) {
             let ship = Object.values(SHIP_DEFINITIONS)[i];
             let y = startY + (i-firstRow)*rowH;
@@ -1383,7 +1384,7 @@ class UIManager {
             let price = ship.price;
             text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr`, pX+30, y+rowH/2);
             this.shipyardListAreas.push({
-                x: pX+20, y: y, w: pW-40, h: rowH-6,
+                x: pX+20, y: y, w:pW-40, h:rowH-6,
                 shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], // The actual key
                 shipName: ship.name, // Display name
                 price
@@ -1406,13 +1407,13 @@ class UIManager {
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
         text("Back", backX+backW/2, backY+backH/2);
         this.shipyardDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
         pop();
     }
 
-    /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
+    /** Draws the Upgrades Menu (when state is VIEWING_UPGR    /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
         if (!player) return;
         this.upgradeListAreas = []; // Fixed: added the dot after "this"
@@ -1441,7 +1442,7 @@ class UIManager {
         // Draw visible upgrades
         let firstRow = this.upgradeScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(15);
+        textSize(20);
         for (let i = firstRow; i < lastRow; i++) {
             let upg = upgrades[i];
             let y = startY + (i-firstRow)*rowH;
@@ -1470,7 +1471,7 @@ class UIManager {
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
         text("Back", backX+backW/2, backY+backH/2);
         this.upgradeDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
         pop();
