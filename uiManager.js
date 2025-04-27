@@ -95,7 +95,8 @@ class UIManager {
         
         // Left side - System name with additional info
         fill(255); 
-        textSize(14); 
+        textFont(font);
+        textSize(20); 
         textAlign(LEFT, CENTER); 
         const systemType = player.currentSystem?.economyType || 'Unknown';
         const secLevel = player.currentSystem?.securityLevel || 'Unknown';
@@ -107,15 +108,15 @@ class UIManager {
         // Center - LEGAL status - aligned at statusLineY
         if (player.isWanted) {
             // Draw WANTED text
-            fill(255,0,0);
+            fill(255);
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(20);
             text("WANTED", width/2, statusLineY);
         } else {
             // Show "LEGAL" status when not wanted
             fill(255);
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(20);
             text("LEGAL", width/2, statusLineY);
         }
         
@@ -149,9 +150,10 @@ class UIManager {
             // Shield text
             fill(255);
             noStroke();
-            textAlign(LEFT, CENTER);
-            textSize(12);
-            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 85, barMiddleY - barHeight/2 - 2);
+            textFont(font);
+            textAlign(RIGHT, CENTER);
+            textSize(20);
+            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight/2 - 2);
         }
 
         // Lower bar - Hull
@@ -171,9 +173,9 @@ class UIManager {
         // Hull text
         fill(255);
         noStroke();
-        textAlign(LEFT, CENTER);
-        textSize(12);
-        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 85, barMiddleY + barHeight/2 + 2);
+        textAlign(RIGHT, CENTER);
+        textSize(20);
+        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight/2 + 2);
         
         // Weapon selector (with integrated cooldown bar)
         this.drawWeaponSelector(player);
@@ -196,7 +198,7 @@ class UIManager {
         
         // Display weapon slots
         textAlign(LEFT, CENTER);
-        textSize(12);
+        textSize(20);
         let xPos = 10;
         
         player.weapons.forEach((weapon, index) => {
@@ -242,7 +244,7 @@ class UIManager {
             
             // Create a background for the mission text
             const missionPadding = 10;
-            textSize(13);
+            textSize(20);
             const missionTextW = textWidth(missionText);
             const missionBoxW = missionTextW + missionPadding * 2;
             const missionBoxX = width - missionBoxW - 10; // 10px from right edge
@@ -279,6 +281,7 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         
+        textFont(font);
         // Rest of the menu with adjusted Y positions
         let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
         const menuOpts = [
@@ -292,7 +295,7 @@ class UIManager {
         menuOpts.forEach((opt, i) => {
             let btnY=btnSY+i*btnSp;
             fill(50,50,90); stroke(150,150,200); rect(btnX,btnY,btnW,btnH,5);
-            fill(220); textSize(18); textAlign(CENTER,CENTER); noStroke();
+            fill(220); textSize(20); textAlign(CENTER,CENTER); noStroke();
             text(opt.text, btnX+btnW/2, btnY+btnH/2);
             let d={x:btnX,y:btnY,w:btnW,h:btnH,text:opt.text};
             if(opt.state) d.state=opt.state;
@@ -315,7 +318,7 @@ class UIManager {
         const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
         
         // Show current hull with adjusted Y position
-        fill(220); textSize(18); textAlign(CENTER,TOP);
+        fill(220); textSize(20); textAlign(CENTER,TOP);
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
 
         // Calculate repair costs - with Math.floor to ensure integers
@@ -328,20 +331,20 @@ class UIManager {
 
         // 100% Repair Button
         fill(0,180,0); stroke(100,255,100); rect(btnX, btnY1, btnW, btnH, 5);
-        fill(0); textSize(18); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
         text(`Full Repair (${fullCost} cr)`, btnX+btnW/2, btnY1+btnH/2);
         this.repairsFullButtonArea = {x:btnX, y:btnY1, w:btnW, h:btnH};
 
         // 50% Repair Button
         fill(180,180,0); stroke(220,220,100); rect(btnX, btnY2, btnW, btnH, 5);
-        fill(0); textSize(18); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
         text(`50% Repair (${halfCost} cr)`, btnX+btnW/2, btnY2+btnH/2);
         this.repairsHalfButtonArea = {x:btnX, y:btnY2, w:btnW, h:btnH};
 
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(16); textAlign(CENTER,CENTER); noStroke();
+        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
         text("Back", backX+backW/2, backY+backH/2);
         this.repairsBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
         pop();
@@ -366,8 +369,9 @@ class UIManager {
         
         // Table setup - adjusted Y position
         let sY = pY+headerHeight+40, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
-        textAlign(CENTER,CENTER); textSize(14); fill(200);
-
+        
+        textAlign(CENTER,CENTER); textSize(20); fill(200);
+     
         // Column headers
         text("Commodity", sX+cW*0.3, sY);
         text("Buy", sX+cW*1.8, sY);
@@ -464,7 +468,7 @@ class UIManager {
             let buy1Y = yP+(rowH-btnH)/2;
             fill(0,150,0); stroke(0,200,0); strokeWeight(1);
             rect(buy1X, buy1Y, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
             text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
             this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
 
@@ -473,7 +477,7 @@ class UIManager {
             let buyAllY = buy1Y;
             fill(0,180,0); stroke(0,220,0); strokeWeight(1);
             rect(buyAllX, buyAllY, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
             text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
             this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
 
@@ -482,7 +486,7 @@ class UIManager {
             let sell1Y = buy1Y;
             fill(150,0,0); stroke(200,0,0); strokeWeight(1);
             rect(sell1X, sell1Y, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
             text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
             this.marketButtonAreas.push({ x: sell1X, y: sell1Y, w: btnW, h: btnH, action: 'sell', quantity: 1, commodity: comm.name });
 
@@ -491,7 +495,7 @@ class UIManager {
             let sellAllY = buy1Y;
             fill(180,0,0); stroke(220,0,0); strokeWeight(1);
             rect(sellAllX, sellAllY, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(12);
+            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
             text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
             this.marketButtonAreas.push({ x: sellAllX, y: sellAllY, w: btnW, h: btnH, action: 'sellAll', commodity: comm.name });
         });
@@ -505,7 +509,7 @@ class UIManager {
         stroke(220,220,100); strokeWeight(1);
         rect(backX, backY, backW, backH, 5);
         fill(0);
-        textSize(16);
+        textSize(20);
         textAlign(CENTER,CENTER);
         noStroke();
         text("Back", backX+backW/2, backY+backH/2);
@@ -551,7 +555,7 @@ class UIManager {
         // --- List Section (always shows available missions) ---
         fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
         let listSY = cY+10, entryH=35, spacing=5;
-        if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(14); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
+        if (!Array.isArray(missions) || missions.length === 0) { /* Draw "No missions" */ fill(180); textSize(20); textAlign(CENTER,CENTER); text("No missions available.", pX+listW/2, cY+cH/2); }
         else {
             missions.forEach((m, i) => {
                 if (!m?.getSummary) return;
@@ -572,7 +576,7 @@ class UIManager {
                 } else {
                     fill(220); // Normal text color
                 }
-                textSize(12); textAlign(LEFT,CENTER); noStroke();
+                textSize(20); textAlign(LEFT,CENTER); noStroke();
                 text(m.getSummary(), pX+20, mY+entryH/2, listW-40);
                 // Store clickable area for list item (used for highlighting)
                 this.missionListButtonAreas.push({x:pX+10,y:mY,w:listW-20,h:entryH,index:i});
@@ -586,7 +590,8 @@ class UIManager {
 
         if (missionToShowDetails) { // If we determined a mission to show details for...
             // Draw the mission text details
-            fill(230); textSize(14); textAlign(LEFT,TOP); textLeading(18); text(missionToShowDetails.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30);
+            fill(230); textSize(20); textAlign(LEFT,TOP); textLeading(24); // Increased leading for readability
+            text(missionToShowDetails.getDetails() || "Error: No details.", detailX+15, cY+15, detailW-30);
 
             // --- Determine Detail Buttons ---
             let actionBtnX = detailX + detailW / 2 - btnDetailW - 10; // Position for Accept/Complete/Abandon
@@ -607,25 +612,25 @@ class UIManager {
                 // Show Complete or Abandon
                 if (canCompleteHere) {
                     fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                    fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                    fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
                     this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
                 } else {
                     fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                    fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                    fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
                     this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
                 }
 
             } else if (!activeMission && missionToShowDetails) {
                 // --- The mission shown is AVAILABLE (and player has no active mission) ---
                 fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
                 this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
             } else {
                 // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission (selected from list)
                 // Or, somehow missionToShowDetails is set but doesn't fit the above.
                 // In this scenario, we shouldn't allow accepting. Show "Unavailable".
                 fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                fill(150); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
+                fill(150); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
                 this.missionDetailButtonAreas['accept'] = null; // Ensure accept is not clickable
                 this.missionDetailButtonAreas['complete'] = null;
                 this.missionDetailButtonAreas['abandon'] = null;
@@ -633,15 +638,15 @@ class UIManager {
 
             // Draw Back button (common if any details are shown)
             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-            fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+            fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
             // Area for 'back' button already stored
 
         } else { // No mission active AND none selected from the list
-            fill(180); textSize(14); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
+            fill(180); textSize(20); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
             // Only show a Back button, centered
             let backBtnX = pX + pW / 2 - btnDetailW / 2; // Center the single back button
             fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-            fill(255); textSize(16); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+            fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
             // Define button areas: only 'back' is active
             this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null };
         }
@@ -763,7 +768,6 @@ class UIManager {
             // Apply thick yellow highlight if selected (and not current)
             // This OVERRIDES previous stroke settings for the selected system.
             if (isSelected && !isCurrent) {
-                 nodeStrokeColor = color(255, 255, 0); // Yellow outline for selected
                  nodeStrokeWeight = 4;                 // Make it thick
             }
             // ---
@@ -1411,10 +1415,11 @@ class UIManager {
     /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
         if (!player) return;
-        thisupgradeListAreas = [];
+        this.upgradeListAreas = []; // Fixed: added the dot after "this"
         push();
         
-       const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        // Rest of the code...
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([40,30,60,230], [200,100,255]);
         
         // Use the standardized header
@@ -1503,7 +1508,7 @@ class UIManager {
 
         push();
         textAlign(CENTER, BOTTOM);
-        textSize(12);
+        textSize(20);
         fill(255);
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
@@ -1592,12 +1597,13 @@ class UIManager {
         
         // Title (specific to each screen)
         fill(255); 
-        textSize(24); 
+        textFont(font);
+        textSize(30); 
         textAlign(CENTER, TOP);
         text(title, pX + pW/2, pY + 20);
         
         // Station name, economy type and security level (left aligned)
-        textSize(16); 
+        textSize(20); 
         textAlign(LEFT, TOP);
         const stationName = station.name || "Unknown Station";
         const systemName = system?.name || "Unknown System";
@@ -1606,7 +1612,7 @@ class UIManager {
         // Economy and Security (left aligned)
         const econ = system?.economyType || station.market?.systemType || "Unknown";
         const law = system?.securityLevel || "Unknown";
-        textSize(14);
+        textSize(20);
         text(`Economy: ${econ}   |   Security: ${law}`, pX +20, pY + 45);
         
         // Credits (right-aligned)

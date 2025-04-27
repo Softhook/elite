@@ -57,15 +57,16 @@ class TitleScreen {
         
         // Draw title
         push();
-        textSize(72);
+        textFont(font);
+        textSize(100);
         textAlign(CENTER, CENTER);
         fill(0, 180, 255);
         stroke(0, 100, 200);
         strokeWeight(3);
-        text("ELITE Redux", width/2, this.titleY);
+        text("Elite Redux", width/2, this.titleY);
         
         // Author credit
-        textSize(24);
+        textSize(20);
         fill(200, 200, 255, this.authorAlpha);
         noStroke();
         text("Christian Nold, Easter 2025", width/2, this.titleY + 80);
@@ -83,7 +84,7 @@ class TitleScreen {
         // Pulse effect
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
-        
+        textFont(font);
         text("Click to Continue", width/2, promptY);
         pop();
     }
@@ -97,6 +98,7 @@ class TitleScreen {
         const startY = this.instructionScrollY;
         
         // Title
+        textFont(font);
         textSize(42);
         fill(0, 180, 255);
         text("HOW TO PLAY", width/2, startY);
@@ -167,6 +169,7 @@ class TitleScreen {
             // Ship name display
             push();
             textAlign(CENTER);
+            textFont(font);
             textSize(24);
             fill(255);
             text(currentShipType, width/2, height * 0.7);
