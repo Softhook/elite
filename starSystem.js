@@ -808,28 +808,29 @@ class StarSystem {
     checkProjectileCollisions(player) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
-
-
-        // Check against asteroids
-        for (let j = this.asteroids.length - 1; j >= 0; j--) {
-            const asteroid = this.asteroids[j];
-            if (!asteroid || asteroid.isDestroyed()) continue;
+            let hit = false;  // <- DECLARE HIT VARIABLE HERE
             
-            if (asteroid.checkCollision(proj)) {
-                // FIXED: Apply damage to asteroid based on projectile damage
-                asteroid.takeDamage(proj.damage || 1);
-                // Remove projectile after hit
-                this.projectiles.splice(i, 1);
+            // Check against asteroids
+            for (let j = this.asteroids.length - 1; j >= 0; j--) {
+                const asteroid = this.asteroids[j];
+                if (!asteroid || asteroid.isDestroyed()) continue;
                 
-                // Create effect at collision point
-                this.addExplosion(proj.pos.x, proj.pos.y, 3, proj.color || color(255, 100, 0));
-                
-
-                hit = true;
-                break;
+                if (asteroid.checkCollision(proj)) {
+                    // FIXED: Apply damage to asteroid based on projectile damage
+                    asteroid.takeDamage(proj.damage || 1);
+                    // Remove projectile after hit
+                    this.projectiles.splice(i, 1);
+                    const explosionColor = [255, 120, 20];
+                    // Create effect at collision point - increase size for visibility
+                    this.addExplosion(proj.pos.x, proj.pos.y, 10, explosionColor);
+                    
+                    hit = true;  // <- Now this variable is defined
+                    break;
+                }
             }
-        }
-        
+            
+            // If already hit something, skip the rest of the checks
+            if (hit) continue;
             
             // For player hits:
             if (proj.owner instanceof Enemy && proj.checkCollision(player)) {

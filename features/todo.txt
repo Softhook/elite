@@ -2,11 +2,10 @@
 
 ## Bugs and Issues
 
+stars are not being drawn
+
 weapon selection is wrong
 
-open inventoy mid flight
-
-abandon mission needs to remove the cargo
 
 cargo update needs to be called - not spining
 
@@ -40,6 +39,8 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
+
+open inventoy mid flight
 
 some weapons better than lasers than hull
 weapon range weapon speed
