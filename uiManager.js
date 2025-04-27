@@ -484,22 +484,52 @@ class UIManager {
             this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
 
             // Sell 1 button
-            let sell1X = buyAllX + btnW + 10; // Add more space before sell buttons
+            let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
             let sell1Y = buy1Y;
-            fill(150,0,0); stroke(200,0,0); strokeWeight(1);
-            rect(sell1X, sell1Y, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-            text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-            this.marketButtonAreas.push({ x: sell1X, y: sell1Y, w: btnW, h: btnH, action: 'sell', quantity: 1, commodity: comm.name });
+
+            // Check if this commodity is needed for the active mission
+            const isMissionCargo = player.activeMission?.cargoType === comm.name;
+
+            if (isMissionCargo) {
+                // Grey out button - not clickable
+                fill(100); stroke(120); strokeWeight(1);
+                rect(sell1X, sell1Y, btnW, btnH, 3);
+                fill(180); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+                text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+                // No marketButtonAreas.push here - button can't be clicked
+            } else {
+                // Normal button - clickable
+                fill(150,0,0); stroke(200,0,0); strokeWeight(1);
+                rect(sell1X, sell1Y, btnW, btnH, 3);
+                fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+                text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+                this.marketButtonAreas.push({ 
+                    x: sell1X, y: sell1Y, w: btnW, h: btnH, 
+                    action: 'sell', quantity: 1, commodity: comm.name 
+                });
+            }
 
             // Sell All button
             let sellAllX = sell1X + btnW + 5; // Position relative to previous button
             let sellAllY = buy1Y;
-            fill(180,0,0); stroke(220,0,0); strokeWeight(1);
-            rect(sellAllX, sellAllY, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-            text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-            this.marketButtonAreas.push({ x: sellAllX, y: sellAllY, w: btnW, h: btnH, action: 'sellAll', commodity: comm.name });
+            if (isMissionCargo) {
+                // Grey out button - not clickable
+                fill(100); stroke(120); strokeWeight(1);
+                rect(sellAllX, sellAllY, btnW, btnH, 3);
+                fill(180); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+                text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+                // No marketButtonAreas.push here - button can't be clicked
+            } else {
+                // Normal button - clickable
+                fill(180,0,0); stroke(220,0,0); strokeWeight(1);
+                rect(sellAllX, sellAllY, btnW, btnH, 3);
+                fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+                text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+                this.marketButtonAreas.push({ 
+                    x: sellAllX, y: sellAllY, w: btnW, h: btnH, 
+                    action: 'sellAll', commodity: comm.name 
+                });
+            }
         });
 
         // Back button
@@ -1419,7 +1449,7 @@ class UIManager {
         if (this.shipyardScrollMax > 0) {
             let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
             fill(60,60,100); stroke(120,180,255); rect(barX, barY, barW, barH, 6);
-            let handleH = max(30, barH * (visibleRows / totalRows));
+            let handleH = max(30, barH * (visibleRows /totalRows));
             let handleY = barY + (barH-handleH) * (this.shipyardScrollOffset / this.shipyardScrollMax);
             fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
             // Store for click/drag
@@ -1437,14 +1467,11 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Upgrades Menu (when state is VIEWING_UPGR    /**```javascript
     /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
         if (!player) return;
-        this.upgradeListAreas = []; // Fixed: added the dot after "this"
+        this.upgradeListAreas = [];
         push();
-        
-        // Rest of the code...
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([40,30,60,230], [200,100,255]);
         

@@ -122,21 +122,29 @@ class Player {
         }
     } // --- End acceptMission method ---
 
+    /** Removes up to `quantity` units of `commodityName` from cargo */
+    removeCargo(commodityName, quantity) {
+        if (!commodityName || quantity <= 0) return false;
+        const idx = this.cargo.findIndex(i => i.name === commodityName);
+        if (idx === -1) return false;
+        const item = this.cargo[idx];
+        if (item.quantity < quantity) return false;
+        item.quantity -= quantity;
+        if (item.quantity === 0) this.cargo.splice(idx, 1);
+        return true;
+    }
+
+    /** Abandon the active mission and strip its cargo */
     abandonMission() {
-        if (this.activeMission) {
-            console.log("Abandoning mission:", this.activeMission.title);
-            // TODO: Apply penalties? Remove mission cargo?
-            if (this.activeMission.cargoType && this.activeMission.cargoQuantity > 0) {
-                 // Need to handle removal of cargo if mission abandoned
-                 console.warn(`Need to implement removal of ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType} on abandon!`);
-                 // this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity); // Be careful with quantities
-            }
-            this.activeMission.status = 'Failed'; // Mark as failed perhaps? Or just clear?
-            this.activeMission = null;
-             // TODO: UI Feedback
-            return true;
+        if (!this.activeMission) return false;
+        const type = this.activeMission.cargoType;
+        const qty  = this.activeMission.cargoQuantity;
+        if (type && qty > 0) {
+            this.removeCargo(type, qty);
         }
-        return false;
+        this.activeMission.fail();
+        this.activeMission = null;
+        return true;
     }
 
  /** Checks if the player has a specific quantity of a commodity. */
@@ -798,35 +806,6 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         }
         
         return { success: true, added: amountToAdd };
-    }
-
-    /** Removes cargo from player inventory. Returns true if successful. */
-    removeCargo(commodityName, quantity) {
-        // Validate input
-        if (!commodityName || quantity <= 0) {
-            return false;
-        }
-        
-        // Find the item
-        const itemIndex = this.cargo.findIndex(item => item?.name === commodityName);
-        if (itemIndex === -1) {
-            return false; // Item not found
-        }
-        
-        // Check if enough quantity exists
-        if (this.cargo[itemIndex].quantity < quantity) {
-            return false;
-        }
-        
-        // Remove the quantity
-        this.cargo[itemIndex].quantity -= quantity;
-        
-        // Remove item entirely if quantity is zero
-        if (this.cargo[itemIndex].quantity <= 0) {
-            this.cargo.splice(itemIndex, 1);
-        }
-        
-        return true;
     }
 
     /**
