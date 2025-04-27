@@ -1167,11 +1167,8 @@ class UIManager {
         // Set up text style
         noStroke();
         textAlign(LEFT, BOTTOM);
-        textSize(12);
-        
-        // Draw text with semi-transparent background
-        fill(0, 0, 0, 120);
-        rect(5, height - 25, 65, 20, 3);
+        textFont(font);
+        textSize(10);
         
         // Color changes based on performance
         if (this.fpsAverage >= 50) {
@@ -1628,6 +1625,7 @@ class UIManager {
         
         // Title (specific to each screen)
         fill(255); 
+        noStroke();
         textFont(font);
         textSize(30); 
         textAlign(CENTER, TOP);
