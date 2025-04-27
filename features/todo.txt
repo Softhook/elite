@@ -9,7 +9,7 @@ weapon selection is wrong
 
 open inventoy mid flight
 
-charge up jump drive
+abandon mission needs to remove the cargo
 
 cargo update needs to be called - not spining
 
