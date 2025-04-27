@@ -164,10 +164,8 @@ class Market {
         player.removeCargo(commodityName, quantity);
         this.updatePlayerCargo(player.cargo);
 
-        // Save less frequently - only on larger transactions
-        if (income > 100 && typeof saveGame === 'function') {
-            saveGame();
-        }
+        // Save  Game
+        saveGame();
         
         return true;
     }
