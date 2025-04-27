@@ -1252,15 +1252,13 @@ class UIManager {
                  handled = true;
             }
             else if (this.missionDetailButtonAreas['abandon'] && activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) {
-                 // Abandon logic: abandon the ACTIVE mission
-                 if (confirm("Abandon current mission?")) { // Add confirmation
-                      player.abandonMission();
-                      if(gameStateManager){
-                           gameStateManager.fetchStationMissions(player); // Refresh list
-                           gameStateManager.selectedMissionIndex = -1; // Deselect list item
-                      }
-                 }
-                 handled = true;
+                // Abandon logic: abandon the ACTIVE mission immediately
+                player.abandonMission();
+                if (gameStateManager) {
+                    gameStateManager.fetchStationMissions(player);    // Refresh list
+                    gameStateManager.selectedMissionIndex = -1;      // Deselect list item
+                }
+                handled = true;
             }
 
             // Handle List Clicks (for highlighting) if no detail button was clicked

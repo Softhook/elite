@@ -240,39 +240,6 @@ function drawHummingbird(s, thrusting = false) {
 // --- Global Ship Definitions Object ---
 // Stores base stats AND VERTEX DATA for each ship type.
 const SHIP_DEFINITIONS = {
-    "Destroyer": {
-        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
-        baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor","Twin Pulse","Force Blaster"],
-        costCategory: "Low", description: "Standard Police.",
-        drawFunction: drawDestroyer,         vertexLayers: [
-            {
-                vertexData: [ { x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 } ],
-                fillColor: [143, 143, 148],
-                strokeColor: [180, 180, 200],
-                strokeW: 0.50
-            },
-            {
-                vertexData: [ { x: -0.7335, y: 0.6180 }, { x: 0.5918, y: 0.0000 }, { x: -0.7335, y: -0.6180 }, { x: -0.8380, y: 0.0000 } ],
-                fillColor: [191, 191, 196],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.50
-            },
-            {
-                vertexData: [ { x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 } ],
-                fillColor: [84, 84, 84],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
-            }
-        ],
-         fillColor: [100, 150, 200],
-        strokeColor: [151, 181, 196],
-        strokeW: 1.00,
-        typicalCargo: [],
-        price: 60000,
-        aiRoles: ["MILITARY"]
-    },
     "ACAB": {
         name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
@@ -452,6 +419,39 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 6500,
         aiRoles: ["EXPLORER"]
+    },
+    "Destroyer": {
+        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
+        baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
+        armament: ["Disruptor","Twin Pulse","Force Blaster"],
+        costCategory: "Low", description: "Standard Police.",
+        drawFunction: drawDestroyer,         vertexLayers: [
+            {
+                vertexData: [ { x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 } ],
+                fillColor: [143, 143, 148],
+                strokeColor: [180, 180, 200],
+                strokeW: 0.50
+            },
+            {
+                vertexData: [ { x: -0.7335, y: 0.6180 }, { x: 0.5918, y: 0.0000 }, { x: -0.7335, y: -0.6180 }, { x: -0.8380, y: 0.0000 } ],
+                fillColor: [191, 191, 196],
+                strokeColor: [50, 50, 60],
+                strokeW: 0.50
+            },
+            {
+                vertexData: [ { x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 } ],
+                fillColor: [84, 84, 84],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
+         fillColor: [100, 150, 200],
+        strokeColor: [151, 181, 196],
+        strokeW: 1.00,
+        typicalCargo: [],
+        price: 60000,
+        aiRoles: ["MILITARY"]
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,

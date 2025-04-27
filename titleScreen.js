@@ -78,7 +78,7 @@ class TitleScreen {
         // Draw start prompt
         push();
         textAlign(CENTER, CENTER);
-        textSize(24);
+        textSize(30);
         const promptY = height * 0.85;
         
         // Pulse effect
@@ -104,7 +104,7 @@ class TitleScreen {
         text("HOW TO PLAY", width/2, startY);
         
         // Game description
-        textSize(18);
+        textSize(20);
         fill(200, 200, 255);
         textAlign(LEFT, TOP);
         const textX = width * 0.1;
@@ -112,17 +112,17 @@ class TitleScreen {
         const lineHeight = 30;
         
         // Introduction
-        text("Space trading, combat, piracy, assasinations you know ...", textX, textY);
+        text("Trading, space combat, piracy, assasinations you know the deal...", textX, textY);
         textY += lineHeight * 2;
         
         // Controls section
-        textSize(24);
+        textSize(30);
         fill(0, 180, 255);
         text("CONTROLS:", textX, textY);
         textY += lineHeight;
         
         // Control instructions
-        textSize(18);
+        textSize(20);
         fill(200, 200, 255);
         text("W or UP ARROW - Thrust forward", textX, textY); textY += lineHeight;
         text("A or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
@@ -133,20 +133,20 @@ class TitleScreen {
         text("Mouse to target beam weapons", textX, textY); textY += lineHeight * 2;
 
         // Gameplay tips
-        textSize(24);
+        textSize(30);
         fill(0, 180, 255);
         text("GAMEPLAY:", textX, textY);
         textY += lineHeight;
         
-        textSize(18);
+        textSize(20);
         fill(200, 200, 255);
         text("• Dock with stations to trade, upgrade and take missions", textX, textY); textY += lineHeight;
         text("• Destroy enemies to collect bounties and cargo", textX, textY); textY += lineHeight;
-        text("• Jump between star systems using the galaxy map", textX, textY); textY += lineHeight;
-        text("• Upgrade your ship and weapons to become ELITE", textX, textY); textY += lineHeight * 2;
+        text("• Jump between systems by going to the Jumpzone and use the galaxy map", textX, textY); textY += lineHeight;
+        text("• Become Elite", textX, textY); textY += lineHeight * 2;
         
         // Start prompt
-        textSize(24);
+        textSize(30);
         textAlign(CENTER);
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
