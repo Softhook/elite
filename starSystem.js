@@ -124,12 +124,11 @@ class StarSystem {
      * MUST be called AFTER p5 setup is complete (e.g., from Galaxy.initGalaxySystems).
      */
     initStaticElements() {
-        // --- Add check to prevent re-initialization ---
-        if (this.staticElementsInitialized) {
+        // Don't skip initialization if stars are missing
+        if (this.staticElementsInitialized && this.bgStars && this.bgStars.length > 0) {
             console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
             return;
         }
-        // ---
 
         console.log(`      >>> ${this.name}: initStaticElements() Start (Seed: ${this.systemIndex})`);
 
@@ -981,8 +980,20 @@ class StarSystem {
 
     /** Draws background stars. Assumes called within translated space. */
     drawBackground() {
-        if (!this.bgStars) return; fill(255); noStroke();
-        this.bgStars.forEach(s => ellipse(s.x, s.y, s.size, s.size));
+        if (!this.bgStars) {
+            console.log(`No bgStars in ${this.name} system!`);
+            return;
+        }
+        
+        fill(255); 
+        noStroke();
+        
+        // Slight glow effect
+        strokeWeight(1);
+        stroke(255, 255, 255, 100);
+        this.bgStars.forEach(s => {
+            ellipse(s.x, s.y, s.size, s.size);
+        });
     }
 
     /** Draws all system contents. */
