@@ -886,8 +886,6 @@ class UIManager {
         // Adjust instruction text slightly based on canJump status
         if (canJump) {
             text("Click reachable system.", width / 2, height - 70);
-        } else {
-            text("Fly to Jump Zone.", width / 2, height - 70);
         }
 
 
