@@ -9,9 +9,7 @@ class Cargo {
         this.type = type || random(LEGAL_CARGO); // Default to random legal cargo
         this.quantity = Math.min(50, Math.max(1, quantity)); // Between 1 and 50 units
         
-        // Visual size scales slightly with quantity
-        this.size = 8 + Math.min(6, Math.floor(this.quantity / 10)); 
-        
+        this.size = 8;
         this.rotation = random(TWO_PI);
         this.rotationSpeed = random(-0.01, 0.01);
         this.collected = false;
@@ -88,16 +86,7 @@ class Cargo {
         vertex(-this.size/1.5, this.size/1.5);
         endShape(CLOSE);
         
-        // Draw quantity indicator
-        if (this.quantity > 1) {
-            fill(255);
-            noStroke();
-            textSize(this.size / 2);
-            textAlign(CENTER, CENTER);
-            // Show x2, x3, etc. for quantities
-            text(`x${this.quantity}`, 0, 0);
-        }
-        
+   
         // Draw some details (packaging lines)
         stroke(min(255, this.color[0] * 0.6), min(255, this.color[1] * 0.6), min(255, this.color[2] * 0.6));
         line(-this.size/1.5, 0, this.size/1.5, 0);
