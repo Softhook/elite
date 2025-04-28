@@ -486,7 +486,7 @@ class StarSystem {
                 console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }
             
-            this.enemies.push(newEnemy);
+            this.addEnemy(newEnemy);
         } catch(e) { 
             console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); 
         }
@@ -1285,4 +1285,20 @@ class StarSystem {
         
         return distToPlayerSq > despawnDistanceSq;
     }
+    /**
+ * Adds an enemy to the system with proper references
+ * @param {Enemy} enemy - The enemy to add
+ * @returns {boolean} Whether enemy was successfully added
+ */
+addEnemy(enemy) {
+    if (enemy) {
+        // Set bidirectional reference
+        enemy.currentSystem = this;
+        this.enemies.push(enemy);
+        return true;
+    }
+    return false;
+}
+
+    
 } // End of StarSystem Class

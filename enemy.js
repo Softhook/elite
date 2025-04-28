@@ -295,8 +295,8 @@ class Enemy {
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         if (this.destroyed || !system) return;
-
-        // Store reference to current system
+    
+        // Always update system reference when update is called
         this.currentSystem = system;
         
         // Update weapon cooldown
@@ -429,15 +429,18 @@ class Enemy {
         }
 
         // --- Evaluate Player ---
-        const playerRef = system.player; // Assuming player is accessible via system
-        if (playerRef && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
+        // CRITICAL FIX: Try multiple ways to access player
+        const playerRef = system.player || this.target;
+        if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
+            // Force consideration of player regardless of system reference
             const playerScore = this.evaluateTargetScore(playerRef, system);
+            console.log(`${this.shipTypeName} evaluating player: score=${playerScore}`);
             if (playerScore > bestScore) {
                 bestScore = playerScore;
                 bestTarget = playerRef;
             }
         }
-
+        
         // --- Evaluate Other Enemies (Potential Targets) ---
         // Only evaluate other enemies if not Police or Hauler/Transport (unless attacked)
         const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE); // Extend this if other roles should fight each other
@@ -1625,7 +1628,8 @@ class Enemy {
 
     /** 
      * Applies forward thrust in current facing direction
-     * @param {number} [multiplier=1.0] - Optional thrust multiplier
+     * @param {number} [multiplier=1.0] -```javascript
+     * Optional thrust multiplier
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
     thrustForward(multiplier = 1.0, createParticles = true) {
@@ -1765,7 +1769,7 @@ class Enemy {
     /** 
      * Helper: Checks conditions and calls fire() if appropriate.
      * @param {Object} system - The current star system
-     * @param {boolean} targetExists - Whether target is valid
+     * @param {boolean} targetExists - Whether we have a valid target
      * @param {number} distanceToTarget - Distance to target
      * @param {number} shootingAngle - Angle to target in radians
      */
@@ -1857,8 +1861,9 @@ class Enemy {
     }
 
     fireWeapon(target = null) {
-        if (!this.currentWeapon || !this.currentSystem) return;
-        WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
+        const system = this.getSystem();
+        if (!this.currentWeapon || !system) return;
+        WeaponSystem.fire(this, system, this.angle, this.currentWeapon.type, target);
     }
 
     /** Cycles to the next available weapon */
@@ -1974,7 +1979,11 @@ class Enemy {
                 }
             } // targetLabel remains "None" if this.target is null and no state-based label applied
 
-            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
+            // UPDATED: Add system name to label
+            const system = this.getSystem();
+            const systemName = system ? system.name : "No System"; 
+            
+            let label = `${this.role} | ${stateKey} | Target: ${targetLabel} System: ${systemName}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
@@ -2119,12 +2128,25 @@ class Enemy {
         }
     }
 
-    /**
-     * Drops cargo when ship is destroyed - each cargo represents 1/3 of ship capacity
-     */
-    dropCargo() {
-        if (!this.currentSystem) return;
-        
+/**
+ * Gets the current star system reference
+ * @return {StarSystem|null} The current system or null if not available
+ */
+getSystem() {
+    return this.currentSystem;
+}
+
+/**
+ * Drops cargo when ship is destroyed - each cargo represents 1/3 of ship capacity
+ */
+dropCargo() {
+    const system = this.getSystem();
+    if (!system) {
+        console.warn(`${this.shipTypeName} can't drop cargo - no system reference`);
+        return;
+    }
+
+    try {
         // Get ship definition with cargo capacity
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
@@ -2155,13 +2177,23 @@ class Enemy {
             // Give cargo some velocity from the explosion
             cargo.vel = p5.Vector.random2D().mult(random(0.8, 2.0));
             
+            // Ensure cargo has proper size for collision detection
+            cargo.size = Math.max(25, Math.min(40, cargoQuantity * 0.5));
+            
             // Add cargo to system
-            if (typeof this.currentSystem.addCargo === 'function') {
-                this.currentSystem.addCargo(cargo);
-                uiManager.addMessage(`${this.shipTypeName} dropped ${cargoQuantity} units of ${cargoType}`);
+            if (system.addCargo(cargo)) {
+                console.log(`Cargo ${cargoType} x${cargoQuantity} successfully added to system ${system.name}`);
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`${this.shipTypeName} dropped ${cargoQuantity} units of ${cargoType}`);
+                }
+            } else {
+                console.warn(`Failed to add cargo to system ${system.name}`);
             }
         }
+    } catch (e) {
+        console.error(`Error in ${this.shipTypeName}.dropCargo():`, e);
     }
+}
 
     /** 
      * Detects nearby cargo within range 
@@ -2452,5 +2484,7 @@ class Enemy {
                 break;
         }
     }
+
+    
 }
 
