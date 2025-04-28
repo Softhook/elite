@@ -479,7 +479,7 @@ class Enemy {
              const scoreThresholdForChange = 5; // Prevent rapid flipping for minor score changes
              if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
                  this.target = bestTarget;
-                 // console.log(`${this.shipTypeName} new target: ${bestTarget?.constructor?.name} ${bestTarget?.role || ''} (Score: ${bestScore.toFixed(1)})`); // Debug
+                console.log(`${this.shipTypeName} new target: ${bestTarget?.constructor?.name} ${bestTarget?.role || ''} (Score: ${bestScore.toFixed(1)})`); // Debug
                  return true; // Target acquired or changed
              }
              // Keep current target if score isn't much better
@@ -1981,9 +1981,9 @@ class Enemy {
 
             // UPDATED: Add system name to label
             const system = this.getSystem();
-            const systemName = system ? system.name : "No System"; 
+
             
-            let label = `${this.role} | ${stateKey} | Target: ${targetLabel} System: ${systemName}`;
+            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
