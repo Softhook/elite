@@ -2,6 +2,8 @@
 
 ## Bugs and Issues
 
+i am not sure if the enemy idle bug has gone now
+
 weapon selection is wrong
 
 

@@ -384,6 +384,12 @@ function saveGame() {
   // Check if localStorage is supported and core objects exist
   if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
       try {
+
+          // CRITICAL CHECK: Don't save if player is dead
+          if (player.hull <= 0) {
+              console.warn("Cannot save game: Player is dead!");
+              return false;
+          }
           // console.log("Saving game state..."); // Optional log
           const saveData = {
               playerData: player.getSaveData(), // Includes shipType, pos, vel, angle, hull, credits, cargo, isWanted
@@ -406,6 +412,12 @@ function loadGame() {
           try {
               const saveData = JSON.parse(savedDataString);
               console.log("Loading game data...");
+
+               // CRITICAL VALIDATION: Check player health before loading
+              if (saveData.playerData && saveData.playerData.hull <= 0) {
+                  console.warn("Save game contains dead player (hull = 0). Cannot load.");
+                  return false;
+              }
               
               // Load galaxy first
               if (saveData.galaxyData) {

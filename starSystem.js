@@ -244,7 +244,7 @@ class StarSystem {
             let px = cos(angle) * orbitRadius;
             let py = sin(angle) * orbitRadius;
 
-            let sz = random(60, 150) * 2;
+            let sz = random(400, 800) * 2;
             let c1 = color(random(50, 200), random(50, 200), random(50, 200));
             let c2 = color(random(50, 200), random(50, 200), random(50, 200));
 

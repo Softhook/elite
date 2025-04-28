@@ -897,6 +897,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     /** Load save data */
     loadSaveData(data) {
         if (!data) { console.warn("Player.loadSaveData: No data provided."); return; }
+
+            // CRITICAL VALIDATION: Verify player is alive before loading
+    if (data.hull <= 0) {
+        console.warn("Cannot load save data: Player hull is <= 0");
+        return false;
+    }
+
+        
         console.log("Player.loadSaveData: Loading data...");
 
         // Load ship definition (which will populate weapons array)
