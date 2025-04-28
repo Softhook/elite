@@ -963,12 +963,14 @@ class StarSystem {
 
     /** Adds a cargo item to the system's cargo array */
     addCargo(cargo) {
-        // Ensure cargo array exists
         if (!this.cargo) this.cargo = [];
         
         if (cargo) {
             this.cargo.push(cargo);
+            console.log(`Cargo added to system ${this.name}: ${cargo.type} x${cargo.quantity}`);
+            return true;
         }
+        return false;
     }
 
     /** Draws background stars. Assumes called within translated space. */

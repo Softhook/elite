@@ -2278,12 +2278,20 @@ class Enemy {
                 }
                 // --- End NEW Logic ---
 
-                console.log(`   ...Finished scheduling explosions.`);
-                // Note: The AFTER log won't reflect timed explosions immediately
-                // console.log(`   Explosions array length AFTER: ${this.currentSystem.explosions?.length ?? 'N/A'}`);
 
-                // Drop cargo when destroyed
-                this.dropCargo();
+        // CRITICAL FIX: Use the system parameter passed to update()
+        const systemForCargo = this.currentSystem || (attacker && attacker.currentSystem);
+        if (systemForCargo) {
+
+            // Use the correct system temporarily for dropping cargo
+            this.currentSystem = systemForCargo;
+            
+            // Drop cargo
+            this.dropCargo();
+            
+        }
+
+
             } else {
                 console.log("   CurrentSystem or addExplosion invalid!"); // Log if system/function is missing
             }

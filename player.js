@@ -811,12 +811,17 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             return { success: false, added: 0 };
         }
         
-        // Find existing item or add new one
-        const existingItem = this.cargo.find(item => item?.name === commodityName);
+        // MODIFIED: Find existing item by type OR name
+        const existingItem = this.cargo.find(item => 
+          item?.name === commodityName || item?.type === commodityName
+        );
+        
         if (existingItem) {
-            existingItem.quantity += amountToAdd;
+          // Update existing
+          existingItem.quantity += amountToAdd;
         } else {
-            this.cargo.push({ name: commodityName, quantity: amountToAdd });
+          // Add new - standardize on using name property
+          this.cargo.push({ name: commodityName, quantity: amountToAdd });
         }
         
         return { success: true, added: amountToAdd };
