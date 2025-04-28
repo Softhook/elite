@@ -307,28 +307,23 @@ class StarSystem {
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
         
-        // Set system-wide police alert immediately if player is wanted
-        if (player && player.isWanted) {
-            console.log(`ALERT: Wanted player detected entering ${this.name} system!`);
-            this.policeAlertSent = true;
-        } else {
-            this.policeAlertSent = false;
-            console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
-        }
+        // Set system-wide police alert immediately
+        this.policeAlertSent = player?.isWanted || false;
+        console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
         
-        // Initial system population
+        // Initial system population - use this.player consistently in timers
         setTimeout(() => {
-            if (player && player.pos) {
-                console.log(`Player entering ${this.name} system. Wanted status: ${player.isWanted}`);
+            if (this.player && this.player.pos) {  // CHANGE: Use this.player instead of player
+                console.log(`Populating ${this.name} system. Player wanted status: ${this.player.isWanted}`);
                 
-                // Spawn initial NPCs
-                for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(player); } catch(e) {} }
-                for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(player); } catch(e) {} }
+                // CHANGE: Use this.player in method calls
+                for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(); } catch(e) {} }
+                for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(); } catch(e) {} }
                 
-                // CRITICAL FIX: Force police response on a slight delay after ships spawn
+                // Use this.player in nested setTimeout too
                 setTimeout(() => {
                     // Check again if player exists and is wanted
-                    if (player && player.isWanted) {
+                    if (this.player && this.player.isWanted) {
                         // Only log once per system entry, not for each police ship
                         console.log(`WANTED ALERT: Broadcasting player wanted status in ${this.name} system!`);
                         uiManager.addMessage(`WANTED ALERT: Player is wanted status in ${this.name} system!`);
@@ -338,12 +333,12 @@ class StarSystem {
                         let policeCount = 0;
                         for (let enemy of this.enemies) {
                             if (enemy.role === AI_ROLE.POLICE) {
-                                enemy.target = player;
+                                enemy.target = this.player;
                                 enemy.currentState = AI_STATE.APPROACHING;
                                 
-                                // Force immediate rotation toward player
-                                if (enemy.pos && player.pos) {
-                                    let angleToPlayer = atan2(player.pos.y - enemy.pos.y, player.pos.x - enemy.pos.x);
+                                // Force initial rotation toward player
+                                if (enemy.pos && this.player.pos) {
+                                    let angleToPlayer = atan2(this.player.pos.y - enemy.pos.y, this.player.pos.x - enemy.pos.x);
                                     enemy.angle = angleToPlayer;
                                     enemy.desiredAngle = enemy.angle;
                                 }
@@ -385,8 +380,8 @@ class StarSystem {
     }
 
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
-    trySpawnNPC(player) {
-        if (!player?.pos || this.enemies.length >= this.maxEnemies) return;
+    trySpawnNPC() {
+        if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
 
         let chosenRole, chosenShipTypeName;
         const econ = (this.economyType || "").toLowerCase();
@@ -467,24 +462,24 @@ class StarSystem {
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
         let spawnDist = sqrt(sq(width/2) + sq(height/2)) + random(150, 400);
-        let spawnX = player.pos.x + cos(angle) * spawnDist;
-        let spawnY = player.pos.y + sin(angle) * spawnDist;
+        let spawnX = this.player.pos.x + cos(angle) * spawnDist;
+        let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {
-            let newEnemy = new Enemy(spawnX, spawnY, player, chosenShipTypeName, chosenRole);
+            let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
             newEnemy.currentSystem = this;
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             
             // NEW CODE: Make police immediately target wanted player upon spawn
             if (newEnemy.role === AI_ROLE.POLICE && 
-                ((player && player.isWanted && !player.destroyed) || this.policeAlertSent)) {
+                ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
                 
-                newEnemy.target = player;
+                newEnemy.target = this.player;
                 newEnemy.currentState = AI_STATE.APPROACHING;
                 
                 // Force initial rotation toward player
-                if (newEnemy.pos && player.pos) {
-                    let angle = atan2(player.pos.y - newEnemy.pos.y, player.pos.x - player.pos.x);
+                if (newEnemy.pos && this.player.pos) {
+                    let angle = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
                     newEnemy.angle = angle; // Already in radians
                 }
                 
@@ -498,11 +493,11 @@ class StarSystem {
     }
 
     /** Attempts to spawn an asteroid. */
-    trySpawnAsteroid(player) {
-        if (!player?.pos || this.asteroids.length >= this.maxAsteroids) return;
+    trySpawnAsteroid() {
+        if (!this.player?.pos || this.asteroids.length >= this.maxAsteroids) return;
         try {
             let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(200,500);
-            let spawnX = player.pos.x + cos(angle)*spawnDist; let spawnY = player.pos.y + sin(angle)*spawnDist;
+            let spawnX = this.player.pos.x + cos(angle)*spawnDist; let spawnY = this.player.pos.y + sin(angle)*spawnDist;
             let size = random(40, 90); // Use larger default size
             this.asteroids.push(new Asteroid(spawnX, spawnY, size));
         } catch(e) { console.error("!!! ERROR during trySpawnAsteroid:", e); }
@@ -658,8 +653,17 @@ class StarSystem {
             this.checkProjectileCollisions(); // Added call to new method
 
             // Spawning Timers
-            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(this.player); this.enemySpawnTimer = 0; }
-            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(this.player); this.asteroidSpawnTimer = 0; }
+            this.enemySpawnTimer += deltaTime; 
+            if (this.enemySpawnTimer >= this.enemySpawnInterval) { 
+                this.trySpawnNPC(); // CHANGE: Don't pass player 
+                this.enemySpawnTimer = 0; 
+            }
+
+            this.asteroidSpawnTimer += deltaTime; 
+            if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
+                this.trySpawnAsteroid(); // CHANGE: Don't pass player
+                this.asteroidSpawnTimer = 0; 
+            }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
 
         //console.log(`[UPDATE] Projectiles remaining: ${this.projectiles.length}`);
@@ -914,34 +918,24 @@ class StarSystem {
      * Handles player collecting cargo in the system
      */
     handleCargoCollection() {
-        const player = this.player;
-        
-        if (!player) return;
+        if (!this.player) return;
         
         for (let i = this.cargo.length - 1; i >= 0; i--) {
             const cargo = this.cargo[i];
             
-            if (cargo.checkCollision(player)) {
-                // Add cargo to player's inventory
-                const success = player.addCargo(cargo.type, cargo.quantity);
+            if (cargo.checkCollision(this.player)) {
+                // CRITICAL FIX: Use cargo.type instead of cargo.name
+                const success = this.player.addCargo(cargo.type, cargo.quantity);
                 
                 if (success.success) {
-                    // Mark as collected so it gets removed next update
                     cargo.collected = true;
-                    
-                    // Optional: Award credits based on cargo value
-                    const value = cargo.getValue ? cargo.getValue() : 0;
-                    if (value > 0) player.addCredits(value);
                     
                     // Show message in UI
                     if (typeof uiManager !== 'undefined') {
+                        // CRITICAL FIX: Use cargo.type here too
                         uiManager.addMessage(`Collected ${success.added} ${cargo.type}`);
-                        if (value > 0) {
-                            uiManager.addMessage(`+${value} credits`);
-                        }
                     }
                 } else if (success.reason === 'CARGO_FULL') {
-                    // Optional: Show message about cargo hold being full
                     if (typeof uiManager !== 'undefined') {
                         uiManager.addMessage(`Cargo hold full!`);
                     }
