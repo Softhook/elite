@@ -1321,10 +1321,10 @@ class StarSystem {
         // ---
 
         // Restore wanted status
-        system.playerWanted = data.playerWanted || false;
-        system.playerWantedLevel = data.playerWantedLevel || 0;
-        system.playerWantedExpiry = data.playerWantedExpiry || null;
-        system.policeAlertSent = data.policeAlertSent || false;
+        sys.playerWanted = data.playerWanted || false;
+        sys.playerWantedLevel = data.playerWantedLevel || 0;
+        sys.playerWantedExpiry = data.playerWantedExpiry || null;
+        sys.policeAlertSent = data.policeAlertSent || false;
         
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving
