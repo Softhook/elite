@@ -241,22 +241,32 @@ function keyPressed() {
           gameStateManager.setState("IN_FLIGHT");
       }
   }
-  // DEBUG: Toggle Player Wanted Status (L key)
+  // Toggle Player Wanted Status in CURRENT SYSTEM ONLY (L key)
   if (key === 'l' || key === 'L') {
-      if (player) { 
-          player.isWanted = !player.isWanted; 
-          console.log("Player Wanted Status Toggled:", player.isWanted);
+      if (player && player.currentSystem) { 
+          // Toggle wanted status in current system only
+          const currentSystem = player.currentSystem;
+          const isCurrentlyWanted = currentSystem.playerWanted || false;
           
-          // CRITICAL FIX: Update the current system's police alert flag
-          if (player.currentSystem) {
-              if (player.isWanted) {
-                  player.currentSystem.policeAlertSent = true;
-                  console.log(`ALERT: System-wide police alert issued in ${player.currentSystem.name}!`);
-              } else {
-                  player.currentSystem.policeAlertSent = false;
-                  console.log(`NOTICE: Police alert cleared in ${player.currentSystem.name}.`);
-              }
+          // Toggle the status
+          currentSystem.playerWanted = !isCurrentlyWanted;
+          
+          // Set police alert
+          currentSystem.policeAlertSent = !isCurrentlyWanted;
+          
+          console.log(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
+          
+          if (!isCurrentlyWanted) {
+              // Now wanted
+              uiManager.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
+              console.log(`ALERT: Police alert issued in ${currentSystem.name}!`);
+          } else {
+              // No longer wanted
+              uiManager.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
+              console.log(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
           }
+          
+          return false; // Prevent default browser behavior
       }
   }
 

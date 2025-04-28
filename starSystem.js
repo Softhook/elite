@@ -120,6 +120,76 @@ class StarSystem {
 
         // Add explicit player property initialization
         this.player = null;
+
+        // Add a system-specific player wanted status
+        this.playerWanted = false;
+        
+        // Optionally track wanted level and expiration time
+        this.playerWantedLevel = 0; // 0-5 scale
+        this.playerWantedExpiry = null; // Timestamp when wanted status expires
+    }
+
+    /**
+     * Sets player wanted status in this system
+     * @param {boolean} wanted - New wanted status
+     * @param {number} level - Optional wanted level (1-5)
+     * @param {number} duration - Optional duration in seconds before expiry
+     */
+    setPlayerWanted(wanted, level = 1, duration = null) {
+        this.playerWanted = wanted;
+        
+        if (wanted) {
+            this.playerWantedLevel = Math.min(5, Math.max(1, level));
+            this.policeAlertSent = true;
+            
+            // Set expiry time if duration provided
+            if (duration) {
+                this.playerWantedExpiry = millis() + (duration * 1000);
+            } else {
+                this.playerWantedExpiry = null;
+            }
+            
+            // Notify connected systems based on level
+            if (this.playerWantedLevel >= 3 && galaxy && galaxy.systems) {
+                this.notifyConnectedSystemsOfCriminal();
+            }
+        } else {
+            this.playerWantedLevel = 0;
+            this.playerWantedExpiry = null;
+            this.policeAlertSent = false;
+        }
+    }
+
+    /**
+     * Checks if player is wanted in this system
+     * @return {boolean} Whether player is wanted here
+     */
+    isPlayerWanted() {
+        // Check for expiry if set
+        if (this.playerWantedExpiry && millis() > this.playerWantedExpiry) {
+            this.playerWanted = false;
+            this.playerWantedLevel = 0;
+            this.playerWantedExpiry = null;
+        }
+        
+        return this.playerWanted;
+    }
+
+    /**
+     * Notifies connected systems of criminal activity
+     */
+    notifyConnectedSystemsOfCriminal() {
+        if (!galaxy || !Array.isArray(this.connectedSystemIndices)) return;
+        
+        // Reduce wanted level for connected systems
+        const connectedLevel = Math.max(1, this.playerWantedLevel - 1);
+        
+        this.connectedSystemIndices.forEach(sysIndex => {
+            const system = galaxy.systems[sysIndex];
+            if (system && !system.playerWanted) {
+                system.setPlayerWanted(true, connectedLevel);
+            }
+        });
     }
 
     /**

@@ -517,18 +517,20 @@ class Enemy {
 
         // 1. Police Logic: Only interested in wanted targets.
         if (this.role === AI_ROLE.POLICE) {
-            if (target.isWanted) {
-                score = TARGET_SCORE_BASE_WANTED; // High base score for wanted targets.
-                if (target.role === AI_ROLE.PIRATE) {
+
+        // Check if target is player and player is wanted in this system
+        if (target instanceof Player && system.isPlayerWanted()) {
+            score = TARGET_SCORE_BASE_WANTED;
+            // Rest of scoring logic
+        }
+
+            if (target.role === AI_ROLE.PIRATE) {
                     score += TARGET_SCORE_WANTED_PIRATE_BONUS; // Bonus for wanted pirates.
-                }
+            }
                 // Future: Bonus if target attacked police recently?
                 isPotentiallyInteresting = true;
-            } else {
-                // Police STRICTLY ignore non-wanted targets.
-                return TARGET_SCORE_INVALID;
-            }
         }
+        
         // 2. Pirate Logic: Interested in cargo, vulnerable targets, or retaliation.
         else if (this.role === AI_ROLE.PIRATE) {
             // a) Target Player? Check cargo and if player attacked us.
@@ -942,10 +944,8 @@ class Enemy {
      */
     updatePoliceAI(system) {
 
-        // FIRST check if player is wanted - prioritize player over other NPCs
-        if ((system.player && system.player.isWanted && system.player.hull > 0) || 
-            (system.policeAlertSent && system.player && system.player.hull > 0)) {
-            
+        // Update to check system wanted status instead of player
+        if (system.player && system.isPlayerWanted()) {
             // Always set player as target when wanted
             this.target = system.player;
             
@@ -1577,7 +1577,7 @@ class Enemy {
 
     /** 
      * Gets the signed angle difference between target angle and current angle 
-     * @param {number} targetAngle - The target angle in radians
+     * @param {number} targetAngle - The target angle to rotate towards
      * @return {number} The normalized angle difference in range [-PI, PI]
      */
     getAngleDifference(targetAngle) {
@@ -1887,7 +1887,7 @@ class Enemy {
     
     /**
      * Check if currently in a combat state
-     * @return {boolean} Whether in a combat-related state
+     * @return {boolean} Whether ship is in a combat-related state
      */
     isInCombatState() {
         return this.currentState === AI_STATE.APPROACHING || 

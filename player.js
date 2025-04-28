@@ -50,7 +50,6 @@ class Player {
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
-        this.isWanted = false;
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -849,6 +848,14 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         
         // Collision occurs if distance squared is less than sum of radii squared
         return dSq < sumRadiiSq;
+    }
+    
+    /**
+     * Checks if player is wanted in current system
+     * @return {boolean} Whether player is wanted in current system
+     */
+    isWantedInCurrentSystem() {
+        return this.currentSystem?.isPlayerWanted() || false;
     }
 
     // --- Save/Load Functionality ---

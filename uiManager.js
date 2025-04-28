@@ -108,18 +108,12 @@ class UIManager {
         const statusLineY = 20; // Central Y position for all status elements
         
         // Center - LEGAL status - aligned at statusLineY
-        if (player.isWanted) {
-            // Draw WANTED text
-            fill(255);
-            textAlign(CENTER, CENTER);
-            textSize(20);
-            text("WANTED", width/2, statusLineY);
+        if (player.currentSystem?.isPlayerWanted()) {
+            fill(255, 0, 0);
+            text(`Wanted - System: ${player.currentSystem.name}`, width/2, statusLineY);
         } else {
-            // Show "LEGAL" status when not wanted
-            fill(255);
-            textAlign(CENTER, CENTER);
-            textSize(20);
-            text("LEGAL", width/2, statusLineY);
+            fill(0, 255, 0);
+            text(`Clean - System: ${player.currentSystem.name}`, width/2, statusLineY);
         }
         
         // Right side - Ship info - aligned with statusLineY
@@ -875,6 +869,17 @@ class UIManager {
                 const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
                 fill(200, 200, 100); // Gold/yellow for visibility
                 text(`Law: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
+                // NEW CODE: Add wanted status display
+                const system = galaxy.systems[i];
+                if (system) {
+                    if (system.playerWanted) {
+                        fill(255, 50, 50); // Red for wanted
+                        text("Wanted", sysData.x, sysData.y + nodeR + 44);
+                    } else {
+                        fill(50, 255, 50); // Green for clean
+                        text("Clean", sysData.x, sysData.y + nodeR + 44);
+                    }
+                }
             }
         });
         // --- End Draw System Nodes ---
