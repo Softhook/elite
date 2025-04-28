@@ -1273,6 +1273,11 @@ class StarSystem {
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
             jumpZoneRadius: this.jumpZoneRadius,
+            // Add wanted status properties
+            playerWanted: this.playerWanted || false,
+            playerWantedLevel: this.playerWantedLevel || 0,
+            playerWantedExpiry: this.playerWantedExpiry,
+            policeAlertSent: this.policeAlertSent || false,
             // ---
             staticElementsInitialized: this.staticElementsInitialized // Save initialization state
         };
@@ -1315,6 +1320,12 @@ class StarSystem {
         sys.jumpZoneRadius = data.jumpZoneRadius || JUMP_ZONE_DEFAULT_RADIUS;
         // ---
 
+        // Restore wanted status
+        system.playerWanted = data.playerWanted || false;
+        system.playerWantedLevel = data.playerWantedLevel || 0;
+        system.playerWantedExpiry = data.playerWantedExpiry || null;
+        system.policeAlertSent = data.policeAlertSent || false;
+        
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving
         sys.staticElementsInitialized = data.staticElementsInitialized || false;
