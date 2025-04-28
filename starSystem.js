@@ -117,6 +117,9 @@ class StarSystem {
 
         // --- Add flag for static elements ---
         this.staticElementsInitialized = false; // Track if initStaticElements has run
+
+        // Add explicit player property initialization
+        this.player = null;
     }
 
     /**
@@ -506,29 +509,30 @@ class StarSystem {
     }
 
     /** Updates all system entities. */
-    update(player) {
-        if (!player || !player.pos) return;
+    update() {
+        if (!this.player || !this.player.pos) return;
         try {
             // Update Enemies & Check Bounty Progress
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i]; if (!enemy) { this.enemies.splice(i, 1); continue; }
                 try{ enemy.update(this); } catch(e){ console.error("Err updating Enemy:",e,enemy); }
                 if (enemy.isDestroyed()) {
-                    let reward = 0; if (enemy.role !== AI_ROLE.HAULER) reward = 25;
-                    // --- Check Active Bounty Mission & AUTO-COMPLETE ---
-                    // Check using safe access ?. and correct types
-                    if (player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
-                        player.activeMission.progressCount++;
-                        console.log(`Bounty progress: ${player.activeMission.progressCount}/${player.activeMission.targetCount}`);
-                        if (player.activeMission.progressCount >= player.activeMission.targetCount) {
+                    let reward = 0; 
+                    if (enemy.role !== AI_ROLE.HAULER) reward = 25;
+                    
+                    // Use this.player instead of player
+                    if (this.player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
+                        this.player.activeMission.progressCount++;
+                        console.log(`Bounty progress: ${this.player.activeMission.progressCount}/${this.player.activeMission.targetCount}`);
+                        if (this.player.activeMission.progressCount >= this.player.activeMission.targetCount) {
                              console.log("Bounty mission target count met! Completing mission...");
                              // Call player.completeMission WITHOUT system/station args for auto-complete
-                             player.completeMission(); // <<< Use simpler call for auto-complete
+                             this.player.completeMission(); // <<< Use simpler call for auto-complete
                              reward = 0; // Don't give base reward if mission completed
                         }
                     }
-                    // --- End Bounty Check ---
-                    if (reward > 0) player.addCredits(reward);
+                    
+                    if (reward > 0) this.player.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
 
@@ -542,7 +546,7 @@ class StarSystem {
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
-                if (asteroid.isDestroyed()) { player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
+                if (asteroid.isDestroyed()) { this.player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
 
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
                     this.asteroids.splice(i, 1);
@@ -593,7 +597,7 @@ class StarSystem {
                 wave.radius += wave.growRate;
                 
                 // Check for collisions with enemies (if player's wave)
-                if (wave.owner === player) {
+                if (wave.owner === this.player) {
                     for (const enemy of this.enemies) {
                         // Skip if already processed this enemy
                         if (wave.processed[enemy.id]) continue;
@@ -624,12 +628,12 @@ class StarSystem {
 
                 
                 // Check collision with player (if enemy's wave)
-                if (wave.owner !== player && player && !wave.processed['player']) {
-                    const dist = p5.Vector.dist(wave.pos, player.pos);
-                    if (dist < wave.radius + player.size/2) {
-                        const falloff = 1 - (dist / (wave.radius + player.size/2));
+                if (wave.owner !== this.player && this.player && !wave.processed['player']) {
+                    const dist = p5.Vector.dist(wave.pos, this.player.pos);
+                    if (dist < wave.radius + this.player.size/2) {
+                        const falloff = 1 - (dist / (wave.radius + this.player.size/2));
                         const dmg = Math.max(1, Math.floor(wave.damage * falloff));
-                        player.takeDamage(dmg);
+                        this.player.takeDamage(dmg);
                         wave.processed['player'] = true;
                         console.log(`Enemy force wave hit player for ${dmg} damage`);
                     }
@@ -650,12 +654,12 @@ class StarSystem {
             }
 
             // Collision Checks
-            this.checkCollisions(player);
-            this.checkProjectileCollisions(player); // Added call to new method
+            this.checkCollisions();
+            this.checkProjectileCollisions(); // Added call to new method
 
             // Spawning Timers
-            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(player); this.enemySpawnTimer = 0; }
-            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(player); this.asteroidSpawnTimer = 0; }
+            this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer >= this.enemySpawnInterval) { this.trySpawnNPC(this.player); this.enemySpawnTimer = 0; }
+            this.asteroidSpawnTimer += deltaTime; if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { this.trySpawnAsteroid(this.player); this.asteroidSpawnTimer = 0; }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
 
         //console.log(`[UPDATE] Projectiles remaining: ${this.projectiles.length}`);
@@ -729,8 +733,8 @@ class StarSystem {
     }
 
     /** Handles all collision detection and responses in the system. */
-    checkCollisions(player) {
-        if (!player) return;
+    checkCollisions() {
+        if (!this.player) return;
         
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
@@ -738,17 +742,17 @@ class StarSystem {
             // Player vs Enemies
             for (let enemy of this.enemies) {
                 if (enemy.isDestroyed()) continue;
-                if (player.checkCollision(enemy)) {
+                if (this.player.checkCollision(enemy)) {
                     // Handle ship-to-ship collision
                     let collisionDamage = Math.floor(
-                        (player.vel.mag() + enemy.vel.mag())
+                        (this.player.vel.mag() + enemy.vel.mag())
                     );
                     console.log(`Ship collision! Damage: ${collisionDamage}`);
-                    player.takeDamage(collisionDamage);
+                    this.player.takeDamage(collisionDamage);
                     enemy.takeDamage(collisionDamage);
                     
                     // Apply physics push based on relative mass/size
-                    const playerMass = player.size * player.size;
+                    const playerMass = this.player.size * this.player.size;
                     const enemyMass = enemy.size * enemy.size;
                     const totalMass = playerMass + enemyMass;
 
@@ -757,10 +761,10 @@ class StarSystem {
                     const enemyImpulseFactor = 3 * (playerMass / totalMass);
 
                     // Create normalized collision vector
-                    let pushVector = p5.Vector.sub(enemy.pos, player.pos).normalize();
+                    let pushVector = p5.Vector.sub(enemy.pos, this.player.pos).normalize();
 
                     // Apply appropriate impulse to each ship
-                    player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
+                    this.player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
                     enemy.vel.add(pushVector.copy().mult(enemyImpulseFactor));
                 }
             }
@@ -768,15 +772,15 @@ class StarSystem {
             // Player vs Asteroids collision
             for (let asteroid of this.asteroids) {
                 if (asteroid.isDestroyed()) continue;
-                if (player.checkCollision(asteroid)) {
+                if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
-                    let collisionDamage = Math.floor(player.vel.mag());
+                    let collisionDamage = Math.floor(this.player.vel.mag());
                     console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
-                    player.takeDamage(collisionDamage);
+                    this.player.takeDamage(collisionDamage);
                     asteroid.takeDamage(20); // Fixed damage to asteroid
                     
                     // Apply physics push based on relative mass/size
-                    const playerMass = player.size * player.size;
+                    const playerMass = this.player.size * this.player.size;
                     const asteroidMass = asteroid.size * asteroid.size;
                     const totalMass = playerMass + asteroidMass;
 
@@ -785,10 +789,10 @@ class StarSystem {
                     const asteroidImpulseFactor = 2 * (playerMass / totalMass);
 
                     // Create normalized collision vector
-                    let pushVector = p5.Vector.sub(asteroid.pos, player.pos).normalize();
+                    let pushVector = p5.Vector.sub(asteroid.pos, this.player.pos).normalize();
 
                     // Apply impulses
-                    player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
+                    this.player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
                     asteroid.vel.add(pushVector.copy().mult(asteroidImpulseFactor));
                 }
             }
@@ -818,7 +822,7 @@ class StarSystem {
     } // End checkCollisions
 
     /** Specifically handles projectile collisions with targets. */
-    checkProjectileCollisions(player) {
+    checkProjectileCollisions() {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
             let hit = false;  // <- DECLARE HIT VARIABLE HERE
@@ -846,10 +850,10 @@ class StarSystem {
             if (hit) continue;
             
             // For player hits:
-            if (proj.owner instanceof Enemy && proj.checkCollision(player)) {
+            if (proj.owner instanceof Enemy && proj.checkCollision(this.player)) {
                 // Use centralized hit handler from WeaponSystem
                 WeaponSystem.handleHitEffects(
-                    player,
+                    this.player,
                     proj.pos,
                     proj.damage,
                     proj.owner,
@@ -992,12 +996,13 @@ class StarSystem {
     }
 
     /** Draws all system contents. */
-    draw(playerRef) {
-        if (!playerRef || !playerRef.pos) return;
+    draw() {
+        if (!this.player || !this.player.pos) return;
 
         push();
-        let tx = width / 2 - playerRef.pos.x;
-        let ty = height / 2 - playerRef.pos.y;
+        // Calculate translation based on this.player position
+        let tx = width / 2 - this.player.pos.x;
+        let ty = height / 2 - this.player.pos.y;
         translate(tx, ty);
 
         // Calculate screen bounds once (with margin)
@@ -1013,7 +1018,7 @@ class StarSystem {
 
         // --- Draw Jump Zone ---
         // Call this early so other objects draw on top if needed
-        this.drawJumpZone(playerRef.pos);
+        this.drawJumpZone(this.player.pos);
         // ---
 
         // Draw station only if visible
@@ -1086,7 +1091,7 @@ class StarSystem {
         }
 
         // Player is always drawn (center of view)
-        playerRef.draw();
+        this.player.draw();
 
         pop();
     }
@@ -1277,15 +1282,11 @@ class StarSystem {
      * @return {boolean} Whether the entity should be despawned
      */
     shouldDespawnEntity(entity, factorMultiplier = 1.1) {
-        if (!entity?.pos || !this.player?.pos) return false;
+        if (!this.player || !entity || !entity.pos) return false;
         
-        // Use p5.js dist() function instead of distSq
-        const distance = dist(
-            entity.pos.x, entity.pos.y, 
-            this.player.pos.x, this.player.pos.y
-        );
-        const despawnDistance = this.despawnRadius * factorMultiplier;
+        const distToPlayerSq = sq(entity.pos.x - this.player.pos.x) + sq(entity.pos.y - this.player.pos.y);
+        const despawnDistanceSq = sq(this.despawnRadius * factorMultiplier);
         
-        return distance > despawnDistance;
+        return distToPlayerSq > despawnDistanceSq;
     }
 } // End of StarSystem Class
