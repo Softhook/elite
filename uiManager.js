@@ -24,7 +24,7 @@ class UIManager {
         this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
 
         // --- Minimap Properties ---
-        this.minimapSize = 150; // Size of the square minimap in pixels
+        this.minimapSize = 200; // Size of the square minimap in pixels
         this.minimapMargin = 15; // Margin from screen edges
         this.minimapX = 0; // Calculated in drawMinimap
         this.minimapY = 0; // Calculated in drawMinimap (now bottom right)

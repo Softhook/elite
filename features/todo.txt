@@ -7,7 +7,7 @@ i am not sure if the enemy idle bug has gone now
 weapon selection is wrong
 
 
-cargo update needs to be called - not spining
+cargo smal
 
 I AM NOt SURE IF THE BOUNTY IS counting old kills
 reset the killswa
@@ -36,6 +36,10 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 
 ## Core Gameplay Enhancements
+
+jettson all
+
+police screen - pay fine - join police
 
 planets have their own screen assocaited where it is possible to explre the planet. find things
 mine the planet
