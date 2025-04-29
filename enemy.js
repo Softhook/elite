@@ -98,6 +98,9 @@ class Enemy {
         this.role = role;
         // ---
 
+        // Add forced combat timer
+        this.forcedCombatTimer = 0;
+
         // After setting role in the constructor
         this.role = role;
         if (this.role === AI_ROLE.PIRATE) {
@@ -512,23 +515,28 @@ class Enemy {
         let score = 0; // START SCORE AT ZERO.
         let isPotentiallyInteresting = false; // Flag: Did role logic find a reason to engage?
 
-        // --- Role-Specific Scoring ---
-        // Determine the base score and if the target is interesting based on *this* enemy's role.
+        // --- CRITICAL FIX: Always consider lastAttacker as interesting for retaliation ---
+        if (target === this.lastAttacker) {
+            score += TARGET_SCORE_RETALIATION_PIRATE; // Use pirate retaliation value as base
+            isPotentiallyInteresting = true;
+            console.log(`${this.shipTypeName} responding to attack from ${target.shipTypeName || 'Player'}`);
+        }
+        // --- END CRITICAL FIX ---
 
+        // --- Role-Specific Scoring ---
         // 1. Police Logic: Only interested in wanted targets.
         if (this.role === AI_ROLE.POLICE) {
-
-        // Check if target is player and player is wanted in this system
-        if (target instanceof Player && system.isPlayerWanted()) {
-            score = TARGET_SCORE_BASE_WANTED;
-            // Rest of scoring logic
-        }
+            // Check if target is player and player is wanted in this system
+            if (target instanceof Player && system.isPlayerWanted()) {
+                score += TARGET_SCORE_BASE_WANTED;
+                isPotentiallyInteresting = true; // MOVED INSIDE conditional
+            }
 
             if (target.role === AI_ROLE.PIRATE) {
-                    score += TARGET_SCORE_WANTED_PIRATE_BONUS; // Bonus for wanted pirates.
+                score += TARGET_SCORE_WANTED_PIRATE_BONUS; // Bonus for wanted pirates.
+                isPotentiallyInteresting = true; // MOVED INSIDE conditional
             }
-                // Future: Bonus if target attacked police recently?
-                isPotentiallyInteresting = true;
+            // NOTE: isPotentiallyInteresting no longer set unconditionally for all targets
         }
         
         // 2. Pirate Logic: Interested in cargo, vulnerable targets, or retaliation.
@@ -543,15 +551,10 @@ class Enemy {
                     score += TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                     isPotentiallyInteresting = true;
                 }
-                // Retaliation is high priority.
-                if (target === this.lastAttacker) {
-                    score += TARGET_SCORE_RETALIATION_PIRATE; // Strong incentive to fight back.
-                    isPotentiallyInteresting = true;
-                }
-                // If player has no cargo and didn't attack, they are not interesting.
-                // Score remains 0 unless retaliation applies.
-
+                
+                // NOTE: Removed redundant lastAttacker check since we handle it at the top now
             }
+            
             // b) Target Haulers/Transports? These are potential prey.
             else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                 score += TARGET_SCORE_PIRATE_PREY_HAULER; // Base score for potential prey.
@@ -905,6 +908,19 @@ class Enemy {
      * @param {Object} system - The current star system
      */
     updateCombatAI(system) {
+        // Add FORCED COMBAT mode when recently attacked
+        if (this.lastAttacker && this.role === AI_ROLE.HAULER) {
+            if (!this.forcedCombatTimer) {
+                this.forcedCombatTimer = 5.0; // 5 seconds of forced combat
+                console.log(`${this.shipTypeName} entering FORCED COMBAT MODE after attack`);
+            }
+        }
+        
+        // Update forced combat timer
+        if (this.forcedCombatTimer > 0) {
+            this.forcedCombatTimer -= deltaTime / 1000;
+        }
+        
         // Initialize flags if not already set
         if (this.combatFlagsInitialized === undefined) {
             this.combatFlagsInitialized = true;
@@ -915,6 +931,14 @@ class Enemy {
         
         // Update targeting information
         const targetExists = this.updateTargeting(system);
+        
+        // CRITICAL FIX: Override targeting result if in forced combat mode
+        if (this.forcedCombatTimer > 0 && this.lastAttacker) {
+            this.target = this.lastAttacker;
+            if (this.currentState === AI_STATE.IDLE) {
+                this.changeState(AI_STATE.APPROACHING);
+            }
+        }
         
         // Calculate distance to target and shooting angle
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
@@ -927,8 +951,10 @@ class Enemy {
             );
         }
         
-        // Update state based on conditions
-        this.updateCombatState(targetExists, distanceToTarget);
+        // MODIFIED: Only update state if not in forced combat mode
+        if (!this.forcedCombatTimer || this.forcedCombatTimer <= 0) {
+            this.updateCombatState(targetExists, distanceToTarget);
+        }
         
         // Get movement target based on current state
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
@@ -1076,34 +1102,48 @@ class Enemy {
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.APPROACHING);
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
-                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`);
-                    // Fall through to combat logic handling below
+                    this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
+                    this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
+                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
+                    
+                    // IMPROVED FIX: Skip all normal hauler processing for this frame
+                    this.updateCombatAI(system);
+                    this.updatePhysics();
+                    return;
                 }
             }
         }
 
-        // Handle Combat/Fleeing states first if active
-        if (this.currentState === AI_STATE.FLEEING ||
-            this.currentState === AI_STATE.APPROACHING ||
-            this.currentState === AI_STATE.ATTACK_PASS ||
-            this.currentState === AI_STATE.REPOSITIONING)
-        {
-            // If in combat state, check combat timer
-            if (this.haulerCombatTimer !== undefined && this.currentState !== AI_STATE.FLEEING) {
+        // IMPROVED: Check explicit "in combat" flag first
+        if (this.inCombat === true) {
+            // Check combat timer
+            if (this.haulerCombatTimer !== undefined) {
                 this.haulerCombatTimer -= deltaTime / 1000;
                 if (this.haulerCombatTimer <= 0) {
                     console.log(`Hauler ${this.shipTypeName} disengaging from combat.`);
                     this.haulerCombatTimer = undefined; // Clear timer
                     this.lastAttacker = null; // Forget attacker
                     this.target = null; // Clear target
+                    this.inCombat = false; // Clear combat flag
+                    
                     // Return to previous state or default
                     this.changeState(this.previousHaulerState || AI_STATE.PATROLLING);
                     this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy(); // Restore patrol target
+                    
                     // Don't run combat AI this frame if disengaging
                     this.performRotationAndThrust(this.patrolTargetPos); // Move towards patrol target
                     this.updatePhysics();
                     return;
                 }
+            }
+
+            // Force reinstate combat state if needed
+            if (this.currentState !== AI_STATE.APPROACHING && 
+                this.currentState !== AI_STATE.ATTACK_PASS &&
+                this.currentState !== AI_STATE.REPOSITIONING &&
+                this.currentState !== AI_STATE.FLEEING) {
+                console.log(`Forcing hauler ${this.shipTypeName} back to APPROACHING state`);
+                this.changeState(AI_STATE.APPROACHING);
             }
 
             // Check hull status - flee if heavily damaged during combat
@@ -1112,19 +1152,39 @@ class Enemy {
                 this.target = this.lastAttacker || this.target; // Ensure we flee from *something*
                 this.changeState(AI_STATE.FLEEING);
                 if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
-                // Fleeing logic will be handled below or in next frame's state check
             }
 
-            // If still in combat or now fleeing, use appropriate AI
+            // Use combat AI when in combat mode
             if (this.currentState === AI_STATE.FLEEING) {
                 this.updateFleeingAI(system);
             } else {
                 this.updateCombatAI(system);
             }
-            this.updatePhysics(); // Ensure physics update happens
-            return; // Don't execute normal hauler logic
+            this.updatePhysics();
+            return; // Skip normal hauler logic
         }
 
+        // Check the combat state flags as well (backup check)
+        if (this.currentState === AI_STATE.FLEEING ||
+            this.currentState === AI_STATE.APPROACHING ||
+            this.currentState === AI_STATE.ATTACK_PASS ||
+            this.currentState === AI_STATE.REPOSITIONING)
+        {
+            // Set the inCombat flag if needed
+            this.inCombat = true;
+            
+            // Run appropriate AI
+            if (this.currentState === AI_STATE.FLEEING) {
+                this.updateFleeingAI(system);
+            } else {
+                this.updateCombatAI(system);
+            }
+            this.updatePhysics();
+            return; // Skip normal hauler logic
+        }
+
+        // Reset combat flag if not in combat state
+        this.inCombat = false;
 
         // --- Normal Hauler Logic (Patrolling, Near Station, Leaving) ---
         let desiredMovementTargetPos = null;
@@ -2273,6 +2333,32 @@ dropCargo() {
             this.hull = 0;
             this.destroyed = true;
             console.log(`ENEMY DESTROYED: ${this.shipTypeName}`); // Log destruction
+
+        // --- ADD: Player Wanted Check ---
+        // Check if the attacker is the player and the system exists
+        if (attacker instanceof Player && this.currentSystem && typeof this.currentSystem.setPlayerWanted === 'function') {
+            let reason = "";
+            
+            // Check if destroyed ship was Police or civilian
+            if (this.role === AI_ROLE.POLICE) {
+                reason = "destroying Police vessel";
+                this.currentSystem.setPlayerWanted(true); // Binary wanted status
+            }
+            else if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
+                reason = "destroying civilian vessel";
+                this.currentSystem.setPlayerWanted(true); // Binary wanted status
+            }
+
+            // Log and notify UI if a reason was found
+            if (reason) {
+                console.log(`Player became wanted in ${this.currentSystem.name} for ${reason}.`);
+                if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                    uiManager.addMessage(`Wanted status gained: ${reason}`, [255, 100, 100]);
+                }
+            }
+        }
+        // --- END ADD ---
+
 
             // Create a large explosion when ship is destroyed
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {

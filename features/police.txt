@@ -1,44 +1,11 @@
 
 Player Wanted Status: Scenarios & Removal
-Based on analyzing the game code, here are realistic scenarios that can make your player character become wanted and methods to remove that status:
 
-Scenarios That Trigger Wanted Status
-Attacking Police Ships
 
-Destorying any police vessel immediately flags you as wanted
+I currenly have wanted status on a system level implemented. Now I want to add the wanted triggering mechanism.
 
-Attacking Non-Hostile Ships
+Destorying any police vessel or Non-Hostile Ship (hauler) immediately flags you as wanted in that system
 
-Firing on haulers, transports, or other non-pirate ships
-Damaging station-owned vessels or station infrastructure
-Carrying Illegal Cargo When Scanned
+Police ships perform scans of any hauler within 500 units and send out a red circuar ping.
 
-Being near police while carrying illegal goods (Narcotics, Weapons, Slaves)
-Police ships perform scans within 500 units - fly too close with contraband and you'll be flagged
-Failing Illegal Missions
-
-Abandoning smuggling missions after accepting cargo
-Getting caught during illegal delivery missions
-Jettisoning Illegal Cargo Near Stations
-
-Dumping contraband within station radar range
-Removing Wanted Status
-Pay Fines at Stations
-
-Dock at stations in the "Repairs" screen
-The fine scales with severity of crimes (50-500 credits)
-Jump to Systems with Different Police
-
-Your wanted status is primarily local to each system
-Systems with "Anarchy" or "Low" security won't pursue you
-Destroy All Witnesses
-
-If you can destroy all police ships that have scanned you (before they radio ahead), your wanted status may be reduced
-Wait it Out
-
-Leave the area and return after several game days
-Wanted status decays over time if no new crimes are committed
-Complete Special Missions
-
-Some stations offer "Clean Record" missions that clear your wanted status upon completion
-These missions typically involve risky tasks to restore your reputation
+If the player is within that range and carrying contraband they will become wanted in that system
