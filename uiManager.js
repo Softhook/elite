@@ -427,7 +427,7 @@ drawPoliceMenu(player) {
     
     // Join Police button - only if not already ACAB
     const btnY2 = btnY1 + btnH + 20;
-    if (player.shipTypeName !== 'ACAB') {
+    if (!player.isPolice) {
         fill(50, 50, 180); 
         stroke(100, 100, 255); 
         rect(btnX, btnY2, btnW, btnH, 5);
@@ -1363,7 +1363,7 @@ drawPoliceMenu(player) {
                     } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
                                btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
                                btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE") {
-                        // Added VIEWING_POLICE to the list of handled states ☝️
+// Added VIEWING_POLICE to the list of handled states ☝️
                         if(gameStateManager)gameStateManager.setState(btn.state);
                         return true;
                     } else if (btn.state) {
@@ -1376,12 +1376,6 @@ drawPoliceMenu(player) {
         }
         // --- VIEWING_MARKET State ---
         else if (currentState === "VIEWING_MARKET") {
-            // First check if clicking on the back button
-            if (this.isClickInArea(mx, my, this.marketBackButtonArea)) { 
-                if(gameStateManager) gameStateManager.setState("DOCKED"); 
-                return true; 
-            }
-            
             return this.handleMarketMousePress(mx, my, market, player);
         }
         // --- VIEWING_MISSIONS State ---
@@ -1469,7 +1463,7 @@ drawPoliceMenu(player) {
                         uiManager.addMessage("You bought the " + area.upgrade.name + "!");
                     } else {
                         uiManager.addMessage("Not enough credits!");
-                    }
+                     }
                     return true;
                 }
             }
@@ -1480,7 +1474,7 @@ drawPoliceMenu(player) {
             }
             return false;
         }
-        // --- VIEWING_REPAIRS State ---
+        // --- VIEW        // --- VIEWING_REPAIRS State ---
         else if (currentState === "VIEWING_REPAIRS") {
             // Full repair
             if (this.isClickInArea(mx, my, this.repairsFullButtonArea)) {
@@ -1552,13 +1546,14 @@ drawPoliceMenu(player) {
                         // Change ship to ACAB
                         player.applyShipDefinition('ACAB');
                         this.addMessage("You have joined the Police Force!", 'lightblue');
+                        player.isPolice = true; // Set police status flag
                         
                         // Clear wanted status as a bonus
                         if (player.currentSystem) {
                             player.currentSystem.playerWanted = false;
                             player.currentSystem.policeAlertSent = false;
                         }
-                        
+
                         // Save game after joining
                         if (typeof saveGame === 'function') {
                             saveGame();
@@ -1571,7 +1566,9 @@ drawPoliceMenu(player) {
         }
 
         // --- GALAXY_MAP State ---
-        else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); }
+        else if (currentState === "GALAXY_MAP") { 
+            return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
+        }
         // --- GAME_OVER State ---
         else if (currentState === "GAME_OVER") { window.location.reload(); return true; }
 

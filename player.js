@@ -51,6 +51,9 @@ class Player {
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
 
+            // Add police status
+        this.isPolice = false;
+
         // Initialize weapons array based on ship definition
         this.weapons = [];
         this.weaponIndex = 0;
@@ -891,6 +894,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
+            isPolice: this.isPolice,
             shield: this.shield,
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
@@ -923,6 +927,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.credits = data.credits !== undefined ? Math.floor(data.credits) : 1000; // Ensure loaded credits are integer
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
+        this.isPolice = data.isPolice || false;
 
         this.shield = data.shield !== undefined ? data.shield : this.maxShield;
         this.maxShield = data.maxShield || this.maxShield;
