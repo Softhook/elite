@@ -375,14 +375,15 @@ this.showingInventory = false;
                      try { currentSystem.draw(player); } catch(e) { console.error("ERROR in currentSystem.draw (Jumping):", e); }
                  } else { background(0); } // Fallback background
 
-                 // Draw jump UI overlay
-                 if (uiManager && player) { // Check uiManager exists
+                 // --- MODIFICATION: Only draw charge UI if fade hasn't started ---
+                 if (this.jumpFadeState === "NONE" && uiManager && player) {
+                 // --- END MODIFICATION ---
                      try { // Wrap jump UI drawing
                          // Draw jump charge indicator (Progress Bar)
                          fill(0, 150, 255, 150); // Set fill before drawing
                          noStroke();             // No outline for bar
                          let chargePercent = constrain(this.jumpChargeTimer / this.jumpChargeDuration, 0, 1); // Calculate percentage 0-1
-                         rect(0, height - 20, width * chargePercent, 20); // Draw the bar
+                         rect(0, height-35, width * chargePercent, 35); // Draw the bar
 
                          // Determine Target Name Safely
                          let targetName = "Unknown"; // Default value
@@ -396,11 +397,12 @@ this.showingInventory = false;
                          }
 
                          // Draw Jump Status Text
-                         fill(255);                  // White text
-                         textAlign(CENTER, BOTTOM); // Align text
-                         textSize(14);              // Set size
+                         textFont(font);             // Use the global font
+                         fill(255);
+                         textAlign(LEFT, BOTTOM);    // Align text to the LEFT
+                         textSize(20);              // Set size
                          // Ensure text function call has correct parentheses
-                         text(`Charging Hyperdrive... Target: ${targetName}`, width / 2, height - 5);
+                         text(`Charging Hyperdrive... Target: ${targetName}`, 50, height - 5);
 
                          // Optionally draw minimap during jump:
                          // if (currentSystem) uiManager.drawMinimap(player, currentSystem);
@@ -408,9 +410,12 @@ this.showingInventory = false;
                      } catch (e) {
                          console.error("Error drawing jump UI:", e);
                      }
+                 // --- MODIFICATION: Close the conditional block ---
                  }
+                 // --- END MODIFICATION ---
 
-                 // Add to draw method for JUMPING case
+
+                 // Draw fade overlay (This should still happen during fades)
                  if (this.jumpFadeState !== "NONE") {
                      push();
                      fill(255, 255, 255, this.jumpFadeOpacity * 255);

@@ -944,7 +944,7 @@ drawPoliceMenu(player) {
             } else if (!canJump && isReachable) {
                  // If player CANNOT jump but system IS reachable: Dimmed appearance
                  //nodeColor = color(100, 100, 150, 150); // Override fill to dim blue/grey (alpha 150)
-                 textColor = color(180); // Dim text
+                 //textColor = color(180); // Dim text
                  nodeStrokeColor = color(150); // Dim stroke
                  nodeStrokeWeight = 1;
             } else {
@@ -971,21 +971,23 @@ drawPoliceMenu(player) {
             this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
 
             // Draw Text Labels
-            fill(textColor); noStroke(); textAlign(CENTER, TOP); textSize(12);
+            textFont(font);
+            
+            fill(textColor); noStroke(); textAlign(CENTER, TOP); textSize(20);
             text(sysData.name, sysData.x, sysData.y + nodeR + 5);
-            textSize(10);
+
             // Show type/security only if visited or current
             if (sysData.visited || isCurrent) {
-                text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
+                text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 25);
                 const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
                 fill(200, 200, 100); // Gold/yellow for visibility
-                text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
+                text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 45);
                 // NEW CODE: Add wanted status display
                 const system = galaxy.systems[i];
                 if (system) {
                     if (system.playerWanted) {
-                        fill(200, 50, 50); // Red for wanted
-                        text("Wanted", sysData.x, sysData.y + nodeR + 44);
+                        fill(255, 0, 0); // Red for wanted
+                        text("Wanted", sysData.x, sysData.y + nodeR + 65);
                     }
                 }
             }
