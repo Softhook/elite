@@ -868,16 +868,13 @@ class UIManager {
                 text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 20);
                 const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
                 fill(200, 200, 100); // Gold/yellow for visibility
-                text(`Law: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
+                text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 32);
                 // NEW CODE: Add wanted status display
                 const system = galaxy.systems[i];
                 if (system) {
                     if (system.playerWanted) {
-                        fill(255, 50, 50); // Red for wanted
+                        fill(200, 50, 50); // Red for wanted
                         text("Wanted", sysData.x, sysData.y + nodeR + 44);
-                    } else {
-                        fill(50, 255, 50); // Green for clean
-                        text("Clean", sysData.x, sysData.y + nodeR + 44);
                     }
                 }
             }

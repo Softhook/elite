@@ -112,7 +112,7 @@ class TitleScreen {
         const lineHeight = 30;
         
         // Introduction
-        text("Trading, space combat, piracy, assasinations you know the deal...", textX, textY);
+        text("Trading, smuggling, space combat, piracy, assasinations, Thargoids - you know the deal...", textX, textY);
         textY += lineHeight * 2;
         
         // Controls section
@@ -125,6 +125,7 @@ class TitleScreen {
         textSize(20);
         fill(200, 200, 255);
         text("W or UP ARROW - Thrust forward", textX, textY); textY += lineHeight;
+        text("S or DOWN ARROW - Thrust back", textX, textY); textY += lineHeight;
         text("A or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
         text("D or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
         text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
@@ -142,8 +143,7 @@ class TitleScreen {
         
         textSize(20);
         fill(200, 200, 255);
-        text("• Dock with stations to trade, upgrade and take missions", textX, textY); textY += lineHeight;
-        text("• Destroy enemies to collect bounties and cargo", textX, textY); textY += lineHeight;
+        text("• Dock with stations to trade, upgrade, take missions and save game", textX, textY); textY += lineHeight;
         text("• Jump between systems by going to the Jumpzone and use the galaxy map", textX, textY); textY += lineHeight;
         text("• Become Elite", textX, textY); textY += lineHeight * 2;
         
