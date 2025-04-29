@@ -111,10 +111,10 @@ class UIManager {
         // Center - LEGAL status - aligned at statusLineY
         if (player.currentSystem?.isPlayerWanted()) {
             fill(255, 0, 0);
-            text(`Wanted - System: ${player.currentSystem.name}`, width/2, statusLineY);
+            text(`Wanted`, width/2, statusLineY);
         } else {
             fill(0, 255, 0);
-            text(`Clean - System: ${player.currentSystem.name}`, width/2, statusLineY);
+            text(`Clean`, width/2, statusLineY);
         }
         
         // Right side - Ship info - aligned with statusLineY
