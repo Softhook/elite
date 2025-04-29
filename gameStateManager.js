@@ -171,6 +171,33 @@ this.showingInventory = false;
                 // No update logic needed for repairs menu
                 break;
 
+            case "VIEWING_POLICE":
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(20,20,40); 
+                }
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawPoliceMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing police menu:", e); 
+                    }
+                }
+                break;
+
             case "GALAXY_MAP":
                 break;
 
@@ -309,7 +336,32 @@ this.showingInventory = false;
                 if (uiManager && player) uiManager.drawRepairsMenu(player);
                 break;
 
-            // TODO: Add drawing cases for VIEWING_SERVICES later
+            case "VIEWING_POLICE":
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(20,20,40); 
+                }
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawPoliceMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing police menu:", e); 
+                    }
+                }
+                break;
 
             case "GALAXY_MAP":
                  if (uiManager && galaxy && player) { try { uiManager.drawGalaxyMap(galaxy, player); } catch(e) { console.error("Error drawing galaxy map:", e); } }

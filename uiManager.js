@@ -9,6 +9,7 @@ class UIManager {
         this.stationMenuButtonAreas = []; // { x, y, w, h, action, state, text }
         this.missionListButtonAreas = [];
         this.missionDetailButtonAreas = {};
+        this.policeButtonAreas = [];
         // track missions that have been completed or abandoned
         this.inactiveMissionIds = new Set();
         this.marketBackButtonArea = {}; // { x, y, w, h }
@@ -304,6 +305,7 @@ class UIManager {
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
+            { text: "Police Station", state: "VIEWING_POLICE" }, // Add this line
             { text: "Undock", action: "UNDOCK" }
         ];
         menuOpts.forEach((opt, i) => {
@@ -363,6 +365,115 @@ class UIManager {
         this.repairsBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
         pop();
     }
+
+// Add this new method after the drawRepairsMenu method
+
+/** Draws the Police Menu */
+drawPoliceMenu(player) {
+    if (!player) return;
+    this.policeButtonAreas = [];
+    
+    push();
+    const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+    this.drawPanelBG([30,30,60,230], [100,100,255]);
+    
+    // Use the standardized header
+    const system = galaxy?.getCurrentSystem();
+    const station = system?.station;
+    const headerHeight = this.drawStationHeader("Police Station", station, player, system);
+    
+    // Show current legal status
+    fill(255); 
+    textSize(20); 
+    textAlign(CENTER, TOP);
+    
+    const isWanted = system?.isPlayerWanted();
+    const statusText = isWanted ? "WANTED" : "CLEAN";
+    const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+    
+    text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, pY+headerHeight+10);
+    fill(statusColor);
+    textSize(24);
+    text(statusText, pX+pW/2, pY+headerHeight+40);
+    
+    // Calculate fine amount - varies by system security level
+    let fineAmount = 100; // Base amount
+    if (system?.securityLevel === 'High') fineAmount = 500;
+    else if (system?.securityLevel === 'Medium') fineAmount = 300;
+    
+    let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+80;
+    
+    // Pay Fine button - only if wanted
+    if (isWanted) {
+        fill(0,180,0); 
+        stroke(100,255,100); 
+        rect(btnX, btnY1, btnW, btnH, 5);
+        
+        fill(0); 
+        textSize(20); 
+        textAlign(CENTER,CENTER); 
+        noStroke();
+        text(`Pay Fine (${fineAmount} cr)`, btnX+btnW/2, btnY1+btnH/2);
+        
+        this.policeButtonAreas.push({
+            x: btnX, 
+            y: btnY1, 
+            w: btnW, 
+            h: btnH, 
+            action: 'pay_fine',
+            amount: fineAmount
+        });
+    }
+    
+    // Join Police button - only if not already ACAB
+    const btnY2 = btnY1 + btnH + 20;
+    if (player.shipTypeName !== 'ACAB') {
+        fill(50, 50, 180); 
+        stroke(100, 100, 255); 
+        rect(btnX, btnY2, btnW, btnH, 5);
+        
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER,CENTER); 
+        noStroke();
+        text("Join Police Force", btnX+btnW/2, btnY2+btnH/2);
+        
+        this.policeButtonAreas.push({
+            x: btnX, 
+            y: btnY2, 
+            w: btnW, 
+            h: btnH, 
+            action: 'join_police'
+        });
+    } else {
+        fill(255);
+        textSize(18);
+        textAlign(CENTER,CENTER);
+        text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
+    }
+    
+    // Back button
+    let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+    fill(180,180,0); 
+    stroke(220,220,100); 
+    rect(backX,backY,backW,backH,5);
+    
+    fill(0); 
+    textSize(20); 
+    textAlign(CENTER,CENTER); 
+    noStroke();
+    text("Back", backX+backW/2, backY+backH/2);
+    
+    this.policeButtonAreas.push({
+        x: backX, 
+        y: backY, 
+        w: backW, 
+        h: backH, 
+        action: 'back'
+    });
+    
+    pop();
+}
 
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
@@ -1251,7 +1362,8 @@ class UIManager {
                         return true;
                     } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
                                btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
-                               btn.state === "VIEWING_REPAIRS") {
+                               btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE") {
+                        // Added VIEWING_POLICE to the list of handled states ☝️
                         if(gameStateManager)gameStateManager.setState(btn.state);
                         return true;
                     } else if (btn.state) {
@@ -1409,6 +1521,55 @@ class UIManager {
             }
             return false;
         }
+        // --- VIEWING_POLICE State ---
+        else if (currentState === "VIEWING_POLICE") {
+            // Handle Police menu button clicks
+            for (const area of this.policeButtonAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (area.action === 'back') {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    } 
+                    else if (area.action === 'pay_fine' && player) {
+                        // Pay fine to clear wanted status
+                        const success = player.spendCredits(area.amount);
+                        if (success) {
+                            // Clear wanted status in current system
+                            player.currentSystem.playerWanted = false;
+                            player.currentSystem.policeAlertSent = false;
+                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
+                            
+                            // Save game after payment
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Not enough credits to pay fine.", 'crimson');
+                        }
+                        return true;
+                    }
+                    else if (area.action === 'join_police' && player) {
+                        // Change ship to ACAB
+                        player.applyShipDefinition('ACAB');
+                        this.addMessage("You have joined the Police Force!", 'lightblue');
+                        
+                        // Clear wanted status as a bonus
+                        if (player.currentSystem) {
+                            player.currentSystem.playerWanted = false;
+                            player.currentSystem.policeAlertSent = false;
+                        }
+                        
+                        // Save game after joining
+                        if (typeof saveGame === 'function') {
+                            saveGame();
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); }
         // --- GAME_OVER State ---
