@@ -4,58 +4,222 @@
 // --- Constants & Enums ---
 // -------------------------
 
-// Define AI Roles using a constant object for readability and maintainability
+// ==========================================
+// === AI CONSTANTS & CONFIGURATION BLOCK ===
+// ==========================================
+
+// === AI Role Definitions ===
+// Define ship roles that determine high-level behavior patterns
 const AI_ROLE = {
-    PIRATE: 'Pirate',
-    POLICE: 'Police',
-    HAULER: 'Hauler',
-    TRANSPORT: 'Transport'  // New role for local shuttles
+    PIRATE: 'Pirate',     // Attacks targets with cargo, generally hostile
+    POLICE: 'Police',     // Enforces law, attacks wanted ships
+    HAULER: 'Hauler',     // Moves cargo between stations and jump points
+    TRANSPORT: 'Transport' // Local transport between nearby locations
 };
 
-// Define AI States (Shared across roles, but used differently)
+// === AI State Definitions ===
+// Define possible states for the state machine that controls behavior
 const AI_STATE = {
-    IDLE: 0,          // Doing nothing specific, often for Pirates or Police off-duty
-    APPROACHING: 1,   // Detected player, moving towards an intercept point (Pirate/Police when hostile)
-    ATTACK_PASS: 2,   // Flying past player while firing (Pirate/Police when hostile)
-    REPOSITIONING: 3, // Moving away after pass (Pirate/Police when hostile)
-    PATROLLING: 4,    // Moving towards a point (e.g., station or patrol route) - Police/Hauler
-    NEAR_STATION: 5,  // Paused near station - Hauler only
-    LEAVING_SYSTEM: 6,// Moving towards exit point - Hauler only
-    TRANSPORTING: 7,  // New state for transport behaviour
-    COLLECTING_CARGO: 8,   // New state for cargo collection behavior
-    FLEEING: 9        // New state for damaged ships trying to escape
+    IDLE: 0,              // Default inactive state, minimal processing
+    APPROACHING: 1,       // Moving toward target to engage
+    ATTACK_PASS: 2,       // Executing attack run while flying past target
+    REPOSITIONING: 3,     // Moving to new position after attack
+    PATROLLING: 4,        // Following patrol route or moving to waypoint
+    NEAR_STATION: 5,      // Paused near station (simulating docking)
+    LEAVING_SYSTEM: 6,    // Moving toward system exit point
+    TRANSPORTING: 7,      // Carrying cargo along fixed route
+    COLLECTING_CARGO: 8,  // Moving to collect floating cargo
+    FLEEING: 9            // Escaping from threat
 };
 
-// Reverse lookup for AI_STATE values to names
+// State name lookup for debugging and logging
 const AI_STATE_NAME = {};
 for (const [k, v] of Object.entries(AI_STATE)) {
     AI_STATE_NAME[v] = k;
 }
 
-// --- AI Tuning Constants ---
-const TIGHT_ANGLE_RAD = 0.17;  // ~10 degrees for weapon selection
-const WIDE_ANGLE_RAD = 0.52;   // ~30 degrees for weapon selection
-const CLOSE_RANGE_MULT = 0.4; // Multiplier of visualFiringRange
-const MEDIUM_RANGE_MULT = 0.7; // Multiplier of visualFiringRange
-const POLICE_WANTED_BASE_SCORE = 100;
-const PIRATE_CARGO_BASE_SCORE = 30;
-const PIRATE_CARGO_MULT = 1.5;
-const RETALIATION_SCORE_BONUS = 60;
-const FLEE_THRUST_MULT_TRANSPORT = 1.8;
-const FLEE_THRUST_MULT_DEFAULT = 1.5;
-const FLEE_MIN_DURATION_MS = 2000;
-const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
-const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
-const TARGET_SCORE_BASE_WANTED = 100;   // Base score for police targeting wanted
-const TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
-const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
-const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
-const TARGET_SCORE_PIRATE_PREY_HAULER = 40; // Score for targeting haulers/transports
-const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
-const TARGET_SCORE_RETALIATION_HAULER = 40; // Score for hauler/transport retaliation
-const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
-const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
-const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
+// === Debug Flags ===
+// Control visibility of debugging information
+const AI_DEBUG = {
+    ENABLED: false,       // Master switch for AI debugging
+    SHOW_STATES: true,    // Show state transitions in console
+    SHOW_TARGETING: false, // Show target evaluation scores
+    SHOW_COMBAT: false,   // Show combat decisions
+    SHOW_MOVEMENT: false, // Show movement calculations
+    SHOW_RANGES: false,   // Visualize detection and firing ranges
+    LOG_LEVEL: 1          // 0=verbose, 1=normal, 2=important only
+};
+
+// === Angle Constants ===
+// Angular values used for targeting and movement
+const AI_ANGLE = {
+    TIGHT_TOLERANCE: 0.17,  // ~10 degrees - Precise alignment
+    WIDE_TOLERANCE: 0.52,   // ~30 degrees - Lenient alignment
+    FIRING_TOLERANCE: 0.26  // ~15 degrees - Standard firing tolerance
+};
+
+// === Range Multipliers ===
+// Multipliers applied to base ranges for different situations
+const AI_RANGE = {
+    CLOSE_MULT: 0.4,      // Close range multiplier (40% of base)
+    MEDIUM_MULT: 0.7,     // Medium range multiplier (70% of base)
+    ENGAGEMENT_MULT: 1.0, // Standard engagement range
+    DETECTION_MULT: 1.8,  // Detection range is 1.8x engagement range
+    FIRING_MULT: 1.3,     // Firing range is 1.3x engagement range
+    FLEE_ESCAPE_MULT: 2.5 // Distance needed to consider safe when fleeing
+};
+
+// === Timing Constants ===
+// Durations for various behaviors in milliseconds or seconds
+const AI_TIMING = {
+    FLEE_MIN_DURATION_MS: 2000,  // Minimum flee time in milliseconds
+    ATTACK_COOLDOWN: 15.0,       // Seconds before responding to new attacks
+    HAULER_COMBAT_TIMER: 10.0,   // Seconds a hauler stays in combat
+    FORCED_COMBAT_TIMER: 5.0,    // Minimum combat duration after attack
+    CARGO_COOLDOWN: 1.0          // Cooldown after cargo collection
+};
+
+// === Targeting Score Constants ===
+// Values used in target evaluation algorithms
+const AI_TARGET_SCORE = {
+    INVALID: -Infinity,           // Score for invalid/ignored targets
+    BASE_WANTED: 100,             // Base score for wanted ships (police)
+    WANTED_PIRATE_BONUS: 20,      // Additional score for pirates (police)
+    CARGO_BASE: 30,               // Base score for targets with cargo (pirates)
+    CARGO_MULT: 1.5,              // Multiplier for cargo amount (pirates)
+    PREY_HAULER: 40,              // Score for targeting haulers (pirates)
+    RETALIATION_PIRATE: 60,       // Score for pirate retaliation
+    RETALIATION_HAULER: 40,       // Score for hauler retaliation
+    DISTANCE_PENALTY_MULT: 0.05,  // Multiplier for distance penalty
+    HULL_DAMAGE_MAX_BONUS: 30,    // Maximum bonus for damaged targets
+    HULL_DAMAGE_MULT: 40          // Multiplier for hull damage calculation
+};
+
+// === Movement Constants ===
+// Values affecting ship movement behavior
+const AI_MOVEMENT = {
+    FLEE_THRUST_MULT_TRANSPORT: 1.8, // Extra thrust when transport flees
+    FLEE_THRUST_MULT_DEFAULT: 1.5,   // Extra thrust when other ships flee
+    DEFAULT_PATROL_SPEED: 0.7,       // Multiplier for patrol speed
+    COMBAT_SPEED: 0.9,               // Multiplier for combat speed
+    HAULER_ROTATION_MULT: 0.7,       // Slower rotation for haulers
+    STANDARD_ROTATION_MULT: 0.9      // Standard rotation multiplier
+};
+
+// === Role-Specific Configurations ===
+// Centralized configuration for each ship role
+
+// Pirate configuration
+const CONFIG_PIRATE = {
+    // Base properties
+    detectionRange: 650,         // Distance at which targets are detected
+    engageDistance: 250,         // Distance to start attack run
+    firingRange: 350,            // Maximum weapon range
+    repositionDistance: 400,     // Distance to maintain when repositioning
+    
+    // Combat behavior
+    targetSwitchThreshold: 5.0,  // Score improvement needed to switch targets
+    predictionTime: 0.5,         // Target position prediction factor
+    passDuration: 1.2,           // Attack pass duration in seconds
+    
+    // Role-specific flags
+    isAutomaticallyWanted: true, // Pirates are always considered wanted
+    prioritizesCargo: true,      // Primarily interested in cargo
+    
+    // Flee behavior
+    fleeHealthThreshold: 0.3,    // Flee when hull below 30%
+    attackCooldownAfterFlee: 20.0 // Seconds before responding to new attacks
+};
+
+// Police configuration
+const CONFIG_POLICE = {
+    // Base properties
+    detectionRange: 800,         // Longer detection range than pirates
+    engageDistance: 300,         // Slightly longer engagement distance
+    firingRange: 400,            // Extended firing range
+    repositionDistance: 450,     // Maintains greater distance when repositioning
+    
+    // Combat behavior
+    targetSwitchThreshold: 10.0, // More reluctant to switch targets
+    predictionTime: 0.4,         // Slightly lower prediction factor
+    passDuration: 1.0,           // Shorter attack passes
+    
+    // Role-specific flags
+    isAutomaticallyWanted: false, // Police are never wanted
+    prioritizesWanted: true,     // Primarily interested in wanted ships
+    
+    // Flee behavior
+    fleeHealthThreshold: 0.2,    // Police flee at lower health (more persistent)
+    attackCooldownAfterFlee: 15.0 // Shorter cooldown after fleeing
+};
+
+// Hauler configuration
+const CONFIG_HAULER = {
+    // Base properties
+    detectionRange: 450,         // Shorter detection range
+    engageDistance: 150,         // Shorter engagement (defensive only)
+    firingRange: 280,            // Shorter firing range
+    repositionDistance: 350,     // Conservative repositioning
+    
+    // Combat behavior
+    targetSwitchThreshold: 0.0,  // Only targets attackers, no switching
+    predictionTime: 0.3,         // Lower prediction factor
+    passDuration: 0.8,           // Short attack passes
+    
+    // Role-specific flags
+    isAutomaticallyWanted: false, // Haulers are never wanted
+    prioritizesFleeing: true,    // Prefers fleeing to combat
+    
+    // Station behavior
+    stationPauseDuration: 5.0,   // Seconds to pause at station
+    stationProximityThreshold: 150, // Distance to detect "near station"
+    
+    // Flee behavior
+    fleeHealthThreshold: 0.5,    // Flee at higher health threshold (cautious)
+    attackCooldownAfterFlee: 30.0 // Long cooldown after fleeing
+};
+
+// Transport configuration
+const CONFIG_TRANSPORT = {
+    // Base properties
+    detectionRange: 400,         // Shortest detection range
+    engageDistance: 0,           // Won't engage in combat (defensive only)
+    firingRange: 250,            // Very short firing range (defensive)
+    repositionDistance: 300,     // Conservative repositioning
+    
+    // Movement behavior
+    speedMultiplier: 0.5,        // Slower than other ships
+    thrustMultiplier: 0.6,       // Lower acceleration
+    
+    // Role-specific flags
+    isAutomaticallyWanted: false, // Transports are never wanted
+    alwaysFlees: true,           // Always chooses to flee rather than fight
+    
+    // Route behavior
+    routeWaitTimeMin: 1500,      // Minimum ms to wait at route points
+    routeWaitTimeMax: 4000,      // Maximum ms to wait at route points
+    
+    // Flee behavior
+    fleeHealthThreshold: 0.8,    // Flee at very high health threshold (very cautious)
+    attackCooldownAfterFlee: 30.0 // Long cooldown after fleeing
+};
+
+// Get configuration based on role
+function getConfigForRole(role) {
+    switch(role) {
+        case AI_ROLE.PIRATE: return CONFIG_PIRATE;
+        case AI_ROLE.POLICE: return CONFIG_POLICE;
+        case AI_ROLE.HAULER: return CONFIG_HAULER;
+        case AI_ROLE.TRANSPORT: return CONFIG_TRANSPORT;
+        default: 
+            console.warn(`Unknown role: ${role}, using PIRATE config as fallback`);
+            return CONFIG_PIRATE;
+    }
+}
+
+// =======================================
+// === END AI CONFIGURATION BLOCK ===
+// =======================================
 
 class Enemy {
     // ---------------------------------
