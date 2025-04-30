@@ -1117,7 +1117,8 @@ class StarSystem {
         if (this.cargo && this.cargo.length > 0) {
             for (let i = 0; i < this.cargo.length; i++) {
                 const c = this.cargo[i];
-                if (this.isInView(c.pos.x, c.pos.y, c.size * 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                // Use 1.5 instead of 4, matching other objects' visibility ranges
+                if (this.isInView(c.pos.x, c.pos.y, c.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                     c.draw();
                 }
             }
