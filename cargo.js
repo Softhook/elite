@@ -129,8 +129,8 @@ class Cargo {
         const d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
         
         // Increase collection radius to make pickup easier
-        // Use 2.5x multiplier to ensure cargo can be picked up
-        return d < (player.size/2 + this.size * 2.5);
+        // Use 2x multiplier to ensure cargo can be picked up
+        return d < (player.size/2 + this.size * 2);
     }
     
     getValue() {

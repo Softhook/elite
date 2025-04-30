@@ -635,19 +635,18 @@ class StarSystem {
             }
             // --- End Projectile Loop ---
 
+            // Improved cargo update and collection logic - place in StarSystem.update() method
             // Update cargo items and handle collection
             if (this.cargo && this.cargo.length > 0) {
-                for (let i = this.cargo.length - 1; i >= 0; i--) {
-                    const cargo = this.cargo[i];
-                    cargo.update();
-                    
-                    // Remove collected or expired cargo
-                    if (cargo.collected || cargo.isExpired()) {
-                        this.cargo.splice(i, 1);
-                    }
+                // FIRST: Remove any already collected or expired cargo
+                this.cargo = this.cargo.filter(cargo => !cargo.collected && !cargo.isExpired());
+                
+                // THEN: Update remaining cargo
+                for (let i = 0; i < this.cargo.length; i++) {
+                    this.cargo[i].update();
                 }
                 
-                // Check for cargo collection by player
+                // FINALLY: Check for player collection on valid cargo
                 this.handleCargoCollection();
             }
 
