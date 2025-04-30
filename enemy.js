@@ -515,13 +515,16 @@ class Enemy {
         let score = 0; // START SCORE AT ZERO.
         let isPotentiallyInteresting = false; // Flag: Did role logic find a reason to engage?
 
-        // --- CRITICAL FIX: Always consider lastAttacker as interesting for retaliation ---
-        if (target === this.lastAttacker) {
-            score += TARGET_SCORE_RETALIATION_PIRATE; // Use pirate retaliation value as base
+        // --- CRITICAL FIX: Better attacker identification ---
+        const isPlayer = target instanceof Player;
+        const isAttacker = target === this.lastAttacker || 
+                          (isPlayer && this.lastAttacker instanceof Player);
+                          
+        if (isAttacker) {
+            score += TARGET_SCORE_RETALIATION_PIRATE;
             isPotentiallyInteresting = true;
             console.log(`${this.shipTypeName} responding to attack from ${target.shipTypeName || 'Player'}`);
         }
-        // --- END CRITICAL FIX ---
 
         // --- Role-Specific Scoring ---
         // 1. Police Logic: Only interested in wanted targets.
