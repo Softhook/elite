@@ -582,12 +582,25 @@ class Enemy {
         }
         // 3. Hauler / Transport Logic: Only interested if attacked.
         else if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
-            // ONLY target if attacked.
-            if (target === this.lastAttacker) {
-                score = TARGET_SCORE_RETALIATION_HAULER; // High score to focus on attacker (triggers flee/retaliate state).
+            // IMPROVED - Check if target is player or lastAttacker
+            const isPlayer = target instanceof Player;
+            const isAttacker = target === this.lastAttacker || 
+                              (isPlayer && this.lastAttacker instanceof Player);
+                              
+            if (isAttacker || (isPlayer && this.forcedCombatTimer > 0)) {
+                // Add logging to help track targeting
+                console.log(`${this.shipTypeName} (${this.role}) evaluating attacker`);
+                
+                // Always set interesting and give score to attackers
+                score = TARGET_SCORE_RETALIATION_HAULER;
                 isPotentiallyInteresting = true;
+                
+                // Check hull for flee vs. fight decision
+                if (this.hull < this.maxHull * 0.5) {
+                    console.log(`${this.shipTypeName} damaged - will flee instead of engaging`);
+                }
             } else {
-                // Ignore everyone else.
+                // Still ignore everyone else
                 return TARGET_SCORE_INVALID;
             }
         }
