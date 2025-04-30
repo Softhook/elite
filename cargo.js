@@ -125,10 +125,12 @@ class Cargo {
     }
     
     checkCollision(player) {
-        if (this.collected) return false;
+        if (!player || !player.pos) return false;
+        const d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
         
-        let d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
-        return d < (player.size/2 + this.size);
+        // Increase collection radius to make pickup easier
+        // Use 2.5x multiplier to ensure cargo can be picked up
+        return d < (player.size/2 + this.size * 2.5);
     }
     
     getValue() {

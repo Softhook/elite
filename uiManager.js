@@ -531,6 +531,35 @@ drawPoliceMenu(player) {
             rect(sX, yP, tW, rowH); // Draw background for the data part of the row
             // --- End Alternating Background ---
 
+    // Check if this is an illegal good in a non-Anarchy system
+    const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
+    
+    // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
+    if (isIllegalInSystem) {
+        fill(120); // Gray color for illegal goods
+    } else {
+        fill(255); // Normal white color
+    }
+    
+    textAlign(LEFT, CENTER);
+    text(comm.name||'?', sX+10, tY, cW-15);
+    
+    // Add "ILLEGAL" indicator for illegal goods
+    if (!comm.isLegal) {
+        if (isIllegalInSystem) {
+            fill(150, 50, 50); // Dark red when unavailable
+        } else {
+            fill(255, 50, 50); // Bright red when available (in Anarchy)
+        }
+        textAlign(LEFT, CENTER);
+        text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
+    }
+    
+    textAlign(RIGHT, CENTER);
+    text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
+    text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
+    text(comm.playerStock??'?', sX+cW*4-10, tY);
+
             // Commodity name and prices
             fill(255);
             textAlign(LEFT,CENTER);
@@ -588,71 +617,94 @@ drawPoliceMenu(player) {
             // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
             let btnStartX = sX + cW * 4.2; // Start position for buttons
 
-            // Buy 1 button
-            let buy1X = btnStartX;
-            let buy1Y = yP+(rowH-btnH)/2;
-            fill(0,150,0); stroke(0,200,0); strokeWeight(1);
-            rect(buy1X, buy1Y, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-            text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
-            this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
+ // Buy 1 button
+let buy1X = btnStartX;
+let buy1Y = yP+(rowH-btnH)/2;
 
-            // Buy All button
-            let buyAllX = buy1X + btnW + 5; // Position relative to previous button
-            let buyAllY = buy1Y;
-            fill(0,180,0); stroke(0,220,0); strokeWeight(1);
-            rect(buyAllX, buyAllY, btnW, btnH, 3);
-            fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-            text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
-            this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
+if (isIllegalInSystem) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy
+    fill(100); stroke(120); strokeWeight(1);
+    rect(buy1X, buy1Y, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(0,150,0); stroke(0,200,0); strokeWeight(1);
+    rect(buy1X, buy1Y, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+    this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
+}
 
-            // Sell 1 button
-            let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
-            let sell1Y = buy1Y;
+// Buy All button
+let buyAllX = buy1X + btnW + 5; // Position relative to previous button
+let buyAllY = buy1Y;
 
-            // Check if this commodity is needed for the active mission
-            const isMissionCargo = player.activeMission?.cargoType === comm.name;
+if (isIllegalInSystem) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy
+    fill(100); stroke(120); strokeWeight(1);
+    rect(buyAllX, buyAllY, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(0,180,0); stroke(0,220,0); strokeWeight(1);
+    rect(buyAllX, buyAllY, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+    this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
+}
 
-            if (isMissionCargo) {
-                // Grey out button - not clickable
-                fill(100); stroke(120); strokeWeight(1);
-                rect(sell1X, sell1Y, btnW, btnH, 3);
-                fill(180); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-                text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-                // No marketButtonAreas.push here - button can't be clicked
-            } else {
-                // Normal button - clickable
-                fill(150,0,0); stroke(200,0,0); strokeWeight(1);
-                rect(sell1X, sell1Y, btnW, btnH, 3);
-                fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-                text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-                this.marketButtonAreas.push({ 
-                    x: sell1X, y: sell1Y, w: btnW, h: btnH, 
-                    action: 'sell', quantity: 1, commodity: comm.name 
-                });
-            }
+// Sell 1 button
+let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
+let sell1Y = buy1Y;
 
-            // Sell All button
-            let sellAllX = sell1X + btnW + 5; // Position relative to previous button
-            let sellAllY = buy1Y;
-            if (isMissionCargo) {
-                // Grey out button - not clickable
-                fill(100); stroke(120); strokeWeight(1);
-                rect(sellAllX, sellAllY, btnW, btnH, 3);
-                fill(180); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-                text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-                // No marketButtonAreas.push here - button can't be clicked
-            } else {
-                // Normal button - clickable
-                fill(180,0,0); stroke(220,0,0); strokeWeight(1);
-                rect(sellAllX, sellAllY, btnW, btnH, 3);
-                fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-                text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-                this.marketButtonAreas.push({ 
-                    x: sellAllX, y: sellAllY, w: btnW, h: btnH, 
-                    action: 'sellAll', commodity: comm.name 
-                });
-            }
+// Check if this commodity is needed for the active mission
+const isMissionCargo = player.activeMission?.cargoType === comm.name;
+
+if (isIllegalInSystem || isMissionCargo) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
+    fill(100); stroke(120); strokeWeight(1);
+    rect(sell1X, sell1Y, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(150,0,0); stroke(200,0,0); strokeWeight(1);
+    rect(sell1X, sell1Y, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+    this.marketButtonAreas.push({ 
+        x: sell1X, y: sell1Y, w: btnW, h: btnH, 
+        action: 'sell', quantity: 1, commodity: comm.name 
+    });
+}
+
+// Sell All button
+let sellAllX = sell1X + btnW + 5; // Position relative to previous button
+let sellAllY = buy1Y;
+
+if (isIllegalInSystem || isMissionCargo) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
+    fill(100); stroke(120); strokeWeight(1);
+    rect(sellAllX, sellAllY, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(180,0,0); stroke(220,0,0); strokeWeight(1);
+    rect(sellAllX, sellAllY, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+    this.marketButtonAreas.push({ 
+        x: sellAllX, y: sellAllY, w: btnW, h: btnH, 
+        action: 'sellAll', commodity: comm.name 
+    });
+}
         });
 
         // Back button

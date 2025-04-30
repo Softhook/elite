@@ -23,22 +23,26 @@ class Market {
         }
 
         this.commodities = [
-            // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock
+            // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock, Legal Status
             // Basic Goods
-            { name: 'Food',           baseBuy: 10,   baseSell: 8,    buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Food',           baseBuy: 10,   baseSell: 8,    buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
             // Industrial Goods
-            { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
             // Raw Materials
-            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
             // Tech Goods
-            { name: 'Computers',      baseBuy: 250,  baseSell: 220,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
-            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Computers',      baseBuy: 250,  baseSell: 220,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+            { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
             // Luxury Goods
-            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0 },
+            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
+                    // ILLEGAL GOODS - higher profit margins but only available in Anarchy systems
+            { name: 'Narcotics',      baseBuy: 800,  baseSell: 700,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
+            { name: 'Weapons',        baseBuy: 1200, baseSell: 1000, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
+            { name: 'Slaves',         baseBuy: 1500, baseSell: 1300, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
         ];
 
         this.updatePrices();
@@ -151,6 +155,14 @@ class Market {
 
         const comm = this.commodities.find(c => c.name === commodityName);
         if (!comm) { console.error(`SELL FAILED: ${commodityName} not found`); return false; }
+        
+        // Check if this is a legal transaction
+        const currentSystem = player.currentSystem;
+        if (!comm.isLegal && currentSystem?.securityLevel !== 'Anarchy') {
+            console.log(`SELL FAILED: Cannot sell illegal goods in non-Anarchy system.`);
+            uiManager.addMessage(`Can't sell illegal goods in ${currentSystem?.securityLevel} security.`, 'crimson');
+            return false;
+        }
 
         // Check cargo amount
         const itemInCargo = player.cargo.find(item => item && item.name === commodityName);
@@ -202,6 +214,14 @@ class Market {
 
         const comm = this.commodities.find(c => c.name === commodityName);
         if (!comm) { console.error(`BUY FAILED: Commodity ${commodityName} not found in market.`); return false; }
+        
+        // Check if this is a legal transaction
+        const currentSystem = player.currentSystem;
+        if (!comm.isLegal && currentSystem?.securityLevel !== 'Anarchy') {
+            console.log(`BUY FAILED: Cannot buy illegal goods in non-Anarchy system.`);
+            uiManager.addMessage(`Can't buy illegal goods in ${currentSystem?.securityLevel} security.`, 'crimson');
+            return false;
+        }
 
         const cost = Math.floor(comm.buyPrice * quantity); // Floor the total cost
         const currentCargoAmount = player.getCargoAmount();
