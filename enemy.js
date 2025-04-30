@@ -2237,8 +2237,8 @@ dropCargo() {
             // Give cargo some velocity from the explosion
             cargo.vel = p5.Vector.random2D().mult(random(0.8, 2.0));
             
-            // Ensure cargo has proper size for collision detection
-            cargo.size = Math.max(25, Math.min(40, cargoQuantity * 0.5));
+
+            cargo.size = 8;
             
             // Add cargo to system
             if (system.addCargo(cargo)) {
