@@ -2395,10 +2395,17 @@ takeDamage(amount, attacker = null) {
             
             // Award credits to player if they destroyed this ship
             if (attacker instanceof Player && system.player === attacker) {
-                const bounty = this.isWanted ? 5000 : (this.role === AI_ROLE.PIRATE ? 1000 : 500);
-                attacker.credits += bounty;
-                uiManager.addMessage(`Ship destroyed: +${bounty} credits`, '#5dfc0a');
-                
+   
+                if (attacker.activeMission) {
+                    // Update progress for bounty missions
+                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
+                        this.role === AI_ROLE.PIRATE) {
+                        attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                        console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                        // NOTE: Credits for the mission itself are awarded upon completion, not here.
+                    }
+                }
+
                 if (this.role !== AI_ROLE.PIRATE) {
                     if (system.setPlayerWanted) {
                         
