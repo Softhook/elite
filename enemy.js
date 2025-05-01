@@ -536,10 +536,17 @@ evaluateTargetScore(target, system) {
         }
     }
     
-    // CRITICAL: Better attacker identification
+    // CRITICAL FIX #1: Much better attacker identification
     const isPlayer = target instanceof Player;
-    const isAttacker = target === this.lastAttacker || 
-                      (isPlayer && this.lastAttacker instanceof Player);
+    
+    // First check direct object equality
+    let isAttacker = target === this.lastAttacker;
+    
+    // If objects don't match but both are Player instances, consider it the same attacker
+    if (!isAttacker && isPlayer && this.lastAttacker instanceof Player) {
+        isAttacker = true;  // ANY Player instance matches if lastAttacker is a Player
+        console.log(`%c[TARGET DEBUG] Player identified as lastAttacker via instanceof check`, 'color:green; font-weight:bold');
+    }
                       
     if (isAttacker) {
         const bonusScore = TARGET_SCORE_RETALIATION_PIRATE;
@@ -610,12 +617,32 @@ evaluateTargetScore(target, system) {
             break;
     }
 
-    // Apply distance penalty to score
+    // Apply distance penalty to score, but ensure penalties don't make interesting targets negative
     if (isPotentiallyInteresting) {
         const distance = this.distanceTo(target);
-        const distancePenalty = Math.min(50, distance * TARGET_SCORE_DISTANCE_PENALTY_MULT);
-        score -= distancePenalty;
-        console.log(`%c[TARGET DEBUG] Distance penalty: -${distancePenalty.toFixed(1)}`, 'color:blue');
+        
+        // CRITICAL FIX #2: Modify distance penalty based on target type
+        // Attackers and players get reduced distance penalties
+        let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
+        if (isAttacker || isPlayer) {
+            distancePenaltyMult *= 0.5; // Half penalty for important targets
+        }
+        
+        // Calculate penalty with upper limit to avoid excessive penalties
+        const distancePenalty = Math.min(40, distance * distancePenaltyMult);
+        
+        // Ensure penalty doesn't make score negative for important targets
+        if (isAttacker || isPlayer) {
+            // For attackers, ensure at least 10 points remain after penalty
+            const minScoreAfterPenalty = 10;
+            const adjustedPenalty = Math.min(distancePenalty, Math.max(0, score - minScoreAfterPenalty));
+            score -= adjustedPenalty;
+            console.log(`%c[TARGET DEBUG] Limited distance penalty: -${adjustedPenalty.toFixed(1)} (original: -${distancePenalty.toFixed(1)})`, 'color:blue');
+        } else {
+            // Normal penalty for other targets
+            score -= distancePenalty;
+            console.log(`%c[TARGET DEBUG] Distance penalty: -${distancePenalty.toFixed(1)}`, 'color:blue');
+        }
         
         // Apply hull damage bonus - prefer damaged targets
         if (target.hull !== undefined && target.maxHull !== undefined) {
@@ -626,8 +653,14 @@ evaluateTargetScore(target, system) {
         }
     }
     
+    // CRITICAL FIX #3: Reject targets with negative or too low final scores
+    if (isPotentiallyInteresting && score <= 0) {
+        console.log(`%c[TARGET DEBUG] ${targetName} became uninteresting due to negative score: ${score}`, 'color:orange');
+        isPotentiallyInteresting = false;
+    }
+    
     // Debug final result
-    console.log(`%c[TARGET DEBUG] Final score for ${targetName}: ${score} (interesting: ${isPotentiallyInteresting})`, 
+    console.log(`%c[TARGET DEBUG] Final score for ${targetName}: ${score.toFixed(1)} (interesting: ${isPotentiallyInteresting})`, 
         isPotentiallyInteresting ? 'color:green; font-weight:bold' : 'color:orange');
     
     // If not interesting, return invalid
