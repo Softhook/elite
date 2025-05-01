@@ -498,153 +498,146 @@ class Enemy {
         }
     }
 
-    /**
-     * Evaluate how attractive a target is based on various factors.
-     * Higher score = more attractive target. Score starts at 0.
-     * @param {Object} target - The target to evaluate (Player, Enemy, Cargo, etc.).
-     * @param {Object} system - The current star system.
-     * @return {number} A score representing target attractiveness, or TARGET_SCORE_INVALID if invalid/ignored.
-     */
-    evaluateTargetScore(target, system) {
-        // --- Initial Validation ---
-        // Immediately discard invalid targets or self-targeting.
-        if (!this.isTargetValid(target) || target === this) {
-            return TARGET_SCORE_INVALID;
-        }
-
-        let score = 0; // START SCORE AT ZERO.
-        let isPotentiallyInteresting = false; // Flag: Did role logic find a reason to engage?
-
-        // --- CRITICAL FIX: Better attacker identification ---
-        const isPlayer = target instanceof Player;
-        const isAttacker = target === this.lastAttacker || 
-                          (isPlayer && this.lastAttacker instanceof Player);
-                          
-        if (isAttacker) {
-            score += TARGET_SCORE_RETALIATION_PIRATE;
-            isPotentiallyInteresting = true;
-            console.log(`${this.shipTypeName} responding to attack from ${target.shipTypeName || 'Player'}`);
-        }
-
-        // --- Role-Specific Scoring ---
-        // 1. Police Logic: Only interested in wanted targets.
-        if (this.role === AI_ROLE.POLICE) {
-            // Check if target is player and player is wanted in this system
-            if (target instanceof Player && system.isPlayerWanted()) {
-                score += TARGET_SCORE_BASE_WANTED;
-                isPotentiallyInteresting = true; // MOVED INSIDE conditional
-            }
-
-            if (target.role === AI_ROLE.PIRATE) {
-                score += TARGET_SCORE_WANTED_PIRATE_BONUS; // Bonus for wanted pirates.
-                isPotentiallyInteresting = true; // MOVED INSIDE conditional
-            }
-            // NOTE: isPotentiallyInteresting no longer set unconditionally for all targets
-        }
-        
-        // 2. Pirate Logic: Interested in cargo, vulnerable targets, or retaliation.
-        else if (this.role === AI_ROLE.PIRATE) {
-            // a) Target Player? Check cargo and if player attacked us.
-            if (target instanceof Player) {
-                // Use getCargoAmount if available, otherwise fallback (adjust if needed)
-                const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
-                const cargoCapacity = target.cargoCapacity || 1; // Avoid division by zero.
-                // Significant score only if player has decent cargo.
-                if (cargoAmount > 5 || (cargoAmount / cargoCapacity) > 0.15) {
-                    score += TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
-                    isPotentiallyInteresting = true;
-                }
-                
-                // NOTE: Removed redundant lastAttacker check since we handle it at the top now
-            }
-            
-            // b) Target Haulers/Transports? These are potential prey.
-            else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
-                score += TARGET_SCORE_PIRATE_PREY_HAULER; // Base score for potential prey.
-                isPotentiallyInteresting = true;
-            }
-            // c) Target other Pirates? Only if attacked.
-            else if (target.role === AI_ROLE.PIRATE && target === this.lastAttacker) {
-                 score += TARGET_SCORE_RETALIATION_PIRATE * 0.8; // Retaliate against other pirates (slightly less than vs player).
-                 isPotentiallyInteresting = true;
-            }
-            // d) Avoid Police unless attacked.
-            else if (target.role === AI_ROLE.POLICE) {
-                if (target === this.lastAttacker) {
-                    score += TARGET_SCORE_RETALIATION_PIRATE * 0.7; // Retaliate against police if attacked (risky).
-                    isPotentiallyInteresting = true;
-                } else {
-                     return TARGET_SCORE_INVALID; // Avoid police otherwise.
-                }
-            }
-            // e) Target Cargo? (Added logic)
-            else if (target instanceof Cargo) {
-                 score += 5 + (target.quantity || 1); // Small base score + quantity bonus.
-                 isPotentiallyInteresting = true;
-            }
-        }
-        // 3. Hauler / Transport Logic: Only interested if attacked.
-        else if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
-            // IMPROVED - Check if target is player or lastAttacker
-            const isPlayer = target instanceof Player;
-            const isAttacker = target === this.lastAttacker || 
-                              (isPlayer && this.lastAttacker instanceof Player);
-                              
-            if (isAttacker || (isPlayer && this.forcedCombatTimer > 0)) {
-                // Add logging to help track targeting
-                console.log(`${this.shipTypeName} (${this.role}) evaluating attacker`);
-                
-                // Always set interesting and give score to attackers
-                score = TARGET_SCORE_RETALIATION_HAULER;
-                isPotentiallyInteresting = true;
-                
-                // Check hull for flee vs. fight decision
-                if (this.hull < this.maxHull * 0.5) {
-                    console.log(`${this.shipTypeName} damaged - will flee instead of engaging`);
-                }
-            } else {
-                // Still ignore everyone else
-                return TARGET_SCORE_INVALID;
-            }
-        }
-        // 4. Other Roles (if added later) - default ignore.
-        else {
-             return TARGET_SCORE_INVALID;
-        }
-
-        // --- General Modifiers (Applied only if target is potentially interesting) ---
-        if (isPotentiallyInteresting) {
-            // a) Distance factor: Closer targets are more attractive.
-            const distance = this.distanceTo(target);
-            if (distance > 0) {
-                 // Apply penalty, ensure it doesn't completely negate base score unless very far.
-                 score -= distance * TARGET_SCORE_DISTANCE_PENALTY_MULT;
-            }
-
-            // b) Hull factor: Weaker targets are more attractive.
-            // Check if target has hull properties before accessing.
-            if (target.hull !== undefined && target.maxHull !== undefined && target.maxHull > 0) {
-                const hullPercent = target.hull / target.maxHull;
-                // Add bonus for damaged targets, max bonus capped.
-                score += Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, (1 - hullPercent) * TARGET_SCORE_HULL_DAMAGE_MULT);
-            }
-
-            // Ensure score doesn't become negative due to distance/hull unless intended.
-            // If the role logic decided it was interesting, keep score at least 0.
-            if (score < 0) {
-                 score = 0;
-            }
-        } else {
-             // If no role logic found a reason to engage, it's not interesting.
-             return TARGET_SCORE_INVALID;
-        }
-
-        // Debug log (optional)
-        // const targetName = target instanceof Player ? "Player" : (target.shipTypeName || target.constructor.name);
-        // console.log(`Target: ${targetName}, Role: ${target?.role || 'N/A'}, Score: ${score.toFixed(1)}`);
-
-        return score;
+/**
+ * Enhanced version of evaluateTargetScore with detailed debugging
+ * @param {Object} target - The target to evaluate
+ * @param {Object} system - The current star system
+ * @return {number} A score representing how attractive this target is
+ */
+evaluateTargetScore(target, system) {
+    // Basic validity check
+    if (!this.isTargetValid(target) || target === this) {
+        return TARGET_SCORE_INVALID;
     }
+
+    // DEBUG: Track what we're evaluating
+    const targetName = target instanceof Player ? "Player" : 
+                      (target.shipTypeName || target.constructor?.name || "Unknown");
+    console.log(`%c[TARGET DEBUG] ${this.shipTypeName} evaluating ${targetName}`, 'color:blue');
+    
+    let score = 0;
+    let isPotentiallyInteresting = false;
+
+    // DEBUG: Check if this is our lastAttacker
+    if (this.lastAttacker) {
+        const lastAttackerName = this.lastAttacker instanceof Player ? "Player" : 
+                               (this.lastAttacker.shipTypeName || "Unknown");
+        console.log(`%c[TARGET DEBUG] ${this.shipTypeName} has lastAttacker: ${lastAttackerName}`, 'color:blue');
+        
+        // Check if same object reference
+        const isSameReference = target === this.lastAttacker;
+        console.log(`%c[TARGET DEBUG] Target is lastAttacker? ${isSameReference}`, 'color:blue');
+        
+        // Check if both are Player type
+        const isTargetPlayer = target instanceof Player;
+        const isLastAttackerPlayer = this.lastAttacker instanceof Player;
+        if (isTargetPlayer && isLastAttackerPlayer) {
+            console.log(`%c[TARGET DEBUG] Both target and lastAttacker are Player instances`, 'color:green; font-weight:bold');
+        }
+    }
+    
+    // CRITICAL: Better attacker identification
+    const isPlayer = target instanceof Player;
+    const isAttacker = target === this.lastAttacker || 
+                      (isPlayer && this.lastAttacker instanceof Player);
+                      
+    if (isAttacker) {
+        const bonusScore = TARGET_SCORE_RETALIATION_PIRATE;
+        score += bonusScore;
+        isPotentiallyInteresting = true;
+        console.log(`%c[TARGET DEBUG] ${this.shipTypeName} responding to attack: +${bonusScore} points`, 'color:green; font-weight:bold');
+    }
+
+    // Role-specific scoring logic
+    switch (this.role) {
+        case AI_ROLE.PIRATE:
+            // Pirates target player, haulers, and cargo
+            if (isPlayer) {
+                const baseScore = 20; // Minimum score for being the player
+                score += baseScore;
+                isPotentiallyInteresting = true; // ALWAYS interesting!
+                console.log(`%c[TARGET DEBUG] Pirate base score for Player: +${baseScore}`, 'color:green');
+                
+                // Add cargo bonus if applicable (additional, not required)
+                const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
+                if (cargoAmount > 5) {
+                    const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
+                    score += cargoBonus;
+                    console.log(`%c[TARGET DEBUG] Player cargo bonus: +${cargoBonus}`, 'color:green');
+                }
+            } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                // Pirates target haulers/transports
+                score += TARGET_SCORE_PIRATE_PREY_HAULER;
+                isPotentiallyInteresting = true;
+                console.log(`%c[TARGET DEBUG] Pirate targeting hauler/transport: +${TARGET_SCORE_PIRATE_PREY_HAULER}`, 'color:green');
+            } else if (target.constructor && target.constructor.name === 'Cargo') {
+                // Pirates value cargo for scoring
+                score += TARGET_SCORE_PIRATE_CARGO_BASE;
+                isPotentiallyInteresting = true;
+                console.log(`%c[TARGET DEBUG] Pirate targeting cargo: +${TARGET_SCORE_PIRATE_CARGO_BASE}`, 'color:green');
+            }
+            break;
+            
+        case AI_ROLE.POLICE:
+            // Police target wanted ships with higher priority
+            if ((isPlayer && system?.isPlayerWanted()) || target.isWanted) {
+                score += TARGET_SCORE_BASE_WANTED;
+                isPotentiallyInteresting = true;
+                console.log(`%c[TARGET DEBUG] Police targeting wanted ship: +${TARGET_SCORE_BASE_WANTED}`, 'color:green');
+                
+                // Extra bonus for pirates that are wanted
+                if (target.role === AI_ROLE.PIRATE) {
+                    score += TARGET_SCORE_WANTED_PIRATE_BONUS;
+                    console.log(`%c[TARGET DEBUG] Police targeting pirate bonus: +${TARGET_SCORE_WANTED_PIRATE_BONUS}`, 'color:green');
+                }
+            }
+            break;
+            
+        case AI_ROLE.HAULER:
+        case AI_ROLE.TRANSPORT:
+            // Haulers/Transports only target attackers when forced into combat
+            if (isAttacker || (isPlayer && this.forcedCombatTimer > 0)) {
+                console.log(`%c[TARGET DEBUG] ${this.shipTypeName} (${this.role}) evaluating attacker`, 'color:green');
+                score += TARGET_SCORE_RETALIATION_HAULER;
+                isPotentiallyInteresting = true;
+                
+                // If hull is damaged, reduce score to encourage fleeing instead
+                if (this.hull < this.maxHull * 0.5) {
+                    score -= 20;
+                    console.log(`%c[TARGET DEBUG] ${this.shipTypeName} damaged - will prefer to flee`, 'color:orange');
+                }
+            }
+            break;
+    }
+
+    // Apply distance penalty to score
+    if (isPotentiallyInteresting) {
+        const distance = this.distanceTo(target);
+        const distancePenalty = Math.min(50, distance * TARGET_SCORE_DISTANCE_PENALTY_MULT);
+        score -= distancePenalty;
+        console.log(`%c[TARGET DEBUG] Distance penalty: -${distancePenalty.toFixed(1)}`, 'color:blue');
+        
+        // Apply hull damage bonus - prefer damaged targets
+        if (target.hull !== undefined && target.maxHull !== undefined) {
+            const damagePercent = 1 - (target.hull / target.maxHull);
+            const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
+            score += damageBonus;
+            console.log(`%c[TARGET DEBUG] Target damage bonus: +${damageBonus.toFixed(1)}`, 'color:green');
+        }
+    }
+    
+    // Debug final result
+    console.log(`%c[TARGET DEBUG] Final score for ${targetName}: ${score} (interesting: ${isPotentiallyInteresting})`, 
+        isPotentiallyInteresting ? 'color:green; font-weight:bold' : 'color:orange');
+    
+    // If not interesting, return invalid
+    if (!isPotentiallyInteresting) {
+        console.log(`%c[TARGET DEBUG] ${targetName} not interesting to ${this.shipTypeName}`, 'color:orange');
+        return TARGET_SCORE_INVALID;
+    }
+    
+    return score;
+}
 
     /**
      * Calculate optimal weapon for current combat situation
@@ -2299,154 +2292,110 @@ dropCargo() {
     // --- Utility Methods ---
     // -----------------------
     
-    /**
-     * Applies damage to the ship and handles destruction
-     * @param {number} amount - Amount of damage to apply
-     * @param {Object} attacker - Entity that caused the damage
-     * @return {Object} Object containing damage dealt and shield hit status
-     */
-    takeDamage(amount, attacker = null) {
-        if (attacker && amount > 0) {
-            this.lastAttacker = attacker;
+/**
+ * Applies damage to the ship and handles destruction
+ * @param {number} amount - Amount of damage to apply
+ * @param {Object} attacker - Entity that caused the damage
+ * @return {Object} Object containing damage dealt and shield hit status
+ */
+takeDamage(amount, attacker = null) {
+    // NEW DEBUG LOGGING
+    console.log(`%c[ATTACK DEBUG] ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
+    
+    if (attacker) {
+        // Log attacker details
+        const attackerName = attacker instanceof Player ? "Player" : (attacker.shipTypeName || "Unknown");
+        console.log(`%c[ATTACK DEBUG] Attacker: ${attackerName}`, 'color:red');
+        console.log(`%c[ATTACK DEBUG] Attacker object:`, 'color:red', attacker);
+        
+        // CRITICAL: Store the attacker reference
+        this.lastAttacker = attacker;
+        
+        // Add assault time tracking
+        this.lastAttackTime = millis();
+        
+        // If attacker is player but got misidentified as another type, log that
+        if (attacker.constructor && attacker.constructor.name === "Player" && !(attacker instanceof Player)) {
+            console.error(`%c[ATTACK DEBUG] CRITICAL ERROR: Player NOT recognized as Player instance!`, 'color:red; font-weight:bold;');
         }
-
-        if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
-
-        let damageDealt = 0;
-        let shieldHit = false;
-
-        // If we have shields, damage them first
-        if (this.shield > 0) {
-            // Record time of shield hit for visual effect AND recharge delay
-            this.shieldHitTime = millis();
-            this.lastShieldHitTime = millis(); // Set the recharge delay timer
-            shieldHit = true; // IMPORTANT: If shield > 0, it's ALWAYS a shield hit
-
-            if (amount <= this.shield) {
-                // Shield absorbs all damage
-                this.shield -= amount;
-                damageDealt = amount;
-            } else {
-                // Shield is depleted, remaining damage goes to hull
-                const remainingDamage = amount - this.shield;
-                damageDealt = amount;
-                this.shield = 0;
-                this.hull -= remainingDamage;
-                
-                // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
-                // Always report as a shield hit if shields absorbed ANY damage
-                shieldHit = true;
-            }
-        } else {
-            // No shields, damage hull directly
-            this.hull -= amount;
-            damageDealt = amount;
-            shieldHit = false;
+        
+        // Immediately attempt targeting update
+        const system = this.getSystem();
+        if (system) {
+            console.log(`%c[ATTACK DEBUG] Force targeting update for ${this.shipTypeName}`, 'color:orange');
+            const hadTarget = this.target !== null;
+            const targetResult = this.updateTargeting(system);
+            console.log(`%c[ATTACK DEBUG] Force targeting result: ${targetResult} (had target before: ${hadTarget})`, 'color:orange');
         }
-
-        // Handle destruction
-        if (this.hull <= 0) {
-            this.hull = 0;
-            this.destroyed = true;
-            console.log(`ENEMY DESTROYED: ${this.shipTypeName}`); // Log destruction
-
-        // --- ADD: Player Wanted Check ---
-        // Check if the attacker is the player and the system exists
-        if (attacker instanceof Player && this.currentSystem && typeof this.currentSystem.setPlayerWanted === 'function') {
-            let reason = "";
-            
-            // Check if destroyed ship was Police or civilian
-            if (this.role === AI_ROLE.POLICE) {
-                reason = "destroying Police vessel";
-                this.currentSystem.setPlayerWanted(true); // Binary wanted status
-            }
-            else if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
-                reason = "destroying civilian vessel";
-                this.currentSystem.setPlayerWanted(true); // Binary wanted status
-            }
-
-            // Log and notify UI if a reason was found
-            if (reason) {
-                console.log(`Player became wanted in ${this.currentSystem.name} for ${reason}.`);
-                if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
-                    uiManager.addMessage(`Wanted status gained: ${reason}`, [255, 100, 100]);
-                }
-            }
-        }
-        // --- END ADD ---
-
-
-            // Create a large explosion when ship is destroyed
-            if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                console.log(`   CurrentSystem valid. Explosions array length BEFORE: ${this.currentSystem.explosions?.length ?? 'N/A'}`);
-
-                // --- NEW Cascading Explosion Logic ---
-                const baseExplosionSize = this.size / 2; // Base size scales with ship
-                const numExplosions = Math.max(3, Math.min(10, 3 + Math.floor(this.size / 15))); // 3-10 explosions based on size
-                const cascadeDelay = 80; // Delay between explosions in ms
-                const explosionColor = this.role === AI_ROLE.PIRATE ?
-                    [255, 100, 30] : // Orange/Red for Pirates
-                    [255, 165, 0];  // Orange for others
-
-                console.log(`   Creating ${numExplosions} cascading explosions...`);
-
-                // Create cascading secondary explosions
-                for (let i = 0; i < numExplosions; i++) {
-                    setTimeout(() => {
-                        // Check if currentSystem still exists when timeout runs
-                        if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                            // Random offset explosions around ship
-                            const offsetX = random(-this.size * 0.8, this.size * 0.8);
-                            const offsetY = random(-this.size * 0.8, this.size * 0.8);
-                            const currentExplosionSize = baseExplosionSize * random(0.6, 1.3); // Varied sizes
-
-                            // Use the determined enemy color
-                            this.currentSystem.addExplosion(
-                                this.pos.x + offsetX,
-                                this.pos.y + offsetY,
-                                currentExplosionSize,
-                                explosionColor // Use the enemy-specific color
-                            );
-                        }
-                    }, i * cascadeDelay); // Staggered timing for cascade effect
-                }
-                // --- End NEW Logic ---
-
-
-        // CRITICAL FIX: Use the system parameter passed to update()
-        const systemForCargo = this.currentSystem || (attacker && attacker.currentSystem);
-        if (systemForCargo) {
-
-            // Use the correct system temporarily for dropping cargo
-            this.currentSystem = systemForCargo;
-            
-            // Drop cargo
-            this.dropCargo();
-            
-        }
-
-
-            } else {
-                console.log("   CurrentSystem or addExplosion invalid!"); // Log if system/function is missing
-            }
-
-            // Handle attacker-specific logic if attacker is provided
-            if (attacker instanceof Player) {
-                // Credit the player for the kill
-                if (attacker.activeMission) {
-                    // Update progress for bounty missions
-                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
-                        this.role === AI_ROLE.PIRATE) {
-                        attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                        console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                        // NOTE: Credits for the mission itself are awarded upon completion, not here.
-                    }
-                }
-            }
-        }
-
-        return { damage: damageDealt, shieldHit: shieldHit };
+    } else {
+        console.log(`%c[ATTACK DEBUG] No attacker provided!`, 'color:red');
     }
+
+    // Skip damage processing if already destroyed or no damage
+    if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
+    
+    let damageDealt = 0;
+    let shieldHit = false;
+    
+    // Shield handling
+    if (this.shield > 0) {
+        shieldHit = true;
+        this.shieldHitTime = millis();
+        this.lastShieldHitTime = millis();
+        
+        if (amount <= this.shield) {
+            // Shield absorbs all damage
+            this.shield -= amount;
+            damageDealt = amount;
+        } else {
+            // Shield is depleted, remaining damage goes to hull
+            damageDealt = this.shield;
+            const hullDamage = amount - this.shield;
+            this.shield = 0;
+            this.hull -= hullDamage;
+            damageDealt += hullDamage;
+        }
+    } else {
+        // No shields, all damage to hull
+        this.hull -= amount;
+        damageDealt = amount;
+    }
+    
+    // Check if destroyed
+    if (this.hull <= 0 && !this.destroyed) {
+        this.destroyed = true;
+        this.hull = 0;
+        
+        // Prevent corpse targeting
+        this.target = null;
+        
+        // Create explosion effect
+        const system = this.getSystem();
+        if (system) {
+            system.createExplosion(this.pos.x, this.pos.y, this.size);
+            this.dropCargo(); // Drop cargo when destroyed
+            
+            // Award credits to player if they destroyed this ship
+            if (attacker instanceof Player && system.player === attacker) {
+                const bounty = this.isWanted ? 5000 : (this.role === AI_ROLE.PIRATE ? 1000 : 500);
+                attacker.credits += bounty;
+                uiManager.addMessage(`Ship destroyed: +${bounty} credits`, '#5dfc0a');
+                
+                // Report crime if attacking non-hostile ship
+                if (this.role !== AI_ROLE.PIRATE && !this.isWanted) {
+                    system.reportCrime('murder', 50);
+                }
+            }
+        }
+    }
+    
+    // Random cargo drop chance when hit but not destroyed
+    if (!this.destroyed && this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
+        this.jettisionCargo();
+    }
+    
+    return { damage: damageDealt, shieldHit: shieldHit };
+}
 
 
     /**
