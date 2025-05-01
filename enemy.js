@@ -2399,16 +2399,17 @@ takeDamage(amount, attacker = null) {
                 attacker.credits += bounty;
                 uiManager.addMessage(`Ship destroyed: +${bounty} credits`, '#5dfc0a');
                 
-
-                if (system.setPlayerWanted) {
-                    system.setPlayerWanted(true, 3); // Set player wanted with level 3
-                    console.log(`Player marked as WANTED for destroying ${this.shipTypeName}`);
-                    uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
-                } else {
-                    // Fallback if setPlayerWanted doesn't exist
-                    if (attacker instanceof Player) {
-                        attacker.isWanted = true;
-                        console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
+                if (this.role !== AI_ROLE.PIRATE) {
+                    if (system.setPlayerWanted) {
+                        system.setPlayerWanted(true, 3); // Set player wanted with level 3
+                        console.log(`Player marked as WANTED for destroying ${this.shipTypeName}`);
+                        uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
+                    } else {
+                        // Fallback if setPlayerWanted doesn't exist
+                        if (attacker instanceof Player) {
+                            attacker.isWanted = true;
+                            console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
+                        }
                     }
                 }
             }
