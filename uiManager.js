@@ -547,12 +547,10 @@ drawPoliceMenu(player) {
     // Add "ILLEGAL" indicator for illegal goods
     if (!comm.isLegal) {
         if (isIllegalInSystem) {
-            fill(150, 50, 50); // Dark red when unavailable
-        } else {
-            fill(255, 50, 50); // Bright red when available (in Anarchy)
-        }
-        textAlign(LEFT, CENTER);
-        text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
+            textAlign(LEFT, CENTER);
+            fill(255, 0, 0);
+            text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
+        } 
     }
     
     textAlign(RIGHT, CENTER);

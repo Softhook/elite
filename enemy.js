@@ -2401,7 +2401,13 @@ takeDamage(amount, attacker = null) {
                 
                 if (this.role !== AI_ROLE.PIRATE) {
                     if (system.setPlayerWanted) {
-                        system.setPlayerWanted(true, 3); // Set player wanted with level 3
+                        
+                        //Copkiller: Set player to wanted and inform neiboring systems
+                        if (this.role === AI_ROLE.POLICE) {
+                            system.setPlayerWanted(true, 3); // Set player wanted with level 3
+                        }else {
+                            system.setPlayerWanted(true, 1); // Set player wanted with level 1
+                        }
                         console.log(`Player marked as WANTED for destroying ${this.shipTypeName}`);
                         uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
                     } else {
