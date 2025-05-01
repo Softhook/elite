@@ -2384,7 +2384,13 @@ takeDamage(amount, attacker = null) {
         // Create explosion effect
         const system = this.getSystem();
         if (system) {
-            system.createExplosion(this.pos.x, this.pos.y, this.size);
+            this.currentSystem.addExplosion(
+                this.pos.x,
+                this.pos.y,
+                this.size,
+                [100, 150, 255] // Blueish-white core
+            );
+
             this.dropCargo(); // Drop cargo when destroyed
             
             // Award credits to player if they destroyed this ship
