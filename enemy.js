@@ -402,274 +402,267 @@ class Enemy {
     // --- Role-Specific Updates ---
     // ---------------------------
     
-    /**
-     * Updates the enemy's targeting information
-     * @param {Object} system - The current star system
-     * @return {boolean} Whether a valid target was found
-     */
-    updateTargeting(system) {
-        let bestScore = TARGET_SCORE_INVALID;
-        let bestTarget = null;
-        let currentTargetScore = TARGET_SCORE_INVALID;
+/**
+ * Updates the enemy's targeting information
+ * @param {Object} system - The current star system
+ * @return {boolean} Whether a valid target was found
+ */
+updateTargeting(system) {
+    let bestScore = TARGET_SCORE_INVALID;
+    let bestTarget = null;
+    let currentTargetScore = TARGET_SCORE_INVALID;
 
-        // --- Evaluate Current Target ---
-        if (this.isTargetValid(this.target)) {
-            currentTargetScore = this.evaluateTargetScore(this.target, system);
-            bestScore = currentTargetScore;
-            bestTarget = this.target;
-        } else {
-            // Current target is invalid, reset it before evaluating others
-            this.target = null;
-        }
+    // Evaluate current target (no debug)
+    if (this.isTargetValid(this.target)) {
+        currentTargetScore = this.evaluateTargetScore(this.target, system);
+        bestScore = currentTargetScore;
+        bestTarget = this.target;
+    } else {
+        this.target = null;
+    }
 
-        // --- Evaluate Last Attacker ---
-        if (this.lastAttacker && this.lastAttacker !== bestTarget && this.isTargetValid(this.lastAttacker)) {
-            const attackerScore = this.evaluateTargetScore(this.lastAttacker, system);
-            if (attackerScore > bestScore) {
-                bestScore = attackerScore;
-                bestTarget = this.lastAttacker;
-            }
-        }
-
-        // --- Evaluate Player ---
-        // CRITICAL FIX: Try multiple ways to access player
-        const playerRef = system.player || this.target;
-        if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
-            // Force consideration of player regardless of system reference
-            const playerScore = this.evaluateTargetScore(playerRef, system);
-            console.log(`${this.shipTypeName} evaluating player: score=${playerScore}`);
-            if (playerScore > bestScore) {
-                bestScore = playerScore;
-                bestTarget = playerRef;
-            }
-        }
-        
-        // --- Evaluate Other Enemies (Potential Targets) ---
-        // Only evaluate other enemies if not Police or Hauler/Transport (unless attacked)
-        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE); // Extend this if other roles should fight each other
-        if (canTargetOtherEnemies && system.enemies) {
-            for (const otherEnemy of system.enemies) {
-                if (otherEnemy === this || otherEnemy === bestTarget || !this.isTargetValid(otherEnemy)) {
-                    continue;
-                }
-                const enemyScore = this.evaluateTargetScore(otherEnemy, system);
-                if (enemyScore > bestScore) {
-                    bestScore = enemyScore;
-                    bestTarget = otherEnemy;
-                }
-            }
-        }
-
-        // --- Evaluate Cargo (Pirates Only) ---
-        if (this.role === AI_ROLE.PIRATE && system.cargo) {
-             for (const cargoItem of system.cargo) {
-                 if (!cargoItem.collected && cargoItem !== bestTarget) {
-                     const cargoScore = this.evaluateTargetScore(cargoItem, system);
-                     if (cargoScore > bestScore) {
-                         bestScore = cargoScore;
-                         bestTarget = cargoItem;
-                     }
-                 }
-             }
-        }
-
-
-        // --- Final Decision ---
-        // Only assign a target if a score significantly above invalid was found.
-        // Using > 0 ensures only positively evaluated targets are kept.
-        if (bestTarget && bestScore > 0) {
-             // Did the target change, or did the score significantly improve?
-             const scoreThresholdForChange = 5; // Prevent rapid flipping for minor score changes
-             if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
-                 this.target = bestTarget;
-                console.log(`${this.shipTypeName} new target: ${bestTarget?.constructor?.name} ${bestTarget?.role || ''} (Score: ${bestScore.toFixed(1)})`); // Debug
-                 return true; // Target acquired or changed
-             }
-             // Keep current target if score isn't much better
-             return this.target !== null;
-
-        } else {
-             // No suitable target found or best target score is too low.
-             if (this.target !== null) {
-                 // console.log(`${this.shipTypeName} lost target or no suitable target found.`); // Debug
-                 this.target = null; // Explicitly set to null
-             }
-             return false; // No valid target
+    // Evaluate lastAttacker (no debug)
+    if (this.lastAttacker && this.lastAttacker !== bestTarget && this.isTargetValid(this.lastAttacker)) {
+        const attackerScore = this.evaluateTargetScore(this.lastAttacker, system);
+        if (attackerScore > bestScore) {
+            bestScore = attackerScore;
+            bestTarget = this.lastAttacker;
         }
     }
 
+    // Evaluate Player (with debug)
+    const playerRef = system.player || this.target;
+    if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
+        const playerScore = this.evaluateTargetScore(playerRef, system);
+        // Log all player evaluations
+        console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
+        if (playerScore > bestScore) {
+            bestScore = playerScore;
+            bestTarget = playerRef;
+        }
+    }
+    
+    // Evaluate other enemies (no debug)
+    const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE);
+    if (canTargetOtherEnemies && system.enemies) {
+        for (const otherEnemy of system.enemies) {
+            if (otherEnemy === this || otherEnemy === bestTarget || !this.isTargetValid(otherEnemy)) {
+                continue;
+            }
+            const enemyScore = this.evaluateTargetScore(otherEnemy, system);
+            if (enemyScore > bestScore) {
+                bestScore = enemyScore;
+                bestTarget = otherEnemy;
+            }
+        }
+    }
+
+    // Evaluate cargo (no debug)
+    if (this.role === AI_ROLE.PIRATE && system.cargo) {
+        for (const cargoItem of system.cargo) {
+            if (!cargoItem.collected && cargoItem !== bestTarget) {
+                const cargoScore = this.evaluateTargetScore(cargoItem, system);
+                if (cargoScore > bestScore) {
+                    bestScore = cargoScore;
+                    bestTarget = cargoItem;
+                }
+            }
+        }
+    }
+
+    // Final target decision
+    if (bestTarget && bestScore > 0) {
+        const scoreThresholdForChange = 5;
+        if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
+            this.target = bestTarget;
+            // Only debug if target is player
+            if (bestTarget instanceof Player) {
+                console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 
+                    'color:red; background-color: black; font-weight:bold;');
+            }
+            return true;
+        }
+        return this.target !== null;
+    } else {
+        if (this.target instanceof Player) {
+            console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
+        }
+        this.target = null;
+        return false;
+    }
+}
+
 /**
- * Enhanced version of evaluateTargetScore with detailed debugging
+ * Evaluates how attractive a target is for this enemy - with isolation from global scope
  * @param {Object} target - The target to evaluate
  * @param {Object} system - The current star system
  * @return {number} A score representing how attractive this target is
  */
 evaluateTargetScore(target, system) {
-    // Basic validity check
-    if (!this.isTargetValid(target) || target === this) {
-        return TARGET_SCORE_INVALID;
-    }
-
-    // DEBUG: Track what we're evaluating
-    const targetName = target instanceof Player ? "Player" : 
-                      (target.shipTypeName || target.constructor?.name || "Unknown");
-    console.log(`%c[TARGET DEBUG] ${this.shipTypeName} evaluating ${targetName}`, 'color:blue');
-    
-    let score = 0;
-    let isPotentiallyInteresting = false;
-
-    // DEBUG: Check if this is our lastAttacker
-    if (this.lastAttacker) {
-        const lastAttackerName = this.lastAttacker instanceof Player ? "Player" : 
-                               (this.lastAttacker.shipTypeName || "Unknown");
-        console.log(`%c[TARGET DEBUG] ${this.shipTypeName} has lastAttacker: ${lastAttackerName}`, 'color:blue');
-        
-        // Check if same object reference
-        const isSameReference = target === this.lastAttacker;
-        console.log(`%c[TARGET DEBUG] Target is lastAttacker? ${isSameReference}`, 'color:blue');
-        
-        // Check if both are Player type
-        const isTargetPlayer = target instanceof Player;
-        const isLastAttackerPlayer = this.lastAttacker instanceof Player;
-        if (isTargetPlayer && isLastAttackerPlayer) {
-            console.log(`%c[TARGET DEBUG] Both target and lastAttacker are Player instances`, 'color:green; font-weight:bold');
+    // Use an immediately-invoked function expression (IIFE) for complete scope isolation
+    return (function(enemy, target, system) {
+        // Basic validity check
+        if (!enemy.isTargetValid(target) || target === enemy) {
+            return TARGET_SCORE_INVALID;
         }
-    }
-    
-    // CRITICAL FIX #1: Much better attacker identification
-    const isPlayer = target instanceof Player;
-    
-    // First check direct object equality
-    let isAttacker = target === this.lastAttacker;
-    
-    // If objects don't match but both are Player instances, consider it the same attacker
-    if (!isAttacker && isPlayer && this.lastAttacker instanceof Player) {
-        isAttacker = true;  // ANY Player instance matches if lastAttacker is a Player
-        console.log(`%c[TARGET DEBUG] Player identified as lastAttacker via instanceof check`, 'color:green; font-weight:bold');
-    }
-                      
-    if (isAttacker) {
-        const bonusScore = TARGET_SCORE_RETALIATION_PIRATE;
-        score += bonusScore;
-        isPotentiallyInteresting = true;
-        console.log(`%c[TARGET DEBUG] ${this.shipTypeName} responding to attack: +${bonusScore} points`, 'color:green; font-weight:bold');
-    }
 
-    // Role-specific scoring logic
-    switch (this.role) {
-        case AI_ROLE.PIRATE:
-            // Pirates target player, haulers, and cargo
+        // Create completely private scoring variables
+        let _score = 0; 
+        let _interesting = false;
+        const isPlayer = target instanceof Player;
+        
+        if (isPlayer) {
+            console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
+        }
+        
+        // Check if target is attacker
+        let isAttacker = target === enemy.lastAttacker;
+        if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
+            isAttacker = true;
             if (isPlayer) {
-                const baseScore = 20; // Minimum score for being the player
-                score += baseScore;
-                isPotentiallyInteresting = true; // ALWAYS interesting!
-                console.log(`%c[TARGET DEBUG] Pirate base score for Player: +${baseScore}`, 'color:green');
-                
-                // Add cargo bonus if applicable (additional, not required)
-                const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
-                if (cargoAmount > 5) {
-                    const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
-                    score += cargoBonus;
-                    console.log(`%c[TARGET DEBUG] Player cargo bonus: +${cargoBonus}`, 'color:green');
-                }
-            } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
-                // Pirates target haulers/transports
-                score += TARGET_SCORE_PIRATE_PREY_HAULER;
-                isPotentiallyInteresting = true;
-                console.log(`%c[TARGET DEBUG] Pirate targeting hauler/transport: +${TARGET_SCORE_PIRATE_PREY_HAULER}`, 'color:green');
-            } else if (target.constructor && target.constructor.name === 'Cargo') {
-                // Pirates value cargo for scoring
-                score += TARGET_SCORE_PIRATE_CARGO_BASE;
-                isPotentiallyInteresting = true;
-                console.log(`%c[TARGET DEBUG] Pirate targeting cargo: +${TARGET_SCORE_PIRATE_CARGO_BASE}`, 'color:green');
+                console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
             }
-            break;
+        }
+        
+        // Add attacker bonus
+        if (isAttacker && isPlayer) {
+            _score += TARGET_SCORE_RETALIATION_PIRATE;
+            _interesting = true;
+            console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
+        } else if (isAttacker) {
+            _score += TARGET_SCORE_RETALIATION_PIRATE;
+            _interesting = true;
+        }
+        
+        // Role-specific scoring - add based on enemy role
+        switch (enemy.role) {
+            case AI_ROLE.PIRATE:
+                if (isPlayer) {
+                    _score += 20; // Base score for player
+                    _interesting = true;
+                    console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
+                    
+                    // Add cargo bonus
+                    const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
+                    if (cargoAmount > 5) {
+                        const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
+                        _score += cargoBonus;
+                        console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
+                    }
+                } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                    _score += TARGET_SCORE_PIRATE_PREY_HAULER;
+                    _interesting = true;
+                } else if (target.constructor?.name === 'Cargo') {
+                    _score += TARGET_SCORE_PIRATE_CARGO_BASE;
+                    _interesting = true;
+                }
+                break;
+                
+            case AI_ROLE.POLICE:
+                if (isPlayer && system?.isPlayerWanted()) {
+                    _score += TARGET_SCORE_BASE_WANTED;
+                    _interesting = true;
+                    console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
+                } else if (target.isWanted) {
+                    _score += TARGET_SCORE_BASE_WANTED;
+                    _interesting = true;
+                    if (target.role === AI_ROLE.PIRATE) {
+                        _score += TARGET_SCORE_WANTED_PIRATE_BONUS;
+                    }
+                }
+                break;
+                
+            case AI_ROLE.HAULER:
+            case AI_ROLE.TRANSPORT:
+                if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
+                    console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
+                    _score += TARGET_SCORE_RETALIATION_HAULER;
+                    _interesting = true;
+                    
+                    if (enemy.hull < enemy.maxHull * 0.5) {
+                        _score -= 20;
+                        console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
+                    }
+                } else if (isAttacker && !isPlayer) {
+                    _score += TARGET_SCORE_RETALIATION_HAULER;
+                    _interesting = true;
+                    if (enemy.hull < enemy.maxHull * 0.5) _score -= 20;
+                }
+                break;
+        }
+        
+        // Log before distance penalties
+        if (isPlayer) {
+            console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
+        }
+        
+        // Distance penalties - Only if interesting
+        if (_interesting) {
+            const distance = enemy.distanceTo(target);
             
-        case AI_ROLE.POLICE:
-            // Police target wanted ships with higher priority
-            if ((isPlayer && system?.isPlayerWanted()) || target.isWanted) {
-                score += TARGET_SCORE_BASE_WANTED;
-                isPotentiallyInteresting = true;
-                console.log(`%c[TARGET DEBUG] Police targeting wanted ship: +${TARGET_SCORE_BASE_WANTED}`, 'color:green');
-                
-                // Extra bonus for pirates that are wanted
-                if (target.role === AI_ROLE.PIRATE) {
-                    score += TARGET_SCORE_WANTED_PIRATE_BONUS;
-                    console.log(`%c[TARGET DEBUG] Police targeting pirate bonus: +${TARGET_SCORE_WANTED_PIRATE_BONUS}`, 'color:green');
-                }
+            // Reduced penalty for important targets
+            let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
+            if (isAttacker || isPlayer) {
+                distancePenaltyMult *= 0.5;
             }
-            break;
             
-        case AI_ROLE.HAULER:
-        case AI_ROLE.TRANSPORT:
-            // Haulers/Transports only target attackers when forced into combat
-            if (isAttacker || (isPlayer && this.forcedCombatTimer > 0)) {
-                console.log(`%c[TARGET DEBUG] ${this.shipTypeName} (${this.role}) evaluating attacker`, 'color:green');
-                score += TARGET_SCORE_RETALIATION_HAULER;
-                isPotentiallyInteresting = true;
+            // Calculate penalty with cap
+            const distancePenalty = Math.min(40, distance * distancePenaltyMult);
+            
+            // Apply penalty with protection for important targets
+            if ((isAttacker || isPlayer) && isPlayer) {
+                const minScoreAfterPenalty = 10;
+                const adjustedPenalty = Math.min(distancePenalty, Math.max(0, _score - minScoreAfterPenalty));
+                _score -= adjustedPenalty;
+                console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
+            } else {
+                _score -= distancePenalty;
+            }
+            
+            // Add hull damage bonus
+            if (target.hull !== undefined && target.maxHull !== undefined) {
+                const damagePercent = 1 - (target.hull / target.maxHull);
+                const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
+                _score += damageBonus;
                 
-                // If hull is damaged, reduce score to encourage fleeing instead
-                if (this.hull < this.maxHull * 0.5) {
-                    score -= 20;
-                    console.log(`%c[TARGET DEBUG] ${this.shipTypeName} damaged - will prefer to flee`, 'color:orange');
+                if (isPlayer && damageBonus > 0) {
+                    console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
                 }
             }
-            break;
-    }
-
-    // Apply distance penalty to score, but ensure penalties don't make interesting targets negative
-    if (isPotentiallyInteresting) {
-        const distance = this.distanceTo(target);
-        
-        // CRITICAL FIX #2: Modify distance penalty based on target type
-        // Attackers and players get reduced distance penalties
-        let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
-        if (isAttacker || isPlayer) {
-            distancePenaltyMult *= 0.5; // Half penalty for important targets
         }
         
-        // Calculate penalty with upper limit to avoid excessive penalties
-        const distancePenalty = Math.min(40, distance * distancePenaltyMult);
-        
-        // Ensure penalty doesn't make score negative for important targets
-        if (isAttacker || isPlayer) {
-            // For attackers, ensure at least 10 points remain after penalty
-            const minScoreAfterPenalty = 10;
-            const adjustedPenalty = Math.min(distancePenalty, Math.max(0, score - minScoreAfterPenalty));
-            score -= adjustedPenalty;
-            console.log(`%c[TARGET DEBUG] Limited distance penalty: -${adjustedPenalty.toFixed(1)} (original: -${distancePenalty.toFixed(1)})`, 'color:blue');
-        } else {
-            // Normal penalty for other targets
-            score -= distancePenalty;
-            console.log(`%c[TARGET DEBUG] Distance penalty: -${distancePenalty.toFixed(1)}`, 'color:blue');
+        // Safe check point - log current value
+        if (isPlayer) {
+            console.log(`%c🔍 DEBUG: Raw score before final check: ${_score}`, 'color:purple; font-weight:bold');
         }
         
-        // Apply hull damage bonus - prefer damaged targets
-        if (target.hull !== undefined && target.maxHull !== undefined) {
-            const damagePercent = 1 - (target.hull / target.maxHull);
-            const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
-            score += damageBonus;
-            console.log(`%c[TARGET DEBUG] Target damage bonus: +${damageBonus.toFixed(1)}`, 'color:green');
+        // Safety check
+        if (_score < -1000) {
+            console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
+            _score = 10;
         }
-    }
-    
-    // CRITICAL FIX #3: Reject targets with negative or too low final scores
-    if (isPotentiallyInteresting && score <= 0) {
-        console.log(`%c[TARGET DEBUG] ${targetName} became uninteresting due to negative score: ${score}`, 'color:orange');
-        isPotentiallyInteresting = false;
-    }
-    
-    // Debug final result
-    console.log(`%c[TARGET DEBUG] Final score for ${targetName}: ${score.toFixed(1)} (interesting: ${isPotentiallyInteresting})`, 
-        isPotentiallyInteresting ? 'color:green; font-weight:bold' : 'color:orange');
-    
-    // If not interesting, return invalid
-    if (!isPotentiallyInteresting) {
-        console.log(`%c[TARGET DEBUG] ${targetName} not interesting to ${this.shipTypeName}`, 'color:orange');
-        return TARGET_SCORE_INVALID;
-    }
-    
-    return score;
+        
+        // Mark uninteresting if score too low
+        if (_interesting && _score <= 0) {
+            if (isPlayer) {
+                console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
+            }
+            _interesting = false;
+        }
+        
+        // Final debug log
+        if (isPlayer) {
+            console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, 
+                _interesting ? 'color:green; font-weight:bold' : 'color:orange');
+        }
+        
+        // Return appropriate final score
+        if (!_interesting) {
+            return TARGET_SCORE_INVALID;
+        }
+        
+        return _score;
+    })(this, target, system); // Pass current context to IIFE
 }
 
     /**
@@ -1868,81 +1861,78 @@ evaluateTargetScore(target, system) {
                (isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Use constant
     }
 
-    /** 
-     * Helper: Checks conditions and calls fire() if appropriate.
-     * @param {Object} system - The current star system
-     * @param {boolean} targetExists - Whether we have a valid target
-     * @param {number} distanceToTarget - Distance to target
-     * @param {number} shootingAngle - Angle to target in radians
-     */
-    performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-        if (!targetExists) return;
-        
-        // Select best weapon for current situation
-        this.selectBestWeapon(distanceToTarget);
-        
-        // Adjust firing range based on weapon type
-        let effectiveFiringRange = this.firingRange; // Local variable for firing logic
-        if (this.currentWeapon) {
-            switch (this.currentWeapon.type) {
-                case 'beam':
-                    effectiveFiringRange *= 1.2; // Beams have longer range
-                    break;
-                case 'missile':
-                    effectiveFiringRange *= 1.3; // Missiles have even longer range
-                    break;
-                case 'turret':
-                    effectiveFiringRange *= 0.8; // Turrets have slightly shorter range
-                    break;
-            }
-        }
-        this.visualFiringRange = effectiveFiringRange; // Store the calculated range for drawing
-
-        // Enhanced firing logic with weapon-specific behaviors
-        // Uses the LOCAL effectiveFiringRange for the decision, behavior unchanged
-        if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
-            // Check if we can fire at the target
-            if (this.canFireAtTarget(shootingAngle)) {
-                if (!this.currentSystem) this.currentSystem = system; // Ensure system is set
-                
-                // Weapon-specific behavior
-                if (this.currentWeapon) {
-                    if (this.currentWeapon.type === 'turret') {
-                        // Turrets track the target
-                        this.fireWeapon(this.target);
-                    } else if (this.currentWeapon.type === 'missile' && 
-                              this.role !== AI_ROLE.POLICE && 
-                              random() < 0.7) {
-                        // Non-police ships sometimes hold missile fire to conserve ammo
-                        console.log(`${this.shipTypeName} holding missile fire to conserve ammo`);
-                    } else if (this.currentWeapon.type === 'beam' && 
-                              distanceToTarget > this.firingRange * 0.8 && 
-                              random() < 0.4) {
-                        // Sometimes hold beam fire at extreme ranges due to damage falloff
-                        console.log(`${this.shipTypeName} holding beam fire at extreme range`);
-                    } else {
-                        // Standard firing
-                        this.fireWeapon();
-                    }
-                } else {
-                    // Fallback if no weapon defined
-                    this.fireWeapon();
-                }
-                
-                // Set cooldown based on fire rate
-                this.fireCooldown = this.fireRate;
-                
-                // Add a slight movement pause after firing for more realistic combat
-                if (this.currentWeapon && this.currentWeapon.type === 'projectile' && random() < 0.3) {
-                    this.vel.mult(0.9); // Slow down slightly
-                }
-            } else if (this.currentState === AI_STATE.IDLE && targetExists && this.role === AI_ROLE.PIRATE) {
-                // Force IDLE pirates who want to fire to transition to APPROACHING
-                console.log(`IDLE ${this.shipTypeName} spotted player in range - activating!`);
-                this.changeState(AI_STATE.APPROACHING);
-            }
+/** 
+ * Checks conditions and calls fire() if appropriate.
+ * @param {Object} system - The current star system
+ * @param {boolean} targetExists - Whether we have a valid target
+ * @param {number} distanceToTarget - Distance to target
+ * @param {number} shootingAngle - Angle to target in radians
+ */
+performFiring(system, targetExists, distanceToTarget, shootingAngle) {
+    if (!targetExists) return;
+    
+    // Only debug firing decisions against player
+    const targetingPlayer = this.target instanceof Player;
+    
+    // Select best weapon (no debug)
+    this.selectBestWeapon(distanceToTarget);
+    
+    // Adjust firing range based on weapon type
+    let effectiveFiringRange = this.firingRange;
+    if (this.currentWeapon) {
+        switch (this.currentWeapon.type) {
+            case 'beam': effectiveFiringRange *= 1.2; break;
+            case 'missile': effectiveFiringRange *= 1.3; break;
+            case 'turret': effectiveFiringRange *= 0.8; break;
         }
     }
+    this.visualFiringRange = effectiveFiringRange;
+
+    // Enhanced firing logic
+    if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
+        if (this.canFireAtTarget(shootingAngle)) {
+            if (!this.currentSystem) this.currentSystem = system;
+            
+            // Player-specific targeting debug
+            if (targetingPlayer) {
+                console.log(`%c🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
+                    'color:red; font-weight:bold');
+            }
+            
+            // Weapon-specific behavior
+            if (this.currentWeapon) {
+                if (this.currentWeapon.type === 'turret') {
+                    this.fireWeapon(this.target);
+                } else if (this.currentWeapon.type === 'missile' && 
+                          this.role !== AI_ROLE.POLICE && 
+                          random() < 0.7) {
+                    // Non-police ships sometimes hold missile fire
+                    if (targetingPlayer) {
+                        console.log(`%c🔫 HOLDING FIRE: ${this.shipTypeName} conserving missiles`, 'color:blue');
+                    }
+                } else if (this.currentWeapon.type === 'beam' && 
+                          distanceToTarget > this.firingRange * 0.8 && 
+                          random() < 0.4) {
+                    // Sometimes hold beam fire at extreme ranges
+                    if (targetingPlayer) {
+                        console.log(`%c🔫 HOLDING FIRE: ${this.shipTypeName} beam ineffective at range`, 'color:blue');
+                    }
+                } else {
+                    // Standard firing
+                    this.fireWeapon();
+                }
+            } else {
+                // Fallback if no weapon defined
+                this.fireWeapon();
+            }
+            
+            this.fireCooldown = this.fireRate;
+        } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
+            // Debug when IDLE pirates spot player
+            console.log(`%c🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
+        }
+    }
+}
 
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
@@ -2332,36 +2322,25 @@ dropCargo() {
  * @return {Object} Object containing damage dealt and shield hit status
  */
 takeDamage(amount, attacker = null) {
-    // NEW DEBUG LOGGING
-    console.log(`%c[ATTACK DEBUG] ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
-    
-    if (attacker) {
-        // Log attacker details
-        const attackerName = attacker instanceof Player ? "Player" : (attacker.shipTypeName || "Unknown");
-        console.log(`%c[ATTACK DEBUG] Attacker: ${attackerName}`, 'color:red');
-        console.log(`%c[ATTACK DEBUG] Attacker object:`, 'color:red', attacker);
+    // Only debug player attacks
+    if (attacker instanceof Player) {
+        console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
         
-        // CRITICAL: Store the attacker reference
+        // Store the attacker reference
         this.lastAttacker = attacker;
-        
-        // Add assault time tracking
         this.lastAttackTime = millis();
         
-        // If attacker is player but got misidentified as another type, log that
-        if (attacker.constructor && attacker.constructor.name === "Player" && !(attacker instanceof Player)) {
-            console.error(`%c[ATTACK DEBUG] CRITICAL ERROR: Player NOT recognized as Player instance!`, 'color:red; font-weight:bold;');
-        }
-        
-        // Immediately attempt targeting update
+        // Immediately attempt targeting update for player attacks
         const system = this.getSystem();
         if (system) {
-            console.log(`%c[ATTACK DEBUG] Force targeting update for ${this.shipTypeName}`, 'color:orange');
-            const hadTarget = this.target !== null;
+            console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
             const targetResult = this.updateTargeting(system);
-            console.log(`%c[ATTACK DEBUG] Force targeting result: ${targetResult} (had target before: ${hadTarget})`, 'color:orange');
+            console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
         }
     } else {
-        console.log(`%c[ATTACK DEBUG] No attacker provided!`, 'color:red');
+        // For non-player attackers, just store the reference without debug
+        if (attacker) this.lastAttacker = attacker;
+        this.lastAttackTime = millis();
     }
 
     // Skip damage processing if already destroyed or no damage
