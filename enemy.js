@@ -2322,15 +2322,34 @@ dropCargo() {
  * @return {Object} Object containing damage dealt and shield hit status
  */
 takeDamage(amount, attacker = null) {
-    // Only debug player attacks
+    this._handleAttackerReference(attacker, amount);
+
+    // Skip damage processing if already destroyed or no damage
+    if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
+
+    const { damageDealt, shieldHit } = this._applyDamageDistribution(amount);
+
+    // Check if destroyed after applying damage
+    if (this.hull <= 0 && !this.destroyed) {
+        this._processDestruction(attacker);
+    } else {
+        // Only check for random cargo drop if not destroyed
+        this._checkRandomCargoDrop();
+    }
+
+    return { damage: damageDealt, shieldHit: shieldHit };
+}
+
+/**
+ * Internal helper: Handles attacker reference and triggers targeting update.
+ * @param {Object} attacker
+ * @param {number} amount - Damage amount for logging purposes
+ */
+_handleAttackerReference(attacker, amount) {
     if (attacker instanceof Player) {
         console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
-        
-        // Store the attacker reference
         this.lastAttacker = attacker;
         this.lastAttackTime = millis();
-        
-        // Immediately attempt targeting update for player attacks
         const system = this.getSystem();
         if (system) {
             console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
@@ -2338,105 +2357,117 @@ takeDamage(amount, attacker = null) {
             console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
         }
     } else {
-        // For non-player attackers, just store the reference without debug
         if (attacker) this.lastAttacker = attacker;
         this.lastAttackTime = millis();
     }
+}
 
-    // Skip damage processing if already destroyed or no damage
-    if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
-    
+/**
+ * Internal helper: Applies damage to shields first, then hull.
+ * Updates this.shield and this.hull directly.
+ * @param {number} amount - The incoming damage amount.
+ * @return {Object} { damageDealt, shieldHit }
+ */
+_applyDamageDistribution(amount) {
     let damageDealt = 0;
     let shieldHit = false;
-    
-    // Shield handling
+
     if (this.shield > 0) {
         shieldHit = true;
         this.shieldHitTime = millis();
         this.lastShieldHitTime = millis();
-        
+
         if (amount <= this.shield) {
             // Shield absorbs all damage
             this.shield -= amount;
             damageDealt = amount;
         } else {
             // Shield is depleted, remaining damage goes to hull
-            damageDealt = this.shield;
+            damageDealt = this.shield; // Damage absorbed by shield
             const hullDamage = amount - this.shield;
             this.shield = 0;
             this.hull -= hullDamage;
-            damageDealt += hullDamage;
+            damageDealt += hullDamage; // Total damage dealt (shield + hull)
         }
     } else {
         // No shields, all damage to hull
         this.hull -= amount;
         damageDealt = amount;
     }
-    
-    // Check if destroyed
-    if (this.hull <= 0 && !this.destroyed) {
-        this.destroyed = true;
-        this.hull = 0;
-        
-        // Prevent corpse targeting
-        this.target = null;
-        
-        // Create explosion effect
-        const system = this.getSystem();
-        if (system) {
-            this.currentSystem.addExplosion(
-                this.pos.x,
-                this.pos.y,
-                this.size,
-                [100, 150, 255] // Blueish-white core
-            );
-
-            this.dropCargo(); // Drop cargo when destroyed
-            
-            // Award credits to player if they destroyed this ship
-            if (attacker instanceof Player && system.player === attacker) {
-   
-                if (attacker.activeMission) {
-                    // Update progress for bounty missions
-                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
-                        this.role === AI_ROLE.PIRATE) {
-                        attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                        console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                        // NOTE: Credits for the mission itself are awarded upon completion, not here.
-                    }
-                }
-
-                if (this.role !== AI_ROLE.PIRATE) {
-                    if (system.setPlayerWanted) {
-                        
-                        //Copkiller: Set player to wanted and inform neiboring systems
-                        if (this.role === AI_ROLE.POLICE) {
-                            system.setPlayerWanted(true, 3); // Set player wanted with level 3
-                        }else {
-                            system.setPlayerWanted(true, 1); // Set player wanted with level 1
-                        }
-                        console.log(`Player marked as WANTED for destroying ${this.shipTypeName}`);
-                        uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
-                    } else {
-                        // Fallback if setPlayerWanted doesn't exist
-                        if (attacker instanceof Player) {
-                            attacker.isWanted = true;
-                            console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Random cargo drop chance when hit but not destroyed
-    if (!this.destroyed && this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
-        this.jettisionCargo();
-    }
-    
-    return { damage: damageDealt, shieldHit: shieldHit };
+    // Ensure hull doesn't go below zero visually before destruction check
+    this.hull = Math.max(0, this.hull);
+    return { damageDealt, shieldHit };
 }
 
+/**
+ * Internal helper: Processes the ship's destruction.
+ * Sets flags, creates effects, drops cargo, handles wanted status.
+ * @param {Object} attacker
+ */
+_processDestruction(attacker) {
+    this.destroyed = true;
+    this.hull = 0; // Ensure hull is exactly 0
+    this.target = null; // Prevent corpse targeting
+
+    const system = this.getSystem();
+    if (system) {
+        // Create explosion effect
+        this.currentSystem.addExplosion(
+            this.pos.x,
+            this.pos.y,
+            this.size,
+            [100, 150, 255] // Blueish-white core
+        );
+
+        // Drop cargo
+        this.dropCargo();
+
+        // Handle player-related consequences (mission progress, wanted status)
+        if (attacker instanceof Player && system.player === attacker) {
+            this._handlePlayerKillConsequences(attacker, system);
+        }
+    }
+}
+
+/**
+ * Internal helper: Handles mission progress and wanted status if player killed the ship.
+ * @param {Player} attacker
+ * @param {StarSystem} system
+ */
+_handlePlayerKillConsequences(attacker, system) {
+    // Update mission progress
+    if (attacker.activeMission) {
+        if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
+            this.role === AI_ROLE.PIRATE) {
+            attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+            console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+        }
+    }
+
+    // Set player wanted status if a non-pirate was destroyed
+    if (this.role !== AI_ROLE.PIRATE) {
+        if (system.setPlayerWanted) {
+            const wantedLevel = (this.role === AI_ROLE.POLICE) ? 3 : 1;
+            system.setPlayerWanted(true, wantedLevel);
+            console.log(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);
+            uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
+        } else {
+            // Fallback if setPlayerWanted doesn't exist
+            attacker.isWanted = true;
+            console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
+        }
+    }
+}
+
+/**
+ * Internal helper: Checks and potentially jettisons cargo on non-fatal hits.
+ */
+_checkRandomCargoDrop() {
+    // Random cargo drop chance when hit but not destroyed
+    if (this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
+        this.jettisionCargo();
+    }
+}
 
     /**
      * Checks if ship has been destroyed
