@@ -287,26 +287,84 @@ class StarSystem {
         }
         // --- End Jump Zone Calculation ---
 
-        // --- Generate Nebulae ---
-        try {
-            if (random() < 0.4) { // 40% chance of having a nebula
-                const nebulaCount = floor(random(1, 3));
-                const nebulaTypes = ['ion', 'radiation', 'emp'];
+// --- Generate Nebulae ---
+try {
+    if (random() < 1) { // 40% chance of having a nebula in the system
+        const nebulaCount = floor(random(1, 3));
+        const nebulaTypes = ['ion', 'radiation', 'emp'];
+        
+        // Only proceed if we have valid reference points
+        if (this.station && this.station.pos && this.jumpZoneCenter) {
+            // Calculate midpoint between station and jump zone
+            const midX = (this.station.pos.x + this.jumpZoneCenter.x) / 2;
+            const midY = (this.station.pos.y + this.jumpZoneCenter.y) / 2;
+            
+            // Define possible nebula positions with weighted distribution
+            const possiblePositions = [
+                { x: this.station.pos.x, y: this.station.pos.y, type: 'near_station', weight: 0.25 },
+                { x: this.jumpZoneCenter.x, y: this.jumpZoneCenter.y, type: 'near_jump', weight: 0.25 },
+                { x: midX, y: midY, type: 'midway', weight: 0.5 }
+            ];
+            
+            for (let i = 0; i < nebulaCount; i++) {
+                // Choose position based on weights
+                const roll = random();
+                let targetPos;
+                let cumulativeWeight = 0;
                 
-                for (let i = 0; i < nebulaCount; i++) {
-                    const angle = random(TWO_PI);
-                    const distance = random(3000, this.despawnRadius * 0.8);
-                    const nebulaRadius = random(1000, 3000);
-                    
-                    this.nebulae.push(new Nebula(
-                        cos(angle) * distance,
-                        sin(angle) * distance,
-                        nebulaRadius,
-                        random(nebulaTypes)
-                    ));
+                for (const pos of possiblePositions) {
+                    cumulativeWeight += pos.weight;
+                    if (roll < cumulativeWeight) {
+                        targetPos = pos;
+                        break;
+                    }
                 }
+                
+                // If no position selected (shouldn't happen), use midway
+                if (!targetPos) targetPos = possiblePositions[2];
+                
+                // Add randomness to exact position (avoid direct overlap)
+                const offsetDist = targetPos.type === 'midway' ? 800 : 1500;
+                const offsetAngle = random(TWO_PI);
+                const x = targetPos.x + cos(offsetAngle) * random(300, offsetDist);
+                const y = targetPos.y + sin(offsetAngle) * random(300, offsetDist);
+                
+                // Choose nebula type based on position
+                let nebulaType;
+                if (targetPos.type === 'near_station') {
+                    // EMP more common near stations (disable weapons)
+                    nebulaType = random() < 0.6 ? 'emp' : random(nebulaTypes);
+                } else if (targetPos.type === 'near_jump') {
+                    // Ion more common near jump points (disable shields)
+                    nebulaType = random() < 0.6 ? 'ion' : random(nebulaTypes);
+                } else {
+                    // Random type in midway areas
+                    nebulaType = random(nebulaTypes);
+                }
+                
+                // Size varies by position
+                const nebulaRadius = targetPos.type === 'midway' 
+                    ? random(1500, 3000)  // Larger in midway
+                    : random(800, 2000);  // Smaller near facilities
+                
+                this.nebulae.push(new Nebula(x, y, nebulaRadius, nebulaType));
+                console.log(`Nebula (${nebulaType}) positioned near ${targetPos.type}`);
             }
-        } catch(e) { console.error("Error generating nebulae:", e); }
+        } else {
+            // Fallback to random placement if no reference points
+            for (let i = 0; i < nebulaCount; i++) {
+                const angle = random(TWO_PI);
+                const distance = random(3000, this.despawnRadius * 0.8);
+                this.nebulae.push(new Nebula(
+                    cos(angle) * distance,
+                    sin(angle) * distance,
+                    random(1000, 3000),
+                    random(nebulaTypes)
+                ));
+            }
+        }
+    }
+} catch(e) { console.error("Error generating nebulae:", e); }
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         randomSeed(); // Reset to non-deterministic (time-based) random
