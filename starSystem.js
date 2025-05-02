@@ -127,6 +127,10 @@ class StarSystem {
         // Optionally track wanted level and expiration time
         this.playerWantedLevel = 0; // 0-5 scale
         this.playerWantedExpiry = null; // Timestamp when wanted status expires
+
+        // Initialize new arrays for nebulae, cosmic storms, and asteroid fields
+        this.nebulae = [];
+        this.cosmicStorms = [];
     }
 
     /**
@@ -282,6 +286,27 @@ class StarSystem {
              console.log(`         Jump Zone for ${this.name} loaded from save data.`);
         }
         // --- End Jump Zone Calculation ---
+
+        // --- Generate Nebulae ---
+        try {
+            if (random() < 0.4) { // 40% chance of having a nebula
+                const nebulaCount = floor(random(1, 3));
+                const nebulaTypes = ['ion', 'radiation', 'emp'];
+                
+                for (let i = 0; i < nebulaCount; i++) {
+                    const angle = random(TWO_PI);
+                    const distance = random(3000, this.despawnRadius * 0.8);
+                    const nebulaRadius = random(1000, 3000);
+                    
+                    this.nebulae.push(new Nebula(
+                        cos(angle) * distance,
+                        sin(angle) * distance,
+                        nebulaRadius,
+                        random(nebulaTypes)
+                    ));
+                }
+            }
+        } catch(e) { console.error("Error generating nebulae:", e); }
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         randomSeed(); // Reset to non-deterministic (time-based) random
@@ -717,6 +742,51 @@ class StarSystem {
                 }
             }
 
+            // Update nebulae
+            for (let nebula of this.nebulae) {
+                nebula.update();
+                
+                // Apply effects to player
+                if (this.player) {
+                    nebula.applyEffects(this.player);
+                }
+                
+                // Apply effects to enemies
+                for (let enemy of this.enemies) {
+                    nebula.applyEffects(enemy);
+                }
+            }
+
+            // Update cosmic storms (they move)
+            for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
+                const storm = this.cosmicStorms[i];
+                storm.update();
+                
+                // Apply effects to player and enemies
+                if (this.player) {
+                    storm.applyEffects(this.player);
+                }
+                
+                for (let enemy of this.enemies) {
+                    storm.applyEffects(enemy);
+                }
+                
+                // Occasionally spawn new storms
+                if (random() < 0.0002) {
+                    const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
+                    const angle = random(TWO_PI);
+                    const distance = this.despawnRadius * 0.7;
+                    
+                    this.cosmicStorms.push(new CosmicStorm(
+                        this.player.pos.x + cos(angle) * distance,
+                        this.player.pos.y + sin(angle) * distance,
+                        random(600, 1200),
+                        stormType
+                    ));
+                }
+            }
+
+
             // Collision Checks
             this.checkCollisions();
             this.checkProjectileCollisions(); // Added call to new method
@@ -1127,6 +1197,15 @@ class StarSystem {
         this.drawJumpZone(this.player.pos);
         // ---
 
+        // Draw nebulae (draw first for background effect)
+        for (let nebula of this.nebulae) {
+            nebula.draw(screenBounds);
+        }
+
+        // Draw cosmic storms (after nebulae but before ships)
+        for (let storm of this.cosmicStorms) {
+            storm.draw(screenBounds);
+        }
         // Draw station only if visible
         if (this.station && 
             this.isInView(this.station.pos.x, this.station.pos.y, 

@@ -1823,6 +1823,11 @@ evaluateTargetScore(target, system) {
  * @param {number} shootingAngle - Angle to target in radians
  */
 performFiring(system, targetExists, distanceToTarget, shootingAngle) {
+    if (this.weaponsDisabled) {
+        // Skip firing when weapons are disabled
+        return;
+    }
+
     if (!targetExists) return;
     
     // Only debug firing decisions against player
@@ -2073,7 +2078,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         pop(); // End Ship Drawing Block
 
         // --- Draw Shield Effect (Separate transformation) ---
-        if (!this.destroyed && this.shield > 0) {
+        if (!this.destroyed && this.shield > 0 && !this.shieldsDisabled) {
             push(); // Isolate shield drawing
             translate(this.pos.x, this.pos.y); // Translate to ship center
 
@@ -2337,7 +2342,8 @@ _applyDamageDistribution(amount) {
     let damageDealt = 0;
     let shieldHit = false;
 
-    if (this.shield > 0) {
+    // Skip shield check entirely if shields are disabled
+    if (this.shield > 0 && !this.shieldsDisabled) {
         shieldHit = true;
         this.shieldHitTime = millis();
         this.lastShieldHitTime = millis();

@@ -20,6 +20,12 @@ class CosmicStorm {
         
         // Initialize particles
         this.initParticles();
+        
+        // Add debug properties
+        this.debug = false;
+        this.affectedEntities = new Set();
+        this.lastEffectTime = 0;
+        this.effectCount = 0;
     }
     
     getColorByType() {
@@ -199,6 +205,43 @@ class CosmicStorm {
             }
         }
         
+        // Add debug visualization if enabled
+        if (this.debug) {
+            // Draw effect boundary
+            strokeWeight(2);
+            stroke(255, 0, 0, 100);
+            noFill();
+            ellipse(this.pos.x, this.pos.y, this.radius * 2);
+            
+            // Draw direction vector
+            stroke(255, 0, 0);
+            line(
+                this.pos.x, 
+                this.pos.y,
+                this.pos.x + this.velocity.x * 50,
+                this.pos.y + this.velocity.y * 50
+            );
+            
+            // Draw debug text
+            fill(255);
+            noStroke();
+            textSize(16);
+            textAlign(CENTER);
+            text(`${this.type} storm`, this.pos.x, this.pos.y - this.radius - 20);
+            text(`Effects: ${this.effectCount}`, this.pos.x, this.pos.y - this.radius - 40);
+            text(`Affected: ${this.affectedEntities.size}`, this.pos.x, this.pos.y - this.radius - 60);
+            
+            // Draw connection lines to affected entities
+            stroke(255, 0, 0, 100);
+            strokeWeight(1);
+            for (let entityId of this.affectedEntities) {
+                let entity = this.findEntityById(entityId);
+                if (entity && entity.pos) {
+                    line(this.pos.x, this.pos.y, entity.pos.x, entity.pos.y);
+                }
+            }
+        }
+        
         pop();
     }
     
@@ -218,31 +261,113 @@ class CosmicStorm {
         
         // Calculate distance from entity to storm center
         const dist = p5.Vector.dist(entity.pos, this.pos);
+        const entityId = entity.id || (entity instanceof Player ? 'player' : Date.now());
         
-        if (dist <= this.radius) {
-            const effectStrength = map(dist, 0, this.radius, 1, 0) * this.intensity;
+        if (dist > this.radius) {
+            // If entity was previously affected but is now out of range, remove from tracking
+            if (this.affectedEntities.has(entityId)) {
+                this.affectedEntities.delete(entityId);
+                
+                // Reset effect flags
+                if (this.type === 'electromagnetic') entity.targetingDisruption = 0;
+                
+                if (this.debug) {
+                    console.log(`Entity ${entityId} left ${this.type} storm`);
+                }
+            }
+            return;
+        }
+        
+        // Entity is in storm range
+        const effectStrength = map(dist, 0, this.radius, 1, 0) * this.intensity;
+        
+        // Add to affected entities list for debugging
+        if (!this.affectedEntities.has(entityId)) {
+            this.affectedEntities.add(entityId);
+            if (this.debug) {
+                console.log(`Entity ${entityId} entered ${this.type} storm`);
+            }
             
-            switch (this.type) {
-                case 'electromagnetic':
-                    // Temporarily disrupt targeting systems
-                    entity.targetingDisruption = effectStrength;
-                    break;
-                    
-                case 'gravitational':
-                    // Pull ship toward center
-                    const pull = p5.Vector.sub(this.pos, entity.pos);
-                    pull.normalize().mult(effectStrength * 0.2);
-                    entity.vel.add(pull);
-                    break;
-                    
-                case 'radiation':
-                    // Damage shields/hull over time
-                    if (random() < 0.03 * effectStrength) {
-                        const damage = random(1, 3) * effectStrength;
-                        entity.takeDamage(damage);
-                    }
-                    break;
+            // Show UI message if it's the player
+            if (entity instanceof Player) {
+                let message = '';
+                switch(this.type) {
+                    case 'electromagnetic': message = "Warning: Electromagnetic storm disrupting targeting!"; break;
+                    case 'gravitational': message = "Caution: Gravitational storm affecting navigation!"; break;
+                    case 'radiation': message = "Alert: Radiation storm causing hull damage!"; break;
+                }
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(message, '#ff0000');
+                }
             }
         }
+        
+        // Apply type-specific effects
+        switch (this.type) {
+            case 'electromagnetic':
+                // Temporarily disrupt targeting systems
+                entity.targetingDisruption = effectStrength;
+                if (this.debug && entity instanceof Player) {
+                    console.log(`Targeting disruption: ${effectStrength.toFixed(2)}`);
+                }
+                break;
+                
+            case 'gravitational':
+                // Pull ship toward center
+                const pull = p5.Vector.sub(this.pos, entity.pos);
+                pull.normalize().mult(effectStrength * 0.2);
+                entity.vel.add(pull);
+                
+                if (this.debug && random() < 0.05) {
+                    console.log(`Gravitational pull: ${effectStrength.toFixed(2)}`);
+                }
+                break;
+                
+            case 'radiation':
+                // Damage shields/hull over time
+                if (random() < 0.03 * effectStrength) {
+                    const damage = random(1, 3) * effectStrength;
+                    entity.takeDamage(damage);
+                    this.effectCount++;
+                    
+                    if (this.debug) {
+                        console.log(`Radiation damage: ${damage.toFixed(1)} to ${entityId}`);
+                    }
+                }
+                break;
+        }
+        
+        // Add visual effect on entity if it's the player and debug is on
+        if (this.debug && entity instanceof Player) {
+            // In the player.draw() method, we'd implement a way to show these effects
+            entity.stormEffect = {
+                type: this.type,
+                strength: effectStrength
+            };
+        }
+    }
+    
+    // Helper method to find entity by ID in the system
+    findEntityById(id) {
+        if (!window.gameStateManager || !gameStateManager.activeSystem) return null;
+        const system = gameStateManager.activeSystem;
+        
+        if (id === 'player') return system.player;
+        
+        // Search in enemies
+        if (system.enemies) {
+            for (let enemy of system.enemies) {
+                if (enemy.id === id) return enemy;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Add this new method
+    toggleDebug() {
+        this.debug = !this.debug;
+        console.log(`Storm ${this.type} debug mode: ${this.debug ? 'ON' : 'OFF'}`);
+        return this.debug;
     }
 }

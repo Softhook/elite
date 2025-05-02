@@ -506,6 +506,21 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Fires the current weapon based on its type using WeaponSystem. */
     fireWeapon(target = null) {
+   
+        // Check if weapons are disabled by EMP nebula
+    if (this.weaponsDisabled) {
+        console.log("Weapons disabled by EMP nebula!");
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Weapons disabled by EMP field!", "#ff0000");
+        }
+        // Play error sound if available
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('error');
+        }
+        return false; // Prevent firing
+    }
+
+
         if (!this.currentWeapon || !this.currentSystem) return;
         WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
 
@@ -585,7 +600,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         pop();
 
         // Draw shield effect with improved visuals
-        if (this.shield > 0) {
+        if (this.shield > 0 && !this.shieldsDisabled) {
             push();
             translate(this.pos.x, this.pos.y);
             
