@@ -383,15 +383,15 @@ class MissionGenerator {
             cargoType: cargo, cargoQuantity: quantity, rewardCredits: reward, isIllegal: true
         });
     }
-
+    
     /** Creates a Bounty Hunting Mission - maybe target specific ship types? */
-     static createBountyMission(originSystem, originStation, galaxy, player) {
+    static createBountyMission(originSystem, originStation, galaxy, player) {
         // Still local for now
         let targetCount = floor(random(2, 6));
-        let rewardPerKill = floor(random(150, 400));
-        // Slightly higher reward in High Sec maybe?
-        if (originSystem.securityLevel === 'High') rewardPerKill *= 1.2;
-        else if (originSystem.securityLevel === 'Low' || originSystem.securityLevel === 'Anarchy') rewardPerKill *= 0.8;
+        // Note: rewardPerKill is calculated but not used in the final reward calculation below.
+        // let rewardPerKill = floor(random(150, 400));
+         if (originSystem.securityLevel === 'High') rewardPerKill *= 1.2;
+         else if (originSystem.securityLevel === 'Low' || originSystem.securityLevel === 'Anarchy') rewardPerKill *= 0.8;
 
         const baseBountyPerShip = 150;
         const techLevelBonus = (originSystem.techLevel || 5) * 10;
@@ -406,7 +406,11 @@ class MissionGenerator {
             description: `Pirate activity in ${originSystem.name} requires intervention. Eliminate ${targetCount} pirate vessels operating within this system. Payment issued upon completion.`,
             originSystem: originSystem.name, originStation: originStation.name,
             destinationSystem: null, destinationStation: null, // Local mission
-            targetDesc: `${targetCount} Pirate vessels`, targetCount: targetCount, rewardCredits: reward, isIllegal: false,
+            targetDesc: `${targetCount} Pirate vessels`,
+            targetCount: targetCount,
+            rewardCredits: reward,
+            isIllegal: false,
+            progressCount: 0 // Explicitly set progress to 0 on creation
         });
      }
 
