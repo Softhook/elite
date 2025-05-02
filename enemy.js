@@ -41,8 +41,8 @@ const POLICE_WANTED_BASE_SCORE = 100;
 const PIRATE_CARGO_BASE_SCORE = 30;
 const PIRATE_CARGO_MULT = 1.5;
 const RETALIATION_SCORE_BONUS = 60;
-const FLEE_THRUST_MULT_TRANSPORT = 1.8;
-const FLEE_THRUST_MULT_DEFAULT = 1.5;
+const FLEE_THRUST_MULT_TRANSPORT = 1.4;
+const FLEE_THRUST_MULT_DEFAULT = 1.2;
 const FLEE_MIN_DURATION_MS = 2000;
 const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
 const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
@@ -226,7 +226,7 @@ class Enemy {
             if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
         }
 
-        console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
+        //console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
 
         // Initialize thrust manager
@@ -435,7 +435,7 @@ updateTargeting(system) {
     if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
         const playerScore = this.evaluateTargetScore(playerRef, system);
         // Log all player evaluations
-        console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
+        //console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
         if (playerScore > bestScore) {
             bestScore = playerScore;
             bestTarget = playerRef;
@@ -477,15 +477,14 @@ updateTargeting(system) {
             this.target = bestTarget;
             // Only debug if target is player
             if (bestTarget instanceof Player) {
-                console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 
-                    'color:red; background-color: black; font-weight:bold;');
+                //console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 'color:red; background-color: black; font-weight:bold;');
             }
             return true;
         }
         return this.target !== null;
     } else {
         if (this.target instanceof Player) {
-            console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
+            //console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
         }
         this.target = null;
         return false;
@@ -512,7 +511,7 @@ evaluateTargetScore(target, system) {
         const isPlayer = target instanceof Player;
         
         if (isPlayer) {
-            console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
+            //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
         }
         
         // Check if target is attacker
@@ -520,7 +519,7 @@ evaluateTargetScore(target, system) {
         if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
             isAttacker = true;
             if (isPlayer) {
-                console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
+                //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
             }
         }
         
@@ -528,7 +527,7 @@ evaluateTargetScore(target, system) {
         if (isAttacker && isPlayer) {
             _score += TARGET_SCORE_RETALIATION_PIRATE;
             _interesting = true;
-            console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
+            //console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
         } else if (isAttacker) {
             _score += TARGET_SCORE_RETALIATION_PIRATE;
             _interesting = true;
@@ -540,14 +539,14 @@ evaluateTargetScore(target, system) {
                 if (isPlayer) {
                     _score += 20; // Base score for player
                     _interesting = true;
-                    console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
+                    //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
                     
                     // Add cargo bonus
                     const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
                     if (cargoAmount > 5) {
                         const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                         _score += cargoBonus;
-                        console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
+                        //console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
                     }
                 } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                     _score += TARGET_SCORE_PIRATE_PREY_HAULER;
@@ -562,7 +561,7 @@ evaluateTargetScore(target, system) {
                 if (isPlayer && system?.isPlayerWanted()) {
                     _score += TARGET_SCORE_BASE_WANTED;
                     _interesting = true;
-                    console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
+                    //console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
                 } else if (target.isWanted) {
                     _score += TARGET_SCORE_BASE_WANTED;
                     _interesting = true;
@@ -575,13 +574,13 @@ evaluateTargetScore(target, system) {
             case AI_ROLE.HAULER:
             case AI_ROLE.TRANSPORT:
                 if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
-                    console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
-                    _score += TARGET_SCORE_RETALIATION_HAULER;
+                    //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
+            _score += TARGET_SCORE_RETALIATION_HAULER;
                     _interesting = true;
                     
                     if (enemy.hull < enemy.maxHull * 0.5) {
                         _score -= 20;
-                        console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
+                        //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
                     }
                 } else if (isAttacker && !isPlayer) {
                     _score += TARGET_SCORE_RETALIATION_HAULER;
@@ -593,7 +592,7 @@ evaluateTargetScore(target, system) {
         
         // Log before distance penalties
         if (isPlayer) {
-            console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
+            //console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
         }
         
         // Distance penalties - Only if interesting
@@ -614,7 +613,7 @@ evaluateTargetScore(target, system) {
                 const minScoreAfterPenalty = 10;
                 const adjustedPenalty = Math.min(distancePenalty, Math.max(0, _score - minScoreAfterPenalty));
                 _score -= adjustedPenalty;
-                console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
+                //console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
             } else {
                 _score -= distancePenalty;
             }
@@ -626,34 +625,28 @@ evaluateTargetScore(target, system) {
                 _score += damageBonus;
                 
                 if (isPlayer && damageBonus > 0) {
-                    console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
+                    //console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
                 }
             }
         }
         
-        // Safe check point - log current value
-        if (isPlayer) {
-            console.log(`%c🔍 DEBUG: Raw score before final check: ${_score}`, 'color:purple; font-weight:bold');
-        }
-        
         // Safety check
         if (_score < -1000) {
-            console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
+            //console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
             _score = 10;
         }
         
         // Mark uninteresting if score too low
         if (_interesting && _score <= 0) {
             if (isPlayer) {
-                console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
+                //console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
             }
             _interesting = false;
         }
         
         // Final debug log
         if (isPlayer) {
-            console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, 
-                _interesting ? 'color:green; font-weight:bold' : 'color:orange');
+            //console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, _interesting ? 'color:green; font-weight:bold' : 'color:orange');
         }
         
         // Return appropriate final score
@@ -1139,7 +1132,7 @@ evaluateTargetScore(target, system) {
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
                     this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
-                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
+                    if (//uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
                     
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
                     this.updateCombatAI(system);
@@ -1359,7 +1352,7 @@ evaluateTargetScore(target, system) {
                 this.previousRoutePoints = this.routePoints ? [...this.routePoints] : null;
                 this.previousRouteIndex = this.currentRouteIndex;
 
-                console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
+                //console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
                 this.target = this.lastAttacker; // Set attacker as target to flee from
                 this.changeState(AI_STATE.FLEEING);
                 if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
@@ -2029,7 +2022,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
             let targetLabel = "None"; // Default
 
-            // --- State-Based Target Labeling (for non-combat roles) ---
+            // State-based target labeling for non-combat roles
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
                 // Check if patrol target is the station
                 if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
@@ -2075,7 +2068,8 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             const system = this.getSystem();
 
             
-            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
+            //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
+            let label = `${shipDef?.name}  Target: ${targetLabel}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
@@ -2347,14 +2341,14 @@ takeDamage(amount, attacker = null) {
  */
 _handleAttackerReference(attacker, amount) {
     if (attacker instanceof Player) {
-        console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
+        //console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
         this.lastAttacker = attacker;
         this.lastAttackTime = millis();
         const system = this.getSystem();
         if (system) {
-            console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
+            //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
             const targetResult = this.updateTargeting(system);
-            console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
+            //console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
         }
     } else {
         if (attacker) this.lastAttacker = attacker;
@@ -2524,7 +2518,7 @@ _checkRandomCargoDrop() {
         this.currentState = newState;
         
         // Log state changes with informative context
-        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
+        //console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);

@@ -668,7 +668,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             if (amount <= this.shield) {
                 // Shield absorbs all damage
                 this.shield -= amount;
-                uiManager.addMessage(`Shield damage: ${amount.toFixed(1)}`);
+                //uiManager.addMessage(`Shield damage: ${amount.toFixed(1)}`);
                 return { damage: amount, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
