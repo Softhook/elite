@@ -984,12 +984,12 @@ if (isIllegalInSystem || isMissionCargo) {
             if (isCurrent) {
                  // Current system: Thick White Outline (Stroke only)
                  nodeStrokeColor = color(255); // White stroke
-                 nodeStrokeWeight = 4;         // Make it thick
+                 nodeStrokeWeight = 3;         // Make it thick
                  // Fill color and text color are already set above
             } else if (canJump && isReachable) {
                  // If player CAN jump and system IS reachable: White Outline (slightly thicker)
                  nodeStrokeColor = color(255); // White outline
-                 nodeStrokeWeight = 2;         // Slightly thicker outline
+                 nodeStrokeWeight = 1;         // Slightly thicker outline
                  if (sysData.visited) textColor = color(255); // Bright text if visited
             } else if (!canJump && isReachable) {
                  // If player CANNOT jump but system IS reachable: Dimmed appearance
@@ -1160,7 +1160,7 @@ if (isIllegalInSystem || isMissionCargo) {
 
         fill(255, 60, 60);
         textAlign(CENTER, CENTER);
-        textSize(48);
+        textSize(50);
         text("GAME OVER", width / 2, height / 2 - 40);
 
         fill(255);

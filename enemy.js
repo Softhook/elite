@@ -41,8 +41,8 @@ const POLICE_WANTED_BASE_SCORE = 100;
 const PIRATE_CARGO_BASE_SCORE = 30;
 const PIRATE_CARGO_MULT = 1.5;
 const RETALIATION_SCORE_BONUS = 60;
-const FLEE_THRUST_MULT_TRANSPORT = 1.8;
-const FLEE_THRUST_MULT_DEFAULT = 1.5;
+const FLEE_THRUST_MULT_TRANSPORT = 1.4;
+const FLEE_THRUST_MULT_DEFAULT = 1.2;
 const FLEE_MIN_DURATION_MS = 2000;
 const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
 const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
@@ -226,7 +226,7 @@ class Enemy {
             if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
         }
 
-        console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
+        //console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
 
         // Initialize thrust manager
@@ -435,7 +435,7 @@ updateTargeting(system) {
     if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
         const playerScore = this.evaluateTargetScore(playerRef, system);
         // Log all player evaluations
-        console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
+        //console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
         if (playerScore > bestScore) {
             bestScore = playerScore;
             bestTarget = playerRef;
@@ -477,15 +477,14 @@ updateTargeting(system) {
             this.target = bestTarget;
             // Only debug if target is player
             if (bestTarget instanceof Player) {
-                console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 
-                    'color:red; background-color: black; font-weight:bold;');
+                //console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 'color:red; background-color: black; font-weight:bold;');
             }
             return true;
         }
         return this.target !== null;
     } else {
         if (this.target instanceof Player) {
-            console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
+            //console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
         }
         this.target = null;
         return false;
@@ -512,7 +511,7 @@ evaluateTargetScore(target, system) {
         const isPlayer = target instanceof Player;
         
         if (isPlayer) {
-            console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
+            //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
         }
         
         // Check if target is attacker
@@ -520,7 +519,7 @@ evaluateTargetScore(target, system) {
         if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
             isAttacker = true;
             if (isPlayer) {
-                console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
+                //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
             }
         }
         
@@ -528,7 +527,7 @@ evaluateTargetScore(target, system) {
         if (isAttacker && isPlayer) {
             _score += TARGET_SCORE_RETALIATION_PIRATE;
             _interesting = true;
-            console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
+            //console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
         } else if (isAttacker) {
             _score += TARGET_SCORE_RETALIATION_PIRATE;
             _interesting = true;
@@ -540,14 +539,14 @@ evaluateTargetScore(target, system) {
                 if (isPlayer) {
                     _score += 20; // Base score for player
                     _interesting = true;
-                    console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
+                    //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
                     
                     // Add cargo bonus
                     const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
                     if (cargoAmount > 5) {
                         const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                         _score += cargoBonus;
-                        console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
+                        //console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
                     }
                 } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                     _score += TARGET_SCORE_PIRATE_PREY_HAULER;
@@ -562,7 +561,7 @@ evaluateTargetScore(target, system) {
                 if (isPlayer && system?.isPlayerWanted()) {
                     _score += TARGET_SCORE_BASE_WANTED;
                     _interesting = true;
-                    console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
+                    //console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
                 } else if (target.isWanted) {
                     _score += TARGET_SCORE_BASE_WANTED;
                     _interesting = true;
@@ -575,13 +574,13 @@ evaluateTargetScore(target, system) {
             case AI_ROLE.HAULER:
             case AI_ROLE.TRANSPORT:
                 if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
-                    console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
-                    _score += TARGET_SCORE_RETALIATION_HAULER;
+                    //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
+            _score += TARGET_SCORE_RETALIATION_HAULER;
                     _interesting = true;
                     
                     if (enemy.hull < enemy.maxHull * 0.5) {
                         _score -= 20;
-                        console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
+                        //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
                     }
                 } else if (isAttacker && !isPlayer) {
                     _score += TARGET_SCORE_RETALIATION_HAULER;
@@ -593,7 +592,7 @@ evaluateTargetScore(target, system) {
         
         // Log before distance penalties
         if (isPlayer) {
-            console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
+            //console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
         }
         
         // Distance penalties - Only if interesting
@@ -614,7 +613,7 @@ evaluateTargetScore(target, system) {
                 const minScoreAfterPenalty = 10;
                 const adjustedPenalty = Math.min(distancePenalty, Math.max(0, _score - minScoreAfterPenalty));
                 _score -= adjustedPenalty;
-                console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
+                //console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
             } else {
                 _score -= distancePenalty;
             }
@@ -626,34 +625,28 @@ evaluateTargetScore(target, system) {
                 _score += damageBonus;
                 
                 if (isPlayer && damageBonus > 0) {
-                    console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
+                    //console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
                 }
             }
         }
         
-        // Safe check point - log current value
-        if (isPlayer) {
-            console.log(`%c🔍 DEBUG: Raw score before final check: ${_score}`, 'color:purple; font-weight:bold');
-        }
-        
         // Safety check
         if (_score < -1000) {
-            console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
+            //console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
             _score = 10;
         }
         
         // Mark uninteresting if score too low
         if (_interesting && _score <= 0) {
             if (isPlayer) {
-                console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
+                //console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
             }
             _interesting = false;
         }
         
         // Final debug log
         if (isPlayer) {
-            console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, 
-                _interesting ? 'color:green; font-weight:bold' : 'color:orange');
+            //console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, _interesting ? 'color:green; font-weight:bold' : 'color:orange');
         }
         
         // Return appropriate final score
@@ -1139,7 +1132,7 @@ evaluateTargetScore(target, system) {
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
                     this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
-                    if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
+                    //if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
                     
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
                     this.updateCombatAI(system);
@@ -1359,7 +1352,7 @@ evaluateTargetScore(target, system) {
                 this.previousRoutePoints = this.routePoints ? [...this.routePoints] : null;
                 this.previousRouteIndex = this.currentRouteIndex;
 
-                console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
+                //console.log(`Transport ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
                 this.target = this.lastAttacker; // Set attacker as target to flee from
                 this.changeState(AI_STATE.FLEEING);
                 if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
@@ -2029,7 +2022,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
             let targetLabel = "None"; // Default
 
-            // --- State-Based Target Labeling (for non-combat roles) ---
+            // State-based target labeling for non-combat roles
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
                 // Check if patrol target is the station
                 if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
@@ -2075,7 +2068,8 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             const system = this.getSystem();
 
             
-            let label = `${this.role} | ${stateKey} | Target: ${targetLabel}`;
+            //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
+            let label = `${shipDef?.name}  Target: ${targetLabel}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
@@ -2185,41 +2179,94 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     // ------------------
     // --- Cargo Handling ---
     // ------------------
-    
+
     /**
-     * Jettisons a single piece of cargo when hit
+     * Internal helper: Handles spawning cargo based on context (jettison or destruction).
+     * Calculates parameters, creates the Cargo object, and calls system.addCargo().
+     * @param {'jettison' | 'destruction'} context - The reason for spawning cargo.
+     * @returns {boolean} True if cargo was spawned successfully, false otherwise.
      */
-    jettisionCargo() {
-        if (!this.currentSystem) return;
-        
-        // Get cargo types for this ship
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
-        
-        // Select a random cargo type and create it
-        const cargoType = random(shipDef.typicalCargo);
-        
-        // Calculate a position slightly offset from the ship
-        const offsetAngle = random(TWO_PI);
-        const offsetDist = this.size * 0.6;
-        const offsetX = this.pos.x + cos(offsetAngle) * offsetDist;
-        const offsetY = this.pos.y + sin(offsetAngle) * offsetDist;
-        
-        // Create and add cargo to the system
-        const cargo = new Cargo(offsetX, offsetY, cargoType);
-        
-        // Give cargo some velocity based on ship's velocity
-        if (this.vel) {
-            cargo.vel.add(p5.Vector.mult(this.vel, 0.3));
-            cargo.vel.add(p5.Vector.random2D().mult(random(0.5, 1.5)));
+    _spawnCargo(context) {
+        // 1. Get System and check for addCargo method
+        const system = this.getSystem();
+        if (!system || typeof system.addCargo !== 'function') {
+            console.warn(`${this.shipTypeName} can't ${context} cargo - system or system.addCargo method missing`);
+            return false; // Good check
         }
-        
-        // Add cargo to system's cargo array
-        if (typeof this.currentSystem.addCargo === 'function') {
-            this.currentSystem.addCargo(cargo);
+
+        // 2. Get Ship Definition and check for cargo types
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) {
+            return false; // Good check - no cargo defined
+        }
+
+        // 3. Initialize variables
+        const cargoType = random(shipDef.typicalCargo); // Selects random type
+        let quantity = 0;
+        let position = createVector(this.pos.x, this.pos.y); // Starts at enemy pos
+        let velocity = createVector(0, 0);
+        let message = "";
+
+        // 4. Context-Specific Calculations
+        if (context === 'jettison') {
+            quantity = 1; // Correct for jettison
+            // Calculates offset position - seems reasonable
+            const offsetAngle = random(TWO_PI);
+            const offsetDist = this.size * 0.6;
+            position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
+            // Calculates velocity based on ship + random push - seems reasonable
+            if (this.vel) {
+                velocity.add(p5.Vector.mult(this.vel, 0.3));
+                velocity.add(p5.Vector.random2D().mult(random(0.5, 1.5)));
+            }
+            message = `${this.shipTypeName} jettisoned ${quantity} unit of ${cargoType}`;
+
+        } else if (context === 'destruction') {
+            const cargoCapacity = shipDef.cargoCapacity || 0;
+            if (cargoCapacity <= 0) return false; // Correct check
+            quantity = Math.max(1, Math.floor(cargoCapacity / 3)); // Drops ~1/3 capacity, min 1 - reasonable
+            // Calculates random offset position around destruction point - reasonable
+            const offsetAngle = random(TWO_PI);
+            const offsetDist = random(this.size * 0.2, this.size * 0.7);
+            position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
+            // Calculates random outward velocity - reasonable for explosion
+            velocity = p5.Vector.random2D().mult(random(0.8, 2.0));
+            message = `${this.shipTypeName} dropped ${quantity} units of ${cargoType}`;
+            console.log(`${this.shipTypeName} destroyed - dropping cargo: ${quantity} x ${cargoType}`); // Good specific log
+
+        } else {
+            console.error(`_spawnCargo called with invalid context: ${context}`);
+            return false; // Handles invalid context
+        }
+
+        // 5. Check Quantity
+        if (quantity <= 0) return false; // Prevents spawning zero items
+
+        // 6. Create Cargo Object
+        let cargoObject = null;
+        try {
+            cargoObject = new Cargo(position.x, position.y, cargoType, quantity);
+            cargoObject.vel = velocity;
+            cargoObject.size = 8; // Standardizes size
+        } catch (e) {
+            console.error(`Error creating Cargo object in _spawnCargo (${context}) for ${this.shipTypeName}:`, e);
+            return false; // Good error handling
+        }
+
+        // 7. Add Cargo to System using system.addCargo
+        if (system.addCargo(cargoObject)) { // Correctly uses the existing method
+            // Handle UI Message
+            if (typeof uiManager !== 'undefined' && message) {
+                uiManager.addMessage(message); // Displays appropriate message
+            }
+            return true; // Success
+        } else {
+            // system.addCargo should log its own failure, but add a warning here too
+            console.warn(`_spawnCargo: system.addCargo failed for ${cargoType} x${quantity}`);
+            return false; // Failure
         }
     }
-
+    
 /**
  * Gets the current star system reference
  * @return {StarSystem|null} The current system or null if not available
@@ -2228,64 +2275,21 @@ getSystem() {
     return this.currentSystem;
 }
 
-/**
- * Drops cargo when ship is destroyed - each cargo represents 1/3 of ship capacity
- */
-dropCargo() {
-    const system = this.getSystem();
-    if (!system) {
-        console.warn(`${this.shipTypeName} can't drop cargo - no system reference`);
-        return;
+    /**
+     * Jettisons a single piece of cargo when hit (but not destroyed).
+     * Calls the internal helper with 'jettison' context.
+     */
+    jettisonCargo() {
+        this._spawnCargo('jettison');
     }
 
-    try {
-        // Get ship definition with cargo capacity
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
-        
-        // Get the ship's cargo capacity
-        const cargoCapacity = shipDef.cargoCapacity || 0;
-        if (cargoCapacity <= 0) return;
-        
-        // Each cargo container represents 1/3 of ship's capacity
-        const cargoQuantity = Math.floor(cargoCapacity / 3);
-        
-        console.log(`${this.shipTypeName} destroyed - dropping cargo worth ${cargoQuantity} units (1/3 of ${cargoCapacity} capacity)`);
-        
-        // Select a random cargo type from this ship's typical cargo
-        const cargoType = random(shipDef.typicalCargo);
-        
-        // Only drop if quantity is meaningful
-        if (cargoQuantity > 0) {
-            // Calculate position around the ship's destruction point
-            const offsetAngle = random(TWO_PI);
-            const offsetDist = random(this.size * 0.2, this.size * 0.7);
-            const offsetX = this.pos.x + cos(offsetAngle) * offsetDist;
-            const offsetY = this.pos.y + sin(offsetAngle) * offsetDist;
-            
-            // Create cargo with quantity
-            const cargo = new Cargo(offsetX, offsetY, cargoType, cargoQuantity);
-            
-            // Give cargo some velocity from the explosion
-            cargo.vel = p5.Vector.random2D().mult(random(0.8, 2.0));
-            
-
-            cargo.size = 8;
-            
-            // Add cargo to system
-            if (system.addCargo(cargo)) {
-                console.log(`Cargo ${cargoType} x${cargoQuantity} successfully added to system ${system.name}`);
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage(`${this.shipTypeName} dropped ${cargoQuantity} units of ${cargoType}`);
-                }
-            } else {
-                console.warn(`Failed to add cargo to system ${system.name}`);
-            }
-        }
-    } catch (e) {
-        console.error(`Error in ${this.shipTypeName}.dropCargo():`, e);
+    /**
+     * Drops cargo when ship is destroyed.
+     * Calls the internal helper with 'destruction' context.
+     */
+    dropCargo() {
+        this._spawnCargo('destruction');
     }
-}
 
     /** 
      * Detects nearby cargo within range 
@@ -2322,121 +2326,152 @@ dropCargo() {
  * @return {Object} Object containing damage dealt and shield hit status
  */
 takeDamage(amount, attacker = null) {
-    // Only debug player attacks
-    if (attacker instanceof Player) {
-        console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
-        
-        // Store the attacker reference
-        this.lastAttacker = attacker;
-        this.lastAttackTime = millis();
-        
-        // Immediately attempt targeting update for player attacks
-        const system = this.getSystem();
-        if (system) {
-            console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
-            const targetResult = this.updateTargeting(system);
-            console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
-        }
-    } else {
-        // For non-player attackers, just store the reference without debug
-        if (attacker) this.lastAttacker = attacker;
-        this.lastAttackTime = millis();
-    }
+    this._handleAttackerReference(attacker, amount);
 
     // Skip damage processing if already destroyed or no damage
     if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
-    
+
+    const { damageDealt, shieldHit } = this._applyDamageDistribution(amount);
+
+    // Check if destroyed after applying damage
+    if (this.hull <= 0 && !this.destroyed) {
+        this._processDestruction(attacker);
+    } else {
+        // Only check for random cargo drop if not destroyed
+        this._checkRandomCargoDrop();
+    }
+
+    return { damage: damageDealt, shieldHit: shieldHit };
+}
+
+/**
+ * Internal helper: Handles attacker reference and triggers targeting update.
+ * @param {Object} attacker
+ * @param {number} amount - Damage amount for logging purposes
+ */
+_handleAttackerReference(attacker, amount) {
+    if (attacker instanceof Player) {
+        //console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
+        this.lastAttacker = attacker;
+        this.lastAttackTime = millis();
+        const system = this.getSystem();
+        if (system) {
+            //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
+            const targetResult = this.updateTargeting(system);
+            //console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
+        }
+    } else {
+        if (attacker) this.lastAttacker = attacker;
+        this.lastAttackTime = millis();
+    }
+}
+
+/**
+ * Internal helper: Applies damage to shields first, then hull.
+ * Updates this.shield and this.hull directly.
+ * @param {number} amount - The incoming damage amount.
+ * @return {Object} { damageDealt, shieldHit }
+ */
+_applyDamageDistribution(amount) {
     let damageDealt = 0;
     let shieldHit = false;
-    
-    // Shield handling
+
     if (this.shield > 0) {
         shieldHit = true;
         this.shieldHitTime = millis();
         this.lastShieldHitTime = millis();
-        
+
         if (amount <= this.shield) {
             // Shield absorbs all damage
             this.shield -= amount;
             damageDealt = amount;
         } else {
             // Shield is depleted, remaining damage goes to hull
-            damageDealt = this.shield;
+            damageDealt = this.shield; // Damage absorbed by shield
             const hullDamage = amount - this.shield;
             this.shield = 0;
             this.hull -= hullDamage;
-            damageDealt += hullDamage;
+            damageDealt += hullDamage; // Total damage dealt (shield + hull)
         }
     } else {
         // No shields, all damage to hull
         this.hull -= amount;
         damageDealt = amount;
     }
-    
-    // Check if destroyed
-    if (this.hull <= 0 && !this.destroyed) {
-        this.destroyed = true;
-        this.hull = 0;
-        
-        // Prevent corpse targeting
-        this.target = null;
-        
-        // Create explosion effect
-        const system = this.getSystem();
-        if (system) {
-            this.currentSystem.addExplosion(
-                this.pos.x,
-                this.pos.y,
-                this.size,
-                [100, 150, 255] // Blueish-white core
-            );
-
-            this.dropCargo(); // Drop cargo when destroyed
-            
-            // Award credits to player if they destroyed this ship
-            if (attacker instanceof Player && system.player === attacker) {
-   
-                if (attacker.activeMission) {
-                    // Update progress for bounty missions
-                    if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
-                        this.role === AI_ROLE.PIRATE) {
-                        attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                        console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                        // NOTE: Credits for the mission itself are awarded upon completion, not here.
-                    }
-                }
-
-                if (this.role !== AI_ROLE.PIRATE) {
-                    if (system.setPlayerWanted) {
-                        
-                        //Copkiller: Set player to wanted and inform neiboring systems
-                        if (this.role === AI_ROLE.POLICE) {
-                            system.setPlayerWanted(true, 3); // Set player wanted with level 3
-                        }else {
-                            system.setPlayerWanted(true, 1); // Set player wanted with level 1
-                        }
-                        console.log(`Player marked as WANTED for destroying ${this.shipTypeName}`);
-                        uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
-                    } else {
-                        // Fallback if setPlayerWanted doesn't exist
-                        if (attacker instanceof Player) {
-                            attacker.isWanted = true;
-                            console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Random cargo drop chance when hit but not destroyed
-    if (!this.destroyed && this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
-        this.jettisionCargo();
-    }
-    
-    return { damage: damageDealt, shieldHit: shieldHit };
+    // Ensure hull doesn't go below zero visually before destruction check
+    this.hull = Math.max(0, this.hull);
+    return { damageDealt, shieldHit };
 }
 
+/**
+ * Internal helper: Processes the ship's destruction.
+ * Sets flags, creates effects, drops cargo, handles wanted status.
+ * @param {Object} attacker
+ */
+_processDestruction(attacker) {
+    this.destroyed = true;
+    this.hull = 0; // Ensure hull is exactly 0
+    this.target = null; // Prevent corpse targeting
+
+    const system = this.getSystem();
+    if (system) {
+        // Create explosion effect
+        this.currentSystem.addExplosion(
+            this.pos.x,
+            this.pos.y,
+            this.size,
+            [100, 150, 255] // Blueish-white core
+        );
+
+        // Drop cargo
+        this.dropCargo();
+
+        // Handle player-related consequences (mission progress, wanted status)
+        if (attacker instanceof Player && system.player === attacker) {
+            this._handlePlayerKillConsequences(attacker, system);
+        }
+    }
+}
+
+/**
+ * Internal helper: Handles mission progress and wanted status if player killed the ship.
+ * @param {Player} attacker
+ * @param {StarSystem} system
+ */
+_handlePlayerKillConsequences(attacker, system) {
+    // Update mission progress
+    if (attacker.activeMission) {
+        if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
+            this.role === AI_ROLE.PIRATE) {
+            attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+            console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+        }
+    }
+
+    // Set player wanted status if a non-pirate was destroyed
+    if (this.role !== AI_ROLE.PIRATE) {
+        if (system.setPlayerWanted) {
+            const wantedLevel = (this.role === AI_ROLE.POLICE) ? 3 : 1;
+            system.setPlayerWanted(true, wantedLevel);
+            console.log(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);
+            uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
+        } else {
+            // Fallback if setPlayerWanted doesn't exist
+            attacker.isWanted = true;
+            console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
+        }
+    }
+}
+
+/**
+ * Internal helper: Checks and potentially jettisons cargo on non-fatal hits.
+ */
+_checkRandomCargoDrop() {
+    // Random cargo drop chance when hit but not destroyed
+    if (this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
+        this.jettisionCargo();
+    }
+}
 
     /**
      * Checks if ship has been destroyed
@@ -2493,7 +2528,7 @@ takeDamage(amount, attacker = null) {
         this.currentState = newState;
         
         // Log state changes with informative context
-        console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
+        //console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);

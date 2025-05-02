@@ -987,29 +987,70 @@ class StarSystem {
      * Handles player collecting cargo in the system
      */
     handleCargoCollection() {
-        if (!this.player) return;
-        
+        if (!this.player || !this.player.pos || !this.cargo || this.cargo.length === 0) return; // Added checks for player.pos and cargo array
+
         for (let i = this.cargo.length - 1; i >= 0; i--) {
-            const cargo = this.cargo[i];
-            
-            if (cargo.checkCollision(this.player)) {
-                // CRITICAL FIX: Use cargo.type instead of cargo.name
-                const success = this.player.addCargo(cargo.type, cargo.quantity);
-                
-                if (success.success) {
-                    cargo.collected = true;
-                    
-                    // Show message in UI
-                    if (typeof uiManager !== 'undefined') {
-                        // CRITICAL FIX: Use cargo.type here too
-                        uiManager.addMessage(`Collected ${success.added} ${cargo.type}`);
+            const cargoItem = this.cargo[i];
+
+            // Skip if already collected, somehow invalid, or expired
+            if (!cargoItem || cargoItem.collected || cargoItem.isExpired()) {
+                 // If expired but not collected, remove it here
+                 if (cargoItem && !cargoItem.collected && cargoItem.isExpired()) {
+                     console.log(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
+                     this.cargo.splice(i, 1);
+                 }
+                 continue;
+            }
+
+            // --- Add Detailed Logging ---
+            const distance = dist(this.player.pos.x, this.player.pos.y, cargoItem.pos.x, cargoItem.pos.y);
+            const collisionThreshold = (this.player.size / 2 + cargoItem.size * 2);
+            const isColliding = cargoItem.checkCollision(this.player); // Use the cargo's collision check
+
+
+            if (isColliding) {
+                // Attempt to add cargo to player
+                // Pass cargoItem.type (which holds the name string) to player.addCargo
+                const addResult = this.player.addCargo(cargoItem.type, cargoItem.quantity, true); // Allow partial adds
+
+                // --- Log Add Attempt ---
+                //console.log(`  Add Attempt Result: Success=${addResult.success}, Added=${addResult.added}, Reason=${addResult.reason || 'N/A'}`);
+                // ---
+
+                if (addResult.success) {
+                    // Play pickup sound
+                    if (typeof soundManager !== 'undefined') {
+                        soundManager.playSound('pickupCoin'); // Use a suitable sound
                     }
-                } else if (success.reason === 'CARGO_FULL') {
+                    // Optional: Add UI message
                     if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage(`Cargo hold full!`);
+                        uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
                     }
+
+                    // If the full quantity wasn't added (partial add), update the cargo item's quantity
+                    if (addResult.added < cargoItem.quantity) {
+                        cargoItem.quantity -= addResult.added;
+                        cargoItem.collected = false; // Keep it in the world if partially collected
+                        //console.log(`  Partial pickup: Remaining ${cargoItem.quantity}t of ${cargoItem.type}`);
+                    } else {
+                        // Only mark as fully collected if the entire quantity was added
+                        cargoItem.collected = true;
+                        // Since it's fully collected, we can remove it immediately
+                        this.cargo.splice(i, 1);
+                        //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
+                    }
+                } else {
+                     // Log why adding failed (e.g., cargo full)
+                     //console.log(`  Add failed. Player Cargo: ${this.player.getCargoAmount()}/${this.player.cargoCapacity}, Reason: ${addResult.reason}`);
+                     // Add UI message for failure if needed
+                     if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
+                         // Avoid spamming this message - maybe only show once per few seconds?
+                         // Simple approach: just show it
+                         uiManager.addMessage(`Cargo hold full!`);
+                     }
                 }
             }
+            // Note: Expiry check moved outside collision block, handled at the start of the loop iteration
         }
     }
 
