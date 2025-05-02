@@ -1132,7 +1132,7 @@ evaluateTargetScore(target, system) {
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
                     this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
-                    if (//uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
+                    //if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
                     
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
                     this.updateCombatAI(system);
@@ -2269,7 +2269,7 @@ dropCargo() {
             // Add cargo to system
             if (system.addCargo(cargo)) {
                 console.log(`Cargo ${cargoType} x${cargoQuantity} successfully added to system ${system.name}`);
-                if (typeof uiManager !== 'undefined') {
+                if (typeof uiManager !== 'undefined') {this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in comb
                     uiManager.addMessage(`${this.shipTypeName} dropped ${cargoQuantity} units of ${cargoType}`);
                 }
             } else {

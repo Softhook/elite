@@ -420,10 +420,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
      * Uses opposite direction from current facing angle.
      */
     reverseThrust() {
-        console.log("Reverse thrust activated"); // Debug output
         
         if (isNaN(this.angle)) {
-            console.error("Player.reverseThrust: this.angle is NaN!");
+
             return;
         }
         
