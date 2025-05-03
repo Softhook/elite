@@ -329,18 +329,10 @@ try {
                 const x = targetPos.x + cos(offsetAngle) * random(300, offsetDist);
                 const y = targetPos.y + sin(offsetAngle) * random(300, offsetDist);
                 
-                // Choose nebula type based on position
+                // Choose nebula type
                 let nebulaType;
-                if (targetPos.type === 'near_station') {
-                    // EMP more common near stations (disable weapons)
-                    nebulaType = random() < 0.6 ? 'emp' : random(nebulaTypes);
-                } else if (targetPos.type === 'near_jump') {
-                    // Ion more common near jump points (disable shields)
-                    nebulaType = random() < 0.6 ? 'ion' : random(nebulaTypes);
-                } else {
-                    // Random type in midway areas
-                    nebulaType = random(nebulaTypes);
-                }
+                nebulaType = random(nebulaTypes);
+
                 
                 // Size varies by position
                 const nebulaRadius = targetPos.type === 'midway' 
