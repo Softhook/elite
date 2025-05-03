@@ -389,7 +389,7 @@ class MissionGenerator {
         // Still local for now
         let targetCount = floor(random(2, 6));
         // Note: rewardPerKill is calculated but not used in the final reward calculation below.
-        // let rewardPerKill = floor(random(150, 400));
+         let rewardPerKill = floor(random(150, 400));
          if (originSystem.securityLevel === 'High') rewardPerKill *= 1.2;
          else if (originSystem.securityLevel === 'Low' || originSystem.securityLevel === 'Anarchy') rewardPerKill *= 0.8;
 
