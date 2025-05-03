@@ -1485,21 +1485,39 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             return false; // Return false if no mission list button was clicked
         }
+
         // --- VIEWING_SHIPYARD State ---
         else if (currentState === "VIEWING_SHIPYARD") {
             for (const area of this.shipyardListAreas) {
                 if (this.isClickInArea(mx, my, area)) {
-                    if (player.credits >= area.price) {
-                        player.spendCredits(area.price);
+                    const finalPrice = area.price; // Can be negative for refunds
+                    
+                    if (finalPrice > 0) {
+                        // Player needs to pay
+                        if (player.credits >= finalPrice) {
+                            player.spendCredits(finalPrice);
+                            player.applyShipDefinition(area.shipTypeKey);
+                            saveGame && saveGame();
+                            uiManager.addMessage("You bought a " + area.shipName + "!");
+                        } else {
+                            uiManager.addMessage("Not enough credits!");
+                        }
+                    } else {
+                        // Player gets a refund or even swap
+                        player.addCredits(-finalPrice); // Convert negative to positive for refund
                         player.applyShipDefinition(area.shipTypeKey);
                         saveGame && saveGame();
-                        uiManager.addMessage("You bought a " + area.shipName + "!");
-                    } else {
-                        uiManager.addMessage("Not enough credits!");
+                        
+                        if (finalPrice < 0) {
+                            uiManager.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
+                        } else {
+                            uiManager.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
+                        }
                     }
                     return true;
                 }
             }
+            
             // Back button
             if (this.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
                 gameStateManager.setState("DOCKED");
@@ -1648,15 +1666,57 @@ if (isIllegalInSystem || isMissionCargo) {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
         
+        // Calculate trade-in value (70% of current ship's value)
+        const currentShipType = player.shipTypeName || "Vulture"; // This could be name or key
+        //console.log(`Looking up ship: "${currentShipType}"`);
+    
+        // IMPROVED LOOKUP LOGIC - Try multiple methods to find the ship
+        let currentShipDef = null;
+        
+        // Method 1: Try direct lookup by object key
+        if (SHIP_DEFINITIONS[currentShipType]) {
+            currentShipDef = SHIP_DEFINITIONS[currentShipType];
+            //console.log(`Found ship by direct key lookup: ${currentShipDef.name}`);
+        } 
+        // Method 2: Try lookup by display name
+        else {
+            currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship => 
+                ship.name === currentShipType
+            );
+            
+            // Method 3: Try case-insensitive lookup
+            if (!currentShipDef) {
+                currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship => 
+                    ship.name.toLowerCase() === currentShipType.toLowerCase()
+                );
+            }
+        }
+    
+        // Debug logging 
+        if (currentShipDef) {
+            //console.log(`Found ship: ${currentShipDef.name}, price: ${currentShipDef.price}`);
+        } else {
+            console.log(`Ship not found: "${currentShipType}"`);
+            //console.log("Available ships:", Object.values(SHIP_DEFINITIONS).map(s => s.name));
+        }
+    
+        const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
+        
+        // Show trade-in info at top of shipyard
+        fill(180, 220, 255);
+        textSize(20);
+        textAlign(LEFT, TOP);
+        text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX+20, pY+headerHeight);
+        
         // List ships with adjusted Y position
-        let rowH = 40, startY = pY+headerHeight, visibleRows = floor((pH-headerHeight-60)/rowH);
+        let rowH = 40, startY = pY+headerHeight+30, visibleRows = floor((pH-headerHeight-90)/rowH);
         let totalRows = Object.values(SHIP_DEFINITIONS).length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
-
+    
         // Clamp scroll offset
         this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
-
+    
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
@@ -1664,18 +1724,67 @@ if (isIllegalInSystem || isMissionCargo) {
         for (let i = firstRow; i < lastRow; i++) {
             let ship = Object.values(SHIP_DEFINITIONS)[i];
             let y = startY + (i-firstRow)*rowH;
-            fill(60,60,100); stroke(120,180,255); rect(pX+20, y, pW-40, rowH-6, 5);
-            fill(255); noStroke(); textAlign(LEFT,CENTER);
-            let price = ship.price;
-            text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}  |  Price: ${price}cr       ${ship.description}`, pX+30, y+rowH/2);
-            this.shipyardListAreas.push({
-                x: pX+20, y: y, w:pW-40, h:rowH-6,
-                shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], // The actual key
-                shipName: ship.name, // Display name
-                price
-            });
+            
+            // IMPROVED CHECK for current ship - try both name and lookup
+            const isCurrentShip = ship.name === currentShipType || 
+                                (currentShipDef && ship.name === currentShipDef.name);
+            
+            if (isCurrentShip) {
+                fill(40, 40, 80); // Darker background for current ship
+            } else {
+                fill(60, 60, 100);
+            }
+            
+            stroke(120, 180, 255);
+            rect(pX+20, y, pW-40, rowH-6, 5);
+            
+            fill(255);
+            noStroke();
+            textAlign(LEFT, CENTER);
+            
+            // Calculate final price after trade-in (allow negative for refund)
+            const originalPrice = ship.price;
+            const finalPrice = originalPrice - currentShipValue;
+            
+            if (isCurrentShip) {
+                // Show "CURRENT SHIP" instead of price
+                text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}     CURRENT SHIP`, pX+30, y+rowH/2);
+            } else {
+                // Left-aligned ship info and original price
+                textAlign(LEFT, CENTER);
+                text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}    Price: ${originalPrice}cr`, pX+30, y+rowH/2);
+                
+                // Right-aligned final cost or refund with appropriate color
+                textAlign(RIGHT, CENTER);
+                
+                if (finalPrice > 0) {
+                    // Player needs to pay additional credits
+                    fill(255, 220, 100); // Gold/yellow color for cost
+                    text(`Final Cost: ${finalPrice}cr`, pX+pW-40, y+rowH/2);
+                } else if (finalPrice < 0) {
+                    // Player gets credits back
+                    fill(100, 255, 150); // Green color for refund
+                    text(`Refund: ${-finalPrice}cr`, pX+pW-40, y+rowH/2);
+                } else {
+                    // Equal trade (no cost, no refund)
+                    fill(255, 255, 255); // White for even swap
+                    text(`Even Swap`, pX+pW-40, y+rowH/2);
+                }
+                
+                // Reset color for the next item
+                fill(255);
+                
+                // Add to clickable areas
+                this.shipyardListAreas.push({
+                    x: pX+20, y: y, w: pW-40, h: rowH-6,
+                    shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], 
+                    shipName: ship.name,
+                    price: finalPrice, // Use the actual final price (can be negative)
+                    originalPrice: originalPrice
+                });
+            }
         }
-
+    
         // Draw scrollbar if needed
         if (this.shipyardScrollMax > 0) {
             let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
@@ -1683,12 +1792,11 @@ if (isIllegalInSystem || isMissionCargo) {
             let handleH = max(30, barH * (visibleRows /totalRows));
             let handleY = barY + (barH-handleH) * (this.shipyardScrollOffset / this.shipyardScrollMax);
             fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
-            // Store for click/drag
             this.shipyardScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
         } else {
             this.shipyardScrollbarArea = null;
         }
-
+    
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
@@ -1697,6 +1805,9 @@ if (isIllegalInSystem || isMissionCargo) {
         this.shipyardDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
         pop();
     }
+
+
+
 
     /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
