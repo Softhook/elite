@@ -1438,7 +1438,9 @@ try {
             // Save station if present
             station: this.station && typeof this.station.toJSON === 'function'
                 ? this.station.toJSON()
-                : null,
+                : null,        
+            // Add Nebulae
+            nebulae: this.nebulae.map(nebula => nebula.toJSON()),
             // --- Add Jump Zone Data ---
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
@@ -1479,6 +1481,11 @@ try {
             sys.station = Station.fromJSON(data.station);
         } else {
             sys.station = null;
+        }
+        
+        // Restore Nebulae if present
+        if (data.nebulae && Array.isArray(data.nebulae)) {
+            sys.nebulae = data.nebulae.map(nebulaData => Nebula.fromJSON(nebulaData));
         }
 
         // --- Restore Jump Zone Data ---

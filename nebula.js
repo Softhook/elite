@@ -256,4 +256,17 @@ class Nebula {
         console.log(`Nebula ${this.type} debug mode: ${this.debug ? 'ON' : 'OFF'}`);
         return this.debug;
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            radius: this.radius,
+            type: this.type,
+            color: this.color
+        };
+    }
+
+    static fromJSON(data) {
+        return new Nebula(data.pos.x, data.pos.y, data.radius, data.type);
+    }
 }
