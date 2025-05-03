@@ -690,11 +690,11 @@ try {
                 
                 if (proj.lifespan <= 0) {
                     //console.log("Projectile removed: lifespan expired");
-                    this.projectiles.splice(i, 1);
+                    this.removeProjectile(i); // USE NEW METHOD
                 } 
                 else if (proj.isOffScreen()) {
                     //console.log("Projectile removed: off-screen at", proj.pos.x.toFixed(0), proj.pos.y.toFixed(0));
-                    this.projectiles.splice(i, 1);
+                    this.removeProjectile(i); // USE NEW METHOD
                 }
             }
             // --- End Projectile Loop ---
@@ -717,57 +717,75 @@ try {
             // Update Beams
             this.updateBeams && this.updateBeams();
 
-            // Update and process force waves
+
+
+            // Update and process force waves with batch processing
             for (let i = this.forceWaves.length - 1; i >= 0; i--) {
                 const wave = this.forceWaves[i];
                 
                 // Expand the wave
                 wave.radius += wave.growRate;
                 
-                // Check for collisions with enemies (if player's wave)
-                if (wave.owner === this.player) {
-                    for (const enemy of this.enemies) {
-                        // Skip if already processed this enemy
-                        if (wave.processed[enemy.id]) continue;
+                // First time initialization - find all entities to process
+                if (!wave.entitiesToProcess) {
+                    wave.entitiesToProcess = [];
+                    
+                    // Add all relevant entities that might be affected
+                    if (wave.owner === this.player) {
+                        // Player's wave affects enemies and asteroids
+                        wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
+                    } else {
+                        // Enemy's wave affects player only
+                        if (this.player) wave.entitiesToProcess.push(this.player);
+                    }
+                    
+                    // Initialize tracking
+                    wave.processedCount = 0;
+                    wave.processed = {};
+                }
+                
+                // Process entities in batches to prevent frame rate drops
+                const batchSize = 5; // Process 5 entities per frame
+                const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
+                const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
+                
+                for (let j = 0; j < entitiesToProcessNow; j++) {
+                    const entity = wave.entitiesToProcess[wave.processedCount + j];
+                    
+                    // Skip if entity is invalid or already processed
+                    if (!entity || !entity.pos || wave.processed[entity.id || entity]) continue;
+                    
+                    // Calculate distance from wave center to entity
+                    const dist = p5.Vector.dist(wave.pos, entity.pos);
+                    
+                    // If entity is within wave radius, apply damage
+                    if (dist < wave.radius + entity.size/2) {
+                        // Calculate damage with much less aggressive falloff
+                        const distRatio = dist / (wave.radius + entity.size/2);
                         
-                        // Calculate distance from wave center to enemy
-                        const dist = p5.Vector.dist(wave.pos, enemy.pos);
+                        // Use a gentler falloff curve
+                        const falloff = Math.pow(1 - distRatio, 0.8);
                         
-                        // If enemy is within wave radius, apply damage
-                        if (dist < wave.radius + enemy.size/2) {
-                            // Calculate damage with much less aggressive falloff
-                            const distRatio = dist / (wave.radius + enemy.size/2);
-                            
-                            // Use a gentler falloff curve (0.8 power instead of 1.5)
-                            // This ensures the damage remains high even at medium distances
-                            const falloff = Math.pow(1 - distRatio, 0.8);
-                            
-                            // Increase minimum damage and make it a percentage of base damage
-                            const minDamage = Math.max(30, Math.floor(wave.damage * 0.1));
-                            const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
-                            
-                            // Apply damage and mark as processed
-                            enemy.takeDamage(dmg);
-                            wave.processed[enemy.id] = true;
-                            console.log(`Force wave hit ${enemy.shipTypeName} for ${dmg} damage`);
+                        // Ensure meaningful minimum damage
+                        const minDamage = Math.max(30, Math.floor(wave.damage * 0.1));
+                        const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
+                        
+                        // Apply damage and mark as processed
+                        entity.takeDamage(dmg, wave.owner);
+                        wave.processed[entity.id || entity] = true;
+                        
+                        // Apply knockback force
+                        if (entity.vel) {
+                            const knockbackDir = p5.Vector.sub(entity.pos, wave.pos).normalize();
+                            entity.vel.add(knockbackDir.mult(2));
                         }
                     }
                 }
-
                 
-                // Check collision with player (if enemy's wave)
-                if (wave.owner !== this.player && this.player && !wave.processed['player']) {
-                    const dist = p5.Vector.dist(wave.pos, this.player.pos);
-                    if (dist < wave.radius + this.player.size/2) {
-                        const falloff = 1 - (dist / (wave.radius + this.player.size/2));
-                        const dmg = Math.max(1, Math.floor(wave.damage * falloff));
-                        this.player.takeDamage(dmg);
-                        wave.processed['player'] = true;
-                        console.log(`Enemy force wave hit player for ${dmg} damage`);
-                    }
-                }
+                // Update processed count
+                wave.processedCount += entitiesToProcessNow;
                 
-                // Remove wave if it reaches max size
+                // Remove wave if it reaches max size and all entities processed
                 if (wave.radius >= wave.maxRadius) {
                     this.forceWaves.splice(i, 1);
                 }
@@ -1025,7 +1043,7 @@ try {
                     // FIXED: Apply damage to asteroid based on projectile damage
                     asteroid.takeDamage(proj.damage || 1);
                     // Remove projectile after hit
-                    this.projectiles.splice(i, 1);
+                    this.removeProjectile(i);
                     const explosionColor = [255, 120, 20];
                     // Create effect at collision point - increase size for visibility
                     this.addExplosion(proj.pos.x, proj.pos.y, 10, explosionColor);
@@ -1179,6 +1197,17 @@ try {
           //  console.log(`[ADD] Projectile added. Count: ${this.projectiles.length + 1}`);
             this.projectiles.push(proj);
         }
+    }
+
+        // Add this method after the addProjectile method:
+    
+    /** Removes a projectile and returns it to the pool if possible */
+    removeProjectile(i) {
+        // Return projectile to pool before splicing if WeaponSystem is available
+        if (this.projectiles[i] && typeof WeaponSystem !== 'undefined') {
+            WeaponSystem.releaseProjectile(this.projectiles[i]);
+        }
+        this.projectiles.splice(i, 1);
     }
 
     /** Adds a beam to the system's list. */

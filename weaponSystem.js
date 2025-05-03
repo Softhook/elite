@@ -11,6 +11,25 @@ const WEAPON_TYPE = {
 };
 
 class WeaponSystem {
+    // Initialize projectile pool safely
+    static init(initialPoolSize = 100) {
+        try {
+            if (typeof ObjectPool !== 'undefined') {
+                if (!this.projectilePool) {
+                    console.log(`Initializing projectile pool with ${initialPoolSize} projectiles`);
+                    this.projectilePool = new ObjectPool(Projectile, initialPoolSize, 1000);
+                }
+                return true;
+            } else {
+                console.warn("ObjectPool class not found! Falling back to direct instantiation.");
+                return false;
+            }
+        } catch (e) {
+            console.error("Error initializing projectile pool:", e);
+            return false;
+        }
+    }
+    
     /** 
      * Handles force blast weapon (area effect damage)
      * @param {Object} owner - Entity firing the weapon
@@ -19,8 +38,13 @@ class WeaponSystem {
     static fireForce(owner, system) {
         if (!owner || !system) return;
         
-        // Get position to emit force wave from
-        const forceWavePos = owner.pos.copy();
+        // Initialize static force wave position vector if not exists
+        if (!this._forceWavePos) {
+            this._forceWavePos = createVector(0, 0);
+        }
+        
+        // Reuse vector instead of creating a new one
+        this._forceWavePos.set(owner.pos.x, owner.pos.y);
         
         // Get owner's current weapon for properties
         const weapon = owner.currentWeapon;
@@ -28,11 +52,9 @@ class WeaponSystem {
         const color = weapon?.color || [255, 0, 0];
         const maxRadius = weapon?.maxRadius || 750;
         
-        console.log(`Force wave fired by ${owner instanceof Player ? "player" : "enemy"} with damage ${damage}, maxRadius: ${maxRadius}`);
-        
-        // Create force wave in the system
+        // Create force wave in the system (reuse objects to minimize allocation)
         system.forceWaves.push({
-            pos: forceWavePos,
+            pos: this._forceWavePos,
             owner: owner,
             startTime: millis(),
             radius: 50,
@@ -41,14 +63,24 @@ class WeaponSystem {
             damage: damage,
             color: color,
             processed: {},
+            // Add batch processing properties to prevent frame rate drops
+            processedCount: 0,
+            entitiesToProcess: [],
+            maxProcessPerFrame: 10
         });
         
-        // Store reference for drawing effects
-        owner.lastForceWave = {
-            pos: forceWavePos.copy(),
-            time: millis(),
-            color: color
-        };
+        // Store reference for drawing effects (reusing owner's lastForceWave if possible)
+        if (!owner.lastForceWave) {
+            owner.lastForceWave = {
+                pos: createVector(this._forceWavePos.x, this._forceWavePos.y),
+                time: millis(),
+                color: color
+            };
+        } else {
+            owner.lastForceWave.pos.set(this._forceWavePos.x, this._forceWavePos.y);
+            owner.lastForceWave.time = millis();
+            owner.lastForceWave.color = color;
+        }
     }
 
     /** 
@@ -100,7 +132,7 @@ class WeaponSystem {
     }
 
     /** 
-     * Fire a single projectile
+     * Fire a single projectile, using object pool if available
      * @param {Object} owner - Entity firing the weapon
      * @param {Object} system - Current star system
      * @param {number} angle - Firing angle in radians
@@ -109,10 +141,26 @@ class WeaponSystem {
         if (!owner?.currentWeapon) return;
         
         const weapon = owner.currentWeapon;
-        const proj = new Projectile(
-            owner.pos.x, owner.pos.y, angle, owner,
-            8, weapon.damage, weapon.color
-        );
+        let proj;
+        
+        // Try to use object pool if available
+        if (this.projectilePool) {
+            proj = this.projectilePool.get(
+                owner.pos.x, owner.pos.y, angle, owner,
+                8, weapon.damage, weapon.color
+            );
+        }
+        
+        // Fall back to direct instantiation if pool is unavailable or full
+        if (!proj) {
+            proj = new Projectile(
+                owner.pos.x, owner.pos.y, angle, owner,
+                8, weapon.damage, weapon.color
+            );
+        }
+        
+        // Add reference to system for proper cleanup
+        proj.system = system;
         system.addProjectile(proj);
         
         // Play laser sound using playWorldSound
@@ -153,26 +201,29 @@ class WeaponSystem {
     static fireStraight(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system || !owner.currentWeapon) return;
         
+        // Initialize perpendicular direction vector if not exists
+        if (!this._perpDir) {
+            this._perpDir = createVector(0, 0);
+        }
+        
         // Offset projectiles perpendicular to angle
         const spacing = 12; // pixels between projectiles
         const mid = (count - 1) / 2;
         const perpAngle = angle + HALF_PI;
         
-        // Cache the perpendicular vector direction
-        const perpDir = p5.Vector.fromAngle(perpAngle);
+        // Set the vector direction without creating a new one
+        this._perpDir.set(cos(perpAngle), sin(perpAngle));
+        
+        const weapon = owner.currentWeapon;
         
         for (let i = 0; i < count; i++) {
             let offset = (i - mid) * spacing;
             // Calculate the position with minimal vector allocations
-            let x = owner.pos.x + perpDir.x * offset;
-            let y = owner.pos.y + perpDir.y * offset;
+            let x = owner.pos.x + this._perpDir.x * offset;
+            let y = owner.pos.y + this._perpDir.y * offset;
             
-            const weapon = owner.currentWeapon;
-            const proj = new Projectile(
-                x, y, angle, owner,
-                8, weapon.damage, weapon.color
-            );
-            system.addProjectile(proj);
+            // Use the pooling-aware fireProjectile
+            this.fireProjectile(owner, system, angle);
         }
         
         // Play laser sound using playWorldSound
@@ -198,7 +249,15 @@ class WeaponSystem {
         
         // Get beam properties
         const beamLength = 1200;
-        const beamStart = owner.pos.copy();
+        
+        // Reuse vectors to avoid garbage collection
+        if (!this._beamStart) {
+            this._beamStart = createVector(0, 0);
+            this._beamDir = createVector(0, 0);
+            this._beamEnd = createVector(0, 0);
+        }
+        
+        this._beamStart.set(owner.pos.x, owner.pos.y);
         
         // Handle player aiming at mouse cursor
         if (owner instanceof Player) {
@@ -211,28 +270,39 @@ class WeaponSystem {
         }
         
         // Calculate beam direction and endpoint
-        const beamDir = p5.Vector.fromAngle(angle);
-        if (!beamDir || isNaN(beamDir.x) || isNaN(beamDir.y)) {
+        this._beamDir.set(cos(angle), sin(angle));
+        
+        if (isNaN(this._beamDir.x) || isNaN(this._beamDir.y)) {
             console.error("Invalid beam direction from angle:", angle);
             return;
         }
         
-        const beamEnd = p5.Vector.add(beamStart, p5.Vector.mult(beamDir, beamLength));
-        const beamDirNorm = beamDir.copy().normalize();
+        this._beamEnd.set(
+            this._beamStart.x + this._beamDir.x * beamLength,
+            this._beamStart.y + this._beamDir.y * beamLength
+        );
         
         // Perform hit detection
-        const hit = this.performBeamHitDetection(owner, system, beamStart, beamDirNorm, beamLength);
+        const hit = this.performBeamHitDetection(owner, system, this._beamStart, this._beamDir, beamLength);
         
-        // Store beam info for drawing
-        owner.lastBeam = {
-            start: beamStart,
-            end: beamEnd,
-            color: owner.currentWeapon?.color || [255, 0, 0],
-            time: millis(),
-            hit: hit.target !== null
-        };
+        // Store beam info for drawing - reuse lastBeam if possible
+        if (!owner.lastBeam) {
+            owner.lastBeam = {
+                start: createVector(this._beamStart.x, this._beamStart.y),
+                end: createVector(this._beamEnd.x, this._beamEnd.y),
+                color: owner.currentWeapon?.color || [255, 0, 0],
+                time: millis(),
+                hit: hit.target !== null
+            };
+        } else {
+            owner.lastBeam.start.set(this._beamStart.x, this._beamStart.y);
+            owner.lastBeam.end.set(this._beamEnd.x, this._beamEnd.y);
+            owner.lastBeam.color = owner.currentWeapon?.color || [255, 0, 0];
+            owner.lastBeam.time = millis();
+            owner.lastBeam.hit = hit.target !== null;
+        }
         
-        // Handle hit effects - replacing the old code with the new method
+        // Handle hit effects
         if (hit.target) {
             this.handleHitEffects(
                 hit.target,
@@ -262,27 +332,38 @@ class WeaponSystem {
     static performBeamHitDetection(owner, system, beamStart, beamDir, beamLength) {
         let hitTarget = null;
         let minDist = Infinity;
-        let hitPoint = null;
+        
+        // Reuse vectors for calculations
+        if (!this._toTarget) {
+            this._toTarget = createVector(0, 0);
+            this._closestPoint = createVector(0, 0);
+            this._hitPoint = createVector(0, 0);
+        }
         
         // Check enemies if owner is Player
         if (owner instanceof Player && system?.enemies) {
             for (let enemy of system.enemies) {
                 if (!enemy?.pos || enemy === owner) continue;
                 
-                let toEnemy = p5.Vector.sub(enemy.pos, beamStart);
-                let projLength = toEnemy.dot(beamDir);
+                // Calculate vector from beam start to enemy
+                this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
+                let projLength = this._toTarget.dot(beamDir);
                 
                 if (projLength > 0 && projLength < beamLength) {
-                    let closestPoint = p5.Vector.add(
-                        beamStart, 
-                        p5.Vector.mult(beamDir, projLength)
+                    // Calculate closest point on beam to enemy
+                    this._closestPoint.set(
+                        beamStart.x + beamDir.x * projLength,
+                        beamStart.y + beamDir.y * projLength
                     );
                     
-                    let distToBeam = p5.Vector.dist(enemy.pos, closestPoint);
+                    // Calculate distance from enemy to closest point on beam
+                    let distToBeam = dist(enemy.pos.x, enemy.pos.y, 
+                                          this._closestPoint.x, this._closestPoint.y);
+                    
                     if (distToBeam < enemy.size / 2 && projLength < minDist) {
                         minDist = projLength;
                         hitTarget = enemy;
-                        hitPoint = closestPoint;
+                        this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
                     }
                 }
             }
@@ -290,27 +371,33 @@ class WeaponSystem {
         
         // Check player if owner is Enemy
         if (owner instanceof Enemy && system?.player?.pos) {
-            let toPlayer = p5.Vector.sub(system.player.pos, beamStart);
-            let projLength = toPlayer.dot(beamDir);
+            // Calculate vector from beam start to player
+            this._toTarget.set(system.player.pos.x - beamStart.x, 
+                              system.player.pos.y - beamStart.y);
+            let projLength = this._toTarget.dot(beamDir);
             
             if (projLength > 0 && projLength < beamLength) {
-                let closestPoint = p5.Vector.add(
-                    beamStart, 
-                    p5.Vector.mult(beamDir, projLength)
+                // Calculate closest point on beam to player
+                this._closestPoint.set(
+                    beamStart.x + beamDir.x * projLength,
+                    beamStart.y + beamDir.y * projLength
                 );
                 
-                let distToBeam = p5.Vector.dist(system.player.pos, closestPoint);
+                // Calculate distance from player to closest point on beam
+                let distToBeam = dist(system.player.pos.x, system.player.pos.y, 
+                                      this._closestPoint.x, this._closestPoint.y);
+                
                 if (distToBeam < system.player.size / 2 && projLength < minDist) {
                     minDist = projLength;
                     hitTarget = system.player;
-                    hitPoint = closestPoint;
+                    this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
                 }
             }
         }
         
         return {
             target: hitTarget,
-            point: hitPoint || beamStart
+            point: hitTarget ? this._hitPoint : beamStart
         };
     }
     
@@ -338,10 +425,7 @@ class WeaponSystem {
                 }
             }
             
-            if (nearestEnemy) {
-                console.log(`Turret targeting ${nearestEnemy.shipTypeName} at distance ${closestDist.toFixed(1)}`);
-                return nearestEnemy;
-            }
+            return nearestEnemy;
         }
         // Find player if enemy is firing
         else if (owner instanceof Enemy && system.player?.pos) {
@@ -416,6 +500,35 @@ class WeaponSystem {
             system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
         }
     }
+    
+    /**
+     * Clean up and release projectiles
+     * This should be called by the system when projectiles are removed
+     * @param {Projectile} projectile - The projectile to release back to pool
+     */
+    static releaseProjectile(projectile) {
+        if (this.projectilePool && projectile) {
+            this.projectilePool.release(projectile);
+        }
+    }
+    
+    /**
+     * Get stats about the projectile pool
+     * @return {Object} Stats object
+     */
+    static getPoolStats() {
+        return this.projectilePool ? this.projectilePool.getStats() : null;
+    }
 }
 
-console.log("WeaponSystem loaded", typeof WeaponSystem);
+// Try to initialize the weapon system's projectile pool if ObjectPool is available
+try {
+    if (typeof ObjectPool !== 'undefined') {
+        WeaponSystem.init(100);
+        console.log("WeaponSystem loaded with object pooling enabled");
+    } else {
+        console.log("WeaponSystem loaded without object pooling (ObjectPool class not found)");
+    }
+} catch (e) {
+    console.error("Error initializing WeaponSystem:", e);
+}

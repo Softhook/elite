@@ -2,6 +2,27 @@
 
 class Projectile {
     constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
+        // Create vectors just once at construction time
+        this.pos = createVector(0, 0);
+        this.vel = createVector(0, 0);
+        
+        // Set default values (will be overridden by reset())
+        this.size = 3;
+        this.lifespan = 90;
+        this.damage = 10;
+        this.owner = null;
+        this.type = "projectile";
+        this.target = null;
+        this.color = color(255, 0, 0);
+        
+        // Call reset if parameters provided
+        if (x !== undefined) {
+            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target);
+        }
+    }
+
+    // Reset method for object pooling
+    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
         try {
             // Validate position inputs
             if (isNaN(x) || isNaN(y)) {
@@ -15,44 +36,85 @@ class Projectile {
                 }
             }
             
-            // Your original logic
-            const spawnOffset = p5.Vector.fromAngle(angle).mult(owner.size * 1.2);
-            this.pos = createVector(x, y).add(spawnOffset);
+            // Reset position without creating a new vector
+            this.pos.set(x, y);
             this.owner = owner;
             this.type = type;
             this.target = target;
+            
+            // Apply spawn offset (reuse velocity vector temporarily)
+            this.vel.set(1, 0).rotate(angle).mult(owner.size * 1.2);
+            this.pos.add(this.vel);
 
             // Use weapon upgrade if owner is Player or Enemy with a weapon
             if (owner && owner.currentWeapon) {
                 this.damage = owner.currentWeapon.damage;
-                this.color = color(...owner.currentWeapon.color);
+                
+                // Reuse color object if possible
+                if (this.color) {
+                    this.color.setRed(owner.currentWeapon.color[0]);
+                    this.color.setGreen(owner.currentWeapon.color[1]);
+                    this.color.setBlue(owner.currentWeapon.color[2]);
+                } else {
+                    this.color = color(...owner.currentWeapon.color);
+                }
+                
                 this.type = owner.currentWeapon.type;
             } else {
                 this.damage = damage;
-                this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
+                
+                // Reuse color object if possible
+                if (this.color && colorOverride) {
+                    this.color.setRed(colorOverride[0]);
+                    this.color.setGreen(colorOverride[1]);
+                    this.color.setBlue(colorOverride[2]);
+                } else {
+                    this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
+                }
             }
+            
             this.size = (owner && owner instanceof Player) ? 4 : 3;
             this.lifespan = 90;
-            this.vel = p5.Vector.fromAngle(angle).mult(speed);
+            
+            // Set velocity vector without creating a new one
+            this.vel.set(1, 0).rotate(angle).mult(speed);
+            
+            return this;
         } catch (e) {
-            // Handle any constructor errors
-            console.error("Error creating projectile:", e);
-            this.pos = createVector(0, 0);
-            this.vel = createVector(0, 0);
+            // Handle any errors
+            console.error("Error resetting projectile:", e);
+            this.pos.set(0, 0);
+            this.vel.set(0, 0);
             this.size = 3;
             this.lifespan = 1;
-            this.color = color(255, 0, 0);
             this.damage = 0;
             this.type = "error";
+            return this;
         }
     }
 
     update() {
         // Homing missile logic
         if (this.type === "missile" && this.target && this.target.pos) {
-            let desired = p5.Vector.sub(this.target.pos, this.pos).normalize().mult(this.vel.mag());
-            this.vel.lerp(desired, 0.08); // Smoothly steer toward target
+            // Calculate desired direction without creating new vectors
+            let dx = this.target.pos.x - this.pos.x;
+            let dy = this.target.pos.y - this.pos.y;
+            let mag = Math.sqrt(dx*dx + dy*dy);
+            
+            // Only steer if we have a valid target position
+            if (mag > 0) {
+                // Calculate steering force (8% turn rate)
+                let speedMag = this.vel.mag();
+                dx = (dx / mag) * speedMag;
+                dy = (dy / mag) * speedMag;
+                
+                // Apply steering gradually
+                this.vel.x = this.vel.x * 0.92 + dx * 0.08;
+                this.vel.y = this.vel.y * 0.92 + dy * 0.08;
+            }
         }
+        
+        // Move projectile
         this.pos.add(this.vel);
         this.lifespan--;
     }
@@ -78,22 +140,17 @@ class Projectile {
         let targetRadius = target.size / 2;
         let projectileRadius = this.size;
         
-        // IMPORTANT: Just return collision detection - DO NOT create explosions here
-        // Let WeaponSystem.handleHitEffects handle all explosions
         return d < (targetRadius + projectileRadius);
     }
     
-    // Define isOffScreen to return true only if the projectile is really far out in world space.
     isOffScreen() {
-        // Don't use raw screen coordinates - we need to account for camera position
         const playerPos = this.system?.player?.pos || createVector(0, 0);
         
         // Calculate screen coordinates relative to player/camera
         const screenX = width/2 + (this.pos.x - playerPos.x);
         const screenY = height/2 + (this.pos.y - playerPos.y);
         
-        // Add generous margins
-        const margin = 100; // Much larger than projectile size
+        const margin = 100;
         
         return (screenX < -margin || 
                 screenX > width + margin || 
