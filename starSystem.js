@@ -289,7 +289,7 @@ class StarSystem {
 
 // --- Generate Nebulae ---
 try {
-    if (random() < 1) { // 40% chance of having a nebula in the system
+    if (random() < 0.3) { // 30% chance of having a nebula in the system
         const nebulaCount = floor(random(1, 3));
         const nebulaTypes = ['ion', 'radiation', 'emp'];
         
