@@ -11,6 +11,13 @@ class CosmicStorm {
         // Storm intensity (affects visual and gameplay)
         this.intensity = random(0.5, 1.0);
         
+        // Add storm lifetime properties
+        this.maxLifetime = random(10000, 30000); // 10-30 seconds
+        this.lifetime = this.maxLifetime;
+        this.dissipating = false;
+        this.dissipateTime = 4000; // 4 seconds to fade out
+        this.dissipateStart = 0;
+        
         // Particles for visual effect
         this.maxParticles = Math.min(radius / 5, 150);
         this.particles = [];
@@ -66,6 +73,30 @@ class CosmicStorm {
     }
     
     update() {
+        // Check if storm should dissipate
+        this.lifetime -= deltaTime;
+        
+        // Start dissipation process when lifetime ends
+        if (!this.dissipating && this.lifetime <= 0) {
+            this.dissipating = true;
+            this.dissipateStart = millis();
+            console.log(`${this.type} storm beginning to dissipate`);
+        }
+        
+        // Handle dissipation effect
+        if (this.dissipating) {
+            const dissipateProgress = (millis() - this.dissipateStart) / this.dissipateTime;
+            
+            // Gradually reduce intensity
+            this.intensity = map(dissipateProgress, 0, 1, this.intensity, 0);
+            
+            // Return false when fully dissipated to signal removal
+            if (dissipateProgress >= 1) {
+                console.log(`${this.type} storm has completely dissipated`);
+                return false;
+            }
+        }
+        
         // Move the entire storm
         this.pos.add(this.velocity);
         
@@ -109,6 +140,9 @@ class CosmicStorm {
                 }
             }
         }
+        
+        // Return true to keep the storm in the system
+        return true;
     }
     
     generateLightning() {
@@ -163,7 +197,7 @@ class CosmicStorm {
         
         push();
         
-        // Main storm cloud/aura
+        // Main storm cloud/aura (adjusted by intensity which fades during dissipation)
         noStroke();
         for (let i = 0; i < 3; i++) {
             fill(

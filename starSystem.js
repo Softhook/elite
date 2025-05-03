@@ -289,7 +289,11 @@ class StarSystem {
 
 // --- Generate Nebulae ---
 try {
-    if (random() < 0.3) { // 30% chance of having a nebula in the system
+    // Skip nebula generation if we already have nebulae from saved data
+    if (this.nebulae.length > 0) {
+        console.log(`Skipping nebula generation: ${this.nebulae.length} nebulae loaded from save data`);
+    }
+    else if (random() < 0.3) { // 30% chance of having a nebula in the system
         const nebulaCount = floor(random(1, 3));
         const nebulaTypes = ['ion', 'radiation', 'emp'];
         
@@ -810,9 +814,15 @@ try {
             // Update cosmic storms (they move)
             for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
                 const storm = this.cosmicStorms[i];
-                storm.update();
+                const keepStorm = storm.update(); // Get return value from update
                 
-                // Apply effects to player and enemies
+                // Remove the storm if it has dissipated
+                if (!keepStorm) {
+                    this.cosmicStorms.splice(i, 1);
+                    continue; // Skip the rest of this iteration
+                }
+                
+                // Only apply effects and draw if the storm is still active
                 if (this.player) {
                     storm.applyEffects(this.player);
                 }
@@ -820,20 +830,21 @@ try {
                 for (let enemy of this.enemies) {
                     storm.applyEffects(enemy);
                 }
+            }
+
+            // Move storm spawning OUTSIDE the loop with a small probability
+            if (random() < 0.0002 && this.cosmicStorms.length < 1) { // Limit to 1 storms max
+                const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
+                const angle = random(TWO_PI);
+                const distance = this.despawnRadius * 0.15;
                 
-                // Occasionally spawn new storms
-                if (random() < 0.0002) {
-                    const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
-                    const angle = random(TWO_PI);
-                    const distance = this.despawnRadius * 0.7;
-                    
-                    this.cosmicStorms.push(new CosmicStorm(
-                        this.player.pos.x + cos(angle) * distance,
-                        this.player.pos.y + sin(angle) * distance,
-                        random(600, 1200),
-                        stormType
-                    ));
-                }
+                this.cosmicStorms.push(new CosmicStorm(
+                    this.player.pos.x + cos(angle) * distance,
+                    this.player.pos.y + sin(angle) * distance,
+                    random(600, 1200),
+                    stormType
+                ));
+                console.log(`New ${stormType} storm spawned naturally`);
             }
 
 
