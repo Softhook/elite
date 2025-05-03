@@ -521,14 +521,3 @@ class WeaponSystem {
     }
 }
 
-// Try to initialize the weapon system's projectile pool if ObjectPool is available
-try {
-    if (typeof ObjectPool !== 'undefined') {
-        WeaponSystem.init(100);
-        console.log("WeaponSystem loaded with object pooling enabled");
-    } else {
-        console.log("WeaponSystem loaded without object pooling (ObjectPool class not found)");
-    }
-} catch (e) {
-    console.error("Error initializing WeaponSystem:", e);
-}

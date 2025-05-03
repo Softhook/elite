@@ -36,6 +36,12 @@ function setup() {
     textSize(14);
     console.log("Setting up Elite MVP..."); // Log startup
 
+    // Initialize object pools after p5.js is ready
+    if (typeof WeaponSystem !== 'undefined' && typeof ObjectPool !== 'undefined') {
+        console.log("Initializing weapon system pool in p5.js setup()");
+        WeaponSystem.init(100);
+    }
+
     // --- Check if Ship Definitions Loaded ---
     if (typeof SHIP_DEFINITIONS === 'undefined') {
         console.error("FATAL ERROR: SHIP_DEFINITIONS not loaded from ships.js! Check file inclusion order in index.html.");

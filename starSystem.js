@@ -1068,7 +1068,7 @@ try {
                     proj.color
                 );
                 
-                this.projectiles.splice(i, 1);
+                this.removeProjectile(i);
                 continue;
             }
             
@@ -1087,7 +1087,7 @@ try {
                             proj.color
                         );
                         
-                        this.projectiles.splice(i, 1);
+                        this.removeProjectile(i);
                         break;
                     }
                 }
@@ -1109,7 +1109,7 @@ try {
                             proj.color
                         );
                         
-                        this.projectiles.splice(i, 1);
+                        this.removeProjectile(i);
                         break;
                     }
                 }
@@ -1207,7 +1207,7 @@ try {
         if (this.projectiles[i] && typeof WeaponSystem !== 'undefined') {
             WeaponSystem.releaseProjectile(this.projectiles[i]);
         }
-        this.projectiles.splice(i, 1);
+        this.projectiles.splice(i, 1); // CORRECT: Use splice instead of recursion
     }
 
     /** Adds a beam to the system's list. */
