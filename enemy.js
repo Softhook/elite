@@ -1073,7 +1073,7 @@ evaluateTargetScore(target, system) {
                 if (system?.station?.pos) {
                     if (random() < 0.2) { //20% chance to patrol back to station
                         this.patrolTargetPos = system.station.pos.copy();
-                        console.log(`Police ${this.shipTypeName} patrolling back to station`);
+                        //console.log(`Police ${this.shipTypeName} patrolling back to station`);
                     } else {
                         // 70% chance to patrol elsewhere in the system
                         const patrolRange = 2000; // Area to patrol within
@@ -1086,7 +1086,7 @@ evaluateTargetScore(target, system) {
                             this.pos.y + sin(patrolAngle) * patrolDist
                         );
                         
-                        console.log(`Police ${this.shipTypeName} patrolling to new point at distance ${patrolDist.toFixed(0)}`);
+                        //console.log(`Police ${this.shipTypeName} patrolling to new point at distance ${patrolDist.toFixed(0)}`);
                     }
                 } else {
                     // No station, just patrol randomly
@@ -2412,6 +2412,10 @@ _handlePlayerKillConsequences(attacker, system) {
             this.role === AI_ROLE.PIRATE) {
             attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
             console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+            if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                console.log("Bounty mission target count met! Completing mission...");
+                system.player.completeMission(); // <<< Use simpler call for auto-complete
+           }
         }
     }
 

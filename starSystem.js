@@ -293,7 +293,7 @@ try {
     if (this.nebulae.length > 0) {
         console.log(`Skipping nebula generation: ${this.nebulae.length} nebulae loaded from save data`);
     }
-    else if (random() < 0.3) { // 30% chance of having a nebula in the system
+    else if (random() < 0.5) { // 50% chance of having a nebula in the system
         const nebulaCount = floor(random(1, 3));
         const nebulaTypes = ['ion', 'radiation', 'emp'];
         
@@ -664,7 +664,7 @@ try {
                     let reward = 0; 
                     if (enemy.role !== AI_ROLE.HAULER) reward = 25;
                     
-                    // Use this.player instead of player
+/*                     // Use this.player instead of player
                     if (this.player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
                         this.player.activeMission.progressCount++;
                         console.log(`Bounty progress: ${this.player.activeMission.progressCount}/${this.player.activeMission.targetCount}`);
@@ -674,7 +674,7 @@ try {
                              this.player.completeMission(); // <<< Use simpler call for auto-complete
                              reward = 0; // Don't give base reward if mission completed
                         }
-                    }
+                    } */
                     
                     if (reward > 0) this.player.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
