@@ -158,23 +158,34 @@ class Nebula {
     
     // Apply effects to ships within the nebula
     applyEffects(entity) {
+        // Get consistent entity ID first
+        const entityId = entity instanceof Player ? 'player' : (entity?.id || Date.now());
+        
         if (!entity || !this.contains(entity.pos)) {
-            // If entity was previously affected but is now out of range, remove from affected set
-            if (entity && entity.id && this.affectedEntities.has(entity.id)) {
-                this.affectedEntities.delete(entity.id);
-                console.log(`Entity ${entity.id} left ${this.type} nebula`);
+            // If entity was previously affected but is now out of range
+            if (entity && this.affectedEntities.has(entityId)) {
+                this.affectedEntities.delete(entityId);
+                console.log(`Entity ${entityId} left ${this.type} nebula`);
                 
                 // Reset affected status
-                if (this.type === 'ion') entity.shieldsDisabled = false;
-                if (this.type === 'emp') entity.weaponsDisabled = false;
+                if (this.type === 'ion') {
+                    entity.shieldsDisabled = false;
+                    if (entity instanceof Player) {
+                        uiManager.addMessage("Shields back online", "#00ff00");
+                    }
+                }
+                if (this.type === 'emp') {
+                    entity.weaponsDisabled = false;
+                    if (entity instanceof Player) {
+                        uiManager.addMessage("Weapons systems restored", "#00ff00");
+                    }
+                }
+                entity.inNebula = false; // Also reset the general nebula status
             }
             return;
         }
         
         // Entity is in nebula range - apply effects
-        const inNebula = entity.inNebula !== true;
-        const entityId = entity.id || (entity instanceof Player ? 'player' : Date.now());
-        
         // Log first entry to nebula
         if (!this.affectedEntities.has(entityId)) {
             this.affectedEntities.add(entityId);
