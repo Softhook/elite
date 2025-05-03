@@ -259,13 +259,13 @@ const SHIP_DEFINITIONS = {
         strokeColor: [151, 181, 196],
         strokeW: 1.00,
         typicalCargo: [],
-        price: 2700,
+        price: 20000,
         aiRoles: ["POLICE"]
     },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
-        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 22,
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 30,
         armament: ["Pulse Laser"],
         costCategory: "Low", description: "Affordable entry-level freighter or explorer.",
         drawFunction: drawAdder, 
@@ -279,13 +279,13 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
         typicalCargo: ["Food", "Textiles", "Minerals"],
-        price: 2700,
+        price: 27000,
         aiRoles: ["HAULER"]
     },
     "Anaconda": {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
-        baseHull: 400, baseShield: 350, shieldRecharge: 0.7, cargoCapacity: 150,
+        baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
         armament: ["Force Blaster"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
         drawFunction: drawAnaconda, 
@@ -299,7 +299,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery","Minerals"],
-        price: 12000,
+        price: 120000,
         aiRoles: ["HAULER", "MILITARY"]
     },
     "AspExplorer": {
@@ -321,7 +321,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [100, 90, 40],
         strokeW: 1.50,
         typicalCargo: ["Minerals","Minerals","Minerals","Minerals", "Medicine", "Computers"],
-        price: 8250,
+        price: 82500,
         aiRoles: ["EXPLORER"]
     },
     "BioFrigate": {
@@ -352,7 +352,7 @@ const SHIP_DEFINITIONS = {
         ],
 
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
-        price: 20000,
+        price: 200000,
         aiRoles: ["ALIEN"]
     },
     "CenturionGunship": {
@@ -374,13 +374,13 @@ const SHIP_DEFINITIONS = {
         strokeColor: [160, 165, 175],
         strokeW: 2.20,
         typicalCargo: ["Weapons", "Metals", "Machinery"],
-        price: 15360,
+        price: 30360,
         aiRoles: ["MILITARY"]
     },
     "CobraMkIII": {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
-        baseHull: 120, baseShield: 100, shieldRecharge: 1.2, cargoCapacity: 44,
+        baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
@@ -397,7 +397,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [200, 220, 255],
         strokeW: 1.50,
         typicalCargo: ["Food"],
-        price: 7200,
+        price: 30000,
         aiRoles: ["POLICE", "HAULER"]
     },
     "DiamondbackExplorer": {
@@ -417,7 +417,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
-        price: 6500,
+        price: 65000,
         aiRoles: ["EXPLORER"]
     },
     "Destroyer": {
@@ -450,13 +450,13 @@ const SHIP_DEFINITIONS = {
         strokeColor: [151, 181, 196],
         strokeW: 1.00,
         typicalCargo: [],
-        price: 60000,
+        price: 900000,
         aiRoles: ["MILITARY"]
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
-        baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 30,
+        baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
@@ -487,7 +487,7 @@ const SHIP_DEFINITIONS = {
         ],
 
         typicalCargo: ["Computers","Computers","Computers","Weapons", "Metals", "Adv Components"],
-        price: 15000,
+        price: 120000,
         aiRoles: ["MILITARY"]
     },
     "FerDeLance": {
@@ -525,7 +525,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
         typicalCargo: ["Computers","Computers","Computers","Computers","Luxury Goods", "Weapons", "Narcotics"],
-        price: 11700,
+        price: 117000,
         aiRoles: ["MILITARY"]
     },
     "GeometricDrone": {
@@ -537,7 +537,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawGeometricDrone, vertexData: [ {x:1,y:0}, {x:0.5,y:0.87}, {x:-0.5,y:0.87}, {x:-1,y:0}, {x:-0.5,y:-0.87}, {x:0.5,y:-0.87} ], // Regular Hexagon
         fillColor: [50, 50, 60], strokeColor: [200, 200, 255], strokeW: 1.0, // Dark metallic, light stroke
         typicalCargo: [],
-        price: 1800,
+        price: 18000,
         aiRoles: ["ALIEN"]
     },
     "GladiusFighter": {
@@ -557,7 +557,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Computers"],
-        price: 7000,
+        price: 60000,
         aiRoles: ["MILITARY"]
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
@@ -569,7 +569,7 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8, // Red
         typicalCargo: [],
-        price: 8850,
+        price: 40000,
         aiRoles: ["MILITARY"]
     },
     "HammerheadCorvette": { // NEW - Unique 2
@@ -610,7 +610,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [150, 180, 210],
         strokeW: 2.00, // Blue-grey
         typicalCargo: ["Machinery", "Metals", "Food","Metals", "Weapons"],
-        price: 14000,
+        price: 100000,
         aiRoles: ["MILITARY"]
     },
     "ImperialClipper": {
@@ -618,7 +618,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
         armament: ["V Punch", "Mini-Turret", "Beam Laser"], // Elegant, balanced
-        costCategory: "High", description: "Elegant and fast Imperial ship, excels in straight lines.",
+        costCategory: "High", description: "Elegant and fast Imperial ship, good shield charging.",
         drawFunction: drawImperialClipper, 
         vertexLayers: [
             {
@@ -636,7 +636,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
-        price: 12600,
+        price: 120000,
         aiRoles: ["HAULER"]
     },
     "ImperialCourier": {
@@ -644,7 +644,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
         baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
         armament: ["Pulse Array", "Beam Laser"], // Elegant, refined
-        costCategory: "Medium", description: "Fast, sleek Imperial ship with strong shields for its size.",
+        costCategory: "Medium", description: "Fast, sleek Imperial ship with good shields for its size.",
         drawFunction: drawImperialCourier, 
         vertexLayers: [
             {
@@ -656,7 +656,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
         typicalCargo: ["Luxury Goods", "Medicine"],
-        price: 5460,
+        price: 50000,
         aiRoles: ["MILITARY"]
     },
     "JackalMultirole": { // NEW - Multi-role
@@ -680,7 +680,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [90, 80, 70],
         strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
-        price: 8120,
+        price: 40000,
         aiRoles: ["HAULER","MILITARY"]
     },
     "Keelback": {
@@ -703,7 +703,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [100, 80, 40],
         strokeW: 1.50,
         typicalCargo: ["Minerals", "Metals", "Machinery"],
-        price: 7200,
+        price: 35000,
         aiRoles: ["HAULER"]
     },
     "KraitMKI": { 
@@ -726,7 +726,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [140, 160, 140],
         strokeW: 1.50,
         typicalCargo: [],
-        price: 6000,
+        price: 9000,
         aiRoles: ["PIRATE"]
     },
 
@@ -748,7 +748,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
         typicalCargo: ["Food","Minerals"],
-        price: 6000,
+        price: 20000,
         aiRoles: ["PIRATE"]
     },
     "MantaHauler": { // NEW - Unique 1
@@ -774,7 +774,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
-        price: 20000,
+        price: 80000,
         aiRoles: ["HAULER"]
     },
     "MuleFreighter": { // NEW - Small Transporter
@@ -794,7 +794,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
-        price: 2660,
+        price: 2000,
         aiRoles: ["TRANSPORT"]
     },
     "NomadVoyager": { 
@@ -814,7 +814,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
-        price: 9360,
+        price: 93600,
         aiRoles: ["EXPLORER"]
     },
     "PathfinderSurvey": {
@@ -842,7 +842,7 @@ const SHIP_DEFINITIONS = {
         
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
         typicalCargo: ["Food","Food", "Minerals","Minerals", "Metals"],
-        price: 6000,
+        price: 60000,
         aiRoles: ["EXPLORER"]
     },
     "ProspectorMiner": { // NEW - Miner
@@ -855,7 +855,7 @@ const SHIP_DEFINITIONS = {
 
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
         typicalCargo: ["Minerals"],
-        price: 7000,
+        price: 8000,
         aiRoles: ["TRANSPORT"]
     },
     "Python": {
@@ -875,7 +875,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals","Medicine", "Metals", "Chemicals"],
-        price: 12600,
+        price: 126000,
         aiRoles: ["HAULER"]
     },
     "ShardInterceptor": { // NEW - Alien 1
@@ -897,7 +897,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [240, 240, 255],
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
-        price: 9000,
+        price: 90000,
         aiRoles: ["ALIEN"]
     },
     "Sidewinder": {
@@ -929,7 +929,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine","Food", "Medicine"],
-        price: 11000,
+        price: 110000,
         aiRoles: ["HAULER"]
     },
     "Thargoid": { 
@@ -940,13 +940,13 @@ const SHIP_DEFINITIONS = {
         costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
         drawFunction: drawThargoid, vertexData: [], // Not editable via vertex data in this setup
         typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
-        price: 16000,
+        price: 9999999,
         aiRoles: ["ALIEN"]
     },
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
-        baseHull: 100, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
+        baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
         costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
         drawFunction: drawType6Transporter, 
@@ -960,13 +960,13 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
         typicalCargo: ["Food","Textiles", "Minerals", "Metals", "Machinery"],
-        price: 10000,
+        price: 80000,
         aiRoles: ["HAULER"]
     },
      "Type9Heavy": {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
-        baseHull: 450, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
+        baseHull: 550, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
         costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
         drawFunction: drawType9Heavy, 
@@ -982,7 +982,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [110, 80, 30],
         strokeW: 2.50,
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
-        price: 50250,
+        price: 120000,
         aiRoles: ["HAULER"]
     },
     "Viper": { 
@@ -1002,7 +1002,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
-        price: 6000,
+        price: 60000,
         aiRoles: ["MILITARY"]
     },
      "Vulture": {
@@ -1024,7 +1024,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [138, 138, 138],
         strokeW: 1.50,
         typicalCargo: ["Weapons", "Narcotics", "Slaves"],
-        price: 8250,
+        price: 40000,
         aiRoles: ["MILITARY"]
     },
     "WaspAssault": {
@@ -1046,7 +1046,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [120, 100, 30],
         strokeW: 1.00,
         typicalCargo: ["Computers"],
-        price: 8000,
+        price: 50000,
         aiRoles: ["MILITARY"]
     },
     "HummingBird": {
@@ -1070,7 +1070,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [120, 100, 30],
         strokeW: 1.00,
         typicalCargo: ["Computers"],
-        price: 6000,
+        price: 40000,
         aiRoles: ["MILITARY"]
     },
 };
