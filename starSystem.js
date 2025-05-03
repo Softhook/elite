@@ -656,27 +656,12 @@ try {
     update() {
         if (!this.player || !this.player.pos) return;
         try {
-            // Update Enemies & Check Bounty Progress
+            // Update Enemies
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i]; if (!enemy) { this.enemies.splice(i, 1); continue; }
                 try{ enemy.update(this); } catch(e){ console.error("Err updating Enemy:",e,enemy); }
+                
                 if (enemy.isDestroyed()) {
-                    let reward = 0; 
-                    if (enemy.role !== AI_ROLE.HAULER) reward = 25;
-                    
-/*                     // Use this.player instead of player
-                    if (this.player.activeMission?.type === MISSION_TYPE.BOUNTY_PIRATE && enemy.role === AI_ROLE.PIRATE) {
-                        this.player.activeMission.progressCount++;
-                        console.log(`Bounty progress: ${this.player.activeMission.progressCount}/${this.player.activeMission.targetCount}`);
-                        if (this.player.activeMission.progressCount >= this.player.activeMission.targetCount) {
-                             console.log("Bounty mission target count met! Completing mission...");
-                             // Call player.completeMission WITHOUT system/station args for auto-complete
-                             this.player.completeMission(); // <<< Use simpler call for auto-complete
-                             reward = 0; // Don't give base reward if mission completed
-                        }
-                    } */
-                    
-                    if (reward > 0) this.player.addCredits(reward);
                     this.enemies.splice(i, 1); continue;
                 }
 

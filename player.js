@@ -261,6 +261,12 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         console.log(`   Credits after addCredits call: ${this.credits}`);
 
         this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
+
+        if (this.activeMission && typeof uiManager !== 'undefined') {
+            uiManager.inactiveMissionIds.add(this.activeMission.id);
+            console.log(`Added mission ID ${this.activeMission.id} to inactive missions list`);
+        }
+        
         this.activeMission = null; // Clear active mission from player
         console.log(`   activeMission is now: ${this.activeMission}`);
 

@@ -12,20 +12,21 @@ const WEAPON_UPGRADES = [
         desc: "Standard energy weapon."
     },
     {
-        name: "Heavy Cannon",
-        type: "projectile",
-        damage: 25,
-        color: [180, 80, 80], // Brownish
-        fireRate: 1.2,
-        price: 3200,
-        desc: "Slow but powerful single shot."
-    },
-    {
+        
         name: "Sniper Rail",
         type: "projectile",
-        damage: 40,
+        damage: 25,
         color: [200, 200, 255], // Pale blue
-        fireRate: 2.0,
+        fireRate: 0.7,
+        price: 3200,
+        desc: "Slow but powerful shot."
+    },
+    {
+        name: "Heavy Cannon",
+        type: "projectile",
+        damage: 40,
+        color: [180, 80, 80], // Brownish
+        fireRate: 1.0,
         price: 5000,
         desc: "Very high damage, long cooldown."
     },
@@ -67,18 +68,18 @@ const WEAPON_UPGRADES = [
     {
         name: "Twin Pulse",
         type: "straight2",
-        damage: 8,
+        damage: 4,
         color: [0, 180, 255], // Blue
         fireRate: 0.35,
         price: 1600,
         desc: "Fires two parallel shots."
     },
     {
-        name: "Pulse Array",
+        name: "Triple Pulse",
         type: "straight3",
-        damage: 4,
+        damage: 6,
         color: [255, 0, 255], // Purple
-        fireRate: 0.32,
+        fireRate: 0.4,
         price: 2500,
         desc: "Fast 3-way parallel shots."
     },
@@ -88,15 +89,15 @@ const WEAPON_UPGRADES = [
         damage: 7,
         color: [0, 255, 180], // Aqua
         fireRate: 0.5,
-        price: 2200,
-        desc: "Fires four parallel shots."
+        price: 5000,
+        desc: "Four parallel shots."
     },
     
     // -----------------------------
     // Spread Weapons (2-way)
     // -----------------------------
     {
-        name: "Double Shot",
+        name: "V Spread", 
         type: "spread2",
         damage: 12,
         color: [255, 255, 0], // Yellow
@@ -105,9 +106,9 @@ const WEAPON_UPGRADES = [
         desc: "Two angled shots, good for close range."
     },
     {
-        name: "Arc Projector",
+        name: "V Punch",
         type: "spread2",
-        damage: 15,
+        damage: 18,
         color: [120, 120, 255], // Violet
         fireRate: 0.7,
         price: 2700,

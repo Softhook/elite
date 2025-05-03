@@ -767,11 +767,14 @@ if (isIllegalInSystem || isMissionCargo) {
             this.missionListButtonAreas = []; // Reset clickable areas
             let currentY = cY + 10; // Starting Y position
             const spacing = 5;
-            
+
             // Process each mission
             for (let i = 0; i < missions.length; i++) {
                 const m = missions[i];
-                const isInactive = this.inactiveMissionIds.has(m.id);
+                // Check mission status directly rather than relying only on inactiveMissionIds
+                const isInactive = this.inactiveMissionIds.has(m.id) || 
+                                m.status === 'Completed' || 
+                                m.status === 'Failed';
 
                 // Get mission text and calculate its space requirements
                 const missionText = m.getSummary();

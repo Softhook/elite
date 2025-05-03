@@ -94,10 +94,27 @@ class Mission {
          // TODO: Add penalties (credits, rep) or consequences later
     }
 
+    // Update the getSummary method
     /** Returns a short summary string for display on the mission board list. */
     getSummary() {
-        // Basic summary - can be enhanced
-        return `${this.title} (${this.type}) - Reward: ${this.rewardCredits}cr`;
+        // Add status information to the summary for completed/failed missions
+        let statusPrefix = '';
+        if (this.status === 'Completed') {
+            statusPrefix = '[COMPLETED] ';
+        } else if (this.status === 'Failed') {
+            statusPrefix = '[FAILED] ';
+        }
+        
+        // Show progress for active bounty missions
+        let progressInfo = '';
+        if (this.status === 'Active' && 
+            (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE) && 
+            this.progressCount > 0) {
+            progressInfo = ` (${this.progressCount}/${this.targetCount})`;
+        }
+        
+        // Basic summary with status prefix
+        return `${statusPrefix}${this.title}${progressInfo} - ${this.rewardCredits}cr`;
     }
 
     /** Returns a detailed multi-line string for the mission details panel. */

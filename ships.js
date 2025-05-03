@@ -404,7 +404,7 @@ const SHIP_DEFINITIONS = {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
         baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
-        armament: ["Beam Laser", "Double Shot"], // Explorer with some punch
+        armament: ["Beam Laser", "V Spread"], // Explorer with some punch
         costCategory: "Medium", description: "Utilitarian explorer known for good heat management.",
         drawFunction: drawDiamondbackExplorer, 
         vertexLayers: [
@@ -494,7 +494,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Pulse Array"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -617,7 +617,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
         baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
-        armament: ["Arc Projector", "Mini-Turret", "Beam Laser"], // Elegant, balanced
+        armament: ["V Punch", "Mini-Turret", "Beam Laser"], // Elegant, balanced
         costCategory: "High", description: "Elegant and fast Imperial ship, excels in straight lines.",
         drawFunction: drawImperialClipper, 
         vertexLayers: [
@@ -862,7 +862,7 @@ const SHIP_DEFINITIONS = {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
-        armament: ["Heavy Cannon", "Arc Projector", "Mini-Turret"], // Versatile heavy combat
+        armament: ["Heavy Cannon", "V Punch", "Mini-Turret"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
         drawFunction: drawPython,         
         vertexLayers: [
