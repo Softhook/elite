@@ -764,14 +764,13 @@ try {
                        // Use normalized distance ratio based on maximum radius
                         const distRatio = dist / (wave.maxRadius + entity.size/2);
                         
-                        // Use a gentler falloff curve
-                        const falloff = Math.pow(1 - distRatio, 0.6);
+                        // Use a gentler falloff curve with reduced distance impact
+                        const falloff = Math.pow(1 - distRatio, 0.9); // Increase the exponent to reduce falloff
                         
                         // Ensure meaningful minimum damage
-                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.25));
+                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.5)); // Increase the minimum damage
                         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
-                        
-                        // Apply damage and mark as processed
+
                         // Apply damage and mark as processed
                         entity.takeDamage(dmg, wave.owner);
                         wave.processed[entity.id || entity] = true;
@@ -781,8 +780,17 @@ try {
                         
                         // Apply knockback force
                         if (entity.vel) {
+                            // Create a NEW vector for knockback direction to avoid modifying the original
                             const knockbackDir = p5.Vector.sub(entity.pos, wave.pos).normalize();
-                            entity.vel.add(knockbackDir.mult(2));
+                            
+                            // Scale force based on how close the entity is to the center (stronger at center)
+                            const forceMagnitude = map(distRatio, 0, 1, 15, 5);
+                            
+                            // Apply force without modifying the direction vector first
+                            entity.vel.add(p5.Vector.mult(knockbackDir, forceMagnitude));
+                            
+                            // Debug output to verify knockback
+                            console.log(`Applied knockback with magnitude ${forceMagnitude} to ${entity.constructor.name}`);
                         }
                     }
                 }

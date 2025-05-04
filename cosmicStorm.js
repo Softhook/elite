@@ -12,10 +12,10 @@ class CosmicStorm {
         this.intensity = random(0.5, 1.0);
         
         // Add storm lifetime properties
-        this.maxLifetime = random(10000, 30000); // 10-30 seconds
+        this.maxLifetime = random(30000, 90000); // 30-90 seconds
         this.lifetime = this.maxLifetime;
         this.dissipating = false;
-        this.dissipateTime = 4000; // 4 seconds to fade out
+        this.dissipateTime = 10000; // 10 seconds to fade out
         this.dissipateStart = 0;
         
         // Particles for visual effect
