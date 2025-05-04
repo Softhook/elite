@@ -407,18 +407,18 @@ class UIManager {
         text(statusText, pX+pW/2, contentY+30);
         
         // Calculate fine amount - varies by system security level
-        let fineAmount = 100; // Base amount
-        if (system?.securityLevel === 'High') fineAmount = 500;
-        else if (system?.securityLevel === 'Medium') fineAmount = 300;
+        let fineAmount = 300; // Base amount
+        if (system?.securityLevel === 'High') fineAmount = 1000;
+        else if (system?.securityLevel === 'Medium') fineAmount = 500;
         
         // Double the fine if player was previously police
         if (player.hasBeenPolice) {
-            fineAmount *= 2;
+            fineAmount *= 3;
             
             // Add explanation text for doubled fine
             fill(255, 200, 100);
             textSize(16);
-            text("Fine doubled for former police officer", pX + pW/2, contentY + 60);
+            text("Fines trippled for former police officer", pX + pW/2, contentY + 60);
         }
 
         // Adjust the button Y position based on contentY
