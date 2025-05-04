@@ -11,7 +11,7 @@
 function isPlayerInJumpZone(playerObj, systemObj) {
     // --- Debug Logging ---
     const funcCaller = (new Error()).stack.split('\n')[2].trim().split(' ')[1]; // Get caller function name
-    console.log(`[isPlayerInJumpZone called by ${funcCaller}]`);
+    //console.log(`[isPlayerInJumpZone called by ${funcCaller}]`);
     // ---
 
     if (!playerObj?.pos) {
@@ -36,14 +36,6 @@ function isPlayerInJumpZone(playerObj, systemObj) {
     const distanceSq = (pX - zX) ** 2 + (pY - zY) ** 2;
     const radiusSq = radius ** 2;
     const isInZone = distanceSq <= radiusSq;
-
-    // --- Debug Logging ---
-    console.log(`  Player Pos: (${pX.toFixed(1)}, ${pY.toFixed(1)})`);
-    console.log(`  Zone Center: (${zX.toFixed(1)}, ${zY.toFixed(1)})`);
-    console.log(`  Zone Radius: ${radius.toFixed(1)}`);
-    console.log(`  DistanceSq: ${distanceSq.toFixed(1)}, RadiusSq: ${radiusSq.toFixed(1)}`);
-    console.log(`  Result: ${isInZone}`);
-    // ---
 
     return isInZone;
 }
@@ -516,9 +508,9 @@ this.showingInventory = false;
         const targetSystem = galaxy.getSystemByIndex(targetIndex);
 
         // --- ADDED: Log state right before the check ---
-        console.log(`[startJump] Checking jump zone status...`);
+        //console.log(`[startJump] Checking jump zone status...`);
         const isInZone = isPlayerInJumpZone(player, currentSystem);
-        console.log(`[startJump] Result of isPlayerInJumpZone: ${isInZone}`);
+        //console.log(`[startJump] Result of isPlayerInJumpZone: ${isInZone}`);
         // ---
 
         // --- Jump Zone Restriction Check ---
