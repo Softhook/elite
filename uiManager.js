@@ -52,6 +52,10 @@ class UIManager {
         this.lastButtonAction = 0;
         this.buttonRepeatDelay = 150; // ms between repeated actions
 
+        //Weapon slots
+        this.selectedWeaponSlot = 0;
+        this.weaponSlotButtons = [];
+
         this.setPanelDefaults();
     }
 
@@ -1527,27 +1531,68 @@ if (isIllegalInSystem || isMissionCargo) {
         }
         // --- VIEWING_UPGRADES State ---
         else if (currentState === "VIEWING_UPGRADES") {
+            // First check if clicking on a weapon slot button
+            if (this.weaponSlotButtons && this.weaponSlotButtons.length > 0) {
+                for (const btn of this.weaponSlotButtons) {
+                    if (this.isClickInArea(mx, my, btn)) {
+                        this.selectedWeaponSlot = btn.slotIndex;
+                        
+                        // Play click sound if available
+                        if (typeof soundManager !== 'undefined') {
+                            soundManager.playSound('click');
+                        }
+                        
+                        return true; // Handled click
+                    }
+                }
+            }
+            
+            // Then check upgrade item buttons
             for (const area of this.upgradeListAreas) {
                 if (this.isClickInArea(mx, my, area)) {
                     if (player.credits >= area.upgrade.price) {
+                        // Check if ship has enough weapon slots
+                        const shipDef = SHIP_DEFINITIONS[player.shipTypeName];
+                        const availableSlots = shipDef?.armament?.length || 1;
+                        
+                        if (this.selectedWeaponSlot >= availableSlots) {
+                            uiManager.addMessage("Your ship doesn't have that weapon slot!", [255, 100, 100]);
+                            return true;
+                        }
+                        
+                        // Spend credits
                         player.spendCredits(area.upgrade.price);
-                        player.setWeaponByName(area.upgrade.name); // Equip the weapon
-                        saveGame && saveGame();
+                        
+                        // Install weapon to selected slot (instead of setWeaponByName)
+                        player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
+                        
+                        // Play purchase sound if available
+                        if (typeof soundManager !== 'undefined') {
+                            soundManager.playSound('upgrade');
+                        }
+                        
                         uiManager.addMessage("You bought the " + area.upgrade.name + "!");
+                        
+                        // Auto-save if possible
+                        if (typeof saveGame === 'function') {
+                            saveGame();
+                        }
                     } else {
                         uiManager.addMessage("Not enough credits!");
-                     }
+                    }
                     return true;
                 }
             }
-            // Back button
+            
+            // Back button (unchanged)
             if (this.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
                 gameStateManager.setState("DOCKED");
                 return true;
             }
             return false;
         }
-        // --- VIEW        // --- VIEWING_REPAIRS State ---
+
+        // --- VIEWING_REPAIRS State ---
         else if (currentState === "VIEWING_REPAIRS") {
             // Full repair
             if (this.isClickInArea(mx, my, this.repairsFullButtonArea)) {
@@ -1822,17 +1867,78 @@ if (isIllegalInSystem || isMissionCargo) {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Upgrades", station, player, system);
         
-        // Use the global WEAPON_UPGRADES array with adjusted Y position
+        // ===== NEW CODE: Add weapon slot selection UI at the top =====
+        const slotPanelY = pY + headerHeight + 15;
+        const slotPanelH = 80;
+        
+        fill(40, 40, 70);
+        rect(pX + 10, slotPanelY, pW - 20, slotPanelH, 5);
+        
+        fill(255);
+        textAlign(CENTER, TOP);
+        textSize(16);
+        text("Select Weapon Slot", pX + pW/2, slotPanelY + 5);
+        
+        // Get available slots from ship's armament array
+        const shipDef = SHIP_DEFINITIONS[player.shipTypeName];
+        const availableSlots = shipDef?.armament?.length || 1;
+        
+        // Draw slot buttons
+        this.weaponSlotButtons = [];
+        const slotBtnW = min(80, (pW - 40) / availableSlots);
+        const slotBtnH = 40;
+        const slotStartX = pX + (pW - (slotBtnW * availableSlots + 10 * (availableSlots-1))) / 2;
+        
+        for (let i = 0; i < availableSlots; i++) {
+            const slotX = slotStartX + i * (slotBtnW + 10);
+            const slotY = slotPanelY + 30;
+            const isSelected = (this.selectedWeaponSlot === i);
+            
+            // Draw slot button
+            fill(isSelected ? 100 : 60, isSelected ? 100 : 60, isSelected ? 150 : 90);
+            stroke(isSelected ? 150 : 100, isSelected ? 150 : 100, isSelected ? 255 : 150);
+            rect(slotX, slotY, slotBtnW, slotBtnH, 4);
+            
+            // Draw slot info
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            
+            // Show current weapon name or "Empty"
+            const currentWeapon = (i < player.weapons.length) ? player.weapons[i]?.name : "Empty";
+            text(`Slot ${i+1}`, slotX + slotBtnW/2, slotY + 10);
+            textSize(10);
+            text(currentWeapon || "Empty", slotX + slotBtnW/2, slotY + 25);
+            
+            // Store button area
+            this.weaponSlotButtons.push({
+                x: slotX, y: slotY, w: slotBtnW, h: slotBtnH, 
+                slotIndex: i
+            });
+        }
+        
+        // Add hint text
+        fill(200, 200, 255);
+        textAlign(CENTER, TOP);
+        textSize(12);
+        text("Click to select which weapon slot to install into", 
+             pX + pW/2, slotPanelY + slotBtnH + 35);
+        // ===== END NEW CODE =====
+             
+        // Continue with existing upgrade menu drawing (adjust startY)
+        let rowH = 40, startY = slotPanelY + slotPanelH + 10;
+        
+        // Use the global WEAPON_UPGRADES array
         const upgrades = WEAPON_UPGRADES;
-        let rowH = 40, startY = pY+headerHeight, visibleRows = floor((pH-headerHeight-60)/rowH);
+        let visibleRows = floor((pH - startY - 60) / rowH);
         let totalRows = upgrades.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
-
+    
         // Clamp scroll offset
         if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
         this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
-
+    
         // Draw visible upgrades
         let firstRow = this.upgradeScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
@@ -1848,7 +1954,7 @@ if (isIllegalInSystem || isMissionCargo) {
             );
             this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
         }
-
+    
         // Draw scrollbar if needed
         if (this.upgradeScrollMax > 0) {
             let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
@@ -1861,7 +1967,7 @@ if (isIllegalInSystem || isMissionCargo) {
         } else {
             this.upgradeScrollbarArea = null;
         }
-
+    
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);

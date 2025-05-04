@@ -909,6 +909,21 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         }
         // ---
 
+        // Save all weapons as an array with their full definitions
+        const weaponsData = this.weapons.map(weapon => {
+            // Only save non-null weapons
+            return weapon ? {
+                name: weapon.name,
+                type: weapon.type,
+                damage: weapon.damage,
+                color: weapon.color,
+                fireRate: weapon.fireRate,
+                price: weapon.price,
+                maxRadius: weapon.maxRadius,
+                desc: weapon.desc
+            } : null;
+        });
+
         return {
             shipTypeName: this.shipTypeName,
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
@@ -921,6 +936,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
+            weapons: weaponsData
             // -----------------------------------------
         };
     }
@@ -953,11 +969,38 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.maxShield = data.maxShield || this.maxShield;
         this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
 
-        // Set the weapon index if saved
-        if (data.weaponIndex !== undefined && 
-            data.weaponIndex >= 0 && 
-            data.weaponIndex < this.weapons.length) {
-            this.switchToWeapon(data.weaponIndex);
+        // Restore player weapons from saved data
+        if (Array.isArray(data.weapons)) {
+            // Clear existing weapons array to avoid duplicates
+            this.weapons = [];
+            
+            // Restore weapons from saved data
+            data.weapons.forEach(weaponData => {
+                if (weaponData) {
+                    // Try to find matching weapon definition for consistency
+                    const matchedWeapon = WEAPON_UPGRADES.find(w => w.name === weaponData.name);
+                    if (matchedWeapon) {
+                        this.weapons.push(matchedWeapon);
+                    } else {
+                        // If not found in definitions, restore from saved data directly
+                        this.weapons.push(weaponData);
+                    }
+                } else {
+                    // Add null placeholder for empty slots
+                    this.weapons.push(null);
+                }
+            });
+            
+            // Restore weapon index and current weapon
+            this.weaponIndex = data.weaponIndex || 0;
+            if (this.weaponIndex >= 0 && this.weaponIndex < this.weapons.length) {
+                this.currentWeapon = this.weapons[this.weaponIndex];
+                this.fireRate = this.currentWeapon?.fireRate || 0.5;
+            } else if (this.weapons.length > 0 && this.weapons[0]) {
+                this.weaponIndex = 0;
+                this.currentWeapon = this.weapons[0];
+                this.fireRate = this.currentWeapon.fireRate || 0.5;
+            }
         }
 
         // --- Load active mission ---
@@ -1137,6 +1180,42 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         } else {
             this.isThrusting = false;
         }
+    }
+
+
+    /**
+     * Installs a weapon into a specific weapon slot
+     * @param {Object} weapon - The weapon definition to install
+     * @param {number} slotIndex - The slot index to install into
+     * @returns {boolean} Success or failure
+     */
+    installWeaponToSlot(weapon, slotIndex) {
+        if (!weapon) return false;
+        
+        // Get slot count from armament array length
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        const availableSlots = shipDef?.armament?.length || 1;
+        
+        // Validate slot index
+        if (slotIndex < 0 || slotIndex >= availableSlots) {
+            console.warn(`Invalid weapon slot index: ${slotIndex}, ship has ${availableSlots} slots`);
+            return false;
+        }
+        
+        // Ensure weapons array has enough positions
+        while (this.weapons.length <= slotIndex) {
+            this.weapons.push(null);
+        }
+        
+        // Install the weapon in the specified slot
+        this.weapons[slotIndex] = weapon;
+        
+        // Set current weapon to the newly installed one
+        this.weaponIndex = slotIndex;
+        this.currentWeapon = weapon;
+        
+        console.log(`Installed ${weapon.name} in slot ${slotIndex+1}`);
+        return true;
     }
 
 } // End of Player Class
