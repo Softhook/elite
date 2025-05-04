@@ -2,10 +2,10 @@
 
 ## Bugs and Issues
 
+Replace type with Singularity
 
-force doesnt seem to hurt enemies
-
-- Alien ships should not be vailable to buy
+Limit the amount of ships and weapon upgrades avilable dependt on the
+- Alien ships should not be vailable to buy based on the tech level techLevel
 
 
 

@@ -98,7 +98,7 @@ class Market {
                     if (['Metals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.75; comm.sellPrice *= 0.85; }
                     if (['Minerals', 'Machinery', 'Food', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.25; comm.sellPrice *= 1.15; }
                     break;
-                case 'High Tech':
+                case 'Post Human':
                     if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
                     if (['Food', 'Metals', 'Chemicals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
                     if (['Luxury Goods'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }

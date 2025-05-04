@@ -1054,17 +1054,22 @@ if (isIllegalInSystem || isMissionCargo) {
 
             // Show type/security only if visited or current
             if (sysData.visited || isCurrent) {
-                text(`(${sysData.type})`, sysData.x, sysData.y + nodeR + 25);
-                const secLevel = galaxy.systems[i]?.securityLevel || "Unknown";
+                // Get the system object to access tech level
+                const system = galaxy.systems[i];
+                const techLevel = system?.techLevel || "?";
+                
+                // Display economy type with tech level
+                text(`(${sysData.type} - Tech ${techLevel})`, sysData.x, sysData.y + nodeR + 25);
+                
+                // Security level (unchanged)
+                const secLevel = system?.securityLevel || "Unknown";
                 fill(200, 200, 100); // Gold/yellow for visibility
                 text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 45);
-                // NEW CODE: Add wanted status display
-                const system = galaxy.systems[i];
-                if (system) {
-                    if (system.playerWanted) {
-                        fill(255, 0, 0); // Red for wanted
-                        text("Wanted", sysData.x, sysData.y + nodeR + 65);
-                    }
+                
+                // Wanted status (unchanged)
+                if (system && system.playerWanted) {
+                    fill(255, 0, 0); // Red for wanted
+                    text("Wanted", sysData.x, sysData.y + nodeR + 65);
                 }
             }
         });
@@ -1772,6 +1777,29 @@ if (isIllegalInSystem || isMissionCargo) {
         textAlign(LEFT, TOP);
         text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX+20, pY+headerHeight);
         
+
+        // FILTER SHIPS based on system properties
+        const systemTechLevel = system?.techLevel || 1;
+        const isMillitarySystem = system?.economyType === "Military";
+        
+        const availableShips = Object.entries(SHIP_DEFINITIONS).filter(([shipKey, shipData]) => {
+            // Never show alien ships
+            if (shipData.aiRoles && shipData.aiRoles.includes("ALIEN")) {
+                return false;
+            }
+            
+            // Only show military ships in military systems
+            if (shipData.aiRoles && shipData.aiRoles.includes("MILITARY")) {
+                return isMillitarySystem;
+            }
+            
+            // Tech level filtering - estimate tech level from price if not explicitly defined
+            const shipTechLevel = shipData.techLevel || Math.min(5, Math.ceil(shipData.price / 40000));
+            return shipTechLevel <= systemTechLevel;
+        });
+
+
+
         // List ships with adjusted Y position
         let rowH = 40, startY = pY+headerHeight+30, visibleRows = floor((pH-headerHeight-90)/rowH);
         let totalRows = Object.values(SHIP_DEFINITIONS).length;
@@ -1936,6 +1964,20 @@ if (isIllegalInSystem || isMissionCargo) {
             });
         }
         
+        // FILTER UPGRADES based on system tech level
+        const systemTechLevel = system?.techLevel || 1;
+        
+        // Filter weapons based on tech level
+        const availableWeapons = WEAPON_UPGRADES.filter(weapon => {
+            // Determine weapon tech level - either explicitly defined or estimated from damage and price
+            const weaponTechLevel = weapon.techLevel || 
+                Math.min(5, Math.ceil((weapon.damage * weapon.price) / 5000));
+                
+            return weaponTechLevel <= systemTechLevel;
+        });
+    
+    
+
         // ===== END NEW CODE =====
              
         // Continue with existing upgrade menu drawing (adjust startY)

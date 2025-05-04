@@ -16,7 +16,7 @@ const ECONOMY_EXPORTS = {
     'Industrial': ['Machinery'],
     'Mining': ['Metals', 'Minerals'], // <-- changed from Extraction
     'Refinery': ['Metals', 'Chemicals'],
-    'High Tech': ['Computers', 'Medicine', 'Adv Components'],
+    'Post Human': ['Computers', 'Medicine', 'Adv Components'],
     'Tourism': [],
     'Service': [],
     'Military': [], // <-- new
@@ -32,7 +32,7 @@ const ECONOMY_IMPORTS = {
     'Industrial': ['Food', 'Metals', 'Minerals', 'Chemicals', 'Adv Components'],
     'Mining': ['Food', 'Machinery', 'Medicine', 'Computers'], // <-- changed from Extraction
     'Refinery': ['Minerals', 'Machinery', 'Food', 'Medicine'],
-    'High Tech': ['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'],
+    'Post Human': ['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'],
     'Tourism': ['Food', 'Luxury Goods', 'Medicine', 'Textiles'],
     'Service': ['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'],
     'Military': ['Food','Luxury Goods', 'Medicine'], // <-- new
@@ -124,7 +124,7 @@ class MissionGenerator {
                   adjustedBounty *= 0.8;
                   adjustedIllegal *= 0.9; // Less likely hotbed for crime? Maybe.
                   break;
-             case 'High Tech':
+             case 'Post Human':
                   // Maybe slightly more bounties due to valuable assets?
                   adjustedBounty *= 1.1;
                   adjustedLegal *= 1.1;

@@ -7,7 +7,7 @@ class Galaxy {
         "Agricultural": { color: [180, 120, 40, 210] }, // Brown/Orange
         "Mining":       { color: [160, 160, 170, 210] }, // Light Grey/Silver
         "Refinery":     { color: [160, 40, 40, 210] },   // Maroon
-        "High Tech":    { color: [0, 200, 200, 210] },   // Cyan
+        "Post Human":    { color: [0, 200, 200, 210] },   // Cyan
         "Tourism":      { color: [200, 80, 200, 210] },  // Purple/Pink
         "Service":      { color: [200, 255, 255, 210] }, // 
         "Military":     { color: [200, 50, 50, 210] },   // Red
@@ -110,7 +110,7 @@ class Galaxy {
             // 3. Assign Economy/Security/Tech
             const economy = random(economyTypeNames); // Select a random economy NAME
             const security = random(securityLevels);
-            const techLevel = floor(random(2, 9));
+            const techLevel = floor(random(1, 6));
 
             // 4. Create StarSystem Object
             try {
