@@ -915,7 +915,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const canJump = isPlayerInJumpZone(player, currentSystem); // Use the helper function
 
         push(); // Isolate map drawing
-        background(10, 0, 20); // Dark space background
+       // background(10, 0, 20); // Dark space background
 
         // --- Draw Connections (Lines) ---
         stroke(150, 150, 200, 200); // Brighter connection line color

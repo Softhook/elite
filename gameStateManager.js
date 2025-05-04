@@ -198,7 +198,22 @@ this.showingInventory = false;
                 }
                 break;
 
+
+            // In GameStateManager.draw(), modify the GALAXY_MAP case:
+
             case "GALAXY_MAP":
+                // Continue updating game world while viewing galaxy map
+                if (player && currentSystem) {
+                    try {
+                        // Update player position (but without input processing)
+                        player.update();
+                        
+                        // Update system - keeps enemies moving, projectiles flying, etc.
+                        currentSystem.update(player);
+                    } catch (e) {
+                        console.error("Error updating game during galaxy map view:", e);
+                    }
+                }
                 break;
 
             case "JUMPING":
@@ -363,10 +378,43 @@ this.showingInventory = false;
                 }
                 break;
 
+
+
             case "GALAXY_MAP":
-                 if (uiManager && galaxy && player) { try { uiManager.drawGalaxyMap(galaxy, player); } catch(e) { console.error("Error drawing galaxy map:", e); } }
-                 else { /* Draw error */ }
-                break;
+                // First draw the regular game view behind the map
+                if (currentSystem && player) {
+                    try { 
+                        currentSystem.draw(player); 
+                    } catch(e) { 
+                        console.error("Error drawing system behind galaxy map:", e); 
+                    }
+                }
+                
+                // Draw semi-transparent overlay
+                push();
+                fill(10, 0, 20, 180); // Dark space background with 180/255 opacity
+                noStroke();
+                rect(0, 0, width, height);
+                pop();
+                
+                // Then draw the galaxy map UI elements
+                if (uiManager && galaxy && player) {
+                    try { 
+                        uiManager.drawGalaxyMap(galaxy, player); 
+                    } catch(e) { 
+                        console.error("Error drawing galaxy map:", e); 
+                    }
+                }
+                
+                // Draw HUD on top
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawHUD(player, currentSystem, true);
+                    } catch(e) {
+                        console.error("Error drawing HUD during galaxy map:", e);
+                    }
+                }
+                break; 
 
             // --- CORRECTED JUMPING DRAWING CASE ---
             case "JUMPING":
