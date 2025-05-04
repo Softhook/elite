@@ -141,6 +141,10 @@ class StarSystem {
      */
     setPlayerWanted(wanted, level = 1, duration = null) {
         this.playerWanted = wanted;
+
+        if (wanted && this.player && this.player.isPolice) {
+            this.player.removePoliceStatus();
+        }
         
         if (wanted) {
             this.playerWantedLevel = Math.min(5, Math.max(1, level));

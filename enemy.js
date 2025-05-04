@@ -2430,6 +2430,12 @@ _handlePlayerKillConsequences(attacker, system) {
     // Set player wanted status if a non-pirate was destroyed
     if (this.role !== AI_ROLE.PIRATE) {
         if (system.setPlayerWanted) {
+
+            // If player is police, revoke status first
+            if (attacker === system.player && system.player.isPolice) {
+                system.player.removePoliceStatus();
+            }
+
             const wantedLevel = (this.role === AI_ROLE.POLICE) ? 3 : 1;
             system.setPlayerWanted(true, wantedLevel);
             console.log(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);

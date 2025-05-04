@@ -51,8 +51,9 @@ class Player {
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
 
-            // Add police status
+        // Add police status
         this.isPolice = false;
+        this.hasBeenPolice = false;
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -1295,6 +1296,23 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         if (this.kills >= 16) return "Poor";
         if (this.kills >= 8) return "Mostly Harmless";
         return "Harmless";
+    }
+
+    /**
+     * Removes police status when player becomes wanted
+     */
+    removePoliceStatus() {
+        if (this.isPolice) {
+            this.hasBeenPolice = true;
+            this.isPolice = false;
+            
+            // Show notification to player
+            if (typeof uiManager !== "undefined") {
+                uiManager.addMessage("Police status revoked due to criminal activity!", [255, 0, 0]);
+            }
+            
+            console.log("Player's police status revoked, marked as former officer");
+        }
     }
 
 } // End of Player Class
