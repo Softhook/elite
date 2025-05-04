@@ -112,7 +112,7 @@ class TitleScreen {
         const lineHeight = 30;
         
         // Introduction
-        text("Trading, smuggling, space combat, piracy, assasinations, Thargoids - you know the deal...", textX, textY);
+        text("Hide in an Ion Nebula near the station and ambush the Imperial Courier - you know the deal...", textX, textY);
         textY += lineHeight * 2;
         
         // Controls section
