@@ -81,6 +81,11 @@ class WeaponSystem {
             owner.lastForceWave.time = millis();
             owner.lastForceWave.color = color;
         }
+
+                // ADD THIS: Play force blast sound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('force', owner.pos.x, owner.pos.y, player.pos);
+        }
     }
 
     /** 

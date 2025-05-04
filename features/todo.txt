@@ -41,8 +41,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 jettson all
 
-police screen - pay fine - join police
-
 planets have their own screen assocaited where it is possible to explre the planet. find things
 mine the planet
 
@@ -88,6 +86,7 @@ divide ships into imperial vs. alliance
 
 ## Graphics and UI Improvements
 
+make the storms and nubeulae look better
 - mulitple thurst ports on large ships
 - Implement visual starfield distortion during hyperjump
 - more weapon sounds
