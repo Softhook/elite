@@ -4,17 +4,33 @@
  */
 class ThrustParticle {
     constructor(x, y, angle, shipSize, baseColor = [255, 120, 30]) {
+        // Create vectors just once at construction time
+        this.pos = createVector(0, 0);
+        this.vel = createVector(0, 0);
+        
+        // Initialize with default values
+        this.size = 1;
+        this.baseColor = [255, 120, 30];
+        this.currentColor = [...this.baseColor, 255];
+        this.maxLife = 20;
+        this.life = this.maxLife;
+        this.shrinkRate = 0.95;
+        
+        // If we have parameters, initialize with them
+        if (x !== undefined) {
+            this.reset(x, y, angle, shipSize, baseColor);
+        }
+    }
+    
+    // Add reset method for object pooling
+    reset(x, y, angle, shipSize, baseColor = [255, 120, 30]) {
         // Position is relative to ship's exhaust point
-        this.pos = createVector(x, y);
+        this.pos.set(x, y);
         
         // Create velocity vector pointing opposite to ship's direction
-        // with some randomization for spread
         const speed = random(0.5, 2.5);
-        // Angle is in radians, add PI to reverse direction and small random spread
         const spreadAngle = angle + PI + random(-0.2, 0.2);
-        // Ensure this is actually radians
-        // These are small radian values (~11 degrees) for random spread
-        this.vel = p5.Vector.fromAngle(spreadAngle).mult(speed);
+        this.vel.set(cos(spreadAngle), sin(spreadAngle)).mult(speed);
         
         // Size based on ship size but with variation
         this.size = random(shipSize * 0.05, shipSize * 0.15);
@@ -29,6 +45,8 @@ class ThrustParticle {
         
         // Shrink rate
         this.shrinkRate = random(0.92, 0.97);
+        
+        return this;
     }
     
     update() {
@@ -70,34 +88,37 @@ class ThrustParticle {
 
 /**
  * ThrustManager handles particle creation and management for ship engines.
+ * Uses object pooling for better performance.
  */
 class ThrustManager {
     constructor() {
-        this.particles = [];
-        this.maxParticles = 100; // Adjust based on performance needs
+        // Add backward compatibility properties
+        this.particles = new Set();
+        this.maxParticles = 500;
+        
+        // Initialize particle pool with reasonable sizes
+        this.particlePool = new ObjectPool(ThrustParticle, 100, this.maxParticles, "ThrustParticle");
     }
     
     createThrust(shipPos, shipAngle, shipSize, thrustCount = 2) {
         // Create multiple particles per frame when thrusting
         for (let i = 0; i < thrustCount; i++) {
             // Calculate spawn position at ship's rear
-            const offset = -shipSize * 0.5; // Negative offset to place at rear
+            const offset = -shipSize * 0.5;
             const spawnPoint = p5.Vector.fromAngle(shipAngle).mult(offset);
             
-            // Determine color based on ship type/size (can be customized)
+            // Determine color based on ship type/size
             let baseColor = [255, 120, 30]; // Default orange
             
-            // Larger ships have more blue-ish thrust
             if (shipSize > 60) {
                 baseColor = [200, 180, 255]; // Bluish for large ships
             } 
-            // Small ships more reddish
             else if (shipSize < 30) {
                 baseColor = [255, 80, 30]; // More red for small ships
             }
             
-            // Create the particle
-            const particle = new ThrustParticle(
+            // Get a particle from the pool
+            const particle = this.particlePool.get(
                 shipPos.x + spawnPoint.x,
                 shipPos.y + spawnPoint.y,
                 shipAngle,
@@ -105,31 +126,37 @@ class ThrustManager {
                 baseColor
             );
             
-            this.particles.push(particle);
-            
-            // Limit maximum particles
-            if (this.particles.length > this.maxParticles) {
-                this.particles.shift(); // Remove oldest particle
+            // Maintain backward compatibility with particles set
+            if (particle) {
+                this.particles.add(particle);
             }
         }
     }
     
     update() {
-        // Update all particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            this.particles[i].update();
+        // Use a temporary array since we'll be modifying while iterating
+        const activeParticles = Array.from(this.particlePool.active);
+        
+        for (const particle of activeParticles) {
+            particle.update();
             
-            // Remove dead particles
-            if (this.particles[i].isDead()) {
-                this.particles.splice(i, 1);
+            // Return dead particles to the pool
+            if (particle.isDead()) {
+                this.particlePool.release(particle);
+                this.particles.delete(particle); // For backward compatibility
             }
         }
     }
     
     draw() {
-        // Draw all particles
-        for (const particle of this.particles) {
+        // Draw all active particles
+        for (const particle of this.particlePool.active) {
             particle.draw();
         }
+    }
+    
+    // Add method to get stats about the pool
+    getPoolStats() {
+        return this.particlePool ? this.particlePool.getStats() : null;
     }
 }
