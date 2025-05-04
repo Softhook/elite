@@ -210,6 +210,7 @@ class Nebula {
             case 'ion':
                 // Disable shields
                 entity.shieldsDisabled = true;
+                entity.shield = 0;
                 entity.inNebula = true;
                 break;
                 
