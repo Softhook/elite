@@ -222,11 +222,26 @@ class WeaponSystem {
             let x = owner.pos.x + this._perpDir.x * offset;
             let y = owner.pos.y + this._perpDir.y * offset;
             
-            // Use the pooling-aware fireProjectile
-            this.fireProjectile(owner, system, angle);
+            // FIXED: Create projectile at the correct offset position
+            let proj;
+            if (this.projectilePool) {
+                proj = this.projectilePool.get(
+                    x, y, angle, owner,
+                    8, weapon.damage, weapon.color
+                );
+            } else {
+                proj = new Projectile(
+                    x, y, angle, owner,
+                    8, weapon.damage, weapon.color
+                );
+            }
+            
+            // Add reference to system for proper cleanup
+            proj.system = system;
+            system.addProjectile(proj);
         }
         
-        // Play laser sound using playWorldSound
+        // Play sound once for all projectiles
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
             soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
         }
