@@ -2,18 +2,6 @@
 
 ## Bugs and Issues
 
-i am not sure if the enemy idle bug has gone now
-
-weapon selection is wrong
-
-
-sho sun big on minimap
-
-cargo smal
-
-I AM NOt SURE IF THE BOUNTY IS counting old kills
-reset the killswa
-
 
 - Fix weapon buying into slots on ship.currently just temp overwrites first weapon
 Issue: When buying weapons, it currently just overwrites the first weapon slot
@@ -30,8 +18,6 @@ No consideration for ship orientation during collision tests
 Solution: Implement more precise hitbox system using ship vertex data
 
 - Fix AI behavior inconsistencies and edge cases
-- Improve enemy targeting and combat decisions
-- Fix potential memory leaks with explosion particles
 
 - Alien ships should not be vailable to buy
 
@@ -39,7 +25,9 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 ## Core Gameplay Enhancements
 
-jettson all
+police perform scan of any ship within 500 units lookig for illegal goods
+
+jettson all inventory screen
 
 planets have their own screen assocaited where it is possible to explre the planet. find things
 mine the planet
@@ -70,10 +58,7 @@ divide ships into imperial vs. alliance
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
 
-
 - Implement asteroid mining gameplay
-- Add smuggling mechanics with scanning gameplay
-
 
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters
@@ -85,19 +70,15 @@ divide ships into imperial vs. alliance
 - editor mirror editing mode
 
 ## Graphics and UI Improvements
-
-make the storms and nubeulae look better
+- show sun big on minimap
+- make the storms and nubeulae look better
 - mulitple thurst ports on large ships
-- Implement visual starfield distortion during hyperjump
 - more weapon sounds
 - warning sound when health is low
 - generate names for all the planets
 - put the messagses in teh corner with 10 lines
 - weapon names clarify
 - better title screen
-- add some space features nebula, moons
-- Redesign space station
-- Add proper 3D ship models (even if sprite-based)
 - Improve target information
 
 ## Economy and Progression
