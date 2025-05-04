@@ -760,8 +760,9 @@ try {
                     
                     // If entity is within wave radius, apply damage
                     if (dist < wave.radius + entity.size/2) {
-                        // Calculate damage with much less aggressive falloff
-                        const distRatio = dist / (wave.radius + entity.size/2);
+
+                       // Use normalized distance ratio based on maximum radius
+                        const distRatio = dist / (wave.maxRadius + entity.size/2);
                         
                         // Use a gentler falloff curve
                         const falloff = Math.pow(1 - distRatio, 0.6);
