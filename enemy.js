@@ -1980,8 +1980,9 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         // --- Draw Info Label (BEFORE rotation) ---
         if (!this.destroyed) {
             push();
+            textFont(font);
             textAlign(CENTER, BOTTOM);
-            textSize(12);
+            textSize(20);
             fill(255);
             noStroke();
 
