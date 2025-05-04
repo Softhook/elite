@@ -375,114 +375,128 @@ class UIManager {
         pop();
     }
 
-// Add this new method after the drawRepairsMenu method
+    /** Draws the Police Menu */
+    drawPoliceMenu(player) {
+        if (!player) return;
+        this.policeButtonAreas = [];
+        
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30,30,60,230], [100,100,255]);
+        
+        // Use the standardized header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Police Station", station, player, system);
+        
+        // Show current legal status
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER, TOP);
+        
+        const isWanted = system?.isPlayerWanted();
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        
+        // Add this line to define contentY
+        const contentY = pY + headerHeight + 10;
+        
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX+pW/2, contentY+30);
+        
+        // Calculate fine amount - varies by system security level
+        let fineAmount = 100; // Base amount
+        if (system?.securityLevel === 'High') fineAmount = 500;
+        else if (system?.securityLevel === 'Medium') fineAmount = 300;
+        
+        // Double the fine if player was previously police
+        if (player.hasBeenPolice) {
+            fineAmount *= 2;
+            
+            // Add explanation text for doubled fine
+            fill(255, 200, 100);
+            textSize(16);
+            text("Fine doubled for former police officer", pX + pW/2, contentY + 60);
+        }
 
-/** Draws the Police Menu */
-drawPoliceMenu(player) {
-    if (!player) return;
-    this.policeButtonAreas = [];
-    
-    push();
-    const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-    this.drawPanelBG([30,30,60,230], [100,100,255]);
-    
-    // Use the standardized header
-    const system = galaxy?.getCurrentSystem();
-    const station = system?.station;
-    const headerHeight = this.drawStationHeader("Police Station", station, player, system);
-    
-    // Show current legal status
-    fill(255); 
-    textSize(20); 
-    textAlign(CENTER, TOP);
-    
-    const isWanted = system?.isPlayerWanted();
-    const statusText = isWanted ? "WANTED" : "CLEAN";
-    const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-    
-    text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, pY+headerHeight+10);
-    fill(statusColor);
-    textSize(24);
-    text(statusText, pX+pW/2, pY+headerHeight+40);
-    
-    // Calculate fine amount - varies by system security level
-    let fineAmount = 100; // Base amount
-    if (system?.securityLevel === 'High') fineAmount = 500;
-    else if (system?.securityLevel === 'Medium') fineAmount = 300;
-    
-    let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+80;
-    
-    // Pay Fine button - only if wanted
-    if (isWanted) {
-        fill(0,180,0); 
-        stroke(100,255,100); 
-        rect(btnX, btnY1, btnW, btnH, 5);
+        // Adjust the button Y position based on contentY
+        let btnW = pW*0.5, btnH = 45;
+        let btnX = pX+pW/2-btnW/2;
+        let btnY1 = contentY + (player.hasBeenPolice ? 90 : 70);
+        
+        // Pay Fine button - only if wanted
+        if (isWanted) {
+            fill(0,180,0); 
+            stroke(100,255,100); 
+            rect(btnX, btnY1, btnW, btnH, 5);
+            
+            fill(0); 
+            textSize(20); 
+            textAlign(CENTER,CENTER); 
+            noStroke();
+            text(`Pay Fine (${fineAmount} cr)`, btnX+btnW/2, btnY1+btnH/2);
+            
+            this.policeButtonAreas.push({
+                x: btnX, 
+                y: btnY1, 
+                w: btnW, 
+                h: btnH, 
+                action: 'pay_fine',
+                amount: fineAmount
+            });
+        }
+        
+        // Join Police button - only if not already ACAB
+        const btnY2 = btnY1 + btnH + 20;
+        if (!player.isPolice) {
+            fill(50, 50, 180); 
+            stroke(100, 100, 255); 
+            rect(btnX, btnY2, btnW, btnH, 5);
+            
+            fill(255); 
+            textSize(20); 
+            textAlign(CENTER,CENTER); 
+            noStroke();
+            text("Join Police Force", btnX+btnW/2, btnY2+btnH/2);
+            
+            this.policeButtonAreas.push({
+                x: btnX, 
+                y: btnY2, 
+                w: btnW, 
+                h: btnH, 
+                action: 'join_police'
+            });
+        } else {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER,CENTER);
+            text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
+        }
+        
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        fill(180,180,0); 
+        stroke(220,220,100); 
+        rect(backX,backY,backW,backH,5);
         
         fill(0); 
         textSize(20); 
         textAlign(CENTER,CENTER); 
         noStroke();
-        text(`Pay Fine (${fineAmount} cr)`, btnX+btnW/2, btnY1+btnH/2);
+        text("Back", backX+backW/2, backY+backH/2);
         
         this.policeButtonAreas.push({
-            x: btnX, 
-            y: btnY1, 
-            w: btnW, 
-            h: btnH, 
-            action: 'pay_fine',
-            amount: fineAmount
+            x: backX, 
+            y: backY, 
+            w: backW, 
+            h: backH, 
+            action: 'back'
         });
-    }
-    
-    // Join Police button - only if not already ACAB
-    const btnY2 = btnY1 + btnH + 20;
-    if (!player.isPolice) {
-        fill(50, 50, 180); 
-        stroke(100, 100, 255); 
-        rect(btnX, btnY2, btnW, btnH, 5);
         
-        fill(255); 
-        textSize(20); 
-        textAlign(CENTER,CENTER); 
-        noStroke();
-        text("Join Police Force", btnX+btnW/2, btnY2+btnH/2);
-        
-        this.policeButtonAreas.push({
-            x: btnX, 
-            y: btnY2, 
-            w: btnW, 
-            h: btnH, 
-            action: 'join_police'
-        });
-    } else {
-        fill(255);
-        textSize(18);
-        textAlign(CENTER,CENTER);
-        text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
+        pop();
     }
-    
-    // Back button
-    let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-    fill(180,180,0); 
-    stroke(220,220,100); 
-    rect(backX,backY,backW,backH,5);
-    
-    fill(0); 
-    textSize(20); 
-    textAlign(CENTER,CENTER); 
-    noStroke();
-    text("Back", backX+backW/2, backY+backH/2);
-    
-    this.policeButtonAreas.push({
-        x: backX, 
-        y: backY, 
-        w: backW, 
-        h: backH, 
-        action: 'back'
-    });
-    
-    pop();
-}
 
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
