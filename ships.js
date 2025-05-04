@@ -1076,4 +1076,55 @@ const SHIP_DEFINITIONS = {
 };
 // --- End Ship Definitions ---
 
+// For each ship definition, add the techLevel property
+
+// Basic/starter ships (Tech Level 1-2)
+SHIP_DEFINITIONS.Sidewinder.techLevel = 1;
+SHIP_DEFINITIONS.MuleFreighter.techLevel = 1;
+SHIP_DEFINITIONS.KraitMKI.techLevel = 2;
+
+// Common utility ships (Tech Level 2-3)
+SHIP_DEFINITIONS.Adder.techLevel = 2; 
+SHIP_DEFINITIONS.ACAB.techLevel = 2;
+SHIP_DEFINITIONS.WaspAssault.techLevel = 2;
+SHIP_DEFINITIONS.Viper.techLevel = 2;
+SHIP_DEFINITIONS.HummingBird.techLevel = 2;
+SHIP_DEFINITIONS.ProspectorMiner.techLevel = 2;
+
+// Mid-tier ships (Tech Level 3)
+SHIP_DEFINITIONS.CobraMkIII.techLevel = 3;
+SHIP_DEFINITIONS.JackalMultirole.techLevel = 3;
+SHIP_DEFINITIONS.Type6Transporter.techLevel = 3;
+SHIP_DEFINITIONS.Keelback.techLevel = 3;
+SHIP_DEFINITIONS.KraitMKII.techLevel = 3;
+SHIP_DEFINITIONS.GladiusFighter.techLevel = 3;
+SHIP_DEFINITIONS.Vulture.techLevel = 3;
+
+// Advanced ships (Tech Level 4)
+SHIP_DEFINITIONS.DiamondbackExplorer.techLevel = 4;
+SHIP_DEFINITIONS.AspExplorer.techLevel = 4;
+SHIP_DEFINITIONS.PathfinderSurvey.techLevel = 4;
+SHIP_DEFINITIONS.NomadVoyager.techLevel = 4;
+SHIP_DEFINITIONS.StarlinerCruiser.techLevel = 4;
+SHIP_DEFINITIONS.Python.techLevel = 4;
+SHIP_DEFINITIONS.Type9Heavy.techLevel = 4;
+SHIP_DEFINITIONS.CenturionGunship.techLevel = 4;
+SHIP_DEFINITIONS.MantaHauler.techLevel = 4;
+SHIP_DEFINITIONS.HammerheadCorvette.techLevel = 4;
+SHIP_DEFINITIONS.ImperialCourier.techLevel = 4;
+
+// Cutting-edge ships (Tech Level 5)
+SHIP_DEFINITIONS.FederalAssaultShip.techLevel = 5;
+SHIP_DEFINITIONS.ImperialClipper.techLevel = 5;
+SHIP_DEFINITIONS.FerDeLance.techLevel = 5;
+SHIP_DEFINITIONS.Anaconda.techLevel = 5;
+SHIP_DEFINITIONS.Destroyer.techLevel = 5;
+SHIP_DEFINITIONS.GnatInterceptor.techLevel = 5;
+
+// Alien ships (special case - very advanced but not purchasable)
+SHIP_DEFINITIONS.Thargoid.techLevel = 5;
+SHIP_DEFINITIONS.ShardInterceptor.techLevel = 5;
+SHIP_DEFINITIONS.BioFrigate.techLevel = 5;
+SHIP_DEFINITIONS.GeometricDrone.techLevel = 5;
+
 console.log(`ships.js (Editor Version with ${Object.keys(SHIP_DEFINITIONS).length} ships) loaded and SHIP_DEFINITIONS created.`); // Updated log

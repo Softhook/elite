@@ -1800,21 +1800,21 @@ if (isIllegalInSystem || isMissionCargo) {
 
 
 
-        // List ships with adjusted Y position
+            // List ships with adjusted Y position
         let rowH = 40, startY = pY+headerHeight+30, visibleRows = floor((pH-headerHeight-90)/rowH);
-        let totalRows = Object.values(SHIP_DEFINITIONS).length;
+        let totalRows = availableShips.length;  // Use filtered count
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
-    
+
         // Clamp scroll offset
         this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
-    
+
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(20);
         for (let i = firstRow; i < lastRow; i++) {
-            let ship = Object.values(SHIP_DEFINITIONS)[i];
+             let [shipKey, ship] = availableShips[i]; // Use filtered ships
             let y = startY + (i-firstRow)*rowH;
             
             // IMPROVED CHECK for current ship - try both name and lookup
@@ -1982,14 +1982,12 @@ if (isIllegalInSystem || isMissionCargo) {
              
         // Continue with existing upgrade menu drawing (adjust startY)
         let rowH = 40, startY = slotPanelY + slotPanelH + 10;
-        
-        // Use the global WEAPON_UPGRADES array
-        const upgrades = WEAPON_UPGRADES;
+
+        // Use the filtered weapons array consistently
         let visibleRows = floor((pH - startY - 60) / rowH);
-        let totalRows = upgrades.length;
+        let totalRows = availableWeapons.length; // <-- CHANGED: Use filtered array length
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
-    
         // Clamp scroll offset
         if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
         this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
@@ -1999,7 +1997,7 @@ if (isIllegalInSystem || isMissionCargo) {
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(20);
         for (let i = firstRow; i < lastRow; i++) {
-            let upg = upgrades[i];
+            let upg = availableWeapons[i];
             let y = startY + (i-firstRow)*rowH;
             fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
             fill(255); noStroke(); textAlign(LEFT,CENTER);
