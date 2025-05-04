@@ -2407,6 +2407,13 @@ _processDestruction(attacker) {
  * @param {StarSystem} system
  */
 _handlePlayerKillConsequences(attacker, system) {
+
+
+    console.log(`BEFORE: Player kills = ${system.player.kills}`);
+    system.player.addKill();
+    console.log(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
+    
+
     // Update mission progress
     if (attacker.activeMission) {
         if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&

@@ -73,6 +73,9 @@ class Player {
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
 
+        // Track enemy kills for Elite rating
+        this.kills = 0;
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -936,6 +939,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             shield: this.shield,
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
+            kills: this.kills,
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -971,6 +975,8 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.shield = data.shield !== undefined ? data.shield : this.maxShield;
         this.maxShield = data.maxShield || this.maxShield;
         this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
+
+        this.kills = data.kills || 0;
 
         // Restore player weapons from saved data
         if (Array.isArray(data.weapons)) {
@@ -1265,6 +1271,30 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // No valid weapons found
         console.warn("No valid weapons available");
         return false;
+    }
+
+    /**
+     * Increments the kill counter when the player destroys an enemy
+     */
+    addKill() {
+        this.kills++;
+        console.log(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
+    }
+
+    /**
+     * Determines player's Elite rating based on kill count
+     * @returns {string} The Elite rating
+     */
+    getEliteRating() {
+        if (this.kills >= 6400) return "Elite";
+        if (this.kills >= 2560) return "Deadly";
+        if (this.kills >= 512) return "Dangerous";
+        if (this.kills >= 128) return "Competent";
+        if (this.kills >= 64) return "Above Average";
+        if (this.kills >= 32) return "Average";
+        if (this.kills >= 16) return "Poor";
+        if (this.kills >= 8) return "Mostly Harmless";
+        return "Harmless";
     }
 
 } // End of Player Class

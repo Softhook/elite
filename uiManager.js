@@ -93,6 +93,8 @@ class UIManager {
         const maxHull = player.maxHull || 1;
         const credits = player.credits ?? 0;
         const shipName = player.shipTypeName || "Unknown Ship";
+        const eliteRating = player.getEliteRating(); // Get elite rating
+    
         
         // Top HUD bar background
         push(); 
@@ -115,10 +117,13 @@ class UIManager {
         // Center - LEGAL status - aligned at statusLineY
         if (player.currentSystem?.isPlayerWanted()) {
             fill(255, 0, 0);
-            text(`Wanted`, width/2, statusLineY);
+            text(`${eliteRating} - Wanted`, width/2, statusLineY);
         } else {
-            fill(0, 255, 0);
-            text(`Clean`, width/2, statusLineY);
+            fill(255);
+            textAlign(CENTER, CENTER);
+            
+            // Add Elite rating to status display
+            text(`${eliteRating} - ` + (player.isPolice ? "POLICE" : "LEGAL"), width/2, statusLineY);
         }
         
         // Right side - Ship info - aligned with statusLineY
