@@ -745,7 +745,7 @@ try {
                 }
                 
                 // Process entities in batches to prevent frame rate drops
-                const batchSize = 5; // Process 5 entities per frame
+                const batchSize = 20; // Process 5 entities per frame
                 const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
                 const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
                 
@@ -764,15 +764,19 @@ try {
                         const distRatio = dist / (wave.radius + entity.size/2);
                         
                         // Use a gentler falloff curve
-                        const falloff = Math.pow(1 - distRatio, 0.8);
+                        const falloff = Math.pow(1 - distRatio, 0.6);
                         
                         // Ensure meaningful minimum damage
-                        const minDamage = Math.max(30, Math.floor(wave.damage * 0.1));
+                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.25));
                         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
                         
                         // Apply damage and mark as processed
+                        // Apply damage and mark as processed
                         entity.takeDamage(dmg, wave.owner);
                         wave.processed[entity.id || entity] = true;
+
+                        // Add this temporary debug line:
+                        console.log(`Force wave hit ${entity.constructor.name} for ${dmg} damage (${entity.hull}/${entity.maxHull} hull)`);
                         
                         // Apply knockback force
                         if (entity.vel) {
@@ -786,7 +790,7 @@ try {
                 wave.processedCount += entitiesToProcessNow;
                 
                 // Remove wave if it reaches max size and all entities processed
-                if (wave.radius >= wave.maxRadius) {
+                if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
                     this.forceWaves.splice(i, 1);
                 }
             }

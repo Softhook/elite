@@ -30,63 +30,78 @@ class WeaponSystem {
         }
     }
     
-    /** 
-     * Handles force blast weapon (area effect damage)
-     * @param {Object} owner - Entity firing the weapon
-     * @param {Object} system - Current star system
-     */
-    static fireForce(owner, system) {
-        if (!owner || !system) return;
-        
-        // Initialize static force wave position vector if not exists
-        if (!this._forceWavePos) {
-            this._forceWavePos = createVector(0, 0);
-        }
-        
-        // Reuse vector instead of creating a new one
-        this._forceWavePos.set(owner.pos.x, owner.pos.y);
-        
-        // Get owner's current weapon for properties
-        const weapon = owner.currentWeapon;
-        const damage = weapon?.damage || 20;
-        const color = weapon?.color || [255, 0, 0];
-        const maxRadius = weapon?.maxRadius || 750;
-        
-        // Create force wave in the system (reuse objects to minimize allocation)
-        system.forceWaves.push({
-            pos: this._forceWavePos,
-            owner: owner,
-            startTime: millis(),
-            radius: 50,
-            maxRadius: maxRadius,
-            growRate: 15,
-            damage: damage,
-            color: color,
-            processed: {},
-            // Add batch processing properties to prevent frame rate drops
-            processedCount: 0,
-            entitiesToProcess: [],
-            maxProcessPerFrame: 10
-        });
-        
-        // Store reference for drawing effects (reusing owner's lastForceWave if possible)
-        if (!owner.lastForceWave) {
-            owner.lastForceWave = {
-                pos: createVector(this._forceWavePos.x, this._forceWavePos.y),
-                time: millis(),
-                color: color
-            };
-        } else {
-            owner.lastForceWave.pos.set(this._forceWavePos.x, this._forceWavePos.y);
-            owner.lastForceWave.time = millis();
-            owner.lastForceWave.color = color;
-        }
-
-                // ADD THIS: Play force blast sound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('force', owner.pos.x, owner.pos.y, player.pos);
-        }
+/** 
+ * Handles force blast weapon (area effect damage)
+ * @param {Object} owner - Entity firing the weapon
+ * @param {Object} system - Current star system
+ */
+static fireForce(owner, system) {
+    if (!owner || !system) return;
+    
+    console.log(`Force weapon fired by ${owner.constructor.name}`); // Debug output
+    
+    // Initialize static force wave position vector if not exists
+    if (!this._forceWavePos) {
+        this._forceWavePos = createVector(0, 0);
     }
+    
+    // Reuse vector instead of creating a new one
+    this._forceWavePos.set(owner.pos.x, owner.pos.y);
+    
+    // Get owner's current weapon for properties
+    const weapon = owner.currentWeapon;
+    const damage = weapon?.damage || 20;
+    const color = weapon?.color || [255, 0, 0];
+    const maxRadius = weapon?.maxRadius || 1000; // INCREASED from 750 to 1000
+    
+    // Pre-populate enemies to process - THIS IS THE KEY FIX
+    let entitiesToProcess = [];
+    if (owner === system.player) {
+        // Player attacking enemies
+        entitiesToProcess = [...system.enemies, ...system.asteroids];
+        console.log(`Found ${entitiesToProcess.length} potential targets for force wave`);
+    } else if (system.player) {
+        // Enemy attacking player
+        entitiesToProcess = [system.player];
+    }
+    
+    // Create force wave in the system (reuse objects to minimize allocation)
+    system.forceWaves.push({
+        pos: this._forceWavePos,
+        owner: owner,
+        startTime: millis(),
+        radius: 50,
+        maxRadius: maxRadius,
+        growRate: 20, // INCREASED from 15 to 20
+        damage: damage,
+        color: color,
+        processed: {},
+        // Add batch processing properties with pre-populated entities
+        processedCount: 0,
+        entitiesToProcess: entitiesToProcess,
+        maxProcessPerFrame: 20 // INCREASED from 10 to 20
+    });
+    
+    console.log(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
+    
+    // Store reference for drawing effects (reusing owner's lastForceWave if possible)
+    if (!owner.lastForceWave) {
+        owner.lastForceWave = {
+            pos: createVector(this._forceWavePos.x, this._forceWavePos.y),
+            time: millis(),
+            color: color
+        };
+    } else {
+        owner.lastForceWave.pos.set(this._forceWavePos.x, this._forceWavePos.y);
+        owner.lastForceWave.time = millis();
+        owner.lastForceWave.color = color;
+    }
+
+    // Play force blast sound
+    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        soundManager.playWorldSound('force', owner.pos.x, owner.pos.y, player.pos);
+    }
+}
 
     /** 
      * Generic fire method that dispatches to specific weapon handlers

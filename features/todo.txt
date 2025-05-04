@@ -3,12 +3,13 @@
 ## Bugs and Issues
 
 
-- Fix weapon buying into slots on ship.currently just temp overwrites first weapon
-Issue: When buying weapons, it currently just overwrites the first weapon slot
-Ships have multiple weapon hardpoints defined in ship definition but can't use them
-No UI for selecting which weapon slot to install into
-No way to manage multiple weapons on complex ships
-Solution: Implement proper weapon slot management with selection UI
+force doesnt seem to hurt enemies
+
+- Alien ships should not be vailable to buy
+
+
+
+## Core Gameplay Enhancements
 
 - All projectile collisions use simple circle-based detection regardless of ship shape
 Problems:
@@ -16,14 +17,6 @@ Hits register when visually the projectile hasn't touched the ship
 Misses occur when projectiles appear to hit elongated ship parts
 No consideration for ship orientation during collision tests
 Solution: Implement more precise hitbox system using ship vertex data
-
-- Fix AI behavior inconsistencies and edge cases
-
-- Alien ships should not be vailable to buy
-
-
-
-## Core Gameplay Enhancements
 
 police perform scan of any ship within 500 units lookig for illegal goods
 
@@ -87,7 +80,6 @@ divide ships into imperial vs. alliance
 - Implement more sophisticated economic simulation
 - Add price fluctuations based on supply/demand
 - Implement market events (shortages, surpluses)
-- Create proper ship purchasing/trading system with trade-ins
 - Implement reputation system with factions
 - Create consequences for illegal activities
 - Add bounty system for player crimes
@@ -122,4 +114,3 @@ divide ships into imperial vs. alliance
 - Create space station construction and ownership
 - Add player fleet management
 - Add multiplayer capabilities
-- Create advanced navigation with autopilot options
