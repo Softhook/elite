@@ -1907,7 +1907,7 @@ if (isIllegalInSystem || isMissionCargo) {
             // Show current weapon name or "Empty"
             const currentWeapon = (i < player.weapons.length) ? player.weapons[i]?.name : "Empty";
             text(`Slot ${i+1}`, slotX + slotBtnW/2, slotY + 10);
-            textSize(10);
+            textSize(12);
             text(currentWeapon || "Empty", slotX + slotBtnW/2, slotY + 25);
             
             // Store button area
@@ -1917,12 +1917,6 @@ if (isIllegalInSystem || isMissionCargo) {
             });
         }
         
-        // Add hint text
-        fill(200, 200, 255);
-        textAlign(CENTER, TOP);
-        textSize(12);
-        text("Click to select which weapon slot to install into", 
-             pX + pW/2, slotPanelY + slotBtnH + 35);
         // ===== END NEW CODE =====
              
         // Continue with existing upgrade menu drawing (adjust startY)

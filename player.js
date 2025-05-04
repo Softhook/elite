@@ -338,22 +338,25 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         // Fallback if no valid weapons were found
         if (this.weapons.length === 0) {
             // Add default pulse laser if no weapons defined
-            this.weapons.push(WEAPON_UPGRADES.find(w => w.name === "Pulse Laser") || {
-                name: "Pulse Laser",
-                type: "projectile",
-                damage: 8,
-                color: [255, 0, 0],
-                fireRate: 0.5,
-                price: 0,
-                desc: "Basic energy weapon"
-            });
+            const defaultWeapon = WEAPON_UPGRADES.find(w => w.name === "Pulse Laser");
+            if (defaultWeapon) {
+                this.weapons.push({...defaultWeapon});
+            } else {
+                // Ultimate fallback
+                this.weapons.push({
+                    name: "Pulse Laser",
+                    type: "projectile",
+                    damage: 8,
+                    color: [255, 0, 0],
+                    fireRate: 0.5,
+                    price: 0,
+                    desc: "Basic energy weapon"
+                });
+            }
         }
         
         // Set current weapon to first one
-        this.weaponIndex = 0;
-        this.currentWeapon = this.weapons[this.weaponIndex];
-        console.log(`Loaded ${this.weapons.length} weapons for ${shipTypeName}:`, 
-                    this.weapons.map(w => w.name).join(', '));
+        this.setCurrentWeapon(0);
     }
 
     /** Switches to the specified weapon index */
@@ -971,19 +974,30 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
         // Restore player weapons from saved data
         if (Array.isArray(data.weapons)) {
-            // Clear existing weapons array to avoid duplicates
+            // Clear existing weapons array
             this.weapons = [];
             
             // Restore weapons from saved data
             data.weapons.forEach(weaponData => {
                 if (weaponData) {
+                    // Required properties check
+                    const requiredProps = ['name', 'type', 'damage', 'fireRate'];
+                    const hasRequiredProps = requiredProps.every(prop => weaponData[prop] !== undefined);
+                    
+                    if (!hasRequiredProps) {
+                        console.warn(`Weapon data missing required properties: ${JSON.stringify(weaponData)}`);
+                        this.weapons.push(null);
+                        return;
+                    }
+                    
                     // Try to find matching weapon definition for consistency
                     const matchedWeapon = WEAPON_UPGRADES.find(w => w.name === weaponData.name);
                     if (matchedWeapon) {
-                        this.weapons.push(matchedWeapon);
+                        // Create a deep copy to avoid modifying base definition
+                        this.weapons.push({...matchedWeapon});
                     } else {
-                        // If not found in definitions, restore from saved data directly
-                        this.weapons.push(weaponData);
+                        // If not found in definitions, still create a copy
+                        this.weapons.push({...weaponData});
                     }
                 } else {
                     // Add null placeholder for empty slots
@@ -993,14 +1007,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             
             // Restore weapon index and current weapon
             this.weaponIndex = data.weaponIndex || 0;
-            if (this.weaponIndex >= 0 && this.weaponIndex < this.weapons.length) {
-                this.currentWeapon = this.weapons[this.weaponIndex];
-                this.fireRate = this.currentWeapon?.fireRate || 0.5;
-            } else if (this.weapons.length > 0 && this.weapons[0]) {
-                this.weaponIndex = 0;
-                this.currentWeapon = this.weapons[0];
-                this.fireRate = this.currentWeapon.fireRate || 0.5;
-            }
+            this.setCurrentWeapon(this.weaponIndex); // Use centralized method
+        } else {
+            // If no saved weapons, initialize from ship definition
+            console.log("No weapon data found, loading defaults from ship definition");
+            this.loadWeaponsFromShipDefinition(this.shipTypeName);
         }
 
         // --- Load active mission ---
@@ -1190,7 +1201,17 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
      * @returns {boolean} Success or failure
      */
     installWeaponToSlot(weapon, slotIndex) {
-        if (!weapon) return false;
+        if (!weapon || typeof weapon !== 'object') {
+            console.warn("Invalid weapon data provided");
+            return false;
+        }
+        
+        // Validate required properties
+        const requiredProps = ['name', 'type', 'damage', 'fireRate'];
+        if (!requiredProps.every(prop => weapon[prop] !== undefined)) {
+            console.warn(`Weapon missing required properties: ${JSON.stringify(weapon)}`);
+            return false;
+        }
         
         // Get slot count from armament array length
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
@@ -1207,15 +1228,43 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             this.weapons.push(null);
         }
         
-        // Install the weapon in the specified slot
-        this.weapons[slotIndex] = weapon;
+        // Install a COPY of the weapon in the specified slot (avoid reference issues)
+        this.weapons[slotIndex] = {...weapon};
         
         // Set current weapon to the newly installed one
-        this.weaponIndex = slotIndex;
-        this.currentWeapon = weapon;
+        return this.setCurrentWeapon(slotIndex);
+    }
+
+    /**
+     * Sets the current weapon based on index
+     * @param {number} index - The weapon index to set as current
+     * @returns {boolean} Success or failure
+     */
+    setCurrentWeapon(index) {
+        if (!Array.isArray(this.weapons)) {
+            console.warn("Weapon array not initialized");
+            return false;
+        }
         
-        console.log(`Installed ${weapon.name} in slot ${slotIndex+1}`);
-        return true;
+        if (index >= 0 && index < this.weapons.length && this.weapons[index]) {
+            this.weaponIndex = index;
+            this.currentWeapon = this.weapons[index];
+            this.fireRate = this.currentWeapon.fireRate || 0.5;
+            return true;
+        } else if (this.weapons.length > 0) {
+            // Find the first non-null weapon
+            const firstValidIndex = this.weapons.findIndex(w => w !== null);
+            if (firstValidIndex >= 0) {
+                this.weaponIndex = firstValidIndex;
+                this.currentWeapon = this.weapons[firstValidIndex];
+                this.fireRate = this.currentWeapon.fireRate || 0.5;
+                return true;
+            }
+        }
+        
+        // No valid weapons found
+        console.warn("No valid weapons available");
+        return false;
     }
 
 } // End of Player Class
