@@ -940,62 +940,81 @@ evaluateTargetScore(target, system) {
     }
 
     /**
+     * Private helper to manage the forced combat state for Haulers after being attacked.
+     * Updates the timer and overrides the target if necessary.
+     * @param {Object} system - The current star system (unused currently, but good practice)
+     * @returns {boolean} True if currently in forced combat mode, false otherwise.
+     * @private
+     */
+    _handleForcedCombat(system) {
+        let isInForcedCombat = false;
+
+        // Check if forced combat should be initiated (Hauler role, recently attacked)
+        if (this.lastAttacker && this.role === AI_ROLE.HAULER && this.forcedCombatTimer <= 0) {
+            this.forcedCombatTimer = 5.0; // 5 seconds of forced combat
+            console.log(`${this.shipTypeName} entering FORCED COMBAT MODE after attack`);
+        }
+
+        // Update and check the timer
+        if (this.forcedCombatTimer > 0) {
+            this.forcedCombatTimer -= deltaTime / 1000;
+            isInForcedCombat = true;
+
+            // Override target to the last attacker
+            if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                this.target = this.lastAttacker;
+                // Ensure the state is appropriate for combat
+                if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.PATROLLING) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
+            } else {
+                // Attacker became invalid, end forced combat early
+                this.forcedCombatTimer = 0;
+                isInForcedCombat = false;
+                this.lastAttacker = null; // Clear invalid attacker
+            }
+        }
+
+        return isInForcedCombat;
+    }
+
+    /**
      * Main combat AI implementation - now using smaller helper methods
      * @param {Object} system - The current star system
      */
     updateCombatAI(system) {
-        // Add FORCED COMBAT mode when recently attacked
-        if (this.lastAttacker && this.role === AI_ROLE.HAULER) {
-            if (!this.forcedCombatTimer) {
-                this.forcedCombatTimer = 5.0; // 5 seconds of forced combat
-                console.log(`${this.shipTypeName} entering FORCED COMBAT MODE after attack`);
-            }
-        }
-        
-        // Update forced combat timer
-        if (this.forcedCombatTimer > 0) {
-            this.forcedCombatTimer -= deltaTime / 1000;
-        }
-        
-        // Initialize flags if not already set
-        if (this.combatFlagsInitialized === undefined) {
-            this.combatFlagsInitialized = true;
-            this.hasLoggedDamageActivation = false;
-            this.hasLoggedPlayerTargeting = false;
-            this.targetSwitchCooldown = 0;
-        }
-        
-        // Update targeting information
-        const targetExists = this.updateTargeting(system);
-        
-        // CRITICAL FIX: Override targeting result if in forced combat mode
-        if (this.forcedCombatTimer > 0 && this.lastAttacker) {
-            this.target = this.lastAttacker;
-            if (this.currentState === AI_STATE.IDLE) {
-                this.changeState(AI_STATE.APPROACHING);
-            }
-        }
-        
+        // --- Handle Forced Combat Mode ---
+        const isInForcedCombat = this._handleForcedCombat(system);
+        // --- End Forced Combat Handling ---
+
+        // Update targeting information (might be overridden by forced combat)
+        let targetExists = this.updateTargeting(system);
+
+        // Re-check target validity after potential forced combat override
+        targetExists = this.isTargetValid(this.target);
+
         // Calculate distance to target and shooting angle
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
-        let shootingAngle = this.angle;
-        
+        let shootingAngle = this.angle; // Default to current angle
+
         if (targetExists) {
+            // Calculate angle towards the actual current target
             shootingAngle = atan2(
-                this.target.pos.y - this.pos.y, 
+                this.target.pos.y - this.pos.y,
                 this.target.pos.x - this.pos.x
             );
         }
-        
-        // MODIFIED: Only update state if not in forced combat mode
-        if (!this.forcedCombatTimer || this.forcedCombatTimer <= 0) {
+
+        // Update combat state transitions, but ONLY if NOT in forced combat
+        // (Forced combat dictates the state via _handleForcedCombat)
+        if (!isInForcedCombat) {
             this.updateCombatState(targetExists, distanceToTarget);
         }
-        
+
         // Get movement target based on current state
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
-        
-        // Perform movement and firing
+
+        // Perform movement and firing (these methods should work regardless of forced combat)
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
