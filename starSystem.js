@@ -609,6 +609,10 @@ try {
                 chosenShipTypeName = "Thargoid";
                 chosenRole = AI_ROLE.PIRATE;
                 uiManager.addMessage(`Thargoid Spawn Detected`);
+
+                if (typeof soundManager !== 'undefined') {
+                    soundManager.playSound('thargoid'); // Use a suitable sound
+                }
             }
         }
 
@@ -1175,7 +1179,7 @@ try {
                     }
                     // Optional: Add UI message
                     if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
+                        //uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
                     }
 
                     // If the full quantity wasn't added (partial add), update the cargo item's quantity
@@ -1197,7 +1201,7 @@ try {
                      if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
                          // Avoid spamming this message - maybe only show once per few seconds?
                          // Simple approach: just show it
-                         uiManager.addMessage(`Cargo hold full!`);
+                         //uiManager.addMessage(`Cargo hold full!`);
                      }
                 }
             }

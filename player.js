@@ -704,7 +704,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                 this.hull -= remainingDamage;
                 
                 // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
-                uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
+                //uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
                 
                 // Always report as a shield hit if shields absorbed ANY damage
                 shieldHit = true;
@@ -712,7 +712,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         } else {
             // No shields, damage hull directly
             this.hull -= amount;
-            uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
+            //uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
             shieldHit = false;
         }
         
