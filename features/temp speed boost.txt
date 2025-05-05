@@ -7,18 +7,21 @@
 Activation Key: 'E' key.
 Game State: Can only be activated when the player is in the "IN_FLIGHT" game state.
 Cooldown: The ability cannot be activated if it is currently on cooldown.
-Resource Cost: (Initially None) - No fuel or energy cost for the MVP version. This could be added later for balance.
+Resource Cost: (Initially None) - No fuel or energy cost
+
+
 4. Interactions:
 
-Activation: Player presses the 'E' key while in flight and not on cooldown.
+Activation: Player presses the 'r' key while in flight and not on cooldown.
 The ship's maxSpeed is temporarily multiplied by BOOST_SPEED_MULTIPLIER.
 The ship's thrustForce is temporarily multiplied by BOOST_THRUST_MULTIPLIER.
 A timer starts for BOOST_DURATION.
 A cooldown timer starts, ending BOOST_COOLDOWN milliseconds after the boost duration finishes.
 Visual and audio feedback for boost start is triggered.
-UI indicator updates to "Active".
+
+
 During Boost:
-Player controls (thrust, rotation) function as normal, but forward thrust is more powerful, and the speed cap is higher.
+Player controls (thrust, rotation) function as normal,
 Thrust particle effects are enhanced.
 Boost End (Duration Expires):
 maxSpeed and thrustForce return to their normal values.

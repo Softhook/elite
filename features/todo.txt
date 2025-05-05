@@ -2,14 +2,13 @@
 
 ## Bugs and Issues
 
-Replace type with Singularity
-
-Limit the amount of ships and weapon upgrades avilable dependt on the
-- Alien ships should not be vailable to buy based on the tech level techLevel
-
 
 
 ## Core Gameplay Enhancements
+
+use tech level for market and missions
+
+Gnat fighter launching
 
 - All projectile collisions use simple circle-based detection regardless of ship shape
 Problems:

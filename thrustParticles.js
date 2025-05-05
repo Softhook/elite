@@ -157,6 +157,53 @@ class ThrustManager {
     
     // Add method to get stats about the pool
     getPoolStats() {
-        return this.particlePool ? this.particlePool.getStats() : null;
+        if (!this.particlePool) return null;
+        
+        return {
+            activeCount: this.particlePool.active ? this.particlePool.active.size : 0,
+            availableCount: this.particlePool.available ? this.particlePool.available.length : 0,
+            maxSize: this.maxParticles,
+            utilization: this.particlePool.active ? 
+                (this.particlePool.active.size / this.maxParticles * 100).toFixed(1) + '%' : '0%',
+            // Fix these property names:
+            created: this.particlePool.totalCreated || 0,
+            reused: this.particlePool.totalReused || 0,
+            reuseRate: this.particlePool.totalCreated && this.particlePool.totalReused ? 
+                ((this.particlePool.totalReused / (this.particlePool.totalCreated + this.particlePool.totalReused)) * 100).toFixed(1) + '%' : '0%'
+        };
     }
 }
+
+/**
+// Updated monitoring function
+function monitorThrustReuse() {
+  console.group("🚀 Thrust Particle Pool Stats");
+  
+  const playerStats = player?.thrustManager?.getPoolStats();
+  console.log(`Player: ${playerStats?.reused || 0} reused / ${playerStats?.created || 0} created`);
+  
+  const enemies = player?.currentSystem?.enemies || [];
+  let totalActive = 0;
+  let totalReused = 0;
+  let totalCreated = 0;
+  
+  enemies.forEach(enemy => {
+    if (enemy?.thrustManager) {
+      const stats = enemy.thrustManager.getPoolStats();
+      if (stats) {
+        totalActive += stats.activeCount || 0;
+        totalReused += stats.reused || 0;
+        totalCreated += stats.created || 0;
+      }
+    }
+  });
+  
+  console.log(`Enemies (${enemies.length}): ${totalReused} reused / ${totalCreated} created`);
+  console.log(`Active particles: ${totalActive}`);
+  
+  console.groupEnd();
+}
+
+// Run every 5 seconds
+window.thrustMonitor = setInterval(monitorThrustReuse, 5000);
+ */

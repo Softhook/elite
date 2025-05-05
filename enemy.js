@@ -77,6 +77,9 @@ class Enemy {
         // --- Robust Ship Definition Lookup ---
         let actualShipTypeName = shipTypeName; // Store the name passed in
         let shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Try to find definition
+        
+        // Initialize thrust manager
+        this.thrustManager = new ThrustManager();
 
         // Handle fallback if type not found
         if (!shipDef) {
@@ -228,9 +231,6 @@ class Enemy {
 
         //console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
-
-        // Initialize thrust manager
-        this.thrustManager = new ThrustManager();
 
         // Cargo collection behavior variables
         this.cargoTarget = null;
@@ -1677,23 +1677,21 @@ evaluateTargetScore(target, system) {
 
     /** 
      * Applies forward thrust in current facing direction
-     * @param {number} [multiplier=1.0] -```javascript
+     * @param {number} [multiplier=1.0] -
      * Optional thrust multiplier
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
     thrustForward(multiplier = 1.0, createParticles = true) {
-        if (isNaN(this.angle)) return;
+        // Apply thrust in the direction we're facing
+        const thrustVector = p5.Vector.fromAngle(this.angle);
+        thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(thrustVector);
         
-        // Calculate thrust vector
-        this.thrustVector.set(cos(this.angle), sin(this.angle));
-        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.isThrusting = true;
         
-        // Apply thrust to velocity
-        this.vel.add(this.thrustVector);
-        
-        // Flag that we're thrusting - particles will be created in updatePhysics
-        if (createParticles) {
-            this.isThrusting = true;
+        // Create visual thrust particles (using the pool via thrustManager)
+        if (createParticles && this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
     }
 
@@ -1779,15 +1777,8 @@ evaluateTargetScore(target, system) {
         if (this.thrustManager) {
             this.thrustManager.update();
         }
-        
-        // Create thrust particles if actively thrusting
-        // This will be controlled by a separate flag now
-        if (this.isThrusting) {
-            if (this.thrustManager) {
-                this.thrustManager.createThrust(this.pos, this.angle, this.size);
-            }
-            this.isThrusting = false; // Reset for next frame
-        }
+
+        this.isThrusting = false;       
     }
 
     // ---------------------------
@@ -1966,11 +1957,9 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             return;
         }
 
-        // Draw thrust particles BEHIND the ship
-        //push();
-        //translate(this.pos.x, this.pos.y); // Translate to ship position for particles
+       
         this.thrustManager.draw();
-        //pop();
+
 
 
         // --- Start Ship Drawing Block ---
