@@ -27,6 +27,8 @@ Attack pass timer ends -> REPOSITIONING.
 Repositioning enemy reaches target -> APPROACHING.
 Damaged enemy gets attacked -> FLEEING.
 Fleeing enemy gets far enough away -> PATROLLING/IDLE.
+
+
 Stage 3: Refactor evaluateTargetScore (Lines 500-648)
 
 Problem: Very complex method with nested conditions for scoring potential targets based on role, distance, damage, etc. Uses an IIFE for scope isolation, which can be refactored.

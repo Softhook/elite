@@ -1,5 +1,5 @@
 class ObjectPool {
-  constructor(objectType, initialSize = 20, maxSize = 1000) {
+  constructor(objectType, initialSize = 20, maxSize = 1500) {
     this.objectType = objectType;
     this.pool = [];
     this.active = new Set();

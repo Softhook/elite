@@ -992,45 +992,36 @@ _determinePostFleeState() {
      * @param {Object} system - The current star system
      */
     updateCombatAI(system) {
-
-        // 1) If we're in FLEEING state, do that logic and skip everything else
-        if (this.currentState === AI_STATE.FLEEING) {
-            this.updateFleeingAI(system);
-            return;
-        }
-
-        // --- Handle Forced Combat Mode ---
+        // 1. Handle forced‐combat mode (e.g., Hauler retaliation override)
         const isInForcedCombat = this._handleForcedCombat(system);
-        // --- End Forced Combat Handling ---
-
-        // Update targeting information (might be overridden by forced combat)
+    
+        // 2. Update targeting (may be overridden by forced combat)
         let targetExists = this.updateTargeting(system);
-
-        // Re-check target validity after potential forced combat override
         targetExists = this.isTargetValid(this.target);
-
-        // Calculate distance to target and shooting angle
+    
+        // 3. Compute distance to target and angle for firing
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
-        let shootingAngle = this.angle; // Default to current angle
-
+        let shootingAngle = this.angle;
         if (targetExists) {
-            // Calculate angle towards the actual current target
             shootingAngle = atan2(
                 this.target.pos.y - this.pos.y,
                 this.target.pos.x - this.pos.x
             );
         }
-
-        // Update combat state transitions, but ONLY if NOT in forced combat
-        // (Forced combat dictates the state via _handleForcedCombat)
+    
+        // 4. Run state‐transition logic if not in forced‐combat
         if (!isInForcedCombat) {
             this.updateCombatState(targetExists, distanceToTarget);
         }
-
-        // Get movement target based on current state
+    
+        // 5. If just entered (or still in) FLEEING, perform flee logic and exit
+        if (this.currentState === AI_STATE.FLEEING) {
+            this.updateFleeingAI(system);
+            return;
+        }
+    
+        // 6. Otherwise, do normal combat movement & firing
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
-
-        // Perform movement and firing (these methods should work regardless of forced combat)
         this.performRotationAndThrust(desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
