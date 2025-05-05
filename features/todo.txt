@@ -5,6 +5,10 @@
 
 
 ## Core Gameplay Enhancements
+refactoring
+
+- sideways kiting with thrust
+- temporary speed burst
 
 use tech level for market and missions
 
@@ -43,8 +47,7 @@ divide ships into imperial vs. alliance
 - special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
 
 
-- sideways kiting with thrust
-- temporary speed burst
+
 
 - Add elite achievements system
 - alien attack behaviour aim and shoot, asssasin
