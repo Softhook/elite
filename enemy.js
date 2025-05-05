@@ -259,6 +259,14 @@ class Enemy {
         // Shield recharge delay
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
+
+        // --- Combat AI Flags ---
+        this.combatFlagsInitialized = true; // Set flag here
+        this.hasLoggedDamageActivation = false;
+        this.hasLoggedPlayerTargeting = false;
+        this.targetSwitchCooldown = 0;
+        this.forcedCombatTimer = 0; // Initialize forced combat timer
+        // --- End Combat AI Flags ---
     }
 
     // -----------------------------
