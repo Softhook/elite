@@ -246,6 +246,38 @@ class SoundManager {
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
                 "sample_size": 8
+              },
+              thargoid: {
+                "oldParams": true,
+                "wave_type": 2,
+                "p_env_attack": -0.17825692502217524,
+                "p_env_sustain": 0.8140800845207565,
+                "p_env_punch": 0.15004474295109135,
+                "p_env_decay": 0.12218577708949585,
+                "p_base_freq": 0.905814324636156,
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0.034847155936952416,
+                "p_freq_dramp": -0.7989093915052705,
+                "p_vib_strength": -0.00301940754076396,
+                "p_vib_speed": -0.5850069794195327,
+                "p_arp_mod": -0.555140862443809,
+                "p_arp_speed": 0.17503066730815253,
+                "p_duty": 0.7420418473521806,
+                "p_duty_ramp": 0.09662151369559566,
+                "p_repeat_speed": 0.7138135653397979,
+                "p_pha_offset": -0.04571525319441293,
+                "p_pha_ramp": 0.01387424799837009,
+                "p_lpf_freq": 0.45749747637061355,
+                "p_lpf_ramp": -0.1064310942280934,
+                "p_lpf_resonance": -0.8194227485996151,
+                "p_hpf_freq": 0.0788306478270632,
+                "p_hpf_ramp": 0.4810852896290552,
+                "sound_vol": 0.25,
+                "sample_rate": 44100,
+                "sample_size": 8,
+                "ctime": 1746456062710,
+                "mtime": 1746456062710,
+                "preset": "random"
               }
         };
 
