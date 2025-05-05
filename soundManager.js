@@ -278,6 +278,38 @@ class SoundManager {
                 "ctime": 1746456062710,
                 "mtime": 1746456062710,
                 "preset": "random"
+              },
+              jump: {
+                "oldParams": true,
+                "wave_type": 3,
+                "p_env_attack": -0.4145750012451005,
+                "p_env_sustain": 0.5272456771338139,
+                "p_env_punch": 0.2479218929083218,
+                "p_env_decay": 0.4804523596576298,
+                "p_base_freq": 0.5903495433764034,
+                "p_freq_limit": 0,
+                "p_freq_ramp": -0.0017681137189092023,
+                "p_freq_dramp": 0.0735803989524578,
+                "p_vib_strength": 0.8838517521733452,
+                "p_vib_speed": -0.6206637957291772,
+                "p_arp_mod": -0.2244272034610615,
+                "p_arp_speed": 0.6266429015969779,
+                "p_duty": 0.2473777402124855,
+                "p_duty_ramp": 0.0026576558969564857,
+                "p_repeat_speed": 0.2989276090745494,
+                "p_pha_offset": -0.12400096166858156,
+                "p_pha_ramp": 0.01936116766289701,
+                "p_lpf_freq": 0.25720467300452077,
+                "p_lpf_ramp": -0.05666605762423825,
+                "p_lpf_resonance": 0.40110077102607167,
+                "p_hpf_freq": 0.16900019772542213,
+                "p_hpf_ramp": -0.6897831495121087,
+                "sound_vol": 0.25,
+                "sample_rate": 44100,
+                "sample_size": 8,
+                "ctime": 1746458443937,
+                "mtime": 1746458443938,
+                "preset": "random"
               }
         };
 

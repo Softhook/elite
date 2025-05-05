@@ -826,118 +826,121 @@ evaluateTargetScore(target, system) {
      * @param {boolean} targetExists - Whether we have a valid target
      * @param {number} distanceToTarget - Distance to the current target
      */
-    updateCombatState(targetExists, distanceToTarget) {
-        switch (this.currentState) {
-            case AI_STATE.IDLE:
-                // Transition to APPROACHING if we have a valid target
-                if (targetExists) {
-                    this.changeState(AI_STATE.APPROACHING);
-                }
-                break;
-                
-            case AI_STATE.APPROACHING:
-                // Transition to ATTACK_PASS when close enough
-                if (targetExists && distanceToTarget < this.engageDistance) {
-                    this.changeState(AI_STATE.ATTACK_PASS);
-                } else if (!targetExists) {
-                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                }
-                break;
-                
-            case AI_STATE.ATTACK_PASS:
-                if (!targetExists) {
-                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                    break;
-                }
-                
-                // Transition to REPOSITIONING when pass timer expires
-                this.passTimer -= deltaTime / 1000;
-                if (this.passTimer <= 0) {
-                    // Prepare data for repositioning
-                    let stateData = {};
-                    if (targetExists) {
-                        let v = p5.Vector.sub(this.pos, this.target.pos);
-                        v.setMag(this.repositionDistance * 1.5);
-                        stateData.repositionTarget = p5.Vector.add(this.pos, v);
-                    }
-                    this.changeState(AI_STATE.REPOSITIONING, stateData);
-                }
-                break;
-                
-            case AI_STATE.REPOSITIONING:
-                if (!targetExists) {
-                    this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
-                    break;
-                }
-                
-                // Check if we've reached the repositioning target or target is too far
-                let distToRepo = this.repositionTarget ? 
-                    this.distanceTo(this.repositionTarget) : Infinity;
-                    
-                if (distanceToTarget > this.repositionDistance || distToRepo < 50) {
-                    this.changeState(AI_STATE.APPROACHING);
-                }
-                break;
-                
-            case AI_STATE.PATROLLING:
-                // Transition to APPROACHING if in detection range
-                if (targetExists && distanceToTarget < this.detectionRange) {
-                    this.changeState(AI_STATE.APPROACHING);
-                }
-                break;
-
-            case AI_STATE.FLEEING:
-                // Add a minimum flee time to prevent premature exit
-                if (!this.fleeStartTime) {
-                    this.fleeStartTime = millis();
-                    this.fleeMinDuration = FLEE_MIN_DURATION_MS; // Use constant
-                }
-                
-                // When fleeing, move away from attacker and increase speed
-                if (this.target && this.target.pos) {
-                    let escapeVector = p5.Vector.sub(this.pos, this.target.pos);
-                    escapeVector.normalize().mult(2000);  // Aim very far away
-                    this.escapeTarget = p5.Vector.add(this.pos, escapeVector);
-                    
-                    // Apply stronger thrust for escape
-                    this.performRotationAndThrust(this.escapeTarget);
-                    const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
-                    this.thrustForward(fleeThrustMultiplier);  // Apply extra thrust when fleeing
-                    
-                    // Add some randomness to make escape path less predictable
-                    if (frameCount % 20 === 0) {
-                        this.vel.add(p5.Vector.random2D().mult(0.5));
-                    }
-                }
-                
-                // Only exit FLEEING when truly safe AND minimum flee time has passed
-                const timeInFlee = millis() - (this.fleeStartTime || 0);
-                const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
-                if (timeInFlee > this.fleeMinDuration && 
-                    (!this.isTargetValid(this.target) || 
-                     this.distanceTo(this.target) > escapeDistanceThreshold)) {
-                    
-                    console.log(`${this.shipTypeName} escaped successfully!`);
-                    
-                    // Add a long cooldown before we can be provoked again
-                    this.attackCooldown = 20.0;
-                    this.lastAttacker = null;  // Reset attacker reference
-                    this.fleeStartTime = null;  // Reset flee timer
-                    
-                    // Always return to a non-combat state (PATROLLING or previous state)
-                    // IMPORTANT: Never return to a combat state like ATTACK_PASS
-                    if (this.previousHaulerState && 
-                        this.previousHaulerState !== AI_STATE.APPROACHING && 
-                        this.previousHaulerState !== AI_STATE.ATTACK_PASS && 
-                        this.previousHaulerState !== AI_STATE.REPOSITIONING) {
-                        this.changeState(this.previousHaulerState);
-                    } else {
-                        this.changeState(AI_STATE.PATROLLING);
-                    }
-                }
-                break;
-        }
+// -------------------------
+// Replace your existing updateCombatState with:
+updateCombatState(targetExists, distanceToTarget) {
+    switch (this.currentState) {
+        case AI_STATE.IDLE:
+            this._updateState_IDLE(targetExists);
+            break;
+        case AI_STATE.APPROACHING:
+            this._updateState_APPROACHING(targetExists, distanceToTarget);
+            break;
+        case AI_STATE.ATTACK_PASS:
+            this._updateState_ATTACK_PASS(targetExists);
+            break;
+        case AI_STATE.REPOSITIONING:
+            this._updateState_REPOSITIONING(targetExists, distanceToTarget);
+            break;
+        case AI_STATE.PATROLLING:
+            this._updateState_PATROLLING(targetExists, distanceToTarget);
+            break;
+        case AI_STATE.FLEEING:
+            this._updateState_FLEEING(targetExists, distanceToTarget);
+            break;
     }
+}
+
+// -------------------------
+// Add these private helpers immediately below:
+
+/** @private */
+_updateState_IDLE(targetExists) {
+    if (targetExists) {
+        this.changeState(AI_STATE.APPROACHING);
+    }
+}
+
+/** @private */
+_updateState_APPROACHING(targetExists, distanceToTarget) {
+    if (targetExists && distanceToTarget < this.engageDistance) {
+        this.changeState(AI_STATE.ATTACK_PASS);
+    } else if (!targetExists) {
+        this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+    }
+}
+
+/** @private */
+_updateState_ATTACK_PASS(targetExists) {
+    if (!targetExists) {
+        this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+        return;
+    }
+    this.passTimer -= deltaTime / 1000;
+    if (this.passTimer <= 0) {
+        let stateData = {};
+        if (this.isTargetValid(this.target)) {
+            let v = p5.Vector.sub(this.pos, this.target.pos);
+            v.setMag(this.repositionDistance * 1.5);
+            stateData.repositionTarget = p5.Vector.add(this.pos, v);
+        }
+        this.changeState(AI_STATE.REPOSITIONING, stateData);
+    }
+}
+
+/** @private */
+_updateState_REPOSITIONING(targetExists, distanceToTarget) {
+    if (!targetExists) {
+        this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+        return;
+    }
+    let distToRepo = this.repositionTarget
+        ? this.distanceTo(this.repositionTarget)
+        : Infinity;
+    if (distanceToTarget > this.repositionDistance || distToRepo < 50) {
+        this.changeState(AI_STATE.APPROACHING);
+    }
+}
+
+/** @private */
+_updateState_PATROLLING(targetExists, distanceToTarget) {
+    if (targetExists && distanceToTarget < this.detectionRange) {
+        this.changeState(AI_STATE.APPROACHING);
+    }
+}
+
+/** @private */
+_updateState_FLEEING(targetExists, distanceToTarget) {
+    // Initialize flee timer
+    if (!this.fleeStartTime) {
+        this.fleeStartTime = millis();
+        this.fleeMinDuration = FLEE_MIN_DURATION_MS;
+    }
+    // Movement handled in updateFleeingAI or here if preferred...
+    // Exit conditions:
+    const timeInFlee = millis() - this.fleeStartTime;
+    const escapeDist = this.detectionRange * 
+        ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT);
+    if (timeInFlee > this.fleeMinDuration &&
+        (!this.isTargetValid(this.target) || this.distanceTo(this.target) > escapeDist)) {
+        this.changeState(this._determinePostFleeState());
+    }
+}
+
+/** @private */
+_determinePostFleeState() {
+    let state = AI_STATE.IDLE;
+    if (this.role === AI_ROLE.POLICE) state = AI_STATE.PATROLLING;
+    else if (this.role === AI_ROLE.HAULER) state = this.previousHaulerState || AI_STATE.PATROLLING;
+    else if (this.role === AI_ROLE.TRANSPORT) state = this.previousTransportState || AI_STATE.TRANSPORTING;
+    // never return into a combat pass
+    if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING].includes(state)) {
+        state = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER)
+            ? AI_STATE.PATROLLING
+            : AI_STATE.TRANSPORTING;
+    }
+    return state;
+}
 
     /**
      * Private helper to manage the forced combat state for Haulers after being attacked.
@@ -947,6 +950,12 @@ evaluateTargetScore(target, system) {
      * @private
      */
     _handleForcedCombat(system) {
+        // Don’t override fleeing with forced combat
+        if (this.currentState === AI_STATE.FLEEING) {
+            return false;
+        }
+
+
         let isInForcedCombat = false;
 
         // Check if forced combat should be initiated (Hauler role, recently attacked)
@@ -983,6 +992,13 @@ evaluateTargetScore(target, system) {
      * @param {Object} system - The current star system
      */
     updateCombatAI(system) {
+
+        // 1) If we're in FLEEING state, do that logic and skip everything else
+        if (this.currentState === AI_STATE.FLEEING) {
+            this.updateFleeingAI(system);
+            return;
+        }
+
         // --- Handle Forced Combat Mode ---
         const isInForcedCombat = this._handleForcedCombat(system);
         // --- End Forced Combat Handling ---
@@ -1209,12 +1225,8 @@ evaluateTargetScore(target, system) {
                 if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
             }
 
-            // Use combat AI when in combat mode
-            if (this.currentState === AI_STATE.FLEEING) {
-                this.updateFleeingAI(system);
-            } else {
-                this.updateCombatAI(system);
-            }
+
+            this.updateCombatAI(system);
             this.updatePhysics();
             return; // Skip normal hauler logic
         }
@@ -1228,12 +1240,8 @@ evaluateTargetScore(target, system) {
             // Set the inCombat flag if needed
             this.inCombat = true;
             
-            // Run appropriate AI
-            if (this.currentState === AI_STATE.FLEEING) {
-                this.updateFleeingAI(system);
-            } else {
-                this.updateCombatAI(system);
-            }
+
+            this.updateCombatAI(system);
             this.updatePhysics();
             return; // Skip normal hauler logic
         }
