@@ -94,7 +94,7 @@ class ThrustManager {
     constructor() {
         // Add backward compatibility properties
         this.particles = new Set();
-        this.maxParticles = 500;
+        this.maxParticles = 1000;
         
         // Initialize particle pool with reasonable sizes
         this.particlePool = new ObjectPool(ThrustParticle, 100, this.maxParticles, "ThrustParticle");

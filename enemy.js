@@ -909,23 +909,58 @@ _updateState_PATROLLING(targetExists, distanceToTarget) {
     }
 }
 
-/** @private */
-_updateState_FLEEING(targetExists, distanceToTarget) {
-    // Initialize flee timer
+  /** @private Handles state logic for FLEEING (movement + exit) */
+  _updateState_FLEEING(targetExists, distanceToTarget) {
+    // 1) Initialize flee timer
     if (!this.fleeStartTime) {
-        this.fleeStartTime = millis();
-        this.fleeMinDuration = FLEE_MIN_DURATION_MS;
+      this.fleeStartTime = millis();
+      this.fleeMinDuration = FLEE_MIN_DURATION_MS;
     }
-    // Movement handled in updateFleeingAI or here if preferred...
-    // Exit conditions:
+
+    // 2) If attacker no longer valid → exit immediately
+    if (!this.isTargetValid(this.target)) {
+      this.lastAttacker = null;
+      this.fleeStartTime = null;
+      const returnState = this._determinePostFleeState();
+      this.changeState(returnState);
+      return;
+    }
+
+    // 3) Movement: thrust away from attacker
+    //    Compute escape point
+    this.tempVector
+      .set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y)
+      .normalize()
+      .mult(this.detectionRange * 3);
+    const escapeTargetPos = p5.Vector.add(this.pos, this.tempVector);
+
+    //    Rotate & thrust toward escape point
+    this.performRotationAndThrust(escapeTargetPos);
+    const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
+      ? FLEE_THRUST_MULT_TRANSPORT
+      : FLEE_THRUST_MULT_DEFAULT;
+    this.thrustForward(fleeThrustMultiplier);
+
+    //    Occasional random jiggle
+    if (frameCount % 30 === 0) {
+      this.tempVector.set(random(-1,1), random(-1,1)).normalize().mult(0.3);
+      this.vel.add(this.tempVector);
+    }
+
+    // 4) Exit condition: ran long enough AND far enough
     const timeInFlee = millis() - this.fleeStartTime;
-    const escapeDist = this.detectionRange * 
-        ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT);
-    if (timeInFlee > this.fleeMinDuration &&
-        (!this.isTargetValid(this.target) || this.distanceTo(this.target) > escapeDist)) {
-        this.changeState(this._determinePostFleeState());
+    const escapeDist = this.detectionRange *
+      ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT+0.5 : FLEE_ESCAPE_DIST_MULT);
+    if (timeInFlee > this.fleeMinDuration && this.distanceTo(this.target) > escapeDist) {
+      console.log(`${this.shipTypeName} escaped successfully.`);
+      this.lastAttacker = null;
+      this.fleeStartTime = null;
+      this.attackCooldown = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT)
+        ? 30.0 : 20.0;
+      const returnState = this._determinePostFleeState();
+      this.changeState(returnState);
     }
-}
+  }
 
 /** @private */
 _determinePostFleeState() {
@@ -1015,8 +1050,9 @@ _determinePostFleeState() {
         }
     
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
+        // ← NO MORE "if (FLEEING) updateFleeingAI" here!
         if (this.currentState === AI_STATE.FLEEING) {
-            this.updateFleeingAI(system);
+            // state helper handles movement & exit
             return;
         }
     
@@ -1390,10 +1426,11 @@ _determinePostFleeState() {
 
         // Handle Fleeing state
         if (this.currentState === AI_STATE.FLEEING) {
-             this.updateFleeingAI(system); // Use centralized fleeing logic
-             this.updatePhysics(); // Ensure physics update happens
-             return; // Skip normal transport behavior
-        }
+            // Delegate to the new state helper (which does movement + exit)
+            this.updateCombatAI(system);
+            this.updatePhysics();
+            return;
+       }
 
         // --- Normal Transport Logic ---
         this.target = null; // Ensure target is null during normal transport
@@ -1534,94 +1571,6 @@ _determinePostFleeState() {
         return true;
     }
 
-    /**
-     * Centralized AI Logic for Fleeing behavior.
-     * @param {Object} system - The current star system.
-     */
-    updateFleeingAI(system) {
-        // Ensure we have a target to flee from
-        if (!this.isTargetValid(this.target)) {
-            // No valid attacker to flee from, maybe they were destroyed or left?
-            console.log(`${this.shipTypeName} lost target while fleeing. Returning to normal.`);
-            this.lastAttacker = null; // Clear attacker
-            this.fleeStartTime = null; // Reset flee timer
-            // Determine state to return to based on role
-            let returnState = AI_STATE.IDLE; // Default fallback
-            if (this.role === AI_ROLE.POLICE) returnState = AI_STATE.PATROLLING;
-            else if (this.role === AI_ROLE.HAULER) returnState = this.previousHaulerState || AI_STATE.PATROLLING;
-            else if (this.role === AI_ROLE.TRANSPORT) returnState = this.previousTransportState || AI_STATE.TRANSPORTING;
-            this.changeState(returnState);
-            // Restore previous route for transport if applicable
-            if (this.role === AI_ROLE.TRANSPORT && this.previousRoutePoints) {
-                 this.routePoints = this.previousRoutePoints;
-                 this.currentRouteIndex = this.previousRouteIndex;
-            }
-            return; // Exit fleeing logic
-        }
-
-        // Initialize flee timer if needed
-        if (!this.fleeStartTime) {
-            this.fleeStartTime = millis();
-            this.fleeMinDuration = FLEE_MIN_DURATION_MS; // Use constant
-        }
-
-        // Calculate escape vector (away from target)
-        // Use tempVector for calculation
-        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-        // Aim far away, but use a reasonable intermediate point for navigation
-        this.tempVector.normalize().mult(this.detectionRange * 3); // Aim 3x detection range away
-        // Use tempVector2 for the target position to avoid creating a new vector
-        let escapeTargetPos = p5.Vector.add(this.pos, this.tempVector); // Calculate escape point
-
-        // Rotate and thrust towards the escape point
-        const angleToEscape = this.performRotationAndThrust(escapeTargetPos);
-
-        // Apply extra thrust based on role or general flee multiplier
-        const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT) ? FLEE_THRUST_MULT_TRANSPORT : FLEE_THRUST_MULT_DEFAULT; // Use constants
-        // Apply extra thrust more consistently when fleeing, even if not perfectly aligned initially
-        this.thrustForward(fleeThrustMultiplier);
-
-        // Add randomness (optional, can make path less predictable)
-        if (frameCount % 30 === 0) { // Less frequent randomness
-            // Use tempVector for random direction
-            this.tempVector.set(random(-1, 1), random(-1, 1)).normalize().mult(0.3); // Smaller random push
-            this.vel.add(this.tempVector);
-        }
-
-        // --- Check Exit Conditions ---
-        const timeInFlee = millis() - (this.fleeStartTime || 0);
-        // Role-specific escape distance threshold
-        const escapeDistanceThreshold = this.detectionRange * ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT + 0.5 : FLEE_ESCAPE_DIST_MULT); // Use constant
-        const distanceToAttacker = this.distanceTo(this.target);
-
-        if (timeInFlee > this.fleeMinDuration && distanceToAttacker > escapeDistanceThreshold)
-        {
-            console.log(`${this.shipTypeName} escaped successfully!`);
-            this.attackCooldown = (this.role === AI_ROLE.TRANSPORT || this.role === AI_ROLE.HAULER) ? 30.0 : 20.0; // Role-specific cooldown
-            this.lastAttacker = null; // Forget attacker
-            this.fleeStartTime = null; // Reset flee timer
-
-            // Determine state to return to based on role
-            let returnState = AI_STATE.IDLE; // Default fallback
-            if (this.role === AI_ROLE.POLICE) returnState = AI_STATE.PATROLLING;
-            else if (this.role === AI_ROLE.HAULER) returnState = this.previousHaulerState || AI_STATE.PATROLLING;
-            else if (this.role === AI_ROLE.TRANSPORT) returnState = this.previousTransportState || AI_STATE.TRANSPORTING;
-
-            // Ensure we don't return to a combat state accidentally
-            if (returnState === AI_STATE.APPROACHING || returnState === AI_STATE.ATTACK_PASS || returnState === AI_STATE.REPOSITIONING) {
-                 returnState = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER) ? AI_STATE.PATROLLING : AI_STATE.TRANSPORTING; // Default transport to TRANSPORTING
-            }
-
-            this.changeState(returnState);
-            // Restore previous route for transport if applicable
-            if (this.role === AI_ROLE.TRANSPORT && this.previousRoutePoints) {
-                 this.routePoints = this.previousRoutePoints;
-                 this.currentRouteIndex = this.previousRouteIndex;
-                 console.log(`Transport ${this.shipTypeName} resuming previous route.`);
-            }
-        }
-        // Note: updatePhysics() is called after this method in the main update loop or role-specific AI
-    }
 
     // -----------------------
     // --- Movement & Physics ---
