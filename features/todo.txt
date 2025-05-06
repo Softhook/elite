@@ -7,9 +7,6 @@
 ## Core Gameplay Enhancements
 refactoring
 
-- sideways kiting with thrust
-- temporary speed burst
-
 use tech level for market and missions
 
 Gnat fighter launching
