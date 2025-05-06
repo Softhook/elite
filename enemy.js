@@ -368,6 +368,7 @@ class Enemy {
                         // When done collecting, return to previous state
                         this.changeState(this.previousState || AI_STATE.TRANSPORTING);
                     }
+                    this.updatePhysics();
                 } else {
                     // Normal transport behavior
                     this.updateTransportAI(system);
