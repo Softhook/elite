@@ -107,7 +107,7 @@ class TitleScreen {
         textSize(20);
         fill(200, 200, 255);
         textAlign(LEFT, TOP);
-        const textX = width * 0.1;
+        let textX = width * 0.1;
         let textY = startY + 80;
         const lineHeight = 30;
         
@@ -126,8 +126,11 @@ class TitleScreen {
         fill(200, 200, 255);
         text("W or UP ARROW - Thrust forward", textX, textY); textY += lineHeight;
         text("S or DOWN ARROW - Thrust back", textX, textY); textY += lineHeight;
-        text("A or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
-        text("D or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
+        text("Q or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
+        text("E or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
+        text("A - Skate left", textX, textY); textY += lineHeight;
+        text("D - Skate right", textX, textY); textY += lineHeight;
+        text("R - Speed Boost", textX, textY); textY += lineHeight;
         text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
         text("1-9 - Switch weapons", textX, textY); textY += lineHeight;
         text("M - Galaxy map", textX, textY); textY += lineHeight;
@@ -138,6 +141,8 @@ class TitleScreen {
         // Gameplay tips
         textSize(30);
         fill(0, 180, 255);
+        textY = startY + 140;
+        textX = width * 0.4;
         text("GAMEPLAY:", textX, textY);
         textY += lineHeight;
         
