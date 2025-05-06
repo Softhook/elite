@@ -58,7 +58,7 @@ console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
 
 // --- Jump Zone Constants ---
 const JUMP_ZONE_DEFAULT_RADIUS = 500;
-const JUMP_ZONE_MIN_DIST_FROM_STATION = 5000;
+const JUMP_ZONE_MIN_DIST_FROM_STATION = 2500;
 const JUMP_ZONE_MAX_DIST_FACTOR = 0.8; // Multiplied by despawnRadius
 const JUMP_ZONE_DRAW_RANGE_FACTOR = 8; // Multiplied by jumpZoneRadius
 const JUMP_ZONE_MAX_ALPHA = 200;
@@ -108,7 +108,7 @@ class StarSystem {
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
         this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 10;
-        this.despawnRadius = 10000; // Default, updated in initStaticElements based on screen size
+        this.despawnRadius = 5000; // Default, updated in initStaticElements based on screen size
 
         // --- Jump Zone Properties ---
         this.jumpZoneCenter = null; // p5.Vector, calculated in initStaticElements or loaded

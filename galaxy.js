@@ -285,8 +285,16 @@ class Galaxy {
             const newSystem = this.getCurrentSystem(); // Use the safer getter
 
             if (player && newSystem) { // Check if newSystem is valid
-                const MIN_ARRIVAL_DISTANCE = 1000;
-                const MAX_ARRIVAL_DISTANCE = 2500;
+                // --- Clear player's nebula/storm effects from the PREVIOUS system ---
+                player.shieldsDisabled = false;
+                player.weaponsDisabled = false;
+                player.inNebula = false;
+                // If there are other specific flags set by storms/nebulas on the player, reset them here too.
+                console.log(`Player effects cleared due to system jump. ShieldsDisabled: ${player.shieldsDisabled}, WeaponsDisabled: ${player.weaponsDisabled}, InNebula: ${player.inNebula}`);
+                // --- End effect clearing ---
+
+                const MIN_ARRIVAL_DISTANCE = 500;
+                const MAX_ARRIVAL_DISTANCE = 1250;
                 let arrivalAngle = random(TWO_PI);
                 let arrivalDist = random(MIN_ARRIVAL_DISTANCE, MAX_ARRIVAL_DISTANCE);
                 let arrivalPosition = p5.Vector.fromAngle(arrivalAngle).mult(arrivalDist);
