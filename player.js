@@ -77,6 +77,14 @@ class Player {
         // Track enemy kills for Elite rating
         this.kills = 0;
 
+        // --- Kiting & Speed Burst setup ---
+        this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
+        this.speedBurstCooldown  = 10000;
+        this.lastBurstTime       = -Infinity;
+        this.speedBurstMultiplier= 10;
+        this.isSpeedBursting     = false;
+        this.speedBurstEnd       = 0;
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -395,38 +403,94 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         }
     }
 
-    /** Handles continuous key presses for movement. Normalizes angle. */
-    handleInput() {
-        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { // Left arrow or A
-            this.angle -= this.rotationSpeed;
-        }
-        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { // Right arrow or D
-            this.angle += this.rotationSpeed;
-        }
-        
-        // Reset reverse thrust flag first
-        this.isReverseThrusting = false;
-        
-        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { // Up arrow or W
-            this.isThrusting = true;
-            this.thrust();
-        }
-        // Add new reverse thrust control
-        else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) { // Down arrow or S
-            this.isThrusting = true;
-            this.isReverseThrusting = true; // Set the flag to indicate reverse thrust
-            this.reverseThrust();
-        }
-        else {
-            this.isThrusting = false;
-        }
-        
-        if (this.fireCooldown > 0) {
-            this.fireCooldown -= deltaTime / 1000;
-        }
-        this.angle %= TWO_PI;
-        if (this.angle < 0) this.angle += TWO_PI;
+/** Handles continuous key presses for movement & new features */
+handleInput() {
+    // DON’T mix manual input & autopilot
+    if (this.autopilotEnabled) return;
+  
+    // Reset per-frame thrust flags
+    this.isThrusting = false;
+    this.isReverseThrusting = false;
+    this.isStrafing = false;
+  
+    // 1) Rotation
+    if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
+      this.angle -= this.rotationSpeed;
     }
+    if (keyIsDown(RIGHT_ARROW) || keyIsDown(69)) {    // E 
+        this.angle += this.rotationSpeed;
+    }
+  
+    // 2) Sideways kiting (strafe)
+    if (keyIsDown(65)) {     // A
+      this.kiteLeft();
+      this.isStrafing  = true;
+    }
+    else if (keyIsDown(68)) { // D
+      this.kiteRight();
+      this.isStrafing  = true;
+    }
+  
+    // 3) Speed burst (R)
+    if (keyIsDown(82)) {
+      this.trySpeedBurst();
+    }
+  
+    // 4) Forward / backward thrust (only if NOT strafing)
+    if (!this.isStrafing) {
+      if (keyIsDown(UP_ARROW) || keyIsDown(87)) {
+        this.isThrusting = true;
+        this.thrust();
+      }
+      else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) {
+        this.isThrusting        = true;
+        this.isReverseThrusting = true;
+        this.reverseThrust();
+      }
+    }
+  
+    // 5) Cooldowns & angle wrap
+    if (this.fireCooldown > 0) {
+      this.fireCooldown -= deltaTime / 1000;
+    }
+    this.angle = (this.angle % TWO_PI + TWO_PI) % TWO_PI;
+  }
+  
+  /** Attempt a one-off forward speed burst if off cooldown */
+  trySpeedBurst() {
+    const now = millis();
+    if (now - this.lastBurstTime > this.speedBurstCooldown && !this.isSpeedBursting) {
+      this.isSpeedBursting = true;
+      this.speedBurstEnd   = now + 1000;  // 1000ms burst window
+      this.lastBurstTime   = now;
+  
+      // Big impulse (will now exceed normal cap)
+      const burst = p5.Vector.fromAngle(this.angle).mult(this.thrustForce * this.speedBurstMultiplier);
+      this.vel.add(burst);
+  
+      uiManager?.addMessage("Speed Burst!", 'lightblue');
+    }
+  }
+
+    /** Apply a left‐strafe (kite) thrust */
+    kiteLeft() {
+        const force = p5.Vector.fromAngle(this.angle - HALF_PI).mult(this.thrustForce);
+        this.vel.add(force);
+        // draw particles
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle - HALF_PI, this.size);
+        }
+    }
+
+    /** Apply a right‐strafe (kite) thrust */
+    kiteRight() {
+        const force = p5.Vector.fromAngle(this.angle + HALF_PI).mult(this.thrustForce);
+        this.vel.add(force);
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle + HALF_PI, this.size);
+        }
+    }
+
 
     /** 
      * Applies reverse thrust (slower backward movement)
@@ -542,20 +606,37 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Updates player position, physics, and state. */
     update() {
-        this.vel.mult(this.drag); 
-        this.vel.limit(this.maxSpeed);
-        
-        // Update thrust particles
+        // 1) Drag (you may optionally skip or reduce drag during the burst)
+        if (!this.isSpeedBursting) {
+            this.vel.mult(this.drag);
+        }
+
+        // 2) Speed cap: if bursting, use boosted cap
+        const cap = this.isSpeedBursting
+                    ? this.baseMaxSpeed * this.speedBurstMultiplier
+                    : this.baseMaxSpeed;
+        this.vel.limit(cap);
+
+        // 3) Sustain extra thrust during burst window
+        if (this.isSpeedBursting) {
+            if (millis() < this.speedBurstEnd) {
+            this.thrust();             // keep pushing forward
+            } else {
+            this.isSpeedBursting = false;
+            }
+        }
+
+        // 4) Usual thrust‐particle & movement logic
         this.thrustManager.update();
-        
-        // Create thrust particles if thrusting - BUT ONLY FOR FORWARD THRUST
-        // We need to track whether we're in reverse thrust mode
         if (this.isThrusting && !this.isReverseThrusting) {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
-        
-        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); }
-        else { this.vel.set(0, 0); } // Reset invalid velocity
+
+        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+            this.pos.add(this.vel);
+        } else {
+            this.vel.set(0,0);
+        }
 
         // Update cooldown timer
         if (this.fireCooldown > 0) {
