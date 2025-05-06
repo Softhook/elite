@@ -81,9 +81,10 @@ class Player {
         this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
         this.speedBurstCooldown  = 10000;
         this.lastBurstTime       = -Infinity;
-        this.speedBurstMultiplier= 10;
+        this.speedBurstMultiplier= 2;
         this.isSpeedBursting     = false;
-        this.speedBurstEnd       = 0;
+        this.speedBurstEnd       = 0; // Keep one
+        this.isCoastingFromBurst = false; // Add this new flag
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -461,11 +462,13 @@ handleInput() {
     const now = millis();
     if (now - this.lastBurstTime > this.speedBurstCooldown && !this.isSpeedBursting) {
       this.isSpeedBursting = true;
+      this.isCoastingFromBurst = false; // Reset coasting flag when a new burst starts
       this.speedBurstEnd   = now + 1000;  // 1000ms burst window
       this.lastBurstTime   = now;
   
       // Big impulse (will now exceed normal cap)
-      const burst = p5.Vector.fromAngle(this.angle).mult(this.thrustForce * this.speedBurstMultiplier);
+      const burstImpulseForce = this.thrustForce * this.speedBurstMultiplier;
+      const burst = p5.Vector.fromAngle(this.angle).mult(burstImpulseForce);
       this.vel.add(burst);
   
       uiManager?.addMessage("Speed Burst!", 'lightblue');
@@ -606,36 +609,63 @@ handleInput() {
 
     /** Updates player position, physics, and state. */
     update() {
-        // 1) Drag (you may optionally skip or reduce drag during the burst)
+        // --- Speed Burst Thrust & State Management ---
+        if (this.isSpeedBursting) {
+            if (millis() < this.speedBurstEnd) {
+                // Actively bursting: sustain with normal thrust application
+                this.thrust();
+            } else {
+                // Burst thrust duration has ended
+                this.isSpeedBursting = false;
+                // Only start coasting if velocity is still significantly above normal max speed.
+                if (this.vel.magSq() > sq(this.baseMaxSpeed * 1.01)) { // Check if speed is > 101% of baseMaxSpeed
+                    this.isCoastingFromBurst = true;
+                } else {
+                    this.isCoastingFromBurst = false; // Speed already low, no need to coast
+                }
+            }
+        }
+        // --- End Speed Burst Thrust & State Management ---
+
+        // 1) Drag
+        // Apply drag if not actively applying burst thrust (i.e., isSpeedBursting is false).
+        // Drag should be active during the coasting phase.
         if (!this.isSpeedBursting) {
             this.vel.mult(this.drag);
         }
 
-        // 2) Speed cap: if bursting, use boosted cap
-        const cap = this.isSpeedBursting
-                    ? this.baseMaxSpeed * this.speedBurstMultiplier
-                    : this.baseMaxSpeed;
-        this.vel.limit(cap);
-
-        // 3) Sustain extra thrust during burst window
+        // 2) Speed cap
+        let currentCap;
         if (this.isSpeedBursting) {
-            if (millis() < this.speedBurstEnd) {
-            this.thrust();             // keep pushing forward
-            } else {
-            this.isSpeedBursting = false;
+            // Actively bursting (thrust being applied), high cap
+            currentCap = this.baseMaxSpeed * this.speedBurstMultiplier;
+        } else if (this.isCoastingFromBurst) {
+            // Coasting after burst: maintain the high cap, let drag reduce speed.
+            currentCap = this.baseMaxSpeed * this.speedBurstMultiplier;
+            // End coasting if speed has decayed close to or below normal max speed.
+            // Using 1.01 (101%) as a threshold to ensure a smooth transition to the normal cap.
+            if (this.vel.magSq() < sq(this.baseMaxSpeed * 1.01)) {
+                this.isCoastingFromBurst = false;
             }
+        } else {
+            // Normal flight, base cap
+            currentCap = this.baseMaxSpeed;
         }
+        this.vel.limit(currentCap);
 
-        // 4) Usual thrust‐particle & movement logic
+        // The old section "3) Sustain extra thrust during burst window" is now integrated above.
+
+        // 4) Usual thrust‐particle & movement logic (from handleInput)
         this.thrustManager.update();
-        if (this.isThrusting && !this.isReverseThrusting) {
+        if (this.isThrusting && !this.isReverseThrusting) { // isThrusting is set by handleInput for W key
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
 
+        // Position update
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
             this.pos.add(this.vel);
         } else {
-            this.vel.set(0,0);
+            this.vel.set(0,0); // Safety net for NaN velocity
         }
 
         // Update cooldown timer
@@ -645,7 +675,7 @@ handleInput() {
 
         // Either handle autopilot OR normal input, never both
         if (this.autopilotEnabled) {
-                    this.updateAutopilot();
+            this.updateAutopilot();
         }
 
         // Regenerate shields only after recharge delay has passed
@@ -656,9 +686,6 @@ handleInput() {
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
-        
-        // Remove the spacebar-specific firing code from here since we're handling it in draw()
-        // This eliminates any potential inconsistency between the flag and actual key state
     }
 
     /** Draws the player ship using its specific draw function. */
