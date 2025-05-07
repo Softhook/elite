@@ -18,18 +18,59 @@ class EventManager {
                 handler: this.initiateAsteroidClusterEvent.bind(this),
                 execute: this.executeAsteroidClusterSpawn.bind(this)
             },
-            // --- Example for a future event ---
-            // {
-            //     type: "PIRATE_SWARM",
-            //     probabilityPerFrame: 0.00003,
-            //     minCooldownFrames: 10 * 60 * 60, // 10 minutes
-            //     warningDurationFrames: 450, // 7.5 seconds
-            //     lastTriggeredFrame: -Infinity,
-            //     isWarningActive: false,
-            //     eventTriggerFrame: 0,
-            //     handler: this.initiatePirateSwarmEvent.bind(this),
-            //     execute: this.executePirateSwarm.bind(this)
-            // }
+/*             {
+                type: "ALIEN_RAID",
+                probabilityPerFrame: 0.00003,
+                minCooldownFrames: 10 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                handler: this.initiateAlienRaidEvent.bind(this),
+                execute: this.executeAlienRaidSpawn.bind(this)
+            }, */
+            {
+                type: "PIRATE_SWARM",
+                probabilityPerFrame: 0.00005,
+                minCooldownFrames: 8 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                handler: this.initiatePirateSwarmEvent.bind(this),
+                execute: this.executePirateSwarmSpawn.bind(this)
+            },
+/*             {
+                type: "BOUNTY_HUNTER_AMBUSH",
+                probabilityPerFrame: 0.00004,
+                minCooldownFrames: 12 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                handler: this.initiateBountyHunterAmbushEvent.bind(this),
+                execute: this.executeBountyHunterAmbushSpawn.bind(this)
+            }, */
+/*             {
+                type: "FAMINE_EVENT",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 20 * 60 * 60,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                handler: this.initiateFamineEvent.bind(this),
+                execute: this.executeFamineEvent.bind(this)
+            },
+            {
+                type: "RELIGIOUS_UPRISING_EVENT",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 20 * 60 * 60,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                handler: this.initiateReligiousUprisingEvent.bind(this),
+                execute: this.executeReligiousUprisingEvent.bind(this)
+            } */
         ];
     }
 
@@ -110,21 +151,67 @@ class EventManager {
         }
     }
 
-    // --- Placeholder for Pirate Swarm Event ---
-    // initiatePirateSwarmEvent() {
-    //     const event = this.events.find(e => e.type === "PIRATE_SWARM");
-    //     if (!event || event.isWarningActive) return;
-    //     event.isWarningActive = true;
-    //     event.eventTriggerFrame = frameCount + event.warningDurationFrames;
-    //     if (this.uiManager) {
-    //         this.uiManager.addMessage("DANGER: Pirate swarm inbound!", "red", (event.warningDurationFrames / 60) * 1000);
-    //     }
-    //     console.log("EventManager: Pirate swarm warning issued.");
-    // }
-    // executePirateSwarm() {
-    //     if (!this.starSystem || !this.player) return;
-    //     console.log("EventManager: Executing pirate swarm!");
-    //     // Logic to spawn a group of pirates targeting the player
-    //     // e.g., this.starSystem.spawnEnemyGroup(this.player.pos, 'PIRATE', floor(random(3,6)));
-    // }
+    initiatePirateSwarmEvent() {
+    const event = this.events.find(e => e.type === "PIRATE_SWARM");
+    if (!event || event.isWarningActive) return; // Already warning or event not found
+
+    event.isWarningActive = true;
+    event.eventTriggerFrame = frameCount + event.warningDurationFrames;
+
+    if (this.uiManager) {
+        const warningDurationMillis = (event.warningDurationFrames / 60) * 1000;
+        this.uiManager.addMessage("DANGER: Pirate swarm inbound!", "red", warningDurationMillis);
+    }
+    console.log(`EventManager: Pirate swarm warning issued. Spawn in ${event.warningDurationFrames} frames.`);
+}
+
+executePirateSwarmSpawn() {
+    if (!this.starSystem || !this.player || !this.player.pos) {
+        console.error("EventManager: Cannot execute pirate swarm spawn - missing references.");
+        return;
+    }
+
+    const event = this.events.find(e => e.type === "PIRATE_SWARM");
+    if (!event) return;
+
+    const eliteRankings = [
+        "Harmless", "Mostly Harmless", "Poor", "Average", "Above Average",
+        "Competent", "Dangerous", "Deadly", "Elite"
+    ];
+    const playerRank = eliteRankings.indexOf(this.player.getEliteRating());
+    const maxRank = eliteRankings.length - 1;
+    const rankFactor = Math.min(playerRank / maxRank, 1);
+
+    const minPirates = 3;
+    const maxPirates = 10;
+    const numPirates = floor(lerp(minPirates, maxPirates, rankFactor));
+
+    const pirateShipTypes = ["Sidewinder", "KraitMKI", "Anaconda"];
+    const shipTypeIndex = floor(rankFactor * (pirateShipTypes.length - 1));
+    const pirateShipType = pirateShipTypes[shipTypeIndex];
+
+    const spawnRadius = random(1600, 2000);
+    const spawnAngle = random(TWO_PI);
+
+    console.log(`EventManager: Spawning pirate swarm: ${numPirates} ${pirateShipType}s near the player.`);
+
+    for (let i = 0; i < numPirates; i++) {
+        const offsetX = cos(spawnAngle + random(-0.2, 0.2)) * spawnRadius;
+        const offsetY = sin(spawnAngle + random(-0.2, 0.2)) * spawnRadius;
+        const spawnX = this.player.pos.x + offsetX;
+        const spawnY = this.player.pos.y + offsetY;
+
+        // Use AI_ROLE.PIRATE instead of "PIRATE"
+        const newEnemy = new Enemy(spawnX, spawnY, this.player, pirateShipType, AI_ROLE.PIRATE);
+
+        // Additional initialization
+        newEnemy.currentState = AI_STATE.APPROACHING;
+        newEnemy.target = this.player;
+        newEnemy.currentSystem = this.starSystem;
+        newEnemy.calculateRadianProperties();
+        newEnemy.initializeColors();
+
+        this.starSystem.addEnemy(newEnemy);
+    }
+}
 }

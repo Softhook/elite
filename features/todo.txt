@@ -5,6 +5,14 @@
 
 
 ## Core Gameplay Enhancements
+
+How can we increase the difficulty
+- Launch harder pirate ships
+- Launch aliens
+- bounty
+
+
+
 refactoring
 
 Integrate the nrrative class
@@ -39,6 +47,13 @@ Spcial events:
 - News famine change the cost of food in connected systems
 - News religious uprising drop cost of luxury goods
 - News war prerations cost of weapons goes up
+- Bounty hunter
+
+alien raid - multile aliens appearing in system close tothe player but out of screenview
+lots of piratiese appearing in system close tothe player but out of screenview should scale based on the players elite ranking in terms of ships and numebr of ships
+spawn mtuleiple Bounty hunterthat only tagets the player. these should scale based on the players elite ranking in terms of ships and numebr of ships
+News that famine in named systems that change the cost of food in connected systems. mark the famine ont he galaxy map
+News religious uprising drop cost of luxury goods mark the uprising on the galaxy map
 
 
 some weapons better than lasers than hull
