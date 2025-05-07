@@ -9,10 +9,8 @@ class EventManager {
                 type: "ASTEROID_CLUSTER",
                 // Probability: e.g., 0.005% chance per frame. (1/20000)
                 // At 60 FPS, this is an average of one trigger attempt every ~333 seconds (5.5 minutes).
-                //probabilityPerFrame: 0.00005,
-                probabilityPerFrame: 0.05,
-                //minCooldownFrames: 5 * 60 * 60, // 5 minutes cooldown after execution
-                minCooldownFrames: 1 * 60 * 60, // 5 minutes cooldown after execution
+                probabilityPerFrame: 0.00005,
+                minCooldownFrames: 5 * 60 * 60, // 5 minutes cooldown after execution
                 warningDurationFrames: 300,     // 5 seconds warning at 60 FPS
                 lastTriggeredFrame: -Infinity,  // Frame count of last execution
                 isWarningActive: false,

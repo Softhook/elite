@@ -107,7 +107,9 @@ class StarSystem {
 
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
-        this.asteroidSpawnTimer = 0; this.asteroidSpawnInterval = 3000; this.maxAsteroids = 10;
+        this.asteroidSpawnTimer = 0; 
+        this.asteroidSpawnInterval = 3000; 
+        this.maxTotalAsteroids = 45;
         this.despawnRadius = 5000; // Default, updated in initStaticElements based on screen size
 
         // --- Jump Zone Properties ---
@@ -652,7 +654,7 @@ try {
 
     /** Attempts to spawn an asteroid at regular intervals. */
     trySpawnAsteroid() {
-        if (!this.player?.pos || this.asteroids.length >= this.maxAsteroids) return;
+        if (!this.player?.pos || this.asteroids.length >= this.maxTotalAsteroids) return;
         try {
             let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(200,500);
             let spawnX = this.player.pos.x + cos(angle)*spawnDist; let spawnY = this.player.pos.y + sin(angle)*spawnDist;

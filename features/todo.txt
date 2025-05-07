@@ -30,9 +30,8 @@ mining sites on planets
 
 spawning events. 
 - alien raid - aliens appearing in military system
-lots of piratiese attacking haulers
-lots of asteroids
-- Add more varied asteroid field generation
+- lots of piratiese attacking haulers
+
 
 some weapons better than lasers than hull
 weapon range weapon speed
