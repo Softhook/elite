@@ -649,16 +649,29 @@ try {
         }
     }
 
-    /** Attempts to spawn an asteroid. */
+
+    /** Attempts to spawn an asteroid at regular intervals. */
     trySpawnAsteroid() {
         if (!this.player?.pos || this.asteroids.length >= this.maxAsteroids) return;
         try {
             let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(200,500);
             let spawnX = this.player.pos.x + cos(angle)*spawnDist; let spawnY = this.player.pos.y + sin(angle)*spawnDist;
             let size = random(40, 90); // Use larger default size
-            this.asteroids.push(new Asteroid(spawnX, spawnY, size));
+            // Call the main addAsteroid method to respect maxTotalAsteroids and centralize creation
+            this.addAsteroid(spawnX, spawnY, size);
         } catch(e) { console.error("!!! ERROR during trySpawnAsteroid:", e); }
     }
+
+    /** Adds a single asteroid to the system. Called by EventManager or trySpawnAsteroid. */
+    addAsteroid(x, y, size) {
+        if (this.asteroids.length >= this.maxTotalAsteroids) {
+            // console.warn("Max total asteroids reached, cannot add more via addAsteroid.");
+            return null; // Return null if asteroid can't be added
+        }
+        const asteroid = new Asteroid(x, y, size);
+        this.asteroids.push(asteroid);
+        return asteroid;
+}
 
     /** Updates all system entities. */
     update() {

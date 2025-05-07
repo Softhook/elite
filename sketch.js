@@ -26,6 +26,10 @@ function setup() {
     font = loadFont('libraries/Frontier.ttf');
 
     soundManager = new SoundManager(); // Create the manager
+
+    // Initialize EventManager - references will be set in newGame/loadGame
+    eventManager = new EventManager(); 
+
     // Create the canvas to fill the browser window
     createCanvas(windowWidth, windowHeight);
     // Set angle mode to RADIANS for p5.js rotation functions (like rotate())
@@ -98,12 +102,18 @@ function setup() {
             console.log("Running initial enterSystem for starting system..."); 
             if (typeof systemToStartIn.enterSystem === 'function') {
                 systemToStartIn.enterSystem(player); // Spawn initial NPCs/Asteroids etc.
+                if (eventManager) { // Initialize EventManager references for a new game
+                    eventManager.initializeReferences(systemToStartIn, player, uiManager);
+                }
             } else {
                 console.error("ERROR: systemToStartIn object missing enterSystem method!");
             }
         } else {
              console.log(`Player starting/loaded in system: ${player.currentSystem.name}`);
-        }
+             if (eventManager) { // Initialize EventManager references after loading a game
+                eventManager.initializeReferences(player.currentSystem, player, uiManager);
+            }
+            }
     } else {
         // This is a critical failure if no starting system can be assigned
         console.error("CRITICAL Error: Could not assign a starting system to the player after initialization!");
@@ -149,6 +159,18 @@ function draw() {
         try {
             // Update game logic based on current state
             gameStateManager.update(player);
+
+                        // Update EventManager if in flight and references are set
+                        let currentSystemForEventManager = galaxy.getCurrentSystem();
+                        if (eventManager && currentSystemForEventManager && player && uiManager) {
+                            // Ensure EventManager has the latest references, especially after a jump
+                            if (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player) {
+                                eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
+                            }
+                            if (gameStateManager.currentState === "IN_FLIGHT") {
+                                eventManager.update();
+                            }
+                        }
             
             // Continuous firing logic - using direct keyIsDown check
             if (gameStateManager.currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
@@ -469,6 +491,11 @@ function loadGame() {
               player.currentSystem = galaxy.getCurrentSystem();
               if (player.currentSystem) {
                   player.currentSystem.player = player;
+
+                // Initialize EventManager references after successfully loading and linking system
+                if (eventManager) {
+                        eventManager.initializeReferences(player.currentSystem, player, uiManager);
+            }
               } else {
                   console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
                   return false;

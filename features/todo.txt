@@ -44,9 +44,6 @@ divide ships into imperial vs. alliance
 - special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
 
 
-
-
-- Add elite achievements system
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
 
