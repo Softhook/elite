@@ -160,7 +160,7 @@ class EventManager {
 
     if (this.uiManager) {
         const warningDurationMillis = (event.warningDurationFrames / 60) * 1000;
-        this.uiManager.addMessage("DANGER: Pirate swarm inbound!", "red", warningDurationMillis);
+        this.uiManager.addMessage("DANGER: Pirate swarm detected!", "red", warningDurationMillis);
     }
     console.log(`EventManager: Pirate swarm warning issued. Spawn in ${event.warningDurationFrames} frames.`);
 }
@@ -186,7 +186,7 @@ executePirateSwarmSpawn() {
     const maxPirates = 10;
     const numPirates = floor(lerp(minPirates, maxPirates, rankFactor));
 
-    const pirateShipTypes = ["Sidewinder", "KraitMKI", "Anaconda"];
+    const pirateShipTypes = ["Sidewinder", "KraitMKI", "Viper", "GladiusFighter"];
     const shipTypeIndex = floor(rankFactor * (pirateShipTypes.length - 1));
     const pirateShipType = pirateShipTypes[shipTypeIndex];
 
@@ -201,7 +201,7 @@ executePirateSwarmSpawn() {
         const spawnX = this.player.pos.x + offsetX;
         const spawnY = this.player.pos.y + offsetY;
 
-        // Use AI_ROLE.PIRATE instead of "PIRATE"
+        // Use AI_ROLE.PIRATE
         const newEnemy = new Enemy(spawnX, spawnY, this.player, pirateShipType, AI_ROLE.PIRATE);
 
         // Additional initialization
