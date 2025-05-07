@@ -57,6 +57,14 @@ const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance pena
 const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
 const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
 
+// --- NEW AI Attack Pass Tuning Constants ---
+const ATTACK_PASS_STRAFE_OFFSET_MULT = 3; // Multiplier of enemy size for sideways offset
+const ATTACK_PASS_AHEAD_DIST_MULT = 6;    // Multiplier of enemy size for how far ahead/past the side-strafe point to aim
+const ATTACK_PASS_STRAFE_PREDICTION_FACTOR = 0.5; // How much of standard predictionTime to use for strafe point
+const ATTACK_PASS_SPEED_BOOST_MULT = 1.1;         // Speed multiplier during attack pass
+const ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR = 0.8; // Factor of combined sizes for emergency collision check
+const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.2; // Thrust multiplier during emergency avoidance
+
 class Enemy {
     // ---------------------------------
     // --- Constructor & Initialization
@@ -144,6 +152,9 @@ class Enemy {
             this.maxSpeed = this.baseMaxSpeed; this.thrustForce = this.baseThrust; this.drag = 0.995;
             this.strokeColorValue = [0, 255, 150]; // Thargoid Green
         }
+
+        this.strafeDirection = 0; // Will be -1 for left, 1 for right, 0 for none. Set in ATTACK_PASS entry.
+
         // Initialize p5.Color objects - set by initializeColors() later
         this.p5FillColor = null;
         this.p5StrokeColor = null;
@@ -797,18 +808,49 @@ evaluateTargetScore(target, system) {
                 }
                 break;
                 
-            case AI_STATE.ATTACK_PASS:
-                if (this.isTargetValid(this.target)) {
-                    if (this.target.vel) {
-                        desiredMovementTargetPos = p5.Vector.add(
-                            this.target.pos, 
-                            this.target.vel.copy().setMag(100)
-                        );
+                case AI_STATE.ATTACK_PASS:
+                    if (this.isTargetValid(this.target)) {
+                        let enemyPos = this.pos.copy();
+                        let targetActualPos = this.target.pos.copy();
+                        let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
+    
+                        // 1. Predict target's future position for calculating the strafe point.
+                        //    Use a fraction of the standard prediction time as we are already close.
+                        let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+                        let predictedTargetPos = p5.Vector.add(targetActualPos, targetVel.mult(strafePredictionFrames));
+    
+                        // 2. Determine the direction from enemy to this predicted target position.
+                        //    This will be the "forward" direction for the pass.
+                        let vecToPredictedTarget = p5.Vector.sub(predictedTargetPos, enemyPos);
+                        if (vecToPredictedTarget.magSq() < 0.1) { // If coincident with predicted
+                            vecToPredictedTarget = p5.Vector.sub(targetActualPos, enemyPos); // Use actual
+                             if (vecToPredictedTarget.magSq() < 0.1) { // If also coincident with actual
+                                vecToPredictedTarget = p5.Vector.random2D(); // Fallback: random direction
+                            }
+                        }
+                        let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
+    
+                        // 3. Calculate the sideStrafePoint: offset from predictedTargetPos, perpendicular to passDirectionNormalized.
+                        let strafeOffsetValue = this.size * ATTACK_PASS_STRAFE_OFFSET_MULT * this.strafeDirection;
+                        let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
+                        let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
+    
+                        // 4. The final desiredMovementTargetPos is a point "past" this sideStrafePoint.
+                        //    Aim further along the vector from the enemy to the sideStrafePoint.
+                        let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
+                        let aheadDistanceForPass = this.size * ATTACK_PASS_AHEAD_DIST_MULT;
+    
+                        if (vectorToSideStrafePoint.magSq() > 0.001) { // Ensure not a zero vector
+                            desiredMovementTargetPos = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
+                        } else {
+                            // If already at sideStrafePoint (unlikely but possible), aim further along the original passDirectionNormalized from that point.
+                            desiredMovementTargetPos = p5.Vector.add(sideStrafePoint, passDirectionNormalized.mult(aheadDistanceForPass));
+                        }
                     } else {
-                        desiredMovementTargetPos = this.target.pos;
+                        // If target becomes invalid during attack pass, aim at current position (effectively stop).
+                        desiredMovementTargetPos = this.pos.copy();
                     }
-                }
-                break;
+                    break;
                 
             case AI_STATE.REPOSITIONING:
                 desiredMovementTargetPos = this.repositionTarget;
@@ -1703,24 +1745,51 @@ _determinePostFleeState() {
      * @return {number} The angle difference in radians
      */
     performRotationAndThrust(desiredMovementTargetPos) {
-        let angleDifference = PI;
+        let angleDifference = PI; // Default to max difference
         
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
-            // Calculate direction vector correctly
             let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
-            
-            // Only compute angle if length isn't zero
-            if (desiredDir.magSq() > 0.001) {
-                let desiredAngle = desiredDir.heading();
+            if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
+                let desiredAngle = desiredDir.heading(); // Radians
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
         
-        // Add proper thrust logic
+        // Thrust logic
         if (this.currentState !== AI_STATE.IDLE && 
-            this.currentState !== AI_STATE.NEAR_STATION && 
-            abs(angleDifference) < this.angleTolerance) {
-            this.thrustForward();
+            this.currentState !== AI_STATE.NEAR_STATION) { // Allow thrusting in most active states
+            
+            let currentThrustMultiplier = 1.0;
+
+            if (this.currentState === AI_STATE.ATTACK_PASS) {
+                currentThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT; // General boost for attack pass
+
+                // Emergency Collision Avoidance for ATTACK_PASS:
+                if (this.isTargetValid(this.target)) {
+                    let distToActualTarget = this.distanceTo(this.target);
+                    // Define "critically close" based on combined sizes
+                    let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
+
+                    if (distToActualTarget < criticalCollisionRange) {
+                        // Check if current heading is still somewhat towards the actual target
+                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
+                        let angleToActualTargetCurrent = vecToActualTarget.heading();
+                        let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
+
+                        // If still pointing somewhat at the actual target (not yet turned for strafe)
+                        // AND the desired turn for the strafe point is still significant
+                        if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
+                            currentThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION; // Drastically reduce thrust
+                            // console.log(`${this.shipTypeName} EMERGENCY BRAKE/TURN in ATTACK_PASS. Dist: ${distToActualTarget.toFixed(0)}`);
+                        }
+                    }
+                }
+            }
+            
+            // Apply thrust if aligned with desiredMovementTargetPos OR if emergency thrust reduction is active
+            if (abs(angleDifference) < this.angleTolerance || currentThrustMultiplier < 1.0) {
+                this.thrustForward(currentThrustMultiplier);
+            }
         }
         
         return angleDifference;
@@ -2497,6 +2566,8 @@ _checkRandomCargoDrop() {
             case AI_STATE.ATTACK_PASS:
                 // Initialize attack pass with timer
                 this.passTimer = this.passDuration;
+                // --- NEW: Set strafe direction for this pass ---
+                this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
                 break;
                 
             case AI_STATE.REPOSITIONING:

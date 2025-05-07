@@ -7,6 +7,8 @@
 ## Core Gameplay Enhancements
 refactoring
 
+Integrate the nrrative class
+
 use tech level for market and missions
 
 Gnat fighter launching
@@ -89,6 +91,8 @@ divide ships into imperial vs. alliance
   - Assassination contracts
   - Mining contracts
   - Salvage operations
+  - Police missions
+  - Military missions
 - Implement mission chains with storylines
 - Add NPC dialogue system
 - Implement random events while traveling
