@@ -28,9 +28,16 @@ mine the planet
 mimitary bases on planets
 mining sites on planets
 
-spawning events. 
+
+Spcial events. 
 - alien raid - aliens appearing in military system
 - lots of piratiese attacking haulers
+- spawn assasin
+- if elite rating ===
+- war seperatist vs alliance battle
+- News famine change the cost of food in connected systems
+- News religious uprising drop cost of luxury goods
+- News war prerations cost of weapons goes up
 
 
 some weapons better than lasers than hull
@@ -40,13 +47,8 @@ weapon range weapon speed
 divide ships into imperial vs. alliance
 
 
-- special event that change the cost of goods, famine,  religious uprising drop cost of luxury goods
-
-
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
-
-- Implement asteroid mining gameplay
 
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters

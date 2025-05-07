@@ -698,7 +698,27 @@ try {
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
-                if (asteroid.isDestroyed()) { this.player.addCredits(floor(asteroid.size / 4)); this.asteroids.splice(i, 1); continue; }
+
+                if (asteroid.isDestroyed()) {
+                    // --- Spawn Mineral Cargo on Asteroid Destruction ---
+                    if (random() < 0.75) { // 75% chance to drop minerals
+                        const mineralType = "Minerals";
+                        let quantity = floor(map(asteroid.size, 30, 90, 1, 5)); // Quantity based on size
+                        quantity = max(1, quantity); // Ensure at least 1 unit
+
+                        // Create cargo slightly offset to avoid instant pickup or overlap if multiple drop
+                        const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
+                        const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
+
+                        const cargoDrop = new Cargo(asteroid.pos.x + offsetX, asteroid.pos.y + offsetY, mineralType, quantity);
+                        this.addCargo(cargoDrop); // Use the existing addCargo method
+                        console.log(`Asteroid destroyed, dropped ${quantity}t of ${mineralType}`);
+                    }
+                    // --- End Mineral Cargo Spawn ---
+
+                    this.asteroids.splice(i, 1); 
+                    continue; 
+                }
 
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
                     this.asteroids.splice(i, 1);

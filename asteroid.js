@@ -4,7 +4,7 @@ class Asteroid {
     constructor(x, y, size) {
         this.pos = createVector(x, y);
         this.size = size || random(40, 90);
-        this.maxHealth = floor(this.size * 1.5);
+        this.maxHealth = floor(this.size * 10);
         this.health = this.maxHealth;
 
         this.vel = p5.Vector.random2D().mult(random(0.1, 0.6));
