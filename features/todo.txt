@@ -23,13 +23,12 @@ police perform scan of any ship within 500 units lookig for illegal goods
 jettson all inventory screen
 
 planets have their own screen assocaited where it is possible to explre the planet. find things
-mine the planet
 
 mimitary bases on planets
 mining sites on planets
 
 
-Spcial events. 
+Spcial events: 
 - alien raid - aliens appearing in military system
 - lots of piratiese attacking haulers
 - spawn assasin
