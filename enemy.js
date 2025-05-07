@@ -59,11 +59,13 @@ const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus ca
 
 // --- NEW AI Attack Pass Tuning Constants ---
 const ATTACK_PASS_STRAFE_OFFSET_MULT = 3; // Multiplier of enemy size for sideways offset
-const ATTACK_PASS_AHEAD_DIST_MULT = 6;    // Multiplier of enemy size for how far ahead/past the side-strafe point to aim
+const ATTACK_PASS_AHEAD_DIST_MULT = 8;    // Multiplier of enemy size for how far ahead/past the side-strafe point to aim
 const ATTACK_PASS_STRAFE_PREDICTION_FACTOR = 0.5; // How much of standard predictionTime to use for strafe point
 const ATTACK_PASS_SPEED_BOOST_MULT = 1.1;         // Speed multiplier during attack pass
 const ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR = 0.8; // Factor of combined sizes for emergency collision check
-const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.2; // Thrust multiplier during emergency avoidance
+const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.3; // Thrust multiplier during emergency avoidance
+const APPROACH_BRAKING_DISTANCE_FACTOR = 1.2; // Multiplier of combined (enemy+target) sizes to start braking in APPROACH
+const APPROACH_CLOSE_THRUST_REDUCTION = 0.05; // Thrust multiplier when very close in APPROACH state (almost zero)
 
 class Enemy {
     // ---------------------------------
@@ -952,6 +954,7 @@ _updateState_PATROLLING(targetExists, distanceToTarget) {
     }
 }
 
+
   /** @private Handles state logic for FLEEING (movement + exit) */
   _updateState_FLEEING(targetExists, distanceToTarget) {
     // 1) Initialize flee timer
@@ -1004,6 +1007,7 @@ _updateState_PATROLLING(targetExists, distanceToTarget) {
       this.changeState(returnState);
     }
   }
+
 
 /** @private */
 _determinePostFleeState() {
@@ -1087,10 +1091,11 @@ _determinePostFleeState() {
             );
         }
     
-        // 4. Run state‐transition logic if not in forced‐combat
-        if (!isInForcedCombat) {
-            this.updateCombatState(targetExists, distanceToTarget);
-        }
+        // 4. Run state‐transition logic.
+        //    REMOVED: if (!isInForcedCombat)
+        //    Allow updateCombatState to run even if in forced combat,
+        //    so Haulers can transition from APPROACHING to ATTACK_PASS.
+        this.updateCombatState(targetExists, distanceToTarget);
     
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
         // ← NO MORE "if (FLEEING) updateFleeingAI" here!
@@ -1744,56 +1749,89 @@ _determinePostFleeState() {
      * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
      * @return {number} The angle difference in radians
      */
-    performRotationAndThrust(desiredMovementTargetPos) {
-        let angleDifference = PI; // Default to max difference
-        
-        if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
-            let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
-            if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
-                let desiredAngle = desiredDir.heading(); // Radians
-                angleDifference = this.rotateTowards(desiredAngle);
-            }
+performRotationAndThrust(desiredMovementTargetPos) {
+    let angleDifference = PI; // Default to max difference
+    
+    if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
+        let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
+        if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
+            let desiredAngle = desiredDir.heading(); // Radians
+            angleDifference = this.rotateTowards(desiredAngle);
         }
-        
-        // Thrust logic
-        if (this.currentState !== AI_STATE.IDLE && 
-            this.currentState !== AI_STATE.NEAR_STATION) { // Allow thrusting in most active states
-            
-            let currentThrustMultiplier = 1.0;
+    }
+    
+    // Default thrust multiplier
+    let effectiveThrustMultiplier = 1.0;
+    let canThrust = false; // Master flag to decide if thrusting happens
+    let forceThrustForAttackPassEmergency = false; // Special flag for attack pass emergency
 
-            if (this.currentState === AI_STATE.ATTACK_PASS) {
-                currentThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT; // General boost for attack pass
+    // Determine thrust conditions based on state
+    if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.NEAR_STATION) {
+        canThrust = false;
+    } else {
+        // For all other active states, assume thrust is possible if aligned,
+        // then apply state-specific multipliers or conditions.
+        const isAlignedForThrust = abs(angleDifference) < this.angleTolerance;
 
-                // Emergency Collision Avoidance for ATTACK_PASS:
-                if (this.isTargetValid(this.target)) {
-                    let distToActualTarget = this.distanceTo(this.target);
-                    // Define "critically close" based on combined sizes
-                    let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
-
-                    if (distToActualTarget < criticalCollisionRange) {
-                        // Check if current heading is still somewhat towards the actual target
-                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
-                        let angleToActualTargetCurrent = vecToActualTarget.heading();
-                        let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
-
-                        // If still pointing somewhat at the actual target (not yet turned for strafe)
-                        // AND the desired turn for the strafe point is still significant
-                        if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
-                            currentThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION; // Drastically reduce thrust
-                            // console.log(`${this.shipTypeName} EMERGENCY BRAKE/TURN in ATTACK_PASS. Dist: ${distToActualTarget.toFixed(0)}`);
-                        }
+        if (this.currentState === AI_STATE.ATTACK_PASS) {
+            effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
+            if (this.isTargetValid(this.target)) {
+                let distToActualTarget = this.distanceTo(this.target);
+                let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
+                if (distToActualTarget < criticalCollisionRange) {
+                    let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
+                    let angleToActualTargetCurrent = vecToActualTarget.heading();
+                    let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
+                    if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
+                        effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
+                        forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
                     }
                 }
             }
-            
-            // Apply thrust if aligned with desiredMovementTargetPos OR if emergency thrust reduction is active
-            if (abs(angleDifference) < this.angleTolerance || currentThrustMultiplier < 1.0) {
-                this.thrustForward(currentThrustMultiplier);
+            if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
+                canThrust = true;
+            }
+
+        } else if (this.currentState === AI_STATE.APPROACHING) {
+            // effectiveThrustMultiplier is 1.0 by default for APPROACHING
+            if (this.isTargetValid(this.target)) {
+                let distToActualTarget = this.distanceTo(this.target);
+                // Calculate the distance at which braking should occur
+                let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
+                let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
+                
+                if (distToActualTarget < approachBrakingZone) {
+                    effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
+                    // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
+                }
+            }
+            if (isAlignedForThrust) {
+                // If APPROACH_CLOSE_THRUST_REDUCTION is 0, this will result in no thrust.
+                // If it's > 0, minimal thrust will be applied if aligned.
+                canThrust = true;
+            }
+
+        } else if (this.currentState === AI_STATE.FLEEING) {
+            effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
+                                      ? FLEE_THRUST_MULT_TRANSPORT
+                                      : FLEE_THRUST_MULT_DEFAULT;
+            if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
+                canThrust = true;
+            }
+        } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
+            // effectiveThrustMultiplier is 1.0 by default
+            if (isAlignedForThrust) {
+                canThrust = true;
             }
         }
-        
-        return angleDifference;
     }
+    
+    if (canThrust) {
+        this.thrustForward(effectiveThrustMultiplier);
+    }
+    
+    return angleDifference;
+}
 
     /**
      * Updates the physics (drag, velocity, position) for the ship
