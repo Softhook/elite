@@ -17,7 +17,7 @@ class EventManager {
         // Define a list of alien ship types that can appear in a raid
         // Ensure these ship types are defined in your SHIP_DEFINITIONS
         // and have AI_ROLE.ALIEN in their aiRoles array.
-        this.alienShipTypes = ["Thargoid"]; // Example types
+        this.alienShipTypes = ["Thargoid","GeometricDrone","ShardInterceptor"]; // Example types
 
         this.events = [
             {
@@ -55,7 +55,7 @@ class EventManager {
                 handler: this.initiatePirateSwarmEvent.bind(this),
                 execute: this.executePirateSwarmSpawn.bind(this)
             },
-/*             {
+             {
                 type: "BOUNTY_HUNTER_AMBUSH",
                 probabilityPerFrame: 0.00004,
                 minCooldownFrames: 12 * 60 * 60,
@@ -65,7 +65,7 @@ class EventManager {
                 eventTriggerFrame: 0,
                 handler: this.initiateBountyHunterAmbushEvent.bind(this),
                 execute: this.executeBountyHunterAmbushSpawn.bind(this)
-            }, */
+            },
 /*             {
                 type: "FAMINE_EVENT",
                 probabilityPerFrame: 0.00002,
@@ -204,7 +204,7 @@ executePirateSwarmSpawn() {
     const maxPirates = 10;
     const numPirates = floor(lerp(minPirates, maxPirates, rankFactor));
 
-    const pirateShipTypes = ["Sidewinder", "KraitMKI", "Viper", "GladiusFighter"];
+    const pirateShipTypes = ["Sidewinder", "KraitMKI","KraitMKII", "Viper", "GladiusFighter"];
     const shipTypeIndex = floor(rankFactor * (pirateShipTypes.length - 1));
     const pirateShipType = pirateShipTypes[shipTypeIndex];
 
@@ -326,5 +326,116 @@ executePirateSwarmSpawn() {
             this.starSystem.addEnemy(newAlien);
         }
     }
+
+
+    // --- Bounty Hunter Ambush Event Methods ---
+    initiateBountyHunterAmbushEvent() {
+        const event = this.events.find(e => e.type === "BOUNTY_HUNTER_AMBUSH");
+        if (!event || event.isWarningActive) return; // Already warning or event not found
+
+        event.isWarningActive = true;
+        event.eventTriggerFrame = frameCount + event.warningDurationFrames;
+
+        if (this.uiManager) {
+            const warningDurationMillis = (event.warningDurationFrames / 60) * 1000;
+            this.uiManager.addMessage("WARNING: Bounty hunter contracts activated!", "orange", warningDurationMillis);
+        }
+        console.log(`EventManager: Bounty Hunter ambush warning issued. Hunters inbound in ${event.warningDurationFrames} frames.`);
+    }
+
+
+executeBountyHunterAmbushSpawn() {
+    if (!this.starSystem || !this.player || !this.player.pos) {
+        console.error("EventManager: Cannot execute Bounty Hunter ambush - missing references.");
+        return;
+    }
+
+    const event = this.events.find(e => e.type === "BOUNTY_HUNTER_AMBUSH");
+    if (!event) return;
+
+    // --- Scaling based on Player's Elite Rating ---
+    const eliteRankings = [
+        "Harmless", "Mostly Harmless", "Poor", "Average", "Above Average",
+        "Competent", "Dangerous", "Deadly", "Elite"
+    ];
+    const playerRankIndex = eliteRankings.indexOf(this.player.getEliteRating());
+    const maxRankIndex = eliteRankings.length - 1;
+    
+    // Ensure playerRankIndex is valid, default to 0 if not found (shouldn't happen if getEliteRating is robust)
+    const validPlayerRankIndex = playerRankIndex === -1 ? 0 : playerRankIndex;
+    const rankFactor = Math.min(validPlayerRankIndex / maxRankIndex, 1); // Normalized 0 to 1
+
+    // Determine number of Bounty Hunters
+    const minHunters = 1; // At least one hunter
+    const maxHunters = 5; // Max 5 hunters for an ambush
+    // Lerp the number of hunters based on rankFactor.
+    // Add 0.5 before floor to achieve rounding to nearest whole number more effectively with lerp.
+    const numHunters = floor(lerp(minHunters, maxHunters, rankFactor) + 0.5);
+
+
+    // --- Select Bounty Hunter Ship Types ---
+    // Ensure these ship types are defined in SHIP_DEFINITIONS
+    // and have AI_ROLE.BOUNTY_HUNTER in their aiRoles array.
+    // You can make this list more varied or also scale ship quality with rank.
+    const potentialHunterShips = ["Viper"]; // Example ships suitable for bounty hunting
+    
+    let availableHunterShips = potentialHunterShips.filter(shipName => {
+        const shipDef = SHIP_DEFINITIONS[shipName];
+        return shipDef && shipDef.aiRoles && shipDef.aiRoles.includes(AI_ROLE.BOUNTY_HUNTER);
+    });
+
+    if (availableHunterShips.length === 0) {
+        console.error("EventManager: No valid Bounty Hunter ship types found. Defaulting to 'Viper'.");
+        availableHunterShips = ["Viper"]; // Fallback
+        if (!SHIP_DEFINITIONS["Viper"] || !SHIP_DEFINITIONS["Viper"].aiRoles.includes(AI_ROLE.BOUNTY_HUNTER)) {
+             console.error("EventManager: Fallback ship 'Viper' not suitable or not found. Cannot spawn Bounty Hunters.");
+             return;
+        }
+    }
+    
+    // For simplicity, pick one ship type for the whole ambush group.
+    // Could be enhanced to pick varied ships or better ships for higher ranks.
+    const hunterShipTypeToSpawn = random(availableHunterShips);
+
+    const spawnRadius = random(1700, 2300); // Spawn distance from player
+    const spawnAngle = random(TWO_PI);    // Random angle around player
+
+    console.log(`EventManager: Spawning Bounty Hunter ambush: ${numHunters} ${hunterShipTypeToSpawn}(s) near the player. Player rank factor: ${rankFactor.toFixed(2)}`);
+
+    for (let i = 0; i < numHunters; i++) {
+        // Spread them out a bit
+        const angleOffset = (i - (numHunters - 1) / 2) * 0.15; // Spread hunters slightly
+        const currentSpawnAngle = spawnAngle + angleOffset;
+        const offsetX = cos(currentSpawnAngle) * (spawnRadius + random(-200, 200));
+        const offsetY = sin(currentSpawnAngle) * (spawnRadius + random(-200, 200));
+        
+        const spawnX = this.player.pos.x + offsetX;
+        const spawnY = this.player.pos.y + offsetY;
+
+        const newHunter = new Enemy(
+            spawnX,
+            spawnY,
+            this.player,      // Player reference
+            hunterShipTypeToSpawn,
+            AI_ROLE.BOUNTY_HUNTER // Assign the BOUNTY_HUNTER role
+        );
+
+        // Enemy constructor should set initial state to APPROACHING and target to player for BOUNTY_HUNTER role.
+        // Additional initializations if needed:
+        newHunter.currentSystem = this.starSystem;
+        if (typeof newHunter.calculateRadianProperties === 'function') {
+            newHunter.calculateRadianProperties();
+        }
+        if (typeof newHunter.initializeColors === 'function') {
+            newHunter.initializeColors();
+        }
+        
+        this.starSystem.addEnemy(newHunter);
+    }
+}
+
+
+
+
 
 }

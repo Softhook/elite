@@ -10,7 +10,8 @@ const AI_ROLE = {
     POLICE: 'Police',
     HAULER: 'Hauler',
     TRANSPORT: 'Transport',  // local shuttles
-    ALIEN: 'Alien'
+    ALIEN: 'Alien',
+    BOUNTY_HUNTER: 'BOUNTY_HUNTER'
 };
 
 // Define AI States (Shared across roles, but used differently)
@@ -149,7 +150,14 @@ class Enemy {
             case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
             case AI_ROLE.PIRATE: this.strokeColorValue = [255, 100, 100]; break; // Red
             case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; // Default Alien Green or from shipDef
-    break;
+            case AI_ROLE.BOUNTY_HUNTER:
+            this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
+            // Bounty hunters might have slightly better stats or use shipDef overrides
+            this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.1; // Slightly faster turning
+            this.angleTolerance = shipDef.angleTolerance || (10 * PI/180); // Standard tolerance
+            this.drag = shipDef.drag || 0.99; // Slightly less drag
+            this.target = playerRef;
+        break;
         }
 
         this.strafeDirection = 0; // Will be -1 for left, 1 for right, 0 for none. Set in ATTACK_PASS entry.
@@ -235,6 +243,7 @@ class Enemy {
                 case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break;
                 case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break;
                 case AI_ROLE.ALIEN: this.currentState = AI_STATE.APPROACHING; break;
+                case AI_ROLE.BOUNTY_HUNTER: this.currentState = AI_STATE.APPROACHING; break;
                 default: this.currentState = AI_STATE.IDLE;
             }
         }
@@ -403,8 +412,11 @@ class Enemy {
                     case AI_ROLE.HAULER: 
                         this.updateHaulerAI(system); 
                         break;
-                     case AI_ROLE.ALIEN: 
+                    case AI_ROLE.ALIEN: 
                         this.updateCombatAI(system);
+                        break;
+                    case AI_ROLE.BOUNTY_HUNTER:
+                        this.updateCombatAI(system); // Bounty Hunters use combat AI
                         break;
                     default: 
                         // Default behavior for unknown roles
@@ -432,6 +444,23 @@ class Enemy {
  * @return {boolean} Whether a valid target was found
  */
 updateTargeting(system) {
+
+
+    // --- BOUNTY HUNTER: Always target player ---
+    if (this.role === AI_ROLE.BOUNTY_HUNTER) {
+        const playerRef = system.player || this.target; // Ensure we have a reference to player
+        if (playerRef instanceof Player && this.isTargetValid(playerRef)) {
+            if (this.target !== playerRef) {
+                this.target = playerRef;
+            }
+            return true; // Player is the target
+        } else {
+            this.target = null; // Player is not valid (e.g., destroyed, not in system)
+            return false;
+        }
+    }
+    // --- END BOUNTY HUNTER ---
+
     let bestScore = TARGET_SCORE_INVALID;
     let bestTarget = null;
     let currentTargetScore = TARGET_SCORE_INVALID;
@@ -532,6 +561,16 @@ evaluateTargetScore(target, system) {
         if (!enemy.isTargetValid(target) || target === enemy) {
             return TARGET_SCORE_INVALID;
         }
+
+        // --- BOUNTY HUNTER: Only cares about the player ---
+        if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
+            if (target instanceof Player) {
+                return 1000; // Very high score for the player
+            } else {
+                return TARGET_SCORE_INVALID; // Ignore all other targets
+            }
+        }
+        // --- END BOUNTY HUNTER ---
 
         // Create completely private scoring variables
         let _score = 0; 

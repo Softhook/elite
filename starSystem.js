@@ -9,6 +9,7 @@ const buildShipRoleArrays = () => {
     const MILITARY_SHIPS = [];
     const ALIEN_SHIPS = [];
     const EXPLORER_SHIPS = [];
+    const BOUNTY_HUNTER_SHIPS = [];
     
     // Iterate through all ship definitions
     for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
@@ -22,6 +23,7 @@ const buildShipRoleArrays = () => {
         if (shipData.aiRoles.includes("MILITARY")) MILITARY_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("ALIEN")) ALIEN_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("EXPLORER")) EXPLORER_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("BOUNTY_HUNTER")) BOUNTY_HUNTER_SHIPS.push(shipKey);
     }
     
     return {
@@ -31,7 +33,8 @@ const buildShipRoleArrays = () => {
         TRANSPORT_SHIPS,
         MILITARY_SHIPS,
         ALIEN_SHIPS,
-        EXPLORER_SHIPS
+        EXPLORER_SHIPS,
+        BOUNTY_HUNTER_SHIPS
     };
 };
 
@@ -43,7 +46,8 @@ const {
     TRANSPORT_SHIPS,
     MILITARY_SHIPS,
     ALIEN_SHIPS,
-    EXPLORER_SHIPS
+    EXPLORER_SHIPS,
+    BOUNTY_HUNTER_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify
@@ -55,6 +59,7 @@ console.log("TRANSPORT_SHIPS:", TRANSPORT_SHIPS);
 console.log("MILITARY_SHIPS:", MILITARY_SHIPS);
 console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
 console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
+console.log("BOUNTY_HUNTER_SHIPS:", BOUNTY_HUNTER_SHIPS);
 
 // --- Jump Zone Constants ---
 const JUMP_ZONE_DEFAULT_RADIUS = 500;

@@ -327,7 +327,7 @@ const SHIP_DEFINITIONS = {
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
-        baseHull: 500, baseShield: 150, shieldRecharge: 2.5,
+        baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
         armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
         drawFunction: drawBioFrigate,
@@ -526,7 +526,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
         typicalCargo: ["Computers","Computers","Computers","Computers","Luxury Goods", "Weapons", "Narcotics"],
         price: 117000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
     "GeometricDrone": {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
@@ -558,19 +558,19 @@ const SHIP_DEFINITIONS = {
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 60000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.10472,
-        baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 0,
+        baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
         armament: ["Pulse Laser"], // Fast single weapon
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8, // Red
         typicalCargo: [],
         price: 40000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
     "HammerheadCorvette": { // NEW - Unique 2
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
@@ -1003,7 +1003,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
         price: 60000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
      "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
@@ -1047,7 +1047,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 50000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
     "HummingBird": {
         name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1071,7 +1071,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 40000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
     },
 };
 // --- End Ship Definitions ---
