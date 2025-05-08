@@ -1815,15 +1815,14 @@ if (isIllegalInSystem || isMissionCargo) {
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(20);
         for (let i = firstRow; i < lastRow; i++) {
-             let [shipKey, ship] = availableShips[i]; // Use filtered ships
+             let [shipKey, ship] = availableShips[i]; // 'shipKey' is the correct key for the current ship
             let y = startY + (i-firstRow)*rowH;
             
-            // IMPROVED CHECK for current ship - try both name and lookup
             const isCurrentShip = ship.name === currentShipType || 
                                 (currentShipDef && ship.name === currentShipDef.name);
             
             if (isCurrentShip) {
-                fill(40, 40, 80); // Darker background for current ship
+                fill(40, 40, 80); 
             } else {
                 fill(60, 60, 100);
             }
@@ -1835,48 +1834,40 @@ if (isIllegalInSystem || isMissionCargo) {
             noStroke();
             textAlign(LEFT, CENTER);
             
-            // Calculate final price after trade-in (allow negative for refund)
             const originalPrice = ship.price;
             const finalPrice = originalPrice - currentShipValue;
             
             if (isCurrentShip) {
-                // Show "CURRENT SHIP" instead of price
                 text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}     CURRENT SHIP`, pX+30, y+rowH/2);
             } else {
-                // Left-aligned ship info and original price
                 textAlign(LEFT, CENTER);
                 text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}    Price: ${originalPrice}cr`, pX+30, y+rowH/2);
                 
-                // Right-aligned final cost or refund with appropriate color
                 textAlign(RIGHT, CENTER);
                 
                 if (finalPrice > 0) {
-                    // Player needs to pay additional credits
-                    fill(255, 220, 100); // Gold/yellow color for cost
+                    fill(255, 220, 100); 
                     text(`Final Cost: ${finalPrice}cr`, pX+pW-40, y+rowH/2);
                 } else if (finalPrice < 0) {
-                    // Player gets credits back
-                    fill(100, 255, 150); // Green color for refund
+                    fill(100, 255, 150); 
                     text(`Refund: ${-finalPrice}cr`, pX+pW-40, y+rowH/2);
                 } else {
-                    // Equal trade (no cost, no refund)
-                    fill(255, 255, 255); // White for even swap
+                    fill(255, 255, 255); 
                     text(`Even Swap`, pX+pW-40, y+rowH/2);
                 }
                 
-                // Reset color for the next item
                 fill(255);
                 
-                // Add to clickable areas
                 this.shipyardListAreas.push({
                     x: pX+20, y: y, w: pW-40, h: rowH-6,
-                    shipTypeKey: Object.keys(SHIP_DEFINITIONS)[i], 
+                    shipTypeKey: shipKey, // <<< USE THE CORRECT shipKey HERE
                     shipName: ship.name,
-                    price: finalPrice, // Use the actual final price (can be negative)
+                    price: finalPrice, 
                     originalPrice: originalPrice
                 });
             }
         }
+
     
         // Draw scrollbar if needed
         if (this.shipyardScrollMax > 0) {
