@@ -2251,14 +2251,20 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
                                       this.role === AI_ROLE.ALIEN);
 
         if (conditionsMetForLine) {
-            // If conditions are met and sound hasn't played for this lock-on period
+            
+        // --- Sound Logic: Play only when target is Player and sound hasn't been played for this lock ---
+        if (this.target instanceof Player) { // Check if the current target is the player
             if (!this.hasPlayedLockOnSound) {
-                
                 if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                    soundManager.playSound('targetlock'); // Ensure 'targetLock' sound is loaded
+                    soundManager.playSound('targetlock'); // Ensure 'targetlock' (or 'targetLock') sound is loaded
                 }
-                this.hasPlayedLockOnSound = true; // Mark sound as played for this period
+                this.hasPlayedLockOnSound = true; // Mark sound as played for this player lock-on period
             }
+        } else {
+            // If target is not the player (or no target), reset the sound flag.
+            // This allows the sound to play again if the player is re-acquired.
+            this.hasPlayedLockOnSound = false;
+        }
 
             // Always draw the line if conditions are met
             let lineCol = this.p5StrokeColor;
