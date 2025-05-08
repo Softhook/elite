@@ -17,7 +17,7 @@ class EventManager {
         // Define a list of alien ship types that can appear in a raid
         // Ensure these ship types are defined in your SHIP_DEFINITIONS
         // and have AI_ROLE.ALIEN in their aiRoles array.
-        this.alienShipTypes = ["BioFrigate"]; // Example types
+        this.alienShipTypes = ["Thargoid"]; // Example types
 
         this.events = [
             {

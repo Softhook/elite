@@ -148,12 +148,8 @@ class Enemy {
             case AI_ROLE.POLICE: this.strokeColorValue = [100, 150, 255]; break; // Blue
             case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
             case AI_ROLE.PIRATE: this.strokeColorValue = [255, 100, 100]; break; // Red
-        }
-        this.isThargoid = (this.shipTypeName === "Thargoid Interceptor"); // Match exact name
-        if (this.isThargoid) { // Thargoid specific overrides
-            this.rotationSpeed = this.baseTurnRate; this.angleTolerance = 5 * PI/180;
-            this.maxSpeed = this.baseMaxSpeed; this.thrustForce = this.baseThrust; this.drag = 0.995;
-            this.strokeColorValue = [0, 255, 150]; // Thargoid Green
+            case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; // Default Alien Green or from shipDef
+    break;
         }
 
         this.strafeDirection = 0; // Will be -1 for left, 1 for right, 0 for none. Set in ATTACK_PASS entry.
@@ -241,7 +237,6 @@ class Enemy {
                 case AI_ROLE.ALIEN: this.currentState = AI_STATE.APPROACHING; break;
                 default: this.currentState = AI_STATE.IDLE;
             }
-            if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
         }
 
         //console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
@@ -282,6 +277,8 @@ class Enemy {
         this.targetSwitchCooldown = 0;
         this.forcedCombatTimer = 0; // Initialize forced combat timer
         // --- End Combat AI Flags ---
+
+        this.hasPlayedLockOnSound = false; // Add this new flag
     }
 
     // -----------------------------
@@ -2196,10 +2193,11 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
         // These use absolute coordinates or manage their own transformations
 
+        this._drawTargetLockOnEffect();
         // DEBUG LINE
-        if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.isThargoid)) {
-             push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
-        }
+        //if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.role === AI_ROLE.ALIEN)) { 
+        //     push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+        //}
 
         // Force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
@@ -2237,6 +2235,50 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         // --- End Other Effects ---
 
     } // End draw()
+
+
+
+    /**
+     * @private
+     * Handles drawing the debug target line and playing the lock-on sound effect
+     * when specific conditions are met.
+     */
+    _drawTargetLockOnEffect() {
+        const conditionsMetForLine = this.target?.pos &&
+                                     this.role !== AI_ROLE.HAULER &&
+                                     (this.currentState === AI_STATE.APPROACHING ||
+                                      this.currentState === AI_STATE.ATTACK_PASS ||
+                                      this.role === AI_ROLE.ALIEN);
+
+        if (conditionsMetForLine) {
+            // If conditions are met and sound hasn't played for this lock-on period
+            if (!this.hasPlayedLockOnSound) {
+                
+                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                    soundManager.playSound('targetlock'); // Ensure 'targetLock' sound is loaded
+                }
+                this.hasPlayedLockOnSound = true; // Mark sound as played for this period
+            }
+
+            // Always draw the line if conditions are met
+            let lineCol = this.p5StrokeColor;
+            try {
+                if (lineCol?.setAlpha) {
+                    lineCol.setAlpha(100);
+                    stroke(lineCol);
+                } else { // Fallback if not a p5.Color or setAlpha fails
+                    stroke(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2], 100);
+                }
+            } catch (e) { // Further fallback
+                stroke(255, 0, 0, 100);
+            }
+            strokeWeight(1);
+            line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
+        } else {
+            // If conditions are NOT met, reset the sound flag so it can play next time
+            this.hasPlayedLockOnSound = false;
+        }
+    }
 
     // ------------------
     // --- Cargo Handling ---

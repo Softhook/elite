@@ -546,15 +546,36 @@ try {
         if (econ === "military") {
             chosenRole = AI_ROLE.HAULER;
             chosenShipTypeName = random(MILITARY_SHIPS);
+
         } else if (econ === "alien") {
-            // Mostly alien ships, but allow a few Vipers as "observers"
-            if (random() < 0.8) {
-                chosenRole = AI_ROLE.PIRATE;
+            // Mostly alien ships
+            if (random() < 0.8 && ALIEN_SHIPS.length > 0) { // 80% chance for an Alien role ship
+                chosenRole = AI_ROLE.ALIEN; // <<< CHANGE TO AI_ROLE.ALIEN
                 chosenShipTypeName = random(ALIEN_SHIPS);
-            } else {
-                chosenRole = AI_ROLE.POLICE;
-                chosenShipTypeName = "Viper";
+            } else { // 20% chance for a different role
+                const rolesToConsider = [];
+                if (PIRATE_SHIPS.length > 0) {
+                    rolesToConsider.push({ role: AI_ROLE.PIRATE, ships: PIRATE_SHIPS });
+                }
+                if (HAULER_SHIPS.length > 0) {
+                    rolesToConsider.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
+                }
+                if (POLICE_SHIPS.length > 0) { // Added POLICE
+                    rolesToConsider.push({ role: AI_ROLE.POLICE, ships: POLICE_SHIPS });
+                }
+
+                if (rolesToConsider.length > 0) {
+                    const selectedPool = random(rolesToConsider);
+                    chosenRole = selectedPool.role;
+                    chosenShipTypeName = random(selectedPool.ships);
+                } else {
+                    // Fallback if PIRATE, HAULER, and POLICE ship lists are all empty.
+                    // Default to a HAULER role and a generic ship.
+                    chosenRole = AI_ROLE.HAULER;
+                    chosenShipTypeName = "Krait"; // A known default ship, or any other suitable default
+                }
             }
+
         } else if (econ === "offworld" || econ === "separatist") {
             // Special distribution for offworld/separatist economies
             const rand = random();
@@ -606,14 +627,15 @@ try {
 
         // --- Thargoid override only for non-alien systems ---
         if (econ !== "alien") {
-            const thargoidChance = 0.01;
-            if (random() < thargoidChance && chosenRole !== AI_ROLE.HAULER) {
+            const specificAlienChance = 0.01; // Chance to spawn a specific alien type like "Thargoid"
+            // Check if "Thargoid" is a defined alien ship and the random chance hits
+            if (random() < specificAlienChance && ALIEN_SHIPS.includes("Thargoid")) {
                 chosenShipTypeName = "Thargoid";
-                chosenRole = AI_ROLE.PIRATE;
-                uiManager.addMessage(`Thargoid Spawn Detected`);
+                chosenRole = AI_ROLE.ALIEN; // <<< Ensure this is AI_ROLE.ALIEN
+                if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
 
                 if (typeof soundManager !== 'undefined') {
-                    soundManager.playSound('thargoid'); // Use a suitable sound
+                    soundManager.playSound('thargoid'); // Use a suitable sound for alien encounter
                 }
             }
         }
