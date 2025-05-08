@@ -9,7 +9,8 @@ const AI_ROLE = {
     PIRATE: 'Pirate',
     POLICE: 'Police',
     HAULER: 'Hauler',
-    TRANSPORT: 'Transport'  // New role for local shuttles
+    TRANSPORT: 'Transport',  // local shuttles
+    ALIEN: 'Alien'
 };
 
 // Define AI States (Shared across roles, but used differently)
@@ -116,8 +117,8 @@ class Enemy {
 
         // After setting role in the constructor
         this.role = role;
-        if (this.role === AI_ROLE.PIRATE) {
-            // Pirates are automatically wanted
+        if (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN) {
+            // Pirates and Aliens are automatically wanted
             this.isWanted = true;
         } else {
             this.isWanted = false;
@@ -237,6 +238,7 @@ class Enemy {
                 case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break;
                 case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break;
                 case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break;
+                case AI_ROLE.ALIEN: this.currentState = AI_STATE.APPROACHING; break;
                 default: this.currentState = AI_STATE.IDLE;
             }
             if (this.isThargoid) { this.currentState = AI_STATE.APPROACHING; }
@@ -404,6 +406,9 @@ class Enemy {
                     case AI_ROLE.HAULER: 
                         this.updateHaulerAI(system); 
                         break;
+                     case AI_ROLE.ALIEN: 
+                        this.updateCombatAI(system);
+                        break;
                     default: 
                         // Default behavior for unknown roles
                         this.vel.mult(this.drag * 0.95); 
@@ -465,10 +470,14 @@ updateTargeting(system) {
     }
     
     // Evaluate other enemies (no debug)
-    const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE);
+    const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN); // <<< MODIFIED
     if (canTargetOtherEnemies && system.enemies) {
         for (const otherEnemy of system.enemies) {
             if (otherEnemy === this || otherEnemy === bestTarget || !this.isTargetValid(otherEnemy)) {
+                continue;
+            }
+            // For Aliens, ensure they don't target other Aliens
+            if (this.role === AI_ROLE.ALIEN && otherEnemy.role === AI_ROLE.ALIEN) {
                 continue;
             }
             const enemyScore = this.evaluateTargetScore(otherEnemy, system);
@@ -592,7 +601,21 @@ evaluateTargetScore(target, system) {
                     }
                 }
                 break;
+            
                 
+            case AI_ROLE.ALIEN: // <<< NEW CASE
+            if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
+                _score += 50; // Base score for any non-alien target
+                _interesting = true;
+                if (isPlayer) {
+                    _score += 10; // Slightly higher preference for player
+                    // console.log(`%c👽 ALIEN TARGETING PLAYER: ${enemy.shipTypeName} score: +60, total score now ${_score}`, 'color:cyan');
+                } else {
+                    // console.log(`%c👽 ALIEN TARGETING NON-ALIEN NPC (${target.shipTypeName || target.constructor.name}): ${enemy.shipTypeName} score: +50, total score now ${_score}`, 'color:cyan');
+                }
+            }
+            break;
+
             case AI_ROLE.HAULER:
             case AI_ROLE.TRANSPORT:
                 if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
@@ -2500,7 +2523,7 @@ _handlePlayerKillConsequences(attacker, system) {
     }
 
     // Set player wanted status if a non-pirate was destroyed
-    if (this.role !== AI_ROLE.PIRATE) {
+    if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN) {
         if (system.setPlayerWanted) {
 
             // If player is police, revoke status first

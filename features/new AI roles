@@ -1,0 +1,7 @@
+please analyse how to implment some addition AI-ROLEs
+
+the bounty hunter will only apprach and do attack_pass targetiing the player and flee if heavily damaged.
+
+the alien will approach and do attack_passes on any other ship with a differnt AI_ROLE than itself.
+
+the guard will have a new AI_STATE of protect and will follow anther assigned ship and attack anyone who attcks the ship they are protecting.

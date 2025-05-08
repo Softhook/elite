@@ -4,6 +4,21 @@ class EventManager {
         this.player = null;     // Will be set by sketch.js
         this.uiManager = null;  // Will be set by sketch.js
 
+        this.pirateGangNames = [
+            "Void Reaver",
+            "Cygnus Marauder",
+            "Nebula Nomads",
+            "Quantum Corsairs",
+            "Kygan Syndicate",
+            "Synapse Ghosts",
+            "Solar Scourge"
+        ];
+
+        // Define a list of alien ship types that can appear in a raid
+        // Ensure these ship types are defined in your SHIP_DEFINITIONS
+        // and have AI_ROLE.ALIEN in their aiRoles array.
+        this.alienShipTypes = ["BioFrigate"]; // Example types
+
         this.events = [
             {
                 type: "ASTEROID_CLUSTER",
@@ -18,7 +33,7 @@ class EventManager {
                 handler: this.initiateAsteroidClusterEvent.bind(this),
                 execute: this.executeAsteroidClusterSpawn.bind(this)
             },
-/*             {
+             {
                 type: "ALIEN_RAID",
                 probabilityPerFrame: 0.00003,
                 minCooldownFrames: 10 * 60 * 60,
@@ -28,7 +43,7 @@ class EventManager {
                 eventTriggerFrame: 0,
                 handler: this.initiateAlienRaidEvent.bind(this),
                 execute: this.executeAlienRaidSpawn.bind(this)
-            }, */
+            },
             {
                 type: "PIRATE_SWARM",
                 probabilityPerFrame: 0.00005,
@@ -158,11 +173,14 @@ class EventManager {
     event.isWarningActive = true;
     event.eventTriggerFrame = frameCount + event.warningDurationFrames;
 
+    const randomGangIndex = floor(random(this.pirateGangNames.length));
+    const gangName = this.pirateGangNames[randomGangIndex];
+
     if (this.uiManager) {
         const warningDurationMillis = (event.warningDurationFrames / 60) * 1000;
-        this.uiManager.addMessage("DANGER: Pirate swarm detected!", "red", warningDurationMillis);
+        this.uiManager.addMessage(`DANGER: ${gangName} pirates detected!`, "red", warningDurationMillis);
     }
-    console.log(`EventManager: Pirate swarm warning issued. Spawn in ${event.warningDurationFrames} frames.`);
+    console.log(`EventManager: ${gangName} pirate swarm warning issued. Spawn in ${event.warningDurationFrames} frames.`);
 }
 
 executePirateSwarmSpawn() {
@@ -213,5 +231,100 @@ executePirateSwarmSpawn() {
 
         this.starSystem.addEnemy(newEnemy);
     }
-}
+  }
+
+    // --- Alien Raid Event Methods ---
+    initiateAlienRaidEvent() {
+        const event = this.events.find(e => e.type === "ALIEN_RAID");
+        if (!event || event.isWarningActive) return; // Already warning or event not found
+
+        event.isWarningActive = true;
+        event.eventTriggerFrame = frameCount + event.warningDurationFrames;
+
+        if (this.uiManager) {
+            const warningDurationMillis = (event.warningDurationFrames / 60) * 1000;
+            // You can make the message more specific if you have alien faction names
+            this.uiManager.addMessage("DANGER: Unidentified alien vessels detected!", "magenta", warningDurationMillis);
+        }
+        console.log(`EventManager: Alien raid warning issued. Hostiles inbound in ${event.warningDurationFrames} frames.`);
+    }
+
+    executeAlienRaidSpawn() {
+        if (!this.starSystem || !this.player || !this.player.pos) {
+            console.error("EventManager: Cannot execute alien raid spawn - missing references.");
+            return;
+        }
+
+        const event = this.events.find(e => e.type === "ALIEN_RAID");
+        if (!event) return;
+
+        // Determine number of aliens and their types
+        // For simplicity, let's spawn a fixed number for now.
+        // You can scale this based on player rank or other factors later.
+        const numAliens = floor(random(3, 6)); // Spawn 3 to 5 aliens
+
+        // Select alien ship types
+        // Ensure this.alienShipTypes is populated in the constructor
+        // and these ship types exist in SHIP_DEFINITIONS
+        let availableAlienShips = this.alienShipTypes.filter(shipName => SHIP_DEFINITIONS[shipName]);
+        if (availableAlienShips.length === 0) {
+            console.error("EventManager: No valid alien ship types found for Alien Raid. Defaulting to 'Krait'.");
+            // Fallback if no specific alien ships are defined or found
+            availableAlienShips = ["BioFrigate"]; 
+            if (!SHIP_DEFINITIONS["BioFrigate"]) {
+                 console.error("EventManager: Fallback ship 'Krait' not found. Cannot spawn aliens.");
+                 return;
+            }
+        }
+        
+        const alienShipTypeToSpawn = random(availableAlienShips);
+
+        const spawnRadius = random(1800, 2200); // Spawn distance from player
+        const spawnAngle = random(TWO_PI);    // Random angle around player
+
+        console.log(`EventManager: Spawning alien raid: ${numAliens} ${alienShipTypeToSpawn}(s) near the player.`);
+
+        for (let i = 0; i < numAliens; i++) {
+            const offsetX = cos(spawnAngle + random(-0.3, 0.3)) * spawnRadius; // Slight spread
+            const offsetY = sin(spawnAngle + random(-0.3, 0.3)) * spawnRadius;
+            const spawnX = this.player.pos.x + offsetX;
+            const spawnY = this.player.pos.y + offsetY;
+
+            // Create the Alien Enemy
+            const newAlien = new Enemy(
+                spawnX,
+                spawnY,
+                this.player,      // Player reference for initial targeting or context
+                alienShipTypeToSpawn,
+                AI_ROLE.ALIEN     // Assign the ALIEN role
+            );
+
+            // --- Essential Initializations for the new Alien ---
+            // The Enemy constructor should handle setting a default state for ALIEN role.
+            // If not, you might need to set it here, e.g., newAlien.currentState = AI_STATE.APPROACHING;
+            // Ensure the Alien targets something appropriate. By default, Aliens target non-Aliens.
+            // The Enemy's updateTargeting should handle this if player is a valid target.
+            // newAlien.target = this.player; // Or let the Alien AI decide its first target
+
+            newAlien.currentSystem = this.starSystem;
+            if (typeof newAlien.calculateRadianProperties === 'function') {
+                newAlien.calculateRadianProperties();
+            }
+            if (typeof newAlien.initializeColors === 'function') {
+                newAlien.initializeColors();
+            }
+            
+            // If Aliens should immediately be aggressive towards the player:
+            if (newAlien.role === AI_ROLE.ALIEN && newAlien.target !== this.player) {
+                // Check if the alien AI picked a different initial target
+                // If you want them to always prioritize player first in a raid:
+                // newAlien.target = this.player;
+                // newAlien.changeState(AI_STATE.APPROACHING); // Ensure they start moving
+            }
+
+
+            this.starSystem.addEnemy(newAlien);
+        }
+    }
+
 }
