@@ -545,6 +545,7 @@ try {
         // Optionally, update market even if already visited
     }
 
+
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
     trySpawnNPC() {
         if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
@@ -555,13 +556,13 @@ try {
 
         // --- Special cases for economy ---
         if (econ === "military") {
-            chosenRole = AI_ROLE.HAULER;
-            chosenShipTypeName = random(MILITARY_SHIPS);
+            chosenRole = AI_ROLE.HAULER; // Military systems might have military haulers
+            chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : HAULER_SHIPS); // Prefer military ships if available
 
         } else if (econ === "alien") {
             // Mostly alien ships
             if (random() < 0.8 && ALIEN_SHIPS.length > 0) { // 80% chance for an Alien role ship
-                chosenRole = AI_ROLE.ALIEN; // <<< CHANGE TO AI_ROLE.ALIEN
+                chosenRole = AI_ROLE.ALIEN; 
                 chosenShipTypeName = random(ALIEN_SHIPS);
             } else { // 20% chance for a different role
                 const rolesToConsider = [];
@@ -571,7 +572,7 @@ try {
                 if (HAULER_SHIPS.length > 0) {
                     rolesToConsider.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
                 }
-                if (POLICE_SHIPS.length > 0) { // Added POLICE
+                if (POLICE_SHIPS.length > 0) { 
                     rolesToConsider.push({ role: AI_ROLE.POLICE, ships: POLICE_SHIPS });
                 }
 
@@ -580,32 +581,28 @@ try {
                     chosenRole = selectedPool.role;
                     chosenShipTypeName = random(selectedPool.ships);
                 } else {
-                    // Fallback if PIRATE, HAULER, and POLICE ship lists are all empty.
-                    // Default to a HAULER role and a generic ship.
                     chosenRole = AI_ROLE.HAULER;
-                    chosenShipTypeName = "Krait"; // A known default ship, or any other suitable default
+                    chosenShipTypeName = "Krait"; 
                 }
             }
 
         } else if (econ === "offworld" || econ === "separatist") {
-            // Special distribution for offworld/separatist economies
             const rand = random();
-            if (rand < 0.30) {
-                // 30% Explorer ships
-                chosenRole = AI_ROLE.HAULER;
+            if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
+                chosenRole = AI_ROLE.HAULER; 
                 chosenShipTypeName = random(EXPLORER_SHIPS);
-            } else if (rand < 0.50) {
-                // 20% Military ships
-                chosenRole = AI_ROLE.HAULER;
+            } else if (rand < 0.50 && MILITARY_SHIPS.length > 0) {
+                chosenRole = AI_ROLE.HAULER; 
                 chosenShipTypeName = random(MILITARY_SHIPS);
-            } else if (rand < 0.65) {
-                // 15% Pirate ships
+            } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.PIRATE;
                 chosenShipTypeName = random(PIRATE_SHIPS);
-            } else {
-                // 35% Hauler ships (remainder)
+            } else if (HAULER_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.HAULER;
                 chosenShipTypeName = random(HAULER_SHIPS);
+            } else { 
+                 chosenRole = AI_ROLE.HAULER;
+                 chosenShipTypeName = "Krait";
             }
         } else {
             // --- Standard spawn logic based on security ---
@@ -617,20 +614,21 @@ try {
 
             switch (chosenRole) {
                 case AI_ROLE.PIRATE:
-                    chosenShipTypeName = random(PIRATE_SHIPS);
+                    chosenShipTypeName = random(PIRATE_SHIPS.length > 0 ? PIRATE_SHIPS : ["Krait"]);
                     break;
                 case AI_ROLE.POLICE:
-                    chosenShipTypeName = random(POLICE_SHIPS);
+                    chosenShipTypeName = random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]);
                     break;
                 case AI_ROLE.HAULER:
-                    chosenShipTypeName = random(HAULER_SHIPS);
+                    chosenShipTypeName = random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"]);
                     break;
                 default:
-                    chosenShipTypeName = "Krait";
+                    chosenShipTypeName = "Krait"; // Fallback
+                    if (!chosenRole) chosenRole = AI_ROLE.HAULER; // Ensure role if not set
             }
 
             // --- Optional: Transport spawn branch ---
-            if (random() < 0.25) {
+            if (random() < 0.25 && TRANSPORT_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.TRANSPORT;
                 chosenShipTypeName = random(TRANSPORT_SHIPS);
             }
@@ -638,18 +636,21 @@ try {
 
         // --- Thargoid override only for non-alien systems ---
         if (econ !== "alien") {
-            const specificAlienChance = 0.01; // Chance to spawn a specific alien type like "Thargoid"
-            // Check if "Thargoid" is a defined alien ship and the random chance hits
+            const specificAlienChance = 0.01; 
             if (random() < specificAlienChance && ALIEN_SHIPS.includes("Thargoid")) {
                 chosenShipTypeName = "Thargoid";
-                chosenRole = AI_ROLE.ALIEN; // <<< Ensure this is AI_ROLE.ALIEN
+                chosenRole = AI_ROLE.ALIEN; 
                 if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
-
-                if (typeof soundManager !== 'undefined') {
-                    soundManager.playSound('thargoid'); // Use a suitable sound for alien encounter
-                }
+                if (typeof soundManager !== 'undefined') soundManager.playSound('thargoid');
             }
         }
+        
+        if (!chosenShipTypeName) {
+            console.warn("StarSystem: chosenShipTypeName was undefined after role selection, defaulting to Krait (Hauler). Role was:", chosenRole);
+            chosenShipTypeName = "Krait";
+            if (!chosenRole) chosenRole = AI_ROLE.HAULER;
+        }
+
 
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
@@ -658,31 +659,69 @@ try {
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
-            newEnemy.currentSystem = this;
+            // newEnemy.currentSystem = this; // addEnemy will set this
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             
-            // NEW CODE: Make police immediately target wanted player upon spawn
+            this.addEnemy(newEnemy); // Add the primary NPC
+
+            // --- START: GUARD SPAWN LOGIC FOR LARGE HAULERS ---
+            if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60 && this.enemies.length < this.maxEnemies) {
+                if (random() < 0.6) { // 60% chance to spawn a guard for a large hauler
+                    let guardShipTypeName;
+                    const defaultGuardShips = ["Viper", "GladiusFighter"]; 
+
+                    if (GUARD_SHIPS && GUARD_SHIPS.length > 0) {
+                        guardShipTypeName = random(GUARD_SHIPS);
+                    } else if (MILITARY_SHIPS && MILITARY_SHIPS.length > 0) {
+                        guardShipTypeName = random(MILITARY_SHIPS); 
+                    } else {
+                        guardShipTypeName = random(defaultGuardShips); 
+                    }
+                    
+                    if (!guardShipTypeName) { 
+                        guardShipTypeName = "Viper"; // Absolute fallback
+                    }
+
+                    // Spawn guard slightly offset from the hauler
+                    let guardSpawnX = newEnemy.pos.x - (newEnemy.size/2 + 30); // Offset based on hauler size
+                    let guardSpawnY = newEnemy.pos.y;      // Same Y for side-by-side initially
+
+                    if (this.enemies.length < this.maxEnemies) { 
+                        let guardNPC = new Enemy(guardSpawnX, guardSpawnY, this.player, guardShipTypeName, AI_ROLE.GUARD);
+                        // guardNPC.currentSystem = this; // addEnemy will set this
+                        guardNPC.calculateRadianProperties();
+                        guardNPC.initializeColors();
+                        
+                        guardNPC.principal = newEnemy; 
+                        guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy }); 
+
+                        this.addEnemy(guardNPC);
+                        console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
+                    }
+                }
+            }
+            // --- END: GUARD SPAWN LOGIC ---
+            
             if (newEnemy.role === AI_ROLE.POLICE && 
                 ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
                 
                 newEnemy.target = this.player;
-                newEnemy.currentState = AI_STATE.APPROACHING;
-                
-                // Force initial rotation toward player
+                newEnemy.changeState(AI_STATE.APPROACHING); // Use changeState for consistency
+                                
                 if (newEnemy.pos && this.player.pos) {
-                    let angle = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
-                    newEnemy.angle = angle; // Already in radians
+                    let angleToPlayer = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
+                    newEnemy.angle = angleToPlayer; 
                 }
                 
                 console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }
             
-            this.addEnemy(newEnemy);
         } catch(e) { 
-            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e); 
+            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e, "Chosen Ship:", chosenShipTypeName, "Role:", chosenRole); 
         }
     }
+
 
 
     /** Attempts to spawn an asteroid at regular intervals. */
