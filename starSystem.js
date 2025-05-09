@@ -26,6 +26,7 @@ const buildShipRoleArrays = () => {
         if (shipData.aiRoles.includes("EXPLORER")) EXPLORER_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("BOUNTY_HUNTER")) BOUNTY_HUNTER_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("GUARD")) GUARD_SHIPS.push(shipKey);
+        
     }
     
     return {
@@ -657,58 +658,23 @@ try {
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
-            // newEnemy.currentSystem = this; // addEnemy will set this
+            newEnemy.currentSystem = this;
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             
-            this.addEnemy(newEnemy); // Add the primary NPC
-
-            // --- START: GUARD SPAWN LOGIC FOR LARGE HAULERS ---
-            if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60 && this.enemies.length < this.maxEnemies) {
-                if (random() < 0.6) { // 60% chance to spawn a guard for a large hauler
-                    let guardShipTypeName;
-                    const defaultGuardShips = ["Viper", "GladiusFighter"]; // Fallback guard ships
-
-                    if (GUARD_SHIPS && GUARD_SHIPS.length > 0) {
-                        guardShipTypeName = random(GUARD_SHIPS);
-                    } else if (MILITARY_SHIPS && MILITARY_SHIPS.length > 0) {
-                        // If no specific "Guard" ships, pick a "Military" one
-                        guardShipTypeName = random(MILITARY_SHIPS); 
-                    } else {
-                        guardShipTypeName = random(defaultGuardShips); // Absolute fallback
-                    }
-                    
-                    if (!guardShipTypeName) { // Final fallback if all lists were empty
-                        guardShipTypeName = "Viper";
-                    }
-
-                    // Spawn guard slightly offset from the hauler
-                    let guardSpawnX = newEnemy.pos.x - 60; // Example offset
-                    let guardSpawnY = newEnemy.pos.y + 40; // Example offset
-
-                    if (this.enemies.length < this.maxEnemies) { // Double check maxEnemies before adding guard
-                        let guardNPC = new Enemy(guardSpawnX, guardSpawnY, this.player, guardShipTypeName, AI_ROLE.GUARD);
-                        // guardNPC.currentSystem = this; // addEnemy will set this
-                        guardNPC.calculateRadianProperties();
-                        guardNPC.initializeColors();
-                        
-                        guardNPC.principal = newEnemy; // Assign the hauler as the principal
-                        guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy }); // Set initial state to GUARDING
-
-                        this.addEnemy(guardNPC);
-                        console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
-                    }
-                }
-            }
-            // --- END: GUARD SPAWN LOGIC ---
-            
-            // Make police immediately target wanted player upon spawn (original logic)
+            // NEW CODE: Make police immediately target wanted player upon spawn
             if (newEnemy.role === AI_ROLE.POLICE && 
                 ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
                 
                 newEnemy.target = this.player;
-                newEnemy.changeState(AI_STATE.APPROACHING); // Use changeState for consistency
-                                
+                newEnemy.currentState = AI_STATE.APPROACHING;
+                
+                // Force initial rotation toward player
+                if (newEnemy.pos && this.player.pos) {
+                    let angle = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
+                    newEnemy.angle = angle; // Already in radians
+                }
+                
                 console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }
             
