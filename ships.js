@@ -910,7 +910,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
         typicalCargo: ["Food"],
         price: 2500,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["PIRATE","GUARD"]
     },
     "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
@@ -1001,7 +1001,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
-        typicalCargo: ["Weapons", "Narcotics"],
+        typicalCargo: ["Computers","Weapons", "Narcotics"],
         price: 60000,
         aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
     },
@@ -1023,9 +1023,9 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 4, 4],
         strokeColor: [138, 138, 138],
         strokeW: 1.50,
-        typicalCargo: ["Weapons", "Narcotics", "Slaves"],
+        typicalCargo: ["Computers","Computers","Weapons", "Narcotics", "Slaves"],
         price: 40000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
     },
     "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1047,7 +1047,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 50000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
     },
     "HummingBird": {
         name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1071,7 +1071,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"]
     },
 };
 // --- End Ship Definitions ---
