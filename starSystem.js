@@ -665,43 +665,64 @@ try {
             
             this.addEnemy(newEnemy); // Add the primary NPC
 
-            // --- START: GUARD SPAWN LOGIC FOR LARGE HAULERS ---
-            if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60 && this.enemies.length < this.maxEnemies) {
-                if (random() < 0.6) { // 60% chance to spawn a guard for a large hauler
-                    let guardShipTypeName;
-                    const defaultGuardShips = ["Viper", "GladiusFighter"]; 
 
-                    if (GUARD_SHIPS && GUARD_SHIPS.length > 0) {
-                        guardShipTypeName = random(GUARD_SHIPS);
-                    } else if (MILITARY_SHIPS && MILITARY_SHIPS.length > 0) {
-                        guardShipTypeName = random(MILITARY_SHIPS); 
-                    } else {
-                        guardShipTypeName = random(defaultGuardShips); 
-                    }
-                    
-                    if (!guardShipTypeName) { 
-                        guardShipTypeName = "Viper"; // Absolute fallback
-                    }
 
-                    // Spawn guard slightly offset from the hauler
-                    let guardSpawnX = newEnemy.pos.x - (newEnemy.size/2 + 30); // Offset based on hauler size
-                    let guardSpawnY = newEnemy.pos.y;      // Same Y for side-by-side initially
+// --- START: GUARD SPAWN LOGIC FOR LARGE HAULERS ---
+if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
+    const slotsLeft = this.maxEnemies - this.enemies.length;
+    if (newEnemy.size > 100 && slotsLeft > 0) {
+        // Spawn two guards for very large haulers
+        const numGuards = min(2, slotsLeft);
+        for (let g = 0; g < numGuards; g++) {
+            let guardShipTypeName;
+            const defaultGuardShips = ["Viper", "GladiusFighter"];
+            if (GUARD_SHIPS.length > 0)        guardShipTypeName = random(GUARD_SHIPS);
+            else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
+            else                                 guardShipTypeName = random(defaultGuardShips);
 
-                    if (this.enemies.length < this.maxEnemies) { 
-                        let guardNPC = new Enemy(guardSpawnX, guardSpawnY, this.player, guardShipTypeName, AI_ROLE.GUARD);
-                        // guardNPC.currentSystem = this; // addEnemy will set this
-                        guardNPC.calculateRadianProperties();
-                        guardNPC.initializeColors();
-                        
-                        guardNPC.principal = newEnemy; 
-                        guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy }); 
+            if (!guardShipTypeName) guardShipTypeName = "Viper";
 
-                        this.addEnemy(guardNPC);
-                        console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
-                    }
-                }
-            }
-            // --- END: GUARD SPAWN LOGIC ---
+            // Offset each guard at a different angle around the hauler
+            const offsetAngle = TWO_PI * (g / numGuards);
+            const spawnDist   = newEnemy.size/2 + 30;
+            const guardX      = newEnemy.pos.x + cos(offsetAngle) * spawnDist;
+            const guardY      = newEnemy.pos.y + sin(offsetAngle) * spawnDist;
+
+            let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
+            guardNPC.calculateRadianProperties();
+            guardNPC.initializeColors();
+            guardNPC.principal = newEnemy;
+            guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
+
+            this.addEnemy(guardNPC);
+            console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
+        }
+    }
+    else if (newEnemy.size <= 100 && slotsLeft > 0 && random() < 0.6) {
+        // 60% chance to spawn a single guard for medium haulers
+        let guardShipTypeName;
+        const defaultGuardShips = ["Viper", "GladiusFighter"];
+        if (GUARD_SHIPS.length > 0)        guardShipTypeName = random(GUARD_SHIPS);
+        else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
+        else                                 guardShipTypeName = random(defaultGuardShips);
+
+        if (!guardShipTypeName) guardShipTypeName = "Viper";
+
+        const guardX = newEnemy.pos.x - (newEnemy.size/2 + 30);
+        const guardY = newEnemy.pos.y;
+
+        let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
+        guardNPC.calculateRadianProperties();
+        guardNPC.initializeColors();
+        guardNPC.principal = newEnemy;
+        guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
+
+        this.addEnemy(guardNPC);
+        console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
+    }
+}
+// --- END: GUARD SPAWN LOGIC ---
+
             
             if (newEnemy.role === AI_ROLE.POLICE && 
                 ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
@@ -1238,6 +1259,7 @@ try {
                         );
                         
                         this.removeProjectile(i);
+                        hit = true;          // mark that we’ve handled this projectile
                         break;
                     }
                 }
