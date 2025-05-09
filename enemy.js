@@ -151,7 +151,7 @@ class Enemy {
             case AI_ROLE.POLICE: this.strokeColorValue = [100, 150, 255]; break; // Blue
             case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
             case AI_ROLE.PIRATE: this.strokeColorValue = [255, 100, 100]; break; // Red
-            case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; // Default Alien Green or from shipDef
+            case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; break;// Default Alien Green or from shipDef
             case AI_ROLE.BOUNTY_HUNTER:
             this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
             // Bounty hunters might have slightly better stats or use shipDef overrides
@@ -159,10 +159,9 @@ class Enemy {
             this.angleTolerance = shipDef.angleTolerance || (10 * PI/180); // Standard tolerance
             this.drag = shipDef.drag || 0.99; // Slightly less drag
             this.target = playerRef;
+            break;
             case AI_ROLE.GUARD:
                 this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
-                this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.0;
-                this.angleTolerance = shipDef.angleTolerance || (15 * PI/180);
                 // Guards might inherit target from principal or player initially
                 this.target = playerRef; // Default, can be overridden
                 break;
@@ -1014,7 +1013,11 @@ updateCombatState(targetExists, distanceToTarget) {
 _updateState_IDLE(targetExists) {
     if (targetExists) {
         this.changeState(AI_STATE.APPROACHING);
+    } else if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+        // If idle, is a guard, and has a valid principal, return to GUARDING state.
+        this.changeState(AI_STATE.GUARDING);
     }
+    // Otherwise, remains IDLE.
 }
 
 /** @private */
@@ -1446,7 +1449,6 @@ _determinePostFleeState() {
                     
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
                     this.updateCombatAI(system);
-                    this.updatePhysics();
                     return;
                 }
             }
