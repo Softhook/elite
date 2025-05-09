@@ -11,7 +11,8 @@ const AI_ROLE = {
     HAULER: 'Hauler',
     TRANSPORT: 'Transport',  // local shuttles
     ALIEN: 'Alien',
-    BOUNTY_HUNTER: 'BOUNTY_HUNTER'
+    BOUNTY_HUNTER: 'BOUNTY_HUNTER',
+    GUARD: 'Guard'
 };
 
 // Define AI States (Shared across roles, but used differently)
@@ -25,7 +26,8 @@ const AI_STATE = {
     LEAVING_SYSTEM: 6,// Moving towards exit point - Hauler only
     TRANSPORTING: 7,  // New state for transport behaviour
     COLLECTING_CARGO: 8,   // New state for cargo collection behavior
-    FLEEING: 9        // New state for damaged ships trying to escape
+    FLEEING: 9,        // New state for damaged ships trying to escape
+    GUARDING: 10
 };
 
 // Reverse lookup for AI_STATE values to names
@@ -157,6 +159,13 @@ class Enemy {
             this.angleTolerance = shipDef.angleTolerance || (10 * PI/180); // Standard tolerance
             this.drag = shipDef.drag || 0.99; // Slightly less drag
             this.target = playerRef;
+            case AI_ROLE.GUARD:
+                this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
+                this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.0;
+                this.angleTolerance = shipDef.angleTolerance || (15 * PI/180);
+                // Guards might inherit target from principal or player initially
+                this.target = playerRef; // Default, can be overridden
+                break;
         break;
         }
 
@@ -236,6 +245,11 @@ class Enemy {
             // Prepare route properties (to be assigned later)
             this.routePoints = null;         // Array of two p5.Vector points [pointA, pointB]
             this.currentRouteIndex = 0;      // Which point we're moving toward
+        } else if (this.role === AI_ROLE.GUARD) {
+            // Guard will start in GUARDING state if a principal is assigned soon after,
+            // otherwise, it might start PATROLLING or IDLE until a principal is assigned.
+            // For now, let's default to PATROLLING if no principal is immediately available.
+            this.currentState = AI_STATE.PATROLLING;
         } else {
             // Existing role assignments – for Pirates/Police/Hauler, etc.
             switch(this.role) {
@@ -278,6 +292,14 @@ class Enemy {
         // Shield recharge delay
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
+
+        // --- Guard-specific properties ---
+        this.principal = null; // The entity this guard is protecting
+        this.guardFormationOffset = createVector(-70, 0); // Desired position relative to principal (x: behind/ahead, y: left/right)
+        this.guardLeashDistance = 350;    // Max distance to stray from principal when not engaging
+        this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
+        this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
+        // ---
 
         // --- Combat AI Flags ---
         this.combatFlagsInitialized = true; // Set flag here
@@ -394,7 +416,23 @@ class Enemy {
                     // Normal transport behavior
                     this.updateTransportAI(system);
                 }
-            } else {
+            } 
+            // --- START OF NEW GUARD ROLE LOGIC ---
+            else if (this.role === AI_ROLE.GUARD) {
+                if (this.currentState === AI_STATE.GUARDING) {
+                    this._updateState_GUARDING(); // Handles formation, threat assessment for principal
+                } else {
+                                // If Guard is in a combat state (APPROACHING, ATTACK_PASS, FLEEING etc.)
+                                // it will use the standard combat AI.
+                                // This allows guards to fight if they are directly attacked or if they
+                                // decide to engage the principal's attacker (which changes their state to APPROACHING).
+                        this.updateCombatAI(system);
+                }
+                        this.updatePhysics(); // Guards always update their physics after their state logic
+            } 
+            // --- END OF NEW GUARD ROLE LOGIC ---
+
+            else {
                 // Handle other role behaviors
                 switch (this.role) {
                     case AI_ROLE.PIRATE:
@@ -561,6 +599,20 @@ evaluateTargetScore(target, system) {
         if (!enemy.isTargetValid(target) || target === enemy) {
             return TARGET_SCORE_INVALID;
         }
+
+         // --- GUARD: Prioritize Principal's Attacker ---
+        if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
+            if (target === enemy.principal.lastAttacker && enemy.isTargetValid(target) && (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) { // Attacked recently
+                //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
+                return 2000; // Very high score to engage principal's attacker
+             }
+                // If guard is directly attacked, it will defend itself via normal lastAttacker logic.
+                // If not engaging principal's attacker, guard should not actively target others unless directly attacked.
+            if (target !== enemy.lastAttacker) { // If not self-defense
+                return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
+            }
+        }
+        // --- END GUARD ---
 
         // --- BOUNTY HUNTER: Only cares about the player ---
         if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
@@ -1011,7 +1063,88 @@ _updateState_PATROLLING(targetExists, distanceToTarget) {
     if (targetExists && distanceToTarget < this.detectionRange) {
         this.changeState(AI_STATE.APPROACHING);
     }
+    // If patrolling and a principal is assigned, switch to GUARDING
+    if (this.principal && this.isTargetValid(this.principal)) {
+        this.changeState(AI_STATE.GUARDING);
+    }
 }
+
+
+
+/** @private Handles state logic for GUARDING */
+_updateState_GUARDING() {
+    if (!this.principal || this.principal.destroyed || !this.isTargetValid(this.principal)) {
+        this.principal = null;
+        // If principal is lost, revert to patrolling or another default behavior
+        console.log(`${this.shipTypeName} (Guard) lost principal. Reverting to PATROLLING.`);
+        this.changeState(AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); // Or specific guard default
+        return;
+    }
+
+    if (this.guardReactionTime > 0) {
+        this.guardReactionTime -= deltaTime / 1000;
+    }
+
+    // Check if principal is being attacked
+    // Use principal.lastAttacker and principal.lastAttackTime to see if attack is recent
+    const principalAttacker = this.principal.lastAttacker;
+    const timeSincePrincipalAttack = this.principal.lastAttackTime ? millis() - this.principal.lastAttackTime : Infinity;
+
+    if (this.guardReactionTime <= 0 && principalAttacker && this.isTargetValid(principalAttacker) && principalAttacker !== this && timeSincePrincipalAttack < 5000) { // React to attacks within last 5s
+        const distToPrincipalAttacker = this.distanceTo(principalAttacker);
+
+        if (distToPrincipalAttacker < this.guardEngageRange) {
+            console.log(`${this.shipTypeName} (Guard): ${this.principal.shipTypeName || 'Principal'} is under attack by ${principalAttacker.shipTypeName || 'Unknown Attacker'}. Engaging!`);
+            this.target = principalAttacker; // Set the attacker as the guard's target
+            this.changeState(AI_STATE.APPROACHING); // Switch to combat mode
+            this.guardReactionTime = 5.0; // Cooldown before checking for new attacker for principal
+            return;
+        }
+    }
+
+    // If no immediate threat to principal, maintain formation
+    let desiredWorldPos;
+    const principalAngle = this.principal.angle;
+    const offsetX = this.guardFormationOffset.x; // e.g., -70 (behind)
+    const offsetY = this.guardFormationOffset.y; // e.g.,   0 (directly behind) or +/- for side
+
+    const cosP = cos(principalAngle);
+    const sinP = sin(principalAngle);
+
+    // Offset relative to principal's orientation
+    // X component of offset is along principal's forward/backward axis
+    // Y component of offset is along principal's left/right axis
+    const localDeltaX = offsetX;
+    const localDeltaY = offsetY;
+
+    const worldDeltaX = cosP * localDeltaX - sinP * localDeltaY;
+    const worldDeltaY = sinP * localDeltaX + cosP * localDeltaY;
+
+    desiredWorldPos = createVector(this.principal.pos.x + worldDeltaX, this.principal.pos.y + worldDeltaY);
+
+    const distToFormationPoint = this.distanceTo(desiredWorldPos);
+    const distDirectToPrincipal = this.distanceTo(this.principal.pos);
+
+    if (distDirectToPrincipal > this.guardLeashDistance || distToFormationPoint > this.size * 0.5) {
+        // If too far from principal OR not in formation spot, move towards formation spot
+        this.performRotationAndThrust(desiredWorldPos);
+    } else {
+        // In formation, try to match principal's velocity or just slow down
+        if (this.principal.vel) {
+            // Gently try to match principal's velocity vector if close
+            let velDiff = p5.Vector.sub(this.principal.vel, this.vel);
+            this.vel.add(velDiff.mult(0.05)); // Small adjustment towards principal's velocity
+        }
+        this.vel.mult(0.97); // General damping if in position
+
+        // Optionally, match principal's orientation
+        // this.rotateTowards(this.principal.angle);
+    }
+    // Guards in GUARDING state don't typically fire unless they transition to a combat state
+    // However, they might take defensive shots if directly attacked.
+    // This is handled by the general takeDamage -> lastAttacker -> updateTargeting flow.
+}
+
 
 
   /** @private Handles state logic for FLEEING (movement + exit) */
@@ -2659,6 +2792,7 @@ _checkRandomCargoDrop() {
         let sumRadii = (target.size / 2) + (this.size / 2); 
         return dSq < sq(sumRadii);
     }
+    
 
     // -----------------------
     // --- State Management ---
@@ -2745,6 +2879,16 @@ _checkRandomCargoDrop() {
                 if (this.currentState !== AI_STATE.COLLECTING_CARGO) {
                     this.previousState = oldState;
                 }
+                break;
+            case AI_STATE.GUARDING:
+                    if (stateData.principal && this.isTargetValid(stateData.principal)) {
+                        this.principal = stateData.principal;
+                        console.log(`${this.shipTypeName} entering GUARDING state, protecting ${this.principal.shipTypeName || 'entity'}`);
+                    } else if (!this.principal) {
+                        console.warn(`${this.shipTypeName} entering GUARDING state without a valid principal. Will likely revert.`);
+                    }
+                    this.target = null; // Guards focus on principal or its attacker, not general targets initially
+                    this.guardReactionTime = 0; // Reset reaction time
                 break;
         }
     }

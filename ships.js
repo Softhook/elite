@@ -558,7 +558,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 60000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"]
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
@@ -1003,7 +1003,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Weapons", "Narcotics"],
         price: 60000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
     },
      "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
