@@ -2039,8 +2039,13 @@ if (isIllegalInSystem || isMissionCargo) {
     }
 
     // Add a message to the queue
-    addMessage(msg) {
-        this.messages.push({ text: msg, time: millis() });
+    addMessage(msg, color = [200, 200, 200], duration = this.messageDisplayTime) { // Added color and duration parameters with defaults
+        this.messages.push({ 
+            text: msg, 
+            time: millis(),
+            color: color,      // Store the color
+            duration: duration // Store the duration
+        });
         // Keep only the last 10 messages (optional)
         if (this.messages.length > 10) this.messages.shift();
     }
@@ -2048,19 +2053,37 @@ if (isIllegalInSystem || isMissionCargo) {
     // Draw messages at the bottom of the screen
     drawMessages() {
         const now = millis();
-        // Only show recent messages
-        const recent = this.messages.filter(m => now - m.time < this.messageDisplayTime);
+        // Filter messages based on their individual duration
+        const recent = this.messages.filter(m => now - m.time < (m.duration || this.messageDisplayTime));
         const toShow = recent.slice(-this.maxMessagesToShow);
 
         push();
         textAlign(CENTER, BOTTOM);
         textFont(font);
         textSize(20);
-        fill(200);
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
+            const messageItem = toShow[i];
+            // Use the message's specific color, or default if not set
+            const messageColor = messageItem.color || [200, 200, 200]; 
+            
+            // Convert color string (like "orange") to array if needed, or handle p5.color object
+            if (typeof messageColor === 'string') {
+                // Basic string to p5.color conversion (can be expanded)
+                try {
+                    fill(color(messageColor)); // p5.js color() function
+                } catch (e) {
+                    fill(200, 200, 200); // Fallback if string is not a valid color
+                    console.warn(`UIManager: Invalid color string '${messageColor}' for message. Using default.`);
+                }
+            } else if (Array.isArray(messageColor)) {
+                fill(...messageColor); // Spread array for fill(r,g,b,a)
+            } else {
+                 fill(messageColor); // Assume it's a p5.Color object or similar
+            }
+
             text(
-                toShow[i].text,
+                messageItem.text,
                 width / 2,
                 height - 10 - (toShow.length - 1 - i) * 22
             );
