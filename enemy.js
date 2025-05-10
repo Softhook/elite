@@ -2123,26 +2123,8 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             
             // Weapon-specific behavior
             if (this.currentWeapon) {
-                if (this.currentWeapon.type === 'turret') {
-                    this.fireWeapon(this.target);
-                } else if (this.currentWeapon.type === 'missile' && 
-                          this.role !== AI_ROLE.POLICE && 
-                          random() < 0.7) {
-                    // Non-police ships sometimes hold missile fire
-                    if (targetingPlayer) {
-                        console.log(`%c🔫 HOLDING FIRE: ${this.shipTypeName} conserving missiles`, 'color:blue');
-                    }
-                } else if (this.currentWeapon.type === 'beam' && 
-                          distanceToTarget > this.firingRange * 0.8 && 
-                          random() < 0.4) {
-                    // Sometimes hold beam fire at extreme ranges
-                    if (targetingPlayer) {
-                        console.log(`%c🔫 HOLDING FIRE: ${this.shipTypeName} beam ineffective at range`, 'color:blue');
-                    }
-                } else {
-                    // Standard firing
-                    this.fireWeapon(this.target);
-                }
+                // Standard firing for all weapon types (including missile, beam, and turret)
+                this.fireWeapon(this.target);
             } else {
                 // Fallback if no weapon defined
                 this.fireWeapon();

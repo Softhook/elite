@@ -216,6 +216,7 @@ const WEAPON_UPGRADES = [
         type: "missile",
         damage: 120,
         color: [0, 255, 255],
+        projectileSize: 7,
         fireRate: 5.0,         // Long reload
         price: 4500,
         speed: 2,              // Missile projectile speed
@@ -228,6 +229,7 @@ const WEAPON_UPGRADES = [
         type: "missile",
         damage: 120,
         color: [255, 255, 255], // White
+        projectileSize: 5,
         fireRate: 5.0,         // Long reload
         price: 8000,
         speed: 10,              // Missile projectile speed
@@ -240,6 +242,7 @@ const WEAPON_UPGRADES = [
         type: "missile",
         damage: 120,
         color: [255, 150, 50], // Orange-ish
+        projectileSize: 5,
         fireRate: 4.0,         // Long reload
         price: 4500,
         speed: 5,              // Missile projectile speed
@@ -252,6 +255,7 @@ const WEAPON_UPGRADES = [
         type: "missile",
         damage: 250,
         color: [255, 100, 100], // Reddish
+        projectileSize: 5,
         fireRate: 7.0,          // Very long reload
         price: 8000,
         speed: 4,               // Slightly slower, heavier

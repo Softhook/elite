@@ -87,7 +87,7 @@ class Projectile {
             
             this.size = (owner && owner instanceof Player) ? 4 : 3;
             if (this.type === "missile") {
-                this.size = 5; // Missiles can be slightly larger
+                this.size = owner.currentWeapon.projectileSize;
             }
             this.lifespan = this.initialLifespan;
             
