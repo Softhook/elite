@@ -821,11 +821,11 @@ evaluateTargetScore(target, system) {
                 score += 1;
             }
             
-            if (weapon.type === 'projectile' && isShortRange) {
-                score += 3; // Projectiles are best at short range
-            } else if (weapon.type === 'projectile' && isMediumRange) {
-                score += 2;
-            } else if (weapon.type === 'projectile' && isLongRange) {
+            if (weapon.type.startsWith('spread') && isShortRange) {
+                score += 3; // now catches spread2/3/4/5
+            } else if (weapon.type.startsWith('straight') && isMediumRange) {
+                score += 2; // now catches straight2/3/4…
+            } else if (weapon.type.startsWith('straight') && isLongRange) {
                 score += 1;
             }
             
@@ -841,20 +841,19 @@ evaluateTargetScore(target, system) {
             
             // Target-specific considerations
             if (target) {
-                // Against fast targets, prefer weapons with higher accuracy
-                if (target.maxSpeed > 5 && weapon.type === 'turret') {
+                // Against fast targets, prefer wide-angle weapons like spread
+                if (target.maxSpeed > 5 && weapon.type.startsWith('spread')) {
+                    score += 3;
+                }    
+                // Against slow targets, prefer missile weapons
+                if (target.maxSpeed < 5 && weapon.type === 'missile') {
                     score += 2;
                 }
-                
                 // Against large targets, prefer high damage weapons
                 if (target.size > 50 && weapon.damage > 10) {
                     score += 2;
                 }
                 
-                // Against armored targets (high hull), prefer armor penetrating weapons
-                if (target.maxHull > 100 && weapon.armorPiercing) {
-                    score += 3;
-                }
             }
             
             // If this weapon scores better, select it
