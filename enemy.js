@@ -2772,7 +2772,7 @@ _handlePlayerKillConsequences(attacker, system) {
     }
 
     // Set player wanted status if a non-pirate was destroyed
-    if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN) {
+    if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN && this.role !== AI_ROLE.BOUNTY_HUNTER) {
         if (system.setPlayerWanted) {
 
             // If player is police, revoke status first
