@@ -1034,7 +1034,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser","Guardian Missile"], // Starter weapon
+        armament: ["Pulse Laser","Loiter Munition","Kalibr Missile","Avenger Missile"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,

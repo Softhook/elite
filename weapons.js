@@ -212,6 +212,30 @@ const WEAPON_UPGRADES = [
     // Missile Weapons
     // -----------------------------
     {
+        name: "Loiter Munition",
+        type: "missile",
+        damage: 120,
+        color: [0, 255, 255],
+        fireRate: 5.0,         // Long reload
+        price: 4500,
+        speed: 2,              // Missile projectile speed
+        turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
+        lifespan: 400,         // Longer life to find target (frames or time units)
+        desc: "Very slow missile slow reload."
+    },
+    {
+        name: "Kalibr Missile",
+        type: "missile",
+        damage: 120,
+        color: [255, 255, 255], // White
+        fireRate: 5.0,         // Long reload
+        price: 8000,
+        speed: 10,              // Missile projectile speed
+        turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
+        lifespan: 400,         // Longer life to find target (frames or time units)
+        desc: "Very fast missile slow reload."
+    },
+    {
         name: "Guardian Missile",
         type: "missile",
         damage: 120,
@@ -224,14 +248,14 @@ const WEAPON_UPGRADES = [
         desc: "Homing missile with moderate payload."
     },
     {
-        name: "Avenger Heavy Missile",
+        name: "Avenger Missile",
         type: "missile",
         damage: 250,
         color: [255, 100, 100], // Reddish
         fireRate: 7.0,          // Very long reload
         price: 8000,
         speed: 4,               // Slightly slower, heavier
-        turnRate: 0.05,         // Wider turn radius
+        turnRate: 0.08,         
         lifespan: 300,
         desc: "Devastating but slow-reloading homing missile."
     }
