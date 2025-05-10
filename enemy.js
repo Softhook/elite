@@ -655,7 +655,6 @@ evaluateTargetScore(target, system) {
         switch (enemy.role) {
             case AI_ROLE.PIRATE:
                 if (isPlayer) {
-                    _score += 20; // Base score for player
                     _interesting = true;
                     //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
                     
@@ -2091,10 +2090,6 @@ performRotationAndThrust(desiredMovementTargetPos) {
  * @param {number} shootingAngle - Angle to target in radians
  */
 performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-    if (this.weaponsDisabled) {
-        // Skip firing when weapons are disabled
-        return;
-    }
 
     if (!targetExists) return;
     
