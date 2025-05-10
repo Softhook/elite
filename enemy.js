@@ -2104,7 +2104,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     if (this.currentWeapon) {
         switch (this.currentWeapon.type) {
             case 'beam': effectiveFiringRange *= 1.2; break;
-            case 'missile': effectiveFiringRange *= 1.3; break;
+            case 'missile': effectiveFiringRange *= 1.8; break;
             case 'turret': effectiveFiringRange *= 0.8; break;
         }
     }
@@ -2141,7 +2141,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
                     }
                 } else {
                     // Standard firing
-                    this.fireWeapon();
+                    this.fireWeapon(this.target);
                 }
             } else {
                 // Fallback if no weapon defined
@@ -2174,10 +2174,25 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         system.addProjectile(proj);
     }
 
-    fireWeapon(target = null) {
-        const system = this.getSystem();
-        if (!this.currentWeapon || !system) return;
-        WeaponSystem.fire(this, system, this.angle, this.currentWeapon.type, target);
+    fireWeapon(targetToPass = null) { // Renamed param to avoid conflict with this.target
+        if (!this.currentWeapon || this.fireCooldown > 0 || !this.currentSystem) return;
+
+        let fireAngle = this.angle; // Default firing angle for non-aimed weapons
+
+        // For missiles, the target is crucial and is passed as targetToPass.
+        // For beams, enemies typically fire straight.
+        // For turrets, WeaponSystem.fireTurret handles its own aiming if targetToPass is null,
+        // or uses targetToPass if provided.
+        
+        if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
+            if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
+                return; // Don't fire missile without a valid target
+            }
+        }
+
+
+        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+        this.fireCooldown = this.fireRate; // Use this.fireRate which should be set by selectBestWeapon
     }
 
     /** Cycles to the next available weapon */
@@ -2311,6 +2326,41 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
         try { drawFunc(this.size, showThrust); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+
+        // --- NEW: Draw Player's Target Indicator ---
+        // Check if THIS enemy instance is the player's current target.
+        // Assumes 'player' is globally accessible (which it is in your sketch.js).
+        if (typeof player !== 'undefined' && player.target === this) {
+            push(); // Isolate transformations for this indicator
+
+            // The canvas is already rotated to the enemy's angle.
+            // Drawing here will make the indicator rotate with the enemy.
+            noFill();
+            stroke(0, 255, 0, 200); // Bright green, semi-transparent
+            strokeWeight(2);
+
+            // Example: A circle around the ship
+            ellipse(0, 0, this.size * 1.6, this.size * 1.6); // Slightly larger than shield
+
+            // Example: Corner brackets
+            const bracketSize = this.size * 0.3;
+            const offset = this.size * 0.7; // Adjust offset to position brackets correctly
+            // Top-left
+            line(-offset, -offset, -offset + bracketSize, -offset);
+            line(-offset, -offset, -offset, -offset + bracketSize);
+            // Top-right
+            line(offset, -offset, offset - bracketSize, -offset);
+            line(offset, -offset, offset, -offset + bracketSize);
+            // Bottom-left
+            line(-offset, offset, -offset + bracketSize, offset);
+            line(-offset, offset, -offset, offset - bracketSize);
+            // Bottom-right
+            line(offset, offset, offset - bracketSize, offset);
+            line(offset, offset, offset, offset - bracketSize);
+
+            pop(); // Restore drawing state
+        }
+        // --- END NEW: Draw Player's Target Indicator ---
 
         // --- Draw Health Bar (AFTER rotation, relative to 0,0) ---
         if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {

@@ -207,5 +207,33 @@ const WEAPON_UPGRADES = [
         price: 10000,
         maxRadius: 750,
         desc: "Super damage, area effect."
+    },
+    // -----------------------------
+    // Missile Weapons
+    // -----------------------------
+    {
+        name: "Guardian Missile",
+        type: "missile",
+        damage: 120,
+        color: [255, 150, 50], // Orange-ish
+        fireRate: 4.0,         // Long reload
+        price: 4500,
+        speed: 5,              // Missile projectile speed
+        turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
+        lifespan: 240,         // Longer life to find target (frames or time units)
+        desc: "Homing missile with moderate payload."
+    },
+    {
+        name: "Avenger Heavy Missile",
+        type: "missile",
+        damage: 250,
+        color: [255, 100, 100], // Reddish
+        fireRate: 7.0,          // Very long reload
+        price: 8000,
+        speed: 4,               // Slightly slower, heavier
+        turnRate: 0.05,         // Wider turn radius
+        lifespan: 300,
+        desc: "Devastating but slow-reloading homing missile."
     }
+
 ];

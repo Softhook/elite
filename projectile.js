@@ -1,33 +1,35 @@
 // ****** projectile.js ******
 
 class Projectile {
-    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
+    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null, lifespan = 90, turnRate = 0, missileSpeed = 0) {
         // Create vectors just once at construction time
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
         
         // Set default values (will be overridden by reset())
         this.size = 3;
-        this.lifespan = 90;
+        this.lifespan = 90; // Default lifespan
+        this.initialLifespan = 90; // Store initial for reset
         this.damage = 10;
         this.owner = null;
         this.type = "projectile";
-        this.target = null;
+        this.target = null; // For homing missiles
         this.color = color(255, 0, 0);
-        
+        this.turnRate = 0; // For homing missiles
+        this.missileSpeed = 0; // Specific speed for missiles
+
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target);
+            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target, lifespan, turnRate, missileSpeed);
         }
     }
 
     // Reset method for object pooling
-    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null) {
+    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null, lifespan = 90, turnRate = 0, missileSpeed = 0) {
         try {
             // Validate position inputs
             if (isNaN(x) || isNaN(y)) {
                 console.warn(`Invalid projectile position: x=${x}, y=${y}`);
-                // Use owner position if available
                 if (owner && owner.pos) {
                     x = owner.pos.x;
                     y = owner.pos.y;
@@ -36,21 +38,24 @@ class Projectile {
                 }
             }
             
-            // Reset position without creating a new vector
             this.pos.set(x, y);
             this.owner = owner;
             this.type = type;
-            this.target = target;
-            
+            this.target = target; // Store the target for homing
+            this.turnRate = turnRate;
+            this.missileSpeed = missileSpeed || speed; // Use missileSpeed if provided, else general speed
+
             // Apply spawn offset (reuse velocity vector temporarily)
-            this.vel.set(1, 0).rotate(angle).mult(owner.size * 1.2);
-            this.pos.add(this.vel);
+            if (owner && owner.size) {
+                this.vel.set(1, 0).rotate(angle).mult(owner.size * 1.2);
+                this.pos.add(this.vel);
+            }
+
 
             // Use weapon upgrade if owner is Player or Enemy with a weapon
             if (owner && owner.currentWeapon) {
                 this.damage = owner.currentWeapon.damage;
                 
-                // Reuse color object if possible
                 if (this.color) {
                     this.color.setRed(owner.currentWeapon.color[0]);
                     this.color.setGreen(owner.currentWeapon.color[1]);
@@ -59,11 +64,17 @@ class Projectile {
                     this.color = color(...owner.currentWeapon.color);
                 }
                 
-                this.type = owner.currentWeapon.type;
-            } else {
+                this.type = owner.currentWeapon.type; // Ensure type is from weapon
+                // Missile-specific properties from weapon definition
+                if (this.type === "missile") {
+                    this.missileSpeed = owner.currentWeapon.speed || speed;
+                    this.turnRate = owner.currentWeapon.turnRate || 0;
+                    this.initialLifespan = owner.currentWeapon.lifespan || lifespan;
+                } else {
+                    this.initialLifespan = lifespan; // Default lifespan for non-missiles
+                }
+            } else { // Fallback if no owner or currentWeapon
                 this.damage = damage;
-                
-                // Reuse color object if possible
                 if (this.color && colorOverride) {
                     this.color.setRed(colorOverride[0]);
                     this.color.setGreen(colorOverride[1]);
@@ -71,22 +82,26 @@ class Projectile {
                 } else {
                     this.color = colorOverride ? color(...colorOverride) : color(255, 0, 0);
                 }
+                this.initialLifespan = lifespan;
             }
             
             this.size = (owner && owner instanceof Player) ? 4 : 3;
-            this.lifespan = 90;
+            if (this.type === "missile") {
+                this.size = 5; // Missiles can be slightly larger
+            }
+            this.lifespan = this.initialLifespan;
             
-            // Set velocity vector without creating a new one
-            this.vel.set(1, 0).rotate(angle).mult(speed);
+            // Set velocity vector
+            const effectiveSpeed = (this.type === "missile") ? this.missileSpeed : speed;
+            this.vel.set(1, 0).rotate(angle).mult(effectiveSpeed);
             
             return this;
         } catch (e) {
-            // Handle any errors
             console.error("Error resetting projectile:", e);
             this.pos.set(0, 0);
             this.vel.set(0, 0);
             this.size = 3;
-            this.lifespan = 1;
+            this.lifespan = 1; // Make it expire quickly
             this.damage = 0;
             this.type = "error";
             return this;
@@ -95,23 +110,21 @@ class Projectile {
 
     update() {
         // Homing missile logic
-        if (this.type === "missile" && this.target && this.target.pos) {
-            // Calculate desired direction without creating new vectors
-            let dx = this.target.pos.x - this.pos.x;
-            let dy = this.target.pos.y - this.pos.y;
-            let mag = Math.sqrt(dx*dx + dy*dy);
-            
-            // Only steer if we have a valid target position
-            if (mag > 0) {
-                // Calculate steering force (8% turn rate)
-                let speedMag = this.vel.mag();
-                dx = (dx / mag) * speedMag;
-                dy = (dy / mag) * speedMag;
-                
-                // Apply steering gradually
-                this.vel.x = this.vel.x * 0.92 + dx * 0.08;
-                this.vel.y = this.vel.y * 0.92 + dy * 0.08;
-            }
+        if (this.type === "missile" && this.target && this.target.pos && !this.target.destroyed && (this.target.hull === undefined || this.target.hull > 0)) {
+            // Calculate desired direction vector
+            let desiredVel = p5.Vector.sub(this.target.pos, this.pos);
+            desiredVel.setMag(this.missileSpeed); // Set to missile's defined speed
+
+            // Calculate steering force
+            let steer = p5.Vector.sub(desiredVel, this.vel);
+            // Scale turnRate by deltaTime for frame-rate independence, assuming deltaTime is in ms
+            // If deltaTime is 1 for 60fps, then 16.67 is the target ms per frame.
+            // Adjust this scaling factor if your deltaTime is different (e.g., if it's already in seconds, multiply by turnRate directly)
+            const timeCorrection = deltaTime ? (deltaTime / (1000/60)) : 1; // Assumes 60 FPS target for scaling
+            steer.limit(this.turnRate * timeCorrection); 
+
+            this.vel.add(steer);
+            this.vel.setMag(this.missileSpeed); // Re-normalize to maintain constant speed after steering
         }
         
         // Move projectile
@@ -121,14 +134,22 @@ class Projectile {
 
     draw() {
         push();
-        fill(this.color);
-        noStroke();
-        ellipse(this.pos.x, this.pos.y, this.size * 2, this.size * 2);
-
-        // Optional: Draw a different shape for missiles or force projectiles
         if (this.type === "missile") {
-            stroke(255, 100, 0);
-            line(this.pos.x, this.pos.y, this.pos.x - this.vel.x * 2, this.pos.y - this.vel.y * 2);
+            translate(this.pos.x, this.pos.y);
+            rotate(this.vel.heading()); // Point in direction of velocity
+            fill(this.color);
+            noStroke();
+            // Simple triangle shape for missile
+            triangle(-this.size * 1.5, -this.size * 0.7,
+                     -this.size * 1.5,  this.size * 0.7,
+                      this.size * 1.3,  0);
+            // Optional: Add a small particle trail (can be expanded with a particle system)
+            fill(255, constrain(this.lifespan * 3, 0, 150), 0, constrain(this.lifespan * 2, 0, 100)); // Fading orange trail
+            ellipse(-this.size * 2, 0, this.size * 1.5, this.size * 0.8);
+        } else { // Standard projectile drawing
+            fill(this.color);
+            noStroke();
+            ellipse(this.pos.x, this.pos.y, this.size * 2, this.size * 2);
         }
         pop();
     }

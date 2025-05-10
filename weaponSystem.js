@@ -7,7 +7,8 @@ const WEAPON_TYPE = {
     FORCE: 'force',
     TURRET: 'turret',
     STRAIGHT: 'straight',
-    SPREAD: 'spread'
+    SPREAD: 'spread',
+    MISSILE: 'missile' 
 };
 
 class WeaponSystem {
@@ -144,7 +145,9 @@ static fireForce(owner, system) {
             case WEAPON_TYPE.SPREAD:
                 this.fireSpread(owner, system, angle, count);
                 break;
-                
+            case WEAPON_TYPE.MISSILE: // New case for missiles
+                this.fireMissile(owner, system, angle, target);
+                break;           
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
@@ -188,6 +191,46 @@ static fireForce(owner, system) {
             soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
         }
     }
+
+    static fireMissile(owner, system, angle, target) {
+        if (!owner?.currentWeapon) {
+            console.warn("fireMissile: Owner has no currentWeapon.");
+            return;
+        }
+        const weapon = owner.currentWeapon;
+        let proj;
+
+        // Get missile-specific properties from the weapon definition
+        const speed = weapon.speed || 4; // Missile's own travel speed
+        const damage = weapon.damage;
+        const color = weapon.color;
+        const lifespan = weapon.lifespan || 180; // Missile's lifespan
+        const turnRate = weapon.turnRate || 0.05; // Missile's turn rate
+
+        if (this.projectilePool) {
+            // Pass all necessary parameters including target, lifespan, turnRate, and missileSpeed
+            proj = this.projectilePool.get(
+                owner.pos.x, owner.pos.y, angle, owner,
+                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+            );
+        }
+
+        if (!proj) {
+            proj = new Projectile(
+                owner.pos.x, owner.pos.y, angle, owner,
+                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+            );
+        }
+
+        proj.system = system;
+        system.addProjectile(proj);
+
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            // Consider adding a specific 'missileLaunch' sound
+            soundManager.playWorldSound('missileLaunch', owner.pos.x, owner.pos.y, player.pos);
+        }
+    }
+
 
     /** 
      * Fire multiple projectiles in a spread pattern

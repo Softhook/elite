@@ -51,6 +51,8 @@ class Player {
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
 
+        this.target = null; // Add this to store the player's current target for missiles etc.
+
         // Add police status
         this.isPolice = false;
         this.hasBeenPolice = false;
@@ -585,26 +587,40 @@ handleInput() {
     }
 
     /** Fires the current weapon based on its type using WeaponSystem. */
-    fireWeapon(target = null) {
+    fireWeapon(target = null) { // Allow target to be passed (e.g. from AI or future auto-turrets)
    
         // Check if weapons are disabled by EMP nebula
-    if (this.weaponsDisabled) {
-        console.log("Weapons disabled by EMP nebula!");
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage("Weapons disabled by EMP field!", "#ff0000");
+        if (this.weaponsDisabled) {
+            console.log("Weapons disabled by EMP nebula!");
+            if (typeof uiManager !== 'undefined') { uiManager.addMessage("Weapons Disabled: EMP", [255,100,0], 2000); }
+            if (typeof soundManager !== 'undefined') { soundManager.playSound('error'); }
+            return false;    
         }
-        // Play error sound if available
-        if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('error');
+
+        if (!this.currentWeapon || !this.currentSystem) return false;
+
+        let fireAngle = this.angle;
+        let effectiveTarget = target || this.target; // Use passed target, fallback to player's locked target
+
+        if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
+            if (!effectiveTarget || effectiveTarget.destroyed || (effectiveTarget.hull !== undefined && effectiveTarget.hull <=0)) {
+                if (typeof uiManager !== 'undefined' && this === player) { // only show message for player
+                    uiManager.addMessage("No target locked for missile.", [255,100,100]);
+                }
+                return false; // Don't fire missile without a valid target
+            }
+        } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
+            // Convert screen mouse position to world coordinates
+            const worldMx = mouseX + (this.pos.x - width/2);
+            const worldMy = mouseY + (this.pos.y - height/2);
+            fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
         }
-        return false; // Prevent firing
-    }
+        // For turrets, WeaponSystem.fireTurret handles its own aiming if no target is passed.
+        // If a target is passed (effectiveTarget), it will be used.
 
-
-        if (!this.currentWeapon || !this.currentSystem) return;
-        WeaponSystem.fire(this, this.currentSystem, this.angle, this.currentWeapon.type, target);
-
-        //console.log(`${this.currentWeapon.name} fired by player at angle ${this.angle}`);
+        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
+        this.fireCooldown = this.fireRate;
+        return true;
     }
 
     /** Updates player position, physics, and state. */
@@ -1150,6 +1166,36 @@ handleInput() {
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
+
+        // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
+        handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
+            if (mouseButton === LEFT) { // Or whatever button you use for targeting
+                if (this.currentSystem && this.currentSystem.enemies) {
+                    const worldMx = mouseX + (this.pos.x - width / 2);
+                    const worldMy = mouseY + (this.pos.y - height / 2);
+    
+                    for (let enemy of this.currentSystem.enemies) {
+                        if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
+                            let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
+                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                                this.target = enemy;
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
+                                }
+                                return; // Target found and set
+                            }
+                        }
+                    }
+                    // If no enemy was clicked, clear target
+                    if (this.target) {
+                         if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                        }
+                    }
+                    this.target = null;
+                }
+            }
+        }
 
     setWeaponByName(name) {
         const found = WEAPON_UPGRADES.find(w => w.name === name);

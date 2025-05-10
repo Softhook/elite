@@ -334,70 +334,78 @@ function keyReleased() {
   return true; // Allow default for other keys
 }
 
+
 function mousePressed() {
-  // Handle title screen clicks
-  if (gameStateManager.currentState === "TITLE_SCREEN" || 
-      gameStateManager.currentState === "INSTRUCTIONS") {
-      titleScreen.handleClick();
-      return;
-  }
-
-  // --- Fullscreen ON only once, on first click inside canvas ---
-  if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-      fullscreen(true);
-  }
-
-  // Handle market button presses specifically 
-  if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
-      return uiManager.handleMarketMousePress(
-          mouseX, mouseY, 
-          player.currentSystem?.station?.getMarket(), 
-          player
-      );
-  }
-
-  // This is where your code goes - inside mousePressed()
-  if (gameStateManager.showingInventory && gameStateManager.currentState === "IN_FLIGHT") {
-    const res = inventoryScreen.handleClick(mouseX, mouseY, player);
-    if (res === 'close') {
-      gameStateManager.showingInventory = false;
-      return false;
-    } 
-    else if (res?.action === 'jettison') {
-      const item = player.cargo[res.idx];
-      if (item && player.removeCargo(item.name, 1)) {
-        uiManager.addMessage(`Jettisoned 1 ${item.name}`);
-        
-        // Create cargo behind player
-        const dir = p5.Vector.fromAngle(player.angle + PI);
-        const pos = p5.Vector.add(
-            player.pos, 
-            dir.copy().mult(player.size * 2.6)
-        );
-        
-        // Add some debug to check what's happening
-        console.log("Creating jettisoned cargo:", item.name);
-        
-        // Create cargo with velocity away from player
-        const cargo = new Cargo(pos.x, pos.y, item.name, 1);
-        cargo.vel = dir.mult(1.5);
-        
-        // Add to system's cargo array
-        console.log("Adding to system cargo array", player.currentSystem);
-        player.currentSystem.addCargo(cargo);
+    // Handle title screen clicks
+    if (gameStateManager.currentState === "TITLE_SCREEN" || 
+        gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen.handleClick();
+        return; // Click handled
+    }
+  
+    // --- Fullscreen ON only once, on first click inside canvas ---
+    if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+        fullscreen(true);
+    }
+  
+    // Handle market button presses specifically 
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        // Let handleMarketMousePress return true if it handled the click
+        if (uiManager.handleMarketMousePress(
+            mouseX, mouseY, 
+            player.currentSystem?.station?.getMarket(), 
+            player
+        )) {
+          return; // Click was handled by market UI
+        }
+    }
+  
+    // Handle inventory clicks
+    if (gameStateManager.showingInventory && gameStateManager.currentState === "IN_FLIGHT") {
+      const res = inventoryScreen.handleClick(mouseX, mouseY, player);
+      if (res === 'close') {
+        gameStateManager.showingInventory = false;
+        return; // Click handled by inventory
+      } 
+      else if (res?.action === 'jettison') {
+        const item = player.cargo[res.idx];
+        if (item && player.removeCargo(item.name, 1)) {
+          uiManager.addMessage(`Jettisoned 1 ${item.name}`);
+          
+          const dir = p5.Vector.fromAngle(player.angle + PI);
+          const pos = p5.Vector.add(
+              player.pos, 
+              dir.copy().mult(player.size * 2.6)
+          );
+          
+          const cargo = new Cargo(pos.x, pos.y, item.name, 1);
+          cargo.vel = dir.mult(1.5);
+          
+          player.currentSystem.addCargo(cargo);
+        }
+        return; // Click handled by inventory
       }
-      return false;
+    }
+  
+    if (!gameStateManager || !player || !uiManager || !galaxy) { return; }
+    
+    // Check if general UI handled the click (e.g., map, station services)
+    let clickHandledByUI = uiManager.handleMouseClicks(
+        mouseX, mouseY, gameStateManager.currentState, player, player.currentSystem?.station?.getMarket(), galaxy
+    );
+  
+    if (clickHandledByUI) {
+      return; // Click handled by general UI
+    }
+  
+    // If UI did NOT handle the click AND we are in flight:
+    // THIS IS THE KEY CHANGE:
+    if (gameStateManager.currentState === "IN_FLIGHT") {
+        player.handleMousePressedForTargeting(); // Use mouse click for TARGETING
+        // player.handleFireInput(); // Ensure this line is NOT called here for mouse clicks if firing is keyboard-only
     }
   }
-
-  if (!gameStateManager || !player || !uiManager || !galaxy) { return; }
-  let clickHandledByUI = uiManager.handleMouseClicks(
-      mouseX, mouseY, gameStateManager.currentState, player, player.currentSystem?.station?.getMarket(), galaxy
-  );
-  if (!clickHandledByUI && gameStateManager.currentState === "IN_FLIGHT") {
-      player.handleFireInput();
-  }
-}
+  
 
 function mouseReleased() {
   // Handle market button releases
