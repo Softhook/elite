@@ -234,6 +234,136 @@ function drawHummingbird(s, thrusting = false) {
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
+// --- Draw functions for new Harlequin Ships ---
+function drawHarlequinJester(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HarlequinJester;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawHarlequinPierrot(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HarlequinPierrot;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawHarlequinColumbine(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HarlequinColumbine;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawHarlequinPantaloon(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HarlequinPantaloon;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawHarlequinScaramouche(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HarlequinScaramouche;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
+// --- Draw functions for new Local Transporters ---
+function drawLocalHopper(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.LocalHopper;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawErrandRunner(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ErrandRunner;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSystemShuttle(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SystemShuttle;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawCargoWagon(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.CargoWagon;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
+// --- Draw functions for new Pirate Ships ---
+function drawPirateCutlass(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PirateCutlass;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawPirateMarauder(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PirateMarauder;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawPirateReaver(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PirateReaver;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawPirateBrigand(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PirateBrigand;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawPirateInterceptorMKII(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PirateInterceptorMKII;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
+// --- Draw functions for new Separatist Ships ---
+function drawSeparatistLiberator(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistLiberator;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistDefiant(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistDefiant;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistOutlander(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistOutlander;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistVanguard(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistVanguard;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistPartisan(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistPartisan;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistBulwark(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistBulwark;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistShadow(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistShadow;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSeparatistSupplyRunner(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SeparatistSupplyRunner;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
+// --- Draw functions for new Imperial Ships ---
+function drawImperialGuardian(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialGuardian;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialPaladin(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialPaladin;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialLancer(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialLancer;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialJusticar(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialJusticar;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialEnvoy(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialEnvoy;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialSentinel(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialSentinel;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialEagleMkII(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialEagleMkII;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawImperialCutterLite(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ImperialCutterLite;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+
 // --- End Ship Drawing Functions ---
 
 
@@ -566,8 +696,8 @@ const SHIP_DEFINITIONS = {
         baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
         armament: ["Pulse Laser"], // Fast single weapon
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
-        drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ], // Very simple dart
-        fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8, // Red
+        drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ],
+        fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8,
         typicalCargo: [],
         price: 40000,
         aiRoles: ["MILITARY","BOUNTY_HUNTER"]
@@ -1073,6 +1203,366 @@ const SHIP_DEFINITIONS = {
         price: 40000,
         aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"]
     },
+    "HarlequinJester": {
+        name: "Harlequin Jester", role: "Light Fighter", sizeCategory: "Tiny", size: 22,
+        baseMaxSpeed: 8.0, baseThrust: 0.18, baseTurnRate: 0.09,
+        baseHull: 40, baseShield: 60, shieldRecharge: 1.4, cargoCapacity: 5,
+        armament: ["Pulse Laser", "Twin Pulse"],
+        costCategory: "Low-Medium", description: "A nimble and brightly colored Harlequin skirmisher.",
+        drawFunction: drawHarlequinJester,
+        vertexData: [ {x:1,y:0}, {x:-0.5,y:0.6}, {x:-0.2,y:0}, {x:-0.5,y:-0.6} ],
+        fillColor: [255, 0, 0], strokeColor: [0, 0, 255], strokeW: 1.2,
+        typicalCargo: [], price: 32000, techLevel: 2,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinPierrot": {
+        name: "Harlequin Pierrot", role: "Medium Trader", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.04,
+        baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
+        armament: ["Mini-Turret"],
+        costCategory: "Medium", description: "A surprisingly capable Harlequin trader, often underestimated.",
+        drawFunction: drawHarlequinPierrot,
+        vertexData: [ {x:0.8,y:0.5}, {x:-0.8,y:0.5}, {x:-0.8,y:-0.5}, {x:0.8,y:-0.5} ],
+        fillColor: [255, 255, 0], strokeColor: [0, 128, 0], strokeW: 1.5,
+        typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
+        aiRoles: ["HAULER", "PIRATE"]
+    },
+    "HarlequinColumbine": {
+        name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.07,
+        baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
+        armament: ["Beam Laser"],
+        costCategory: "Medium", description: "A swift Harlequin scout, adept at slipping past blockades.",
+        drawFunction: drawHarlequinColumbine,
+        vertexData: [ {x:0.9,y:0}, {x:0,y:0.7}, {x:-0.9,y:0}, {x:0,y:-0.7} ],
+        fillColor: [128, 0, 128], strokeColor: [255, 165, 0], strokeW: 1.0,
+        typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
+        aiRoles: ["HAULER", "PIRATE"]
+    },
+    "HarlequinPantaloon": {
+        name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,
+        baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.025,
+        baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 250,
+        armament: ["Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium-High", description: "A surprisingly large and garish Harlequin cargo vessel.",
+        drawFunction: drawHarlequinPantaloon,
+        vertexData: [ {x:1,y:0.4}, {x:0.5,y:0.8}, {x:-1,y:0.8}, {x:-1,y:-0.8}, {x:0.5,y:-0.8}, {x:1,y:-0.4} ],
+        fillColor: [0, 200, 200], strokeColor: [200, 0, 200], strokeW: 2.0,
+        typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
+        aiRoles: ["HAULER", "PIRATE"]
+    },
+    "HarlequinScaramouche": {
+        name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
+        baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
+        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
+        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret"],
+        costCategory: "High", description: "A versatile and deadly Harlequin ship, adaptable to many combat roles.",
+        drawFunction: drawHarlequinScaramouche,
+        vertexData: [ {x:1,y:0}, {x:0.2,y:0.6}, {x:-0.8,y:0.6}, {x:-0.8,y:-0.6}, {x:0.2,y:-0.6} ],
+        fillColor: [50, 50, 50], strokeColor: [255, 255, 255], strokeW: 1.5,
+        typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
+        aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
+    },
+    "LocalHopper": {
+        name: "Local Hopper", role: "Light Transport", sizeCategory: "Tiny", size: 18,
+        baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,
+        baseHull: 40, baseShield: 0, shieldRecharge: 0.5, cargoCapacity: 15,
+        armament: [],
+        costCategory: "Very Low", description: "A very basic, slow, and cheap short-range shuttle.",
+        drawFunction: drawLocalHopper,
+        vertexData: [ {x:0.6,y:0.6}, {x:-0.6,y:0.6}, {x:-0.6,y:-0.6}, {x:0.6,y:-0.6} ],
+        fillColor: [150, 150, 150], strokeColor: [100, 100, 100], strokeW: 1.0,
+        typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
+        aiRoles: ["TRANSPORT"]
+    },
+    "ErrandRunner": {
+        name: "Errand Runner", role: "Light Transport", sizeCategory: "Small", size: 24,
+        baseMaxSpeed: 4.0, baseThrust: 0.05, baseTurnRate: 0.045,
+        baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "Slightly more capable than a Hopper, used for inter-station deliveries.",
+        drawFunction: drawErrandRunner,
+        vertexData: [ {x:0.7,y:0.4}, {x:-0.7,y:0.4}, {x:-0.9,y:0}, {x:-0.7,y:-0.4}, {x:0.7,y:-0.4} ],
+        fillColor: [130, 140, 150], strokeColor: [80, 90, 100], strokeW: 1.0,
+        typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
+        aiRoles: ["TRANSPORT", "HAULER"]
+    },
+    "SystemShuttle": {
+        name: "System Shuttle", role: "Medium Transport", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 3.8, baseThrust: 0.06, baseTurnRate: 0.04,
+        baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
+        armament: ["Twin Pulse"],
+        costCategory: "Low", description: "A common sight carrying goods within a star system.",
+        drawFunction: drawSystemShuttle,
+        vertexData: [ {x:0.8,y:0.5}, {x:0.6,y:0.7}, {x:-0.8,y:0.7}, {x:-0.8,y:-0.7}, {x:0.6,y:-0.7}, {x:0.8,y:-0.5} ],
+        fillColor: [160, 150, 140], strokeColor: [100, 90, 80], strokeW: 1.2,
+        typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
+        aiRoles: ["TRANSPORT", "HAULER"]
+    },
+    "CargoWagon": {
+        name: "Cargo Wagon", role: "Heavy Local Transport", sizeCategory: "Medium", size: 45,
+        baseMaxSpeed: 3.0, baseThrust: 0.045, baseTurnRate: 0.03,
+        baseHull: 120, baseShield: 30, shieldRecharge: 0.5, cargoCapacity: 120,
+        armament: ["Mini-Turret"],
+        costCategory: "Low-Medium", description: "Slow but spacious, for bulk local transport. Little more than an engine strapped to containers.",
+        drawFunction: drawCargoWagon,
+        vertexData: [ {x:1,y:0.6}, {x:0.8,y:0.8}, {x:-0.8,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.8,y:-0.8}, {x:0.8,y:-0.8}, {x:1,y:-0.6} ],
+        fillColor: [100, 90, 80], strokeColor: [60, 50, 40], strokeW: 1.5,
+        typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
+        aiRoles: ["TRANSPORT", "HAULER"]
+    },
+    "PirateCutlass": {
+        name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
+        baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
+        baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Multi-Cannon", "Pulse Laser"],
+        costCategory: "Medium", description: "A common, modified fighter favored by pirates for its speed and bite.",
+        drawFunction: drawPirateCutlass,
+        vertexData: [ {x:1,y:0}, {x:-0.4,y:0.5}, {x:-0.8,y:0.3}, {x:-0.8,y:-0.3}, {x:-0.4,y:-0.5} ],
+        fillColor: [80, 20, 20], strokeColor: [150, 100, 100], strokeW: 1.0,
+        typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "PirateMarauder": {
+        name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
+        baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
+        baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
+        armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium-High", description: "A heavily armed pirate vessel designed for disabling and looting targets.",
+        drawFunction: drawPirateMarauder,
+        vertexData: [ {x:0.9,y:0.3}, {x:0.2,y:0.7}, {x:-0.9,y:0.7}, {x:-0.9,y:-0.7}, {x:0.2,y:-0.7}, {x:0.9,y:-0.3} ],
+        fillColor: [50, 50, 50], strokeColor: [100, 100, 100], strokeW: 1.5,
+        typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
+        aiRoles: ["PIRATE"]
+    },
+    "PirateReaver": {
+        name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
+        baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
+        armament: ["Force Blaster", "Mini-Turret", "Railgun Turret"],
+        costCategory: "High", description: "A formidable pirate capital ship, often a captured and modified freighter or military vessel.",
+        drawFunction: drawPirateReaver,
+        vertexData: [ {x:1,y:0.1}, {x:0.5,y:0.6}, {x:-0.5,y:0.8}, {x:-1,y:0.4}, {x:-1,y:-0.4}, {x:-0.5,y:-0.8}, {x:0.5,y:-0.6}, {x:1,y:-0.1} ],
+        fillColor: [40, 60, 40], strokeColor: [80, 100, 80], strokeW: 2.0,
+        typicalCargo: ["Narcotics", "Slaves", "Weapons"], price: 140000, techLevel: 5,
+        aiRoles: ["PIRATE"]
+    },
+    "PirateBrigand": {
+        name: "Pirate Brigand", role: "Fast Cargo Thief", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 6.8, baseThrust: 0.13, baseTurnRate: 0.065,
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.1, cargoCapacity: 30,
+        armament: ["Pulse Laser", "Mini-Turret"],
+        costCategory: "Medium", description: "A swift pirate ship designed for quick raids on unsuspecting haulers.",
+        drawFunction: drawPirateBrigand,
+        vertexData: [ {x:0.8,y:0}, {x:0.2,y:0.4}, {x:-0.8,y:0.4}, {x:-0.8,y:-0.4}, {x:0.2,y:-0.4} ],
+        fillColor: [100, 60, 20], strokeColor: [150, 100, 50], strokeW: 1.0,
+        typicalCargo: ["Food", "Textiles", "Minerals"], price: 38000, techLevel: 2,
+        aiRoles: ["PIRATE"]
+    },
+    "PirateInterceptorMKII": {
+        name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
+        baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.075,
+        baseHull: 100, baseShield: 150, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
+        costCategory: "Medium-High", description: "An upgraded pirate interceptor, bristling with stolen tech.",
+        drawFunction: drawPirateInterceptorMKII,
+        vertexData: [ {x:1.1,y:0}, {x:-0.2,y:0.5}, {x:-0.9,y:0.5}, {x:-0.7,y:0}, {x:-0.9,y:-0.5}, {x:-0.2,y:-0.5} ],
+        fillColor: [60, 20, 60], strokeColor: [120, 80, 120], strokeW: 1.3,
+        typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "SeparatistLiberator": {
+        name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,
+        baseMaxSpeed: 6.5, baseThrust: 0.14, baseTurnRate: 0.07,
+        baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
+        armament: ["Multi-Cannon", "Burst Blaster"],
+        costCategory: "Medium", description: "Core fighter of Separatist cells, rugged and reliable.",
+        drawFunction: drawSeparatistLiberator,
+        vertexData: [ {x:1,y:0}, {x:-0.6,y:0.6}, {x:-1,y:0.2}, {x:-1,y:-0.2}, {x:-0.6,y:-0.6} ],
+        fillColor: [100, 40, 40], strokeColor: [160, 100, 100], strokeW: 1.2,
+        typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
+        aiRoles: ["PIRATE"]
+    },
+    "SeparatistDefiant": {
+        name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
+        baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
+        baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
+        armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse"],
+        costCategory: "Medium-High", description: "A heavily armed Separatist gunship, designed to break blockades.",
+        drawFunction: drawSeparatistDefiant,
+        vertexData: [ {x:0.9,y:0.4}, {x:0.4,y:0.8}, {x:-0.9,y:0.8}, {x:-0.9,y:-0.8}, {x:0.4,y:-0.8}, {x:0.9,y:-0.4} ],
+        fillColor: [70, 70, 70], strokeColor: [120, 120, 120], strokeW: 1.8,
+        typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
+        aiRoles: ["PIRATE"]
+    },
+    "SeparatistOutlander": {
+        name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05,
+        baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
+        armament: ["Beam Laser", "Mini-Turret"],
+        costCategory: "Medium", description: "Separatist vessel for deep space operations and hit-and-run attacks.",
+        drawFunction: drawSeparatistOutlander, 
+        vertexData: [ {x:1,y:0}, {x:0.3,y:0.3}, {x:-0.2,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.2,y:-0.7}, {x:0.3,y:-0.3} ], // Sleek but rugged
+        fillColor: [60, 80, 60], strokeColor: [100, 120, 100], strokeW: 1.4, // Olive Drab
+        typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
+        aiRoles: ["HAULER", "PIRATE"]
+    },
+    "SeparatistVanguard": {
+        name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
+        baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
+        baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
+        armament: ["Force Blaster", "Railgun Turret", "Quad Pulse"],
+        costCategory: "High", description: "Lead ship in Separatist fleets, heavily armed and armored.",
+        drawFunction: drawSeparatistVanguard, 
+        vertexData: [ {x:1,y:0.2}, {x:0.6,y:0.7}, {x:-0.6,y:0.9}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.6,y:-0.9}, {x:0.6,y:-0.7}, {x:1,y:-0.2} ], // Imposing, angular
+        fillColor: [50, 30, 30], strokeColor: [100, 80, 80], strokeW: 2.2, // Dark Brownish Red
+        typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
+        aiRoles: ["PIRATE"]
+    },
+    "SeparatistPartisan": {
+        name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
+        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "A small, expendable fighter used by Separatist militias.",
+        drawFunction: drawSeparatistPartisan, 
+        vertexData: [ {x:0.9,y:0}, {x:-0.7,y:0.5}, {x:-0.9,y:0}, {x:-0.7,y:-0.5} ], // Simple dart
+        fillColor: [80, 80, 60], strokeColor: [120, 120, 100], strokeW: 0.8, // Muddy Yellow
+        typicalCargo: [], price: 28000, techLevel: 2,
+        aiRoles: ["PIRATE"]
+    },
+     "SeparatistBulwark": {
+        name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
+        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
+        baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
+        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter"],
+        costCategory: "Very High", description: "A heavily fortified Separatist ship, slow but incredibly tough.",
+        drawFunction: drawSeparatistBulwark,
+        vertexData: [ {x:1,y:0.7}, {x:0.7,y:1}, {x:-0.7,y:1}, {x:-1,y:0.7}, {x:-1,y:-0.7}, {x:-0.7,y:-1}, {x:0.7,y:-1}, {x:1,y:-0.7} ],
+        fillColor: [40, 40, 50], strokeColor: [90, 90, 100], strokeW: 3.0,
+        typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
+        aiRoles: ["PIRATE"]
+    },
+    "SeparatistShadow": {
+        name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
+        baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
+        armament: ["Pulse Laser", "Disruptor"],
+        costCategory: "Medium-High", description: "Separatist ship with basic stealth capabilities, used for infiltration and sabotage.",
+        drawFunction: drawSeparatistShadow,
+        vertexData: [ {x:1,y:0}, {x:-0.3,y:0.4}, {x:-0.8,y:0.1}, {x:-0.8,y:-0.1}, {x:-0.3,y:-0.4} ],
+        fillColor: [30, 30, 30], strokeColor: [70, 70, 70], strokeW: 1.0,
+        typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
+        aiRoles: ["PIRATE"]
+    },
+    "SeparatistSupplyRunner": {
+        name: "Separatist Supply Runner", role: "Armored Transport", sizeCategory: "Medium", size: 52,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.035,
+        baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
+        armament: ["Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium", description: "A Separatist transport designed to get vital supplies through hostile territory.",
+        drawFunction: drawSeparatistSupplyRunner,
+        vertexData: [ {x:0.9,y:0.6}, {x:0.7,y:0.8}, {x:-0.7,y:0.8}, {x:-0.9,y:0.6}, {x:-0.9,y:-0.6}, {x:-0.7,y:-0.8}, {x:0.7,y:-0.8}, {x:0.9,y:-0.6} ],
+        fillColor: [90, 70, 50], strokeColor: [130, 110, 90], strokeW: 1.6,
+        typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
+        aiRoles: ["HAULER"]
+    },
+    "ImperialGuardian": {
+        name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
+        baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
+        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium-High", description: "A common Imperial patrol ship, faster than the ACAB, well-shielded.",
+        drawFunction: drawImperialGuardian,
+        vertexData: [ {x:1,y:0}, {x:0.5,y:0.4}, {x:-0.5,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.5,y:-0.7}, {x:0.5,y:-0.4} ],
+        fillColor: [220, 220, 240], strokeColor: [100, 120, 200], strokeW: 1.5,
+        typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
+        aiRoles: ["POLICE", "GUARD"]
+    },
+    "ImperialPaladin": {
+        name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
+        baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
+        baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
+        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster"],
+        costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
+        drawFunction: drawImperialPaladin,
+        vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:-0.3,y:0.8}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
+        fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
+        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 5,
+        aiRoles: ["POLICE"]
+    },
+    "ImperialLancer": {
+        name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
+        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
+        baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
+        armament: ["Twin Pulse", "Sniper Rail"],
+        costCategory: "Medium", description: "A high-speed Imperial interceptor designed for surgical strikes.",
+        drawFunction: drawImperialLancer,
+        vertexData: [ {x:1.2,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
+        fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
+        typicalCargo: [], price: 62000, techLevel: 4,
+        aiRoles: ["BOUNTY_HUNTER"]
+    },
+    "ImperialJusticar": {
+        name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
+        baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
+        baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
+        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser"],
+        costCategory: "High", description: "A heavily armed Imperial vessel used for enforcing blockades and punitive actions.",
+        drawFunction: drawImperialJusticar,
+        vertexData: [ {x:0.9,y:0.5}, {x:0.5,y:0.9}, {x:-0.5,y:0.9}, {x:-0.9,y:0.5}, {x:-0.9,y:-0.5}, {x:-0.5,y:-0.9}, {x:0.5,y:-0.9}, {x:0.9,y:-0.5} ],
+        fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
+        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 5,
+        aiRoles: ["POLICE"]
+    },
+    "ImperialEnvoy": {
+        name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,
+        baseMaxSpeed: 6.0, baseThrust: 0.08, baseTurnRate: 0.03,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
+        armament: ["Mini-Turret", "Pulse Laser"],
+        costCategory: "High", description: "An unarmed or lightly armed Imperial ship for diplomatic missions, fast and well-shielded.",
+        drawFunction: drawImperialEnvoy,
+        vertexData: [ {x:1.1,y:0}, {x:0.8,y:0.3}, {x:-0.8,y:0.4}, {x:-1.1,y:0}, {x:-0.8,y:-0.4}, {x:0.8,y:-0.3} ],
+        fillColor: [250, 250, 255], strokeColor: [200, 180, 120], strokeW: 1.5,
+        typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
+        aiRoles: ["TRANSPORT"]
+    },
+    "ImperialSentinel": {
+        name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,
+        baseMaxSpeed: 5.2, baseThrust: 0.095, baseTurnRate: 0.04,
+        baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
+        armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
+        costCategory: "High", description: "A dedicated Imperial corvette for long-duration border patrols and customs enforcement.",
+        drawFunction: drawImperialSentinel,
+        vertexData: [ {x:1,y:0.3}, {x:0.4,y:0.6}, {x:-0.4,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.4,y:-0.8}, {x:0.4,y:-0.6}, {x:1,y:-0.3} ],
+        fillColor: [210, 215, 225], strokeColor: [90, 110, 170], strokeW: 1.9,
+        typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
+        aiRoles: ["POLICE", "GUARD"]
+    },
+    "ImperialEagleMkII": {
+        name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 7.8, baseThrust: 0.18, baseTurnRate: 0.092,
+        baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
+        armament: ["Twin Pulse", "Beam Laser"],
+        costCategory: "Medium", description: "An upgraded version of the classic Eagle, exclusive to Imperial pilots. Even faster and better shielded.",
+        drawFunction: drawImperialEagleMkII,
+        vertexData: [ {x:1,y:0}, {x:-0.6,y:0.4}, {x:-0.9,y:0.2}, {x:-0.9,y:-0.2}, {x:-0.6,y:-0.4} ],
+        fillColor: [230, 230, 245], strokeColor: [150, 150, 220], strokeW: 1.1,
+        typicalCargo: [], price: 58000, techLevel: 3,
+        aiRoles: ["POLICE", "BOUNTY_HUNTER"]
+    },
+    "ImperialCutterLite": {
+        name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
+        baseMaxSpeed: 6.5, baseThrust: 0.09, baseTurnRate: 0.028,
+        baseHull: 200, baseShield: 280, shieldRecharge: 1.6, cargoCapacity: 150,
+        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
+        costCategory: "High", description: "A smaller, more agile version of the Cutter, still capable of significant cargo and defense.",
+        drawFunction: drawImperialCutterLite,
+        vertexData: [ {x:1.1,y:0}, {x:0.7,y:0.25}, {x:0,y:0.7}, {x:-0.9,y:0.6}, {x:-1.1,y:0.3}, {x:-1.1,y:-0.3}, {x:-0.9,y:-0.6}, {x:0,y:-0.7}, {x:0.7,y:-0.25} ],
+        fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
+        typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
+        aiRoles: ["HAULER", "PIRATE"]
+    }
 };
 // --- End Ship Definitions ---
 

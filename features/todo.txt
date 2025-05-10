@@ -6,6 +6,11 @@
 
 ## Core Gameplay Enhancements
 
+
+weapon disable thrust
+
+protective barrier
+
 How can we increase the difficulty
 
 ships above size 100 get two guards
