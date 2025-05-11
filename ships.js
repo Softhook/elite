@@ -1040,7 +1040,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
         typicalCargo: ["Food"],
         price: 2500,
-        aiRoles: ["PIRATE","GUARD"]
+        aiRoles: ["PIRATE"]
     },
     "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
@@ -1237,7 +1237,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0}, {x:0,y:0.7}, {x:-0.9,y:0}, {x:0,y:-0.7} ],
         fillColor: [128, 0, 128], strokeColor: [255, 165, 0], strokeW: 1.0,
         typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinPantaloon": {
         name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,

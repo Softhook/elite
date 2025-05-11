@@ -214,7 +214,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Loiter Munition",
         type: "missile",
-        damage: 120,
+        damage: 100,
         color: [0, 255, 255],
         projectileSize: 7,
         fireRate: 5.0,         // Long reload
@@ -227,7 +227,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Kalibr Missile",
         type: "missile",
-        damage: 120,
+        damage: 100,
         color: [255, 255, 255], // White
         projectileSize: 5,
         fireRate: 5.0,         // Long reload
@@ -240,7 +240,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Guardian Missile",
         type: "missile",
-        damage: 120,
+        damage: 60,
         color: [255, 150, 50], // Orange-ish
         projectileSize: 5,
         fireRate: 4.0,         // Long reload
@@ -248,12 +248,12 @@ const WEAPON_UPGRADES = [
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
-        desc: "Homing missile with moderate payload."
+        desc: "Basic missile with moderate payload."
     },
     {
         name: "Avenger Missile",
         type: "missile",
-        damage: 250,
+        damage: 200,
         color: [255, 100, 100], // Reddish
         projectileSize: 5,
         fireRate: 7.0,          // Very long reload

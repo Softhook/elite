@@ -295,7 +295,7 @@ class Enemy {
         // --- Guard-specific properties ---
         this.principal = null; // The entity this guard is protecting
         this.guardFormationOffset = createVector(-70, 0); // Desired position relative to principal (x: behind/ahead, y: left/right)
-        this.guardLeashDistance = 350;    // Max distance to stray from principal when not engaging
+        this.guardLeashDistance = 450;    // Max distance to stray from principal when not engaging
         this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
         this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
         // ---
@@ -418,17 +418,19 @@ class Enemy {
             } 
             // --- START OF NEW GUARD ROLE LOGIC ---
             else if (this.role === AI_ROLE.GUARD) {
-                if (this.currentState === AI_STATE.GUARDING) {
-                    this._updateState_GUARDING(); // Handles formation, threat assessment for principal
-                } else {
-                                // If Guard is in a combat state (APPROACHING, ATTACK_PASS, FLEEING etc.)
-                                // it will use the standard combat AI.
-                                // This allows guards to fight if they are directly attacked or if they
-                                // decide to engage the principal's attacker (which changes their state to APPROACHING).
-                        this.updateCombatAI(system);
+                // *** ADD THIS CHECK ***
+                if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                    // Use hauler jump logic for guards following their principal
+                    this.updateHaulerAI(system);
                 }
-                        this.updatePhysics(); // Guards always update their physics after their state logic
-            } 
+                else if (this.currentState === AI_STATE.GUARDING) {
+                    this._updateState_GUARDING();
+                }
+                else {
+                    this.updateCombatAI(system);
+                }
+                this.updatePhysics();
+            }
             // --- END OF NEW GUARD ROLE LOGIC ---
 
             else {
@@ -599,17 +601,35 @@ evaluateTargetScore(target, system) {
             return TARGET_SCORE_INVALID;
         }
 
-         // --- GUARD: Prioritize Principal's Attacker ---
+        // --- GUARD: Prioritize Principal's Attacker (with friendly fire prevention) ---
         if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
-            if (target === enemy.principal.lastAttacker && enemy.isTargetValid(target) && (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) { // Attacked recently
+            // FRIENDLY FIRE PREVENTION: Never target principal
+            if (target === enemy.principal) {
+                return TARGET_SCORE_INVALID;
+            }
+            
+            // FRIENDLY FIRE PREVENTION: Never target fellow guards protecting same principal
+            if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
+                return TARGET_SCORE_INVALID;
+            }
+            
+            // Original code - high priority for principal's attacker
+            if (target === enemy.principal.lastAttacker && 
+                enemy.isTargetValid(target) && 
+                (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) {
                 //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
                 return 2000; // Very high score to engage principal's attacker
-             }
-                // If guard is directly attacked, it will defend itself via normal lastAttacker logic.
-                // If not engaging principal's attacker, guard should not actively target others unless directly attacked.
+            }
+            
+            // Original code - only engage in self-defense otherwise
             if (target !== enemy.lastAttacker) { // If not self-defense
                 return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
             }
+        }
+
+        // FRIENDLY FIRE PREVENTION: Principals never target their own guards
+        if (target.role === AI_ROLE.GUARD && target.principal === enemy) {
+            return TARGET_SCORE_INVALID;
         }
         // --- END GUARD ---
 
@@ -1074,24 +1094,49 @@ _updateState_PATROLLING(targetExists, distanceToTarget) {
 
 /** @private Handles state logic for GUARDING */
 _updateState_GUARDING() {
-    if (!this.principal || this.principal.destroyed || !this.isTargetValid(this.principal)) {
+    // Check if principal is missing, destroyed, or has left the system
+    if (!this.principal || !this.isTargetValid(this.principal)) {
+        const system = this.getSystem();
+        
+        // Principal Jumped: Check if principal was at jump zone when it disappeared
+        if (this.principal && this.principal.destroyed && system?.jumpZoneCenter) {
+            // Principal is gone - determine if it jumped or was destroyed
+            console.log(`${this.shipTypeName} (Guard): Principal ${this.principal.shipTypeName} has left the system. Following...`);
+            
+            // Set up for system exit - always follow through jump zone
+            this.setLeavingSystemTarget(system);
+            this.changeState(AI_STATE.LEAVING_SYSTEM);
+            
+            // Apply velocity boost in jump direction
+            if (system.jumpZoneCenter) {
+                const jumpDir = p5.Vector.sub(system.jumpZoneCenter, this.pos).normalize();
+                this.vel.add(jumpDir.mult(this.maxSpeed * 0.7));
+            }
+            return;
+        }
+        
+        // Principal was destroyed or is invalid 
+        console.log(`${this.shipTypeName} (Guard): Principal is invalid or destroyed. Reverting to default state.`);
         this.principal = null;
-        // If principal is lost, revert to patrolling or another default behavior
-        console.log(`${this.shipTypeName} (Guard) lost principal. Reverting to PATROLLING.`);
-        this.changeState(AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE); // Or specific guard default
+        this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
         return;
     }
 
+    // Principal is valid - update guard reaction cooldown
     if (this.guardReactionTime > 0) {
         this.guardReactionTime -= deltaTime / 1000;
     }
 
     // Check if principal is being attacked
-    // Use principal.lastAttacker and principal.lastAttackTime to see if attack is recent
     const principalAttacker = this.principal.lastAttacker;
     const timeSincePrincipalAttack = this.principal.lastAttackTime ? millis() - this.principal.lastAttackTime : Infinity;
 
-    if (this.guardReactionTime <= 0 && principalAttacker && this.isTargetValid(principalAttacker) && principalAttacker !== this && timeSincePrincipalAttack < 5000) { // React to attacks within last 5s
+    if (this.guardReactionTime <= 0 && 
+        principalAttacker && 
+        this.isTargetValid(principalAttacker) && 
+        principalAttacker !== this && 
+        timeSincePrincipalAttack < 5000) { // React to attacks within last 5s
+        
         const distToPrincipalAttacker = this.distanceTo(principalAttacker);
 
         if (distToPrincipalAttacker < this.guardEngageRange) {
@@ -1130,20 +1175,26 @@ _updateState_GUARDING() {
         // If too far from principal OR not in formation spot, move towards formation spot
         this.performRotationAndThrust(desiredWorldPos);
     } else {
-        // In formation, try to match principal's velocity or just slow down
+        // In formation, match principal's velocity more precisely
         if (this.principal.vel) {
-            // Gently try to match principal's velocity vector if close
+            // Calculate velocity difference
             let velDiff = p5.Vector.sub(this.principal.vel, this.vel);
-            this.vel.add(velDiff.mult(0.05)); // Small adjustment towards principal's velocity
+            
+            // Match speed more aggressively (25% per frame instead of 5%)
+            this.vel.add(velDiff.mult(0.25));
+            
+            // No general damping when actively matching principal's speed
+            // Only apply minor stabilization
+            if (velDiff.magSq() < 0.1) { // If velocities are very close
+                this.vel.mult(0.99); // Minimal damping for stability
+            }
+            
+            // Match orientation too for better formation aesthetics
+            this.rotateTowards(this.principal.angle);
         }
-        this.vel.mult(0.97); // General damping if in position
-
-        // Optionally, match principal's orientation
-        // this.rotateTowards(this.principal.angle);
     }
     // Guards in GUARDING state don't typically fire unless they transition to a combat state
-    // However, they might take defensive shots if directly attacked.
-    // This is handled by the general takeDamage -> lastAttacker -> updateTargeting flow.
+    // This is handled by the general takeDamage -> lastAttacker -> updateTargeting flow
 }
 
 
@@ -1612,9 +1663,11 @@ _determinePostFleeState() {
                 // Exit if:
                 // 1. Arrived at the jump zone target (dE < 150)
                 if (dE < 150) {
+                    this.inCombat = false; // Add this line
+                    this.haulerCombatTimer = undefined; // Add this line
                     this.destroyed = true;
                     // This log confirms the condition was met
-                    console.log(`Hauler ${this.shipTypeName} left the system.`);
+                    console.log(`${this.role} ${this.shipTypeName} left the system.`);
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case
@@ -2660,19 +2713,22 @@ takeDamage(amount, attacker = null) {
  * @param {number} amount - Damage amount for logging purposes
  */
 _handleAttackerReference(attacker, amount) {
-    if (attacker instanceof Player) {
-        //console.log(`%c🎯 PLAYER ATTACK: ${this.shipTypeName} taking ${amount} damage`, 'color:red; font-weight:bold;');
+    if (attacker) {
+        // Record attacker regardless of type
         this.lastAttacker = attacker;
         this.lastAttackTime = millis();
+        
+        // Always update targeting for any attacker
         const system = this.getSystem();
         if (system) {
-            //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
+            // Special debug for player attacks if needed
+            if (attacker instanceof Player) {
+                //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
+            }
+            
+            // Update targeting immediately for all attackers
             const targetResult = this.updateTargeting(system);
-            //console.log(`%c🎯 PLAYER ATTACK: Target update result: ${targetResult}, new target: ${this.target?.constructor?.name || 'none'}`, 'color:red');
         }
-    } else {
-        if (attacker) this.lastAttacker = attacker;
-        this.lastAttackTime = millis();
     }
 }
 
@@ -2723,6 +2779,11 @@ _processDestruction(attacker) {
     this.destroyed = true;
     this.hull = 0; // Ensure hull is exactly 0
     this.target = null; // Prevent corpse targeting
+
+    // Add these lines to clear all combat flags
+    this.inCombat = false;
+    this.haulerCombatTimer = undefined;
+    this.forcedCombatTimer = 0;
 
     const system = this.getSystem();
     if (system) {
