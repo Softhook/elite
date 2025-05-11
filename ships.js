@@ -1119,7 +1119,7 @@ const SHIP_DEFINITIONS = {
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
-        armament: ["Multi-Cannon", "Twin Pulse"], // Fast fighter
+        armament: ["Multi-Cannon", "Twin Pulse", "Guardian Missile"], // Fast fighter
         costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
         drawFunction: drawViper,
         vertexLayers: [
