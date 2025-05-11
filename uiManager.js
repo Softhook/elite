@@ -1197,7 +1197,7 @@ if (isIllegalInSystem || isMissionCargo) {
 
         fill(255);
         textSize(30);
-        text("Press F5 or reload to restart", width / 2, height / 2 + 20);
+        text("Press F5 or reload to restart from last Save", width / 2, height / 2 + 20);
 
         pop();
     } // --- End drawGameOverScreen ---

@@ -416,7 +416,7 @@ const SHIP_DEFINITIONS = {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
         baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
-        armament: ["Force Blaster"],
+        armament: ["Force Blaster","Guardian Missile"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
         drawFunction: drawAnaconda, 
         vertexLayers: [
@@ -489,7 +489,7 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser"], // Balanced heavy firepower
+        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, 
         vertexLayers: [
@@ -554,7 +554,7 @@ const SHIP_DEFINITIONS = {
         name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor","Twin Pulse","Force Blaster"],
+        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawDestroyer,         vertexLayers: [
             {
@@ -587,7 +587,7 @@ const SHIP_DEFINITIONS = {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret"], // Military arsenal
+        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
         
@@ -624,7 +624,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -674,7 +674,7 @@ const SHIP_DEFINITIONS = {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
-        armament: ["Burst Blaster", "Twin Pulse"], // Fast attack loadout
+        armament: ["Burst Blaster", "Twin Pulse","Kalibr Missile"], // Fast attack loadout
         costCategory: "Medium", description: "Balanced space superiority fighter. Agile and well-armed.",
         drawFunction: drawGladiusFighter, 
         vertexLayers: [
@@ -706,7 +706,7 @@ const SHIP_DEFINITIONS = {
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter"], // Military loadout
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [
@@ -992,7 +992,7 @@ const SHIP_DEFINITIONS = {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
-        armament: ["Heavy Cannon", "V Punch", "Mini-Turret"], // Versatile heavy combat
+        armament: ["Heavy Cannon", "V Punch", "Mini-Turret","Kalibr Missile"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
         drawFunction: drawPython,         
         vertexLayers: [
@@ -1034,7 +1034,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser","Loiter Munition","Kalibr Missile","Avenger Missile"], // Starter weapon
+        armament: ["Pulse Laser","Guardian Missile"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
@@ -1139,7 +1139,7 @@ const SHIP_DEFINITIONS = {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
-        armament: ["Heavy Cannon", "Burst Blaster"], // Aggressive fighter
+        armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition"], // Aggressive fighter
         costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
         drawFunction: drawVulture, 
         vertexLayers: [
@@ -1255,7 +1255,7 @@ const SHIP_DEFINITIONS = {
         name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
-        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret"],
+        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition"],
         costCategory: "High", description: "A versatile and deadly Harlequin ship, adaptable to many combat roles.",
         drawFunction: drawHarlequinScaramouche,
         vertexData: [ {x:1,y:0}, {x:0.2,y:0.6}, {x:-0.8,y:0.6}, {x:-0.8,y:-0.6}, {x:0.2,y:-0.6} ],
@@ -1315,7 +1315,7 @@ const SHIP_DEFINITIONS = {
         name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
         baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
         baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
-        armament: ["Multi-Cannon", "Pulse Laser"],
+        armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
         costCategory: "Medium", description: "A common, modified fighter favored by pirates for its speed and bite.",
         drawFunction: drawPirateCutlass,
         vertexData: [ {x:1,y:0}, {x:-0.4,y:0.5}, {x:-0.8,y:0.3}, {x:-0.8,y:-0.3}, {x:-0.4,y:-0.5} ],
@@ -1327,7 +1327,7 @@ const SHIP_DEFINITIONS = {
         name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
         baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
-        armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret"],
+        armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
         costCategory: "Medium-High", description: "A heavily armed pirate vessel designed for disabling and looting targets.",
         drawFunction: drawPirateMarauder,
         vertexData: [ {x:0.9,y:0.3}, {x:0.2,y:0.7}, {x:-0.9,y:0.7}, {x:-0.9,y:-0.7}, {x:0.2,y:-0.7}, {x:0.9,y:-0.3} ],
@@ -1339,7 +1339,7 @@ const SHIP_DEFINITIONS = {
         name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
         baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
-        armament: ["Force Blaster", "Mini-Turret", "Railgun Turret"],
+        armament: ["Multi-Cannon","Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
         costCategory: "High", description: "A formidable pirate capital ship, often a captured and modified freighter or military vessel.",
         drawFunction: drawPirateReaver,
         vertexData: [ {x:1,y:0.1}, {x:0.5,y:0.6}, {x:-0.5,y:0.8}, {x:-1,y:0.4}, {x:-1,y:-0.4}, {x:-0.5,y:-0.8}, {x:0.5,y:-0.6}, {x:1,y:-0.1} ],
@@ -1387,7 +1387,7 @@ const SHIP_DEFINITIONS = {
         name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
         baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
         baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse"],
+        armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
         costCategory: "Medium-High", description: "A heavily armed Separatist gunship, designed to break blockades.",
         drawFunction: drawSeparatistDefiant,
         vertexData: [ {x:0.9,y:0.4}, {x:0.4,y:0.8}, {x:-0.9,y:0.8}, {x:-0.9,y:-0.8}, {x:0.4,y:-0.8}, {x:0.9,y:-0.4} ],
@@ -1411,7 +1411,7 @@ const SHIP_DEFINITIONS = {
         name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
         baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
         baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
-        armament: ["Force Blaster", "Railgun Turret", "Quad Pulse"],
+        armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
         costCategory: "High", description: "Lead ship in Separatist fleets, heavily armed and armored.",
         drawFunction: drawSeparatistVanguard, 
         vertexData: [ {x:1,y:0.2}, {x:0.6,y:0.7}, {x:-0.6,y:0.9}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.6,y:-0.9}, {x:0.6,y:-0.7}, {x:1,y:-0.2} ], // Imposing, angular
@@ -1435,7 +1435,7 @@ const SHIP_DEFINITIONS = {
         name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
         baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
-        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter"],
+        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile"],
         costCategory: "Very High", description: "A heavily fortified Separatist ship, slow but incredibly tough.",
         drawFunction: drawSeparatistBulwark,
         vertexData: [ {x:1,y:0.7}, {x:0.7,y:1}, {x:-0.7,y:1}, {x:-1,y:0.7}, {x:-1,y:-0.7}, {x:-0.7,y:-1}, {x:0.7,y:-1}, {x:1,y:-0.7} ],
@@ -1537,7 +1537,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.3}, {x:0.4,y:0.6}, {x:-0.4,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.4,y:-0.8}, {x:0.4,y:-0.6}, {x:1,y:-0.3} ],
         fillColor: [210, 215, 225], strokeColor: [90, 110, 170], strokeW: 1.9,
         typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
-        aiRoles: ["POLICE", "GUARD"]
+        aiRoles: ["POLICE"]
     },
     "ImperialEagleMkII": {
         name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,

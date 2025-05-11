@@ -164,24 +164,24 @@ static fireForce(owner, system) {
         if (!owner?.currentWeapon) return;
         
         const weapon = owner.currentWeapon;
+        const speed = weapon.speed || 8; // Use defined speed with fallback
         let proj;
         
-        // Try to use object pool if available
+        // Use the speed variable instead of hardcoded 8
         if (this.projectilePool) {
             proj = this.projectilePool.get(
                 owner.pos.x, owner.pos.y, angle, owner,
-                8, weapon.damage, weapon.color
+                speed, weapon.damage, weapon.color
             );
         }
         
-        // Fall back to direct instantiation if pool is unavailable or full
         if (!proj) {
             proj = new Projectile(
                 owner.pos.x, owner.pos.y, angle, owner,
-                8, weapon.damage, weapon.color
+                speed, weapon.damage, weapon.color
             );
         }
-        
+            
         // Add reference to system for proper cleanup
         proj.system = system;
         system.addProjectile(proj);
@@ -263,7 +263,7 @@ static fireForce(owner, system) {
      */
     static fireStraight(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system || !owner.currentWeapon) return;
-        
+ 
         // Initialize perpendicular direction vector if not exists
         if (!this._perpDir) {
             this._perpDir = createVector(0, 0);
@@ -278,6 +278,7 @@ static fireForce(owner, system) {
         this._perpDir.set(cos(perpAngle), sin(perpAngle));
         
         const weapon = owner.currentWeapon;
+        const speed = weapon.speed || 8; // Use defined speed with fallback
         
         for (let i = 0; i < count; i++) {
             let offset = (i - mid) * spacing;
@@ -290,12 +291,12 @@ static fireForce(owner, system) {
             if (this.projectilePool) {
                 proj = this.projectilePool.get(
                     x, y, angle, owner,
-                    8, weapon.damage, weapon.color
+                    speed, weapon.damage, weapon.color
                 );
             } else {
                 proj = new Projectile(
                     x, y, angle, owner,
-                    8, weapon.damage, weapon.color
+                    speed, weapon.damage, weapon.color
                 );
             }
             
