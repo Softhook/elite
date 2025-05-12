@@ -6,7 +6,6 @@
 
 ## Core Gameplay Enhancements
 
-ai logic for force weapons and for tangle weapons
 
 
 protective barrier

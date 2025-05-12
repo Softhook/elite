@@ -257,7 +257,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 100], // Reddish
         projectileSize: 5,
         fireRate: 7.0,          // Very long reload
-        price: 8000,
+        price: 12000,
         speed: 4,               // Slightly slower, heavier
         turnRate: 0.08,         
         lifespan: 300,

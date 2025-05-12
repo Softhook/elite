@@ -489,7 +489,7 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile"], // Balanced heavy firepower
+        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, 
         vertexLayers: [
@@ -554,7 +554,7 @@ const SHIP_DEFINITIONS = {
         name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile"],
+        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile","Heavy Tangle"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawDestroyer,         vertexLayers: [
             {
@@ -587,7 +587,7 @@ const SHIP_DEFINITIONS = {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile"], // Military arsenal
+        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
         
@@ -624,7 +624,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -706,7 +706,7 @@ const SHIP_DEFINITIONS = {
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile"], // Military loadout
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [
@@ -747,7 +747,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
         baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
-        armament: ["V Punch", "Mini-Turret", "Beam Laser"], // Elegant, balanced
+        armament: ["V Punch", "Mini-Turret", "Beam Laser","Heavy Tangle"], // Elegant, balanced
         costCategory: "High", description: "Elegant and fast Imperial ship, good shield charging.",
         drawFunction: drawImperialClipper, 
         vertexLayers: [
@@ -992,7 +992,7 @@ const SHIP_DEFINITIONS = {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
-        armament: ["Heavy Cannon", "V Punch", "Mini-Turret","Kalibr Missile"], // Versatile heavy combat
+        armament: ["Heavy Cannon", "V Punch", "Mini-Turret","Kalibr Missile","Heavy Tangle"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
         drawFunction: drawPython,         
         vertexLayers: [
@@ -1034,7 +1034,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser","Guardian Missile","Heavy Tangle"], // Starter weapon
+        armament: ["Pulse Laser","Guardian Missile","Tangle Projector"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
@@ -1483,7 +1483,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
         baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
-        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster"],
+        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle"],
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         drawFunction: drawImperialPaladin,
         vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:-0.3,y:0.8}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
@@ -1507,7 +1507,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
         baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
         baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
-        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser"],
+        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser","Heavy Tangle"],
         costCategory: "High", description: "A heavily armed Imperial vessel used for enforcing blockades and punitive actions.",
         drawFunction: drawImperialJusticar,
         vertexData: [ {x:0.9,y:0.5}, {x:0.5,y:0.9}, {x:-0.5,y:0.9}, {x:-0.9,y:0.5}, {x:-0.9,y:-0.5}, {x:-0.5,y:-0.9}, {x:0.5,y:-0.9}, {x:0.9,y:-0.5} ],
