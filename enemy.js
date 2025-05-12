@@ -2303,7 +2303,12 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
                 return; // Don't fire missile without a valid target
             }
         }
-
+        
+        // Check: EMP nebula check
+        if (this.currentSystem?.isInEMPNebula && this.currentSystem.isInEMPNebula(this.pos)) {
+            //(no UI feedback needed)
+            return;
+        }
 
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
         this.fireCooldown = this.fireRate; // Use this.fireRate which should be set by selectBestWeapon
