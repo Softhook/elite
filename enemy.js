@@ -832,6 +832,11 @@ evaluateTargetScore(target, system) {
         // Score each weapon based on situation
         let bestScore = -1;
         let bestWeapon = this.currentWeapon;
+
+        // Check if target is already entangled
+        const targetAlreadyEntangled = target && 
+                                    target.dragMultiplier > 1.0 && 
+                                    target.dragEffectTimer > 0;
         
         for (const weapon of this.weapons) {
             let score = 0;
@@ -849,15 +854,20 @@ evaluateTargetScore(target, system) {
             }
 
             // --- TANGLE WEAPON LOGIC ---
-            // Tangle weapons are excellent against fast targets
             if (weapon.type.includes('tangle') && target) {
-                // Extra effective against very fast targets
-                if (target.maxSpeed > 6.5) {
-                    score += 5; // Highest priority for very fast targets
-                } 
-                // Good for fast targets
-                else if (target.maxSpeed > 5) {
-                    score += 3;
+                // Only consider tangle weapons if target is NOT already entangled
+                if (!targetAlreadyEntangled) {
+                    // Extra effective against very fast targets
+                    if (target.maxSpeed > 6.5) {
+                        score += 5; // Highest priority for very fast targets
+                    } 
+                    // Good for fast targets
+                    else if (target.maxSpeed > 5) {
+                        score += 3;
+                    } 
+                } else {
+                    // Target is already entangled - significant penalty
+                    score -= 10; // Strong negative score to discourage selection
                 }
             }
 
