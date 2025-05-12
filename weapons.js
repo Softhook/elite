@@ -268,9 +268,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Tangle Projector",
         type: "tangle",
-        damage: 2,           // Very low direct damage
+        damage: 4,           // Very low direct damage
         color: [20, 200, 100], // Green
-        fireRate: 2.0,       // Moderate firing rate
+        fireRate: 0.6,       // Good firing rate
         price: 6800,
         dragDuration: 7.0,   // Seconds target's movement is impaired
         dragMultiplier: 50.0, // Strong drag effect
@@ -280,7 +280,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Tangle",
         type: "tangle",
-        damage: 4,           // Low direct damage
+        damage: 6,           // Low direct damage
         color: [30, 240, 120], // Brighter green
         fireRate: 2.0,       // Slower firing rate
         price: 12500,
