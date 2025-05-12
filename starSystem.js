@@ -1177,95 +1177,121 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         }
     } // End checkCollisions
 
-    /** Specifically handles projectile collisions with targets. */
-    checkProjectileCollisions() {
-        for (let i = this.projectiles.length - 1; i >= 0; i--) {
-            const proj = this.projectiles[i];
-            let hit = false;  // <- DECLARE HIT VARIABLE HERE
+/** Specifically handles projectile collisions with targets. */
+checkProjectileCollisions() {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const proj = this.projectiles[i];
+        let hit = false;  // <- DECLARE HIT VARIABLE HERE
+        
+        // Check against asteroids
+        for (let j = this.asteroids.length - 1; j >= 0; j--) {
+            const asteroid = this.asteroids[j];
+            if (!asteroid || asteroid.isDestroyed()) continue;
             
-            // Check against asteroids
-            for (let j = this.asteroids.length - 1; j >= 0; j--) {
-                const asteroid = this.asteroids[j];
-                if (!asteroid || asteroid.isDestroyed()) continue;
+            if (asteroid.checkCollision(proj)) {
+                // FIXED: Apply damage to asteroid based on projectile damage
+                asteroid.takeDamage(proj.damage || 1);
+                // Remove projectile after hit
+                this.removeProjectile(i);
+                const explosionColor = [255, 120, 20];
+                // Create effect at collision point - increase size for visibility
+                this.addExplosion(proj.pos.x, proj.pos.y, 10, explosionColor);
                 
-                if (asteroid.checkCollision(proj)) {
-                    // FIXED: Apply damage to asteroid based on projectile damage
-                    asteroid.takeDamage(proj.damage || 1);
-                    // Remove projectile after hit
-                    this.removeProjectile(i);
-                    const explosionColor = [255, 120, 20];
-                    // Create effect at collision point - increase size for visibility
-                    this.addExplosion(proj.pos.x, proj.pos.y, 10, explosionColor);
+                hit = true;  // <- Now this variable is defined
+                break;
+            }
+        }
+        
+        // If already hit something, skip the rest of the checks
+        if (hit) continue;
+        
+        // For player hits:
+        if (proj.owner instanceof Enemy && proj.checkCollision(this.player)) {
+            // Use centralized hit handler from WeaponSystem
+            WeaponSystem.handleHitEffects(
+                this.player,
+                proj.pos,
+                proj.damage,
+                proj.owner,
+                this,
+                proj.color
+            );
+            
+            // Apply Tangle effect if it's a tangle projectile
+            if (proj.type === "tangle" && typeof this.player.applyDragEffect === 'function') {
+                this.player.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+                
+                // Add visual feedback
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
+                }
+            }
+            
+            this.removeProjectile(i);
+            continue;
+        }
+        
+        // For enemy hits:
+        if (proj.owner instanceof Player) {
+            for (let j = 0; j < this.enemies.length; j++) {
+                const enemy = this.enemies[j];
+                if (proj.checkCollision(enemy)) {
+                    // Use centralized hit handler from WeaponSystem
+                    WeaponSystem.handleHitEffects(
+                        enemy,
+                        proj.pos,
+                        proj.damage,
+                        proj.owner,
+                        this,
+                        proj.color
+                    );
                     
-                    hit = true;  // <- Now this variable is defined
+                    // Apply Tangle effect if it's a tangle projectile
+                    if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
+                        enemy.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+                        
+                        // Add visual feedback for player
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`${enemy.shipTypeName} caught in energy tangle!`, "#30FFB4");
+                        }
+                    }
+                    
+                    this.removeProjectile(i);
                     break;
                 }
             }
-            
-            // If already hit something, skip the rest of the checks
-            if (hit) continue;
-            
-            // For player hits:
-            if (proj.owner instanceof Enemy && proj.checkCollision(this.player)) {
-                // Use centralized hit handler from WeaponSystem
-                WeaponSystem.handleHitEffects(
-                    this.player,
-                    proj.pos,
-                    proj.damage,
-                    proj.owner,
-                    this,
-                    proj.color
-                );
-                
-                this.removeProjectile(i);
-                continue;
-            }
-            
-            // For enemy hits:
-            if (proj.owner instanceof Player) {
-                for (let j = 0; j < this.enemies.length; j++) {
-                    const enemy = this.enemies[j];
-                    if (proj.checkCollision(enemy)) {
-                        // Use centralized hit handler from WeaponSystem
-                        WeaponSystem.handleHitEffects(
-                            enemy,
-                            proj.pos,
-                            proj.damage,
-                            proj.owner,
-                            this,
-                            proj.color
-                        );
-                        
-                        this.removeProjectile(i);
-                        break;
+        }
+        
+        // For enemy-to-enemy hits (friendly fire)
+        if (proj.owner instanceof Enemy) {
+            for (let j = 0; j < this.enemies.length; j++) {
+                const enemy = this.enemies[j];
+                // Skip if the enemy is shooting itself
+                if (enemy !== proj.owner && proj.checkCollision(enemy)) {
+                    // Use centralized hit handler from WeaponSystem
+                    WeaponSystem.handleHitEffects(
+                        enemy,
+                        proj.pos,
+                        proj.damage / 2, // Reduce damage for friendly fire
+                        proj.owner,
+                        this,
+                        proj.color
+                    );
+                    
+                    // Apply Tangle effect if it's a tangle projectile
+                    if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
+                        // Reduced tangle effect for friendly fire
+                        enemy.applyDragEffect((proj.dragDuration || 5.0) * 0.5, (proj.dragMultiplier || 10.0) * 0.5);
                     }
-                }
-            }
-            
-            // NEW CODE: For enemy-to-enemy hits (friendly fire)
-            if (proj.owner instanceof Enemy) {
-                for (let j = 0; j < this.enemies.length; j++) {
-                    const enemy = this.enemies[j];
-                    // Skip if the enemy is shooting itself
-                    if (enemy !== proj.owner && proj.checkCollision(enemy)) {
-                        // Use centralized hit handler from WeaponSystem
-                        WeaponSystem.handleHitEffects(
-                            enemy,
-                            proj.pos,
-                            proj.damage / 2, // Reduce damage for friendly fire
-                            proj.owner,
-                            this,
-                            proj.color
-                        );
-                        
-                        this.removeProjectile(i);
-                        hit = true;          // mark that we’ve handled this projectile
-                        break;
-                    }
+                    
+                    this.removeProjectile(i);
+                    hit = true;          // mark that we've handled this projectile
+                    break;
                 }
             }
         }
-    } // End checkProjectileCollisions
+    }
+} // End checkProjectileCollisions
 
     /**
      * Handles player collecting cargo in the system

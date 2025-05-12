@@ -373,6 +373,15 @@ class Enemy {
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
 
+            // Update drag effect timer
+        if (this.dragEffectTimer > 0) {
+            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
+            if (this.dragEffectTimer <= 0) {
+                this.dragMultiplier = 1.0;
+                this.dragEffectTimer = 0;
+            }
+        }
+
         // For pirates: Look for cargo first if not already collecting
         if (this.role === AI_ROLE.PIRATE && 
             this.currentState !== AI_STATE.COLLECTING_CARGO && 
@@ -1989,6 +1998,20 @@ _determinePostFleeState() {
         this.hasPausedNearStation = false; // Reset pause flag
     }
 
+/**
+ * Applies energy tangle effect to impair movement
+ * @param {number} duration - How long drag lasts in seconds
+ * @param {number} multiplier - How much drag is increased
+ */
+applyDragEffect(duration = 5.0, multiplier = 10.0) {
+    // Use higher value if already affected
+    this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
+    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration);
+    
+    // Visual effect timestamp
+    this.tangleEffectTime = millis();
+}
+
     /** 
      * Helper: Rotates towards target, applies thrust if aligned. Returns angle difference.
      * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
@@ -2082,32 +2105,55 @@ performRotationAndThrust(desiredMovementTargetPos) {
      * Updates the physics (drag, velocity, position) for the ship
      * Centralizes all physics calculations in one place
      */
-    updatePhysics() {
-        // Skip if destroyed
-        if (this.destroyed) return;
+updatePhysics() {
+    // Skip if destroyed
+    if (this.destroyed) return;
+    
+    // Calculate effective drag by combining different effects
+    let effectiveDrag;
+    
+    // --- TANGLE WEAPON EFFECT ---
+    if (this.dragMultiplier > 1.0) {
+        // Enhanced tangle formula with non-linear scaling for more dramatic effect
+        effectiveDrag = Math.min(0.95, this.drag * Math.pow(this.dragMultiplier, 1.2));
         
-        // Apply drag based on role
-        const effectiveDrag = this.currentState === AI_STATE.NEAR_STATION ? this.drag * 0.8 : this.drag;
-        this.vel.mult(effectiveDrag);
-        
-        // Ensure we don't exceed max speed
-        this.vel.limit(this.maxSpeed);
-        
-        // Update position only if velocity is valid
-        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-            this.pos.add(this.vel);
-        } else {
-            console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
-            this.vel.set(0, 0);
+        // Add subtle jitter to visualize energy field disruption
+        if (frameCount % 6 === 0) {
+            const jitterAmount = 0.02;
+            this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
         }
-        
-        // Update thrust particles
-        if (this.thrustManager) {
-            this.thrustManager.update();
-        }
-
-        this.isThrusting = false;       
+    } 
+    // --- STATION PROXIMITY EFFECT ---
+    else if (this.currentState === AI_STATE.NEAR_STATION) {
+        // Station braking - stronger effect than normal drag
+        effectiveDrag = this.drag * 0.8;
+    } 
+    // --- DEFAULT DRAG ---
+    else {
+        effectiveDrag = this.drag;
     }
+    
+    // Apply the calculated drag
+    this.vel.mult(effectiveDrag);
+    
+    // Ensure we don't exceed max speed
+    this.vel.limit(this.maxSpeed);
+    
+    // Update position only if velocity is valid
+    if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+        this.pos.add(this.vel);
+    } else {
+        console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
+        this.vel.set(0, 0);
+    }
+    
+    // Update thrust particles
+    if (this.thrustManager) {
+        this.thrustManager.update();
+    }
+
+    this.isThrusting = false;
+}
 
     // ---------------------------
     // --- Combat & Weapons ---
@@ -2360,6 +2406,39 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
         try { drawFunc(this.size, showThrust); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+
+        // Draw tangle effect if active
+        if (this.dragMultiplier > 1.0) {
+            // Simply check if we still have drag effect time remaining
+            if (this.dragEffectTimer > 0) {
+                // Calculate opacity - fade out during last second
+                const opacity = this.dragEffectTimer < 1.0 ? 
+                    map(this.dragEffectTimer, 0, 1.0, 0, 180) : 
+                    180;
+                
+                // Draw energy tethers with proper opacity
+                noFill();
+                stroke(30, 220, 120, opacity);
+                strokeWeight(2);
+                
+                for (let i = 0; i < 6; i++) {
+                    let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                    let innerRadius = this.size * 0.6;
+                    let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                    
+                    beginShape();
+                    for (let j = 0; j < 5; j++) {
+                        let r = map(j % 2, 0, 1, innerRadius, outerRadius);
+                        let jitterAmount = map(j, 0, 4, 0, 5);
+                        let jitter = random(-jitterAmount, jitterAmount);
+                        let x = cos(angle + j * 0.4) * r + jitter;
+                        let y = sin(angle + j * 0.4) * r + jitter;
+                        vertex(x, y);
+                    }
+                    endShape();
+                }
+            }
+        }
 
         // --- NEW: Draw Player's Target Indicator ---
         // Check if THIS enemy instance is the player's current target.

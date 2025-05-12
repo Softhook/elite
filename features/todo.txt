@@ -13,12 +13,6 @@ protective barrier
 
 How can we increase the difficulty
 
-ships above size 100 get two guards
-
-make the guard follow the speed and relative position of the principle ship they are guarding
-
-make the guard leave system if principle has left system
-
 alow the player to pay for boadygard service at station
 
 refactoring

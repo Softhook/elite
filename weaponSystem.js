@@ -8,7 +8,8 @@ const WEAPON_TYPE = {
     TURRET: 'turret',
     STRAIGHT: 'straight',
     SPREAD: 'spread',
-    MISSILE: 'missile' 
+    MISSILE: 'missile',
+    TANGLE: 'tangle'
 };
 
 class WeaponSystem {
@@ -147,7 +148,10 @@ static fireForce(owner, system) {
                 break;
             case WEAPON_TYPE.MISSILE: // New case for missiles
                 this.fireMissile(owner, system, angle, target);
-                break;           
+                break;
+            case WEAPON_TYPE.TANGLE: // Add this case
+                this.fireTangle(owner, system, angle);
+                break;       
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
@@ -513,6 +517,54 @@ static fireForce(owner, system) {
         
         return null;
     }
+
+// Tangle weapons
+    /**
+     * Fire a tangle weapon that temporarily immobilizes the target
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     */
+
+static fireTangle(owner, system, angle) {
+    if (!owner?.currentWeapon) return;
+    
+    const weapon = owner.currentWeapon;
+    const speed = weapon.speed || 6; // Slower than regular projectiles
+    const dragDuration = weapon.dragDuration || 5.0;
+    const dragMultiplier = weapon.dragMultiplier || 10.0;
+    
+    let proj;
+    
+    // Create projectile with tangle properties
+    if (this.projectilePool) {
+        proj = this.projectilePool.get(
+            owner.pos.x, owner.pos.y, angle, owner,
+            speed, weapon.damage, weapon.color, 
+            "tangle", null, 60, 0, 0, 
+            dragDuration, dragMultiplier
+        );
+    } else {
+        proj = new Projectile(
+            owner.pos.x, owner.pos.y, angle, owner,
+            speed, weapon.damage, weapon.color, 
+            "tangle", null, 60, 0, 0,
+            dragDuration, dragMultiplier
+        );
+    }
+    
+    // Make projectile bigger
+    proj.size = weapon.projectileSize || 7;
+    
+    // Add reference to system for proper cleanup
+    proj.system = system;
+    system.addProjectile(proj);
+    
+    // Play tangle sound
+    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
+    }
+}
 
     /** 
      * Fire a turret weapon that auto-aims at the nearest target

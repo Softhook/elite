@@ -262,6 +262,32 @@ const WEAPON_UPGRADES = [
         turnRate: 0.08,         
         lifespan: 300,
         desc: "Devastating but slow-reloading homing missile."
+    },
+        // Tangle weapons
+     
+    {
+        name: "Tangle Projector",
+        type: "tangle",
+        damage: 2,           // Very low direct damage
+        color: [20, 200, 100], // Green
+        fireRate: 2.0,       // Moderate firing rate
+        price: 6800,
+        dragDuration: 7.0,   // Seconds target's movement is impaired
+        dragMultiplier: 50.0, // Strong drag effect
+        projectileSize: 5,   // Medium projectile
+        desc: "Temporarily immobilizes enemy ships with energy tethers."
+    },
+    {
+        name: "Heavy Tangle",
+        type: "tangle",
+        damage: 4,           // Low direct damage
+        color: [30, 240, 120], // Brighter green
+        fireRate: 2.0,       // Slower firing rate
+        price: 12500,
+        dragDuration: 12.0,   // Longer effect
+        dragMultiplier: 1000.0, // Nearly stops ships completely
+        projectileSize: 7,   // Larger projectile
+        desc: "Advanced immobilization system that can stop even large ships."
     }
 
 ];

@@ -1,7 +1,9 @@
 // ****** projectile.js ******
 
 class Projectile {
-    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null, lifespan = 90, turnRate = 0, missileSpeed = 0) {
+        constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
+           type = "projectile", target = null, lifespan = 90, turnRate = 0, 
+           missileSpeed = 0, dragDuration = 5.0, dragMultiplier = 10.0) {
         // Create vectors just once at construction time
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
@@ -18,14 +20,20 @@ class Projectile {
         this.turnRate = 0; // For homing missiles
         this.missileSpeed = 0; // Specific speed for missiles
 
+        this.dragDuration = dragDuration;
+        this.dragMultiplier = dragMultiplier;
+
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target, lifespan, turnRate, missileSpeed);
+            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target, 
+                    lifespan, turnRate, missileSpeed, dragDuration, dragMultiplier);
         }
     }
 
     // Reset method for object pooling
-    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, type = "projectile", target = null, lifespan = 90, turnRate = 0, missileSpeed = 0) {
+    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
+     type = "projectile", target = null, lifespan = 90, turnRate = 0, 
+     missileSpeed = 0, dragDuration = 5.0, dragMultiplier = 10.0) {
         try {
             // Validate position inputs
             if (isNaN(x) || isNaN(y)) {
@@ -44,6 +52,9 @@ class Projectile {
             this.target = target; // Store the target for homing
             this.turnRate = turnRate;
             this.missileSpeed = missileSpeed || speed; // Use missileSpeed if provided, else general speed
+
+            this.dragDuration = dragDuration;
+            this.dragMultiplier = dragMultiplier;
 
             // Apply spawn offset (reuse velocity vector temporarily)
             if (owner && owner.size) {
@@ -146,6 +157,41 @@ class Projectile {
             // Optional: Add a small particle trail (can be expanded with a particle system)
             fill(255, constrain(this.lifespan * 3, 0, 150), 0, constrain(this.lifespan * 2, 0, 100)); // Fading orange trail
             ellipse(-this.size * 2, 0, this.size * 1.5, this.size * 0.8);
+
+            } else if (this.type === "tangle") { // Add this section
+            translate(this.pos.x, this.pos.y);
+            
+            // Energy field background
+            noStroke();
+            fill(this.color[0], this.color[1], this.color[2], 60);
+            ellipse(0, 0, this.size * 3, this.size * 2);
+            
+            // Core
+            fill(this.color[0], this.color[1], this.color[2], 150);
+            ellipse(0, 0, this.size * 1.5, this.size * 1.5);
+            
+            // Bright center
+            fill(255, 255, 255, 180);
+            ellipse(0, 0, this.size * 0.5, this.size * 0.5);
+            
+            // Energy strands
+            stroke(this.color[0], this.color[1], this.color[2], 200);
+            strokeWeight(1.5);
+            noFill();
+        
+            // Draw tethers/tendrils
+            for (let i = 0; i < 8; i++) {
+                const angle = (frameCount * 0.1 + i * PI/4) % TWO_PI;
+                beginShape();
+                for (let j = 0; j < 4; j++) {
+                    const radius = map(j, 0, 3, this.size * 0.5, this.size * 1.8);
+                    const jitter = map(j, 0, 3, 0, this.size * 0.3);
+                    const x = cos(angle + j * 0.2) * radius + random(-jitter, jitter);
+                    const y = sin(angle + j * 0.2) * radius + random(-jitter, jitter);
+                    vertex(x, y);
+                }
+                endShape();
+            }
         } else { // Standard projectile drawing
             fill(this.color);
             noStroke();

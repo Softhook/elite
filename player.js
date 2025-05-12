@@ -76,6 +76,11 @@ class Player {
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
 
+        // Add tangle weapon effect properties
+        this.dragMultiplier = 1.0;   // Default - normal drag
+        this.dragEffectTimer = 0;    // Countdown timer for tangle effect
+        this.tangleEffectTime = 0;   // Visual effect timestamp
+
         // Track enemy kills for Elite rating
         this.kills = 0;
 
@@ -374,6 +379,30 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.setCurrentWeapon(0);
     }
 
+    /**
+     * Applies energy tangle effect to impair player movement
+     * @param {number} duration - How long drag lasts in seconds
+     * @param {number} multiplier - How much drag is increased
+     */
+    applyDragEffect(duration = 5.0, multiplier = 10.0) {
+        // Use higher value if already affected
+        this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
+        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration);
+        
+        // Visual effect timestamp
+        this.tangleEffectTime = millis();
+        
+        // Player feedback
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Ship caught in energy tangle! Engines affected!", "#30FFB4");
+        }
+        
+        // Play sound effect if available
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playWorldSound('electricField', this.pos.x, this.pos.y, this.pos);
+        }
+    }
+
     /** Switches to the specified weapon index */
     switchToWeapon(index) {
         if (!this.weapons || !Array.isArray(this.weapons)) {
@@ -625,6 +654,21 @@ handleInput() {
 
     /** Updates player position, physics, and state. */
     update() {
+
+
+        // Update tangle effect timer
+        if (this.dragEffectTimer > 0) {
+            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
+            if (this.dragEffectTimer <= 0) {
+                this.dragMultiplier = 1.0;
+                this.dragEffectTimer = 0;
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Engines restored to normal operation.", "#30FFB4");
+                }
+            }
+        }
+        // ---- End new section ----
+
         // --- Speed Burst Thrust & State Management ---
         if (this.isSpeedBursting) {
             if (millis() < this.speedBurstEnd) {
@@ -647,7 +691,26 @@ handleInput() {
         // Apply drag if not actively applying burst thrust (i.e., isSpeedBursting is false).
         // Drag should be active during the coasting phase.
         if (!this.isSpeedBursting) {
-            this.vel.mult(this.drag);
+            // Apply drag including tangle effect
+            let effectiveDrag;
+            
+            if (this.dragMultiplier > 1.0) {
+                // FIXED: Match the enemy implementation's pattern
+                // Higher dragMultiplier = more drag = SMALLER velocity multiplier
+                effectiveDrag = Math.max(0.05, 1 - (this.drag * Math.pow(this.dragMultiplier, 1.2)));
+                
+                // Add subtle jitter to visualize energy field disruption
+                if (frameCount % 6 === 0) {
+                    const jitterAmount = 0.02;
+                    this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
+                }
+            } else {
+                // Normal drag (typically ~0.985)
+                effectiveDrag = this.drag;
+            }
+            
+            // Apply drag - CHANGED to match pattern
+            this.vel.mult(effectiveDrag);
         }
 
         // 2) Speed cap
@@ -839,6 +902,39 @@ handleInput() {
             //uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
             shieldHit = false;
         }
+
+            // Draw tangle effect if active
+    if (this.dragMultiplier > 1.0 && this.tangleEffectTime) {
+        const elapsed = millis() - this.tangleEffectTime;
+        if (elapsed < 3000) { // Visual effect for 3 seconds
+            push();
+            translate(this.pos.x, this.pos.y);
+            
+            // Draw energy tethers
+            noFill();
+            stroke(30, 220, 120, 180 - elapsed/20);
+            strokeWeight(2);
+            
+            for (let i = 0; i < 6; i++) {
+                let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                let innerRadius = this.size * 0.6;
+                let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                
+                beginShape();
+                for (let j = 0; j < 5; j++) {
+                    let r = map(j % 2, 0, 1, innerRadius, outerRadius);
+                    let jitterAmount = map(j, 0, 4, 0, 5);
+                    let jitter = random(-jitterAmount, jitterAmount);
+                    let x = cos(angle + j * 0.4) * r + jitter;
+                    let y = sin(angle + j * 0.4) * r + jitter;
+                    vertex(x, y);
+                }
+                endShape();
+            }
+            
+            pop();
+        }
+    }
         
         // Check for destruction
         if (this.hull <= 0) {
