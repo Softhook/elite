@@ -282,7 +282,7 @@ const WEAPON_UPGRADES = [
         type: "tangle",
         damage: 6,           // Low direct damage
         color: [30, 240, 120], // Brighter green
-        fireRate: 2.0,       // Slower firing rate
+        fireRate: 1.0,       // Slower firing rate
         price: 12500,
         dragDuration: 12.0,   // Longer effect
         dragMultiplier: 1000.0, // Nearly stops ships completely
