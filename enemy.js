@@ -840,7 +840,27 @@ evaluateTargetScore(target, system) {
             const isLongRange = distanceToTarget > this.visualFiringRange * MEDIUM_RANGE_MULT;
             const isMediumRange = distanceToTarget > this.visualFiringRange * CLOSE_RANGE_MULT && distanceToTarget <= this.visualFiringRange * MEDIUM_RANGE_MULT;
             const isShortRange = distanceToTarget <= this.visualFiringRange * CLOSE_RANGE_MULT;
+            const isVeryCloseRange = distanceToTarget <= this.visualFiringRange * 0.2; // Very close = 20% of firing range
             
+            // --- FORCE WEAPON LOGIC ---
+            // Force weapons are highly effective at very close range
+            if (weapon.type.includes('force') && isVeryCloseRange) {
+                score += 5; // Highest priority at very close rangee
+            }
+
+            // --- TANGLE WEAPON LOGIC ---
+            // Tangle weapons are excellent against fast targets
+            if (weapon.type.includes('tangle') && target) {
+                // Extra effective against very fast targets
+                if (target.maxSpeed > 6.5) {
+                    score += 5; // Highest priority for very fast targets
+                } 
+                // Good for fast targets
+                else if (target.maxSpeed > 5) {
+                    score += 3;
+                }
+            }
+
             // Score based on weapon type and range
             if (weapon.type.includes('beam') && isLongRange) {
                 score += 3; // Beams are good at long range
@@ -2113,32 +2133,42 @@ updatePhysics() {
     // Skip if destroyed
     if (this.destroyed) return;
     
-    // Calculate effective drag by combining different effects
-    let effectiveDrag;
-    
     // --- TANGLE WEAPON EFFECT ---
-    if (this.dragMultiplier > 1.0) {
-        // Enhanced tangle formula with non-linear scaling for more dramatic effect
-        effectiveDrag = Math.min(0.95, this.drag * Math.pow(this.dragMultiplier, 1.2));
+    if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
+        // First apply normal drag (always safe)
+        this.vel.mult(this.drag);
         
-        // Add subtle jitter to visualize energy field disruption
-        if (frameCount % 6 === 0) {
-            const jitterAmount = 0.02;
-            this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
+        // Then apply the tangle effect with safety bounds
+        const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
+        const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
+        
+        // Apply tangle effect if values are valid
+        if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
+            this.vel.mult(tangledSpeedFactor);
+            
+            // Add slight directional randomness to simulate being caught in energy net
+            if (frameCount % 5 === 0) {
+                this.vel.rotate(random(-0.1, 0.1));
+            }
+        }
+        
+        // Update drag timer
+        this.dragEffectTimer -= deltaTime / 1000;
+        if (this.dragEffectTimer <= 0) {
+            this.dragMultiplier = 1.0;
+            this.dragEffectTimer = 0;
         }
     } 
     // --- STATION PROXIMITY EFFECT ---
     else if (this.currentState === AI_STATE.NEAR_STATION) {
         // Station braking - stronger effect than normal drag
-        effectiveDrag = this.drag * 0.8;
+        this.vel.mult(this.drag * 0.8);
     } 
     // --- DEFAULT DRAG ---
     else {
-        effectiveDrag = this.drag;
+        // Normal drag
+        this.vel.mult(this.drag);
     }
-    
-    // Apply the calculated drag
-    this.vel.mult(effectiveDrag);
     
     // Ensure we don't exceed max speed
     this.vel.limit(this.maxSpeed);
@@ -2422,7 +2452,8 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
                 
                 // Draw energy tethers with proper opacity
                 noFill();
-                stroke(30, 220, 120, opacity);
+                //stroke(30, 220, 120, opacity);
+                stroke(200, 180);
                 strokeWeight(2);
                 
                 for (let i = 0; i < 6; i++) {

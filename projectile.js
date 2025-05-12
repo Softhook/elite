@@ -163,16 +163,16 @@ class Projectile {
             
             // Energy field background
             noStroke();
-            fill(this.color[0], this.color[1], this.color[2], 60);
-            ellipse(0, 0, this.size * 3, this.size * 2);
+            fill(200,150);
+            ellipse(0, 0, this.size * 2, this.size * 2);
             
             // Core
-            fill(this.color[0], this.color[1], this.color[2], 150);
-            ellipse(0, 0, this.size * 1.5, this.size * 1.5);
+            //fill(this.color[0], this.color[1], this.color[2], 150);
+            //ellipse(0, 0, this.size * 1.5, this.size * 1.5);
             
             // Bright center
-            fill(255, 255, 255, 180);
-            ellipse(0, 0, this.size * 0.5, this.size * 0.5);
+            //fill(255, 255, 255, 180);
+            //ellipse(0, 0, this.size * 0.5, this.size * 0.5);
             
             // Energy strands
             stroke(this.color[0], this.color[1], this.color[2], 200);

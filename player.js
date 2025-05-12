@@ -694,25 +694,33 @@ handleInput() {
         // Apply drag if not actively applying burst thrust (i.e., isSpeedBursting is false).
         // Drag should be active during the coasting phase.
         if (!this.isSpeedBursting) {
-            // Apply drag including tangle effect
-            let effectiveDrag;
-            
-            if (this.dragMultiplier > 1.0) {
-                // UNIFIED FORMULA: Exactly match the enemy implementation pattern
-                effectiveDrag = Math.min(0.95, this.drag * Math.pow(this.dragMultiplier, 1.2));
-    
-                // Add subtle jitter to visualize energy field disruption
-                if (frameCount % 6 === 0) {
-                    const jitterAmount = 0.02;
-                    this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
+            if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
+                // First apply normal drag
+                this.vel.mult(this.drag);
+                
+                // Then apply powerful velocity reduction with safety checks
+                const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
+                const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
+                
+                // Apply tangle effect if values are valid
+                if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
+                    this.vel.mult(tangledSpeedFactor);
+                    
+                    // Add slight directional randomness to simulate being caught in energy net
+                    if (frameCount % 5 === 0) {
+                        this.vel.rotate(random(-0.1, 0.1));
+                    }
+                    
+                    // Add subtle jitter to visualize energy field disruption
+                    if (frameCount % 6 === 0) {
+                        const jitterAmount = 0.03;
+                        this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
+                    }
                 }
             } else {
                 // Normal drag (typically ~0.985)
-                effectiveDrag = this.drag;
+                this.vel.mult(this.drag);
             }
-            
-            // Apply drag - CHANGED to match pattern
-            this.vel.mult(effectiveDrag);
         }
 
         // 2) Speed cap
@@ -833,7 +841,7 @@ handleInput() {
             
             // Draw energy tethers
             noFill();
-            stroke(30, 220, 120, 180);
+            stroke(200, 180);
             strokeWeight(2);
             
             for (let i = 0; i < 6; i++) {

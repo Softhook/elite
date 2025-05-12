@@ -272,8 +272,8 @@ const WEAPON_UPGRADES = [
         color: [20, 200, 100], // Green
         fireRate: 0.6,       // Good firing rate
         price: 6800,
-        dragDuration: 7.0,   // Seconds target's movement is impaired
-        dragMultiplier: 50.0, // Strong drag effect
+        dragDuration: 8.0,   // Seconds target's movement is impaired
+        dragMultiplier: 2.0, // Strong drag effect
         projectileSize: 5,   // Medium projectile
         desc: "Temporarily immobilizes enemy ships with energy tethers."
     },
@@ -284,8 +284,8 @@ const WEAPON_UPGRADES = [
         color: [30, 240, 120], // Brighter green
         fireRate: 1.0,       // Slower firing rate
         price: 12500,
-        dragDuration: 12.0,   // Longer effect
-        dragMultiplier: 1000.0, // Nearly stops ships completely
+        dragDuration: 15.0,   // Longer effect
+        dragMultiplier: 5.0, // Nearly stops ships completely
         projectileSize: 7,   // Larger projectile
         desc: "Advanced immobilization system that can stop even large ships."
     }
