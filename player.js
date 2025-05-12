@@ -384,24 +384,27 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
      * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
      */
-    applyDragEffect(duration = 5.0, multiplier = 10.0) {
-        // Use higher value if already affected
-        this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
-        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration);
-        
-        // Visual effect timestamp
-        this.tangleEffectTime = millis();
-        
-        // Player feedback
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage("Ship caught in energy tangle! Engines affected!", "#30FFB4");
-        }
-        
-        // Play sound effect if available
-        if (typeof soundManager !== 'undefined') {
-            soundManager.playWorldSound('electricField', this.pos.x, this.pos.y, this.pos);
-        }
+applyDragEffect(duration = 5.0, multiplier = 10.0) {
+    // Use higher value if already affected
+    this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
+    
+    // ENHANCED: Extend duration for consecutive hits
+    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
+                          (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+    
+    // Visual effect timestamp
+    this.tangleEffectTime = millis();
+    
+    // Player feedback
+    if (typeof uiManager !== 'undefined') {
+        uiManager.addMessage("Ship caught in energy tangle! Engines affected!", "#30FFB4");
     }
+    
+    // Play sound effect if available
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playWorldSound('electricField', this.pos.x, this.pos.y, this.pos);
+    }
+}
 
     /** Switches to the specified weapon index */
     switchToWeapon(index) {
@@ -695,10 +698,9 @@ handleInput() {
             let effectiveDrag;
             
             if (this.dragMultiplier > 1.0) {
-                // FIXED: Match the enemy implementation's pattern
-                // Higher dragMultiplier = more drag = SMALLER velocity multiplier
-                effectiveDrag = Math.max(0.05, 1 - (this.drag * Math.pow(this.dragMultiplier, 1.2)));
-                
+                // UNIFIED FORMULA: Exactly match the enemy implementation pattern
+                effectiveDrag = Math.min(0.95, this.drag * Math.pow(this.dragMultiplier, 1.2));
+    
                 // Add subtle jitter to visualize energy field disruption
                 if (frameCount % 6 === 0) {
                     const jitterAmount = 0.02;
@@ -824,6 +826,36 @@ handleInput() {
             pop();
         }
 
+
+        if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
+            push();
+            translate(this.pos.x, this.pos.y);
+            
+            // Draw energy tethers
+            noFill();
+            stroke(30, 220, 120, 180);
+            strokeWeight(2);
+            
+            for (let i = 0; i < 6; i++) {
+                let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                let innerRadius = this.size * 0.6;
+                let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                
+                beginShape();
+                for (let j = 0; j < 5; j++) {
+                    let r = map(j % 2, 0, 1, innerRadius, outerRadius);
+                    let jitterAmount = map(j, 0, 4, 0, 5);
+                    let jitter = random(-jitterAmount, jitterAmount);
+                    let x = cos(angle + j * 0.4) * r + jitter;
+                    let y = sin(angle + j * 0.4) * r + jitter;
+                    vertex(x, y);
+                }
+                endShape();
+            }
+            
+            pop();
+        }
+
         // Draw force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
             const timeSinceForce = millis() - this.lastForceWave.time;
@@ -902,39 +934,6 @@ handleInput() {
             //uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
             shieldHit = false;
         }
-
-            // Draw tangle effect if active
-    if (this.dragMultiplier > 1.0 && this.tangleEffectTime) {
-        const elapsed = millis() - this.tangleEffectTime;
-        if (elapsed < 3000) { // Visual effect for 3 seconds
-            push();
-            translate(this.pos.x, this.pos.y);
-            
-            // Draw energy tethers
-            noFill();
-            stroke(30, 220, 120, 180 - elapsed/20);
-            strokeWeight(2);
-            
-            for (let i = 0; i < 6; i++) {
-                let angle = frameCount * 0.03 + i * TWO_PI / 6;
-                let innerRadius = this.size * 0.6;
-                let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
-                
-                beginShape();
-                for (let j = 0; j < 5; j++) {
-                    let r = map(j % 2, 0, 1, innerRadius, outerRadius);
-                    let jitterAmount = map(j, 0, 4, 0, 5);
-                    let jitter = random(-jitterAmount, jitterAmount);
-                    let x = cos(angle + j * 0.4) * r + jitter;
-                    let y = sin(angle + j * 0.4) * r + jitter;
-                    vertex(x, y);
-                }
-                endShape();
-            }
-            
-            pop();
-        }
-    }
         
         // Check for destruction
         if (this.hull <= 0) {

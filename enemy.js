@@ -1998,19 +1998,23 @@ _determinePostFleeState() {
         this.hasPausedNearStation = false; // Reset pause flag
     }
 
-/**
- * Applies energy tangle effect to impair movement
- * @param {number} duration - How long drag lasts in seconds
- * @param {number} multiplier - How much drag is increased
- */
-applyDragEffect(duration = 5.0, multiplier = 10.0) {
-    // Use higher value if already affected
-    this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
-    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration);
-    
-    // Visual effect timestamp
-    this.tangleEffectTime = millis();
-}
+
+    /**
+     * Applies energy tangle effect to impair movement
+     * @param {number} duration - How long drag lasts in seconds
+     * @param {number} multiplier - How much drag is increased
+     */
+    applyDragEffect(duration = 5.0, multiplier = 10.0) {
+        // Use higher value if already affected
+        this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
+        
+        // ENHANCED: Extend duration for consecutive hits
+        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
+                            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+        
+        // Visual effect timestamp
+        this.tangleEffectTime = millis();
+    }
 
     /** 
      * Helper: Rotates towards target, applies thrust if aligned. Returns angle difference.

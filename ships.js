@@ -374,7 +374,7 @@ const SHIP_DEFINITIONS = {
         name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 12,
-        armament: ["Twin Pulse"],
+        armament: ["Tangle Projector"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawACAB, 
         vertexLayers: [
