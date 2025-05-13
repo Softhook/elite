@@ -722,12 +722,7 @@ evaluateTargetScore(target, system) {
             if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
                 _score += 50; // Base score for any non-alien target
                 _interesting = true;
-                if (isPlayer) {
-                    _score += 10; // Slightly higher preference for player
-                    // console.log(`%c👽 ALIEN TARGETING PLAYER: ${enemy.shipTypeName} score: +60, total score now ${_score}`, 'color:cyan');
-                } else {
-                    // console.log(`%c👽 ALIEN TARGETING NON-ALIEN NPC (${target.shipTypeName || target.constructor.name}): ${enemy.shipTypeName} score: +50, total score now ${_score}`, 'color:cyan');
-                }
+ 
             }
             break;
 
