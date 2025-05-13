@@ -249,6 +249,27 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                  console.warn("   Complete failed: Bounty target count not met."); return false;
             }
         }
+        
+        // --- NEW: COP KILLER BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
+        else if (this.activeMission.type === MISSION_TYPE.BOUNTY_POLICE) {
+            console.log(`   Bounty Check (Police): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+            if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+                console.log("   Bounty Check (Police): Target count met. Allowing completion.");
+                canComplete = true; // Allow completion anywhere once count is met
+            } else {
+                 console.warn("   Complete failed: Bounty (Police) target count not met."); return false;
+            }
+        }
+        // --- NEW: ALIEN BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
+        else if (this.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN) {
+            console.log(`   Bounty Check (Alien): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+            if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+                console.log("   Bounty Check (Alien): Target count met. Allowing completion.");
+                canComplete = true; // Allow completion anywhere once count is met
+            } else {
+                 console.warn("   Complete failed: Bounty (Alien) target count not met."); return false;
+            }
+        }
 
         // --- Add other mission type checks here later ---
         else {

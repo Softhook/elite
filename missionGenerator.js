@@ -75,6 +75,7 @@ class MissionGenerator {
         let baseLegalDeliveryChance = 0.45;
         let baseBountyChance = 0.35;
         let baseIllegalDeliveryChance = 0.15;
+        let baseAlienBountyChance = 0.20;
         // Add placeholders for future types if needed
         // let baseMiningChance = 0.0;
         // let baseAssassinationChance = 0.0;
@@ -84,6 +85,7 @@ class MissionGenerator {
         let adjustedLegal = baseLegalDeliveryChance;
         let adjustedBounty = baseBountyChance;
         let adjustedIllegal = baseIllegalDeliveryChance;
+        let adjustedAlienBounty = baseAlienBountyChance;
         let adjustedOther = baseOtherChance;
 
         // Security Modifiers
@@ -91,7 +93,8 @@ class MissionGenerator {
             case 'High':
                 adjustedBounty *= 0.1;       // Much les bounties
                 adjustedIllegal *= 0.1;      // Drastically fewer illegal missions
-                adjustedLegal *= 1.1;        // Slightly more legal trade
+                adjustedLegal *= 1.1;
+                adjustedAlienBounty *= 0.5; 
                 break;
             case 'Medium':
                 // Use base rates mostly, maybe slight bounty increase?
@@ -106,7 +109,8 @@ class MissionGenerator {
             case 'Anarchy':
                 adjustedBounty *= 1.8;       // Lots of bounties
                 adjustedIllegal *= 4.0;      // Lots of illegal missions
-                adjustedLegal *= 0.3;        // Much less legal trade emphasis
+                adjustedLegal *= 0.3;     // Less legal trade
+                adjustedAlienBounty *= 1.2;    
                 break;
         }
 
@@ -119,7 +123,12 @@ class MissionGenerator {
                   adjustedLegal *= 1.1; // Slightly more trade focus
                   adjustedBounty *= 0.9;
                   break;
-             case 'Agricultural':
+            case 'Military': // <-- Specific increase for Military systems
+                  adjustedAlienBounty *= 3.0; // Significantly more Alien Bounties
+                  adjustedBounty *= 1.2; // Also slightly more regular bounties
+                  adjustedLegal *= 0.8;
+                  break;
+            case 'Agricultural':
                   adjustedLegal *= 1.2; // More trade focus
                   adjustedBounty *= 0.8;
                   adjustedIllegal *= 0.9; // Less likely hotbed for crime? Maybe.
@@ -161,6 +170,7 @@ class MissionGenerator {
         adjustedLegal = max(0, adjustedLegal);
         adjustedBounty = max(0, adjustedBounty);
         adjustedIllegal = max(0, adjustedIllegal);
+        adjustedAlienBounty = max(0, adjustedAlienBounty); 
         adjustedOther = max(0, adjustedOther); // Include any other types
 
         let totalAdjustedChance = adjustedLegal + adjustedBounty + adjustedIllegal + adjustedOther; // Sum of all chances
@@ -180,6 +190,7 @@ class MissionGenerator {
         let normLegal = adjustedLegal / totalAdjustedChance;
         let normBounty = adjustedBounty / totalAdjustedChance;
         let normIllegal = adjustedIllegal / totalAdjustedChance;
+        let normAlienBounty = adjustedAlienBounty / totalAdjustedChance;
         // let normOther = adjustedOther / totalAdjustedChance; // Normalize others if added
 
         // --- Generate Missions based on Normalized Probabilities ---
@@ -191,9 +202,11 @@ class MissionGenerator {
                 if (missionTypeRoll < normLegal) {
                     mission = this.createLegalDelivery(currentSystem, currentStation, galaxy, player);
                 } else if (missionTypeRoll < normLegal + normBounty) {
-                    mission = this.createBountyMission(currentSystem, currentStation, galaxy, player);
+                    mission = this.createBountyMission(currentSystem, currentStation, galaxy, player); // Pirate Bounty
                 } else if (missionTypeRoll < normLegal + normBounty + normIllegal) {
                      mission = this.createIllegalDelivery(currentSystem, currentStation, galaxy, player);
+                } else if (missionTypeRoll < normLegal + normBounty + normIllegal + normAlienBounty) { // <-- Add Alien Bounty slot
+                     mission = this.createAlienBountyMission(currentSystem, currentStation, galaxy, player);
                 } else {
                     // Fallback / 'Other' category if roll exceeds defined types
                     // For now, maybe generate another legal delivery as fallback?
@@ -386,99 +399,97 @@ class MissionGenerator {
     
     /** Creates a Bounty Hunting Mission - maybe target specific ship types? */
     static createBountyMission(originSystem, originStation, galaxy, player) {
-        // Still local for now
         let targetCount = floor(random(2, 6));
-        // Note: rewardPerKill is calculated but not used in the final reward calculation below.
-         let rewardPerKill = floor(random(150, 400));
-         if (originSystem.securityLevel === 'High') rewardPerKill *= 1.2;
-         else if (originSystem.securityLevel === 'Low' || originSystem.securityLevel === 'Anarchy') rewardPerKill *= 0.8;
-
+        
         const baseBountyPerShip = 150;
+        // Reward can still be influenced by the origin system's properties, as that's where the contract is given.
         const techLevelBonus = (originSystem.techLevel || 5) * 10;
         const securityPenalty = (originSystem.securityLevel === 'High' ? -50 : (originSystem.securityLevel === 'Anarchy' ? 100 : 0));
 
         let reward = Math.floor(targetCount * baseBountyPerShip + techLevelBonus + securityPenalty + random(50, 300));
-        reward = Math.max(100, Math.floor(reward)); // Ensure minimum reward, floor again
+        reward = Math.max(100, Math.floor(reward));
 
          return new Mission({
             type: MISSION_TYPE.BOUNTY_PIRATE,
             title: `Pirate Cull: Destroy ${targetCount} Pirates`,
-            description: `Pirate activity in ${originSystem.name} requires intervention. Eliminate ${targetCount} pirate vessels operating within this system. Payment issued upon completion.`,
-            originSystem: originSystem.name, originStation: originStation.name,
-            destinationSystem: null, destinationStation: null, // Local mission
-            targetDesc: `${targetCount} Pirate vessels`,
+            description: `Pirate activity is a scourge across the galaxy. Eliminate ${targetCount} pirate vessels. Payment will be processed automatically upon fulfilling the contract.`,
+            originSystem: originSystem.name, 
+            originStation: originStation.name,
+            destinationSystem: null, // No specific destination system
+            destinationStation: null, 
+            targetDesc: `${targetCount} Pirate vessels (any system)`,
             targetCount: targetCount,
             rewardCredits: reward,
             isIllegal: false,
-            progressCount: 0 // Explicitly set progress to 0 on creation
+            progressCount: 0 
         });
      }
 
-    /** Creates a Cop Killer Mission - only available in Anarchy and Separatist systems */
+    /** 
+     * Creates a Cop Killer Mission - Targets (Police) can be destroyed anywhere.
+     * This mission is typically offered in Anarchy or Separatist systems.
+     */
     static createCopKillerMission(originSystem, originStation, galaxy, player) {
-        // Find a destination system that isn't anarchy (needs to have cops to kill)
-        let potentialSystems = [];
-        const maxSearchJumps = 3;
-        
-        // Search through connected systems to find ones with cops (not anarchy)
-        for (let i = 0; i < galaxy.systems.length; i++) {
-            // Skip origin system and anarchy systems
-            if (i === originSystem.systemIndex || 
-                galaxy.systems[i].securityLevel === 'Anarchy') continue;
-                
-            // Check if within range
-            let jumpDist = galaxy.getJumpDistance(originSystem.systemIndex, i);
-            if (jumpDist <= maxSearchJumps && jumpDist > 0) {
-                potentialSystems.push(galaxy.systems[i]);
-            }
+        // Target count can be based on general difficulty or origin system's context
+        let targetCount = floor(random(2, 5)); // e.g., 2-4 police ships
+        if (originSystem.securityLevel === 'Anarchy') {
+            targetCount = floor(random(3,6)); // Slightly more for anarchy origin
         }
         
-        // No viable target systems found
-        if (potentialSystems.length === 0) {
-            console.log("No viable target systems found for cop killer mission");
-            return null;
-        }
-        
-        // Select a random target system
-        const targetSystem = random(potentialSystems);
-        
-        // Determine target count based on security level of destination
-        let targetCount = 3; // Base count
-        switch (targetSystem.securityLevel) {
-            case 'High':
-                targetCount = floor(random(2, 4)); // Fewer targets but higher security
-                break;
-            case 'Medium':
-                targetCount = floor(random(3, 5));
-                break;
-            case 'Low':
-                targetCount = floor(random(4, 7)); // More targets in low security
-                break;
-        }
-        
-        // Calculate reward based on target system security and distance
-        let jumpDistance = galaxy.getJumpDistance(originSystem.systemIndex, targetSystem.systemIndex);
-        const baseBountyPerCop = 300; // Higher base for police
-        const techLevelBonus = (originSystem.techLevel || 5) * 15;
+        const baseBountyPerCop = 300; 
+        const techLevelBonus = (originSystem.techLevel || 5) * 15; // Origin system's tech can influence perceived difficulty/reward
 
         let reward = Math.floor(targetCount * baseBountyPerCop + techLevelBonus + random(200, 600));
-        reward = Math.max(250, Math.floor(reward)); // Ensure minimum reward, floor again
+        reward = Math.max(250, Math.floor(reward)); 
         
-        // Create the mission object
+        // The completion flag name should be generic if the target system is not specific.
+        // Or, it could be tied to the origin system if that makes sense for your game's event tracking.
+        // For now, let's make it more generic or tied to origin.
+        const completionFlagName = `copKillerMission_${originSystem.name}_${targetCount}_${Date.now()%10000}`;
+
         return new Mission({
-            type: MISSION_TYPE.BOUNTY_POLICE, // Will need to add this constant to Mission class
-            title: `Eliminate ${targetCount} Police Ships in ${targetSystem.name}`,
-            description: `Certain parties in ${originSystem.name} require the disruption of security operations in ${targetSystem.name}. Eliminate ${targetCount} police vessels and return for payment. Warning: This action will result in WANTED status.`,
+            type: MISSION_TYPE.BOUNTY_POLICE,
+            title: `Eliminate ${targetCount} Police Ships`,
+            description: `Certain parties require the disruption of security operations. Eliminate ${targetCount} police vessels anywhere you can find them. Payment will be processed automatically upon completion. Warning: This action will result in WANTED status in multiple systems.`,
             originSystem: originSystem.name, 
             originStation: originStation.name,
-            destinationSystem: targetSystem.name, 
-            destinationStation: null, // No specific station required
-            targetDesc: `${targetCount} Police vessels`, 
+            destinationSystem: null, // No specific destination system
+            destinationStation: null, 
+            targetDesc: `${targetCount} Police vessels (any system)`, 
             targetCount: targetCount, 
             rewardCredits: reward, 
-            isIllegal: true, // This is definitely illegal
-            completionFlagName: `copKillerMission_${targetSystem.name}_${targetCount}`
+            isIllegal: true, 
+            completionFlagName: completionFlagName 
         });
     }
+
+    /** 
+     * Creates an Alien Bounty Mission - Targets can be destroyed anywhere.
+     * High rewards, more common in Military systems.
+     */
+    static createAlienBountyMission(originSystem, originStation, galaxy, player) {
+        let targetCount = floor(random(1, 4)); // 1 to 3 alien targets (they are tough)
+        
+        const baseBountyPerAlien = 1250; // Significantly higher base bounty
+        const techLevelBonus = (originSystem.techLevel || 5) * 50; // Tech level of origin influences perceived threat/reward
+
+        let reward = Math.floor(targetCount * baseBountyPerAlien + techLevelBonus + random(500, 2000));
+        reward = Math.max(1500, Math.floor(reward)); // Ensure a high minimum reward
+
+         return new Mission({
+            type: MISSION_TYPE.BOUNTY_ALIEN,
+            title: `Xeno Threat: Neutralize ${targetCount} Alien Hostiles`,
+            description: `Alien vessels have been threatening human systems and shipping. High command authorizes the neutralization of ${targetCount} such xeno-threats. Payment will be processed automatically upon confirmation of kills. Extreme caution advised.`,
+            originSystem: originSystem.name, 
+            originStation: originStation.name,
+            destinationSystem: null, // No specific destination system
+            destinationStation: null, 
+            targetDesc: `${targetCount} Alien vessels (any system)`, // You'll need "Alien" ship types for tracking
+            targetCount: targetCount,
+            rewardCredits: reward,
+            isIllegal: false, // Assuming these are sanctioned hunts
+            progressCount: 0 
+        });
+     }
 
 } // End MissionGenerator Class

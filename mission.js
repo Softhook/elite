@@ -5,7 +5,8 @@ const MISSION_TYPE = {
     DELIVERY_LEGAL: 'Legal delivery',
     DELIVERY_ILLEGAL: 'Illegal delivery',
     BOUNTY_PIRATE: 'Bounty',
-    BOUNTY_POLICE: 'Bounty', // Add this new type
+    BOUNTY_POLICE: 'Bounty',
+    BOUNTY_ALIEN: 'Alien Bounty', // Add this new type
     //ASSASSINATION_CLEAN: 'Official Assassination',
     //ASSASSINATION_WANTED: 'Political Assassination',
     //COURIER: 'Courier (Highspeed Delivery)',
@@ -108,7 +109,8 @@ class Mission {
         // Show progress for active bounty missions
         let progressInfo = '';
         if (this.status === 'Active' && 
-            (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE) && 
+            (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE||
+             this.type === MISSION_TYPE.BOUNTY_ALIEN) && 
             this.progressCount > 0) {
             progressInfo = ` (${this.progressCount}/${this.targetCount})`;
         }
@@ -128,12 +130,22 @@ class Mission {
          details += `Origin: ${this.originStation} (${this.originSystem})\n`;
 
          // Add optional details based on mission type
-         if (this.destinationSystem) details += `Destination: ${this.destinationStation || 'System Wide'} (${this.destinationSystem})\n`;
+         if (this.destinationSystem) {
+            details += `Destination: ${this.destinationStation || 'System Wide'} (${this.destinationSystem})\n`;
+         } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE ||
+                    this.type === MISSION_TYPE.BOUNTY_ALIEN) {
+            // For "anywhere" bounties, explicitly state target location if no destinationSystem
+            details += `Target Location: Any System\n`;
+         }
+
          if (this.cargoType) details += `Cargo: ${this.cargoQuantity}t ${this.cargoType}\n`;
+         
          if (this.targetDesc) {
              details += `Target: ${this.targetDesc}`;
-             // Add progress for bounty missions if active
-             if (this.status === 'Active' && this.type === MISSION_TYPE.BOUNTY_PIRATE) {
+             // Add progress for active bounty missions (both pirate and police)
+             if (this.status === 'Active' && 
+                (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE||
+                    this.type === MISSION_TYPE.BOUNTY_ALIEN)) {
                   details += ` (${this.progressCount}/${this.targetCount} destroyed)\n`;
              } else {
                   details += `\n`;
