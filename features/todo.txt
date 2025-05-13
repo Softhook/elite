@@ -6,7 +6,7 @@
 
 ## Core Gameplay Enhancements
 
-
+indicator of where battles are taking place
 
 protective barrier
 

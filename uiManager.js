@@ -56,6 +56,12 @@ class UIManager {
         this.selectedWeaponSlot = 0;
         this.weaponSlotButtons = [];
 
+        // Battle indicator system
+        this.battleIndicators = [];
+        this.battleIndicatorDuration = 1200; // Duration in milliseconds (was 800, 1500 in different thoughts)
+        this.battleIndicatorLineLength = 25; // Length of the white line (was 20)
+        this.battleIndicatorEdgeBuffer = 10; // Distance from the absolute screen edge (was 10, 30)
+
         this.setPanelDefaults();
     }
 
@@ -83,6 +89,159 @@ class UIManager {
         fill(...fillCol); stroke(...strokeCol); rect(x, y, w, h, 10);
     }
 
+
+    /**
+     * Tracks a combat sound event that might be off-screen.
+     * Called by SoundManager.
+     * @param {number} x - World X coordinate of the sound event.
+     * @param {number} y - World Y coordinate of the sound event.
+     * @param {string} soundType - The type/name of the sound (e.g., "laser", "explosion").
+     */
+    trackCombatSound(x, y, soundType) {
+
+        // Optional: Filter for specific combat-related sound types if needed
+        const combatSounds = ['laser', 'explosion', 'hit', 'shield', 'missileLaunch', 'beam', 'turret'];
+        if (!combatSounds.includes(soundType)) {
+            // console.log(`UIManager: Sound '${soundType}' is not in combatSounds list for indicator.`); // DEBUG if filter active
+            // return; // Uncomment if you only want specific sounds to trigger indicators
+        }
+
+        this.battleIndicators.push({
+            x: x, // World X
+            y: y, // World Y
+            timestamp: millis(),
+            type: soundType
+        });
+        //console.log(`UIManager: Indicator pushed. Total indicators: ${this.battleIndicators.length}`); // DEBUG
+
+        this.cleanupBattleIndicators();
+    }
+
+    /**
+     * Removes battle indicators that have exceeded their duration.
+     */
+    cleanupBattleIndicators() {
+        const now = millis();
+        this.battleIndicators = this.battleIndicators.filter(indicator =>
+            now - indicator.timestamp < this.battleIndicatorDuration
+        );
+    }
+
+    /**
+     * Draws battle indicators for off-screen events.
+     * These appear as white lines at the screen edge.
+     * @param {Player} player - The player object, needed for their position.
+     */
+    drawBattleIndicators(player) {
+        if (!player || !player.pos || this.battleIndicators.length === 0) {
+            return;
+        }
+
+        // It's good practice to also call cleanup here in case trackCombatSound isn't called frequently
+        this.cleanupBattleIndicators();
+        if (this.battleIndicators.length === 0) return;
+
+
+        push();
+        const screenCenterX = width / 2;
+        const screenCenterY = height / 2;
+        const edgeBuffer = this.battleIndicatorEdgeBuffer;
+
+        // Calculate screen boundaries in world coordinates
+        const viewRect = {
+            left: player.pos.x - screenCenterX,
+            right: player.pos.x + screenCenterX,
+            top: player.pos.y - screenCenterY,
+            bottom: player.pos.y + screenCenterY
+        };
+
+        for (const indicator of this.battleIndicators) {
+            // Check if the indicator's world position is off-screen
+            const isOffScreen = (
+                indicator.x < viewRect.left ||
+                indicator.x > viewRect.right ||
+                indicator.y < viewRect.top ||
+                indicator.y > viewRect.bottom
+            );
+
+            if (!isOffScreen) {
+                continue;
+            }
+
+            // Calculate direction vector from player to the sound event
+            const dx = indicator.x - player.pos.x;
+            const dy = indicator.y - player.pos.y;
+            const angleToEvent = atan2(dy, dx); // Angle in world space
+
+            let edgeX, edgeY; // These will be screen coordinates
+
+            // Determine the point on the screen border in the direction of the event
+            // This logic finds an intersection point with a boundary slightly inset from the screen edge
+            const h = height - 2 * edgeBuffer; // Effective height for intersection
+            const w = width - 2 * edgeBuffer;  // Effective width for intersection
+
+            // Calculate intersection with vertical edges (left/right of screen)
+            // Relative distances from screen center to edge
+            let tVert = Infinity;
+            if (abs(cos(angleToEvent)) > 1e-6) { // Avoid division by zero
+                tVert = (cos(angleToEvent) > 0 ? w / 2 : -w / 2) / cos(angleToEvent);
+            }
+            const yAtScreenVertEdge = screenCenterY + sin(angleToEvent) * tVert;
+
+            // Calculate intersection with horizontal edges (top/bottom of screen)
+            let tHoriz = Infinity;
+            if (abs(sin(angleToEvent)) > 1e-6) { // Avoid division by zero
+                tHoriz = (sin(angleToEvent) > 0 ? h / 2 : -h / 2) / sin(angleToEvent);
+            }
+            const xAtScreenHorizEdge = screenCenterX + cos(angleToEvent) * tHoriz;
+
+            // Choose the closer valid intersection point on the screen border
+            if (abs(yAtScreenVertEdge - screenCenterY) <= h / 2 && tVert < tHoriz) {
+                edgeX = (cos(angleToEvent) > 0 ? width - edgeBuffer : edgeBuffer);
+                edgeY = constrain(yAtScreenVertEdge, edgeBuffer, height - edgeBuffer);
+            } else if (abs(xAtScreenHorizEdge - screenCenterX) <= w / 2) {
+                edgeY = (sin(angleToEvent) > 0 ? height - edgeBuffer : edgeBuffer);
+                edgeX = constrain(xAtScreenHorizEdge, edgeBuffer, width - edgeBuffer);
+            } else {
+                // Fallback for corner cases: attempt to place based on dominant angle component
+                if (abs(cos(angleToEvent)) > abs(sin(angleToEvent))) {
+                    edgeX = (cos(angleToEvent) > 0 ? width - edgeBuffer : edgeBuffer);
+                    edgeY = constrain(screenCenterY + tan(angleToEvent) * (edgeX - screenCenterX), edgeBuffer, height - edgeBuffer);
+                } else {
+                    edgeY = (sin(angleToEvent) > 0 ? height - edgeBuffer : edgeBuffer);
+                    edgeX = constrain(screenCenterX + (edgeY - screenCenterY) / tan(angleToEvent), edgeBuffer, width - edgeBuffer);
+                }
+            }
+            
+            // Final clamp to ensure it's on the visible border area
+            edgeX = constrain(edgeX, edgeBuffer, width - edgeBuffer);
+            edgeY = constrain(edgeY, edgeBuffer, height - edgeBuffer);
+
+            // Calculate opacity based on age for fade-out effect
+            const age = millis() - indicator.timestamp;
+            const opacity = map(age, 0, this.battleIndicatorDuration, 220, 0); // Max opacity 220
+
+            if (opacity <= 0) continue;
+
+            strokeWeight(2);
+            stroke(255, 255, 255, opacity); // White, fading line
+
+            const lineHalfLength = this.battleIndicatorLineLength / 2;
+
+            // Draw line "alongside" the edge
+            if (edgeX <= edgeBuffer + 1 || edgeX >= width - edgeBuffer - 1) { // On left or right edge (allow for float precision)
+                // Draw a vertical line
+                line(edgeX, edgeY - lineHalfLength, edgeX, edgeY + lineHalfLength);
+            } else if (edgeY <= edgeBuffer + 1 || edgeY >= height - edgeBuffer - 1) { // On top or bottom edge
+                // Draw a horizontal line
+                line(edgeX - lineHalfLength, edgeY, edgeX + lineHalfLength, edgeY);
+            }
+        }
+        pop();
+    }
+
+
+
     /** Draws the Heads-Up Display (HUD) during flight */
     drawHUD(player) {
         if (!player) { console.warn("drawHUD: Player object missing"); return; }
@@ -95,7 +254,8 @@ class UIManager {
         const shipName = player.shipTypeName || "Unknown Ship";
         const eliteRating = player.getEliteRating(); // Get elite rating
     
-        
+        this.drawBattleIndicators(player); 
+
         // Top HUD bar background
         push(); 
         fill(0, 180, 0, 150); 

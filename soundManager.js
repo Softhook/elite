@@ -533,6 +533,17 @@ class SoundManager {
                 audioToPlay.currentTime = 0;
             }
             audioToPlay.play();
+
+            // ***** INTEGRATION CHECK *****
+            if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
+                //console.log(`SoundManager: Notifying UIManager for sound '${name}' at ${sourceX.toFixed(0)}, ${sourceY.toFixed(0)}`); // DEBUG
+                uiManager.trackCombatSound(sourceX, sourceY, name);
+            } else {
+                console.warn("SoundManager: uiManager or trackCombatSound not available for battle indicator."); // DEBUG
+            }
+            // ***** END INTEGRATION *****
+
+
         } catch (e) {
             console.error(`SoundManager: Error playing sound "${name}" (${versionSelected}):`, e);
         }
