@@ -983,57 +983,19 @@ evaluateTargetScore(target, system) {
                 }
                 break;
                 
-                case AI_STATE.ATTACK_PASS:
-                    if (this.isTargetValid(this.target)) {
-                        let enemyPos = this.pos.copy();
-                        let targetActualPos = this.target.pos.copy();
-                        let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
-    
-                        // 1. Predict target's future position for calculating the strafe point.
-                        //    Use a fraction of the standard prediction time as we are already close.
-                        let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
-                        let predictedTargetPos = p5.Vector.add(targetActualPos, targetVel.mult(strafePredictionFrames));
-    
-                        // 2. Determine the direction from enemy to this predicted target position.
-                        //    This will be the "forward" direction for the pass.
-                        let vecToPredictedTarget = p5.Vector.sub(predictedTargetPos, enemyPos);
-                        if (vecToPredictedTarget.magSq() < 0.1) { // If coincident with predicted
-                            vecToPredictedTarget = p5.Vector.sub(targetActualPos, enemyPos); // Use actual
-                             if (vecToPredictedTarget.magSq() < 0.1) { // If also coincident with actual
-                                vecToPredictedTarget = p5.Vector.random2D(); // Fallback: random direction
-                            }
-                        }
-                        let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
-    
-                        // 3. Calculate the sideStrafePoint: offset from predictedTargetPos, perpendicular to passDirectionNormalized.
-                        const randomStrafeMultFactor = random(0.7, 1.3); // 70% to 130% of original
-                        let strafeOffsetValue = this.size * (ATTACK_PASS_STRAFE_OFFSET_MULT * randomStrafeMultFactor) * this.strafeDirection;
-                        let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
-                        let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
-
-                        // Add a small random jitter to the sideStrafePoint itself
-                        const jitterMagnitude = this.size * random(0.3, 0.8); // Max jitter based on ship size
-                        sideStrafePoint.add(p5.Vector.random2D().mult(random(jitterMagnitude)));
-    
-    
-                        // 4. The final desiredMovementTargetPos is a point "past" this sideStrafePoint.
-                        //    Aim further along the vector from the enemy to the sideStrafePoint.
-                        let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
-                        // Introduce randomness to the ahead distance multiplier
-                        const randomAheadDistFactor = random(0.8, 1.2); // 80% to 120% of original
-                        let aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * randomAheadDistFactor);
-    
-                        if (vectorToSideStrafePoint.magSq() > 0.001) { // Ensure not a zero vector
-                            desiredMovementTargetPos = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
-                        } else {
-                            // If already at sideStrafePoint (unlikely but possible), aim further along the original passDirectionNormalized from that point.
-                            desiredMovementTargetPos = p5.Vector.add(sideStrafePoint, passDirectionNormalized.mult(aheadDistanceForPass));
-                        }
-                    } else {
-                        // If target becomes invalid during attack pass, aim at current position (effectively stop).
-                        desiredMovementTargetPos = this.pos.copy();
-                    }
-                    break;
+            case AI_STATE.ATTACK_PASS:
+                if (this.attackPassTargetPos && this.isTargetValid(this.target)) {
+                    // Use the pre-calculated target position
+                    desiredMovementTargetPos = this.attackPassTargetPos;
+                } else if (this.isTargetValid(this.target)) {
+                    // Fallback if somehow we don't have a pre-calculated target
+                    this.attackPassTargetPos = this.calculateAttackPassTarget();
+                    desiredMovementTargetPos = this.attackPassTargetPos;
+                } else {
+                    // If target becomes invalid during attack pass, aim at current position
+                    desiredMovementTargetPos = this.pos.copy();
+                }
+                break;
                 
             case AI_STATE.REPOSITIONING:
                 desiredMovementTargetPos = this.repositionTarget;
@@ -1194,6 +1156,26 @@ _updateState_ATTACK_PASS(targetExists) {
     }
     this.passTimer -= deltaTime / 1000;
     if (this.passTimer <= 0) {
+        if (this.isTargetValid(this.target)) {
+            // Check if we should do another attack pass
+            const distanceToTarget = this.distanceTo(this.target);
+            const isInCombatRange = distanceToTarget < this.firingRange * 1.2;
+            
+            if (isInCombatRange) {
+                // Go directly into another attack pass with opposite strafe direction
+                console.log(`${this.shipTypeName}: Chaining into another attack pass`);
+                this.strafeDirection = -this.strafeDirection; // Reverse strafe direction
+                
+                // Set up a new attack pass with fresh timer
+                const basePassDuration = this.passDuration;
+                this.passTimer = basePassDuration * random(0.85, 1.15);
+                
+                // No state change - we stay in ATTACK_PASS
+                return;
+            }
+        }
+        
+        // If we didn't chain into another pass, proceed with normal repositioning
         let stateData = {};
         if (this.isTargetValid(this.target)) {
             let v = p5.Vector.sub(this.pos, this.target.pos);
@@ -3208,13 +3190,18 @@ _checkRandomCargoDrop() {
      */
     onStateEntry(state, stateData = {}) {
         switch(state) {
-            case AI_STATE.ATTACK_PASS:
-                // Initialize attack pass with timer
-                const basePassDuration = this.passDuration; // this.passDuration is 1.0 + this.size * 0.01
-                this.passTimer = basePassDuration * random(0.85, 1.25); // 85% to 125% of original duration
-                // --- NEW: Set strafe direction for this pass ---
-                this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
-                break;
+        case AI_STATE.ATTACK_PASS:
+            // Initialize attack pass with timer
+            const basePassDuration = this.passDuration;
+            this.passTimer = basePassDuration * random(0.85, 1.25);
+            this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
+
+            // CALCULATE STRAFE TARGET ONCE - upon entering state
+            if (this.isTargetValid(this.target)) {
+                // Calculate and store the strafe target position - do this only once
+                this.attackPassTargetPos = this.calculateAttackPassTarget();
+            }
+            break;
                 
             case AI_STATE.REPOSITIONING:
                 // Set repositioning target if we have a valid target
@@ -3261,6 +3248,55 @@ _checkRandomCargoDrop() {
                     this.guardReactionTime = 0; // Reset reaction time
                 break;
         }
+    }
+
+    // Add this new method to calculate the attack path once
+    calculateAttackPassTarget() {
+        // Similar logic to what's in getMovementTargetForState but happens ONCE
+        let enemyPos = this.pos.copy();
+        let targetActualPos = this.target.pos.copy();
+        let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
+
+        // Use consistent values for this entire attack pass
+        const strafeMultFactor = random(0.7, 1.3); // Calculate ONCE
+        const aheadDistFactor = random(0.8, 1.2);  // Calculate ONCE
+
+        // Predict target's future position for calculating the strafe point
+        let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        let predictedTargetPos = p5.Vector.add(targetActualPos, targetVel.mult(strafePredictionFrames));
+
+        // Direction from enemy to predicted target position
+        let vecToPredictedTarget = p5.Vector.sub(predictedTargetPos, enemyPos);
+        if (vecToPredictedTarget.magSq() < 0.1) {
+            vecToPredictedTarget = p5.Vector.sub(targetActualPos, enemyPos);
+            if (vecToPredictedTarget.magSq() < 0.1) {
+                vecToPredictedTarget = p5.Vector.random2D();
+            }
+        }
+        let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
+
+        // Calculate side strafe point
+        const strafeOffsetValue = this.size * (ATTACK_PASS_STRAFE_OFFSET_MULT * strafeMultFactor) * this.strafeDirection;
+        let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
+        let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
+
+        // Add a single jitter value that remains consistent for this pass
+        const jitterMagnitude = this.size * random(0.3, 0.8);
+        let jitterVector = p5.Vector.random2D().mult(jitterMagnitude);
+        sideStrafePoint.add(jitterVector);
+
+        // Calculate the final aim point
+        let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
+        let aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * aheadDistFactor);
+
+        let finalTarget;
+        if (vectorToSideStrafePoint.magSq() > 0.001) {
+            finalTarget = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
+        } else {
+            finalTarget = p5.Vector.add(sideStrafePoint, passDirectionNormalized.mult(aheadDistanceForPass));
+        }
+
+        return finalTarget;
     }
 
     /**
