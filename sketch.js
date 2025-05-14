@@ -83,6 +83,20 @@ function setup() {
         console.log("No save game found, generating procedural galaxy...");
         if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
             galaxy.initGalaxySystems();
+
+        // --- START: Position player near station for new game ---
+        const startingSystemForNewGame = galaxy.getCurrentSystem();
+        if (startingSystemForNewGame && startingSystemForNewGame.station && startingSystemForNewGame.station.pos) {
+            player.pos.set(startingSystemForNewGame.station.pos.x + startingSystemForNewGame.station.size + 100, startingSystemForNewGame.station.pos.y);
+            player.angle = PI; // Face away from the typical station spawn side
+            console.log(`New game: Player positioned near station ${startingSystemForNewGame.station.name} in ${startingSystemForNewGame.name}`);
+        } else {
+            // Fallback if no station or system, though initGalaxySystems should create one
+            player.pos.set(0,0); 
+            console.warn("New game: Could not position player near station (station or system not found). Defaulting to 0,0.");
+        }
+        // --- END: Position player near station for new game ---
+
         } else {
             console.error("FATAL ERROR: Galaxy object or initGalaxySystems method missing!");
             noLoop(); return;
