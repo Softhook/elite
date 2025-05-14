@@ -269,7 +269,8 @@ class UIManager {
         textAlign(LEFT, CENTER); 
         const systemType = player.currentSystem?.economyType || 'Unknown';
         const secLevel = player.currentSystem?.securityLevel || 'Unknown';
-        text(`System: ${csName}            Economy: ${systemType}   Security: ${secLevel}`, 10, 20);
+        const techLevel = player.currentSystem?.techLevel || '?';
+        text(`${csName}            ${systemType}   Tech: ${techLevel}   ${secLevel}`, 10, 20);
         
         // ALIGNED: Status elements at consistent vertical position
         const statusLineY = 20; // Central Y position for all status elements
@@ -2340,11 +2341,12 @@ if (isIllegalInSystem || isMissionCargo) {
         const systemName = system?.name || "Unknown System";
         text(`${stationName} - ${systemName}`, pX+20, pY + 20);
         
-        // Economy and Security (left aligned)
+        // Economy, Security, and Tech Level (left aligned)
         const econ = system?.economyType || station.market?.systemType || "Unknown";
         const law = system?.securityLevel || "Unknown";
+        const tech = system?.techLevel || "?"; // Get tech level
         textSize(20);
-        text(`Economy: ${econ}   |   Security: ${law}`, pX +20, pY + 45);
+        text(`${econ}   |   Tech: ${tech}   |   ${law}`, pX +20, pY + 45);
         
         // Credits (right-aligned)
         textAlign(RIGHT, TOP);
