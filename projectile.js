@@ -161,6 +161,7 @@ class Projectile {
             } else if (this.type === "tangle") { // Add this section
             translate(this.pos.x, this.pos.y);
             
+            stroke(0);
             // Energy field background
             noStroke();
             fill(200,150);
