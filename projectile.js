@@ -161,7 +161,6 @@ class Projectile {
             } else if (this.type === "tangle") { // Add this section
             translate(this.pos.x, this.pos.y);
             
-            stroke(0);
             // Energy field background
             noStroke();
             fill(200,150);
@@ -176,7 +175,8 @@ class Projectile {
             //ellipse(0, 0, this.size * 0.5, this.size * 0.5);
             
             // Energy strands
-            stroke(this.color[0], this.color[1], this.color[2], 200);
+            stroke(255);
+            //stroke(this.color[0], this.color[1], this.color[2], 200);
             strokeWeight(1.5);
             noFill();
         
