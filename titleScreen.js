@@ -639,7 +639,7 @@ class TitleScreen {
         text("M - Galaxy map", textX, textY); textY += lineHeight;
         text("I - Inventory while flying", textX, textY); textY += lineHeight;
         text("H and J - AutoPilot to Station or Jump Zone", textX, textY); textY += lineHeight;
-        text("Mouse to target beam weapons", textX, textY); textY += lineHeight * 2;
+        text("Mouse to lock missiles and direct beam weapons", textX, textY); textY += lineHeight * 2;
 
         // Gameplay tips
         textSize(30);
