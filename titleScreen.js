@@ -699,14 +699,18 @@ class TitleScreen {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
             gameStateManager.setState("INSTRUCTIONS");
         } else if (gameStateManager.currentState === "INSTRUCTIONS") {
-            gameStateManager.setState("NEW_GAME_SETUP");
+            // If coming from instructions, assume it's for a new game start
+            // as per the prompt, and transition directly to IN_FLIGHT.
+            gameStateManager.setState("IN_FLIGHT");
         }
     }
     
     handleKeyPress(keyCode, key) {
         // Allow SPACE to advance from instructions
         if (gameStateManager.currentState === "INSTRUCTIONS" && (keyCode === 32 || key === ' ')) {
-            gameStateManager.setState("NEW_GAME_SETUP");
+            // If coming from instructions, assume it's for a new game start
+            // and transition directly to IN_FLIGHT.
+            gameStateManager.setState("IN_FLIGHT");
         }
         // Allow ESCAPE to go back from instructions to title
         if (keyCode === ESCAPE) {
