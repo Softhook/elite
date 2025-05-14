@@ -995,14 +995,22 @@ evaluateTargetScore(target, system) {
                         let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
     
                         // 3. Calculate the sideStrafePoint: offset from predictedTargetPos, perpendicular to passDirectionNormalized.
-                        let strafeOffsetValue = this.size * ATTACK_PASS_STRAFE_OFFSET_MULT * this.strafeDirection;
+                        const randomStrafeMultFactor = random(0.7, 1.3); // 70% to 130% of original
+                        let strafeOffsetValue = this.size * (ATTACK_PASS_STRAFE_OFFSET_MULT * randomStrafeMultFactor) * this.strafeDirection;
                         let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
                         let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
+
+                        // Add a small random jitter to the sideStrafePoint itself
+                        const jitterMagnitude = this.size * random(0.3, 0.8); // Max jitter based on ship size
+                        sideStrafePoint.add(p5.Vector.random2D().mult(random(jitterMagnitude)));
+    
     
                         // 4. The final desiredMovementTargetPos is a point "past" this sideStrafePoint.
                         //    Aim further along the vector from the enemy to the sideStrafePoint.
                         let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
-                        let aheadDistanceForPass = this.size * ATTACK_PASS_AHEAD_DIST_MULT;
+                        // Introduce randomness to the ahead distance multiplier
+                        const randomAheadDistFactor = random(0.8, 1.2); // 80% to 120% of original
+                        let aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * randomAheadDistFactor);
     
                         if (vectorToSideStrafePoint.magSq() > 0.001) { // Ensure not a zero vector
                             desiredMovementTargetPos = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
@@ -3060,7 +3068,8 @@ _checkRandomCargoDrop() {
         switch(state) {
             case AI_STATE.ATTACK_PASS:
                 // Initialize attack pass with timer
-                this.passTimer = this.passDuration;
+                const basePassDuration = this.passDuration; // this.passDuration is 1.0 + this.size * 0.01
+                this.passTimer = basePassDuration * random(0.85, 1.25); // 85% to 125% of original duration
                 // --- NEW: Set strafe direction for this pass ---
                 this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
                 break;
