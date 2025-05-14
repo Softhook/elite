@@ -477,6 +477,36 @@ static fireForce(owner, system) {
                 }
             }
         }
+
+            // NEW: Check other enemies if owner is Enemy (for enemy-to-enemy combat)
+        if (owner instanceof Enemy && system?.enemies) {
+            for (let enemy of system.enemies) {
+                // Skip if not valid or is the same ship firing
+                if (!enemy?.pos || enemy === owner) continue;
+                
+                // Calculate vector from beam start to enemy
+                this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
+                let projLength = this._toTarget.dot(beamDir);
+                
+                if (projLength > 0 && projLength < beamLength) {
+                    // Calculate closest point on beam to enemy
+                    this._closestPoint.set(
+                        beamStart.x + beamDir.x * projLength,
+                        beamStart.y + beamDir.y * projLength
+                    );
+                    
+                    // Calculate distance from enemy to closest point on beam
+                    let distToBeam = dist(enemy.pos.x, enemy.pos.y, 
+                                        this._closestPoint.x, this._closestPoint.y);
+                    
+                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
+                        minDist = projLength;
+                        hitTarget = enemy;
+                        this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
+                    }
+                }
+            }
+        }
         
         return {
             target: hitTarget,
