@@ -27,7 +27,8 @@ const AI_STATE = {
     TRANSPORTING: 7,  // New state for transport behaviour
     COLLECTING_CARGO: 8,   // New state for cargo collection behavior
     FLEEING: 9,        // New state for damaged ships trying to escape
-    GUARDING: 10
+    GUARDING: 10,
+    SNIPING: 11
 };
 
 // Reverse lookup for AI_STATE values to names
@@ -70,6 +71,15 @@ const ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR = 0.8; // Factor of combined size
 const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.3; // Thrust multiplier during emergency avoidance
 const APPROACH_BRAKING_DISTANCE_FACTOR = 1.2; // Multiplier of combined (enemy+target) sizes to start braking in APPROACH
 const APPROACH_CLOSE_THRUST_REDUCTION = 0.05; // Thrust multiplier when very close in APPROACH state (almost zero)
+
+
+const SNIPING_IDEAL_RANGE_FACTOR = 0.9;         // Try to stay at 90% of visualFiringRange
+const SNIPING_MIN_RANGE_EXIT_FACTOR = 0.5;    // If target closer than 50% of visualFiringRange, exit SNIPING
+const SNIPING_MAX_RANGE_EXIT_FACTOR = 1.1;    // If target further than 110% of visualFiringRange, exit SNIPING
+const SNIPING_BRAKE_FACTOR = 0.85;            // How quickly to slow down when trying to stay still
+const SNIPING_POSITION_ADJUST_THRUST = 0.2;   // Gentle thrust for minor position adjustments
+const SNIPING_STANDOFF_TOLERANCE_FACTOR = 0.1; // Allow 10% deviation from ideal range before adjusting
+const SNIPING_HULL_DROP_EXIT_PERCENT = 0.15;  // Exit sniping if hull drops by 15% of maxHull since entering state
 
 class Enemy {
     // ---------------------------------
@@ -309,6 +319,7 @@ class Enemy {
         // --- End Combat AI Flags ---
 
         this.hasPlayedLockOnSound = false; // Add this new flag
+        this.shieldPlusHullAtStateEntry = null; // For tracking combined health drop during certain states
     }
 
     // -----------------------------
@@ -1031,6 +1042,27 @@ evaluateTargetScore(target, system) {
             case AI_STATE.PATROLLING:
                 desiredMovementTargetPos = this.patrolTargetPos;
                 break;
+                        case AI_STATE.SNIPING: // <<< NEW CASE
+                if (this.isTargetValid(this.target)) {
+                    const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
+                    const rangeTolerance = idealSnipeRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
+
+                    if (distanceToTarget > idealSnipeRange + rangeTolerance) {
+                        // Too far, move slightly closer to target
+                        let vecToTarget = p5.Vector.sub(this.target.pos, this.pos);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecToTarget.setMag(distanceToTarget - idealSnipeRange));
+                    } else if (distanceToTarget < idealSnipeRange - rangeTolerance) {
+                        // Too close, move slightly away from target
+                        let vecFromTarget = p5.Vector.sub(this.pos, this.target.pos);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecFromTarget.setMag(idealSnipeRange - distanceToTarget));
+                    } else {
+                        // Within tolerance, try to stay put
+                        desiredMovementTargetPos = this.pos.copy();
+                    }
+                } else {
+                    desiredMovementTargetPos = this.pos.copy(); // No valid target, stay put
+                }
+                break;
         }
         
         return desiredMovementTargetPos;
@@ -1063,6 +1095,9 @@ updateCombatState(targetExists, distanceToTarget) {
         case AI_STATE.FLEEING:
             this._updateState_FLEEING(targetExists, distanceToTarget);
             break;
+        case AI_STATE.SNIPING: // <<< NEW CASE
+            this._updateState_SNIPING(targetExists, distanceToTarget);
+            break;
     }
 }
 
@@ -1080,13 +1115,75 @@ _updateState_IDLE(targetExists) {
     // Otherwise, remains IDLE.
 }
 
+/** @private Handles state logic for SNIPING */
+_updateState_SNIPING(targetExists, distanceToTarget) {
+    if (!targetExists) {
+        this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+        return;
+    }
+
+    // --- NEW: Check for significant damage taken (shield + hull) while sniping ---
+    if (this.shieldPlusHullAtStateEntry !== null) {
+        const totalMaxHealth = this.maxShield + this.maxHull;
+        if (totalMaxHealth > 0) { // Ensure totalMaxHealth is positive
+            const combinedHealthDropThreshold = totalMaxHealth * SNIPING_HULL_DROP_EXIT_PERCENT;
+            const currentCombinedHealth = this.shield + this.hull;
+
+            if (currentCombinedHealth < this.shieldPlusHullAtStateEntry - combinedHealthDropThreshold) {
+                console.log(`${this.shipTypeName} (SNIPING): Took significant combined damage (Health from ${this.shieldPlusHullAtStateEntry.toFixed(0)} to ${currentCombinedHealth.toFixed(0)}). Switching to ATTACK_PASS.`);
+                this.changeState(AI_STATE.ATTACK_PASS);
+                return; // Exit early after state change
+            }
+        }
+    }
+    // --- END NEW ---
+
+    // Flee if damaged
+    if (this.hull < this.maxHull * 0.3) { // Example flee threshold
+        this.changeState(AI_STATE.FLEEING);
+        return;
+    }
+
+    const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
+    const minSnipeRange = this.visualFiringRange * SNIPING_MIN_RANGE_EXIT_FACTOR;
+    const maxSnipeRange = this.visualFiringRange * SNIPING_MAX_RANGE_EXIT_FACTOR;
+
+    // Transition conditions
+    if (distanceToTarget < minSnipeRange) {
+        // Target is too close, decide to ATTACK_PASS or REPOSITION
+        // For now, let's transition to ATTACK_PASS to be aggressive
+        console.log(`${this.shipTypeName} (SNIPING): Target too close (${distanceToTarget.toFixed(0)} < ${minSnipeRange.toFixed(0)}), switching to ATTACK_PASS.`);
+        this.changeState(AI_STATE.ATTACK_PASS);
+    } else if (distanceToTarget > maxSnipeRange) {
+        // Target is too far, need to APPROACH
+        console.log(`${this.shipTypeName} (SNIPING): Target too far (${distanceToTarget.toFixed(0)} > ${maxSnipeRange.toFixed(0)}), switching to APPROACHING.`);
+        this.changeState(AI_STATE.APPROACHING);
+    }
+    // Otherwise, stay in SNIPING state. Movement and firing are handled by
+    // getMovementTargetForState, performRotationAndThrust, and performFiring.
+}
+
 /** @private */
 _updateState_APPROACHING(targetExists, distanceToTarget) {
-    if (targetExists && distanceToTarget < this.engageDistance) {
-        this.changeState(AI_STATE.ATTACK_PASS);
-    } else if (!targetExists) {
+    if (!targetExists) {
         this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+        return;
     }
+
+    // Condition to enter SNIPING state:
+    // Target is within a good sniping range (e.g., 70% to 95% of visualFiringRange)
+    // AND not yet close enough for a standard attack pass.
+    const canSnipe = this.visualFiringRange > 0 && // Must have a firing range
+                     distanceToTarget < this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR * 1.1 && // Within 110% of ideal snipe range
+                     distanceToTarget > this.engageDistance * 1.1; // Further than typical engage distance for attack pass
+
+    if (canSnipe && this.hasGoodSnipingWeapon()) { // Add a check for suitable weapons
+        console.log(`${this.shipTypeName} (APPROACHING): Target in snipe range (${distanceToTarget.toFixed(0)}), switching to SNIPING.`);
+        this.changeState(AI_STATE.SNIPING);
+    } else if (distanceToTarget < this.engageDistance) {
+        this.changeState(AI_STATE.ATTACK_PASS);
+    }
+    // Otherwise, continue approaching.
 }
 
 /** @private */
@@ -1113,11 +1210,23 @@ _updateState_REPOSITIONING(targetExists, distanceToTarget) {
         this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
         return;
     }
+
     let distToRepo = this.repositionTarget
         ? this.distanceTo(this.repositionTarget)
         : Infinity;
-    if (distanceToTarget > this.repositionDistance || distToRepo < 50) {
-        this.changeState(AI_STATE.APPROACHING);
+
+    // Condition to enter SNIPING state after repositioning:
+    const canSnipeAfterReposition = this.visualFiringRange > 0 &&
+                                   distanceToTarget < this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR * 1.05 && // Within 105% of ideal
+                                   distanceToTarget > this.engageDistance * 1.2; // Further than engage for attack pass
+
+    if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) { // Reached repo point or target moved far
+        if (canSnipeAfterReposition && this.hasGoodSnipingWeapon()) {
+            console.log(`${this.shipTypeName} (REPOSITIONING): Repositioned to snipe range (${distanceToTarget.toFixed(0)}), switching to SNIPING.`);
+            this.changeState(AI_STATE.SNIPING);
+        } else {
+            this.changeState(AI_STATE.APPROACHING);
+        }
     }
 }
 
@@ -1353,6 +1462,21 @@ _determinePostFleeState() {
         }
 
         return isInForcedCombat;
+    }
+
+    /**
+    * Helper to check if the current ship has weapons suitable for sniping.
+     * @returns {boolean} True if a sniping weapon is equipped.
+     */
+    hasGoodSnipingWeapon() {
+        if (!this.currentWeapon) return false;
+        // Define what constitutes a "good sniping weapon"
+        // Example: Beams, non-spread projectiles, or missiles.
+        const weaponType = this.currentWeapon.type;
+        return weaponType === WEAPON_TYPE.BEAM ||
+               weaponType === WEAPON_TYPE.MISSILE ||
+               (weaponType.startsWith(WEAPON_TYPE.PROJECTILE_STRAIGHT)) || // e.g. PROJECTILE_STRAIGHT, PROJECTILE_STRAIGHT_FAST
+               weaponType === WEAPON_TYPE.TURRET; // Turrets can be good if accurate
     }
 
     /**
@@ -2054,89 +2178,107 @@ _determinePostFleeState() {
      * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
      * @return {number} The angle difference in radians
      */
-performRotationAndThrust(desiredMovementTargetPos) {
-    let angleDifference = PI; // Default to max difference
-    
-    if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
-        let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
-        if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
-            let desiredAngle = desiredDir.heading(); // Radians
-            angleDifference = this.rotateTowards(desiredAngle);
+    performRotationAndThrust(desiredMovementTargetPos) {
+        let angleDifference = PI; // Default to max difference
+        
+        if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
+            let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
+            if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
+                let desiredAngle = desiredDir.heading(); // Radians
+                angleDifference = this.rotateTowards(desiredAngle);
+            }
         }
-    }
-    
-    // Default thrust multiplier
-    let effectiveThrustMultiplier = 1.0;
-    let canThrust = false; // Master flag to decide if thrusting happens
-    let forceThrustForAttackPassEmergency = false; // Special flag for attack pass emergency
+        
+        // Default thrust multiplier
+        let effectiveThrustMultiplier = 1.0;
+        let canThrust = false; // Master flag to decide if thrusting happens
+        let forceThrustForAttackPassEmergency = false; // Special flag for attack pass emergency
 
-    // Determine thrust conditions based on state
-    if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.NEAR_STATION) {
-        canThrust = false;
-    } else {
-        // For all other active states, assume thrust is possible if aligned,
-        // then apply state-specific multipliers or conditions.
-        const isAlignedForThrust = abs(angleDifference) < this.angleTolerance;
+        // Determine thrust conditions based on state
+        if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.NEAR_STATION) {
+            canThrust = false;
+        } else {
+            // For all other active states, assume thrust is possible if aligned,
+            // then apply state-specific multipliers or conditions.
+            const isAlignedForThrust = abs(angleDifference) < this.angleTolerance;
 
-        if (this.currentState === AI_STATE.ATTACK_PASS) {
-            effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
-            if (this.isTargetValid(this.target)) {
-                let distToActualTarget = this.distanceTo(this.target);
-                let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
-                if (distToActualTarget < criticalCollisionRange) {
-                    let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
-                    let angleToActualTargetCurrent = vecToActualTarget.heading();
-                    let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
-                    if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
-                        effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
-                        forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
+            if (this.currentState === AI_STATE.ATTACK_PASS) {
+                effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
+                if (this.isTargetValid(this.target)) {
+                    let distToActualTarget = this.distanceTo(this.target);
+                    let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
+                    if (distToActualTarget < criticalCollisionRange) {
+                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
+                        let angleToActualTargetCurrent = vecToActualTarget.heading();
+                        let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
+                        if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
+                            effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
+                            forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
+                        }
                     }
                 }
-            }
-            if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
-                canThrust = true;
-            }
+                if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
+                    canThrust = true;
+                }
 
-        } else if (this.currentState === AI_STATE.APPROACHING) {
-            // effectiveThrustMultiplier is 1.0 by default for APPROACHING
-            if (this.isTargetValid(this.target)) {
-                let distToActualTarget = this.distanceTo(this.target);
-                // Calculate the distance at which braking should occur
-                let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
-                let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
+            } else if (this.currentState === AI_STATE.APPROACHING) {
+                // effectiveThrustMultiplier is 1.0 by default for APPROACHING
+                if (this.isTargetValid(this.target)) {
+                    let distToActualTarget = this.distanceTo(this.target);
+                    // Calculate the distance at which braking should occur
+                    let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
+                    let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
+                    
+                    if (distToActualTarget < approachBrakingZone) {
+                        effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
+                        // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
+                    }
+                }
+                if (isAlignedForThrust) {
+                    // If APPROACH_CLOSE_THRUST_REDUCTION is 0, this will result in no thrust.
+                    // If it's > 0, minimal thrust will be applied if aligned.
+                    canThrust = true;
+                }
+
+            } else if (this.currentState === AI_STATE.FLEEING) {
+                effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
+                                        ? FLEE_THRUST_MULT_TRANSPORT
+                                        : FLEE_THRUST_MULT_DEFAULT;
+                if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
+                    canThrust = true;
+                }
+            } else if (this.currentState === AI_STATE.SNIPING) { // <<<--- THIS IS THE NEWLY INTEGRATED BLOCK
+                // For sniping, alignment for thrust can be more lenient for minor adjustments
+                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
                 
-                if (distToActualTarget < approachBrakingZone) {
-                    effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
-                    // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
+                // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
+                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
+                    if (isAlignedForSnipeThrust) {
+                        effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
+                        canThrust = true;
+                    } else {
+                        canThrust = false; // Don't thrust if not aligned for adjustment
+                    }
+                } else { 
+                    // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
+                    this.vel.mult(SNIPING_BRAKE_FACTOR); 
+                    canThrust = false; // No active thrust, just braking
+                }
+            } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
+                // effectiveThrustMultiplier is 1.0 by default
+                if (isAlignedForThrust) {
+                    canThrust = true;
                 }
             }
-            if (isAlignedForThrust) {
-                // If APPROACH_CLOSE_THRUST_REDUCTION is 0, this will result in no thrust.
-                // If it's > 0, minimal thrust will be applied if aligned.
-                canThrust = true;
-            }
-
-        } else if (this.currentState === AI_STATE.FLEEING) {
-            effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
-                                      ? FLEE_THRUST_MULT_TRANSPORT
-                                      : FLEE_THRUST_MULT_DEFAULT;
-            if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
-                canThrust = true;
-            }
-        } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
-            // effectiveThrustMultiplier is 1.0 by default
-            if (isAlignedForThrust) {
-                canThrust = true;
-            }
         }
+        
+        if (canThrust) {
+            this.thrustForward(effectiveThrustMultiplier);
+        }
+        
+        return angleDifference;
     }
-    
-    if (canThrust) {
-        this.thrustForward(effectiveThrustMultiplier);
-    }
-    
-    return angleDifference;
-}
+
 
     /**
      * Updates the physics (drag, velocity, position) for the ship
@@ -3084,6 +3226,12 @@ _checkRandomCargoDrop() {
                     this.repositionTarget = p5.Vector.add(this.pos, v);
                 }
                 break;
+
+            case AI_STATE.SNIPING: // <<< EXISTING CASE
+                this.vel.mult(0.5); // Attempt to slow down upon entering sniping mode
+                this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store combined shield + hull
+                console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}).`);
+            break;
                 
             case AI_STATE.NEAR_STATION:
                 // Reset timer on entry
@@ -3142,6 +3290,10 @@ _checkRandomCargoDrop() {
                 break;
 
             case AI_STATE.LEAVING_SYSTEM:
+                break;
+            case AI_STATE.SNIPING: // <<< EXISTING CASE
+                console.log(`${this.shipTypeName} exiting SNIPING state.`);
+                this.shieldPlusHullAtStateEntry = null; // Clear stored combined health
                 break;
         }
     }
