@@ -1084,7 +1084,7 @@ _updateState_SNIPING(targetExists, distanceToTarget) {
         return;
     }
 
-    // --- NEW: Check for significant damage taken (shield + hull) while sniping ---
+    // --- Check for significant damage taken (shield + hull) while sniping ---
     if (this.shieldPlusHullAtStateEntry !== null) {
         const totalMaxHealth = this.maxShield + this.maxHull;
         if (totalMaxHealth > 0) { // Ensure totalMaxHealth is positive
@@ -1092,7 +1092,7 @@ _updateState_SNIPING(targetExists, distanceToTarget) {
             const currentCombinedHealth = this.shield + this.hull;
 
             if (currentCombinedHealth < this.shieldPlusHullAtStateEntry - combinedHealthDropThreshold) {
-                console.log(`${this.shipTypeName} (SNIPING): Took significant combined damage (Health from ${this.shieldPlusHullAtStateEntry.toFixed(0)} to ${currentCombinedHealth.toFixed(0)}). Switching to ATTACK_PASS.`);
+                console.log(`${this.shipTypeName} (SNIPING): Took significant damage. Switching to ATTACK_PASS.`);
                 this.changeState(AI_STATE.ATTACK_PASS);
                 return; // Exit early after state change
             }
@@ -1120,6 +1120,22 @@ _updateState_SNIPING(targetExists, distanceToTarget) {
         // Target is too far, need to APPROACH
         console.log(`${this.shipTypeName} (SNIPING): Target too far (${distanceToTarget.toFixed(0)} > ${maxSnipeRange.toFixed(0)}), switching to APPROACHING.`);
         this.changeState(AI_STATE.APPROACHING);
+    } 
+    // NEW: Add random chance to reposition or start an attack run
+    else if (frameCount % 60 === 0 && random() < 0.05) { // Check every ~1 second with 5% chance
+        // Decide between repositioning (30%) or attack run (70%)
+        if (random() < 0.3) {
+            console.log(`${this.shipTypeName} (SNIPING): Randomly repositioning for a better angle.`);
+            let stateData = {};
+            let v = p5.Vector.sub(this.pos, this.target.pos);
+            v.rotate(random(-PI/2, PI/2)); // Shift angle randomly
+            v.setMag(this.repositionDistance * random(0.8, 1.2)); // Vary distance slightly
+            stateData.repositionTarget = p5.Vector.add(this.pos, v);
+            this.changeState(AI_STATE.REPOSITIONING, stateData);
+        } else {
+            console.log(`${this.shipTypeName} (SNIPING): Initiating surprise attack run.`);
+            this.changeState(AI_STATE.ATTACK_PASS);
+        }
     }
     // Otherwise, stay in SNIPING state. Movement and firing are handled by
     // getMovementTargetForState, performRotationAndThrust, and performFiring.
@@ -1156,35 +1172,29 @@ _updateState_ATTACK_PASS(targetExists) {
     }
     this.passTimer -= deltaTime / 1000;
     if (this.passTimer <= 0) {
+        // After attack pass completion, make a tactical decision
         if (this.isTargetValid(this.target)) {
-            // Check if we should do another attack pass
-            const distanceToTarget = this.distanceTo(this.target);
-            const isInCombatRange = distanceToTarget < this.firingRange * 1.2;
-            
-            if (isInCombatRange) {
-                // Go directly into another attack pass with opposite strafe direction
-                console.log(`${this.shipTypeName}: Chaining into another attack pass`);
-                this.strafeDirection = -this.strafeDirection; // Reverse strafe direction
-                
-                // Set up a new attack pass with fresh timer
-                const basePassDuration = this.passDuration;
-                this.passTimer = basePassDuration * random(0.85, 1.15);
-                
-                // No state change - we stay in ATTACK_PASS
-                return;
+            // 50% chance to reposition, 50% chance to go back to approaching
+            if (random() < 0.5) {
+                // Reposition after attack
+                let stateData = {};
+                let v = p5.Vector.sub(this.pos, this.target.pos);
+                v.setMag(this.repositionDistance * 1.5);
+                stateData.repositionTarget = p5.Vector.add(this.pos, v);
+                console.log(`${this.shipTypeName}: Attack pass complete, repositioning`);
+                this.changeState(AI_STATE.REPOSITIONING, stateData);
+            } else {
+                // Go directly back to approaching state for another attack run
+                console.log(`${this.shipTypeName}: Attack pass complete, resuming approach`);
+                this.changeState(AI_STATE.APPROACHING);
             }
+        } else {
+            // If target is no longer valid, go to appropriate default state
+            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
         }
-        
-        // If we didn't chain into another pass, proceed with normal repositioning
-        let stateData = {};
-        if (this.isTargetValid(this.target)) {
-            let v = p5.Vector.sub(this.pos, this.target.pos);
-            v.setMag(this.repositionDistance * 1.5);
-            stateData.repositionTarget = p5.Vector.add(this.pos, v);
-        }
-        this.changeState(AI_STATE.REPOSITIONING, stateData);
     }
 }
+
 
 /** @private */
 _updateState_REPOSITIONING(targetExists, distanceToTarget) {
@@ -2425,16 +2435,24 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         system.addProjectile(proj);
     }
 
-    fireWeapon(targetToPass = null) { // Renamed param to avoid conflict with this.target
+    fireWeapon(targetToPass = null) {
         if (!this.currentWeapon || this.fireCooldown > 0 || !this.currentSystem) return;
-
-        let fireAngle = this.angle; // Default firing angle for non-aimed weapons
-
-        // For missiles, the target is crucial and is passed as targetToPass.
-        // For beams, enemies typically fire straight.
-        // For turrets, WeaponSystem.fireTurret handles its own aiming if targetToPass is null,
-        // or uses targetToPass if provided.
+    
+        // Default firing angle (ship's current heading)
+        let fireAngle = this.angle;
+    
+        // Check if target is stationary or very slow-moving
+        if (targetToPass && targetToPass.vel && 
+            targetToPass.vel.magSq() < 0.25) { // threshold for "almost stationary"
+            
+            // Aim directly at the target's current position instead of predicted position
+            fireAngle = atan2(
+                targetToPass.pos.y - this.pos.y,
+                targetToPass.pos.x - this.pos.x
+            );
+        }
         
+        // Rest of existing code remains unchanged
         if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
             if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
                 return; // Don't fire missile without a valid target
@@ -2443,12 +2461,11 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         
         // Check: EMP nebula check
         if (this.currentSystem?.isInEMPNebula && this.currentSystem.isInEMPNebula(this.pos)) {
-            //(no UI feedback needed)
             return;
         }
-
+    
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
-        this.fireCooldown = this.fireRate; // Use this.fireRate which should be set by selectBestWeapon
+        this.fireCooldown = this.fireRate;
     }
 
     /** Cycles to the next available weapon */
@@ -2753,7 +2770,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * when specific conditions are met.
      */
     _drawTargetLockOnEffect() {
-        const conditionsMetForLine = this.target?.pos &&
+        const conditionsMetForLine = this.isTargetValid(this.target) &&
                                      this.role !== AI_ROLE.HAULER &&
                                      (this.currentState === AI_STATE.APPROACHING ||
                                       this.currentState === AI_STATE.ATTACK_PASS ||
