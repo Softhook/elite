@@ -1280,8 +1280,7 @@ checkProjectileCollisions() {
                     
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
-                        // Reduced tangle effect for friendly fire
-                        enemy.applyDragEffect((proj.dragDuration || 5.0) * 0.5, (proj.dragMultiplier || 10.0) * 0.5);
+                        enemy.applyDragEffect((proj.dragDuration || 5.0), (proj.dragMultiplier || 10.0));
                     }
                     
                     this.removeProjectile(i);

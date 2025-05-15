@@ -74,8 +74,8 @@ const APPROACH_CLOSE_THRUST_REDUCTION = 0.05; // Thrust multiplier when very clo
 
 
 const SNIPING_IDEAL_RANGE_FACTOR = 0.9;         // Try to stay at 90% of visualFiringRange
-const SNIPING_MIN_RANGE_EXIT_FACTOR = 0.5;    // If target closer than 50% of visualFiringRange, exit SNIPING
-const SNIPING_MAX_RANGE_EXIT_FACTOR = 1.1;    // If target further than 110% of visualFiringRange, exit SNIPING
+const SNIPING_MIN_RANGE_EXIT_FACTOR = 0.4;    // If target closer than 50% of visualFiringRange, exit SNIPING
+const SNIPING_MAX_RANGE_EXIT_FACTOR = 1.2;    // If target further than 110% of visualFiringRange, exit SNIPING
 const SNIPING_BRAKE_FACTOR = 0.85;            // How quickly to slow down when trying to stay still
 const SNIPING_POSITION_ADJUST_THRUST = 0.2;   // Gentle thrust for minor position adjustments
 const SNIPING_STANDOFF_TOLERANCE_FACTOR = 0.1; // Allow 10% deviation from ideal range before adjusting
@@ -189,7 +189,7 @@ class Enemy {
         this.target = playerRef; this.currentState = AI_STATE.IDLE; // Default state
         this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed
         // AI Tuning Parameters
-        this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 280 + this.size * 0.3; this.visualFiringRange = this.firingRange; // Initialize with base range for drawing
+        this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 350 + this.size * 0.3; this.visualFiringRange = this.firingRange; // Initialize with base range for drawing
         this.repositionDistance = 300 + this.size; this.predictionTime = 0.4; this.passDuration = 1.0 + this.size * 0.01; this.stationPauseDuration = random(3, 7); this.stationProximityThreshold = 150;
 
         // --- Weapon Assignment Based on Ship Definition ---
@@ -2458,7 +2458,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             this.currentWeapon = this.weapons[this.weaponIndex];
             this.fireRate = this.currentWeapon.fireRate;
             // Reset cooldown when switching weapons (optional)
-            this.fireCooldown = this.fireRate * 0.5; 
+            //this.fireCooldown = this.fireRate * 0.5; 
         }
     }
 
