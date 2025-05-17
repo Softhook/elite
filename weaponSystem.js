@@ -486,20 +486,34 @@ static fireForce(owner, system) {
         
         // Calculate beam direction and endpoint
         this._beamDir.set(cos(angle), sin(angle));
-        
         if (isNaN(this._beamDir.x) || isNaN(this._beamDir.y)) {
             console.error("Invalid beam direction from angle:", angle);
             return;
         }
-        
-        this._beamEnd.set(
-            this._beamStart.x + this._beamDir.x * beamLength,
-            this._beamStart.y + this._beamDir.y * beamLength
-        );
-        
         // Perform hit detection
         const hit = this.performBeamHitDetection(owner, system, this._beamStart, this._beamDir, beamLength);
-        
+        // Set endpoint to hit point if there was a hit, otherwise full length
+        if (hit && hit.point && hit.target) {
+            // If the target has a shield, draw to the edge of the shield
+            if (typeof hit.target.shield === 'number' && hit.target.shield > 0 && hit.target.pos) {
+                // Calculate direction from beam start to target center
+                const dirToTarget = p5.Vector.sub(hit.target.pos, this._beamStart).normalize();
+                // Use the same shield radius as in collision: target.size * 0.6
+                const shieldRadius = (hit.target.size || 20) * 0.6;
+                // Set endpoint to the edge of the shield
+                this._beamEnd.set(
+                    hit.target.pos.x - dirToTarget.x * shieldRadius,
+                    hit.target.pos.y - dirToTarget.y * shieldRadius
+                );
+            } else {
+                this._beamEnd.set(hit.point.x, hit.point.y);
+            }
+        } else {
+            this._beamEnd.set(
+                this._beamStart.x + this._beamDir.x * beamLength,
+                this._beamStart.y + this._beamDir.y * beamLength
+            );
+        }
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
@@ -507,14 +521,14 @@ static fireForce(owner, system) {
                 end: createVector(this._beamEnd.x, this._beamEnd.y),
                 color: owner.currentWeapon?.color || [255, 0, 0],
                 time: millis(),
-                hit: hit.target !== null
+                hit: !!(hit && hit.target)
             };
         } else {
             owner.lastBeam.start.set(this._beamStart.x, this._beamStart.y);
             owner.lastBeam.end.set(this._beamEnd.x, this._beamEnd.y);
             owner.lastBeam.color = owner.currentWeapon?.color || [255, 0, 0];
             owner.lastBeam.time = millis();
-            owner.lastBeam.hit = hit.target !== null;
+            owner.lastBeam.hit = !!(hit && hit.target);
         }
         
         // Handle hit effects
@@ -547,13 +561,13 @@ static fireForce(owner, system) {
     static performBeamHitDetection(owner, system, beamStart, beamDir, beamLength) {
         let hitTarget = null;
         let minDist = Infinity;
-        // Reuse vectors for calculations
         if (!this._toTarget) {
             this._toTarget = createVector(0, 0);
         }
         // Check enemies if owner is Player
         if (owner instanceof Player && system?.enemies) {
             for (let enemy of system.enemies) {
+                if (enemy === owner) continue; // Skip self
                 if (enemy.isDestroyed && enemy.isDestroyed()) continue;
                 this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
                 const projLen = this._toTarget.dot(beamDir);
@@ -572,24 +586,26 @@ static fireForce(owner, system) {
         // Check player if owner is Enemy
         if (owner instanceof Enemy && system?.player?.pos) {
             const player = system.player;
-            this._toTarget.set(player.pos.x - beamStart.x, player.pos.y - beamStart.y);
-            const projLen = this._toTarget.dot(beamDir);
-            if (projLen >= 0 && projLen <= beamLength) {
-                const closestX = beamStart.x + beamDir.x * projLen;
-                const closestY = beamStart.y + beamDir.y * projLen;
-                const distToLine = dist(player.pos.x, player.pos.y, closestX, closestY);
-                if (distToLine < player.size * 0.6 && projLen < minDist) {
-                    minDist = projLen;
-                    hitTarget = player;
-                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
-                    this._hitPoint.set(closestX, closestY);
+            if (player !== owner) { // Skip self
+                this._toTarget.set(player.pos.x - beamStart.x, player.pos.y - beamStart.y);
+                const projLen = this._toTarget.dot(beamDir);
+                if (projLen >= 0 && projLen <= beamLength) {
+                    const closestX = beamStart.x + beamDir.x * projLen;
+                    const closestY = beamStart.y + beamDir.y * projLen;
+                    const distToLine = dist(player.pos.x, player.pos.y, closestX, closestY);
+                    if (distToLine < player.size * 0.6 && projLen < minDist) {
+                        minDist = projLen;
+                        hitTarget = player;
+                        if (!this._hitPoint) this._hitPoint = createVector(0, 0);
+                        this._hitPoint.set(closestX, closestY);
+                    }
                 }
             }
         }
-        // NEW: Check asteroids for beam collision
+        // Check asteroids for beam collision
         if (system?.asteroids && Array.isArray(system.asteroids)) {
             for (let asteroid of system.asteroids) {
-                if (!asteroid?.pos || asteroid.destroyed) continue;
+                if (!asteroid?.pos || asteroid.destroyed || asteroid === owner) continue; // Skip self
                 this._toTarget.set(asteroid.pos.x - beamStart.x, asteroid.pos.y - beamStart.y);
                 const projLen = this._toTarget.dot(beamDir);
                 if (projLen < 0 || projLen > beamLength) continue;
@@ -604,9 +620,19 @@ static fireForce(owner, system) {
                 }
             }
         }
+        // If a hit was found, set the beam length to stop at the hit point
+        if (hitTarget && this._hitPoint) {
+            // Optionally, you could return the new beam length as well
+            return {
+                target: hitTarget,
+                point: this._hitPoint,
+                length: minDist // For drawing the beam only up to the hit
+            };
+        }
         return {
-            target: hitTarget,
-            point: hitTarget ? this._hitPoint : beamStart
+            target: null,
+            point: beamStart,
+            length: beamLength
         };
     }
     
