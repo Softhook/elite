@@ -1522,6 +1522,11 @@ _determinePostFleeState() {
                 this.target.pos.x - this.pos.x
             );
         }
+
+        // NEW: Select best weapon for the current situation if we have a target
+        if (targetExists) {
+            this.selectBestWeapon(distanceToTarget);
+        }
     
         // 4. Run state‐transition logic.
         //    REMOVED: if (!isInForcedCombat)
@@ -2431,11 +2436,19 @@ updatePhysics() {
      * @return {boolean} Whether firing angle is acceptable
      */
     canFireAtTarget(targetAngle) {
-        const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
+        // Check weapon type for special aiming rules
+        const currentWeaponType = this.currentWeapon?.type;
+        const isTurretWeapon = currentWeaponType === 'turret';
+        const isMissileWeapon = currentWeaponType === 'missile';
         const angleDiff = this.getAngleDifference(targetAngle);
         
+        // Allow wider angle for missile weapons (missiles can be fired at greater angles than standard weapons)
+        const missileAngleTolerance = WIDE_ANGLE_RAD * 2.5; // Much wider acceptance angle for missiles
+        
         return this.currentState !== AI_STATE.IDLE && 
-               (isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Use constant
+               (isTurretWeapon || 
+                isMissileWeapon && Math.abs(angleDiff) < missileAngleTolerance ||
+                Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Standard weapons use normal tolerance
     }
 
 /** 
@@ -2545,6 +2558,20 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         const system = this.currentSystem;
         const weaponType = this.currentWeapon.type;
         
+        // For missiles, ensure we always have the main target
+        if (weaponType === WEAPON_TYPE.MISSILE) {
+            // If no target was passed in, use the enemy's current target
+            if (!targetToPass && this.target) {
+                targetToPass = this.target;
+                console.log(`${this.shipTypeName}: Using main target for missile firing`);
+            }
+            
+            // Debug output if we're still missing a target
+            if (!targetToPass) {
+                console.log(`${this.shipTypeName}: Tried to fire missile but no target available`);
+            }
+        }
+        
         // Combined target validation with short-circuit evaluation
         const isValidMissileTarget = !(
             weaponType === WEAPON_TYPE.MISSILE && 
@@ -2553,7 +2580,10 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
              (targetToPass.hull !== undefined && targetToPass.hull <= 0))
         );
         
-        if (!isValidMissileTarget) return;
+        if (!isValidMissileTarget) {
+            console.log(`${this.shipTypeName}: Invalid missile target, aborting missile launch`);
+            return;
+        }
         
         // EMP nebula check with optional chaining
         if (system.isInEMPNebula?.(this.pos)) return;

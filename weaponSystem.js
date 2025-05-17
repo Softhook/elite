@@ -321,6 +321,10 @@ static fireForce(owner, system) {
             console.warn("fireMissile: Owner has no currentWeapon.");
             return;
         }
+        
+        // Log missile firing attempt with owner information
+        console.log(`Firing missile from ${owner.constructor.name} ${owner.shipTypeName || 'unknown'} at target:`, target ? target.constructor.name : 'no target');
+        
         const weapon = owner.currentWeapon;
         let proj;
 
@@ -344,6 +348,14 @@ static fireForce(owner, system) {
                 owner.pos.x, owner.pos.y, angle, owner,
                 speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
             );
+        }
+        
+        // Ensure the missile has a target reference (important for tracking)
+        if (proj && target) {
+            proj.target = target;
+            console.log(`Missile projectile created with target:`, target.constructor.name);
+        } else if (proj) {
+            console.log(`WARNING: Missile created without target!`);
         }
 
         proj.system = system;
