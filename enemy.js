@@ -433,12 +433,14 @@ class Enemy {
                 case AI_ROLE.GUARD:
                     if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
                         this.updateHaulerAI(system);
+                        this.updatePhysics();
                     } else if (this.currentState === AI_STATE.GUARDING) {
                         this._updateState_GUARDING();
+                        this.updatePhysics();
                     } else {
                         this.updateCombatAI(system);
+                        this.updatePhysics();
                     }
-                    this.updatePhysics();
                     break;
                     
                 case AI_ROLE.PIRATE:
@@ -1031,6 +1033,7 @@ evaluateTargetScore(target, system) {
                         
             case AI_STATE.SNIPING:
                 if (this.isTargetValid(this.target)) {
+                    const distanceToTarget = this.pos.dist(this.target.pos); // ADD THIS LINE
                     // Cache calculations for reuse
                     const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
                     const rangeTolerance = idealSnipeRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
@@ -1047,8 +1050,10 @@ evaluateTargetScore(target, system) {
                         this.tempVector.setMag(idealSnipeRange - distanceToTarget);
                         return createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
                     } else {
-                        // Within tolerance, try to stay put
-                        return this.pos.copy();
+                        // Within tolerance, try to stay put BUT ALWAYS FACE THE TARGET
+                        // Return the target's position for rotation purposes
+                        // This will ensure the ship always faces the target even when not moving
+                        return this.predictTargetPosition();
                     }
                 } else {
                     return this.pos.copy(); // No valid target, stay put
@@ -1974,7 +1979,7 @@ _determinePostFleeState() {
                         console.log(`Transporter ${this.shipTypeName} switching destination.`);
                         this.waitTimer = 0;
                         this.vel.set(0, 0); // Reset velocity
-                    }
+                      }
                 }
             }
         }
