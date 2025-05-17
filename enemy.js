@@ -3011,8 +3011,6 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         for (const pos of positions) {
             line(pos.x, pos.y, pos.x + pos.dx, pos.y + pos.dy);
         }
-        
-        pop();
     }
     
     /**

@@ -408,42 +408,28 @@ static fireForce(owner, system) {
      */
     static fireBeam(owner, system, angle) {
         if (!owner || !system) return;
-        
-        // Validate angle
         if (isNaN(angle) || !isFinite(angle)) {
             console.error("Invalid angle in fireBeam:", angle);
             return;
         }
-        
-        // Get beam properties
         const beamLength = 1200;
-        
-        // Reuse vectors to avoid garbage collection
         const beamStart = this.getOrCreateVector('_beamStart', owner.pos.x, owner.pos.y);
         const beamDir = this.getOrCreateVector('_beamDir', cos(angle), sin(angle));
         const beamEnd = this.getOrCreateVector('_beamEnd');
-        
         // Handle player aiming at mouse cursor
         if (owner instanceof Player) {
-            // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (owner.pos.x - width/2);
             const worldMy = mouseY + (owner.pos.y - height/2);
-            
-            // Calculate angle to mouse cursor
             angle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
             beamDir.set(cos(angle), sin(angle));
         }
-        
         // Calculate beam direction and endpoint
         const hit = this.performBeamHitDetection(owner, system, beamStart, beamDir, beamLength);
         if (hit && hit.point && hit.target) {
-            // If the target has a shield, draw to the edge of the shield
-            if (typeof hit.target.shield === 'number' && hit.target.shield > 0 && hit.target.pos) {
-                // Calculate direction from beam start to target center
+            // If the target has a shield, draw to the edge of the shield (works for both player and enemy beams)
+            if (typeof hit.target.shield === 'number' && hit.target.shield > 0 && hit.target.pos && typeof hit.target.size === 'number') {
                 const dirToTarget = p5.Vector.sub(hit.target.pos, beamStart).normalize();
-                // Use the same shield radius as in collision: target.size * 0.6
                 const shieldRadius = (hit.target.size || 20) * 0.6;
-                // Set endpoint to the edge of the shield
                 beamEnd.set(
                     hit.target.pos.x - dirToTarget.x * shieldRadius,
                     hit.target.pos.y - dirToTarget.y * shieldRadius
@@ -454,7 +440,6 @@ static fireForce(owner, system) {
         } else {
             beamEnd.set(beamStart.x + beamDir.x * beamLength, beamStart.y + beamDir.y * beamLength);
         }
-        // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
                 start: createVector(beamStart.x, beamStart.y),
@@ -470,8 +455,6 @@ static fireForce(owner, system) {
             owner.lastBeam.time = millis();
             owner.lastBeam.hit = !!(hit && hit.target);
         }
-        
-        // Handle hit effects
         if (hit.target) {
             this.handleHitEffects(
                 hit.target,
@@ -482,7 +465,6 @@ static fireForce(owner, system) {
                 owner.currentWeapon?.color || [255, 0, 0]
             );
         }
-
         playWorldSound('beam', owner);
     }
     
@@ -686,26 +668,50 @@ static fireTangle(owner, system, angle) {
         }
         
         // Only create explosion if there were NO shields before the hit
-        if (!targetHasShield && system.addExplosion) {
+        if (!targetHasShield && system.addExplosion && hitPoint && typeof hitPoint.x === 'number' && typeof hitPoint.y === 'number') {
             // Convert color to safe format
             let explosionColor;
-            if (Array.isArray(color)) {
+            if (Array.isArray(color) && color.length >= 3) {
                 explosionColor = color;
             } else if (color && color.levels) {
                 explosionColor = [color.levels[0], color.levels[1], color.levels[2]];
+            } else if (typeof color === 'object' && color !== null && typeof color.toString === 'function') {
+                // Try to parse p5.Color string
+                const cstr = color.toString();
+                const match = cstr.match(/\d+/g);
+                if (match && match.length >= 3) {
+                    explosionColor = [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
+                } else {
+                    explosionColor = [255, 0, 0];
+                }
             } else {
                 explosionColor = [255, 0, 0];
             }
-            
             system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
         }
         // Missile explosion effect
-        const isMissile = owner?.currentWeapon?.type === WEAPON_TYPE.MISSILE || owner?.type === WEAPON_TYPE.MISSILE;
+        const isMissile = (owner?.currentWeapon?.type === WEAPON_TYPE.MISSILE) || (owner?.type === WEAPON_TYPE.MISSILE);
         if (isMissile && hitPoint && system && typeof system.addExplosion === 'function') {
-            const explosionSize = owner?.currentWeapon?.explosionSize || 18;
-            // Defensive color fallback: ensure color is array or p5.Color
+            // Defensive: fallback to default explosion size if currentWeapon is missing
+            let explosionSize = 18;
+            if (owner?.currentWeapon && typeof owner.currentWeapon.explosionSize === 'number') {
+                explosionSize = owner.currentWeapon.explosionSize;
+            }
+            // Defensive color fallback: ensure color is array of 3 numbers
             let explosionColor = color;
-            if (!explosionColor || typeof explosionColor === 'number' || (Array.isArray(explosionColor) && explosionColor.length < 3)) {
+            if (Array.isArray(explosionColor) && explosionColor.length >= 3) {
+                // ok
+            } else if (explosionColor && explosionColor.levels) {
+                explosionColor = [explosionColor.levels[0], explosionColor.levels[1], explosionColor.levels[2]];
+            } else if (typeof explosionColor === 'object' && explosionColor !== null && typeof explosionColor.toString === 'function') {
+                const cstr = explosionColor.toString();
+                const match = cstr.match(/\d+/g);
+                if (match && match.length >= 3) {
+                    explosionColor = [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
+                } else {
+                    explosionColor = [255, 180, 80];
+                }
+            } else {
                 explosionColor = [255, 180, 80];
             }
             system.addExplosion(hitPoint.x, hitPoint.y, explosionSize, explosionColor);

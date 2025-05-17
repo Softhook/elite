@@ -1291,35 +1291,39 @@ handleInput() {
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
 
-        // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
-        handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
-            if (mouseButton === LEFT) { // Or whatever button you use for targeting
-                if (this.currentSystem && this.currentSystem.enemies) {
-                    const worldMx = mouseX + (this.pos.x - width / 2);
-                    const worldMy = mouseY + (this.pos.y - height / 2);
-    
-                    for (let enemy of this.currentSystem.enemies) {
-                        if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
-                            let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
-                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
-                                this.target = enemy;
-                                if (typeof uiManager !== 'undefined') {
-                                    uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
-                                }
-                                return; // Target found and set
+        // Utility: Check if an object is a valid enemy target
+    isValidEnemyTarget(enemy) {
+        return enemy && typeof enemy === 'object' && !enemy.destroyed && enemy.pos && typeof enemy.pos.x === 'number' && typeof enemy.pos.y === 'number' && typeof enemy.size === 'number' && typeof enemy.shipTypeName === 'string' && typeof enemy.hull !== 'undefined';
+    }
+
+    handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
+        if (mouseButton === LEFT) { // Or whatever button you use for targeting
+            if (this.currentSystem && this.currentSystem.enemies) {
+                const worldMx = mouseX + (this.pos.x - width / 2);
+                const worldMy = mouseY + (this.pos.y - height / 2);
+
+                for (let enemy of this.currentSystem.enemies) {
+                    if (this.isValidEnemyTarget(enemy)) {
+                        let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
+                        if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                            this.target = enemy;
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
                             }
+                            return; // Target found and set
                         }
                     }
-                    // If no enemy was clicked, clear target
-                    if (this.target) {
-                         if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`Target unlocked.`, [255,255,0]);
-                        }
-                    }
-                    this.target = null;
                 }
+                // If no enemy was clicked, clear target
+                if (this.target) {
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                    }
+                }
+                this.target = null;
             }
         }
+    }
 
     setWeaponByName(name) {
         const found = WEAPON_UPGRADES.find(w => w.name === name);
