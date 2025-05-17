@@ -13,22 +13,142 @@ const WEAPON_TYPE = {
 };
 
 class WeaponSystem {
-    // Initialize projectile pool safely
+    // Initialize all object pools
     static init(initialPoolSize = 100) {
         try {
-            if (typeof ObjectPool !== 'undefined') {
-                if (!this.projectilePool) {
-                    console.log(`Initializing projectile pool with ${initialPoolSize} projectiles`);
-                    this.projectilePool = new ObjectPool(Projectile, initialPoolSize, 1000);
-                }
-                return true;
-            } else {
+            if (typeof ObjectPool === 'undefined') {
                 console.warn("ObjectPool class not found! Falling back to direct instantiation.");
                 return false;
             }
+            
+            // Initialize projectile pool
+            if (!this.projectilePool) {
+                console.log(`Initializing projectile pool with ${initialPoolSize} projectiles`);
+                this.projectilePool = new ObjectPool(Projectile, initialPoolSize, 2000);
+            }
+            
+            // Initialize explosion pool if Explosion class exists
+            if (typeof Explosion !== 'undefined' && !this.explosionPool) {
+                console.log("Initializing explosion effect pool");
+                this.explosionPool = new ObjectPool(Explosion, 50, 300);
+            }
+            
+            // Initialize beam pool if Beam class exists
+            if (typeof Beam !== 'undefined' && !this.beamPool) {
+                console.log("Initializing beam effect pool");
+                this.beamPool = new ObjectPool(Beam, 10, 50);
+            }
+            
+            // Initialize force wave pool if ForceWave class exists
+            if (typeof ForceWave !== 'undefined' && !this.forceWavePool) {
+                console.log("Initializing force wave pool");
+                this.forceWavePool = new ObjectPool(ForceWave, 5, 20);
+            }
+            
+            // Track pooled entity types for debugging
+            this._pooledTypes = ['projectile'];
+            if (typeof Explosion !== 'undefined') this._pooledTypes.push('explosion');
+            if (typeof Beam !== 'undefined') this._pooledTypes.push('beam');
+            if (typeof ForceWave !== 'undefined') this._pooledTypes.push('forceWave');
+            
+            console.log(`Weapon system initialized with ${this._pooledTypes.length} object pools`);
+            return true;
         } catch (e) {
-            console.error("Error initializing projectile pool:", e);
+            console.error("Error initializing weapon system pools:", e);
             return false;
+        }
+    }
+    
+    /**
+     * Get an object from its pool or create directly if pool doesn't exist
+     * @param {string} type - The type of object to get
+     * @param {Array} args - Arguments to pass to constructor/reset
+     * @returns {Object} The pooled object
+     */
+    static getPooledObject(type, ...args) {
+        let obj = null;
+        
+        try {
+            switch(type) {
+                case 'projectile':
+                    if (this.projectilePool) {
+                        obj = this.projectilePool.get(...args);
+                    } else if (typeof Projectile !== 'undefined') {
+                        obj = new Projectile(...args);
+                    }
+                    break;
+                    
+                case 'explosion':
+                    if (this.explosionPool) {
+                        obj = this.explosionPool.get(...args);
+                    } else if (typeof Explosion !== 'undefined') {
+                        obj = new Explosion(...args);
+                    }
+                    break;
+                    
+                case 'beam':
+                    if (this.beamPool) {
+                        obj = this.beamPool.get(...args);
+                    } else if (typeof Beam !== 'undefined') {
+                        obj = new Beam(...args);
+                    }
+                    break;
+                
+                case 'forceWave':
+                    if (this.forceWavePool && typeof ForceWave !== 'undefined') {
+                        obj = this.forceWavePool.get(...args);
+                    } else if (typeof ForceWave !== 'undefined') {
+                        obj = new ForceWave(...args);
+                    }
+                    break;
+                    
+                default:
+                    console.warn(`Unknown object type '${type}' in getPooledObject`);
+                    break;
+            }
+            
+            if (!obj) {
+                console.warn(`Failed to get pooled object of type '${type}'`);
+            }
+        } catch (error) {
+            console.error(`Error in getPooledObject for type '${type}':`, error);
+        }
+        
+        return obj;
+    }
+    
+    /**
+     * Return an object to its pool
+     * @param {Object} obj - The object to release
+     * @param {string} type - The type of object
+     */
+    static releasePooledObject(obj, type) {
+        if (!obj) return;
+        
+        try {
+            switch(type) {
+                case 'projectile':
+                    if (this.projectilePool) this.projectilePool.release(obj);
+                    break;
+                    
+                case 'explosion':
+                    if (this.explosionPool) this.explosionPool.release(obj);
+                    break;
+                    
+                case 'beam':
+                    if (this.beamPool) this.beamPool.release(obj);
+                    break;
+                    
+                case 'forceWave':
+                    if (this.forceWavePool) this.forceWavePool.release(obj);
+                    break;
+                    
+                default:
+                    console.warn(`Unknown object type '${type}' in releasePooledObject`);
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error in releasePooledObject for type '${type}':`, error);
         }
     }
     
@@ -668,17 +788,56 @@ static fireTangle(owner, system, angle) {
      * @param {Projectile} projectile - The projectile to release back to pool
      */
     static releaseProjectile(projectile) {
-        if (this.projectilePool && projectile) {
-            this.projectilePool.release(projectile);
+        if (projectile) {
+            this.releasePooledObject(projectile, 'projectile');
+        }
+    }
+    
+    /** Release an explosion back to the pool */
+    static releaseExplosion(explosion) {
+        if (explosion) {
+            this.releasePooledObject(explosion, 'explosion');
+        }
+    }
+    
+    /** Release a beam back to the pool */
+    static releaseBeam(beam) {
+        if (beam) {
+            this.releasePooledObject(beam, 'beam');
+        }
+    }
+    
+    /** Release a force wave back to the pool */
+    static releaseForceWave(forceWave) {
+        if (forceWave) {
+            this.releasePooledObject(forceWave, 'forceWave');
         }
     }
     
     /**
-     * Get stats about the projectile pool
-     * @return {Object} Stats object
+     * Get stats about all object pools
+     * @return {Object} Stats object with detailed information for each pool type
      */
     static getPoolStats() {
-        return this.projectilePool ? this.projectilePool.getStats() : null;
+        const stats = {};
+        
+        if (this.projectilePool) {
+            stats.projectile = this.projectilePool.getStats();
+        }
+        
+        if (this.explosionPool) {
+            stats.explosion = this.explosionPool.getStats();
+        }
+        
+        if (this.beamPool) {
+            stats.beam = this.beamPool.getStats();
+        }
+        
+        if (this.forceWavePool) {
+            stats.forceWave = this.forceWavePool.getStats();
+        }
+        
+        return stats;
     }
 }
 

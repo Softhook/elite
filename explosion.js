@@ -4,15 +4,45 @@
  */
 class Explosion {
     constructor(x, y, size, baseColor = [255, 160, 30]) {
-        this.pos = createVector(x, y);
-        this.size = size || 30;
-        this.baseColor = baseColor;
+        // Create position vector just once (reused by reset)
+        this.pos = createVector(0, 0);
         
-        // Animation properties
-        this.duration = 60; // Frames until complete
-        this.currentFrame = 0;
+        // Initialize empty arrays (reused by reset)
         this.particles = [];
         this.debris = [];
+        
+        // Set default values (will be overridden by reset)
+        this.size = 30;
+        this.baseColor = [255, 160, 30];
+        this.duration = 60;
+        this.currentFrame = 0;
+        
+        // Call reset if parameters provided
+        if (x !== undefined) {
+            this.reset(x, y, size, baseColor);
+        }
+    }
+    
+    /**
+     * Reset method for object pooling
+     * @param {number} x - X position of explosion
+     * @param {number} y - Y position of explosion
+     * @param {number} size - Size of explosion
+     * @param {Array} baseColor - Base color of explosion
+     */
+    reset(x, y, size, baseColor = [255, 160, 30]) {
+        // Update position vector
+        this.pos.set(x, y);
+        
+        // Set/reset properties
+        this.size = size || 30;
+        this.baseColor = baseColor;
+        this.duration = 60; // Frames until complete
+        this.currentFrame = 0;
+        
+        // Clear arrays for reuse
+        this.particles.length = 0;
+        this.debris.length = 0;
         
         // Create initial explosion particles
         this.generateParticles();
@@ -23,7 +53,6 @@ class Explosion {
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
             soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos);
         }
-
     }
     
     generateParticles() {

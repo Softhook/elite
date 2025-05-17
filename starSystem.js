@@ -944,7 +944,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             for (let i = this.explosions.length - 1; i >= 0; i--) {
                 this.explosions[i].update();
                 if (this.explosions[i].isDone()) {
-                    this.explosions.splice(i, 1);
+                    // Return to pool if WeaponSystem is available
+                    if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.releaseExplosion === 'function') {
+                        WeaponSystem.releaseExplosion(this.explosions[i]);
+                    }
+                    
+                    // Use fast removal technique - swap with last element then pop
+                    const lastIndex = this.explosions.length - 1;
+                    if (i !== lastIndex) {
+                        this.explosions[i] = this.explosions[lastIndex]; 
+                    }
+                    this.explosions.pop(); // Much faster than splice for large arrays
                 }
             }
 
@@ -1085,7 +1095,29 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
     /** Adds an explosion to the system's list. */
     addExplosion(x, y, size, color) {
-        this.explosions.push(new Explosion(x, y, size, color));
+        // Use object pooling if WeaponSystem is available
+        if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
+            console.log(`Adding explosion at (${x.toFixed(1)},${y.toFixed(1)}) with size ${size}, using object pooling`);
+            const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color);
+            
+            if (explosion) {
+                this.explosions.push(explosion);
+                console.log(`Successfully added pooled explosion, total explosions: ${this.explosions.length}`);
+                return;
+            } else {
+                console.warn(`Failed to get pooled explosion object at (${x.toFixed(1)},${y.toFixed(1)})`);
+            }
+        }
+        
+        // Fall back to direct instantiation if pooling is unavailable or failed
+        console.log(`Creating new explosion directly at (${x.toFixed(1)},${y.toFixed(1)})`);
+        try {
+            const explosion = new Explosion(x, y, size, color);
+            this.explosions.push(explosion);
+            console.log(`Successfully added direct explosion, total explosions: ${this.explosions.length}`);
+        } catch (error) {
+            console.error(`Error creating explosion:`, error);
+        }
     }
 
     /** Handles all collision detection and responses in the system. */
@@ -1179,67 +1211,90 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
 /** Specifically handles projectile collisions with targets. */
 checkProjectileCollisions() {
+    // Pre-allocate reusable distance vectors to avoid object creation in the loop
+    if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
+    
+    // Process projectiles using optimized collision detection
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
         const proj = this.projectiles[i];
-        let hit = false;  // <- DECLARE HIT VARIABLE HERE
+        const projPos = proj.pos;
+        const projSize = proj.size || 3;
+        let hit = false;
         
-        // Check against asteroids
+        // Fast collision pre-check using distance squared (no sqrt calculation)
+        // Only do full collision check if object is potentially within range
+        const distCheckVector = this._distCheckVector;
+        
+        // Check against asteroids using broadphase filtering
         for (let j = this.asteroids.length - 1; j >= 0; j--) {
             const asteroid = this.asteroids[j];
             if (!asteroid || asteroid.isDestroyed()) continue;
             
-            if (asteroid.checkCollision(proj)) {
-                // FIXED: Apply damage to asteroid based on projectile damage
-                asteroid.takeDamage(proj.damage || 1);
-                // Remove projectile after hit
-                this.removeProjectile(i);
-                const explosionColor = [255, 120, 20];
-                // Create effect at collision point - increase size for visibility
-                this.addExplosion(proj.pos.x, proj.pos.y, 10, explosionColor);
-                
-                hit = true;  // <- Now this variable is defined
-                break;
+            // Fast distance check before expensive collision detection
+            const combinedRadiusSquared = Math.pow(asteroid.size + projSize, 2);
+            distCheckVector.set(asteroid.pos.x - projPos.x, asteroid.pos.y - projPos.y);
+            
+            if (distCheckVector.magSq() <= combinedRadiusSquared) {
+                // Only do precise collision check if objects are close enough
+                if (asteroid.checkCollision(proj)) {
+                    asteroid.takeDamage(proj.damage || 1);
+                    this.removeProjectile(i);
+                    const explosionColor = [255, 120, 20];
+                    this.addExplosion(projPos.x, projPos.y, 10, explosionColor);
+                    
+                    hit = true;
+                    break;
+                }
             }
         }
         
         // If already hit something, skip the rest of the checks
         if (hit) continue;
         
-        // For player hits:
-        if (proj.owner instanceof Enemy && proj.checkCollision(this.player)) {
-            // Use centralized hit handler from WeaponSystem
-            WeaponSystem.handleHitEffects(
-                this.player,
-                proj.pos,
-                proj.damage,
-                proj.owner,
-                this,
-                proj.color
-            );
+        // For player hits - use quick distance check first
+        if (proj.owner instanceof Enemy) {
+            const combinedRadiusSquared = Math.pow(this.player.size + projSize, 2);
+            distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
             
-            // Apply Tangle effect if it's a tangle projectile
-            if (proj.type === "tangle" && typeof this.player.applyDragEffect === 'function') {
-                this.player.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+            if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(this.player)) {
+                // Use centralized hit handler from WeaponSystem
+                WeaponSystem.handleHitEffects(
+                    this.player,
+                    projPos,
+                    proj.damage,
+                    proj.owner,
+                    this,
+                    proj.color
+                );
                 
-                // Add visual feedback
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
+                // Apply Tangle effect if it's a tangle projectile
+                if (proj.type === "tangle" && typeof this.player.applyDragEffect === 'function') {
+                    this.player.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+                    
+                    // Add visual feedback
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
+                    }
                 }
+                
+                this.removeProjectile(i);
+                continue;
             }
-            
-            this.removeProjectile(i);
-            continue;
         }
         
-        // For enemy hits:
+        // For enemy hits - use spatial partitioning approach
         if (proj.owner instanceof Player) {
+            // Get only nearby enemies using pre-check with distance squared
             for (let j = 0; j < this.enemies.length; j++) {
                 const enemy = this.enemies[j];
-                if (proj.checkCollision(enemy)) {
+                const combinedRadiusSquared = Math.pow(enemy.size + projSize, 2);
+                distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
+                
+                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
                     // Use centralized hit handler from WeaponSystem
                     WeaponSystem.handleHitEffects(
                         enemy,
-                        proj.pos,
+                        projPos,
                         proj.damage,
                         proj.owner,
                         this,
@@ -1382,7 +1437,12 @@ checkProjectileCollisions() {
         if (this.projectiles[i] && typeof WeaponSystem !== 'undefined') {
             WeaponSystem.releaseProjectile(this.projectiles[i]);
         }
-        this.projectiles.splice(i, 1); // CORRECT: Use splice instead of recursion
+        // Use fast array removal technique - swap with last element then pop if not last element
+        const lastIndex = this.projectiles.length - 1;
+        if (i !== lastIndex) {
+            this.projectiles[i] = this.projectiles[lastIndex];
+        }
+        this.projectiles.pop(); // Much faster than splice for large arrays
     }
 
     /** Adds a beam to the system's list. */

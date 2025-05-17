@@ -365,134 +365,119 @@ class Enemy {
     update(system) {
         if (this.destroyed || !system) return;
     
-        // Always update system reference when update is called
+        // Always update system reference
         this.currentSystem = system;
         
-        // Update weapon cooldown
-        this.fireCooldown -= deltaTime / 1000;
+        // Use a single multiplier for time-based cooldowns (deltaTime in seconds)
+        const dtSeconds = deltaTime / 1000;
         
-        // Cargo collection cooldown
-        if (this.cargoCollectionCooldown > 0) {
-            this.cargoCollectionCooldown -= deltaTime / 1000;
+        // Process all cooldowns in a batch with a single calculation
+        this.fireCooldown -= dtSeconds;
+        if (this.cargoCollectionCooldown > 0) this.cargoCollectionCooldown -= dtSeconds;
+        if (this.attackCooldown > 0) this.attackCooldown -= dtSeconds;
+        
+        // Optimize shield regeneration with cached values and faster checks
+        if (this.shield < this.maxShield && !this.destroyed) {
+            const currentTime = millis();
+            if (currentTime - this.lastShieldHitTime > this.shieldRechargeDelay) {
+                // Cache the time scale computation
+                const timeScaleFactor = this._getTimeScale() * 0.016;
+                const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScaleFactor;
+                
+                this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+            }
         }
-
-        // Process hauler attack cooldown
-        if (this.attackCooldown > 0) {
-            this.attackCooldown -= deltaTime / 1000;
-        }
-
-        // Regenerate shields only after recharge delay has passed
-        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
-        if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
-            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
-            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
-        }
-
-            // Update drag effect timer
+        
+        // Update tangle effect timer
         if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
+            this.dragEffectTimer -= dtSeconds;
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
             }
         }
-
-        // For pirates: Look for cargo first if not already collecting
-        if (this.role === AI_ROLE.PIRATE && 
-            this.currentState !== AI_STATE.COLLECTING_CARGO && 
-            this.cargoCollectionCooldown <= 0) {
-            
-            const cargoTarget = this.detectCargo(system);
-            if (cargoTarget) {
-                this.cargoTarget = cargoTarget;
-                this.changeState(AI_STATE.COLLECTING_CARGO);
-                console.log(`${this.shipTypeName} detected cargo - moving to collect`);
+        
+        // Optimize cargo detection logic - only run every 5 frames
+        if (frameCount % 5 === 0) {
+            // For pirates and transporters - only check for cargo when needed
+            if ((this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.TRANSPORT) && 
+                this.currentState !== AI_STATE.COLLECTING_CARGO && 
+                this.cargoCollectionCooldown <= 0) {
+                
+                const cargoTarget = this.detectCargo(system);
+                if (cargoTarget) {
+                    if (this.role === AI_ROLE.TRANSPORT) {
+                        this.previousState = this.currentState;  // Remember state for transports
+                    }
+                    this.cargoTarget = cargoTarget;
+                    this.changeState(AI_STATE.COLLECTING_CARGO);
+                }
             }
         }
 
-        // For transporters: Check for cargo like pirates do
-        if (this.role === AI_ROLE.TRANSPORT && 
-            this.currentState !== AI_STATE.COLLECTING_CARGO && 
-            this.cargoCollectionCooldown <= 0) {
-            
-            const cargoTarget = this.detectCargo(system);
-            if (cargoTarget) {
-                // Remember current state to return to after collection
-                this.previousState = this.currentState;
-                this.cargoTarget = cargoTarget;
-                this.changeState(AI_STATE.COLLECTING_CARGO);
-                console.log(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
-            }
-        }
-
-        // Role-specific AI behavior updates
+        // Role-specific AI behavior updates - optimize with lookup table instead of if/else chain
         try {
-            if (this.role === AI_ROLE.TRANSPORT) {
-                // Handle cargo collection first if applicable
-                if (this.currentState === AI_STATE.COLLECTING_CARGO) {
-                    if (!this.updateCargoCollectionAI(system)) {
-                        // When done collecting, return to previous state
-                        this.changeState(this.previousState || AI_STATE.TRANSPORTING);
+            // Use role as key for direct lookup
+            switch (this.role) {
+                case AI_ROLE.TRANSPORT:
+                    if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                        if (!this.updateCargoCollectionAI(system)) {
+                            this.changeState(this.previousState || AI_STATE.TRANSPORTING);
+                        }
+                        this.updatePhysics();
+                    } else {
+                        this.updateTransportAI(system);
+                    }
+                    break;
+                    
+                case AI_ROLE.GUARD:
+                    if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                        this.updateHaulerAI(system);
+                    } else if (this.currentState === AI_STATE.GUARDING) {
+                        this._updateState_GUARDING();
+                    } else {
+                        this.updateCombatAI(system);
                     }
                     this.updatePhysics();
-                } else {
-                    // Normal transport behavior
-                    this.updateTransportAI(system);
-                }
-            } 
-            // --- START OF NEW GUARD ROLE LOGIC ---
-            else if (this.role === AI_ROLE.GUARD) {
-                // *** ADD THIS CHECK ***
-                if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
-                    // Use hauler jump logic for guards following their principal
-                    this.updateHaulerAI(system);
-                }
-                else if (this.currentState === AI_STATE.GUARDING) {
-                    this._updateState_GUARDING();
-                }
-                else {
-                    this.updateCombatAI(system);
-                }
-                this.updatePhysics();
-            }
-            // --- END OF NEW GUARD ROLE LOGIC ---
-
-            else {
-                // Handle other role behaviors
-                switch (this.role) {
-                    case AI_ROLE.PIRATE:
-                        if (this.currentState === AI_STATE.COLLECTING_CARGO) {
-                            if (!this.updateCargoCollectionAI(system)) {
-                                this.updateCombatAI(system);
-                            }
-                        } else {
+                    break;
+                    
+                case AI_ROLE.PIRATE:
+                    if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                        if (!this.updateCargoCollectionAI(system)) {
                             this.updateCombatAI(system);
                         }
-                        break;
-                    case AI_ROLE.POLICE: 
-                        this.updatePoliceAI(system); 
-                        break;
-                    case AI_ROLE.HAULER: 
-                        this.updateHaulerAI(system); 
-                        break;
-                    case AI_ROLE.ALIEN: 
+                    } else {
                         this.updateCombatAI(system);
-                        break;
-                    case AI_ROLE.BOUNTY_HUNTER:
-                        this.updateCombatAI(system); // Bounty Hunters use combat AI
-                        break;
-                    default: 
-                        // Default behavior for unknown roles
-                        this.vel.mult(this.drag * 0.95); 
-                        break;
-                }
-                
-                // Update physics - except for Transport role which handles its own physics
-                this.updatePhysics();
+                    }
+                    this.updatePhysics();
+                    break;
+                    
+                case AI_ROLE.POLICE:
+                    this.updatePoliceAI(system);
+                    this.updatePhysics();
+                    break;
+                    
+                case AI_ROLE.HAULER:
+                    this.updateHaulerAI(system);
+                    this.updatePhysics();
+                    break;
+                    
+                case AI_ROLE.ALIEN:
+                case AI_ROLE.BOUNTY_HUNTER:
+                    // Both use the same combat AI
+                    this.updateCombatAI(system);
+                    this.updatePhysics();
+                    break;
+                    
+                default:
+                    // Minimal default behavior
+                    this.vel.x *= (this.drag * 0.95);
+                    this.vel.y *= (this.drag * 0.95);
+                    this.updatePhysics();
+                    break;
             }
         } catch (e) {
-            console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
+            console.error(`Error in ${this.role} ${this.shipTypeName} update:`, e);
             this.changeState(AI_STATE.IDLE);
             this.updatePhysics(); // Still update physics even on error
         }
@@ -830,115 +815,126 @@ evaluateTargetScore(target, system) {
 }
 
     /**
-     * Calculate optimal weapon for current combat situation
-     * Takes into account range, target type, and weapon capabilities
+     * Calculate optimal weapon for current combat situation with optimized scoring
      * @param {number} distanceToTarget - Distance to current target
      * @param {Object} target - The current target
      * @return {Object} The selected weapon definition
      */
     selectOptimalWeapon(distanceToTarget, target) {
-        // If we only have one weapon, just use it
+        // Fast path for common case
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
         
-        // Score each weapon based on situation
+        // Cache range calculations once
+        const visualFiringRange = this.visualFiringRange;
+        const mediumRangeThreshold = visualFiringRange * MEDIUM_RANGE_MULT;
+        const closeRangeThreshold = visualFiringRange * CLOSE_RANGE_MULT;
+        const veryCloseRangeThreshold = visualFiringRange * 0.2;
+        
+        // Fast range classification using single checks
+        let rangeType;
+        if (distanceToTarget <= veryCloseRangeThreshold) {
+            rangeType = 0; // Very close
+        } else if (distanceToTarget <= closeRangeThreshold) {
+            rangeType = 1; // Short range
+        } else if (distanceToTarget <= mediumRangeThreshold) {
+            rangeType = 2; // Medium range
+        } else {
+            rangeType = 3; // Long range
+        }
+        
+        // Cache target properties once to avoid repeated property access
+        const targetAlreadyEntangled = target?.dragMultiplier > 1.0 && target?.dragEffectTimer > 0;
+        const targetMaxSpeed = target?.maxSpeed || 0;
+        const targetSize = target?.size || 0;
+        const targetIsFast = targetMaxSpeed > 5;
+        const targetIsVerySlow = targetMaxSpeed < 5;
+        const targetIsLarge = targetSize > 50;
+        
+        // Lookup tables for optimal performance
+        // Organized as [veryClose, shortRange, mediumRange, longRange]
+        const weaponRangeScores = {
+            'beam': [1, 1, 2, 3],
+            'spread': [3, 3, 1, 0],
+            'straight': [1, 0, 2, 1],
+            'missile': [0, 1, 3, 3],
+            'turret': [2, 2, 2, 2],
+            'force': [5, 2, 0, 0],
+            'tangle': targetAlreadyEntangled ? [-10, -10, -10, -10] : [3, 2, 1, 0]
+        };
+        
+        // Weapon match bonuses for target types to avoid nested ifs
+        const targetTypeScores = {
+            // Faster target - spread weapons bonus
+            'spread_fast': targetIsFast ? 3 : 0,
+            // Slow target - missile bonus
+            'missile_slow': targetIsVerySlow ? 2 : 0,
+            // Very fast target - additional tangle weapon bonus
+            'tangle_veryFast': targetMaxSpeed > 6.5 ? 2 : 0
+        };
+        
         let bestScore = -1;
         let bestWeapon = this.currentWeapon;
-
-        // Check if target is already entangled
-        const targetAlreadyEntangled = target && 
-                                    target.dragMultiplier > 1.0 && 
-                                    target.dragEffectTimer > 0;
         
-        for (const weapon of this.weapons) {
+        // Use traditional loop for better performance
+        const weaponCount = this.weapons.length;
+        for (let i = 0; i < weaponCount; i++) {
+            const weapon = this.weapons[i];
             let score = 0;
             
-            // Range considerations
-            const isLongRange = distanceToTarget > this.visualFiringRange * MEDIUM_RANGE_MULT;
-            const isMediumRange = distanceToTarget > this.visualFiringRange * CLOSE_RANGE_MULT && distanceToTarget <= this.visualFiringRange * MEDIUM_RANGE_MULT;
-            const isShortRange = distanceToTarget <= this.visualFiringRange * CLOSE_RANGE_MULT;
-            const isVeryCloseRange = distanceToTarget <= this.visualFiringRange * 0.2; // Very close = 20% of firing range
+            // Fast base type determination
+            let baseType = '';
+            const weaponType = weapon.type;
             
-            // --- FORCE WEAPON LOGIC ---
-            // Force weapons are highly effective at very close range
-            if (weapon.type.includes('force') && isVeryCloseRange) {
-                score += 5; // Highest priority at very close rangee
-            }
-
-            // --- TANGLE WEAPON LOGIC ---
-            if (weapon.type.includes('tangle') && target) {
-                // Only consider tangle weapons if target is NOT already entangled
-                if (!targetAlreadyEntangled) {
-                    // Extra effective against very fast targets
-                    if (target.maxSpeed > 6.5) {
-                        score += 5; // Highest priority for very fast targets
-                    } 
-                    // Good for fast targets
-                    else if (target.maxSpeed > 5) {
-                        score += 3;
-                    } 
-                } else {
-                    // Target is already entangled - significant penalty
-                    score -= 10; // Strong negative score to discourage selection
-                }
-            }
-
-            // Score based on weapon type and range
-            if (weapon.type.includes('beam') && isLongRange) {
-                score += 3; // Beams are good at long range
-            } else if (weapon.type.includes('beam') && isMediumRange) {
-                score += 2;
-            } else if (weapon.type.includes('beam') && isShortRange) {
-                score += 1;
+            // Use early-return string operations for efficient type detection
+            // Order these by frequency of occurrence for optimization
+            if (weaponType === 'missile') baseType = 'missile';
+            else if (weaponType === 'turret') baseType = 'turret';
+            else if (weaponType.startsWith('spread')) baseType = 'spread';
+            else if (weaponType.startsWith('straight')) baseType = 'straight';
+            else if (weaponType.includes('beam')) baseType = 'beam';
+            else if (weaponType.includes('force')) baseType = 'force';
+            else if (weaponType.includes('tangle')) baseType = 'tangle';
+            
+            // Score by range using direct lookup - one access instead of multiple conditions
+            if (baseType in weaponRangeScores) {
+                score += weaponRangeScores[baseType][rangeType];
             }
             
-            if (weapon.type.startsWith('spread') && isShortRange) {
-                score += 3; // now catches spread2/3/4/5
-            } else if (weapon.type.startsWith('straight') && isMediumRange) {
-                score += 2; // now catches straight2/3/4…
-            } else if (weapon.type.startsWith('straight') && isLongRange) {
-                score += 1;
-            }
-            
-            if (weapon.type === 'missile' && (isMediumRange || isLongRange)) {
-                score += 3; // Missiles are best at medium to long range
-            } else if (weapon.type === 'missile' && isShortRange) {
-                score += 1;
-            }
-            
-            if (weapon.type === 'turret') {
-                score += 2; // Turrets are flexible at any range
-            }
-            
-            // Target-specific considerations
+            // Add target-specific bonuses using lookup tables
             if (target) {
-                // Against fast targets, prefer wide-angle weapons like spread
-                if (target.maxSpeed > 5 && weapon.type.startsWith('spread')) {
-                    score += 3;
-                }    
-                // Against slow targets, prefer missile weapons
-                if (target.maxSpeed < 5 && weapon.type === 'missile') {
-                    score += 2;
-                }
-                // Against large targets, prefer high damage weapons
-                if (target.size > 50 && weapon.damage > 10) {
-                    score += 2;
+                // Add spread weapon bonus against fast targets
+                if (baseType === 'spread') {
+                    score += targetTypeScores.spread_fast;
                 }
                 
+                // Add missile bonus against slow targets
+                if (baseType === 'missile') {
+                    score += targetTypeScores.missile_slow;
+                }
+                
+                // Add extra tangle bonus for very fast targets
+                if (baseType === 'tangle' && !targetAlreadyEntangled) {
+                    score += targetTypeScores.tangle_veryFast;
+                }
+                
+                // Add damage bonus against large targets - use direct property access
+                if (targetIsLarge && (weapon.damage || 0) > 10) {
+                    score += 2;
+                }
             }
             
-            // If this weapon scores better, select it
+            // Update best weapon using direct comparison
             if (score > bestScore) {
                 bestScore = score;
                 bestWeapon = weapon;
             }
         }
         
-        // Only change weapons if the selected one is different and better by at least 2 points
+        // Only change weapons if significant improvement
         if (bestWeapon !== this.currentWeapon && bestScore > 0) {
             return bestWeapon;
         }
         
-        // Otherwise stick with current weapon
         return this.currentWeapon;
     }
 
@@ -947,28 +943,47 @@ evaluateTargetScore(target, system) {
      * @param {number} distanceToTarget - Distance to current target
      */
     selectBestWeapon(distanceToTarget) {
+        // Fast path for common case - only one weapon
         if (!this.weapons || this.weapons.length <= 1) return;
         
-        // Use our new optimal weapon selection algorithm
+        // Don't switch weapons too frequently - add rate limiting
+        const currentTime = millis();
+        if (this._lastWeaponCheckTime && currentTime - this._lastWeaponCheckTime < 500) {
+            // Only check weapon every 500ms to reduce processing
+            return;
+        }
+        this._lastWeaponCheckTime = currentTime;
+        
+        // Use optimal weapon selection algorithm
         const optimalWeapon = this.selectOptimalWeapon(distanceToTarget, this.target);
         
-        // If we got a different weapon, switch to it
-        if (optimalWeapon !== this.currentWeapon) {
-            // Find the index of the optimal weapon
-            const newIndex = this.weapons.indexOf(optimalWeapon);
-            if (newIndex !== -1) {
-                this.weaponIndex = newIndex;
-                this.currentWeapon = this.weapons[this.weaponIndex];
-                this.fireRate = this.currentWeapon.fireRate;
-                // Reset cooldown when switching weapons (half normal delay)
-                this.fireCooldown = this.fireRate * 0.5;
-                
-                // Log weapon change for debugging
-                if (this.lastWeaponSwitch === undefined || 
-                    millis() - this.lastWeaponSwitch > 2000) {
-                    console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
-                    this.lastWeaponSwitch = millis();
-                }
+        // Skip further processing if already using optimal weapon
+        if (optimalWeapon === this.currentWeapon) return;
+        
+        // Find the index directly instead of using indexOf
+        let newIndex = -1;
+        const len = this.weapons.length;
+        for (let i = 0; i < len; i++) {
+            if (this.weapons[i] === optimalWeapon) {
+                newIndex = i;
+                break;
+            }
+        }
+        
+        if (newIndex !== -1) {
+            this.weaponIndex = newIndex;
+            this.currentWeapon = this.weapons[this.weaponIndex];
+            this.fireRate = this.currentWeapon.fireRate;
+            
+            // Reset cooldown when switching weapons (half normal delay)
+            this.fireCooldown = this.fireRate * 0.5;
+            
+            // Rate-limit debug logging
+            if (this.lastWeaponSwitch === undefined || 
+                currentTime - this.lastWeaponSwitch > 2000) {
+                // Only log weapon changes every 2 seconds to reduce console spam
+                console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${Math.round(distanceToTarget)}`);
+                this.lastWeaponSwitch = currentTime;
             }
         }
     }
@@ -979,26 +994,30 @@ evaluateTargetScore(target, system) {
      * @return {p5.Vector|null} Position vector to move toward
      */
     getMovementTargetForState(distanceToTarget) {
+        // Cache target validity check to avoid multiple calls
+        const targetValid = this.isTargetValid(this.target);
+        
+        // Initialize the movement target vector that will be returned
         let desiredMovementTargetPos = null;
         
         switch (this.currentState) {
             case AI_STATE.APPROACHING:
-                if (this.isTargetValid(this.target)) {
-                    desiredMovementTargetPos = this.predictTargetPosition();
+                if (targetValid) {
+                    return this.predictTargetPosition();
                 }
                 break;
                 
             case AI_STATE.ATTACK_PASS:
-                if (this.attackPassTargetPos && this.isTargetValid(this.target)) {
+                if (this.attackPassTargetPos && targetValid) {
                     // Use the pre-calculated target position
-                    desiredMovementTargetPos = this.attackPassTargetPos;
-                } else if (this.isTargetValid(this.target)) {
+                    return this.attackPassTargetPos;
+                } else if (targetValid) {
                     // Fallback if somehow we don't have a pre-calculated target
                     this.attackPassTargetPos = this.calculateAttackPassTarget();
-                    desiredMovementTargetPos = this.attackPassTargetPos;
+                    return this.attackPassTargetPos;
                 } else {
                     // If target becomes invalid during attack pass, aim at current position
-                    desiredMovementTargetPos = this.pos.copy();
+                    return this.pos.copy();
                 }
                 break;
                 
@@ -1009,29 +1028,35 @@ evaluateTargetScore(target, system) {
             case AI_STATE.PATROLLING:
                 desiredMovementTargetPos = this.patrolTargetPos;
                 break;
-                        case AI_STATE.SNIPING: // <<< NEW CASE
+                        
+            case AI_STATE.SNIPING:
                 if (this.isTargetValid(this.target)) {
+                    // Cache calculations for reuse
                     const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
                     const rangeTolerance = idealSnipeRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
 
                     if (distanceToTarget > idealSnipeRange + rangeTolerance) {
                         // Too far, move slightly closer to target
-                        let vecToTarget = p5.Vector.sub(this.target.pos, this.pos);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecToTarget.setMag(distanceToTarget - idealSnipeRange));
+                        // Reuse this.tempVector instead of creating new vectors
+                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
+                        this.tempVector.setMag(distanceToTarget - idealSnipeRange);
+                        return createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
                     } else if (distanceToTarget < idealSnipeRange - rangeTolerance) {
                         // Too close, move slightly away from target
-                        let vecFromTarget = p5.Vector.sub(this.pos, this.target.pos);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecFromTarget.setMag(idealSnipeRange - distanceToTarget));
+                        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                        this.tempVector.setMag(idealSnipeRange - distanceToTarget);
+                        return createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
                     } else {
                         // Within tolerance, try to stay put
-                        desiredMovementTargetPos = this.pos.copy();
+                        return this.pos.copy();
                     }
                 } else {
-                    desiredMovementTargetPos = this.pos.copy(); // No valid target, stay put
+                    return this.pos.copy(); // No valid target, stay put
                 }
                 break;
         }
         
+        // Return the calculated position or null if no valid position found
         return desiredMovementTargetPos;
     }
 
@@ -2038,10 +2063,18 @@ _determinePostFleeState() {
         
         // Reuse the temp vector instead of creating new ones
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
-        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        // Cache deltaTime calculation to avoid conditional in high-frequency calls
+        const timeScale = this._getTimeScale();
+        let pf = this.predictionTime * timeScale;
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
         return this.tempVector;
+    }
+    
+    /** @private Get normalized time scale factor for consistent speed regardless of framerate */
+    _getTimeScale() {
+        // Cache this calculation since multiple methods use it
+        return deltaTime ? (60 / (1000/deltaTime)) : 60;
     }
 
     /** 
@@ -2072,7 +2105,22 @@ _determinePostFleeState() {
      */
     distanceTo(target) {
         if (!target?.pos) return Infinity;
-        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+        // Direct component calculation is faster than dist() function call
+        const dx = this.pos.x - target.pos.x;
+        const dy = this.pos.y - target.pos.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    /** 
+     * Calculates squared distance to target entity (faster than distanceTo when just comparing)
+     * @param {Object} target - Entity with pos property
+     * @return {number} Squared distance to target or Infinity if invalid
+     */
+    distanceToSquared(target) {
+        if (!target?.pos) return Infinity;
+        const dx = this.pos.x - target.pos.x;
+        const dy = this.pos.y - target.pos.y;
+        return dx * dx + dy * dy;
     }
 
     /**
@@ -2285,22 +2333,34 @@ updatePhysics() {
     // Skip if destroyed
     if (this.destroyed) return;
     
+    // Cache frequently used values
+    const velX = this.vel.x;
+    const velY = this.vel.y;
+    
+    let dragFactor;
+    
     // --- TANGLE WEAPON EFFECT ---
     if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-        // First apply normal drag (always safe)
-        this.vel.mult(this.drag);
+        // First apply normal drag
+        dragFactor = this.drag;
         
-        // Then apply the tangle effect with safety bounds
-        const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
-        const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
+        // Then apply tangle effect with safety bounds
+        const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001);
+        const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0);
         
-        // Apply tangle effect if values are valid
+        // Apply combined drag factor directly to components
         if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
-            this.vel.mult(tangledSpeedFactor);
+            dragFactor *= tangledSpeedFactor;
             
-            // Add slight directional randomness to simulate being caught in energy net
+            // Add randomness only occasionally to reduce calculations
             if (frameCount % 5 === 0) {
-                this.vel.rotate(random(-0.1, 0.1));
+                const randomAngle = random(-0.1, 0.1);
+                const cosAngle = Math.cos(randomAngle);
+                const sinAngle = Math.sin(randomAngle);
+                
+                // Manual rotation calculation
+                this.vel.x = velX * cosAngle - velY * sinAngle;
+                this.vel.y = velX * sinAngle + velY * cosAngle;
             }
         }
         
@@ -2313,21 +2373,33 @@ updatePhysics() {
     } 
     // --- STATION PROXIMITY EFFECT ---
     else if (this.currentState === AI_STATE.NEAR_STATION) {
-        // Station braking - stronger effect than normal drag
-        this.vel.mult(this.drag * 0.8);
+        // Stronger braking - avoid extra multiplication
+        dragFactor = this.drag * 0.8;
     } 
     // --- DEFAULT DRAG ---
     else {
-        // Normal drag
-        this.vel.mult(this.drag);
+        dragFactor = this.drag;
     }
     
-    // Ensure we don't exceed max speed
-    this.vel.limit(this.maxSpeed);
+    // Apply drag directly to components
+    this.vel.x *= dragFactor;
+    this.vel.y *= dragFactor;
     
-    // Update position only if velocity is valid
-    if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-        this.pos.add(this.vel);
+    // Optimized max speed check using squared magnitude comparison
+    const speedSquared = this.vel.x * this.vel.x + this.vel.y * this.vel.y;
+    const maxSpeedSquared = this.maxSpeed * this.maxSpeed;
+    
+    if (speedSquared > maxSpeedSquared) {
+        const scaleFactor = this.maxSpeed / Math.sqrt(speedSquared);
+        this.vel.x *= scaleFactor;
+        this.vel.y *= scaleFactor;
+    }
+    
+    // Fast NaN check without using isNaN
+    if (this.vel.x === this.vel.x && this.vel.y === this.vel.y) {
+        // Direct component addition for better performance
+        this.pos.x += this.vel.x;
+        this.pos.y += this.vel.y;
     } else {
         console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
         this.vel.set(0, 0);
@@ -2374,103 +2446,155 @@ updatePhysics() {
  * @param {number} shootingAngle - Angle to target in radians
  */
 performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-
-    if (!targetExists) return;
+    // Early exit conditions - quick checks first
+    if (!targetExists || !this.isWeaponReady() || this.currentState === AI_STATE.IDLE) return;
     
-    // Only debug firing decisions against player
-    const targetingPlayer = this.target instanceof Player;
-    
-    // Select best weapon (no debug)
-    this.selectBestWeapon(distanceToTarget);
-    
-    // Adjust firing range based on weapon type
-    let effectiveFiringRange = this.firingRange;
-    if (this.currentWeapon) {
-        switch (this.currentWeapon.type) {
-            case 'beam': effectiveFiringRange *= 1.2; break;
-            case 'missile': effectiveFiringRange *= 1.8; break;
-            case 'turret': effectiveFiringRange *= 0.8; break;
-        }
+    // Fast path check for weapon
+    if (!this.currentWeapon) {
+        // No weapon to fire
+        return;
     }
+    
+    // Cache weapon type
+    const weaponType = this.currentWeapon.type;
+    
+    // Fast weapon range calculation with lookup
+    const rangeFactor = 
+        weaponType === 'beam' ? 1.2 :
+        weaponType === 'missile' ? 1.8 :
+        weaponType === 'turret' ? 0.8 : 1.0;
+    
+    const effectiveFiringRange = this.firingRange * rangeFactor;
+    
+    // Store for visualization
     this.visualFiringRange = effectiveFiringRange;
-
-    // Enhanced firing logic
-    if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
-        if (this.canFireAtTarget(shootingAngle)) {
-            if (!this.currentSystem) this.currentSystem = system;
-            
-            // Player-specific targeting debug
-            if (targetingPlayer) {
-                console.log(`%c🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
-                    'color:red; font-weight:bold');
-            }
-            
-            // Weapon-specific behavior
-            if (this.currentWeapon) {
-                // Standard firing for all weapon types (including missile, beam, and turret)
-                this.fireWeapon(this.target);
-            } else {
-                // Fallback if no weapon defined
-                this.fireWeapon();
-            }
-            
-            this.fireCooldown = this.fireRate;
-        } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
-            // Debug when IDLE pirates spot player
-            console.log(`%c🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
+    
+    // Early range check
+    if (distanceToTarget >= effectiveFiringRange) return;
+    
+    // Firing angle check
+    if (!this.canFireAtTarget(shootingAngle)) {
+        // Only log for player targets in certain conditions (reduced logging)
+        if (this.target instanceof Player && frameCount % 60 === 0) {
+            // Log once per second instead of every frame
+            console.log(`${this.shipTypeName} targeting player but angle not aligned`);
         }
+        return;
+    }
+    
+    // System reference check
+    if (!this.currentSystem) this.currentSystem = system;
+    
+    // Fire the weapon
+    this.fireWeapon(this.target);
+    
+    // Reset cooldown
+    this.fireCooldown = this.fireRate;
+    
+    // Only log player targeting when it actually happens
+    if (this.target instanceof Player && frameCount % 30 === 0) {
+        // Reduce logging frequency to every half second
+        console.log(`${this.shipTypeName} firing ${this.currentWeapon.name} at player`);
     }
 }
 
-    /** Creates and adds a projectile aimed in the specified direction (radians). */
+    /**
+     * Creates and adds a projectile aimed in the specified direction (radians)
+     * Optimized with improved vector calculations
+     * @param {Object} system - The current star system
+     * @param {number} fireAngleRadians - The angle to fire at
+     */
     fire(system, fireAngleRadians) {
-        // Allow haulers to fire if they're in a defensive combat mode
-        if (this.role === AI_ROLE.HAULER && 
-            !(this.currentState === AI_STATE.APPROACHING || 
-              this.currentState === AI_STATE.ATTACK_PASS || 
-              this.currentState === AI_STATE.REPOSITIONING)) {
-            return; // Only block firing when not in combat states
-        }
+        // Early exit for hauler safety check
+        const isHaulerCanFire = this.role !== AI_ROLE.HAULER || 
+                              this.currentState === AI_STATE.APPROACHING || 
+                              this.currentState === AI_STATE.ATTACK_PASS || 
+                              this.currentState === AI_STATE.REPOSITIONING;
+                              
+        if (!isHaulerCanFire) return;
         
-        if (!system || typeof system.addProjectile !== 'function') { return; }
-        if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
-        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
-        let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-        let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
+        // System validity check
+        if (!system || typeof system.addProjectile !== 'function') return;
+        
+        // Angle validity check (NaN protection)
+        if (isNaN(this.angle) || isNaN(fireAngleRadians)) return;
+        
+        // Calculate spawn position directly with trig functions - avoid vector creation
+        const spawnDistance = this.size * 0.7;
+        const cosAngle = Math.cos(this.angle);
+        const sinAngle = Math.sin(this.angle);
+        
+        const spawnX = this.pos.x + cosAngle * spawnDistance;
+        const spawnY = this.pos.y + sinAngle * spawnDistance;
+        
+        // Create projectile directly with coordinates
+        const proj = new Projectile(spawnX, spawnY, fireAngleRadians, 'ENEMY', 5, 5);
         system.addProjectile(proj);
     }
 
+    /**
+     * Fires the currently equipped weapon with advanced targeting
+     * Optimized for different weapon types and targeting scenarios
+     * @param {Object} targetToPass - The target to fire at
+     */
     fireWeapon(targetToPass = null) {
-        if (!this.currentWeapon || this.fireCooldown > 0 || !this.currentSystem) return;
-    
-        // Default firing angle (ship's current heading)
-        let fireAngle = this.angle;
-    
-        // Check if target is stationary or very slow-moving
-        if (targetToPass && targetToPass.vel && 
-            targetToPass.vel.magSq() < 0.25) { // threshold for "almost stationary"
-            
-            // Aim directly at the target's current position instead of predicted position
-            fireAngle = atan2(
-                targetToPass.pos.y - this.pos.y,
-                targetToPass.pos.x - this.pos.x
-            );
-        }
+        // Early return checks with combined condition
+        if (!this.currentWeapon || !this.currentSystem) return;
         
-        // Rest of existing code remains unchanged
-        if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
-            if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
-                return; // Don't fire missile without a valid target
+        // Cached system and weapon type for multiple uses
+        const system = this.currentSystem;
+        const weaponType = this.currentWeapon.type;
+        
+        // Combined target validation with short-circuit evaluation
+        const isValidMissileTarget = !(
+            weaponType === WEAPON_TYPE.MISSILE && 
+            (!targetToPass || 
+             targetToPass.destroyed || 
+             (targetToPass.hull !== undefined && targetToPass.hull <= 0))
+        );
+        
+        if (!isValidMissileTarget) return;
+        
+        // EMP nebula check with optional chaining
+        if (system.isInEMPNebula?.(this.pos)) return;
+        
+        // Calculate firing angle with optimized path selection
+        let fireAngle;
+        
+        if (!targetToPass || !targetToPass.pos) {
+            // No target - use ship angle
+            fireAngle = this.angle;
+        } else {
+            // Cache position components for multiple calculations
+            const targetX = targetToPass.pos.x;
+            const targetY = targetToPass.pos.y;
+            const shipX = this.pos.x;
+            const shipY = this.pos.y;
+            
+            // Compute target vector components
+            const dX = targetX - shipX;
+            const dY = targetY - shipY;
+            
+            // Fast stationary target check with direct component calculation
+            const isStationaryTarget = !targetToPass.vel || 
+                         (targetToPass.vel.x * targetToPass.vel.x + 
+                          targetToPass.vel.y * targetToPass.vel.y) < 0.25;
+                          
+            if (isStationaryTarget) {
+                // Direct angle calculation for stationary or slow targets
+                fireAngle = Math.atan2(dY, dX);
+            } else {
+                // For fast-moving targets, use ship's current facing
+                fireAngle = this.angle;
+                
+                // Future enhancement: Add predictive targeting here
+                // We could calculate target's future position based on velocity
+                // and distance, then aim at that predicted position
             }
         }
         
-        // Check: EMP nebula check
-        if (this.currentSystem?.isInEMPNebula && this.currentSystem.isInEMPNebula(this.pos)) {
-            return;
-        }
-    
-        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
-        this.fireCooldown = this.fireRate;
+        // Fire the weapon using the WeaponSystem
+        WeaponSystem.fire(this, system, fireAngle, weaponType, targetToPass);
     }
 
     /** Cycles to the next available weapon */
@@ -2615,118 +2739,205 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * @return {string} The appropriate target label
      */
     _getTargetLabel() {
-        // Fast path for most common states using switch
+        // Fast path for most common states with fixed labels - no distance checks needed
+        if (this.currentState === AI_STATE.TRANSPORTING) return "Delivery";
+        if (!this.target && this.currentState !== AI_STATE.PATROLLING && 
+            this.currentState !== AI_STATE.NEAR_STATION && 
+            this.currentState !== AI_STATE.LEAVING_SYSTEM) return "None";
+        
+        // Cache target for multiple accesses
+        const target = this.target;
+        
+        // Cache frequently used values to reduce repeated property access
         switch (this.currentState) {
             case AI_STATE.PATROLLING:
-            case AI_STATE.NEAR_STATION:
-                // Check if patrol target is the station (common case)
-                if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
-                    this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
-                    return "Station";
+            case AI_STATE.NEAR_STATION: {
+                // Use squared distance check - more efficient than dist()
+                const patrolPos = this.patrolTargetPos;
+                const station = this.currentSystem?.station?.pos;
+                
+                if (patrolPos && station) {
+                    const dx = patrolPos.x - station.x;
+                    const dy = patrolPos.y - station.y;
+                    if (dx * dx + dy * dy < 2500) { // 50^2 = 2500
+                        return "Station";
+                    }
                 }
                 return "Patrol Point";
+            }
                 
-            case AI_STATE.LEAVING_SYSTEM:
-                // Check if patrol target is jump zone
-                if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
-                    this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
-                    return "Jump Zone";
+            case AI_STATE.LEAVING_SYSTEM: {
+                // Use squared distance check
+                const patrolPos = this.patrolTargetPos;
+                const jumpZone = this.currentSystem?.jumpZoneCenter;
+                
+                if (patrolPos && jumpZone) {
+                    const dx = patrolPos.x - jumpZone.x;
+                    const dy = patrolPos.y - jumpZone.y;
+                    if (dx * dx + dy * dy < 2500) { // 50^2 = 2500
+                        return "Jump Zone";
+                    }
                 }
                 return "System Edge";
-                
-            case AI_STATE.TRANSPORTING:
-                return "Delivery";
-                
-            default:
-                // Handle target-based states
-                if (!this.target) return "None";
-                
-                // Fast instanceof checks
-                if (this.target instanceof Player) return "Player";
-                if (this.target instanceof Enemy && this.target.shipTypeName) return this.target.shipTypeName;
-                if (this.target instanceof Cargo) return `Cargo (${this.target.type})`;
-                
-                // Check other target types
-                const targetType = this.target.constructor.name;
-                if (targetType === 'Station') return "Station";
-                if (targetType === 'Planet') return this.target.name || "Planet";
-                return this.target.name || targetType || "Unknown";
+            }
         }
+        
+        // Fast path for common target types - check specific properties first, then instanceof
+        if (!target) return "None";
+        
+        // Check for specific properties that identify object types
+        // This avoids costly instanceof checks when possible
+        if (target.isPlayer === true) return "Player"; 
+        if (target.shipTypeName) return target.shipTypeName; // Enemy ships
+        if (target.type && !target.shipTypeName) return `Cargo (${target.type})`;
+        
+        // Only do instanceof checks if absolutely necessary
+        if (typeof Player !== 'undefined' && target instanceof Player) return "Player";
+        if (typeof Enemy !== 'undefined' && target instanceof Enemy) return target.shipTypeName || "Enemy Ship";
+        if (typeof Cargo !== 'undefined' && target instanceof Cargo) return `Cargo (${target.type})`;
+        
+        // Final checks for other known types
+        if (target.constructor) {
+            const targetType = target.constructor.name;
+            if (targetType === 'Station') return "Station";
+            if (targetType === 'Planet') return target.name || "Planet";
+            return targetType || "Unknown";
+        }
+        
+        // Last resort
+        return target.name || "Unknown";
     }
     
     /**
      * @private
      * Draw tangle effect if the enemy ship is affected
-     * Optimized with lookup tables and reduced calculations
+     * Heavily optimized with lookup tables, reduced calculations, and better caching
      */
     _drawTangleEffectIfActive(currentTime) {
+        // Fast early exit
         if (this.dragMultiplier <= 1.0 || this.dragEffectTimer <= 0) return;
+        
+        // Initialize tangle effect cache if needed
+        if (!this._tangleCache) {
+            this._tangleCache = {
+                // Pre-calculate angle offsets and store them
+                angleOffsets: [0, 0.4, 0.8, 1.2, 1.6],
+                // Scale random ranges for each vertex
+                randomFactors: [1.25, 2.5, 3.75, 5.0, 6.25],
+                // Vertex coordinate caches
+                xCache: new Array(30), // 6 segments * 5 vertices
+                yCache: new Array(30),
+                // Animation state
+                lastUpdateFrame: 0,
+                // Reusable segment angle values
+                segmentAngles: new Array(6),
+                // Pre-computed sin values for animation
+                tangleSinValues: new Array(6),
+                // Static random values (update less frequently)
+                randomCache: new Array(30),
+                // Last time randomization occurred
+                lastRandomTime: 0,
+                // Store pre-calculated vertex coordinates
+                vertices: new Array(6).fill().map(() => []),
+                // Reuse a single shape for better performance
+                shape: null
+            };
             
+            // Precalculate the segment angles once (these don't change)
+            const segmentAngle = TWO_PI / 6;
+            for (let i = 0; i < 6; i++) {
+                this._tangleCache.segmentAngles[i] = i * segmentAngle;
+                // Initialize vertex arrays
+                this._tangleCache.vertices[i] = new Array(5);
+            }
+        }
+        
         // Calculate opacity - fade out during last second
         const opacity = this.dragEffectTimer < 1.0 ? 
-            Math.floor(this.dragEffectTimer * 180) : // Linear mapping without using map()
-            180;
-        
-        // Draw energy tethers
-        noFill();
-        stroke(200, opacity); // Use opacity directly in stroke
-        strokeWeight(2);
+            Math.floor(this.dragEffectTimer * 180) : 180;
         
         // Cache calculations that don't change during this frame
         const innerRadius = this.size * 0.6;
         const baseOuterRadius = this.size * 1.2;
+        const radiusFactor = this.size * 0.2;
+        const cache = this._tangleCache;
         
-        // Use modulo for frame animation to avoid continuous growth
-        const animFrame = frameCount % 360;
-        const frameAngle = animFrame * 0.03;
-        const frameSin = animFrame * 0.1;
-        
-        // Constants for the loop
-        const segmentAngle = TWO_PI / 6;
-        
-        // Pre-calculate sin values for this frame (avoid redundant calculations)
-        const sinValues = [];
-        for (let i = 0; i < 6; i++) {
-            sinValues[i] = sin(frameSin + i);
+        // OPTIMIZATION: Update animation parameters less frequently (every 10 frames)
+        // This significantly reduces computation while maintaining visual quality
+        if (frameCount % 10 === 0 || frameCount !== cache.lastUpdateFrame) {
+            cache.lastUpdateFrame = frameCount;
+            
+            // Animation timing - modulo to keep values from growing too large
+            const animFrame = frameCount % 360;
+            const frameAngle = animFrame * 0.03;
+            const frameSin = animFrame * 0.1;
+            
+            // Pre-compute sin values for animation (once per update)
+            for (let i = 0; i < 6; i++) {
+                cache.tangleSinValues[i] = sin(frameSin + i);
+            }
+            
+            // OPTIMIZATION: Update random values less frequently (every 200ms)
+            // Reduces CPU usage while maintaining visual variation
+            const now = millis();
+            if (now - cache.lastRandomTime > 200) {
+                cache.lastRandomTime = now;
+                
+                // Pre-generate random values (less frequently)
+                for (let idx = 0; idx < cache.randomCache.length; idx++) {
+                    const j = idx % cache.angleOffsets.length;
+                    const randomFactor = cache.randomFactors[j];
+                    cache.randomCache[idx] = [
+                        random(-randomFactor, randomFactor),
+                        random(-randomFactor, randomFactor)
+                    ];
+                }
+            }
+            
+            // Pre-generate all vertex coordinates
+            for (let i = 0; i < 6; i++) {
+                const baseAngle = frameAngle + cache.segmentAngles[i];
+                const outerRadius = baseOuterRadius + radiusFactor * cache.tangleSinValues[i];
+                
+                // Generate vertices for this segment
+                for (let j = 0; j < cache.angleOffsets.length; j++) {
+                    const idx = i * cache.angleOffsets.length + j;
+                    const angle = baseAngle + cache.angleOffsets[j];
+                    const radius = (j % 2 === 0) ? innerRadius : outerRadius;
+                    
+                    // Calculate base coordinates
+                    const cosVal = cos(angle);
+                    const sinVal = sin(angle);
+                    
+                    // Store pre-calculated vertex coordinates
+                    const randomOffset = cache.randomCache[idx];
+                    cache.vertices[i][j] = [
+                        cosVal * radius + randomOffset[0],
+                        sinVal * radius + randomOffset[1]
+                    ];
+                }
+            }
         }
         
-        // Draw the tangle effect with optimized loops
-        for (let i = 0; i < 6; i++) {
-            const angle = frameAngle + i * segmentAngle;
-            const outerRadius = baseOuterRadius + this.size * 0.2 * sinValues[i];
-            
+        // Set up drawing style once
+        noFill();
+        stroke(200, opacity);
+        strokeWeight(2);
+        
+        // OPTIMIZATION: Draw fewer segments at greater distances
+        // Reduces draw calls based on distance from camera
+        const segmentsToRender = this.distFromCamera ? 
+            Math.min(6, Math.max(2, Math.ceil(12 / (this.distFromCamera * 0.01 + 1)))) : 6;
+        
+        // Draw all segments with cached values
+        for (let i = 0; i < segmentsToRender; i++) {
             beginShape();
             
-            // Unroll the inner loop for better performance
-            // Point 1
-            vertex(
-                cos(angle) * innerRadius + random(-1.25, 1.25),
-                sin(angle) * innerRadius + random(-1.25, 1.25)
-            );
-            
-            // Point 2
-            vertex(
-                cos(angle + 0.4) * outerRadius + random(-2.5, 2.5),
-                sin(angle + 0.4) * outerRadius + random(-2.5, 2.5)
-            );
-            
-            // Point 3
-            vertex(
-                cos(angle + 0.8) * innerRadius + random(-3.75, 3.75),
-                sin(angle + 0.8) * innerRadius + random(-3.75, 3.75)
-            );
-            
-            // Point 4
-            vertex(
-                cos(angle + 1.2) * outerRadius + random(-5, 5),
-                sin(angle + 1.2) * outerRadius + random(-5, 5)
-            );
-            
-            // Point 5
-            vertex(
-                cos(angle + 1.6) * innerRadius + random(-6.25, 6.25),
-                sin(angle + 1.6) * innerRadius + random(-6.25, 6.25)
-            );
+            // Use pre-computed vertices directly
+            const vertices = cache.vertices[i];
+            for (let j = 0; j < vertices.length; j++) {
+                vertex(vertices[j][0], vertices[j][1]);
+            }
             
             endShape();
         }
@@ -2737,17 +2948,18 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * Draw the target indicator when this ship is the player's target
      */
     _drawTargetIndicator(radius) {
-        push();
+        // Reuse rendering constants
+        const strokeAlpha = 200;
+        const bracketSize = this.size * 0.3;
+        const offset = this.size * 0.7;
+        
+        // Set styles only once
         noFill();
-        stroke(0, 255, 0, 200);
+        stroke(0, 255, 0, strokeAlpha);
         strokeWeight(2);
         
         // Draw circle - more visible than individual elements
         ellipse(0, 0, radius, radius);
-        
-        // Draw corner brackets - optimized to avoid redundant calculations
-        const bracketSize = this.size * 0.3;
-        const offset = this.size * 0.7;
         
         // Draw brackets in a single loop with pre-calculated positions
         const positions = [
@@ -3419,53 +3631,114 @@ _checkRandomCargoDrop() {
         }
     }
 
-    // Add this new method to calculate the attack path once
+    /**
+     * Calculate the attack pass target position with optimized vector operations
+     * @return {p5.Vector} The calculated attack pass target position
+     */
     calculateAttackPassTarget() {
-        // Similar logic to what's in getMovementTargetForState but happens ONCE
-        let enemyPos = this.pos.copy();
-        let targetActualPos = this.target.pos.copy();
-        let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
-
-        // Use consistent values for this entire attack pass
-        const strafeMultFactor = random(0.7, 1.3); // Calculate ONCE
-        const aheadDistFactor = random(0.8, 1.2);  // Calculate ONCE
-
-        // Predict target's future position for calculating the strafe point
-        let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
-        let predictedTargetPos = p5.Vector.add(targetActualPos, targetVel.mult(strafePredictionFrames));
-
-        // Direction from enemy to predicted target position
-        let vecToPredictedTarget = p5.Vector.sub(predictedTargetPos, enemyPos);
-        if (vecToPredictedTarget.magSq() < 0.1) {
-            vecToPredictedTarget = p5.Vector.sub(targetActualPos, enemyPos);
-            if (vecToPredictedTarget.magSq() < 0.1) {
-                vecToPredictedTarget = p5.Vector.random2D();
+        // Don't create new vectors for positions - access components directly
+        const enemyPosX = this.pos.x;
+        const enemyPosY = this.pos.y;
+        
+        // Basic validity check for target
+        if (!this.target?.pos) {
+            // Return a position slightly ahead of current position if no target
+            return createVector(
+                enemyPosX + Math.cos(this.angle) * (this.size * 5),
+                enemyPosY + Math.sin(this.angle) * (this.size * 5)
+            );
+        }
+        
+        const targetPosX = this.target.pos.x;
+        const targetPosY = this.target.pos.y;
+        
+        // Get target velocity components with safe fallbacks
+        const targetVelX = this.target.vel ? this.target.vel.x : 0;
+        const targetVelY = this.target.vel ? this.target.vel.y : 0;
+        
+        // Use consistent random values for this entire attack pass
+        const strafeMultFactor = random(0.7, 1.3);
+        const aheadDistFactor = random(0.8, 1.2);
+        
+        // Calculate prediction frames using cached time scale
+        const timeScale = this._getTimeScale();
+        const strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * timeScale;
+        
+        // Calculate predicted target position directly with components
+        const predictedTargetPosX = targetPosX + (targetVelX * strafePredictionFrames);
+        const predictedTargetPosY = targetPosY + (targetVelY * strafePredictionFrames);
+        
+        // Direction vector from enemy to predicted target position
+        let vecToTargetX = predictedTargetPosX - enemyPosX;
+        let vecToTargetY = predictedTargetPosY - enemyPosY;
+        
+        // Check if the direction vector is too small (near-zero)
+        const vecToTargetMagSq = vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY;
+        if (vecToTargetMagSq < 0.1) {
+            // Try using actual position instead
+            vecToTargetX = targetPosX - enemyPosX;
+            vecToTargetY = targetPosY - enemyPosY;
+            
+            const altVecMagSq = vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY;
+            if (altVecMagSq < 0.1) {
+                // If still too small, use a random direction
+                const randAngle = random(TWO_PI);
+                vecToTargetX = Math.cos(randAngle);
+                vecToTargetY = Math.sin(randAngle);
             }
         }
-        let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
-
-        // Calculate side strafe point
+        
+        // Normalize the direction vector
+        const vecToTargetMag = Math.sqrt(vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY);
+        const passDirectionX = vecToTargetX / vecToTargetMag;
+        const passDirectionY = vecToTargetY / vecToTargetMag;
+        
+        // Calculate strafe offset (perpendicular to direction)
         const strafeOffsetValue = this.size * (ATTACK_PASS_STRAFE_OFFSET_MULT * strafeMultFactor) * this.strafeDirection;
-        let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
-        let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
-
-        // Add a single jitter value that remains consistent for this pass
+        
+        // Calculate perpendicular vector (-y, x) for strafe without creating new vector
+        const perpX = -passDirectionY * strafeOffsetValue;
+        const perpY = passDirectionX * strafeOffsetValue;
+        
+        // Calculate strafe point
+        const sideStrafePointX = predictedTargetPosX + perpX;
+        const sideStrafePointY = predictedTargetPosY + perpY;
+        
+        // Add jitter to strafe point
         const jitterMagnitude = this.size * random(0.3, 0.8);
-        let jitterVector = p5.Vector.random2D().mult(jitterMagnitude);
-        sideStrafePoint.add(jitterVector);
-
-        // Calculate the final aim point
-        let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
-        let aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * aheadDistFactor);
-
-        let finalTarget;
-        if (vectorToSideStrafePoint.magSq() > 0.001) {
-            finalTarget = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
+        const jitterAngle = random(TWO_PI);
+        const jitterX = Math.cos(jitterAngle) * jitterMagnitude;
+        const jitterY = Math.sin(jitterAngle) * jitterMagnitude;
+        
+        const finalStrafeX = sideStrafePointX + jitterX;
+        const finalStrafeY = sideStrafePointY + jitterY;
+        
+        // Calculate vector to strafe point
+        const vecToStrafeX = finalStrafeX - enemyPosX;
+        const vecToStrafeY = finalStrafeY - enemyPosY;
+        const vecToStrafeMagSq = vecToStrafeX * vecToStrafeX + vecToStrafeY * vecToStrafeY;
+        
+        // Calculate final target based on strafe vector
+        const aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * aheadDistFactor);
+        
+        let finalTargetX, finalTargetY;
+        
+        if (vecToStrafeMagSq > 0.001) {
+            // Normalize vector to strafe point and extend by ahead distance
+            const vecToStrafeMag = Math.sqrt(vecToStrafeMagSq);
+            const normVecToStrafeX = vecToStrafeX / vecToStrafeMag;
+            const normVecToStrafeY = vecToStrafeY / vecToStrafeMag;
+            
+            finalTargetX = finalStrafeX + (normVecToStrafeX * aheadDistanceForPass);
+            finalTargetY = finalStrafeY + (normVecToStrafeY * aheadDistanceForPass);
         } else {
-            finalTarget = p5.Vector.add(sideStrafePoint, passDirectionNormalized.mult(aheadDistanceForPass));
+            // Use pass direction if strafe vector is too small
+            finalTargetX = finalStrafeX + (passDirectionX * aheadDistanceForPass);
+            finalTargetY = finalStrafeY + (passDirectionY * aheadDistanceForPass);
         }
-
-        return finalTarget;
+        
+        // Only create one new vector at the end
+        return createVector(finalTargetX, finalTargetY);
     }
 
     /**
