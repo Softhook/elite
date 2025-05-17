@@ -12,6 +12,16 @@ const WEAPON_TYPE = {
     TANGLE: 'tangle'
 };
 
+// --- Helper functions ---
+function getWeaponProp(weapon, prop, fallback) {
+    return (weapon && weapon[prop] !== undefined) ? weapon[prop] : fallback;
+}
+function playWorldSound(type, owner) {
+    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        soundManager.playWorldSound(type, owner.pos.x, owner.pos.y, player.pos);
+    }
+}
+
 class WeaponSystem {
     // Initialize all object pools
     static init(initialPoolSize = 100) {
@@ -279,6 +289,41 @@ static fireForce(owner, system) {
     }
 
     /** 
+     * Get or create a vector, reusing cached instance if available
+     * @param {string} cacheProp - Property name for cached vector
+     * @param {number} x - Initial x value (optional)
+     * @param {number} y - Initial y value (optional)
+     * @returns {p5.Vector} The vector instance
+     */
+    static getOrCreateVector(cacheProp, x = 0, y = 0) {
+        if (!this[cacheProp]) this[cacheProp] = createVector(x, y);
+        else this[cacheProp].set(x, y);
+        return this[cacheProp];
+    }
+
+    /** 
+     * Get a pooled object or create a new instance if pool is not available
+     * @param {string} type - The type of object to get
+     * @param {Array} args - Arguments to pass to constructor/reset
+     * @returns {Object} The pooled or newly created object
+     */
+    static getPooledOrNew(type, ...args) {
+        switch(type) {
+            case 'projectile':
+                return this.projectilePool ? this.projectilePool.get(...args) : new Projectile(...args);
+            case 'explosion':
+                return this.explosionPool ? this.explosionPool.get(...args) : new Explosion(...args);
+            case 'beam':
+                return this.beamPool ? this.beamPool.get(...args) : new Beam(...args);
+            case 'forceWave':
+                return this.forceWavePool ? this.forceWavePool.get(...args) : new ForceWave(...args);
+            default:
+                console.warn(`Unknown pooled type: ${type}`);
+                return null;
+        }
+    }
+
+    /** 
      * Fire a single projectile, using object pool if available
      * @param {Object} owner - Entity firing the weapon
      * @param {Object} system - Current star system
@@ -288,83 +333,28 @@ static fireForce(owner, system) {
         if (!owner?.currentWeapon) return;
         
         const weapon = owner.currentWeapon;
-        const speed = weapon.speed || 8; // Use defined speed with fallback
-        let proj;
-        
-        // Use the speed variable instead of hardcoded 8
-        if (this.projectilePool) {
-            proj = this.projectilePool.get(
-                owner.pos.x, owner.pos.y, angle, owner,
-                speed, weapon.damage, weapon.color
-            );
-        }
-        
-        if (!proj) {
-            proj = new Projectile(
-                owner.pos.x, owner.pos.y, angle, owner,
-                speed, weapon.damage, weapon.color
-            );
-        }
-            
-        // Add reference to system for proper cleanup
+        const speed = getWeaponProp(weapon, 'speed', 8);
+        const proj = this.getPooledOrNew('projectile', owner.pos.x, owner.pos.y, angle, owner, speed, weapon.damage, weapon.color);
         proj.system = system;
         system.addProjectile(proj);
         
-        // Play laser sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
-        }
+        playWorldSound('laser', owner);
     }
 
     static fireMissile(owner, system, angle, target) {
-        if (!owner?.currentWeapon) {
-            console.warn("fireMissile: Owner has no currentWeapon.");
-            return;
-        }
+        if (!owner?.currentWeapon) return;
         
         // Log missile firing attempt with owner information
         console.log(`Firing missile from ${owner.constructor.name} ${owner.shipTypeName || 'unknown'} at target:`, target ? target.constructor.name : 'no target');
         
-        const weapon = owner.currentWeapon;
-        let proj;
-
-        // Get missile-specific properties from the weapon definition
-        const speed = weapon.speed || 4; // Missile's own travel speed
-        const damage = weapon.damage;
-        const color = weapon.color;
-        const lifespan = weapon.lifespan || 180; // Missile's lifespan
-        const turnRate = weapon.turnRate || 0.05; // Missile's turn rate
-
-        if (this.projectilePool) {
-            // Pass all necessary parameters including target, lifespan, turnRate, and missileSpeed
-            proj = this.projectilePool.get(
-                owner.pos.x, owner.pos.y, angle, owner,
-                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
-            );
-        }
-
-        if (!proj) {
-            proj = new Projectile(
-                owner.pos.x, owner.pos.y, angle, owner,
-                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
-            );
-        }
-        
-        // Ensure the missile has a target reference (important for tracking)
-        if (proj && target) {
-            proj.target = target;
-            console.log(`Missile projectile created with target:`, target.constructor.name);
-        } else if (proj) {
-            console.log(`WARNING: Missile created without target!`);
-        }
-
+        const w = owner.currentWeapon;
+        const args = [owner.pos.x, owner.pos.y, angle, owner, getWeaponProp(w, 'speed', 4), w.damage, w.color, w.type, target, getWeaponProp(w, 'lifespan', 180), getWeaponProp(w, 'turnRate', 0.05), getWeaponProp(w, 'speed', 4)];
+        const proj = this.getPooledOrNew('projectile', ...args);
+        if (proj && target) proj.target = target;
         proj.system = system;
         system.addProjectile(proj);
-
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            // Consider adding a specific 'missileLaunch' sound
-            soundManager.playWorldSound('missileLaunch', owner.pos.x, owner.pos.y, player.pos);
-        }
+        
+        playWorldSound('missileLaunch', owner);
     }
 
 
@@ -379,15 +369,10 @@ static fireForce(owner, system) {
         if (count < 1 || !owner || !system) return;
         
         // Calculate appropriate spread based on count
-        const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
-        const spread = spreadMap[count] || 0.3;
+        const spread = {2:0.18,3:0.3,4:0.4,5:0.2}[count] || 0.3;
+        const start = -spread / 2, step = count > 1 ? spread / (count - 1) : 0;
         
-        const start = -spread / 2;
-        const step = count > 1 ? spread / (count - 1) : 0;
-        
-        for (let i = 0; i < count; i++) {
-            this.fireProjectile(owner, system, angle + start + i * step);
-        }
+        for (let i = 0; i < count; i++) this.fireProjectile(owner, system, angle + start + i * step);
     }
 
     /** 
@@ -400,51 +385,19 @@ static fireForce(owner, system) {
     static fireStraight(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system || !owner.currentWeapon) return;
  
-        // Initialize perpendicular direction vector if not exists
-        if (!this._perpDir) {
-            this._perpDir = createVector(0, 0);
-        }
-        
-        // Offset projectiles perpendicular to angle
-        const spacing = 12; // pixels between projectiles
-        const mid = (count - 1) / 2;
-        const perpAngle = angle + HALF_PI;
-        
-        // Set the vector direction without creating a new one
-        this._perpDir.set(cos(perpAngle), sin(perpAngle));
-        
-        const weapon = owner.currentWeapon;
-        const speed = weapon.speed || 8; // Use defined speed with fallback
+        const spacing = 12, mid = (count - 1) / 2, perpAngle = angle + HALF_PI;
+        const perpDir = this.getOrCreateVector('_perpDir', cos(perpAngle), sin(perpAngle));
+        const weapon = owner.currentWeapon, speed = getWeaponProp(weapon, 'speed', 8);
         
         for (let i = 0; i < count; i++) {
             let offset = (i - mid) * spacing;
-            // Calculate the position with minimal vector allocations
-            let x = owner.pos.x + this._perpDir.x * offset;
-            let y = owner.pos.y + this._perpDir.y * offset;
-            
-            // FIXED: Create projectile at the correct offset position
-            let proj;
-            if (this.projectilePool) {
-                proj = this.projectilePool.get(
-                    x, y, angle, owner,
-                    speed, weapon.damage, weapon.color
-                );
-            } else {
-                proj = new Projectile(
-                    x, y, angle, owner,
-                    speed, weapon.damage, weapon.color
-                );
-            }
-            
-            // Add reference to system for proper cleanup
+            let x = owner.pos.x + perpDir.x * offset, y = owner.pos.y + perpDir.y * offset;
+            const proj = this.getPooledOrNew('projectile', x, y, angle, owner, speed, weapon.damage, weapon.color);
             proj.system = system;
             system.addProjectile(proj);
         }
         
-        // Play sound once for all projectiles
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
-        }
+        playWorldSound('laser', owner);
     }
 
     /** 
@@ -466,13 +419,9 @@ static fireForce(owner, system) {
         const beamLength = 1200;
         
         // Reuse vectors to avoid garbage collection
-        if (!this._beamStart) {
-            this._beamStart = createVector(0, 0);
-            this._beamDir = createVector(0, 0);
-            this._beamEnd = createVector(0, 0);
-        }
-        
-        this._beamStart.set(owner.pos.x, owner.pos.y);
+        const beamStart = this.getOrCreateVector('_beamStart', owner.pos.x, owner.pos.y);
+        const beamDir = this.getOrCreateVector('_beamDir', cos(angle), sin(angle));
+        const beamEnd = this.getOrCreateVector('_beamEnd');
         
         // Handle player aiming at mouse cursor
         if (owner instanceof Player) {
@@ -482,50 +431,41 @@ static fireForce(owner, system) {
             
             // Calculate angle to mouse cursor
             angle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
+            beamDir.set(cos(angle), sin(angle));
         }
         
         // Calculate beam direction and endpoint
-        this._beamDir.set(cos(angle), sin(angle));
-        if (isNaN(this._beamDir.x) || isNaN(this._beamDir.y)) {
-            console.error("Invalid beam direction from angle:", angle);
-            return;
-        }
-        // Perform hit detection
-        const hit = this.performBeamHitDetection(owner, system, this._beamStart, this._beamDir, beamLength);
-        // Set endpoint to hit point if there was a hit, otherwise full length
+        const hit = this.performBeamHitDetection(owner, system, beamStart, beamDir, beamLength);
         if (hit && hit.point && hit.target) {
             // If the target has a shield, draw to the edge of the shield
             if (typeof hit.target.shield === 'number' && hit.target.shield > 0 && hit.target.pos) {
                 // Calculate direction from beam start to target center
-                const dirToTarget = p5.Vector.sub(hit.target.pos, this._beamStart).normalize();
+                const dirToTarget = p5.Vector.sub(hit.target.pos, beamStart).normalize();
                 // Use the same shield radius as in collision: target.size * 0.6
                 const shieldRadius = (hit.target.size || 20) * 0.6;
                 // Set endpoint to the edge of the shield
-                this._beamEnd.set(
+                beamEnd.set(
                     hit.target.pos.x - dirToTarget.x * shieldRadius,
                     hit.target.pos.y - dirToTarget.y * shieldRadius
                 );
             } else {
-                this._beamEnd.set(hit.point.x, hit.point.y);
+                beamEnd.set(hit.point.x, hit.point.y);
             }
         } else {
-            this._beamEnd.set(
-                this._beamStart.x + this._beamDir.x * beamLength,
-                this._beamStart.y + this._beamDir.y * beamLength
-            );
+            beamEnd.set(beamStart.x + beamDir.x * beamLength, beamStart.y + beamDir.y * beamLength);
         }
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
-                start: createVector(this._beamStart.x, this._beamStart.y),
-                end: createVector(this._beamEnd.x, this._beamEnd.y),
+                start: createVector(beamStart.x, beamStart.y),
+                end: createVector(beamEnd.x, beamEnd.y),
                 color: owner.currentWeapon?.color || [255, 0, 0],
                 time: millis(),
                 hit: !!(hit && hit.target)
             };
         } else {
-            owner.lastBeam.start.set(this._beamStart.x, this._beamStart.y);
-            owner.lastBeam.end.set(this._beamEnd.x, this._beamEnd.y);
+            owner.lastBeam.start.set(beamStart.x, beamStart.y);
+            owner.lastBeam.end.set(beamEnd.x, beamEnd.y);
             owner.lastBeam.color = owner.currentWeapon?.color || [255, 0, 0];
             owner.lastBeam.time = millis();
             owner.lastBeam.hit = !!(hit && hit.target);
@@ -536,17 +476,14 @@ static fireForce(owner, system) {
             this.handleHitEffects(
                 hit.target,
                 hit.point,
-                owner.currentWeapon?.damage || 10,
+                getWeaponProp(owner.currentWeapon, 'damage', 10),
                 owner,
                 system,
                 owner.currentWeapon?.color || [255, 0, 0]
             );
         }
 
-        // Play sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('beam', owner.pos.x, owner.pos.y, player.pos);
-        }
+        playWorldSound('beam', owner);
     }
     
     /**
@@ -561,72 +498,79 @@ static fireForce(owner, system) {
     static performBeamHitDetection(owner, system, beamStart, beamDir, beamLength) {
         let hitTarget = null;
         let minDist = Infinity;
-        if (!this._toTarget) {
-            this._toTarget = createVector(0, 0);
-        }
+        // Reuse static vectors for temp calculations
+        if (!this._toTarget) this._toTarget = createVector(0, 0);
+        if (!this._hitPoint) this._hitPoint = createVector(0, 0);
+        // Cache references
+        const isPlayer = owner instanceof Player;
+        const isEnemy = owner instanceof Enemy;
+        const enemies = system?.enemies;
+        const player = system?.player;
+        const asteroids = system?.asteroids;
+        const enemyShieldMult = 0.6;
+        const asteroidShieldMult = 0.6;
         // Check enemies if owner is Player
-        if (owner instanceof Player && system?.enemies) {
-            for (let enemy of system.enemies) {
-                if (enemy === owner) continue; // Skip self
-                if (enemy.isDestroyed && enemy.isDestroyed()) continue;
+        if (isPlayer && enemies && enemies.length) {
+            for (let i = 0, len = enemies.length; i < len; i++) {
+                const enemy = enemies[i];
+                if (enemy === owner || (enemy.isDestroyed && enemy.isDestroyed()) || !enemy?.pos) continue;
                 this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
                 const projLen = this._toTarget.dot(beamDir);
                 if (projLen < 0 || projLen > beamLength) continue;
                 const closestX = beamStart.x + beamDir.x * projLen;
                 const closestY = beamStart.y + beamDir.y * projLen;
+                const size = enemy.size * enemyShieldMult;
                 const distToLine = dist(enemy.pos.x, enemy.pos.y, closestX, closestY);
-                if (distToLine < enemy.size * 0.6 && projLen < minDist) {
+                if (distToLine < size && projLen < minDist) {
                     minDist = projLen;
                     hitTarget = enemy;
-                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
                     this._hitPoint.set(closestX, closestY);
+                    if (projLen === 0) break; // Can't get closer
                 }
             }
         }
         // Check player if owner is Enemy
-        if (owner instanceof Enemy && system?.player?.pos) {
-            const player = system.player;
-            if (player !== owner) { // Skip self
-                this._toTarget.set(player.pos.x - beamStart.x, player.pos.y - beamStart.y);
-                const projLen = this._toTarget.dot(beamDir);
-                if (projLen >= 0 && projLen <= beamLength) {
-                    const closestX = beamStart.x + beamDir.x * projLen;
-                    const closestY = beamStart.y + beamDir.y * projLen;
-                    const distToLine = dist(player.pos.x, player.pos.y, closestX, closestY);
-                    if (distToLine < player.size * 0.6 && projLen < minDist) {
-                        minDist = projLen;
-                        hitTarget = player;
-                        if (!this._hitPoint) this._hitPoint = createVector(0, 0);
-                        this._hitPoint.set(closestX, closestY);
-                    }
+        if (isEnemy && player?.pos && player !== owner) {
+            this._toTarget.set(player.pos.x - beamStart.x, player.pos.y - beamStart.y);
+            const projLen = this._toTarget.dot(beamDir);
+            if (projLen >= 0 && projLen <= beamLength) {
+                const closestX = beamStart.x + beamDir.x * projLen;
+                const closestY = beamStart.y + beamDir.y * projLen;
+                const size = player.size * enemyShieldMult;
+                const distToLine = dist(player.pos.x, player.pos.y, closestX, closestY);
+                if (distToLine < size && projLen < minDist) {
+                    minDist = projLen;
+                    hitTarget = player;
+                    this._hitPoint.set(closestX, closestY);
+                    if (projLen === 0) return { target: hitTarget, point: this._hitPoint, length: minDist };
                 }
             }
         }
         // Check asteroids for beam collision
-        if (system?.asteroids && Array.isArray(system.asteroids)) {
-            for (let asteroid of system.asteroids) {
-                if (!asteroid?.pos || asteroid.destroyed || asteroid === owner) continue; // Skip self
+        if (asteroids && Array.isArray(asteroids)) {
+            for (let i = 0, len = asteroids.length; i < len; i++) {
+                const asteroid = asteroids[i];
+                if (!asteroid?.pos || asteroid.destroyed || asteroid === owner) continue;
                 this._toTarget.set(asteroid.pos.x - beamStart.x, asteroid.pos.y - beamStart.y);
                 const projLen = this._toTarget.dot(beamDir);
                 if (projLen < 0 || projLen > beamLength) continue;
                 const closestX = beamStart.x + beamDir.x * projLen;
                 const closestY = beamStart.y + beamDir.y * projLen;
+                const size = (asteroid.size || 20) * asteroidShieldMult;
                 const distToLine = dist(asteroid.pos.x, asteroid.pos.y, closestX, closestY);
-                if (distToLine < (asteroid.size || 20) * 0.6 && projLen < minDist) {
+                if (distToLine < size && projLen < minDist) {
                     minDist = projLen;
                     hitTarget = asteroid;
-                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
                     this._hitPoint.set(closestX, closestY);
+                    if (projLen === 0) break;
                 }
             }
         }
-        // If a hit was found, set the beam length to stop at the hit point
-        if (hitTarget && this._hitPoint) {
-            // Optionally, you could return the new beam length as well
+        if (hitTarget) {
             return {
                 target: hitTarget,
                 point: this._hitPoint,
-                length: minDist // For drawing the beam only up to the hit
+                length: minDist
             };
         }
         return {
@@ -681,41 +625,14 @@ static fireForce(owner, system) {
 static fireTangle(owner, system, angle) {
     if (!owner?.currentWeapon) return;
     
-    const weapon = owner.currentWeapon;
-    const speed = weapon.speed || 6; // Slower than regular projectiles
-    const dragDuration = weapon.dragDuration || 5.0;
-    const dragMultiplier = weapon.dragMultiplier || 10.0;
-    
-    let proj;
-    
-    // Create projectile with tangle properties
-    if (this.projectilePool) {
-        proj = this.projectilePool.get(
-            owner.pos.x, owner.pos.y, angle, owner,
-            speed, weapon.damage, weapon.color, 
-            "tangle", null, 60, 0, 0, 
-            dragDuration, dragMultiplier
-        );
-    } else {
-        proj = new Projectile(
-            owner.pos.x, owner.pos.y, angle, owner,
-            speed, weapon.damage, weapon.color, 
-            "tangle", null, 60, 0, 0,
-            dragDuration, dragMultiplier
-        );
-    }
-    
-    // Make projectile bigger
-    proj.size = weapon.projectileSize || 7;
-    
-    // Add reference to system for proper cleanup
+    const w = owner.currentWeapon;
+    const args = [owner.pos.x, owner.pos.y, angle, owner, getWeaponProp(w, 'speed', 6), w.damage, w.color, "tangle", null, 60, 0, 0, getWeaponProp(w, 'dragDuration', 5.0), getWeaponProp(w, 'dragMultiplier', 10.0)];
+    const proj = this.getPooledOrNew('projectile', ...args);
+    proj.size = getWeaponProp(w, 'projectileSize', 7);
     proj.system = system;
     system.addProjectile(proj);
     
-    // Play tangle sound
-    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
-    }
+    playWorldSound('laser', owner);
 }
 
     /** 
