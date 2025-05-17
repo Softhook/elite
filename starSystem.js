@@ -1097,7 +1097,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
     addExplosion(x, y, size, color) {
         // Use object pooling if WeaponSystem is available
         if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
-            console.log(`Adding explosion at (${x.toFixed(1)},${y.toFixed(1)}) with size ${size}, using object pooling`);
+            //console.log(`Adding explosion at (${x.toFixed(1)},${y.toFixed(1)}) with size ${size}, using object pooling`);
             const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color);
             
             if (explosion) {

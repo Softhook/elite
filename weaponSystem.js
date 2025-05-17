@@ -792,6 +792,17 @@ static fireTangle(owner, system, angle) {
             
             system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
         }
+        // Missile explosion effect
+        const isMissile = owner?.currentWeapon?.type === WEAPON_TYPE.MISSILE || owner?.type === WEAPON_TYPE.MISSILE;
+        if (isMissile && hitPoint && system && typeof system.addExplosion === 'function') {
+            const explosionSize = owner?.currentWeapon?.explosionSize || 18;
+            // Defensive color fallback: ensure color is array or p5.Color
+            let explosionColor = color;
+            if (!explosionColor || typeof explosionColor === 'number' || (Array.isArray(explosionColor) && explosionColor.length < 3)) {
+                explosionColor = [255, 180, 80];
+            }
+            system.addExplosion(hitPoint.x, hitPoint.y, explosionSize, explosionColor);
+        }
     }
     
     /**
