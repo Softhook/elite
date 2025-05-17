@@ -547,99 +547,63 @@ static fireForce(owner, system) {
     static performBeamHitDetection(owner, system, beamStart, beamDir, beamLength) {
         let hitTarget = null;
         let minDist = Infinity;
-        
         // Reuse vectors for calculations
         if (!this._toTarget) {
             this._toTarget = createVector(0, 0);
-            this._closestPoint = createVector(0, 0);
-            this._hitPoint = createVector(0, 0);
         }
-        
         // Check enemies if owner is Player
         if (owner instanceof Player && system?.enemies) {
             for (let enemy of system.enemies) {
-                if (!enemy?.pos || enemy === owner) continue;
-                
-                // Calculate vector from beam start to enemy
+                if (enemy.isDestroyed && enemy.isDestroyed()) continue;
                 this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
-                let projLength = this._toTarget.dot(beamDir);
-                
-                if (projLength > 0 && projLength < beamLength) {
-                    // Calculate closest point on beam to enemy
-                    this._closestPoint.set(
-                        beamStart.x + beamDir.x * projLength,
-                        beamStart.y + beamDir.y * projLength
-                    );
-                    
-                    // Calculate distance from enemy to closest point on beam
-                    let distToBeam = dist(enemy.pos.x, enemy.pos.y, 
-                                          this._closestPoint.x, this._closestPoint.y);
-                    
-                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
-                        minDist = projLength;
-                        hitTarget = enemy;
-                        this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
-                    }
+                const projLen = this._toTarget.dot(beamDir);
+                if (projLen < 0 || projLen > beamLength) continue;
+                const closestX = beamStart.x + beamDir.x * projLen;
+                const closestY = beamStart.y + beamDir.y * projLen;
+                const distToLine = dist(enemy.pos.x, enemy.pos.y, closestX, closestY);
+                if (distToLine < enemy.size * 0.6 && projLen < minDist) {
+                    minDist = projLen;
+                    hitTarget = enemy;
+                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
+                    this._hitPoint.set(closestX, closestY);
                 }
             }
         }
-        
         // Check player if owner is Enemy
         if (owner instanceof Enemy && system?.player?.pos) {
-            // Calculate vector from beam start to player
-            this._toTarget.set(system.player.pos.x - beamStart.x, 
-                              system.player.pos.y - beamStart.y);
-            let projLength = this._toTarget.dot(beamDir);
-            
-            if (projLength > 0 && projLength < beamLength) {
-                // Calculate closest point on beam to player
-                this._closestPoint.set(
-                    beamStart.x + beamDir.x * projLength,
-                    beamStart.y + beamDir.y * projLength
-                );
-                
-                // Calculate distance from player to closest point on beam
-                let distToBeam = dist(system.player.pos.x, system.player.pos.y, 
-                                      this._closestPoint.x, this._closestPoint.y);
-                
-                if (distToBeam < system.player.size / 2 && projLength < minDist) {
-                    minDist = projLength;
-                    hitTarget = system.player;
-                    this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
+            const player = system.player;
+            this._toTarget.set(player.pos.x - beamStart.x, player.pos.y - beamStart.y);
+            const projLen = this._toTarget.dot(beamDir);
+            if (projLen >= 0 && projLen <= beamLength) {
+                const closestX = beamStart.x + beamDir.x * projLen;
+                const closestY = beamStart.y + beamDir.y * projLen;
+                const distToLine = dist(player.pos.x, player.pos.y, closestX, closestY);
+                if (distToLine < player.size * 0.6 && projLen < minDist) {
+                    minDist = projLen;
+                    hitTarget = player;
+                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
+                    this._hitPoint.set(closestX, closestY);
                 }
             }
         }
-
-            // NEW: Check other enemies if owner is Enemy (for enemy-to-enemy combat)
-        if (owner instanceof Enemy && system?.enemies) {
-            for (let enemy of system.enemies) {
-                // Skip if not valid or is the same ship firing
-                if (!enemy?.pos || enemy === owner) continue;
-                
-                // Calculate vector from beam start to enemy
-                this._toTarget.set(enemy.pos.x - beamStart.x, enemy.pos.y - beamStart.y);
-                let projLength = this._toTarget.dot(beamDir);
-                
-                if (projLength > 0 && projLength < beamLength) {
-                    // Calculate closest point on beam to enemy
-                    this._closestPoint.set(
-                        beamStart.x + beamDir.x * projLength,
-                        beamStart.y + beamDir.y * projLength
-                    );
-                    
-                    // Calculate distance from enemy to closest point on beam
-                    let distToBeam = dist(enemy.pos.x, enemy.pos.y, 
-                                        this._closestPoint.x, this._closestPoint.y);
-                    
-                    if (distToBeam < enemy.size / 2 && projLength < minDist) {
-                        minDist = projLength;
-                        hitTarget = enemy;
-                        this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
-                    }
+        // NEW: Check asteroids for beam collision
+        if (system?.asteroids && Array.isArray(system.asteroids)) {
+            for (let asteroid of system.asteroids) {
+                if (!asteroid?.pos || asteroid.destroyed) continue;
+                this._toTarget.set(asteroid.pos.x - beamStart.x, asteroid.pos.y - beamStart.y);
+                const projLen = this._toTarget.dot(beamDir);
+                if (projLen < 0 || projLen > beamLength) continue;
+                const closestX = beamStart.x + beamDir.x * projLen;
+                const closestY = beamStart.y + beamDir.y * projLen;
+                const distToLine = dist(asteroid.pos.x, asteroid.pos.y, closestX, closestY);
+                if (distToLine < (asteroid.size || 20) * 0.6 && projLen < minDist) {
+                    minDist = projLen;
+                    hitTarget = asteroid;
+                    if (!this._hitPoint) this._hitPoint = createVector(0, 0);
+                    this._hitPoint.set(closestX, closestY);
                 }
             }
         }
-        
         return {
             target: hitTarget,
             point: hitTarget ? this._hitPoint : beamStart
