@@ -301,6 +301,11 @@ class Enemy {
         // Shield recharge delay
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
+        
+        // Initialize tangle effect properties
+        this.dragMultiplier = 1.0;   // Default - normal drag 
+        this.dragEffectTimer = 0;    // Countdown timer for tangle effect
+        this.tangleEffectTime = 0;   // Visual effect timestamp
 
         // --- Guard-specific properties ---
         this.principal = null; // The entity this guard is protecting
@@ -2595,46 +2600,9 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         fill(255);
         noStroke();
 
-        let targetLabel = "None"; // Default
-
-        // Determine target label - optimize the state checking with if/else chain
-        if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
-            if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
-                this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
-                targetLabel = "Station";
-            } else {
-                targetLabel = "Patrol Point";
-            }
-        } else if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
-            if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
-                this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
-                targetLabel = "Jump Zone";
-            } else {
-                targetLabel = "System Edge";
-            }
-        } else if (this.currentState === AI_STATE.TRANSPORTING) {
-            targetLabel = "Delivery";
-        } else if (this.target) { // Only check target properties if it exists
-            // Use optimized instanceof checks by type in order of likelihood
-            if (this.target instanceof Player) {
-                targetLabel = "Player";
-            } else if (this.target instanceof Enemy && this.target.shipTypeName) {
-                targetLabel = this.target.shipTypeName;
-            } else if (this.target instanceof Cargo) {
-                targetLabel = `Cargo (${this.target.type})`;
-            } else {
-                // Check object type via constructor for other targets
-                const targetType = this.target.constructor.name;
-                if (targetType === 'Station') {
-                    targetLabel = "Station";
-                } else if (targetType === 'Planet') {
-                    targetLabel = this.target.name || "Planet";
-                } else {
-                    targetLabel = this.target.name || targetType || "Unknown";
-                }
-            }
-        }
-
+        // Get target label with optimized determination logic
+        const targetLabel = this._getTargetLabel();
+        
         // Draw the label with ship name and target info
         const label = `${shipDef?.name}  Target: ${targetLabel}`;
         text(label, 0, -this.size / 2 - 15);
@@ -2643,43 +2611,124 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     
     /**
      * @private
+     * Determine target label with optimized branching
+     * @return {string} The appropriate target label
+     */
+    _getTargetLabel() {
+        // Fast path for most common states using switch
+        switch (this.currentState) {
+            case AI_STATE.PATROLLING:
+            case AI_STATE.NEAR_STATION:
+                // Check if patrol target is the station (common case)
+                if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
+                    this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
+                    return "Station";
+                }
+                return "Patrol Point";
+                
+            case AI_STATE.LEAVING_SYSTEM:
+                // Check if patrol target is jump zone
+                if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
+                    this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
+                    return "Jump Zone";
+                }
+                return "System Edge";
+                
+            case AI_STATE.TRANSPORTING:
+                return "Delivery";
+                
+            default:
+                // Handle target-based states
+                if (!this.target) return "None";
+                
+                // Fast instanceof checks
+                if (this.target instanceof Player) return "Player";
+                if (this.target instanceof Enemy && this.target.shipTypeName) return this.target.shipTypeName;
+                if (this.target instanceof Cargo) return `Cargo (${this.target.type})`;
+                
+                // Check other target types
+                const targetType = this.target.constructor.name;
+                if (targetType === 'Station') return "Station";
+                if (targetType === 'Planet') return this.target.name || "Planet";
+                return this.target.name || targetType || "Unknown";
+        }
+    }
+    
+    /**
+     * @private
      * Draw tangle effect if the enemy ship is affected
+     * Optimized with lookup tables and reduced calculations
      */
     _drawTangleEffectIfActive(currentTime) {
-        if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-            // Calculate opacity - fade out during last second
-            const opacity = this.dragEffectTimer < 1.0 ? 
-                map(this.dragEffectTimer, 0, 1.0, 0, 180) : 
-                180;
+        if (this.dragMultiplier <= 1.0 || this.dragEffectTimer <= 0) return;
             
-            // Draw energy tethers
-            noFill();
-            stroke(200, 180);
-            strokeWeight(2);
+        // Calculate opacity - fade out during last second
+        const opacity = this.dragEffectTimer < 1.0 ? 
+            Math.floor(this.dragEffectTimer * 180) : // Linear mapping without using map()
+            180;
+        
+        // Draw energy tethers
+        noFill();
+        stroke(200, opacity); // Use opacity directly in stroke
+        strokeWeight(2);
+        
+        // Cache calculations that don't change during this frame
+        const innerRadius = this.size * 0.6;
+        const baseOuterRadius = this.size * 1.2;
+        
+        // Use modulo for frame animation to avoid continuous growth
+        const animFrame = frameCount % 360;
+        const frameAngle = animFrame * 0.03;
+        const frameSin = animFrame * 0.1;
+        
+        // Constants for the loop
+        const segmentAngle = TWO_PI / 6;
+        
+        // Pre-calculate sin values for this frame (avoid redundant calculations)
+        const sinValues = [];
+        for (let i = 0; i < 6; i++) {
+            sinValues[i] = sin(frameSin + i);
+        }
+        
+        // Draw the tangle effect with optimized loops
+        for (let i = 0; i < 6; i++) {
+            const angle = frameAngle + i * segmentAngle;
+            const outerRadius = baseOuterRadius + this.size * 0.2 * sinValues[i];
             
-            // Pre-calculate constants outside the loops
-            const twoPi = TWO_PI; // Cache TWO_PI value
-            const frameAngle = frameCount * 0.03;
-            const innerRadius = this.size * 0.6;
-            const baseOuterRadius = this.size * 1.2;
-            const frameSin = frameCount * 0.1;
+            beginShape();
             
-            // Draw the tangle effect with more efficient loops
-            for (let i = 0; i < 6; i++) {
-                const angle = frameAngle + i * twoPi / 6;
-                const outerRadius = baseOuterRadius + this.size * 0.2 * sin(frameSin + i);
-                
-                beginShape();
-                for (let j = 0; j < 5; j++) {
-                    const r = (j % 2 === 0) ? innerRadius : outerRadius; // Avoid map() call
-                    const jitterAmount = j * 1.25; // Simplified from map()
-                    const jitter = random(-jitterAmount, jitterAmount);
-                    const x = cos(angle + j * 0.4) * r + jitter;
-                    const y = sin(angle + j * 0.4) * r + jitter;
-                    vertex(x, y);
-                }
-                endShape();
-            }
+            // Unroll the inner loop for better performance
+            // Point 1
+            vertex(
+                cos(angle) * innerRadius + random(-1.25, 1.25),
+                sin(angle) * innerRadius + random(-1.25, 1.25)
+            );
+            
+            // Point 2
+            vertex(
+                cos(angle + 0.4) * outerRadius + random(-2.5, 2.5),
+                sin(angle + 0.4) * outerRadius + random(-2.5, 2.5)
+            );
+            
+            // Point 3
+            vertex(
+                cos(angle + 0.8) * innerRadius + random(-3.75, 3.75),
+                sin(angle + 0.8) * innerRadius + random(-3.75, 3.75)
+            );
+            
+            // Point 4
+            vertex(
+                cos(angle + 1.2) * outerRadius + random(-5, 5),
+                sin(angle + 1.2) * outerRadius + random(-5, 5)
+            );
+            
+            // Point 5
+            vertex(
+                cos(angle + 1.6) * innerRadius + random(-6.25, 6.25),
+                sin(angle + 1.6) * innerRadius + random(-6.25, 6.25)
+            );
+            
+            endShape();
         }
     }
     
@@ -2822,25 +2871,29 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     
     /**
      * @private
-     * Draw weapon range indicator 
+     * Draw weapon range indicator with improved performance
      */
     _drawWeaponRangeIndicator() {
-        // Cache the targeting condition to avoid multiple property checks
-        const isApproachingTarget = this.target && 
-            this.isTargetValid(this.target) && 
-            this.currentWeapon && 
-            (this.currentState === AI_STATE.APPROACHING ||
-             this.currentState === AI_STATE.ATTACK_PASS ||
-             this.currentState === AI_STATE.REPOSITIONING);
-             
-        if (isApproachingTarget) {
-            push();
-            stroke(200, 200, 0, 100);
-            noFill();
-            strokeWeight(1);
-            circle(this.pos.x, this.pos.y, this.visualFiringRange * 2);
-            pop();
-        }
+        // Early return for the most common case
+        if (!this.currentWeapon || !this.target) return;
+        
+        // Fast path checking: First check the state as it's fastest
+        const isAttackState = (this.currentState === AI_STATE.APPROACHING ||
+                              this.currentState === AI_STATE.ATTACK_PASS ||
+                              this.currentState === AI_STATE.REPOSITIONING);
+        
+        if (!isAttackState) return;
+        
+        // Only then check target validity which is more expensive
+        if (!this.isTargetValid(this.target)) return;
+        
+        // Draw the circle without push/pop for better performance
+        // The global drawing state is already clean at this point in the draw() method
+        stroke(200, 200, 0, 100);
+        noFill();
+        strokeWeight(1);
+        circle(this.pos.x, this.pos.y, this.visualFiringRange * 2);
+        // No need for pop() as there was no push()
     }
 
 
