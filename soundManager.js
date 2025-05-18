@@ -6,7 +6,7 @@
 class SoundManager {
     constructor() {
         console.log("SoundManager constructor called.");
-        this.sounds = {}; // Stores { definition, audioNormal, audioQuiet }
+        this.sounds = {}; // Stores { definition, audioNormal }
         this.soundDefinitions = {
             // --- Sound Definitions ---
             laser: 
@@ -383,47 +383,32 @@ class SoundManager {
             return;
         }
 
-        console.log("Initializing SoundManager sounds (Normal & Quiet versions)...");
+        console.log("Initializing SoundManager sounds (Single audio per sound)...");
         let generatedCount = 0;
 
         for (const name in this.soundDefinitions) {
-            try {
-                const originalDefinition = this.soundDefinitions[name];
-                // Ensure base volume exists, default to 0.25
-                originalDefinition.sound_vol = originalDefinition.sound_vol ?? 0.25;
-
-                // Generate Normal Sound
-                const audioNormal = this._generateSingleSound(name, originalDefinition, originalDefinition.sound_vol, "Normal");
-
-                // Generate Quiet Sound
-                const quietVolume = constrain(originalDefinition.sound_vol * OFFSCREEN_VOLUME_REDUCTION_FACTOR, 0.0, 1.0);
-                const audioQuiet = this._generateSingleSound(name, originalDefinition, quietVolume, "Quiet");
-
-                // Store if at least one version was successful
-                if (audioNormal || audioQuiet) {
-                    this.sounds[name] = {
-                        definition: originalDefinition,
-                        audioNormal: audioNormal,
-                        audioQuiet: audioQuiet
-                    };
-                    generatedCount++;
-                } else {
-                    console.error(`   BOTH audio versions failed validation for '${name}'. Sound will be unavailable.`);
-                }
-
-            } catch (error) {
-                console.error(`SoundManager Error: Catastrophic failure during generation for sound '${name}':`, error);
+            const def = this.soundDefinitions[name];
+            // Only generate one audio object per sound
+            const audio = this._generateSingleSound(name, def, def.sound_vol, "Normal");
+            if (audio) {
+                this.sounds[name] = {
+                    audio: audio,
+                    definition: def
+                };
+                generatedCount++;
+            } else {
+                this.sounds[name] = { audio: null, definition: def };
             }
         }
         console.log(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
     }
 
     /**
-     * Internal helper to generate a single audio object (normal or quiet).
+     * Internal helper to generate a single audio object.
      * @param {string} name - Sound name (for logging).
      * @param {object} originalDefinition - The base definition from soundDefinitions.
      * @param {number} targetVolume - The volume to apply to this version.
-     * @param {string} versionLabel - "Normal" or "Quiet" (for logging).
+     * @param {string} versionLabel - "Normal" (for logging).
      * @returns {object|null} The generated audio object (HTMLAudioElement or custom) or null if failed.
      */
     _generateSingleSound(name, originalDefinition, targetVolume, versionLabel) {
@@ -484,7 +469,8 @@ class SoundManager {
 
     /**
      * Plays a sound originating from a specific world location.
-     * Selects pre-generated 'Normal' or 'Quiet' version based on visibility.
+     * Sets the volume dynamically for off-screen sounds.
+     * Handles both HTMLAudioElement and WebAudio BufferSource (sfxr).
      * @param {string} name - The name of the sound effect.
      * @param {number} sourceX - World X coordinate of the sound source.
      * @param {number} sourceY - World Y coordinate of the sound source.
@@ -493,96 +479,124 @@ class SoundManager {
     playWorldSound(name, sourceX, sourceY, listenerPos) {
         const soundEntry = this.sounds[name];
         if (!soundEntry) {
-            // This warning is less likely now, but good to keep
             console.warn(`playWorldSound: Sound entry '${name}' not found (likely failed generation).`);
             return;
         }
 
         const isOffScreen = this._isOffScreen(sourceX, sourceY, listenerPos);
-        const reason = isOffScreen ? "Off-Screen" : "On-Screen";
+        const baseVolume = soundEntry.definition.sound_vol;
+        let intendedVolume = isOffScreen ? 0.01 : baseVolume;
 
-        // Select Audio Object
-        let audioToPlay = null;
-        let versionSelected = "None";
-        if (isOffScreen) {
-            // Prefer quiet, fallback to normal if quiet failed generation
-            audioToPlay = soundEntry.audioQuiet || soundEntry.audioNormal;
-            versionSelected = soundEntry.audioQuiet ? "Quiet" : "Normal (Fallback)";
-        } else {
-            audioToPlay = soundEntry.audioNormal;
-            versionSelected = "Normal";
-        }
-
-        // Check if a playable object was found/generated
-        if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-             console.warn(`playWorldSound: No valid audio object ('${versionSelected}') available for '${name}' (Status: ${reason}).`);
-             return;
-        }
-
-        // Log Selection
-        const baseVolume = soundEntry.definition.sound_vol; // Already defaulted in init
-        const intendedVolume = isOffScreen
-            ? constrain(baseVolume * OFFSCREEN_VOLUME_REDUCTION_FACTOR, 0.0, 1.0)
-            : baseVolume;
-        //console.log(`playWorldSound: '${name}' | Status: ${reason} | Selected: ${versionSelected} | BaseVol: ${baseVolume.toFixed(2)} | IntendedVol: ${intendedVolume.toFixed(2)}`);
-
-        // Play the selected pre-generated sound
+        // --- Procedural gain control for sfxr sounds using Web Audio API ---
+        // Try to use Web Audio API for sfxr sounds (true gain control)
+        let usedWebAudio = false;
         try {
-            // Attempt to reset time - may not work on custom sfxr objects, but harmless to try
+            if (typeof sfxr !== 'undefined' && typeof SoundEffect !== 'undefined') {
+                // Use SoundEffect to get the normalized buffer
+                const sfx = new SoundEffect(soundEntry.definition);
+                const normalized = sfx.getRawBuffer().normalized;
+                // Get or create a single AudioContext
+                let actx = null;
+                if (typeof window !== 'undefined') {
+                    if (!window._eliteAudioContext) {
+                        window._eliteAudioContext = window.AudioContext ? new window.AudioContext() : new window.webkitAudioContext();
+                    }
+                    actx = window._eliteAudioContext;
+                }
+                if (actx) {
+                    // Resume context if needed (required by some browsers)
+                    if (actx.state === 'suspended') {
+                        actx.resume();
+                    }
+                    // Create AudioBuffer
+                    const sampleRate = soundEntry.definition.sample_rate || 44100;
+                    const audioBuffer = actx.createBuffer(1, normalized.length, sampleRate);
+                    audioBuffer.copyToChannel(new Float32Array(normalized), 0);
+                    // Create BufferSource
+                    const source = actx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    // Create GainNode for volume control
+                    const gainNode = actx.createGain();
+                    gainNode.gain.value = intendedVolume;
+                    // Connect and play
+                    source.connect(gainNode);
+                    gainNode.connect(actx.destination);
+                    source.start();
+                    usedWebAudio = true;
+                }
+            }
+        } catch (e) {
+            console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
+        }
+        if (usedWebAudio) return;
+
+        // --- Fallback: HTMLAudioElement (set .volume property) ---
+        let audioToPlay = soundEntry.audio;
+        if (!audioToPlay || typeof audioToPlay.play !== 'function') {
+            // Regenerate if needed
+            audioToPlay = sfxr.toAudio(soundEntry.definition);
+            if (!audioToPlay || typeof audioToPlay.play !== 'function') {
+                console.error(`SoundManager: Could not generate playable audio for sound '${name}'.`);
+                return;
+            }
+            soundEntry.audio = audioToPlay;
+        }
+
+        let previousVolume = audioToPlay.volume;
+        try {
             if (typeof audioToPlay.currentTime !== 'undefined') {
                 audioToPlay.currentTime = 0;
             }
-            audioToPlay.play();
-
-            // ***** INTEGRATION CHECK *****
-            if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
-                //console.log(`SoundManager: Notifying UIManager for sound '${name}' at ${sourceX.toFixed(0)}, ${sourceY.toFixed(0)}`); // DEBUG
-                uiManager.trackCombatSound(sourceX, sourceY, name);
-            } else {
-                console.warn("SoundManager: uiManager or trackCombatSound not available for battle indicator."); // DEBUG
+            if (typeof audioToPlay.volume !== 'undefined') {
+                audioToPlay.volume = intendedVolume;
             }
-            // ***** END INTEGRATION *****
-
-
+            audioToPlay.play();
+            // Restore previous volume after a short delay
+            if (typeof audioToPlay.volume !== 'undefined') {
+                setTimeout(() => {
+                    audioToPlay.volume = previousVolume;
+                }, 100);
+            }
         } catch (e) {
-            console.error(`SoundManager: Error playing sound "${name}" (${versionSelected}):`, e);
+            console.error(`SoundManager: Error playing sound '${name}':`, e);
+        }
+
+        // Integration
+        if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
+            uiManager.trackCombatSound(sourceX, sourceY, name);
         }
     }
 
     /**
-     * Plays a UI or non-positioned sound, always using the 'Normal' version.
+     * Plays a UI or non-positioned sound, always using the single audio object.
      * @param {string} name - The name of the sound effect.
      * @param {number} [volMultiplier=1.0] - Optional multiplier for the base volume (only works reliably on standard HTMLAudioElements).
      */
     playSound(name, volMultiplier = 1.0) {
         const soundEntry = this.sounds[name];
-        if (!soundEntry || !soundEntry.audioNormal || typeof soundEntry.audioNormal.play !== 'function') {
-            console.warn(`playSound: Sound '${name}' (Normal) not found or is not playable.`);
+        if (!soundEntry || !soundEntry.audio || typeof soundEntry.audio.play !== 'function') {
+            console.warn(`playSound: Sound '${name}' not found or is not playable.`);
             return;
         }
-
-        const audioToPlay = soundEntry.audioNormal;
-
+        const audioToPlay = soundEntry.audio;
+        let previousVolume = null;
+        let canSetVolume = typeof audioToPlay.volume !== 'undefined';
         try {
-            // Apply optional multiplier ONLY if it's a standard HTMLAudioElement
-            if (typeof audioToPlay.volume !== 'undefined' && volMultiplier !== 1.0) {
-                const baseVol = soundEntry.definition.sound_vol;
-                const finalVolume = constrain(baseVol * volMultiplier, 0.0, 1.0);
-                audioToPlay.volume = finalVolume;
-                // console.log(`playSound: Applied volume multiplier ${volMultiplier} to '${name}'. New vol: ${finalVolume.toFixed(2)}`);
-            } else if (volMultiplier !== 1.0) {
-                // Log warning if multiplier requested for non-standard object
-                console.warn(`playSound: Cannot apply volume multiplier to non-standard audio object for '${name}'. Playing at base volume.`);
+            if (canSetVolume && volMultiplier !== 1.0) {
+                previousVolume = audioToPlay.volume;
+                audioToPlay.volume = constrain(soundEntry.definition.sound_vol * volMultiplier, 0.0, 1.0);
             }
-
-            // Attempt reset and play
             if (typeof audioToPlay.currentTime !== 'undefined') {
                 audioToPlay.currentTime = 0;
             }
             audioToPlay.play();
-
+            if (canSetVolume && previousVolume !== null) {
+                setTimeout(() => {
+                    audioToPlay.volume = previousVolume;
+                }, 100);
+            }
         } catch (e) {
-            console.error(`SoundManager: Error playing sound "${name}" (Normal):`, e);
+            console.error(`SoundManager: Error playing sound '${name}':`, e);
         }
     }
 
