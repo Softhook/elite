@@ -164,7 +164,7 @@ class Station {
         this._drawRings();
         this._drawHabitationModules();
         this._drawSolarPanels();
-        this._drawRunningLights();
+        this._drawStandardRunningLights();
     }
 
     /**
@@ -296,32 +296,48 @@ class Station {
      * Draws solar panels extending from the hub.
      * @private
      */
-    _drawSolarPanels() {
+    _drawSolarPanels(extraAngles = []) {
+        // Standard panels at 45° and 225°
         for (let i = 0; i < 2; i++) {
             push();
             rotate(i * PI + PI/4);
-            
-            // Panel mount
-            fill(120, 120, 140);
-            rect(-this.size * 0.02, this.size * 0.12, this.size * 0.04, this.size * 0.04);
-            
-            // Panel
-            fill(20, 30, 100);
-            stroke(150, 150, 170);
-            rect(-this.size * 0.15, this.size * 0.16, this.size * 0.3, this.size * 0.1);
-            
-            // Panel grid lines
-            stroke(180, 180, 200, 100);
-            strokeWeight(1);
-            for (let j = 0; j < 5; j++) {
-                let x = -this.size * 0.15 + j * this.size * 0.075;
-                line(x, this.size * 0.16, x, this.size * 0.26);
-            }
-            for (let j = 0; j < 3; j++) {
-                let y = this.size * 0.16 + j * this.size * 0.05;
-                line(-this.size * 0.15, y, this.size * 0.15, y);
-            }
+            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
             pop();
+        }
+        // Extra panels for separatist (if any)
+        for (let angle of extraAngles) {
+            push();
+            rotate(angle);
+            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
+            pop();
+        }
+    }
+
+    /**
+     * Draws a single solar panel with optional grid lines.
+     * @param {p5.Color} panelColor - The color of the solar panel
+     * @param {p5.Color} mountColor - The color of the panel mount
+     * @param {p5.Color} gridColor - The color of the grid lines
+     * @private
+     */
+    _drawSingleSolarPanel(panelColor, mountColor, gridColor) {
+        // Panel mount
+        fill(mountColor);
+        rect(-this.size * 0.02, this.size * 0.12, this.size * 0.04, this.size * 0.04);
+        // Panel
+        fill(panelColor);
+        stroke(gridColor);
+        rect(-this.size * 0.15, this.size * 0.16, this.size * 0.3, this.size * 0.1);
+        // Panel grid lines
+        stroke(gridColor, 100);
+        strokeWeight(1);
+        for (let j = 0; j < 5; j++) {
+            let x = -this.size * 0.15 + j * this.size * 0.075;
+            line(x, this.size * 0.16, x, this.size * 0.26);
+        }
+        for (let j = 0; j < 3; j++) {
+            let y = this.size * 0.16 + j * this.size * 0.05;
+            line(-this.size * 0.15, y, this.size * 0.15, y);
         }
     }
 
@@ -329,29 +345,33 @@ class Station {
      * Draws animated running lights around the station's perimeter.
      * @private
      */
-    _drawRunningLights() {
+    _drawRunningLights(lightFn, count = 24, radius = 0.475, size = 3) {
         noStroke();
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < count; i++) {
             push();
-            rotate(i * TWO_PI / 24);
-            
-            // Alternate light colors
-            if (i % 8 === 0) {
-                fill(255, 30, 30, 100 + sin(this.lightTimer*3 + i) * 100); // Red
-            } else if (i % 8 === 4) {
-                fill(30, 30, 255, 100 + sin(this.lightTimer*3 + i + PI) * 100); // Blue 
-            } else if (i % 2 === 0) {
-                fill(255, 255, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Yellow
-            }
-            
-            // Only draw if the fill is defined (skip some positions)
-            if (fill) {
-                ellipse(0, -this.size * 0.475, 3, 3);
+            rotate(i * TWO_PI / count);
+            let c = lightFn(i, this.lightTimer);
+            if (c) {
+                fill(c);
+                ellipse(0, -this.size * radius, size, size);
             }
             pop();
         }
     }
-    
+
+    /**
+     * Draws the standard running lights for the station.
+     * @private
+     */
+    _drawStandardRunningLights() {
+        this._drawRunningLights((i, t) => {
+            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t*3 + i) * 100); // Red
+            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t*3 + i + PI) * 100); // Blue
+            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t*2 + i*0.3) * 100); // Yellow
+            return null;
+        });
+    }
+
     /**
      * Draws a military station with defensive structures and armored design.
      * @private
@@ -1139,37 +1159,12 @@ class Station {
      * @private
      */
     _drawSeparatistStation() {
-        // Draw the standard station components
         this._drawCentralHub();
         this._drawMainArms();
         this._drawRings();
         this._drawHabitationModules();
-        this._drawSolarPanels();
-        this._drawRunningLights();
-        // Add two extra solar panels at 135° and 315°
-        for (let i = 0; i < 2; i++) {
-            let angle = PI * (3/4 + i); // 135° and 315°
-            push();
-            rotate(angle);
-            // Panel mount
-            fill(120, 120, 140);
-            rect(-this.size * 0.02, this.size * 0.12, this.size * 0.04, this.size * 0.04);
-            // Panel
-            fill(20, 30, 100);
-            stroke(150, 150, 170);
-            rect(-this.size * 0.15, this.size * 0.16, this.size * 0.3, this.size * 0.1);
-            // Panel grid lines
-            stroke(180, 180, 200, 100);
-            strokeWeight(1);
-            for (let j = 0; j < 5; j++) {
-                let x = -this.size * 0.15 + j * this.size * 0.075;
-                line(x, this.size * 0.16, x, this.size * 0.26);
-            }
-            for (let j = 0; j < 3; j++) {
-                let y = this.size * 0.16 + j * this.size * 0.05;
-                line(-this.size * 0.15, y, this.size * 0.15, y);
-            }
-            pop();
-        }
+        // Draw standard panels plus two extra at 135° and 315°
+        this._drawSolarPanels([PI * 3/4, PI * 7/4]);
+        this._drawStandardRunningLights();
     }
 }
