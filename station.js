@@ -16,25 +16,16 @@ class Station {
         this.pos = createVector(worldX, worldY);
         this.name = name;
         this.systemType = systemType;
-        
-        // Create market with the system's economy type
         this.market = new Market(systemType);
         this.market.systemName = name.replace(" Hub", "");
-        
-        // Station physical properties
-        this.size = 160; // Base size for station dimensions
+        this.size = 160;
         this.dockingRadius = this.size;
-        
-        // Set station appearance based on system type
         this._setStationAppearance();
-        
         this.angle = 0;
         this.rotationSpeed = 0.0015;
-        
-        // Lighting effects
         this.lightTimer = 0;
     }
-    
+
     /**
      * Configures the station's appearance based on the system type.
      * @private
@@ -97,9 +88,7 @@ class Station {
      * Returns the market associated with this station.
      * @returns {Market} The station's market
      */
-    getMarket() {
-        return this.market;
-    }
+    getMarket() { return this.market; }
 
     /**
      * Main draw method for the station. Calls helper methods to draw individual components.
@@ -116,57 +105,23 @@ class Station {
         
         // Select the appropriate drawing method based on station type
         switch (this.stationType) {
-            case "military":
-                this._drawMilitaryStation();
-                break;
-            case "alien":
-                this._drawAlienStation();
-                break;
-            case "agricultural":
-                this._drawAgriculturalStation();
-                break;
-            case "industrial":
-                this._drawIndustrialStation();
-                break;
-            case "mining":
-                this._drawMiningStation();
-                break;
-            case "tourism":
-                this._drawTourismStation();
-                break;
-            case "refinery":
-                this._drawRefineryStation();
-                break;
-            case "posthuman":
-                this._drawPostHumanStation();
-                break;
-            case "imperial":
-                this._drawImperialStation();
-                break;
-            case "separatist":
-                this._drawSeparatistStation();
-                break;
-            default:
-                this._drawStandardStation();
-                break;
+            case "military": this._drawMilitaryStation(); break;
+            case "alien": this._drawAlienStation(); break;
+            case "agricultural": this._drawAgriculturalStation(); break;
+            case "industrial": this._drawIndustrialStation(); break;
+            case "mining": this._drawMiningStation(); break;
+            case "tourism": this._drawTourismStation(); break;
+            case "refinery": this._drawRefineryStation(); break;
+            case "posthuman": this._drawPostHumanStation(); break;
+            case "imperial": this._drawImperialStation(); break;
+            case "separatist": this._drawSeparatistStation(); break;
+            default: this._drawStandardStation(); break;
         }
         
         pop();
     }
-    
-    /**
-     * Draws the standard station type.
-     * @private
-     */
-    _drawStandardStation() {
-        this._drawCentralHub();
-        this._drawMainArms();
-        this._drawRings();
-        this._drawHabitationModules();
-        this._drawSolarPanels();
-        this._drawStandardRunningLights();
-    }
 
+    // --- Drawing helpers ---
     /**
      * Draws the central hub of the station.
      * @private
@@ -293,27 +248,6 @@ class Station {
     }
 
     /**
-     * Draws solar panels extending from the hub.
-     * @private
-     */
-    _drawSolarPanels(extraAngles = []) {
-        // Standard panels at 45° and 225°
-        for (let i = 0; i < 2; i++) {
-            push();
-            rotate(i * PI + PI/4);
-            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
-            pop();
-        }
-        // Extra panels for separatist (if any)
-        for (let angle of extraAngles) {
-            push();
-            rotate(angle);
-            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
-            pop();
-        }
-    }
-
-    /**
      * Draws a single solar panel with optional grid lines.
      * @param {p5.Color} panelColor - The color of the solar panel
      * @param {p5.Color} mountColor - The color of the panel mount
@@ -338,6 +272,27 @@ class Station {
         for (let j = 0; j < 3; j++) {
             let y = this.size * 0.16 + j * this.size * 0.05;
             line(-this.size * 0.15, y, this.size * 0.15, y);
+        }
+    }
+
+    /**
+     * Draws solar panels extending from the hub.
+     * @private
+     */
+    _drawSolarPanels(extraAngles = []) {
+        // Standard panels at 45° and 225°
+        for (let i = 0; i < 2; i++) {
+            push();
+            rotate(i * PI + PI/4);
+            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
+            pop();
+        }
+        // Extra panels for separatist (if any)
+        for (let angle of extraAngles) {
+            push();
+            rotate(angle);
+            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170));
+            pop();
         }
     }
 
@@ -1165,6 +1120,19 @@ class Station {
         this._drawHabitationModules();
         // Draw standard panels plus two extra at 135° and 315°
         this._drawSolarPanels([PI * 3/4, PI * 7/4]);
+        this._drawStandardRunningLights();
+    }
+
+    /**
+     * Draws the standard (default) station with all standard features.
+     * @private
+     */
+    _drawStandardStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        this._drawHabitationModules();
+        this._drawSolarPanels();
         this._drawStandardRunningLights();
     }
 }
