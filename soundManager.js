@@ -467,6 +467,21 @@ class SoundManager {
                 sourceY < screenTop  || sourceY > screenBottom);
     }
 
+    // Helper: Compute intended volume based on distance
+    _computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos) {
+        if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number') return baseVolume;
+        const dx = sourceX - listenerPos.x;
+        const dy = sourceY - listenerPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        let maxDistance = 1000;
+        if (typeof width !== 'undefined' && typeof height !== 'undefined') {
+            maxDistance = 1.2 * Math.sqrt(width * width + height * height);
+        }
+        let dropoff = 1 - (distance / maxDistance);
+        dropoff = Math.max(dropoff, 0.04);
+        return baseVolume * dropoff;
+    }
+
     /**
      * Plays a sound originating from a specific world location.
      * Sets the volume dynamically for off-screen sounds.
@@ -482,28 +497,10 @@ class SoundManager {
             console.warn(`playWorldSound: Sound entry '${name}' not found (likely failed generation).`);
             return;
         }
-
-        // Compute distance-based volume drop-off
         const baseVolume = soundEntry.definition.sound_vol;
-        let intendedVolume = baseVolume;
-        if (listenerPos && typeof sourceX === 'number' && typeof sourceY === 'number') {
-            // Calculate Euclidean distance
-            const dx = sourceX - listenerPos.x;
-            const dy = sourceY - listenerPos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            // Define max audible distance (e.g., 1.2x screen diagonal)
-            let maxDistance = 1000; // fallback
-            if (typeof width !== 'undefined' && typeof height !== 'undefined') {
-                maxDistance = 1.2 * Math.sqrt(width * width + height * height);
-            }
-            // Linear falloff
-            let dropoff = 1 - (distance / maxDistance);
-            dropoff = Math.max(dropoff, 0.04); // minimum volume factor
-            intendedVolume = baseVolume * dropoff;
-        }
+        const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
 
         // --- Procedural gain control for sfxr sounds using Web Audio API ---
-        // Try to use Web Audio API for sfxr sounds (true gain control)
         let usedWebAudio = false;
         try {
             if (typeof sfxr !== 'undefined' && typeof SoundEffect !== 'undefined') {
@@ -519,9 +516,7 @@ class SoundManager {
                     actx = window._eliteAudioContext;
                 }
                 if (actx) {
-                    if (actx.state === 'suspended') {
-                        actx.resume();
-                    }
+                    if (actx.state === 'suspended') actx.resume();
                     const sampleRate = soundEntry.definition.sample_rate || 44100;
                     const audioBuffer = actx.createBuffer(1, normalized.length, sampleRate);
                     audioBuffer.copyToChannel(new Float32Array(normalized), 0);
@@ -538,7 +533,7 @@ class SoundManager {
         } catch (e) {
             console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
         }
-        // Always call UI indicator, even if Web Audio was used
+        // UI indicator (always call, only once)
         if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
             uiManager.trackCombatSound(sourceX, sourceY, name);
         }
@@ -547,7 +542,6 @@ class SoundManager {
         // --- Fallback: HTMLAudioElement (set .volume property) ---
         let audioToPlay = soundEntry.audio;
         if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-            // Regenerate if needed
             audioToPlay = sfxr.toAudio(soundEntry.definition);
             if (!audioToPlay || typeof audioToPlay.play !== 'function') {
                 console.error(`SoundManager: Could not generate playable audio for sound '${name}'.`);
@@ -555,7 +549,6 @@ class SoundManager {
             }
             soundEntry.audio = audioToPlay;
         }
-
         let previousVolume = audioToPlay.volume;
         try {
             if (typeof audioToPlay.currentTime !== 'undefined') {
@@ -565,7 +558,6 @@ class SoundManager {
                 audioToPlay.volume = intendedVolume;
             }
             audioToPlay.play();
-            // Restore previous volume after a short delay
             if (typeof audioToPlay.volume !== 'undefined') {
                 setTimeout(() => {
                     audioToPlay.volume = previousVolume;
@@ -573,11 +565,6 @@ class SoundManager {
             }
         } catch (e) {
             console.error(`SoundManager: Error playing sound '${name}':`, e);
-        }
-
-        // Integration
-        if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
-            uiManager.trackCombatSound(sourceX, sourceY, name);
         }
     }
 
