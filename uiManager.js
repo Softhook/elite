@@ -471,18 +471,14 @@ class UIManager {
 
     /** Draws the Main Station Menu (when state is DOCKED) */
     drawStationMainMenu(station, player) {
-        if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         this.stationMenuButtonAreas = [];
+        if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([20,20,50,220], [100,100,255]);
-        
-        // Use the standardized header
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
-        
         textFont(font);
-        // Rest of the menu with adjusted Y positions
         let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_MARKET" },
@@ -490,187 +486,98 @@ class UIManager {
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
-            { text: "Police Station", state: "VIEWING_POLICE" }, // Add this line
+            { text: "Police Station", state: "VIEWING_POLICE" },
             { text: "Undock", action: "UNDOCK" }
         ];
         menuOpts.forEach((opt, i) => {
             let btnY=btnSY+i*btnSp;
-            fill(50,50,90); stroke(150,150,200); rect(btnX,btnY,btnW,btnH,5);
-            fill(220); textSize(20); textAlign(CENTER,CENTER); noStroke();
-            text(opt.text, btnX+btnW/2, btnY+btnH/2);
-            let d={x:btnX,y:btnY,w:btnW,h:btnH,text:opt.text};
-            if(opt.state) d.state=opt.state;
-            if(opt.action) d.action=opt.action;
-            this.stationMenuButtonAreas.push(d);
+            let area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50,50,90], [150,150,200]);
+            if(opt.state) area.state=opt.state;
+            if(opt.action) area.action=opt.action;
+            this.stationMenuButtonAreas.push(area);
         });
         pop();
     } // --- End drawStationMainMenu ---
 
     /** Draws the Repairs Menu */
     drawRepairsMenu(player) {
+        this.repairsFullButtonArea = {};
+        this.repairsHalfButtonArea = {};
+        this.repairsBackButtonArea = {};
         if (!player) return;
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([60,30,30,230], [255,180,100]);
-        
-        // Use the standardized header
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
-        
-        // Show current hull with adjusted Y position
         fill(220); textSize(20); textAlign(CENTER,TOP);
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
-
-        // Calculate repair costs - with Math.floor to ensure integers
         let missing = player.maxHull - player.hull;
         let fullCost = Math.floor(missing * 10);
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
-
         let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
-
-        // 100% Repair Button
-        fill(0,180,0); stroke(100,255,100); rect(btnX, btnY1, btnW, btnH, 5);
-        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-        text(`Full Repair (${fullCost} cr)`, btnX+btnW/2, btnY1+btnH/2);
-        this.repairsFullButtonArea = {x:btnX, y:btnY1, w:btnW, h:btnH};
-
-        // 50% Repair Button
-        fill(180,180,0); stroke(220,220,100); rect(btnX, btnY2, btnW, btnH, 5);
-        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-        text(`50% Repair (${halfCost} cr)`, btnX+btnW/2, btnY2+btnH/2);
-        this.repairsHalfButtonArea = {x:btnX, y:btnY2, w:btnW, h:btnH};
-
-        // Back button
+        this.repairsFullButtonArea = this._drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0,180,0], [100,255,100]);
+        this.repairsHalfButtonArea = this._drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180,180,0], [220,220,100]);
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-        text("Back", backX+backW/2, backY+backH/2);
-        this.repairsBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
+        this.repairsBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
         pop();
     }
 
     /** Draws the Police Menu */
     drawPoliceMenu(player) {
-        if (!player) return;
         this.policeButtonAreas = [];
-        
+        if (!player) return;
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG([30,30,60,230], [100,100,255]);
-        
-        // Use the standardized header
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Police Station", station, player, system);
-        
-        // Show current legal status
         fill(255); 
         textSize(20); 
         textAlign(CENTER, TOP);
-        
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        
-        // Add this line to define contentY
         const contentY = pY + headerHeight + 10;
-        
         text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
         fill(statusColor);
         textSize(24);
         text(statusText, pX+pW/2, contentY+30);
-        
-        // Calculate fine amount - varies by system security level
-        let fineAmount = 300; // Base amount
+        let fineAmount = 300;
         if (system?.securityLevel === 'High') fineAmount = 1000;
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
-        
-        // Double the fine if player was previously police
         if (player.hasBeenPolice) {
             fineAmount *= 3;
-            
-            // Add explanation text for doubled fine
             fill(255, 200, 100);
             textSize(16);
             text("Fines trippled for former police officer", pX + pW/2, contentY + 60);
         }
-
-        // Adjust the button Y position based on contentY
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
         let btnY1 = contentY + (player.hasBeenPolice ? 90 : 70);
-        
-        // Pay Fine button - only if wanted
         if (isWanted) {
-            fill(0,180,0); 
-            stroke(100,255,100); 
-            rect(btnX, btnY1, btnW, btnH, 5);
-            
-            fill(0); 
-            textSize(20); 
-            textAlign(CENTER,CENTER); 
-            noStroke();
-            text(`Pay Fine (${fineAmount} cr)`, btnX+btnW/2, btnY1+btnH/2);
-            
-            this.policeButtonAreas.push({
-                x: btnX, 
-                y: btnY1, 
-                w: btnW, 
-                h: btnH, 
-                action: 'pay_fine',
-                amount: fineAmount
-            });
+            this.policeButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount})
+            );
         }
-        
-        // Join Police button - only if not already ACAB
         const btnY2 = btnY1 + btnH + 20;
         if (!player.isPolice) {
-            fill(50, 50, 180); 
-            stroke(100, 100, 255); 
-            rect(btnX, btnY2, btnW, btnH, 5);
-            
-            fill(255); 
-            textSize(20); 
-            textAlign(CENTER,CENTER); 
-            noStroke();
-            text("Join Police Force", btnX+btnW/2, btnY2+btnH/2);
-            
-            this.policeButtonAreas.push({
-                x: btnX, 
-                y: btnY2, 
-                w: btnW, 
-                h: btnH, 
-                action: 'join_police'
-            });
+            this.policeButtonAreas.push(
+                this._drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50,50,180], [100,100,255], 5, {action:'join_police'})
+            );
         } else {
             fill(255);
             textSize(18);
             textAlign(CENTER,CENTER);
             text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
         }
-        
-        // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        fill(180,180,0); 
-        stroke(220,220,100); 
-        rect(backX,backY,backW,backH,5);
-        
-        fill(0); 
-        textSize(20); 
-        textAlign(CENTER,CENTER); 
-        noStroke();
-        text("Back", backX+backW/2, backY+backH/2);
-        
-        this.policeButtonAreas.push({
-            x: backX, 
-            y: backY, 
-            w: backW, 
-            h: backH, 
-            action: 'back'
-        });
-        
+        this.policeButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        );
         pop();
     }
 
@@ -909,16 +816,7 @@ if (isIllegalInSystem || isMissionCargo) {
         let backH = 30;
         let backX = pX+pW/2-backW/2;
         let backY = pY+pH-backH-15;
-        fill(180,180,0);
-        stroke(220,220,100); strokeWeight(1);
-        rect(backX, backY, backW, backH, 5);
-        fill(0);
-        textSize(20);
-        textAlign(CENTER,CENTER);
-        noStroke();
-        text("Back", backX+backW/2, backY+backH/2);
-        this.marketBackButtonArea = {x:backX, y:backY, w:backW, h:backH};
-
+        this.marketBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
         pop();
     }
 
@@ -2059,10 +1957,7 @@ if (isIllegalInSystem || isMissionCargo) {
     
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-        text("Back", backX+backW/2, backY+backH/2);
-        this.shipyardDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
+        this.shipyardDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
         pop();
     }
 
@@ -2191,10 +2086,7 @@ if (isIllegalInSystem || isMissionCargo) {
     
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        fill(180,180,0); stroke(220,220,100); rect(backX,backY,backW,backH,5);
-        fill(0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-        text("Back", backX+backW/2, backY+backH/2);
-        this.upgradeDetailButtons = {back: {x:backX, y:backY, w:backW, h:backH}};
+        this.upgradeDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
         pop();
     }
 
@@ -2371,4 +2263,34 @@ if (isIllegalInSystem || isMissionCargo) {
         return headerHeight; // Return the height used by header
     }
 
+    /**
+     * Draws a standardized button and returns its clickable area object.
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} w - Width
+     * @param {number} h - Height
+     * @param {string} label - Button text
+     * @param {Array} fillCol - Fill color [r,g,b]
+     * @param {Array} strokeCol - Stroke color [r,g,b]
+     * @param {number} [radius=5] - Corner radius
+     * @param {Object} [extra={}] - Extra properties to attach to the area object
+     * @returns {Object} Area object with x, y, w, h, and any extra properties
+     */
+    _drawButton(x, y, w, h, label, fillCol, strokeCol, radius = 5, extra = {}) {
+        // If this is a back button, force a consistent red background
+        if (typeof label === 'string' && label.trim().toLowerCase() === 'back') {
+            fillCol = [180, 0, 0];
+            strokeCol = [255, 150, 150];
+        }
+        fill(...fillCol);
+        stroke(...strokeCol);
+        strokeWeight(2);
+        rect(x, y, w, h, radius);
+        fill(255);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(22);
+        text(label, x + w / 2, y + h / 2);
+        return Object.assign({ x, y, w, h }, extra);
+    }
 } // End of UIManager Class
