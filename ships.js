@@ -767,7 +767,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 120000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
@@ -787,7 +787,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 50000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["IMPERIAL"]
     },
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
@@ -1279,7 +1279,7 @@ const SHIP_DEFINITIONS = {
         name: "Errand Runner", role: "Light Transport", sizeCategory: "Small", size: 24,
         baseMaxSpeed: 4.0, baseThrust: 0.05, baseTurnRate: 0.045,
         baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
-        armament: ["Pulse Laser"],
+        armament: [],
         costCategory: "Low", description: "Slightly more capable than a Hopper, used for inter-station deliveries.",
         drawFunction: drawErrandRunner,
         vertexData: [ {x:0.7,y:0.4}, {x:-0.7,y:0.4}, {x:-0.9,y:0}, {x:-0.7,y:-0.4}, {x:0.7,y:-0.4} ],
@@ -1291,7 +1291,7 @@ const SHIP_DEFINITIONS = {
         name: "System Shuttle", role: "Medium Transport", sizeCategory: "Small", size: 30,
         baseMaxSpeed: 3.8, baseThrust: 0.06, baseTurnRate: 0.04,
         baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
-        armament: ["Twin Pulse"],
+        armament: [],
         costCategory: "Low", description: "A common sight carrying goods within a star system.",
         drawFunction: drawSystemShuttle,
         vertexData: [ {x:0.8,y:0.5}, {x:0.6,y:0.7}, {x:-0.8,y:0.7}, {x:-0.8,y:-0.7}, {x:0.6,y:-0.7}, {x:0.8,y:-0.5} ],
@@ -1309,7 +1309,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.6}, {x:0.8,y:0.8}, {x:-0.8,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.8,y:-0.8}, {x:0.8,y:-0.8}, {x:1,y:-0.6} ],
         fillColor: [100, 90, 80], strokeColor: [60, 50, 40], strokeW: 1.5,
         typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
-        aiRoles: ["TRANSPORT", "HAULER"]
+        aiRoles: ["TRANSPORT"]
     },
     "PirateCutlass": {
         name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
@@ -1381,7 +1381,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:-0.6,y:0.6}, {x:-1,y:0.2}, {x:-1,y:-0.2}, {x:-0.6,y:-0.6} ],
         fillColor: [100, 40, 40], strokeColor: [160, 100, 100], strokeW: 1.2,
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistDefiant": {
         name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
@@ -1393,7 +1393,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0.4}, {x:0.4,y:0.8}, {x:-0.9,y:0.8}, {x:-0.9,y:-0.8}, {x:0.4,y:-0.8}, {x:0.9,y:-0.4} ],
         fillColor: [70, 70, 70], strokeColor: [120, 120, 120], strokeW: 1.8,
         typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistOutlander": {
         name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
@@ -1405,7 +1405,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:0.3,y:0.3}, {x:-0.2,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.2,y:-0.7}, {x:0.3,y:-0.3} ], // Sleek but rugged
         fillColor: [60, 80, 60], strokeColor: [100, 120, 100], strokeW: 1.4, // Olive Drab
         typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["SEPARATIST", "PIRATE"]
     },
     "SeparatistVanguard": {
         name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
@@ -1417,7 +1417,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.2}, {x:0.6,y:0.7}, {x:-0.6,y:0.9}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.6,y:-0.9}, {x:0.6,y:-0.7}, {x:1,y:-0.2} ], // Imposing, angular
         fillColor: [50, 30, 30], strokeColor: [100, 80, 80], strokeW: 2.2, // Dark Brownish Red
         typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistPartisan": {
         name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
@@ -1429,7 +1429,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0}, {x:-0.7,y:0.5}, {x:-0.9,y:0}, {x:-0.7,y:-0.5} ], // Simple dart
         fillColor: [80, 80, 60], strokeColor: [120, 120, 100], strokeW: 0.8, // Muddy Yellow
         typicalCargo: [], price: 28000, techLevel: 2,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
      "SeparatistBulwark": {
         name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
@@ -1441,7 +1441,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.7}, {x:0.7,y:1}, {x:-0.7,y:1}, {x:-1,y:0.7}, {x:-1,y:-0.7}, {x:-0.7,y:-1}, {x:0.7,y:-1}, {x:1,y:-0.7} ],
         fillColor: [40, 40, 50], strokeColor: [90, 90, 100], strokeW: 3.0,
         typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistShadow": {
         name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
@@ -1453,7 +1453,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:-0.3,y:0.4}, {x:-0.8,y:0.1}, {x:-0.8,y:-0.1}, {x:-0.3,y:-0.4} ],
         fillColor: [30, 30, 30], strokeColor: [70, 70, 70], strokeW: 1.0,
         typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["PIRATE","SEPARATIST"]
     },
     "SeparatistSupplyRunner": {
         name: "Separatist Supply Runner", role: "Armored Transport", sizeCategory: "Medium", size: 52,
@@ -1465,7 +1465,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0.6}, {x:0.7,y:0.8}, {x:-0.7,y:0.8}, {x:-0.9,y:0.6}, {x:-0.9,y:-0.6}, {x:-0.7,y:-0.8}, {x:0.7,y:-0.8}, {x:0.9,y:-0.6} ],
         fillColor: [90, 70, 50], strokeColor: [130, 110, 90], strokeW: 1.6,
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER","SEPARATIST"]
     },
     "ImperialGuardian": {
         name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
@@ -1477,7 +1477,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:0.5,y:0.4}, {x:-0.5,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.5,y:-0.7}, {x:0.5,y:-0.4} ],
         fillColor: [220, 220, 240], strokeColor: [100, 120, 200], strokeW: 1.5,
         typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
-        aiRoles: ["POLICE", "GUARD"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialPaladin": {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
@@ -1489,7 +1489,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:-0.3,y:0.8}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 5,
-        aiRoles: ["POLICE"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialLancer": {
         name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
@@ -1501,7 +1501,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1.2,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
         fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
         typicalCargo: [], price: 62000, techLevel: 4,
-        aiRoles: ["BOUNTY_HUNTER"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialJusticar": {
         name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
@@ -1513,7 +1513,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0.5}, {x:0.5,y:0.9}, {x:-0.5,y:0.9}, {x:-0.9,y:0.5}, {x:-0.9,y:-0.5}, {x:-0.5,y:-0.9}, {x:0.5,y:-0.9}, {x:0.9,y:-0.5} ],
         fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
         typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 5,
-        aiRoles: ["POLICE"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialEnvoy": {
         name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,
@@ -1525,7 +1525,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1.1,y:0}, {x:0.8,y:0.3}, {x:-0.8,y:0.4}, {x:-1.1,y:0}, {x:-0.8,y:-0.4}, {x:0.8,y:-0.3} ],
         fillColor: [250, 250, 255], strokeColor: [200, 180, 120], strokeW: 1.5,
         typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
-        aiRoles: ["TRANSPORT"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialSentinel": {
         name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,
@@ -1537,7 +1537,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.3}, {x:0.4,y:0.6}, {x:-0.4,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.4,y:-0.8}, {x:0.4,y:-0.6}, {x:1,y:-0.3} ],
         fillColor: [210, 215, 225], strokeColor: [90, 110, 170], strokeW: 1.9,
         typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
-        aiRoles: ["POLICE"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialEagleMkII": {
         name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,
@@ -1549,7 +1549,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:-0.6,y:0.4}, {x:-0.9,y:0.2}, {x:-0.9,y:-0.2}, {x:-0.6,y:-0.4} ],
         fillColor: [230, 230, 245], strokeColor: [150, 150, 220], strokeW: 1.1,
         typicalCargo: [], price: 58000, techLevel: 3,
-        aiRoles: ["POLICE", "BOUNTY_HUNTER"]
+        aiRoles: ["IMPERIAL"]
     },
     "ImperialCutterLite": {
         name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
@@ -1561,7 +1561,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1.1,y:0}, {x:0.7,y:0.25}, {x:0,y:0.7}, {x:-0.9,y:0.6}, {x:-1.1,y:0.3}, {x:-1.1,y:-0.3}, {x:-0.9,y:-0.6}, {x:0,y:-0.7}, {x:0.7,y:-0.25} ],
         fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["HAULER", "IMPERIAL"]
     }
 };
 // --- End Ship Definitions ---

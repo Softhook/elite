@@ -11,6 +11,8 @@ const buildShipRoleArrays = () => {
     const EXPLORER_SHIPS = [];
     const BOUNTY_HUNTER_SHIPS = [];
     const GUARD_SHIPS = [];
+    const IMPERIAL_SHIPS = [];
+    const SEPARATIST_SHIPS = [];
     
     // Iterate through all ship definitions
     for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
@@ -26,6 +28,8 @@ const buildShipRoleArrays = () => {
         if (shipData.aiRoles.includes("EXPLORER")) EXPLORER_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("BOUNTY_HUNTER")) BOUNTY_HUNTER_SHIPS.push(shipKey);
         if (shipData.aiRoles.includes("GUARD")) GUARD_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("IMPERIAL")) IMPERIAL_SHIPS.push(shipKey);
+        if (shipData.aiRoles.includes("SEPARATIST")) SEPARATIST_SHIPS.push(shipKey);
         
     }
     
@@ -38,7 +42,9 @@ const buildShipRoleArrays = () => {
         ALIEN_SHIPS,
         EXPLORER_SHIPS,
         BOUNTY_HUNTER_SHIPS,
-        GUARD_SHIPS
+        GUARD_SHIPS,
+        IMPERIAL_SHIPS,
+        SEPARATIST_SHIPS
     };
 };
 
@@ -52,7 +58,9 @@ const {
     ALIEN_SHIPS,
     EXPLORER_SHIPS,
     BOUNTY_HUNTER_SHIPS,
-    GUARD_SHIPS
+    GUARD_SHIPS,
+    IMPERIAL_SHIPS,
+    SEPARATIST_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify
@@ -66,6 +74,8 @@ console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
 console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
 console.log("BOUNTY_HUNTER_SHIPS:", BOUNTY_HUNTER_SHIPS);
 console.log("GUARD_SHIPS:", GUARD_SHIPS);
+console.log("IMPERIAL_SHIPS:",IMPERIAL_SHIPS);
+console.log("SEPARATIST_SHIPS:", SEPARATIST_SHIPS);
 
 // --- Jump Zone Constants ---
 const JUMP_ZONE_DEFAULT_RADIUS = 500;
@@ -586,7 +596,7 @@ try {
                 }
             }
 
-        } else if (econ === "offworld" || econ === "separatist") {
+        } else if (econ === "offworld") {
             const rand = random();
             if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.HAULER; 
@@ -604,6 +614,14 @@ try {
                  chosenRole = AI_ROLE.HAULER;
                  chosenShipTypeName = "Krait";
             }
+
+        } else if (econ === "separatist") {
+                chosenRole = AI_ROLE.HAULER; // Or another role if you want
+                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : HAULER_SHIPS);
+        } else if (econ === "imperial") {
+                chosenRole = AI_ROLE.HAULER; // Or another role if you want
+                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : HAULER_SHIPS);
+
         } else {
             // --- Standard spawn logic based on security ---
             const probs = this.getEnemyRoleProbabilities();
