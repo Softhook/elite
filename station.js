@@ -51,6 +51,37 @@ class Station {
                 this.rotationSpeed = 0.002; // Slightly faster rotation
                 this.size = 180; // Slightly larger
                 break;
+            case "Agricultural":
+                this.color = color(120, 180, 100); // Agricultural green
+                this.stationType = "agricultural";
+                this.rotationSpeed = 0.0012; // Slightly slower rotation
+                break;
+            case "Industrial":
+                this.color = color(160, 140, 120); // Industrial bronze-brown
+                this.stationType = "industrial";
+                break;
+            case "Mining":
+                this.color = color(160, 130, 90); // Mining rust/copper
+                this.stationType = "mining";
+                this.size = 170; // Slightly larger
+                break;
+            case "Tourism":
+                this.color = color(200, 160, 220); // Tourism lavender
+                this.stationType = "tourism";
+                break;
+            case "Refinery":
+                this.color = color(200, 80, 50); // Refinery orange-red
+                this.stationType = "refinery";
+                break;
+            case "Post Human":
+                this.color = color(100, 180, 230); // Post Human light blue
+                this.stationType = "posthuman";
+                break;
+            case "Imperial":
+                this.color = color(220, 190, 90); // Imperial gold
+                this.stationType = "imperial";
+                this.rotationSpeed = 0.001; // Slower, more stately rotation
+                break;
             default:
                 this.color = color(180, 180, 200); // Standard silver-grey
                 this.stationType = "standard";
@@ -86,6 +117,27 @@ class Station {
                 break;
             case "alien":
                 this._drawAlienStation();
+                break;
+            case "agricultural":
+                this._drawAgriculturalStation();
+                break;
+            case "industrial":
+                this._drawIndustrialStation();
+                break;
+            case "mining":
+                this._drawMiningStation();
+                break;
+            case "tourism":
+                this._drawTourismStation();
+                break;
+            case "refinery":
+                this._drawRefineryStation();
+                break;
+            case "posthuman":
+                this._drawPostHumanStation();
+                break;
+            case "imperial":
+                this._drawImperialStation();
                 break;
             default:
                 this._drawStandardStation();
@@ -805,6 +857,273 @@ class Station {
             player.applyShipDefinition(area.shipType);
             saveGame && saveGame();
             alert(`You bought a ${area.shipType}!`);
+        }
+    }
+
+    /**
+     * Draws an agricultural station with greenhouses and domes.
+     * @private
+     */
+    _drawAgriculturalStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Greenhouse domes on modules
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            if (i % 4 === 0) {
+                // Large greenhouse domes at cardinal points
+                fill(120, 200, 120, 180);
+                stroke(80, 160, 80);
+                ellipse(0, -this.size * 0.48, this.size * 0.13, this.size * 0.08);
+                fill(180, 255, 180, 80 + 40 * sin(this.lightTimer + i));
+                ellipse(0, -this.size * 0.48, this.size * 0.09, this.size * 0.05);
+            } else {
+                // Standard modules with green windows
+                fill(this.color);
+                stroke(100, 180, 100);
+                rect(-this.size * 0.04, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 2);
+                fill(180, 255, 180, 120 + 40 * sin(this.lightTimer + i));
+                noStroke();
+                rect(-this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 1);
+            }
+            pop();
+        }
+        this._drawSolarPanels();
+        // Yellow/green running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(180, 255, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Green-yellow
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws an industrial station with smokestacks and extra modules.
+     * @private
+     */
+    _drawIndustrialStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Industrial modules with smokestacks
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            fill(this.color);
+            stroke(120, 100, 80);
+            rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 2);
+            // Smokestack
+            if (i % 4 === 0) {
+                fill(80, 80, 80);
+                rect(-this.size * 0.01, -this.size * 0.51, this.size * 0.02, this.size * 0.04, 1);
+                fill(180, 180, 180, 80 + 40 * sin(this.lightTimer + i));
+                ellipse(0, -this.size * 0.53, this.size * 0.03, this.size * 0.01);
+            }
+            pop();
+        }
+        this._drawSolarPanels();
+        // Orange/white running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws a mining station with ore containers and rugged modules.
+     * @private
+     */
+    _drawMiningStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Mining containers and rugged modules
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            if (i % 4 === 0) {
+                // Large ore container
+                fill(180, 140, 80);
+                stroke(120, 80, 40);
+                rect(-this.size * 0.06, -this.size * 0.48, this.size * 0.12, this.size * 0.07, 2);
+            } else {
+                // Rugged module
+                fill(this.color);
+                stroke(120, 100, 80);
+                rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 2);
+            }
+            pop();
+        }
+        // No solar panels, instead draw mining cranes
+        for (let i = 0; i < 2; i++) {
+            push();
+            rotate(i * PI + PI/4);
+            stroke(120, 100, 80);
+            strokeWeight(3);
+            line(0, this.size * 0.12, 0, this.size * 0.28);
+            strokeWeight(1);
+            line(0, this.size * 0.28, this.size * 0.08, this.size * 0.32);
+            pop();
+        }
+        // Red/yellow running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            if (i % 3 === 0) fill(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws a tourism station with domes and purple lights.
+     * @private
+     */
+    _drawTourismStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Domes and windows
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            if (i % 4 === 0) {
+                fill(220, 180, 255, 180);
+                stroke(180, 120, 220);
+                ellipse(0, -this.size * 0.48, this.size * 0.13, this.size * 0.08);
+            } else {
+                fill(this.color);
+                stroke(180, 120, 220);
+                rect(-this.size * 0.04, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 2);
+                fill(255, 200, 255, 120 + 40 * sin(this.lightTimer + i));
+                noStroke();
+                rect(-this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 1);
+            }
+            pop();
+        }
+        this._drawSolarPanels();
+        // Purple/white running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(200, 160, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Purple
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws a refinery station with tanks and red lights.
+     * @private
+     */
+    _drawRefineryStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Tanks and pipes
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            fill(this.color);
+            stroke(180, 80, 50);
+            rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 2);
+            if (i % 4 === 0) {
+                fill(200, 80, 50);
+                ellipse(0, -this.size * 0.51, this.size * 0.06, this.size * 0.06);
+                stroke(180, 80, 50);
+                line(0, -this.size * 0.51, 0, -this.size * 0.47);
+            }
+            pop();
+        }
+        this._drawSolarPanels();
+        // Red/orange running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
+            if (i % 3 === 0) fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws a posthuman station with blue/white lights and sleek modules.
+     * @private
+     */
+    _drawPostHumanStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Sleek modules
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            fill(this.color);
+            stroke(100, 180, 230);
+            rect(-this.size * 0.04, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 6);
+            fill(200, 255, 255, 120 + 40 * sin(this.lightTimer + i));
+            noStroke();
+            rect(-this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 3);
+            pop();
+        }
+        this._drawSolarPanels();
+        // Blue/white running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(100, 200, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Blue
+            if (i % 3 === 0) fill(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+
+    /**
+     * Draws an imperial station with gold and stately features.
+     * @private
+     */
+    _drawImperialStation() {
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        // Gold modules and banners
+        for (let i = 0; i < 16; i++) {
+            push();
+            rotate(i * TWO_PI / 16);
+            fill(this.color);
+            stroke(180, 160, 60);
+            rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 4);
+            if (i % 4 === 0) {
+                fill(255, 220, 100);
+                rect(-this.size * 0.01, -this.size * 0.51, this.size * 0.02, this.size * 0.06, 2);
+            }
+            pop();
+        }
+        this._drawSolarPanels();
+        // Gold/white running lights
+        noStroke();
+        for (let i = 0; i < 24; i++) {
+            push();
+            rotate(i * TWO_PI / 24);
+            fill(255, 220, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Gold
+            if (i % 3 === 0) fill(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
         }
     }
 }
