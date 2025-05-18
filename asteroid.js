@@ -12,30 +12,33 @@ class Asteroid {
         this.rotationSpeed = random(-0.01, 0.01);
 
         // Generate vertices in strict clockwise order
-        this.vertices = [];
-        let numVertices = floor(random(8, 12));
-        let baseRadius = this.size / 2;
-        this.maxRadius = baseRadius;
-
-        // Generate angles first, ensure they're in ascending order
-        let angles = [];
-        for (let i = 0; i < numVertices; i++) {
-            angles.push(i * TWO_PI / numVertices);
-        }
-        
-        // Sort angles to ensure clockwise order (not strictly necessary in this case,
-        // but good practice for vertex generation)
-        angles.sort((a, b) => a - b);
-        
-        // Now create vertices with these ordered angles
-        for (let angle of angles) {
-            let radius = baseRadius * random(0.75, 1.25);
-            this.vertices.push(createVector(cos(angle) * radius, sin(angle) * radius));
-            if (radius > this.maxRadius) this.maxRadius = radius;
-        }
+        this.vertices = this._generateVertices();
 
         this.color = color(random(120, 180)); // Lighter gray for better visibility
         this.destroyed = false;
+    }
+
+    /**
+     * Generates the asteroid's vertices in strict clockwise order.
+     * @returns {p5.Vector[]} Array of vertex vectors.
+     */
+    _generateVertices() {
+        const numVertices = floor(random(8, 12));
+        const baseRadius = this.size / 2;
+        let maxRadius = baseRadius;
+
+        // Generate angles in ascending order
+        const angles = Array.from({length: numVertices}, (_, i) => i * TWO_PI / numVertices);
+        angles.sort((a, b) => a - b);
+
+        // Create vertices
+        const vertices = angles.map(angle => {
+            const radius = baseRadius * random(0.75, 1.25);
+            if (radius > maxRadius) maxRadius = radius;
+            return createVector(cos(angle) * radius, sin(angle) * radius);
+        });
+        this.maxRadius = maxRadius;
+        return vertices;
     }
 
     update() {
@@ -58,7 +61,7 @@ class Asteroid {
 
         // Draw an irregular shape using pre-generated vertices
         beginShape();
-        for (let v of this.vertices) {
+        for (const v of this.vertices) {
             vertex(v.x, v.y);
         }
         endShape(CLOSE);
@@ -67,11 +70,11 @@ class Asteroid {
 
         // --- Draw Health Bar ---
         if (this.health < this.maxHealth && this.maxHealth > 0) {
-            let healthPercent = this.health / this.maxHealth;
-            let barW = this.size * 0.7;
-            let barH = 5;
-            let barX = this.pos.x - barW / 2;
-            let barY = this.pos.y - this.maxRadius - 14;
+            const healthPercent = this.health / this.maxHealth;
+            const barW = this.size * 0.7;
+            const barH = 5;
+            const barX = this.pos.x - barW / 2;
+            const barY = this.pos.y - this.maxRadius - 14;
 
             push();
             noStroke();
@@ -83,9 +86,7 @@ class Asteroid {
         }
     }
 
-    /**
-     * Applies damage to the asteroid's health.
-     */
+    /** Applies damage to the asteroid's health. */
     takeDamage(amount) {
         if (this.destroyed || amount <= 0) return;
         this.health -= amount;
@@ -106,13 +107,10 @@ class Asteroid {
      * @returns {boolean} True if collision detected based on overlapping circular bounds.
      */
     checkCollision(target) {
-        if (!target || !target.pos || typeof target.size !== 'number') {
-            return false;
-        }
-        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
-        let targetRadius = target.size / 2;
-        let sumRadii = targetRadius + this.maxRadius;
+        if (!target || !target.pos || typeof target.size !== 'number') return false;
+        const dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
+        const targetRadius = target.size / 2;
+        const sumRadii = targetRadius + this.maxRadius;
         return dSq < sq(sumRadii);
     }
-
 } // End of Asteroid Class
