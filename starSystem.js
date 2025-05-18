@@ -114,6 +114,7 @@ class StarSystem {
 
         // --- Initialize empty arrays and default null/values ---
         this.station = null; // Created in initStaticElements
+        this.secretStations = []; // <--- NEW
         this.planets = [];
         this.asteroids = [];
         this.enemies = [];
@@ -289,6 +290,28 @@ class StarSystem {
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
         catch(e) { console.error("Error during createRandomPlanets call:", e); }
+
+        // --- Secret Station Generation ---
+        this.secretStations = [];
+        if (this.planets && this.planets.length > 1 && random() < 0.5) { // 50% chance
+            // Pick a random planet (not the sun)
+            let planetIdx = floor(random(1, this.planets.length));
+            let planet = this.planets[planetIdx];
+            let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
+            let dist = planet.size * 1.8 + random(200, 600);
+            let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
+            // Pick subtype based on system type
+            let subtype = null;
+            let sysType = (this.economyType || "").toLowerCase();
+            if (sysType.includes("military")) subtype = "secret_military";
+            else if (sysType.includes("alien")) subtype = "secret_alien";
+            else if (sysType.includes("separatist")) subtype = "secret_separatist";
+            else subtype = "secret_generic";
+            let secretName = `${this.name} Secret Base`;
+            let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
+            this.secretStations.push(secretStation);
+        }
+        // --- End Secret Station Generation ---
 
         // --- Calculate Jump Zone Position (AFTER station position is set in createRandomPlanets) ---
         if (this.jumpZoneCenter === null) { // Check if not already loaded from save data
@@ -493,8 +516,12 @@ try {
                 console.log(`Populating ${this.name} system. Player wanted status: ${this.player.isWanted}`);
                 
                 // CHANGE: Use this.player in method calls
-                for (let i = 0; i < 3; i++) { try { this.trySpawnNPC(); } catch(e) {} }
-                for (let i = 0; i < 8; i++) { try { this.trySpawnAsteroid(); } catch(e) {} }
+                for (let i = 0; i < 3; i++) {
+                    try { this.trySpawnNPC(); } catch(e) {}
+                }
+                for (let i = 0; i < 8; i++) {
+                    try { this.trySpawnAsteroid(); } catch(e) {}
+                }
                 
                 // Use this.player in nested setTimeout too
                 setTimeout(() => {
@@ -1540,6 +1567,12 @@ checkProjectileCollisions() {
                           this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
             this.station.draw();
         }
+        // Draw discovered secret stations
+        for (const s of this.secretStations) {
+            if (s.discovered && this.isInView(s.pos.x, s.pos.y, s.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                s.draw();
+            }
+        }
 
         // Determine sun position using the first planet if it exists
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
@@ -1716,9 +1749,10 @@ checkProjectileCollisions() {
             // Save station if present
             station: this.station && typeof this.station.toJSON === 'function'
                 ? this.station.toJSON()
-                : null,        
-            // Add Nebulae
-            nebulae: this.nebulae.map(nebula => nebula.toJSON()),
+                : null,
+            secretStations: this.secretStations && this.secretStations.length > 0
+                ? this.secretStations.map(s => s.toJSON())
+                : [],
             // --- Add Jump Zone Data ---
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
@@ -1830,6 +1864,7 @@ addEnemy(enemy) {
     if (enemy) {
         // Set bidirectional reference
         enemy.currentSystem = this;
+        window.currentSystem = this;
         this.enemies.push(enemy);
         return true;
     }

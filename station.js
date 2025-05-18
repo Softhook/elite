@@ -11,8 +11,10 @@ class Station {
      * @param {number} worldY - The Y coordinate in world space
      * @param {string} systemType - The economy type of the system
      * @param {string} name - The name of the station (defaults to "Station")
+     * @param {boolean} isSecret - Whether this is a secret station
+     * @param {string|null} stationSubtype - Subtype for secret stations (e.g., 'secret_military')
      */
-    constructor(worldX, worldY, systemType, name = "Station") {
+    constructor(worldX, worldY, systemType, name = "Station", isSecret = false, stationSubtype = null) {
         this.pos = createVector(worldX, worldY);
         this.name = name;
         this.systemType = systemType;
@@ -24,6 +26,9 @@ class Station {
         this.angle = 0;
         this.rotationSpeed = 0.0015;
         this.lightTimer = 0;
+        this.isSecret = isSecret;
+        this.stationSubtype = stationSubtype;
+        this.discovered = !isSecret; // Only discovered if not secret
     }
 
     /**
@@ -792,7 +797,10 @@ class Station {
             rotationSpeed: this.rotationSpeed,
             market: this.market && typeof this.market.toJSON === 'function'
                 ? this.market.toJSON()
-                : null
+                : null,
+            isSecret: this.isSecret || false,
+            stationSubtype: this.stationSubtype || null,
+            discovered: this.discovered || false
         };
     }
 
@@ -803,28 +811,25 @@ class Station {
      * @static
      */
     static fromJSON(data) {
-        const s = new Station(data.pos.x, data.pos.y, data.systemType || data.market?.type || "Unknown", data.name);
+        const s = new Station(
+            data.pos.x, data.pos.y,
+            data.systemType || data.market?.type || "Unknown",
+            data.name,
+            data.isSecret || false,
+            data.stationSubtype || null
+        );
         s.size = data.size;
         s.dockingRadius = data.dockingRadius;
-        
-        // Restore station type if available, otherwise _setStationAppearance will handle it based on systemType
-        if (data.stationType) {
-            s.stationType = data.stationType;
-        }
-        
-        // Color restoration (optional, simple fallback)
+        if (data.stationType) s.stationType = data.stationType;
         if (data.color && typeof color === "function") {
             try { s.color = color(data.color); } catch {}
         }
-        
         s.angle = data.angle;
         s.rotationSpeed = data.rotationSpeed;
-        
-        // Restore market if possible
         if (data.market && typeof Market?.fromJSON === "function") {
             s.market = Market.fromJSON(data.market);
         }
-        
+        s.discovered = data.discovered || false;
         return s;
     }
 
@@ -1136,3 +1141,5 @@ class Station {
         this._drawStandardRunningLights();
     }
 }
+
+window.Station = Station;
