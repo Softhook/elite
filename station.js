@@ -82,6 +82,10 @@ class Station {
                 this.stationType = "imperial";
                 this.rotationSpeed = 0.001; // Slower, more stately rotation
                 break;
+            case "Separatist":
+                this.color = color(200, 100, 0); // Separatist orange
+                this.stationType = "separatist";
+                break;
             default:
                 this.color = color(180, 180, 200); // Standard silver-grey
                 this.stationType = "standard";
@@ -138,6 +142,9 @@ class Station {
                 break;
             case "imperial":
                 this._drawImperialStation();
+                break;
+            case "separatist":
+                this._drawSeparatistStation();
                 break;
             default:
                 this._drawStandardStation();
@@ -258,7 +265,7 @@ class Station {
         // Docking bays at cardinal points
         fill(80, 80, 100);
         stroke(100, 100, 120);
-        rect(-this.size * 0.06, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 3);
+        rect(-this.size * 0.06, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 2);
         
         // Docking bay lighting (alternating red/green)
         fill(sin(this.lightTimer*2 + index) > 0 ? color(0, 200, 0) : color(200, 0, 0));
@@ -1123,6 +1130,45 @@ class Station {
             fill(255, 220, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Gold
             if (i % 3 === 0) fill(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
             ellipse(0, -this.size * 0.475, 3, 3);
+            pop();
+        }
+    }
+    
+    /**
+     * Draws a separatist station with extra solar panels and unique features.
+     * @private
+     */
+    _drawSeparatistStation() {
+        // Draw the standard station components
+        this._drawCentralHub();
+        this._drawMainArms();
+        this._drawRings();
+        this._drawHabitationModules();
+        this._drawSolarPanels();
+        this._drawRunningLights();
+        // Add two extra solar panels at 135° and 315°
+        for (let i = 0; i < 2; i++) {
+            let angle = PI * (3/4 + i); // 135° and 315°
+            push();
+            rotate(angle);
+            // Panel mount
+            fill(120, 120, 140);
+            rect(-this.size * 0.02, this.size * 0.12, this.size * 0.04, this.size * 0.04);
+            // Panel
+            fill(20, 30, 100);
+            stroke(150, 150, 170);
+            rect(-this.size * 0.15, this.size * 0.16, this.size * 0.3, this.size * 0.1);
+            // Panel grid lines
+            stroke(180, 180, 200, 100);
+            strokeWeight(1);
+            for (let j = 0; j < 5; j++) {
+                let x = -this.size * 0.15 + j * this.size * 0.075;
+                line(x, this.size * 0.16, x, this.size * 0.26);
+            }
+            for (let j = 0; j < 3; j++) {
+                let y = this.size * 0.16 + j * this.size * 0.05;
+                line(-this.size * 0.15, y, this.size * 0.15, y);
+            }
             pop();
         }
     }
