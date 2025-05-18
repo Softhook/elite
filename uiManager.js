@@ -2,67 +2,82 @@
 
 class UIManager {
     constructor() {
-        // --- Areas for clickable UI elements ---
-        this.marketButtonAreas = []; // { x, y, w, h, action, commodity }
-        this.galaxyMapNodeAreas = [];// { x, y, radius, index }
-        this.jumpButtonArea = {};    // { x, y, w, h }
-        this.stationMenuButtonAreas = []; // { x, y, w, h, action, state, text }
+        // --- UI Areas ---
+        this._initUIAreas();
+        // --- UI State ---
+        this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
+        // --- Minimap ---
+        this._initMinimap();
+        // --- Shipyard/Upgrade/Repairs ---
+        this._initShopAreas();
+        // --- FPS Tracking ---
+        this._initFPSTracking();
+        // --- Message System ---
+        this._initMessages();
+        // --- Weapon/Combat ---
+        this.selectedWeaponSlot = 0;
+        this.weaponSlotButtons = [];
+        this._initBattleIndicators();
+        // --- Panel Defaults ---
+        this.setPanelDefaults();
+    }
+
+    // --- Initialization Helpers ---
+    _initUIAreas() {
+        this.marketButtonAreas = [];
+        this.galaxyMapNodeAreas = [];
+        this.jumpButtonArea = {};
+        this.stationMenuButtonAreas = [];
         this.missionListButtonAreas = [];
         this.missionDetailButtonAreas = {};
         this.policeButtonAreas = [];
-        // track missions that have been completed or abandoned
         this.inactiveMissionIds = new Set();
-        this.marketBackButtonArea = {}; // { x, y, w, h }
-        this.shipyardListAreas = []; // Placeholder
-        this.shipyardDetailButtons = {}; // Placeholder
-        this.upgradeListAreas = []; // Placeholder
-        this.upgradeDetailButtons = {}; // Placeholder
-        this.repairsFullButtonArea = {}; // Placeholder
-        this.repairsHalfButtonArea = {}; // Placeholder
-        this.repairsBackButtonArea = {}; // Placeholder
+        this.marketBackButtonArea = {};
+    }
 
-        // --- UI State ---
-        this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
+    _initMinimap() {
+        this.minimapSize = 200;
+        this.minimapMargin = 15;
+        this.minimapX = 0;
+        this.minimapY = 0;
+        this.minimapWorldViewRange = 5000;
+        this.minimapScale = 1;
+    }
 
-        // --- Minimap Properties ---
-        this.minimapSize = 200; // Size of the square minimap in pixels
-        this.minimapMargin = 15; // Margin from screen edges
-        this.minimapX = 0; // Calculated in drawMinimap
-        this.minimapY = 0; // Calculated in drawMinimap (now bottom right)
-        this.minimapWorldViewRange = 5000; // World units shown across minimap width/height
-        this.minimapScale = 1; // Calculated pixels per world unit
-
-        // --- Shipyard Scroll Properties ---
+    _initShopAreas() {
+        this.shipyardListAreas = [];
+        this.shipyardDetailButtons = {};
+        this.upgradeListAreas = [];
+        this.upgradeDetailButtons = {};
+        this.repairsFullButtonArea = {};
+        this.repairsHalfButtonArea = {};
+        this.repairsBackButtonArea = {};
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
+    }
 
-        // FPS tracking properties
-        this.fpsValues = [];          // Array to store recent FPS readings
-        this.fpsMaxSamples = 30;      // Number of samples to average (half a second at 60fps)
-        this.fpsUpdateInterval = 10;  // Update display every 10 frames
-        this.fpsFrameCount = 0;       // Frame counter for updates
-        this.fpsAverage = 0;          // Current average FPS value to display
+    _initFPSTracking() {
+        this.fpsValues = [];
+        this.fpsMaxSamples = 30;
+        this.fpsUpdateInterval = 10;
+        this.fpsFrameCount = 0;
+        this.fpsAverage = 0;
+    }
 
+    _initMessages() {
         this.messages = [];
-        this.messageDisplayTime = 4000; // ms
+        this.messageDisplayTime = 4000;
         this.maxMessagesToShow = 4;
-
-        // Properties for market button holding
         this.marketButtonHeld = null;
         this.lastButtonAction = 0;
-        this.buttonRepeatDelay = 150; // ms between repeated actions
+        this.buttonRepeatDelay = 150;
+    }
 
-        //Weapon slots
-        this.selectedWeaponSlot = 0;
-        this.weaponSlotButtons = [];
-
-        // Battle indicator system
+    _initBattleIndicators() {
         this.battleIndicators = [];
-        this.battleIndicatorDuration = 1200; // Duration in milliseconds (was 800, 1500 in different thoughts)
-        this.battleIndicatorLineLength = 25; // Length of the white line (was 20)
-        this.battleIndicatorEdgeBuffer = 10; // Distance from the absolute screen edge (was 10, 30)
-
-        this.setPanelDefaults();
+        this.battleIndicatorDuration = 1200;
+        this.battleIndicatorLineLength = 25;
+        this.battleIndicatorEdgeBuffer = 10;
     }
 
     /** Sets standardized panel geometry for all station menus */
