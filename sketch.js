@@ -3,20 +3,14 @@
 // --- Ship Definitions and Drawing Functions are loaded from ships.js ---
 // Ensure ships.js is included BEFORE this file in index.html
 
+// --- Global Constants ---
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
+const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
 
 // --- Global Variables ---
-let player;                 // The player object
-let galaxy;                 // The galaxy object containing star systems
-let uiManager;              // Handles drawing UI elements (HUD, menus, map)
-let gameStateManager;       // Controls the overall game state (flight, docked, map etc.)
-const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
-let loadGameWasSuccessful = false;     // Flag to track if a saved game was successfully loaded
-let soundManager;
-let titleScreen;            // Handles title screen and instructions screen
-let font;
-let inventoryScreen;
+let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager;
+let loadGameWasSuccessful = false;
 // --- End Global Variables ---
 
 // --- p5.js Setup Function ---
@@ -83,20 +77,17 @@ function setup() {
         console.log("No save game found, generating procedural galaxy...");
         if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
             galaxy.initGalaxySystems();
-
-        // --- START: Position player near station for new game ---
-        const startingSystemForNewGame = galaxy.getCurrentSystem();
-        if (startingSystemForNewGame && startingSystemForNewGame.station && startingSystemForNewGame.station.pos) {
-            player.pos.set(startingSystemForNewGame.station.pos.x + startingSystemForNewGame.station.size + 100, startingSystemForNewGame.station.pos.y);
-            player.angle = PI; // Face away from the typical station spawn side
-            console.log(`New game: Player positioned near station ${startingSystemForNewGame.station.name} in ${startingSystemForNewGame.name}`);
-        } else {
-            // Fallback if no station or system, though initGalaxySystems should create one
-            player.pos.set(0,0); 
-            console.warn("New game: Could not position player near station (station or system not found). Defaulting to 0,0.");
-        }
-        // --- END: Position player near station for new game ---
-
+            // Position player near station for new game
+            const startingSystem = galaxy.getCurrentSystem();
+            if (startingSystem && startingSystem.station && startingSystem.station.pos) {
+                player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100, startingSystem.station.pos.y);
+                player.angle = PI; // Face away from the typical station spawn side
+                console.log(`New game: Player positioned near station ${startingSystem.station.name} in ${startingSystem.name}`);
+            } else {
+                // Fallback if no station or system, though initGalaxySystems should create one
+                player.pos.set(0,0); 
+                console.warn("New game: Could not position player near station (station or system not found). Defaulting to 0,0.");
+            }
         } else {
             console.error("FATAL ERROR: Galaxy object or initGalaxySystems method missing!");
             noLoop(); return;
