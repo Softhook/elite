@@ -152,65 +152,50 @@ function setup() {
 // Runs continuously after setup() completes.
 function draw() {
     background(0); // Clear the canvas each frame
+    const currentState = gameStateManager?.currentState;
 
-    // Update title screen animations if in title or instructions screen
-    if (gameStateManager.currentState === "TITLE_SCREEN" || 
-        gameStateManager.currentState === "INSTRUCTIONS") {
+    // Title/instructions screen animation
+    if (currentState === "TITLE_SCREEN" || currentState === "INSTRUCTIONS") {
         titleScreen.update(deltaTime);
     }
 
-    // --- Game State Update and Draw ---
+    // Main game state update and draw
     if (gameStateManager && player) {
         try {
-            // Update game logic based on current state
             gameStateManager.update(player);
-
-                        // Update EventManager if in flight and references are set
-                        let currentSystemForEventManager = galaxy.getCurrentSystem();
-                        if (eventManager && currentSystemForEventManager && player && uiManager) {
-                            // Ensure EventManager has the latest references, especially after a jump
-                            if (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player) {
-                                eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
-                            }
-                            if (gameStateManager.currentState === "IN_FLIGHT") {
-                                eventManager.update();
-                            }
-                        }
-            
-            // Continuous firing logic - using direct keyIsDown check
-            if (gameStateManager.currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
+            // Update EventManager if in flight and references are set
+            const currentSystemForEventManager = galaxy.getCurrentSystem();
+            if (eventManager && currentSystemForEventManager && player && uiManager) {
+                if (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player) {
+                    eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
+                }
+                if (currentState === "IN_FLIGHT") {
+                    eventManager.update();
+                }
+            }
+            // Continuous firing logic
+            if (currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
                 player.handleFireInput();
             }
-            
             // Draw visuals based on current state
             gameStateManager.draw(player);
-            
             // Check for held market buttons
-            if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
-                uiManager.checkMarketButtonHeld(
-                    player.currentSystem?.station?.getMarket(), 
-                    player
-                );
+            if (currentState === "VIEWING_MARKET" && uiManager) {
+                uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
             }
-            
         } catch (e) {
             // Catch any unexpected errors during the main loop
+            showCriticalError(`ERROR in Update/Draw Loop!\nCheck Console.\n${e.message}`);
             console.error("!!! ERROR during gameStateManager update/draw:", e);
-            // Display error on screen and stop the loop
-            fill(255, 0, 0); textSize(16); textAlign(CENTER, CENTER); noStroke();
-            text(`ERROR in Update/Draw Loop!\nCheck Console.\n${e.message}`, width / 2, height / 2);
-            noLoop(); // Stop the loop on critical error
+            noLoop();
         }
     } else {
-         // Handle case where critical objects are missing during draw
-         console.error("CRITICAL ERROR: gameStateManager or Player missing in draw()!");
-         fill(255,0,0); textSize(20); textAlign(CENTER,CENTER); noStroke();
-         text("Error: Game State Manager or Player missing!", width/2, height/2);
-         noLoop(); // Stop if fundamental objects missing
-         return;
+        showCriticalError("Error: Game State Manager or Player missing!");
+        console.error("CRITICAL ERROR: gameStateManager or Player missing in draw()!");
+        noLoop();
+        return;
     }
-
-    // Draw framerate display (always visible in all game states)
+    // --- UI Drawing ---
     uiManager.drawFramerate();
     uiManager.drawMessages();
 
@@ -220,106 +205,85 @@ function draw() {
     //     line(width / 2, height / 2, mouseX, mouseY); pop(); // Line from screen center to mouse
     // }
 
-} // --- End draw() ---
+}
+
+/**
+ * Displays a critical error message on the screen in red and large font.
+ * @param {string} msg - The error message to display.
+ */
+function showCriticalError(msg) {
+    fill(255, 0, 0); textSize(20); textAlign(CENTER, CENTER); noStroke();
+    text(msg, width / 2, height / 2);
+}
 
 
 // --- Input Handling Functions ---
 
 function keyPressed() {
-  // toggle inventory with “I”
-  if ((key === 'i' || key === 'I') 
-      && gameStateManager.currentState === "IN_FLIGHT") {
-    gameStateManager.showingInventory = !gameStateManager.showingInventory;
-    return false;
-  }
-
-  // Handle instructions screen keyboard input
-  if (gameStateManager.currentState === "INSTRUCTIONS") {
-      titleScreen.handleKeyPress(keyCode);
-      return;
-  }
-
-  // For spacebar - just trigger initial shot
-  if (key === ' ' || keyCode === 32) {
-      if (gameStateManager.currentState === "IN_FLIGHT" && player) {
-          player.handleFireInput();
-      }
-      return false;
-  }
-
-  if (!gameStateManager) return; // Don't process keys if game not ready
-
-  // WEAPON SWITCHING - Number keys 1-9
-  if (gameStateManager.currentState === "IN_FLIGHT" && player) {
-      // Check for number keys 1-9
-      const numKey = parseInt(key);
-      if (!isNaN(numKey) && numKey >= 1 && numKey <= 9) {
-          // Convert to 0-based index for array access
-          const weaponIndex = numKey - 1;
-          if (player.switchToWeapon(weaponIndex)) {
-              console.log(`Switched to weapon: ${player.currentWeapon.name}`);
-          }
-          return false; // Prevent default browser behavior
-      }
-  }
-
-  // Toggle Galaxy Map (M key)
-  if (key === 'm' || key === 'M') {
-      if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
-      else if (gameStateManager.currentState === "GALAXY_MAP") gameStateManager.setState("IN_FLIGHT");
-  }
-  // Allow ESC to exit map/docked state back to flight
-  if (keyCode === ESCAPE) {
-      if (gameStateManager.currentState === "GALAXY_MAP" || gameStateManager.currentState === "DOCKED") {
-          gameStateManager.setState("IN_FLIGHT");
-      }
-  }
-  // Toggle Player Wanted Status in CURRENT SYSTEM ONLY (L key)
-  if (key === 'l' || key === 'L') {
-      if (player && player.currentSystem) { 
-          // Toggle wanted status in current system only
-          const currentSystem = player.currentSystem;
-          const isCurrentlyWanted = currentSystem.playerWanted || false;
-          
-          // Toggle the status
-          currentSystem.playerWanted = !isCurrentlyWanted;
-          
-          // Set police alert
-          currentSystem.policeAlertSent = !isCurrentlyWanted;
-          
-          console.log(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
-          
-          if (!isCurrentlyWanted) {
-              // Now wanted
-              uiManager.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
-              console.log(`ALERT: Police alert issued in ${currentSystem.name}!`);
-          } else {
-              // No longer wanted
-              uiManager.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
-              console.log(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
-          }
-          
-          return false; // Prevent default browser behavior
-      }
-  }
-
-      // Autopilot controls - with improved debugging
-      if (gameStateManager && gameStateManager.currentState === "IN_FLIGHT" && player && !player.destroyed) {
-          // H key - autopilot to station
-          if (key.toLowerCase() === 'h') {
-              console.log("H key detected - toggling station autopilot");
-              player.toggleAutopilot('station');
-              return false; // Prevent default browser behavior
-          }
-          
-          // J key - autopilot to jump zone
-          if (key.toLowerCase() === 'j') {
-              console.log("J key detected - toggling jump zone autopilot");
-              player.toggleAutopilot('jumpzone');
-              return false; // Prevent default browser behavior
-          }
-      }
-  
+    // Toggle inventory with “I”
+    if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
+        gameStateManager.showingInventory = !gameStateManager.showingInventory;
+        return false;
+    }
+    // Instructions screen keyboard input
+    if (gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen.handleKeyPress(keyCode);
+        return;
+    }
+    // Spacebar triggers initial shot
+    if ((key === ' ' || keyCode === 32) && gameStateManager.currentState === "IN_FLIGHT" && player) {
+        player.handleFireInput();
+        return false;
+    }
+    if (!gameStateManager) return;
+    // Weapon switching 1-9
+    if (gameStateManager.currentState === "IN_FLIGHT" && player) {
+        const numKey = parseInt(key);
+        if (!isNaN(numKey) && numKey >= 1 && numKey <= 9) {
+            const weaponIndex = numKey - 1;
+            if (player.switchToWeapon(weaponIndex)) {
+                console.log(`Switched to weapon: ${player.currentWeapon.name}`);
+            }
+            return false;
+        }
+    }
+    // Single-key actions (map, wanted, autopilot, etc.)
+    switch (key.toLowerCase()) {
+        case 'm':
+            if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
+            else if (gameStateManager.currentState === "GALAXY_MAP") gameStateManager.setState("IN_FLIGHT");
+            return;
+        case 'l':
+            if (player && player.currentSystem) {
+                const currentSystem = player.currentSystem;
+                const isCurrentlyWanted = currentSystem.playerWanted || false;
+                currentSystem.playerWanted = !isCurrentlyWanted;
+                currentSystem.policeAlertSent = !isCurrentlyWanted;
+                console.log(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
+                if (!isCurrentlyWanted) {
+                    uiManager.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
+                    console.log(`ALERT: Police alert issued in ${currentSystem.name}!`);
+                } else {
+                    uiManager.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
+                    console.log(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
+                }
+                return false;
+            }
+            break;
+        case 'h':
+        case 'j':
+            if (gameStateManager.currentState === "IN_FLIGHT" && player && !player.destroyed) {
+                handleAutopilotKey(key.toLowerCase());
+                return false;
+            }
+            break;
+    }
+    // ESC to exit map/docked state back to flight
+    if (keyCode === ESCAPE) {
+        if (gameStateManager.currentState === "GALAXY_MAP" || gameStateManager.currentState === "DOCKED") {
+            gameStateManager.setState("IN_FLIGHT");
+        }
+    }
   // DEBUG: Clear Save Data (Shift + C key)
   // if (key === 'c' || key === 'C') {
   //     if (keyIsDown(SHIFT)) {
@@ -334,6 +298,20 @@ function keyPressed() {
   // return false; // Uncomment to prevent default browser key actions (like scrolling with arrows)
 }
 
+/**
+ * Handles autopilot key logic for 'h' (station) and 'j' (jump zone).
+ * @param {string} autopilotKey - The pressed key, already lowercased.
+ */
+function handleAutopilotKey(autopilotKey) {
+    if (autopilotKey === 'h') {
+        console.log("H key detected - toggling station autopilot");
+        player.toggleAutopilot('station');
+    } else if (autopilotKey === 'j') {
+        console.log("J key detected - toggling jump zone autopilot");
+        player.toggleAutopilot('jumpzone');
+    }
+}
+
 function keyReleased() {
   // We'll leave this empty or handle other keys
   return true; // Allow default for other keys
@@ -345,71 +323,66 @@ function mousePressed() {
     if (gameStateManager.currentState === "TITLE_SCREEN" || 
         gameStateManager.currentState === "INSTRUCTIONS") {
         titleScreen.handleClick();
-        return; // Click handled
+        return;
     }
-  
+
     // --- Fullscreen ON only once, on first click inside canvas ---
     if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
         fullscreen(true);
     }
-  
+
     // Handle market button presses specifically 
     if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
-        // Let handleMarketMousePress return true if it handled the click
         if (uiManager.handleMarketMousePress(
             mouseX, mouseY, 
             player.currentSystem?.station?.getMarket(), 
             player
-        )) {
-          return; // Click was handled by market UI
-        }
+        )) return; // Click was handled by market UI
     }
-  
+
     // Handle inventory clicks
     if (gameStateManager.showingInventory && gameStateManager.currentState === "IN_FLIGHT") {
-      const res = inventoryScreen.handleClick(mouseX, mouseY, player);
-      if (res === 'close') {
-        gameStateManager.showingInventory = false;
-        return; // Click handled by inventory
-      } 
-      else if (res?.action === 'jettison') {
-        const item = player.cargo[res.idx];
-        if (item && player.removeCargo(item.name, 1)) {
-          uiManager.addMessage(`Jettisoned 1 ${item.name}`);
-          
-          const dir = p5.Vector.fromAngle(player.angle + PI);
-          const pos = p5.Vector.add(
-              player.pos, 
-              dir.copy().mult(player.size * 2.6)
-          );
-          
-          const cargo = new Cargo(pos.x, pos.y, item.name, 1);
-          cargo.vel = dir.mult(1.5);
-          
-          player.currentSystem.addCargo(cargo);
+        const res = inventoryScreen.handleClick(mouseX, mouseY, player);
+        if (res === 'close') {
+            gameStateManager.showingInventory = false;
+            return;
         }
-        return; // Click handled by inventory
-      }
+        if (res?.action === 'jettison') {
+            handleJettisonFromInventory(res.idx);
+            return;
+        }
     }
-  
-    if (!gameStateManager || !player || !uiManager || !galaxy) { return; }
-    
+
+    // Defensive: Ensure all core objects exist
+    if (!gameStateManager || !player || !uiManager || !galaxy) return;
+
     // Check if general UI handled the click (e.g., map, station services)
-    let clickHandledByUI = uiManager.handleMouseClicks(
+    if (uiManager.handleMouseClicks(
         mouseX, mouseY, gameStateManager.currentState, player, player.currentSystem?.station?.getMarket(), galaxy
-    );
-  
-    if (clickHandledByUI) {
-      return; // Click handled by general UI
-    }
-  
+    )) return;
+
     // If UI did NOT handle the click AND we are in flight:
-    // THIS IS THE KEY CHANGE:
     if (gameStateManager.currentState === "IN_FLIGHT") {
-        player.handleMousePressedForTargeting(); // Use mouse click for TARGETING
-        // player.handleFireInput(); // Ensure this line is NOT called here for mouse clicks if firing is keyboard-only
+        player.handleMousePressedForTargeting();
     }
-  }
+}
+
+/**
+ * Handles the logic for jettisoning an item from the inventory.
+ * Extracted for clarity and maintainability.
+ * @param {number} idx - The index of the item in the player's cargo.
+ */
+function handleJettisonFromInventory(idx) {
+    const item = player.cargo[idx];
+    if (item && player.removeCargo(item.name, 1)) {
+        uiManager.addMessage(`Jettisoned 1 ${item.name}`);
+        const dir = p5.Vector.fromAngle(player.angle + PI);
+        const pos = p5.Vector.add(player.pos, dir.copy().mult(player.size * 2.6));
+        const cargo = new Cargo(pos.x, pos.y, item.name, 1);
+        cargo.vel = dir.mult(1.5);
+        player.currentSystem.addCargo(cargo);
+    }
+}
   
 
 function mouseReleased() {
@@ -432,104 +405,88 @@ function mouseWheel(event) {
 
 // --- Save/Load Functionality ---
 function saveGame() {
-  // Check if localStorage is supported and core objects exist
-  if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
-      try {
-
-          // CRITICAL CHECK: Don't save if player is dead
-          if (player.hull <= 0) {
-              console.warn("Cannot save game: Player is dead!");
-              return false;
-          }
-          // console.log("Saving game state..."); // Optional log
-          const saveData = {
-              playerData: player.getSaveData(), // Includes shipType, pos, vel, angle, hull, credits, cargo, isWanted
-              galaxyData: galaxy.getSaveData(), // Includes visited status for systems
-              currentSystemIndex: galaxy.currentSystemIndex // Save current location
-          };
-          localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-          // console.log("Game Saved."); // Optional log
-      } catch (e) { console.error("Error saving game:", e); }
-  } else { console.warn("Could not save game (LocalStorage missing or objects not ready)."); }
+    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
+        try {
+            if (player.hull <= 0) {
+                console.warn("Cannot save game: Player is dead!");
+                return false;
+            }
+            const saveData = {
+                playerData: player.getSaveData(),
+                galaxyData: galaxy.getSaveData(),
+                currentSystemIndex: galaxy.currentSystemIndex
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        } catch (e) {
+            showCriticalError("Error saving game: " + e.message);
+            console.error("Error saving game:", e);
+        }
+    } else {
+        showCriticalError("Could not save game (LocalStorage missing or objects not ready).");
+        console.warn("Could not save game (LocalStorage missing or objects not ready).");
+    }
 }
 
 function loadGame() {
-  loadGameWasSuccessful = false; // Reset flag at start of load attempt
-  
-  // Check if localStorage is supported and core objects exist
-  if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
-      const savedDataString = localStorage.getItem(SAVE_KEY); // Get saved data string
-      if (savedDataString) { // Check if data exists
-          try {
-              const saveData = JSON.parse(savedDataString);
-              console.log("Loading game data...");
-
-               // CRITICAL VALIDATION: Check player health before loading
-              if (saveData.playerData && saveData.playerData.hull <= 0) {
-                  console.warn("Save game contains dead player (hull = 0). Cannot load.");
-                  return false;
-              }
-              
-              // Load galaxy first
-              if (saveData.galaxyData) {
-                  galaxy.loadSaveData(saveData.galaxyData);
-              }
-              
-              // Add this code right here - after galaxy load but before player load
-              // Ensure economy types are synchronized after loading
-              console.log("Ensuring economy types are synchronized...");
-              if (galaxy.systems) {
-                  galaxy.systems.forEach(system => {
-                      // Use the setter method to properly update both system and market
-                      if (system && system.economyType) {
-                          system.setEconomyType(system.economyType);
-                          console.log(`Synchronized economy for ${system.name}: ${system.economyType}`);
-                      }
-                  });
-              }
-              
-              // Then load player data as you did before
-              if (saveData.playerData) {
-                  player.loadSaveData(saveData.playerData);
-              }
-              
-              // Rest of your existing loadGame function...
-              // Verify systems were actually loaded
-              if (!galaxy.systems || galaxy.systems.length === 0) {
-                  console.error("Galaxy systems array is empty after loading save!");
-                  return false;
-              }
-
-              // Link player object to the loaded system object
-              player.currentSystem = galaxy.getCurrentSystem();
-              if (player.currentSystem) {
-                  player.currentSystem.player = player;
-
-                // Initialize EventManager references after successfully loading and linking system
-                if (eventManager) {
+    loadGameWasSuccessful = false;
+    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
+        const savedDataString = localStorage.getItem(SAVE_KEY);
+        if (savedDataString) {
+            try {
+                const saveData = JSON.parse(savedDataString);
+                console.log("Loading game data...");
+                if (saveData.playerData && saveData.playerData.hull <= 0) {
+                    console.warn("Save game contains dead player (hull = 0). Cannot load.");
+                    return false;
+                }
+                if (saveData.galaxyData) {
+                    galaxy.loadSaveData(saveData.galaxyData);
+                }
+                // Ensure economy types are synchronized after loading
+                if (galaxy.systems) {
+                    galaxy.systems.forEach(system => {
+                        if (system && system.economyType) {
+                            system.setEconomyType(system.economyType);
+                            console.log(`Synchronized economy for ${system.name}: ${system.economyType}`);
+                        }
+                    });
+                }
+                if (saveData.playerData) {
+                    player.loadSaveData(saveData.playerData);
+                }
+                if (!galaxy.systems || galaxy.systems.length === 0) {
+                    showCriticalError("Galaxy systems array is empty after loading save!");
+                    console.error("Galaxy systems array is empty after loading save!");
+                    return false;
+                }
+                player.currentSystem = galaxy.getCurrentSystem();
+                if (player.currentSystem) {
+                    player.currentSystem.player = player;
+                    if (eventManager) {
                         eventManager.initializeReferences(player.currentSystem, player, uiManager);
+                    }
+                } else {
+                    showCriticalError("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                    console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                    return false;
+                }
+                loadGameWasSuccessful = true;
+                console.log("Game Loaded Successfully.");
+                return true;
+            } catch (e) {
+                showCriticalError("Error parsing or applying saved game data: " + e.message);
+                console.error("Error parsing or applying saved game data:", e);
+                return false;
             }
-              } else {
-                  console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
-                  return false;
-              }
-
-              loadGameWasSuccessful = true;
-              console.log("Game Loaded Successfully.");
-              return true;
-
-          } catch (e) { 
-              console.error("Error parsing or applying saved game data:", e);
-              return false;
-          }
-      } else {
-          console.log("No saved game found.");
-          return false;
-      }
-  } else {
-      console.warn("Could not load game (LocalStorage missing or objects not ready).");
-      return false;
-  }
+        } else {
+            console.log("No saved game found.");
+            return false;
+        }
+    } else {
+        showCriticalError("Could not load game (LocalStorage missing or objects not ready).");
+        console.warn("Could not load game (LocalStorage missing or objects not ready).");
+        return false;
+    }
 }
 // --- End Save/Load ---
 
