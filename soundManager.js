@@ -483,9 +483,24 @@ class SoundManager {
             return;
         }
 
-        const isOffScreen = this._isOffScreen(sourceX, sourceY, listenerPos);
+        // Compute distance-based volume drop-off
         const baseVolume = soundEntry.definition.sound_vol;
-        let intendedVolume = isOffScreen ? 0.01 : baseVolume;
+        let intendedVolume = baseVolume;
+        if (listenerPos && typeof sourceX === 'number' && typeof sourceY === 'number') {
+            // Calculate Euclidean distance
+            const dx = sourceX - listenerPos.x;
+            const dy = sourceY - listenerPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Define max audible distance (e.g., 1.2x screen diagonal)
+            let maxDistance = 1000; // fallback
+            if (typeof width !== 'undefined' && typeof height !== 'undefined') {
+                maxDistance = 1.2 * Math.sqrt(width * width + height * height);
+            }
+            // Linear falloff
+            let dropoff = 1 - (distance / maxDistance);
+            dropoff = Math.max(dropoff, 0.04); // minimum volume factor
+            intendedVolume = baseVolume * dropoff;
+        }
 
         // --- Procedural gain control for sfxr sounds using Web Audio API ---
         // Try to use Web Audio API for sfxr sounds (true gain control)
@@ -504,21 +519,16 @@ class SoundManager {
                     actx = window._eliteAudioContext;
                 }
                 if (actx) {
-                    // Resume context if needed (required by some browsers)
                     if (actx.state === 'suspended') {
                         actx.resume();
                     }
-                    // Create AudioBuffer
                     const sampleRate = soundEntry.definition.sample_rate || 44100;
                     const audioBuffer = actx.createBuffer(1, normalized.length, sampleRate);
                     audioBuffer.copyToChannel(new Float32Array(normalized), 0);
-                    // Create BufferSource
                     const source = actx.createBufferSource();
                     source.buffer = audioBuffer;
-                    // Create GainNode for volume control
                     const gainNode = actx.createGain();
                     gainNode.gain.value = intendedVolume;
-                    // Connect and play
                     source.connect(gainNode);
                     gainNode.connect(actx.destination);
                     source.start();
@@ -527,6 +537,10 @@ class SoundManager {
             }
         } catch (e) {
             console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
+        }
+        // Always call UI indicator, even if Web Audio was used
+        if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
+            uiManager.trackCombatSound(sourceX, sourceY, name);
         }
         if (usedWebAudio) return;
 
