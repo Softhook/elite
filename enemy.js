@@ -2234,7 +2234,7 @@ _determinePostFleeState() {
      * @return {number} The angle difference in radians
      */
     performRotationAndThrust(desiredMovementTargetPos) {
-        let angleDifference = PI; // Default to max difference
+        let angleDifference = Math.PI; // Default to max difference
         
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
             let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
@@ -2255,7 +2255,7 @@ _determinePostFleeState() {
         } else {
             // For all other active states, assume thrust is possible if aligned,
             // then apply state-specific multipliers or conditions.
-            const isAlignedForThrust = abs(angleDifference) < this.angleTolerance;
+            const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
 
             if (this.currentState === AI_STATE.ATTACK_PASS) {
                 effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
@@ -2266,7 +2266,7 @@ _determinePostFleeState() {
                         let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
                         let angleToActualTargetCurrent = vecToActualTarget.heading();
                         let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
-                        if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
+                        if (Math.abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && Math.abs(angleDifference) > this.angleTolerance * 0.5) {
                             effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
                             forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
                         }
@@ -2304,7 +2304,7 @@ _determinePostFleeState() {
                 }
             } else if (this.currentState === AI_STATE.SNIPING) { // <<<--- THIS IS THE NEWLY INTEGRATED BLOCK
                 // For sniping, alignment for thrust can be more lenient for minor adjustments
-                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
+                const isAlignedForSnipeThrust = Math.abs(angleDifference) < this.angleTolerance * 1.5; 
                 
                 // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
                 if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
