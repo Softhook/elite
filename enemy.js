@@ -2228,12 +2228,13 @@ _determinePostFleeState() {
         this.tangleEffectTime = millis();
     }
 
-    /** 
-     * Helper: Rotates towards target, applies thrust if aligned. Returns angle difference.
-     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
-     * @return {number} The angle difference in radians
+    /**
+     * Helper: Rotates towards the target position.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
+     * @return {number} The angle difference in radians.
+     * @private
      */
-    performRotationAndThrust(desiredMovementTargetPos) {
+    _performRotation(desiredMovementTargetPos) {
         let angleDifference = Math.PI; // Default to max difference
         
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
@@ -2243,90 +2244,165 @@ _determinePostFleeState() {
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
-        
-        // Default thrust multiplier
-        let effectiveThrustMultiplier = 1.0;
-        let canThrust = false; // Master flag to decide if thrusting happens
-        let forceThrustForAttackPassEmergency = false; // Special flag for attack pass emergency
+        return angleDifference;
+    }
 
-        // Determine thrust conditions based on state
-        if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.NEAR_STATION) {
-            canThrust = false;
-        } else {
-            // For all other active states, assume thrust is possible if aligned,
-            // then apply state-specific multipliers or conditions.
-            const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
+    /**
+     * Helper: Calculates thrust parameters for the ATTACK_PASS state.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
+     * @private
+     */
+    _getAttackPassThrustParams(angleDifference) {
+        let effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
+        let canThrust = false;
+        let forceThrustForAttackPassEmergency = false;
 
-            if (this.currentState === AI_STATE.ATTACK_PASS) {
-                effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
-                if (this.isTargetValid(this.target)) {
-                    let distToActualTarget = this.distanceTo(this.target);
-                    let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
-                    if (distToActualTarget < criticalCollisionRange) {
-                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
-                        let angleToActualTargetCurrent = vecToActualTarget.heading();
-                        let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
-                        if (Math.abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && Math.abs(angleDifference) > this.angleTolerance * 0.5) {
-                            effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
-                            forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
-                        }
-                    }
-                }
-                if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
-                    canThrust = true;
-                }
-
-            } else if (this.currentState === AI_STATE.APPROACHING) {
-                // effectiveThrustMultiplier is 1.0 by default for APPROACHING
-                if (this.isTargetValid(this.target)) {
-                    let distToActualTarget = this.distanceTo(this.target);
-                    // Calculate the distance at which braking should occur
-                    let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
-                    let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
-                    
-                    if (distToActualTarget < approachBrakingZone) {
-                        effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
-                        // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
-                    }
-                }
-                if (isAlignedForThrust) {
-                    // If APPROACH_CLOSE_THRUST_REDUCTION is 0, this will result in no thrust.
-                    // If it's > 0, minimal thrust will be applied if aligned.
-                    canThrust = true;
-                }
-
-            } else if (this.currentState === AI_STATE.FLEEING) {
-                effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
-                                        ? FLEE_THRUST_MULT_TRANSPORT
-                                        : FLEE_THRUST_MULT_DEFAULT;
-                if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
-                    canThrust = true;
-                }
-            } else if (this.currentState === AI_STATE.SNIPING) { // <<<--- THIS IS THE NEWLY INTEGRATED BLOCK
-                // For sniping, alignment for thrust can be more lenient for minor adjustments
-                const isAlignedForSnipeThrust = Math.abs(angleDifference) < this.angleTolerance * 1.5; 
-                
-                // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
-                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
-                    if (isAlignedForSnipeThrust) {
-                        effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
-                        canThrust = true;
-                    } else {
-                        canThrust = false; // Don't thrust if not aligned for adjustment
-                    }
-                } else { 
-                    // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
-                    this.vel.mult(SNIPING_BRAKE_FACTOR); 
-                    canThrust = false; // No active thrust, just braking
-                }
-            } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
-                // effectiveThrustMultiplier is 1.0 by default
-                if (isAlignedForThrust) {
-                    canThrust = true;
+        if (this.isTargetValid(this.target)) {
+            let distToActualTarget = this.distanceTo(this.target);
+            let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
+            if (distToActualTarget < criticalCollisionRange) {
+                let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
+                let angleToActualTargetCurrent = vecToActualTarget.heading();
+                let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
+                if (Math.abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && Math.abs(angleDifference) > this.angleTolerance * 0.5) {
+                    effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
+                    forceThrustForAttackPassEmergency = true;
                 }
             }
         }
+        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
+        if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
+            canThrust = true;
+        }
+        return { canThrust, effectiveThrustMultiplier };
+    }
+
+    /**
+     * Helper: Calculates thrust parameters for the APPROACHING state.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
+     * @private
+     */
+    _getApproachingThrustParams(angleDifference) {
+        let effectiveThrustMultiplier = 1.0;
+        let canThrust = false;
+
+        if (this.isTargetValid(this.target)) {
+            let distToActualTarget = this.distanceTo(this.target);
+            let targetSize = this.target.size || (this.target.width / 2) || this.size;
+            let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
+            
+            if (distToActualTarget < approachBrakingZone) {
+                effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
+            }
+        }
+        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
+        if (isAlignedForThrust) {
+            canThrust = true;
+        }
+        return { canThrust, effectiveThrustMultiplier };
+    }
+
+    /**
+     * Helper: Calculates thrust parameters for the FLEEING state.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
+     * @private
+     */
+    _getFleeingThrustParams(angleDifference) {
+        let effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
+                                        ? FLEE_THRUST_MULT_TRANSPORT
+                                        : FLEE_THRUST_MULT_DEFAULT;
+        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
+        return { canThrust: isAlignedForThrust, effectiveThrustMultiplier };
+    }
+
+    /**
+     * Helper: Calculates thrust parameters for the SNIPING state.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, thrustMultiplier: number, shouldBrake: boolean}}
+     * @private
+     */
+    _getSnipingThrustParams(desiredMovementTargetPos, angleDifference) {
+        let thrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
+        let canThrust = false;
+        let shouldBrake = false;
+
+        const isAlignedForSnipeThrust = Math.abs(angleDifference) < this.angleTolerance * 1.5; 
         
+        if (desiredMovementTargetPos && desiredMovementTargetPos instanceof p5.Vector && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) {
+            if (isAlignedForSnipeThrust) {
+                canThrust = true;
+            }
+        } else { 
+            shouldBrake = true;
+        }
+        return { canThrust, thrustMultiplier, shouldBrake };
+    }
+
+    /**
+     * Helper: Calculates thrust parameters for default active states.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
+     * @private
+     */
+    _getDefaultActiveStateThrustParams(angleDifference) {
+        const effectiveThrustMultiplier = 1.0;
+        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
+        return { canThrust: isAlignedForThrust, effectiveThrustMultiplier };
+    }
+
+    /**
+     * Helper: Determines thrust applicability and multiplier based on current AI state.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
+     * @param {number} angleDifference - Current angle difference to the movement target.
+     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
+     * @private
+     */
+    _calculateThrustParameters(desiredMovementTargetPos, angleDifference) {
+        let effectiveThrustMultiplier = 1.0;
+        let canThrust = false;
+
+        switch (this.currentState) {
+            case AI_STATE.IDLE:
+            case AI_STATE.NEAR_STATION:
+                // canThrust remains false
+                break;
+            case AI_STATE.ATTACK_PASS:
+                ({ canThrust, effectiveThrustMultiplier } = this._getAttackPassThrustParams(angleDifference));
+                break;
+            case AI_STATE.APPROACHING:
+                ({ canThrust, effectiveThrustMultiplier } = this._getApproachingThrustParams(angleDifference));
+                break;
+            case AI_STATE.FLEEING:
+                ({ canThrust, effectiveThrustMultiplier } = this._getFleeingThrustParams(angleDifference));
+                break;
+            case AI_STATE.SNIPING:
+                const snipeResult = this._getSnipingThrustParams(desiredMovementTargetPos, angleDifference);
+                canThrust = snipeResult.canThrust;
+                effectiveThrustMultiplier = snipeResult.thrustMultiplier;
+                if (snipeResult.shouldBrake) {
+                    this.vel.mult(SNIPING_BRAKE_FACTOR);
+                }
+                break;
+            default: // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
+                ({ canThrust, effectiveThrustMultiplier } = this._getDefaultActiveStateThrustParams(angleDifference));
+                break;
+        }
+        return { canThrust, effectiveThrustMultiplier };
+    }
+
+    /** 
+     * Rotates towards target, applies thrust if aligned. Returns angle difference.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
+     * @return {number} The angle difference in radians
+     */
+    performRotationAndThrust(desiredMovementTargetPos) {
+        const angleDifference = this._performRotation(desiredMovementTargetPos);
+        const { canThrust, effectiveThrustMultiplier } = this._calculateThrustParameters(desiredMovementTargetPos, angleDifference);
+
         if (canThrust) {
             this.thrustForward(effectiveThrustMultiplier);
         }
