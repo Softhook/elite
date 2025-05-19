@@ -7,6 +7,7 @@
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
 const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
+let globalSessionSeed; 
 
 // --- Global Variables ---
 let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager;
@@ -75,8 +76,9 @@ function setup() {
     // --- Initialize Galaxy Systems ONLY if no save data was loaded ---
     if (!loadGameWasSuccessful) {
         console.log("No save game found, generating procedural galaxy...");
+        globalSessionSeed = millis(); // Or some other random value for the session
         if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
-            galaxy.initGalaxySystems();
+            galaxy.initGalaxySystems(globalSessionSeed); // Pass the globalSessionSeed
             // Position player near station for new game
             const startingSystem = galaxy.getCurrentSystem();
             if (startingSystem && startingSystem.station && startingSystem.station.pos) {

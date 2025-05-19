@@ -22,7 +22,7 @@ class Galaxy {
 
     // ... (constructor remains the same) ...
 
-    initGalaxySystems() {
+    initGalaxySystems(globalSessionSeed) { // Add globalSessionSeed parameter
         console.log(">>> Galaxy.initGalaxySystems() called for procedural generation.");
         this.systems = []; // Ensure clear array
 
@@ -138,7 +138,7 @@ class Galaxy {
         console.log("   Galaxy.initGalaxySystems: Initializing static elements for each system...");
         this.systems.forEach((system, index) => { /* ... same init logic ... */
              if (system && system.initStaticElements) {
-                 try { system.initStaticElements(); }
+                 try { system.initStaticElements(globalSessionSeed); } // Pass globalSessionSeed
                  catch (e) { console.error(`Error during initStaticElements for system ${index} (${system?.name || 'N/A'}):`, e); }
              } else { console.warn(`Skipping initStaticElements for invalid system object at index ${index}.`); }
          });
@@ -452,10 +452,12 @@ class Galaxy {
             return sys;
         }).filter(Boolean);
 
+        // When loading a saved game, we do NOT want to use a new globalSessionSeed.
+        // The original seed (this.systemIndex) is sufficient to reconstruct the saved state.
         this.systems.forEach((sys, idx) => {
             if (sys && typeof sys.initStaticElements === 'function') {
                 try {
-                    sys.initStaticElements();
+                    sys.initStaticElements(); // No globalSessionSeed here for loading
                 } catch (e) {
                     console.error(`Error during initStaticElements for loaded system ${idx} (${sys?.name || 'N/A'}):`, e);
                 }

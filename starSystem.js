@@ -227,15 +227,17 @@ class StarSystem {
     /**
      * Initializes static, seeded elements (station, planets, background) using p5 functions.
      * MUST be called AFTER p5 setup is complete (e.g., from Galaxy.initGalaxySystems).
+     * @param {number} [sessionSeed] - An optional seed component from the current game session.
      */
-    initStaticElements() {
+    initStaticElements(sessionSeed) {
         // Don't skip initialization if stars are missing
         if (this.staticElementsInitialized && this.bgStars && this.bgStars.length > 0) {
             console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
             return;
         }
 
-        console.log(`      >>> ${this.name}: initStaticElements() Start (Seed: ${this.systemIndex})`);
+        const seedToUse = sessionSeed ? this.systemIndex + sessionSeed : this.systemIndex;
+        console.log(`      >>> ${this.name}: initStaticElements() Start (Seed: ${seedToUse})`);
 
         // Check if p5 functions are available before using them
         if (typeof randomSeed !== 'function' || typeof random !== 'function' || typeof color !== 'function' || typeof max !== 'function' || typeof floor !== 'function' || typeof width === 'undefined' || typeof height === 'undefined') {
@@ -245,7 +247,7 @@ class StarSystem {
         }
 
         // --- Apply Seed for deterministic generation ---
-        randomSeed(this.systemIndex);
+        randomSeed(seedToUse);
 
         // --- Create Station (Initial position might be temporary) ---
         console.log("         Creating Station...");
@@ -294,22 +296,27 @@ class StarSystem {
         // --- Secret Station Generation ---
         this.secretStations = [];
         if (this.planets && this.planets.length > 1 && random() < 0.5) { // 50% chance
-            // Pick a random planet (not the sun)
-            let planetIdx = floor(random(1, this.planets.length));
-            let planet = this.planets[planetIdx];
-            let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
-            let dist = planet.size * 1.8 + random(200, 600);
-            let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
-            // Pick subtype based on system type
-            let subtype = null;
-            let sysType = (this.economyType || "").toLowerCase();
-            if (sysType.includes("military")) subtype = "secret_military";
-            else if (sysType.includes("alien")) subtype = "secret_alien";
-            else if (sysType.includes("separatist")) subtype = "secret_separatist";
-            else subtype = "secret_generic";
-            let secretName = `${this.name} Secret Base`;
-            let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
-            this.secretStations.push(secretStation);
+            try { // <<< ADD TRY HERE
+                // Pick a random planet (not the sun)
+                let planetIdx = floor(random(1, this.planets.length));
+                let planet = this.planets[planetIdx];
+                let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
+                let dist = planet.size * 1.8 + random(200, 600);
+                let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
+                // Pick subtype based on system type
+                let subtype = null;
+                let sysType = (this.economyType || "").toLowerCase();
+                if (sysType.includes("military")) subtype = "secret_military";
+                else if (sysType.includes("alien")) subtype = "secret_alien";
+                else if (sysType.includes("separatist")) subtype = "secret_separatist";
+                else subtype = "secret_generic";
+                let secretName = `${this.name} Secret Base`;
+                let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
+                this.secretStations.push(secretStation);
+                console.log(`         Successfully created Secret Station: ${secretName}`);
+            } catch (e) { // <<< ADD CATCH HERE
+                console.error(`Error creating Secret Station for ${this.name}:`, e);
+            }
         }
         // --- End Secret Station Generation ---
 
