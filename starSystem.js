@@ -1760,6 +1760,10 @@ checkProjectileCollisions() {
             secretStations: this.secretStations && this.secretStations.length > 0
                 ? this.secretStations.map(s => s.toJSON())
                 : [],
+            // Save nebulae if present
+            nebulae: Array.isArray(this.nebulae) && this.nebulae.length > 0
+                ? this.nebulae.map(n => (typeof n.toJSON === 'function' ? n.toJSON() : null))
+                : [],
             // --- Add Jump Zone Data ---
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,

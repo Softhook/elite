@@ -413,6 +413,20 @@ function saveGame() {
                 console.warn("Cannot save game: Player is dead!");
                 return false;
             }
+            
+            // Fix for station docking position issue:
+            // If player is DOCKED or in any station sub-menu, ensure position is exactly at the station
+            const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_POLICE"];
+            if (stationStates.includes(gameStateManager.currentState)) {
+                const currentSystem = galaxy.getCurrentSystem();
+                if (currentSystem && currentSystem.station && currentSystem.station.pos) {
+                    // Snap player position to station position before saving
+                    player.pos = currentSystem.station.pos.copy();
+                    player.vel.set(0, 0); // Ensure velocity is zero
+                    console.log("SaveGame: Adjusted player position to match station position");
+                }
+            }
+            
             const saveData = {
                 playerData: player.getSaveData(),
                 galaxyData: galaxy.getSaveData(),
@@ -464,6 +478,24 @@ function loadGame() {
                 player.currentSystem = galaxy.getCurrentSystem();
                 if (player.currentSystem) {
                     player.currentSystem.player = player;
+                    
+                    // Fix for initial station positioning: 
+                    // Check if player position is far away from station but the system has one
+                    if (player.currentSystem.station && player.currentSystem.station.pos) {
+                        const distToStation = dist(player.pos.x, player.pos.y, 
+                                                 player.currentSystem.station.pos.x, 
+                                                 player.currentSystem.station.pos.y);
+                        
+                        // If player is suspiciously far from station (may be a new game that saved without proper docking)
+                        // or if position appears to be invalid
+                        if (distToStation > 10000 || isNaN(player.pos.x) || isNaN(player.pos.y)) {
+                            console.warn("Player position appears invalid or too far from station. Repositioning near station.");
+                            player.pos.set(player.currentSystem.station.pos.x + player.currentSystem.station.size + 100, 
+                                         player.currentSystem.station.pos.y);
+                            player.vel.set(0, 0);
+                        }
+                    }
+                    
                     if (eventManager) {
                         eventManager.initializeReferences(player.currentSystem, player, uiManager);
                     }
