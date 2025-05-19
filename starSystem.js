@@ -295,25 +295,55 @@ class StarSystem {
 
         // --- Secret Station Generation ---
         this.secretStations = [];
-        if (this.planets && this.planets.length > 1 && random() < 0.5) { // 50% chance
+        if (this.planets && this.planets.length > 2 && random() < 0.5) { // 50% chance and at least 3 planets (sun + main station planet + 1 more)
             try { // <<< ADD TRY HERE
-                // Pick a random planet (not the sun)
-                let planetIdx = floor(random(1, this.planets.length));
-                let planet = this.planets[planetIdx];
-                let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
-                let dist = planet.size * 1.8 + random(200, 600);
-                let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
-                // Pick subtype based on system type
-                let subtype = null;
-                let sysType = (this.economyType || "").toLowerCase();
-                if (sysType.includes("military")) subtype = "secret_military";
-                else if (sysType.includes("alien")) subtype = "secret_alien";
-                else if (sysType.includes("separatist")) subtype = "secret_separatist";
-                else subtype = "secret_generic";
-                let secretName = `${this.name} Secret Base`;
-                let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
-                this.secretStations.push(secretStation);
-                console.log(`         Successfully created Secret Station: ${secretName}`);
+                // We already know which planet the main station is near
+                let mainStationPlanetIndex = this.mainStationPlanetIndex || -1;
+                
+                // If mainStationPlanetIndex is somehow not set, find it based on proximity
+                if (mainStationPlanetIndex === -1 && this.station && this.station.pos) {
+                    let closestDist = Infinity;
+                    // Start from 1 to skip the sun
+                    for (let i = 1; i < this.planets.length; i++) {
+                        let d = p5.Vector.dist(this.station.pos, this.planets[i].pos);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            mainStationPlanetIndex = i;
+                        }
+                    }
+                }
+                
+                // Generate list of eligible planets (excluding sun and main station planet)
+                let eligiblePlanets = [];
+                for (let i = 1; i < this.planets.length; i++) {
+                    if (i !== mainStationPlanetIndex) {
+                        eligiblePlanets.push(i);
+                    }
+                }
+                
+                // Only proceed if we have eligible planets
+                if (eligiblePlanets.length > 0) {
+                    // Pick a random eligible planet
+                    let planetIdx = eligiblePlanets[floor(random(eligiblePlanets.length))];
+                    let planet = this.planets[planetIdx];
+                    
+                    let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
+                    let dist = planet.size * 1.8 + random(200, 600);
+                    let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
+                    
+                    // Pick subtype based on system type
+                    let subtype = null;
+                    let sysType = (this.economyType || "").toLowerCase();
+                    if (sysType.includes("military")) subtype = "secret_military";
+                    else if (sysType.includes("alien")) subtype = "secret_alien";
+                    else if (sysType.includes("separatist")) subtype = "secret_separatist";
+                    else subtype = "secret_generic";
+                    
+                    let secretName = `${this.name} Secret Base`;
+                    let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
+                    this.secretStations.push(secretStation);
+                    console.log(`         Successfully created Secret Station: ${secretName} near planet index ${planetIdx}`);
+                }
             } catch (e) { // <<< ADD CATCH HERE
                 console.error(`Error creating Secret Station for ${this.name}:`, e);
             }
@@ -470,6 +500,10 @@ try {
             let offsetDistance = chosenPlanet.size * 1.5 + 80; // Ensure the station is offset a bit
             let offset = p5.Vector.fromAngle(angle).mult(offsetDistance);
             this.station.pos = p5.Vector.add(chosenPlanet.pos, offset);
+            
+            // Store which planet the main station is associated with
+            this.mainStationPlanetIndex = randomIndex;
+            console.log(`         Main station positioned near planet index ${randomIndex}`);
         }
     } // End createRandomPlanets
 

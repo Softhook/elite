@@ -255,6 +255,47 @@ function keyPressed() {
             if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
             else if (gameStateManager.currentState === "GALAXY_MAP") gameStateManager.setState("IN_FLIGHT");
             return;
+        case 'b':
+            // Toggle secret base navigation when in flight
+            if (gameStateManager.currentState === "IN_FLIGHT" && player) {
+                const wasActive = player.showSecretBaseNavigation;
+                player.showSecretBaseNavigation = !wasActive;
+                
+                if (player.showSecretBaseNavigation) {
+                    // Only show message if there's actually a secret base in the system
+                    if (player.currentSystem && player.currentSystem.secretStations && 
+                        player.currentSystem.secretStations.length > 0) {
+                        
+                        // Find closest secret station and determine if it's discovered
+                        let anyDiscovered = false;
+                        for (const station of player.currentSystem.secretStations) {
+                            if (station.discovered) {
+                                anyDiscovered = true;
+                                break;
+                            }
+                        }
+                        
+                        // Initialize cache immediately to avoid delay
+                        player._cachedNavigation = null; // Clear any old cache
+                        
+                        if (anyDiscovered) {
+                            uiManager.addMessage("Secret Base Navigation: ACTIVATED", [0, 255, 255]);
+                        } else {
+                            uiManager.addMessage("Secret Base Detector: ACTIVATED - Base detected but not yet discovered", [0, 200, 200]);
+                        }
+                    } else {
+                        uiManager.addMessage("No Secret Base detected in this system", [255, 100, 100]);
+                        // Turn off if there's no secret base
+                        player.showSecretBaseNavigation = false;
+                    }
+                } else {
+                    // Clear cache when deactivating to free memory
+                    player._cachedNavigation = null;
+                    uiManager.addMessage("Secret Base Navigation: DEACTIVATED", [150, 150, 150]);
+                }
+                return false;
+            }
+            break;
         case 'l':
             if (player && player.currentSystem) {
                 const currentSystem = player.currentSystem;
