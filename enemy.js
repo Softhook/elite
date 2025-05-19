@@ -2635,6 +2635,12 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         // Early return checks with combined condition
         if (!this.currentWeapon || !this.currentSystem) return;
         
+        // Check if weapons are disabled (by EMP nebula, for example)
+        if (this.weaponsDisabled) {
+            // Cannot fire weapons when disabled
+            return;
+        }
+        
         // Cached system and weapon type for multiple uses
         const system = this.currentSystem;
         const weaponType = this.currentWeapon.type;
@@ -2666,8 +2672,8 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             return;
         }
         
-        // EMP nebula check with optional chaining
-        if (system.isInEMPNebula?.(this.pos)) return;
+        // Remove legacy EMP check that uses a non-existent method
+        // if (system.isInEMPNebula?.(this.pos)) return;
         
         // Calculate firing angle with optimized path selection
         let fireAngle;
