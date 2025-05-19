@@ -314,6 +314,9 @@ class Enemy {
         this.guardLeashDistance = 450;    // Max distance to stray from principal when not engaging
         this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
         this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
+        this.currentEngagementTarget = null; // Track who the guard is currently engaging
+        this.lastEngagementTime = 0;      // When the guard started engaging the current target
+        this.engagementDuration = 12000;  // Min time to stick with a target (12 seconds)
         // ---
 
         // --- Combat AI Flags ---
@@ -1319,10 +1322,44 @@ _updateState_GUARDING() {
         this.guardReactionTime -= deltaTime / 1000;
     }
 
+    // If we're currently engaged in combat to protect the principal, 
+    // don't immediately switch back to formation
+    if (this.currentEngagementTarget && 
+        this.isTargetValid(this.currentEngagementTarget) && 
+        (this.currentState === AI_STATE.APPROACHING || 
+        this.currentState === AI_STATE.ATTACK_PASS || 
+        this.currentState === AI_STATE.REPOSITIONING ||
+        this.currentState === AI_STATE.SNIPING)) {
+        
+        // Stay with current target until combat is resolved (or attacker escapes)
+        return;
+    }
+
     // Check if principal is being attacked
     const principalAttacker = this.principal.lastAttacker;
     const timeSincePrincipalAttack = this.principal.lastAttackTime ? millis() - this.principal.lastAttackTime : Infinity;
+    const currentTime = millis();
+    
+    // If we're already engaged with a target and the engagement is still fresh, 
+    // stay with the current target even if the principal is being attacked by someone else
+    if (this.currentEngagementTarget && 
+        this.isTargetValid(this.currentEngagementTarget) && 
+        currentTime - this.lastEngagementTime < this.engagementDuration) {
+        
+        // Continue with current target even if principal is attacked by someone else
+        this.target = this.currentEngagementTarget;
+        
+        // Only change state if not already in a combat state
+        if (this.currentState !== AI_STATE.APPROACHING && 
+            this.currentState !== AI_STATE.ATTACK_PASS && 
+            this.currentState !== AI_STATE.REPOSITIONING &&
+            this.currentState !== AI_STATE.SNIPING) {
+            this.changeState(AI_STATE.APPROACHING); // Ensure we're in combat mode
+        }
+        return;
+    }
 
+    // Check for new threats to the principal
     if (this.guardReactionTime <= 0 && 
         principalAttacker && 
         this.isTargetValid(principalAttacker) && 
@@ -1331,11 +1368,19 @@ _updateState_GUARDING() {
         
         const distToPrincipalAttacker = this.distanceTo(principalAttacker);
 
+        // Don't keep announcing the same engagement
+        const isNewEngagement = this.currentEngagementTarget !== principalAttacker;
+
         if (distToPrincipalAttacker < this.guardEngageRange) {
-            console.log(`${this.shipTypeName} (Guard): ${this.principal.shipTypeName || 'Principal'} is under attack by ${principalAttacker.shipTypeName || 'Unknown Attacker'}. Engaging!`);
+            if (isNewEngagement) {
+                console.log(`${this.shipTypeName} (Guard): ${this.principal.shipTypeName || 'Principal'} is under attack by ${principalAttacker.shipTypeName || 'Unknown Attacker'}. Engaging!`);
+            }
+            
             this.target = principalAttacker; // Set the attacker as the guard's target
+            this.currentEngagementTarget = principalAttacker; // Remember who we're engaging
+            this.lastEngagementTime = currentTime; // Track when we started this engagement
             this.changeState(AI_STATE.APPROACHING); // Switch to combat mode
-            this.guardReactionTime = 5.0; // Cooldown before checking for new attacker for principal
+            this.guardReactionTime = 10.0; // Extended cooldown to reduce constant re-engaging
             return;
         }
     }
@@ -3773,6 +3818,9 @@ _checkRandomCargoDrop() {
         // Log state changes with informative context
         //console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
+        // Add previous state to the stateData for context in state transitions
+        stateData.previousState = oldState;
+        
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);
         
@@ -3815,6 +3863,34 @@ _checkRandomCargoDrop() {
                 this.vel.mult(0.5); // Attempt to slow down upon entering sniping mode
                 this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store combined shield + hull
                 console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}).`);
+            break;
+                
+            case AI_STATE.GUARDING:
+                // Reset targeting when returning to guard state
+                if (this.principal) {
+                    const currentTime = millis();
+                    const combatStates = [AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING];
+                    const wasPreviouslyInCombat = combatStates.includes(stateData.previousState);
+                    const timeInEngagement = this.lastEngagementTime ? currentTime - this.lastEngagementTime : Infinity;
+                    
+                    // Reset engagement if:
+                    // 1. We've been engaged for longer than our persistence duration, OR
+                    // 2. We're coming from a non-combat state, OR
+                    // 3. Our previous engagement target is no longer valid
+                    if (timeInEngagement > this.engagementDuration || 
+                        !wasPreviouslyInCombat ||
+                        !this.isTargetValid(this.currentEngagementTarget)) {
+                        
+                        // Clear engagement tracking
+                        this.currentEngagementTarget = null;
+                        this.lastEngagementTime = 0;
+                    }
+                }
+                
+                // Apply initial braking when entering guarding state
+                if (this.vel) {
+                    this.vel.mult(0.8);
+                }
             break;
                 
             case AI_STATE.NEAR_STATION:
