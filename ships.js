@@ -1246,7 +1246,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Twin Pulse", "Mini-Turret"],
         costCategory: "Medium-High", description: "A surprisingly large and garish Harlequin cargo vessel.",
         drawFunction: drawHarlequinPantaloon,
-        vertexData: [ {x:1,y:0.4}, {x:0.5,y:0.8}, {x:-1,y:0.8}, {x:-1,y:-0.8}, {x:0.5,y:-0.8}, {x:1,y:-0.4} ],
+                vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.4000 }, { x: 0.5000, y: 0.8000 }, { x: -0.2369, y: 0.9045 }, { x: -1.0000, y: 0.8000 }, { x: -0.9216, y: 0.0000 }, { x: -1.0000, y: -0.8000 }, { x: -0.2369, y: -0.9045 }, { x: 0.5000, y: -0.8000 }, { x: 1.0000, y: -0.4000 } ],
+                fillColor: [0, 200, 200],
+                strokeColor: [200, 0, 200],
+                strokeW: 2.00
+            }
+        ],
         fillColor: [0, 200, 200], strokeColor: [200, 0, 200], strokeW: 2.0,
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
         aiRoles: ["HAULER", "PIRATE"]
@@ -1258,7 +1265,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition"],
         costCategory: "High", description: "A versatile and deadly Harlequin ship, adaptable to many combat roles.",
         drawFunction: drawHarlequinScaramouche,
-        vertexData: [ {x:1,y:0}, {x:0.2,y:0.6}, {x:-0.8,y:0.6}, {x:-0.8,y:-0.6}, {x:0.2,y:-0.6} ],
+         vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 } ],
+                fillColor: [150, 219, 0],
+                strokeColor: [255, 255, 255],
+                strokeW: 1.50
+            }
+        ],
         fillColor: [50, 50, 50], strokeColor: [255, 255, 255], strokeW: 1.5,
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
         aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
@@ -1390,7 +1404,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
         costCategory: "Medium-High", description: "A heavily armed Separatist gunship, designed to break blockades.",
         drawFunction: drawSeparatistDefiant,
-        vertexData: [ {x:0.9,y:0.4}, {x:0.4,y:0.8}, {x:-0.9,y:0.8}, {x:-0.9,y:-0.8}, {x:0.4,y:-0.8}, {x:0.9,y:-0.4} ],
+                vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 } ],
+                fillColor: [70, 70, 70],
+                strokeColor: [120, 120, 120],
+                strokeW: 1.80
+            }
+        ],
         fillColor: [70, 70, 70], strokeColor: [120, 120, 120], strokeW: 1.8,
         typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
         aiRoles: ["SEPARATIST"]
@@ -1510,7 +1531,26 @@ const SHIP_DEFINITIONS = {
         armament: ["Quad Pulse", "Railgun Turret", "Beam Laser","Heavy Tangle"],
         costCategory: "High", description: "A heavily armed Imperial vessel used for enforcing blockades and punitive actions.",
         drawFunction: drawImperialJusticar,
-        vertexData: [ {x:0.9,y:0.5}, {x:0.5,y:0.9}, {x:-0.5,y:0.9}, {x:-0.9,y:0.5}, {x:-0.9,y:-0.5}, {x:-0.5,y:-0.9}, {x:0.5,y:-0.9}, {x:0.9,y:-0.5} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.5000 }, { x: 0.5000, y: 0.9000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.5000 }, { x: -0.9000, y: -0.5000 }, { x: -0.5000, y: -0.9000 }, { x: 0.5000, y: -0.9000 }, { x: 0.9000, y: -0.5000 } ],
+                fillColor: [180, 190, 210],
+                strokeColor: [120, 140, 190],
+                strokeW: 1.80
+            },
+            {
+                vertexData: [ { x: -0.7571, y: -0.4875 }, { x: 0.0000, y: -0.3393 }, { x: 0.7571, y: -0.4875 }, { x: -0.3319, y: -0.7334 } ],
+                fillColor: [255, 255, 255],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.3956, y: 0.7037 }, { x: 0.7252, y: 0.4089 }, { x: 0.0000, y: 0.2726 }, { x: -0.7252, y: 0.4089 } ],
+                fillColor: [255, 255, 255],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
         typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 5,
         aiRoles: ["IMPERIAL"]
