@@ -1234,8 +1234,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         (this.player.vel.mag() + enemy.vel.mag())
                     );
                     console.log(`Ship collision! Damage: ${collisionDamage}`);
-                    this.player.takeDamage(collisionDamage);
-                    enemy.takeDamage(collisionDamage);
+                    this.player.takeDamage(collisionDamage, enemy);
+                    enemy.takeDamage(collisionDamage, this.player);
                     
                     // Apply physics push based on relative mass/size
                     const playerMass = this.player.size * this.player.size;
@@ -1262,8 +1262,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     // Handle player-asteroid collision
                     let collisionDamage = Math.floor(this.player.vel.mag());
                     console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
-                    this.player.takeDamage(collisionDamage);
-                    asteroid.takeDamage(20); // Fixed damage to asteroid
+                    this.player.takeDamage(collisionDamage, asteroid);
+                    asteroid.takeDamage(20, this.player); // Fixed damage to asteroid
                     
                     // Apply physics push based on relative mass/size
                     const playerMass = this.player.size * this.player.size;

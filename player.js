@@ -1030,7 +1030,13 @@ handleInput() {
     }
 
     /** Applies damage to the player's hull. */
-    takeDamage(amount) {
+    takeDamage(amount, attacker = null) {
+        // Record attacker for bodyguard response
+        if (attacker) {
+            this.lastAttacker = attacker;
+            this.lastAttackTime = millis();
+        }
+        
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
         
         let shieldHit = false;

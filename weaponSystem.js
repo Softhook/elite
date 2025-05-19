@@ -638,7 +638,7 @@ static fireTangle(owner, system, angle) {
         // IMPORTANT: Check shield status BEFORE applying damage
         const targetHasShield = target.shield > 0;
         
-        // Apply damage and get result
+        // Apply damage and get result, passing owner as the attacker
         target.takeDamage(damage, owner);
         
         // Set shield hit time if target has shields
