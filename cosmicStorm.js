@@ -150,15 +150,37 @@ class CosmicStorm {
 
     drawAura() {
         noStroke();
-        for (let i = 0; i < 3; i++) {
-            fill(
-                this.color[0],
-                this.color[1],
-                this.color[2],
-                map(i, 0, 2, 100, 20) * this.intensity
-            );
-            ellipse(this.pos.x, this.pos.y, this.radius * map(i, 0, 2, 1, 1.5));
-        }
+        
+        // Use Canvas 2D API for efficient radial gradient, just like in Nebula
+        const ctx = drawingContext;
+        
+        // Create a radial gradient
+        const outerRadius = this.radius;
+        const gradient = ctx.createRadialGradient(
+            this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
+            this.pos.x, this.pos.y, outerRadius  // Outer circle
+        );
+        
+        // Add color stops for smooth gradient
+        const r = this.color[0];
+        const g = this.color[1];
+        const b = this.color[2];
+        const baseAlpha = 100 * this.intensity / 255; // Convert to 0-1 range for RGBA
+        
+        // Create smooth gradient that doesn't fully fade out
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${baseAlpha})`);
+        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.85})`);
+        gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.65})`);
+        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.45})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.3})`);
+        
+        // Apply gradient to context
+        ctx.fillStyle = gradient;
+        
+        // Draw circle with the gradient
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius * 1.5, 0, TWO_PI);
+        ctx.fill();
     }
 
     drawParticles() {

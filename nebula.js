@@ -81,15 +81,36 @@ class Nebula {
         
         push();
         
-        // Draw main nebula cloud
-        noStroke();
-        for (let i = 0; i < 5; i++) {
-            const alpha = map(i, 0, 4, this.opacity, 20);
-            const size = map(i, 0, 4, this.radius * 0.5, this.radius * 2);
-            
-            fill(this.color[0], this.color[1], this.color[2], alpha);
-            ellipse(this.pos.x, this.pos.y, size);
-        }
+        // Use Canvas 2D API for efficient radial gradient
+        const ctx = drawingContext;
+        
+        // Create a radial gradient - using original nebula radius
+        const outerRadius = this.radius;
+        const gradient = ctx.createRadialGradient(
+            this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
+            this.pos.x, this.pos.y, outerRadius  // Outer circle (same center, same as nebula radius)
+        );
+        
+        // Add color stops for smooth gradient
+        const r = this.color[0];
+        const g = this.color[1];
+        const b = this.color[2];
+        
+        // Start with high opacity in center, don't fully fade out at edge
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${this.opacity/255})`);
+        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.85/255})`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.7/255})`);
+        gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.6/255})`);
+        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.5/255})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.4/255})`);
+        
+        // Apply gradient to context
+        ctx.fillStyle = gradient;
+        
+        // Draw circle with the gradient - using the nebula radius
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, outerRadius, 0, TWO_PI);
+        ctx.fill();
         
         // Draw particles
         for (let particle of this.particles) {
