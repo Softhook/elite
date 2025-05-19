@@ -38,9 +38,7 @@ mining sites on planets
 
 
 Spcial events: 
-- alien raid - aliens appearing in military system
-- lots of piratiese attacking haulers
-- if elite rating ===
+
 - war seperatist vs alliance battle
 - News famine change the cost of food in connected systems
 - News religious uprising drop cost of luxury goods

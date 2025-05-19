@@ -556,6 +556,12 @@ try {
             if (this.player && this.player.pos) {  // CHANGE: Use this.player instead of player
                 console.log(`Populating ${this.name} system. Player wanted status: ${this.player.isWanted}`);
                 
+                // Spawn player's bodyguards if any
+                if (this.player.activeBodyguards && this.player.activeBodyguards.length > 0) {
+                    console.log(`Player has ${this.player.activeBodyguards.length} active bodyguards to spawn`);
+                    this.player.spawnBodyguards(this);
+                }
+                
                 // CHANGE: Use this.player in method calls
                 for (let i = 0; i < 3; i++) {
                     try { this.trySpawnNPC(); } catch(e) {}
@@ -1216,6 +1222,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // Player vs Enemies
             for (let enemy of this.enemies) {
                 if (enemy.isDestroyed()) continue;
+                
+                // Skip collision detection for player's bodyguards
+                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this.player) {
+                    continue; // This prevents collisions between player and their bodyguards
+                }
+                
                 if (this.player.checkCollision(enemy)) {
                     // Handle ship-to-ship collision
                     let collisionDamage = Math.floor(

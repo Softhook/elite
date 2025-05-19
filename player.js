@@ -96,6 +96,10 @@ class Player {
         // Secret base navigation feature
         this.showSecretBaseNavigation = false; // Feature flag for drawing path to secret base
         this._cachedNavigation = null; // Cache for navigation calculations
+        
+        // Bodyguards for protection
+        this.activeBodyguards = []; // Tracks hired bodyguards
+        this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -1261,6 +1265,16 @@ handleInput() {
             console.log("SAVING DATA: No active mission.");
         }
         // ---
+        
+        // Save bodyguard data
+        const bodyguardsData = this.activeBodyguards.map(bodyguard => {
+            return {
+                shipType: bodyguard.shipType,
+                cost: bodyguard.cost,
+                hireTime: bodyguard.hireTime,
+                id: bodyguard.id
+            };
+        });
 
         // Save all weapons as an array with their full definitions
         const weaponsData = this.weapons.map(weapon => {
@@ -1291,7 +1305,9 @@ handleInput() {
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
-            weapons: weaponsData
+            weapons: weaponsData,
+            // Save bodyguard data for persistence
+            bodyguards: bodyguardsData
             // -----------------------------------------
         };
     }
@@ -1328,6 +1344,18 @@ handleInput() {
         this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
 
         this.kills = data.kills || 0;
+        
+        // Load bodyguard data
+        this.activeBodyguards = [];
+        if (Array.isArray(data.bodyguards)) {
+            this.activeBodyguards = data.bodyguards.map(bodyguardData => ({
+                shipType: bodyguardData.shipType,
+                cost: bodyguardData.cost,
+                hireTime: bodyguardData.hireTime || millis(),
+                id: bodyguardData.id || (Date.now() + "_" + Math.floor(Math.random() * 1000))
+            }));
+            console.log(`Loaded ${this.activeBodyguards.length} bodyguards from save data`);
+        }
 
         // Restore player weapons from saved data
         if (Array.isArray(data.weapons)) {
@@ -1699,4 +1727,116 @@ handleInput() {
         }
     }
 
+    /** 
+     * Hire a new bodyguard if player has enough credits and space
+     * @param {string} shipType - The type of ship from GUARD_SHIPS array
+     * @param {number} cost - The cost in credits
+     * @return {boolean} Whether hiring was successful
+     */
+    hireBodyguard(shipType, cost) {
+        // Validate inputs
+        if (!shipType || cost <= 0) {
+            console.warn(`Invalid bodyguard hire request: ${shipType}, ${cost}`);
+            return false;
+        }
+        
+        // Check if player has space for more bodyguards
+        if (this.activeBodyguards.length >= this.bodyguardLimit) {
+            console.log("Bodyguard limit reached");
+            return false;
+        }
+        
+        // Check if player has enough credits
+        if (!this.spendCredits(cost)) {
+            console.log("Not enough credits to hire bodyguard");
+            return false;
+        }
+        
+        // Store info about the hired bodyguard
+        // The actual guard ship will be spawned when player undocks
+        const bodyguard = {
+            shipType: shipType,
+            cost: cost,
+            hireTime: millis(),
+            id: Date.now() + "_" + Math.floor(Math.random() * 1000) // Unique ID
+        };
+        
+        this.activeBodyguards.push(bodyguard);
+        console.log(`Bodyguard hired: ${shipType} for ${cost} credits`);
+        
+        return true;
+    }
+    
+    /**
+     * Spawns all hired bodyguards in the current system
+     * @param {StarSystem} system - The current system where guards should be spawned
+     */
+    spawnBodyguards(system) {
+        if (!system || !this.activeBodyguards.length) return;
+        
+        console.log(`Attempting to spawn ${this.activeBodyguards.length} bodyguards`);
+        
+        this.activeBodyguards.forEach(bodyguardInfo => {
+            try {
+                // Spawn the bodyguard ship near the player
+                const offsetDist = this.size * 3 + 50;
+                const angle = random(TWO_PI);
+                const spawnX = this.pos.x + cos(angle) * offsetDist;
+                const spawnY = this.pos.y + sin(angle) * offsetDist;
+                
+                // Create the bodyguard ship
+                const guard = new Enemy(spawnX, spawnY, this, bodyguardInfo.shipType, AI_ROLE.GUARD);
+                
+                // Set this player as the principal to protect
+                guard.principal = this;
+                guard.changeState(AI_STATE.GUARDING, { principal: this });
+                
+                // Add the guard to the system
+                if (system.addEnemy(guard)) {
+                    console.log(`Successfully spawned bodyguard ${bodyguardInfo.shipType} (ID: ${bodyguardInfo.id})`);
+                } else {
+                    console.warn(`Failed to add bodyguard to system: ${bodyguardInfo.shipType}`);
+                }
+            } catch (e) {
+                console.error(`Error spawning bodyguard ${bodyguardInfo.shipType}:`, e);
+            }
+        });
+    }
+    
+    /**
+     * Dismiss all bodyguards
+     */
+    dismissBodyguards() {
+        if (!this.currentSystem || this.activeBodyguards.length === 0) return;
+        
+        // Find and remove the actual guard ships from the system
+        const system = this.currentSystem;
+        
+        if (system && system.enemies) {
+            // Mark guards for removal
+            system.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this) {
+                    enemy.destroyed = true;
+                }
+            });
+        }
+        
+        // Clear the bodyguards list
+        const count = this.activeBodyguards.length;
+        this.activeBodyguards = [];
+        
+        console.log(`Dismissed ${count} bodyguards`);
+    }
+    
+    /**
+     * Count how many bodyguard ships are actually present in the current system
+     * @return {number} Number of active bodyguard ships
+     */
+    getActiveGuardsCount() {
+        if (!this.currentSystem || !this.currentSystem.enemies) return 0;
+        
+        return this.currentSystem.enemies.filter(
+            enemy => enemy.role === AI_ROLE.GUARD && enemy.principal === this
+        ).length;
+    }
 } // End of Player Class

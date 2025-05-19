@@ -486,6 +486,7 @@ class UIManager {
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
+            { text: "Protection Services", state: "VIEWING_PROTECTION" },
             { text: "Police Station", state: "VIEWING_POLICE" },
             { text: "Undock", action: "UNDOCK" }
         ];
@@ -1520,8 +1521,8 @@ if (isIllegalInSystem || isMissionCargo) {
                         return true;
                     } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
                                btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
-                               btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE") {
-// Added VIEWING_POLICE to the list of handled states ☝️
+                               btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE" ||
+                               btn.state === "VIEWING_PROTECTION") {
                         if(gameStateManager)gameStateManager.setState(btn.state);
                         return true;
                     } else if (btn.state) {
@@ -1782,6 +1783,47 @@ if (isIllegalInSystem || isMissionCargo) {
             return false;
         }
 
+        // --- VIEWING_PROTECTION State ---
+        else if (currentState === "VIEWING_PROTECTION") {
+            for (const btn of this.protectionServicesButtons) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "HIRE_BODYGUARD") {
+                        // Try to hire the bodyguard
+                        const hired = player.hireBodyguard(btn.shipType, btn.cost);
+                        if (hired) {
+                            this.addMessage(`Hired ${btn.shipType} bodyguard for ${btn.cost} credits.`, [150, 255, 150]);
+                            // Play purchase sound if available
+                            if (typeof soundManager !== 'undefined') {
+                                soundManager.playSound('upgrade');
+                            }
+                            // If we reached max bodyguards, refresh the UI
+                            if (player.activeBodyguards.length >= player.bodyguardLimit) {
+                                if (gameStateManager) {
+                                    gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
+                                }
+                            }
+                        } else {
+                            this.addMessage("Failed to hire bodyguard.", [255, 100, 100]);
+                        }
+                        return true;
+                    }
+                    else if (btn.action === "DISMISS_BODYGUARDS") {
+                        player.dismissBodyguards();
+                        this.addMessage("All bodyguards have been dismissed.", [255, 180, 100]);
+                        if (gameStateManager) {
+                            gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
+                        }
+                        return true;
+                    }
+                    else if (btn.state === "DOCKED") {
+                        if (gameStateManager) gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { 
             return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
@@ -2007,18 +2049,17 @@ if (isIllegalInSystem || isMissionCargo) {
             // Draw slot button
             fill(isSelected ? 100 : 60, isSelected ? 100 : 60, isSelected ? 150 : 90);
             stroke(isSelected ? 150 : 100, isSelected ? 150 : 100, isSelected ? 255 : 150);
+            strokeWeight(1);
             rect(slotX, slotY, slotBtnW, slotBtnH, 4);
             
             // Draw slot info
-            fill(255);
+            noStroke();
+            textSize(20);
+            fill(230);
             textAlign(CENTER, CENTER);
-            textSize(14);
-            
-            // Show current weapon name or "Empty"
-            const currentWeapon = (i < player.weapons.length) ? player.weapons[i]?.name : "Empty";
             text(`Slot ${i+1}`, slotX + slotBtnW/2, slotY + 10);
             textSize(12);
-            text(currentWeapon || "Empty", slotX + slotBtnW/2, slotY + 25);
+            text((i < player.weapons.length) ? player.weapons[i]?.name : "Empty", slotX + slotBtnW/2, slotY + 25);
             
             // Store button area
             this.weaponSlotButtons.push({
@@ -2292,5 +2333,159 @@ if (isIllegalInSystem || isMissionCargo) {
         textSize(22);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
+    }
+
+    /** Draws the Protection Services menu (when state is VIEWING_PROTECTION) */
+    drawProtectionServicesMenu(player) {
+        if (!player) return;
+        push();
+        
+        // Initialize button areas
+        this.protectionServicesButtons = [];
+        
+        // Get panel dimensions
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        
+        // Draw panel background
+        this.drawPanelBG([20, 30, 60, 220], [80, 120, 180]);
+        
+        // Draw header
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station; // Direct property access instead of getStation() method
+        const headerHeight = this.drawStationHeader("Protection Services", station, player, system);
+        
+        // Draw description
+        textFont(font);
+        fill(220);
+        textSize(24);
+        textAlign(CENTER, TOP);
+        let descY = pY + headerHeight + 20;
+        text("Hire professional security guards to protect you during your travels.", pX + pW/2, descY);
+        
+        // Show current bodyguard status
+        textSize(20);
+        fill(180, 220, 255);
+        let statusY = descY + 40;
+        text(`Active bodyguards: ${player.activeBodyguards.length}/${player.bodyguardLimit}`, pX + pW/2, statusY);
+        
+        // Only show guard options if player has space for more
+        if (player.activeBodyguards.length < player.bodyguardLimit) {
+            // Available guards section
+            fill(230);
+            textSize(22);
+            textAlign(LEFT, TOP);
+            text("Available Guards for Hire:", pX + 40, statusY + 40);
+            
+            // Define guard ship types to offer
+            // Using ships that have the GUARD role from the GUARD_SHIPS array
+            const guardOptions = [
+                { ship: "GladiusFighter", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
+                { ship: "Vulture", name: "Vulture Protector", cost: 12000, description: "Heavy combat protection" },
+                { ship: "WaspAssault", name: "Wasp Security", cost: 6000, description: "Fast response protection" },
+                { ship: "Viper", name: "Viper Guardian", cost: 10000, description: "Agile defender" }
+            ];
+            
+            // Filter to only show ships the player can afford
+            const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
+            
+            if (affordableGuards.length === 0) {
+                textSize(20);
+                fill(255, 150, 150);
+                textAlign(CENTER, TOP);
+                text("You don't have enough credits to hire any guards.", pX + pW/2, statusY + 80);
+            } else {
+                // Draw available guards
+                let guardY = statusY + 80;
+                textAlign(LEFT, TOP);
+                
+                affordableGuards.forEach((guard, i) => {
+                    const btnX = pX + 40;
+                    const btnY = guardY + i * 80;
+                    const btnW = pW - 80;
+                    const btnH = 70;
+                    
+                    // Draw guard option background
+                    fill(40, 60, 100);
+                    stroke(100, 140, 200);
+                    strokeWeight(1);
+                    rect(btnX, btnY, btnW, btnH, 5);
+                    
+                    // Draw guard information
+                    noStroke();
+                    textSize(20);
+                    fill(230);
+                    textAlign(CENTER, CENTER);
+                    text(`${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
+                    
+                    textSize(16);
+                    fill(200);
+                    text(guard.description, btnX + 15, btnY + 40);
+                    
+                    // Draw cost and hire button
+                    textAlign(RIGHT, TOP);
+                    fill(150, 230, 150);
+                    text(`${guard.cost.toLocaleString()} Cr`, btnX + btnW - 100, btnY + 15);
+                    
+                    // Draw hire button
+                    const hireBtn = this._drawButton(
+                        btnX + btnW - 90, 
+                        btnY + 10, 
+                        80, 
+                        30, 
+                        "HIRE", 
+                        [50, 100, 50], 
+                        [100, 200, 100]
+                    );
+                    
+                    // Add ship info to button
+                    hireBtn.action = "HIRE_BODYGUARD";
+                    hireBtn.shipType = guard.ship;
+                    hireBtn.cost = guard.cost;
+                    
+                    this.protectionServicesButtons.push(hireBtn);
+                    
+                    // Reset alignment
+                    textAlign(LEFT, TOP);
+                });
+            }
+        } else {
+            // Max bodyguards reached
+            textSize(20);
+            fill(255, 200, 100);
+            textAlign(CENTER, TOP);
+            text("Maximum number of bodyguards hired.", pX + pW/2, statusY + 80);
+        }
+        
+        // Draw dismiss all button if player has active bodyguards
+        if (player.activeBodyguards.length > 0) {
+            const dismissBtnY = pY + pH - 80;
+            const dismissBtn = this._drawButton(
+                pX + pW/2 - 100, 
+                dismissBtnY, 
+                200, 
+                40, 
+                "DISMISS ALL GUARDS", 
+                [100, 50, 50], 
+                [200, 100, 100]
+            );
+            dismissBtn.action = "DISMISS_BODYGUARDS";
+            this.protectionServicesButtons.push(dismissBtn);
+        }
+        
+        // Draw back button
+        const backButtonY = pY + pH - 80;
+        const backButton = this._drawButton(
+            pX + 40, 
+            backButtonY, 
+            120, 
+            40, 
+            "BACK", 
+            [60, 60, 100], 
+            [120, 120, 180]
+        );
+        backButton.state = "DOCKED";
+        this.protectionServicesButtons.push(backButton);
+        
+        pop();
     }
 } // End of UIManager Class

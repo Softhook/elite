@@ -89,13 +89,20 @@ this.showingInventory = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES"]; // Add other station states here later
+        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION"]; // Add other station states here later
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             console.log("Undocking! Applying position offset.");
             if (player) {
                 const offsetMultiplier = 10; const offsetDistance = player.size * offsetMultiplier;
                 let undockOffset = createVector(0, -offsetDistance); // Simple 'up' offset
                 player.pos.add(undockOffset); player.vel.mult(0);
+                
+                // Spawn any hired bodyguards when undocking
+                if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
+                    console.log("Spawning bodyguards when undocking from station");
+                    player.spawnBodyguards(galaxy.getCurrentSystem());
+                }
+                
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
             } else { console.error("Player object missing during undock offset!"); }
         }
@@ -161,6 +168,11 @@ this.showingInventory = false;
 
             case "VIEWING_REPAIRS":
                 // No update logic needed for repairs menu
+                break;
+                
+            case "VIEWING_PROTECTION":
+                // No update logic needed for protection services menu
+                if (player) { player.vel.set(0, 0); }
                 break;
 
             case "VIEWING_POLICE":
@@ -341,6 +353,10 @@ this.showingInventory = false;
 
             case "VIEWING_REPAIRS":
                 if (uiManager && player) uiManager.drawRepairsMenu(player);
+                break;
+                
+            case "VIEWING_PROTECTION":
+                if (uiManager && player) uiManager.drawProtectionServicesMenu(player);
                 break;
 
             case "VIEWING_POLICE":
