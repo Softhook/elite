@@ -2,11 +2,11 @@
 
 ## Bugs and Issues
 
-for copkiller missions remove the system restriction. any system is ok
+
 
 ## Core Gameplay Enhancements
 
-indicator of where battles are taking place
+
 
 protective barrier
 
@@ -40,19 +40,11 @@ mining sites on planets
 Spcial events: 
 - alien raid - aliens appearing in military system
 - lots of piratiese attacking haulers
-- spawn assasin
 - if elite rating ===
 - war seperatist vs alliance battle
 - News famine change the cost of food in connected systems
 - News religious uprising drop cost of luxury goods
 - News war prerations cost of weapons goes up
-- Bounty hunter
-
-alien raid - multile aliens appearing in system close tothe player but out of screenview
-lots of piratiese appearing in system close tothe player but out of screenview should scale based on the players elite ranking in terms of ships and numebr of ships
-spawn mtuleiple Bounty hunterthat only tagets the player. these should scale based on the players elite ranking in terms of ships and numebr of ships
-News that famine in named systems that change the cost of food in connected systems. mark the famine ont he galaxy map
-News religious uprising drop cost of luxury goods mark the uprising on the galaxy map
 
 
 some weapons better than lasers than hull
@@ -76,7 +68,6 @@ divide ships into imperial vs. alliance
 
 ## Graphics and UI Improvements
 - show sun big on minimap
-- make the storms and nubeulae look better
 - mulitple thurst ports on large ships
 - more weapon sounds
 - warning sound when health is low

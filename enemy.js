@@ -52,6 +52,7 @@ const FLEE_MIN_DURATION_MS = 2000;
 const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
 const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
 const TARGET_SCORE_BASE_WANTED = 100;   // Base score for police targeting wanted
+const JUMP_EFFECT_DURATION_MS = 1500;   // Duration of the jump visual effect in milliseconds
 const TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
 const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
 const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
@@ -364,6 +365,19 @@ class Enemy {
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         if (this.destroyed || !system) return;
+    
+        // Check if jump effect is active and should be completed
+        if (this.jumpingEffect && this.jumpEffectStartTime) {
+            const currentTime = millis();
+            const elapsedTime = currentTime - this.jumpEffectStartTime;
+            
+            if (elapsedTime >= JUMP_EFFECT_DURATION_MS) {
+                // Jump effect finished, destroy the enemy
+                console.log(`${this.role} ${this.shipTypeName} jump effect complete, destroying.`);
+                this.destroy();
+                return;
+            }
+        }
     
         // Always update system reference
         this.currentSystem = system;
@@ -1586,6 +1600,9 @@ _determinePostFleeState() {
             return;
         } else {
             // Reset flags when player is no longer wanted
+           
+           
+
             this.hasReportedWantedPlayer = false;
             this.reportedWantedTarget = false;
             
@@ -1860,12 +1877,16 @@ _determinePostFleeState() {
                 // ---  Exit Condition ---
                 // Exit if:
                 // 1. Arrived at the jump zone target (dE < 150)
-                if (dE < 150) {
-                    this.inCombat = false; // Add this line
-                    this.haulerCombatTimer = undefined; // Add this line
-                    this.destroyed = true;
+                if (dE < 150 && !this.jumpingEffect) {
+                    this.inCombat = false;
+                    this.haulerCombatTimer = undefined;
+                    
+                    // Start jump effect instead of immediately destroying
+                    this.jumpingEffect = true;
+                    this.jumpEffectStartTime = millis();
+                    
                     // This log confirms the condition was met
-                    console.log(`${this.role} ${this.shipTypeName} left the system.`);
+                    console.log(`${this.role} ${this.shipTypeName} triggered jump effect.`);
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case
@@ -2756,6 +2777,63 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             if (!this.p5FillColor || !this.p5StrokeColor) return; // Still missing colors after init
         }
 
+        // Handle jump effect animation if active
+        if (this.jumpingEffect && this.jumpEffectStartTime) {
+            const currentTime = millis();
+            const elapsedTime = currentTime - this.jumpEffectStartTime;
+            const progress = Math.min(elapsedTime / JUMP_EFFECT_DURATION_MS, 1.0);
+            
+            push();
+            translate(this.pos.x, this.pos.y);
+            
+            // Phase 1: Ship fades to white (0% to 30%)
+            if (progress < 0.3) {
+                const fadeToWhite = progress / 0.3;
+                const whiteness = 255 * fadeToWhite;
+                const originalColor = 255 * (1 - fadeToWhite);
+                
+                rotate(this.angle);
+                // Blend original color with white
+                const r = originalColor + whiteness;
+                const g = originalColor + whiteness;
+                const b = originalColor + whiteness;
+                fill(r, g, b);
+                stroke(255);
+                strokeWeight(1);
+                
+                // Draw the ship using its defined drawing function
+                const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+                const drawFunc = shipDef?.drawFunction;
+                if (typeof drawFunc === 'function') {
+                    drawFunc(this.size, false);
+                } else {
+                    ellipse(0, 0, this.size, this.size);
+                }
+            } 
+            // Phase 2: Transform to white ball and fade out (30% to 100%)
+            else {
+                const fadeOutProgress = (progress - 0.3) / 0.7;
+                const alpha = 255 * (1 - fadeOutProgress);
+                
+                // No rotation needed for ball
+                fill(255, 255, 255, alpha);
+                noStroke();
+                
+                // Ball starts at ship size and shrinks slightly
+                const ballSize = this.size * (1 - fadeOutProgress * 0.2);
+                ellipse(0, 0, ballSize, ballSize);
+                
+                // Optional: Add a subtle glow effect
+                if (alpha > 30) {
+                    fill(255, 255, 255, alpha * 0.5);
+                    ellipse(0, 0, ballSize * 1.5, ballSize * 1.5);
+                }
+            }
+            
+            pop();
+            return;  // Skip normal drawing when jump effect is active
+        }
+
         // Cache ship definition and draw function - multiple accesses previously
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         const drawFunc = shipDef?.drawFunction;
@@ -2799,7 +2877,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             drawFunc(this.size, showThrust);
         } catch (e) { 
             console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); 
-            ellipse(0,0,this.size, this.size); // Fallback 
+            ellipse(0, 0, this.size, this.size);
         }
         
         // Draw tangle effect if active - this remains in the rotated context
@@ -3300,12 +3378,14 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * Calculates parameters, creates the Cargo object, and calls system.addCargo().
      * @param {'jettison' | 'destruction'} context - The reason for spawning cargo.
      * @returns {boolean} True if cargo was spawned successfully, false otherwise.
+     * @private
      */
     _spawnCargo(context) {
         // 1. Get System and check for addCargo method
         const system = this.getSystem();
         if (!system || typeof system.addCargo !== 'function') {
             console.warn(`${this.shipTypeName} can't ${context} cargo - system or system.addCargo method missing`);
+           
             return false; // Good check
         }
 
@@ -3614,6 +3694,27 @@ _checkRandomCargoDrop() {
     }
 }
 
+    /**
+     * Destroys the enemy, setting the destroyed flag to true
+     * This allows the star system to remove it from the enemies array
+     */
+    destroy() {
+        if (this.destroyed) return; // Already destroyed
+        
+        console.log(`${this.role} ${this.shipTypeName} destroy() called`);
+        this.destroyed = true;
+        this.hull = 0;
+        
+        // Clear all state flags
+        this.inCombat = false;
+        this.haulerCombatTimer = undefined;
+        this.forcedCombatTimer = 0;
+        this.target = null;
+        
+        // Don't create an explosion - this is for enemies that leave the system
+        // The _processDestruction method handles explosions for enemies that are destroyed by damage
+    }
+    
     /**
      * Checks if ship has been destroyed
      * @return {boolean} Whether ship is destroyed
