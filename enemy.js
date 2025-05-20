@@ -3672,6 +3672,22 @@ _processDestruction(attacker) {
             [100, 150, 255] // Blueish-white core
         );
 
+        // If this is a bodyguard, track destruction in player
+        if (this.role === AI_ROLE.GUARD && this.principal instanceof Player) {
+            // Find the bodyguard ID in activeBodyguards array that matches this ship
+            const activeGuards = this.principal.activeBodyguards;
+            for (let i = 0; i < activeGuards.length; i++) {
+                if (activeGuards[i].id === this.guardId) {
+                    // Add this ID to destroyedBodyguards list
+                    if (!this.principal.destroyedBodyguards.includes(activeGuards[i].id)) {
+                        this.principal.destroyedBodyguards.push(activeGuards[i].id);
+                        console.log(`Bodyguard ${activeGuards[i].id} marked as destroyed`);
+                    }
+                    break;
+                }
+            }
+        }
+
         // Drop cargo
         this.dropCargo();
 

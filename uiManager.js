@@ -1815,6 +1815,15 @@ if (isIllegalInSystem || isMissionCargo) {
                         }
                         return true;
                     }
+                    else if (btn.action === "CLEANUP_DESTROYED_BODYGUARDS") {
+                        const count = player.destroyedBodyguards.length;
+                        player.destroyedBodyguards = []; // Clear the destroyed bodyguards list
+                        this.addMessage(`Removed ${count} destroyed bodyguard records.`, [150, 150, 255]);
+                        if (gameStateManager) {
+                            gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
+                        }
+                        return true;
+                    }
                     else if (btn.state === "DOCKED") {
                         if (gameStateManager) gameStateManager.setState("DOCKED");
                         return true;
@@ -2290,11 +2299,11 @@ if (isIllegalInSystem || isMissionCargo) {
         text(`${stationName} - ${systemName}`, pX+20, pY + 20);
         
         // Economy, Security, and Tech Level (left aligned)
-        const econ = system?.economyType || station.market?.systemType || "Unknown";
-        const law = system?.securityLevel || "Unknown";
+        const econ = system?.securityLevel || "Unknown";
         const tech = system?.techLevel || "?"; // Get tech level
+        const econType = system?.economyType || "Unknown"; // Economy type
         textSize(20);
-        text(`${econ}   |   Tech: ${tech}   |   ${law}`, pX +20, pY + 45);
+        text(`${econ}   |   Tech: ${tech}   |   ${econType}`, pX +20, pY + 45);
         
         // Credits (right-aligned)
         textAlign(RIGHT, TOP);
@@ -2366,10 +2375,13 @@ if (isIllegalInSystem || isMissionCargo) {
         textSize(20);
         fill(180, 220, 255);
         let statusY = descY + 40;
-        text(`Active bodyguards: ${player.activeBodyguards.length}/${player.bodyguardLimit}`, pX + pW/2, statusY);
+        
+        // Display active non-destroyed bodyguards
+        const activeNonDestroyedCount = player.getActiveGuardsCount();
+        text(`Active bodyguards: ${activeNonDestroyedCount}/${player.bodyguardLimit}`, pX + pW/2, statusY);
         
         // Only show guard options if player has space for more
-        if (player.activeBodyguards.length < player.bodyguardLimit) {
+        if (activeNonDestroyedCount < player.bodyguardLimit) {
             // Available guards section
             fill(230);
             textSize(22);
@@ -2415,10 +2427,9 @@ if (isIllegalInSystem || isMissionCargo) {
                     textSize(20);
                     fill(230);
                     textAlign(CENTER, CENTER);
-                    text(`${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
+                    text(`Slot ${i+1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
                     
                     textSize(16);
-                    fill(200);
                     text(guard.description, btnX + 15, btnY + 40);
                     
                     // Draw cost and hire button
@@ -2453,14 +2464,24 @@ if (isIllegalInSystem || isMissionCargo) {
             textSize(20);
             fill(255, 200, 100);
             textAlign(CENTER, TOP);
-            text("Maximum number of bodyguards hired.", pX + pW/2, statusY + 80);
+            
+            // If there are destroyed bodyguards, let the player know they need to dismiss them
+            if (player.destroyedBodyguards.length > 0) {
+                text(`${player.destroyedBodyguards.length} bodyguard(s) destroyed. Dismiss them to hire new ones.`, pX + pW/2, statusY + 80);
+            } else {
+                text("Maximum number of bodyguards hired.", pX + pW/2, statusY + 80);
+            }
         }
         
+        // Dismiss buttons at the bottom
+        // Show different buttons based on active and destroyed guards
+        const dismissBtnY = pY + pH - 80;
+        const hasDestroyedGuards = player.destroyedBodyguards.length > 0;
+        
         // Draw dismiss all button if player has active bodyguards
-        if (player.activeBodyguards.length > 0) {
-            const dismissBtnY = pY + pH - 80;
+        if (activeNonDestroyedCount > 0) {
             const dismissBtn = this._drawButton(
-                pX + pW/2 - 100, 
+                pX + pW/2 - (hasDestroyedGuards ? 120 : 100), 
                 dismissBtnY, 
                 200, 
                 40, 
@@ -2472,11 +2493,25 @@ if (isIllegalInSystem || isMissionCargo) {
             this.protectionServicesButtons.push(dismissBtn);
         }
         
-        // Draw back button
-        const backButtonY = pY + pH - 80;
+        // Show clean up destroyed guards button if needed
+        if (hasDestroyedGuards) {
+            const cleanupBtn = this._drawButton(
+                pX + pW/2 + (activeNonDestroyedCount > 0 ? 120 : -100), 
+                dismissBtnY, 
+                200, 
+                40, 
+                "CLEAR DESTROYED GUARDS", 
+                [70, 70, 100], 
+                [140, 140, 200]
+            );
+            cleanupBtn.action = "CLEANUP_DESTROYED_BODYGUARDS";
+            this.protectionServicesButtons.push(cleanupBtn);
+        }
+        
+        // Draw back button - use same Y position as other buttons
         const backButton = this._drawButton(
             pX + 40, 
-            backButtonY, 
+            dismissBtnY, 
             120, 
             40, 
             "BACK", 
