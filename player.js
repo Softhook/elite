@@ -98,8 +98,7 @@ class Player {
         this._cachedNavigation = null; // Cache for navigation calculations
         
         // Bodyguards for protection
-        this.activeBodyguards = []; // Tracks hired bodyguards
-        this.destroyedBodyguards = []; // Tracks IDs of destroyed bodyguards
+        this.activeBodyguards = []; // Tracks hired bodyguards - destroyed ones are automatically removed
         this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
@@ -1314,9 +1313,7 @@ handleInput() {
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
             weapons: weaponsData,
             // Save bodyguard data for persistence
-            bodyguards: bodyguardsData,
-            // Save destroyed bodyguards for persistence
-            destroyedBodyguards: this.destroyedBodyguards
+            bodyguards: bodyguardsData
             // -----------------------------------------
         };
     }
@@ -1364,13 +1361,6 @@ handleInput() {
                 id: bodyguardData.id || (Date.now() + "_" + Math.floor(Math.random() * 1000))
             }));
             console.log(`Loaded ${this.activeBodyguards.length} bodyguards from save data`);
-        }
-        
-        // Load destroyed bodyguards list
-        this.destroyedBodyguards = [];
-        if (Array.isArray(data.destroyedBodyguards)) {
-            this.destroyedBodyguards = [...data.destroyedBodyguards];
-            console.log(`Loaded ${this.destroyedBodyguards.length} destroyed bodyguard records from save data`);
         }
 
         // Restore player weapons from saved data
@@ -1790,14 +1780,32 @@ handleInput() {
     spawnBodyguards(system) {
         if (!system || !this.activeBodyguards.length) return;
         
-        // Filter out bodyguards that have been destroyed
-        const activeGuardsToSpawn = this.activeBodyguards.filter(bodyguardInfo => 
-            !this.destroyedBodyguards.includes(bodyguardInfo.id)
-        );
+        // No need to filter - destroyed bodyguards are automatically removed
+        const activeGuardsToSpawn = this.activeBodyguards;
         
-        console.log(`Attempting to spawn ${activeGuardsToSpawn.length} bodyguards (${this.destroyedBodyguards.length} have been destroyed)`);
+        console.log(`Attempting to spawn ${activeGuardsToSpawn.length} bodyguards`);
+        
+        // Check for existing bodyguards to prevent duplicates
+        const alreadySpawnedIds = new Set();
+        
+        // Find existing bodyguards in the system
+        if (system.enemies) {
+            system.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this && enemy.guardId) {
+                    alreadySpawnedIds.add(enemy.guardId);
+                }
+            });
+        }
+        
+        console.log(`Found ${alreadySpawnedIds.size} bodyguards already spawned in system`);
         
         activeGuardsToSpawn.forEach(bodyguardInfo => {
+            // Skip if this bodyguard is already spawned in the system
+            if (alreadySpawnedIds.has(bodyguardInfo.id)) {
+                console.log(`Skipping bodyguard ${bodyguardInfo.id}, already present in system`);
+                return;
+            }
+            
             try {
                 // Spawn the bodyguard ship near the player
                 const offsetDist = this.size * 3 + 50;
@@ -1845,10 +1853,9 @@ handleInput() {
             });
         }
         
-        // Clear the bodyguards list and also clear the destroyed list since we're dismissing all
+        // Clear the bodyguards list
         const count = this.activeBodyguards.length;
         this.activeBodyguards = [];
-        this.destroyedBodyguards = []; // Reset the destroyed list too since there are no active guards
         
         console.log(`Dismissed ${count} bodyguards`);
     }
@@ -1879,8 +1886,8 @@ handleInput() {
     }
 
     /**
-     * Get the count of active bodyguards that have not been destroyed
-     * @return {number} Count of active non-destroyed bodyguards
+     * Get the count of active bodyguards
+     * @return {number} Count of active bodyguards
      */
     getActiveGuardsCount() {
         // If there are no active bodyguards, return 0
@@ -1888,12 +1895,9 @@ handleInput() {
             return 0;
         }
         
-        // Count bodyguards that are not in the destroyed list
-        const activeNonDestroyedCount = this.activeBodyguards.filter(bodyguardInfo => 
-            !this.destroyedBodyguards.includes(bodyguardInfo.id)
-        ).length;
-        
-        return activeNonDestroyedCount;
+        // Since destroyed bodyguards are automatically removed,
+        // we can just return the length of the activeBodyguards array
+        return this.activeBodyguards.length;
     }
     
 }// End of Player Class
