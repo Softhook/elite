@@ -2417,7 +2417,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     noStroke();
                     textSize(20);
                     fill(230);
-                    textAlign(CENTER, CENTER);
+                    textAlign(LEFT, CENTER);
                     text(`Slot ${i+1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
                     
                     textSize(16);
@@ -2458,11 +2458,15 @@ if (isIllegalInSystem || isMissionCargo) {
             text("Maximum number of bodyguards hired.", pX + pW/2, statusY + 80);
         }
         
-        // Dismiss button at the bottom
-        const dismissBtnY = pY + pH - 80;
+        // Position the back button consistently with other screens
+        const backY = pY + pH - 30 - 15; // Standard positioning: pY + pH - backH - 15
+        
+        // Position dismiss button above the back button
+        const dismissBtnY = backY - 50;
         
         // Draw dismiss all button if player has active bodyguards
         if (activeGuardsCount > 0) {
+            // Center the dismiss button properly
             const dismissBtn = this._drawButton(
                 pX + pW/2 - 100, 
                 dismissBtnY, 
@@ -2476,10 +2480,10 @@ if (isIllegalInSystem || isMissionCargo) {
             this.protectionServicesButtons.push(dismissBtn);
         }
         
-        // Draw back button - use same Y position as other buttons
+        // Draw back button with standard positioning
         const backButton = this._drawButton(
-            pX + 40, 
-            dismissBtnY, 
+            pX + pW/2 - 60, 
+            backY, 
             120, 
             40, 
             "BACK", 

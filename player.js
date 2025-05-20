@@ -1861,24 +1861,16 @@ handleInput() {
     }
     
     /**
-     * Dismiss a specific destroyed bodyguard from tracking
-     * @param {string} bodyguardId - The ID of the destroyed bodyguard to remove
+     * Remove a specific bodyguard from tracking by ID
+     * @param {string} bodyguardId - The ID of the bodyguard to remove
      * @return {boolean} True if the bodyguard was removed, false otherwise
      */
-    dismissDestroyedBodyguard(bodyguardId) {
-        // Find the index of the bodyguard ID in the destroyed list
-        const index = this.destroyedBodyguards.indexOf(bodyguardId);
-        if (index !== -1) {
-            // Remove this ID from the destroyed list
-            this.destroyedBodyguards.splice(index, 1);
-            
-            // Also remove from activeBodyguards if it's still there
-            const activeIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardId);
-            if (activeIndex !== -1) {
-                this.activeBodyguards.splice(activeIndex, 1);
-            }
-            
-            console.log(`Dismissed destroyed bodyguard ${bodyguardId}`);
+    removeBodyguardById(bodyguardId) {
+        // Remove from activeBodyguards if it's there
+        const activeIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardId);
+        if (activeIndex !== -1) {
+            this.activeBodyguards.splice(activeIndex, 1);
+            console.log(`Removed bodyguard ${bodyguardId} from tracking`);
             return true;
         }
         

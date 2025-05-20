@@ -2,6 +2,11 @@
 
 ## Bugs and Issues
 
+repair section repair guards at cheaper rate than player
+
+
+
+the guards availabe depend on econ of system
 
 
 ## Core Gameplay Enhancements
