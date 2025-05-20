@@ -2,9 +2,6 @@
 
 ## Bugs and Issues
 
-repair section repair guards at cheaper rate than player
-
-
 
 the guards availabe depend on econ of system
 
@@ -16,8 +13,6 @@ the guards availabe depend on econ of system
 protective barrier
 
 How can we increase the difficulty
-
-alow the player to pay for boadygard service at station
 
 refactoring
 

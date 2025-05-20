@@ -1450,7 +1450,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0}, {x:-0.7,y:0.5}, {x:-0.9,y:0}, {x:-0.7,y:-0.5} ], // Simple dart
         fillColor: [80, 80, 60], strokeColor: [120, 120, 100], strokeW: 0.8, // Muddy Yellow
         typicalCargo: [], price: 28000, techLevel: 2,
-        aiRoles: ["SEPARATIST"]
+        aiRoles: ["SEPARATIST", "GUARD"]
     },
      "SeparatistBulwark": {
         name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
@@ -1522,7 +1522,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1.2,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
         fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
         typicalCargo: [], price: 62000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL", "GUARD"]
     },
     "ImperialJusticar": {
         name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
@@ -1589,7 +1589,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:-0.6,y:0.4}, {x:-0.9,y:0.2}, {x:-0.9,y:-0.2}, {x:-0.6,y:-0.4} ],
         fillColor: [230, 230, 245], strokeColor: [150, 150, 220], strokeW: 1.1,
         typicalCargo: [], price: 58000, techLevel: 3,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL", "GUARD"]
     },
     "ImperialCutterLite": {
         name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
