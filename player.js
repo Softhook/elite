@@ -1759,7 +1759,7 @@ handleInput() {
         }
         
         // Store info about the hired bodyguard
-        // The actual guard ship will be spawned when player undocks
+        // // The actual guard ship will be spawned when player undocks
         const bodyguard = {
             shipType: shipType,
             cost: cost,
@@ -1892,4 +1892,71 @@ handleInput() {
         return this.activeBodyguards.length;
     }
     
+    /**
+     * Gets information about damaged bodyguards in the current system
+     * @return {Object} Information about damaged guards and repair cost
+     */
+    getDamagedBodyguardsInfo() {
+        if (!this.currentSystem || !this.activeBodyguards.length) {
+            return { count: 0, totalCost: 0, damagedGuards: [] };
+        }
+        
+        const damagedGuards = [];
+        let totalRepairCost = 0;
+        
+        // Check each active bodyguard in the system
+        if (this.currentSystem.enemies) {
+            this.currentSystem.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.hull < enemy.maxHull &&
+                    !enemy.destroyed) {
+                    
+                    // Calculate repair cost - much cheaper than player ship repairs
+                    const missingHull = enemy.maxHull - enemy.hull;
+                    const repairCost = Math.floor(missingHull * 3); // 3 credits per hull point
+                    
+                    damagedGuards.push({
+                        enemy: enemy,
+                        missingHull: missingHull,
+                        repairCost: repairCost
+                    });
+                    
+                    totalRepairCost += repairCost;
+                }
+            });
+        }
+        
+        return {
+            count: damagedGuards.length,
+            totalCost: totalRepairCost,
+            damagedGuards: damagedGuards
+        };
+    }
+    
+    /**
+     * Repair all damaged bodyguards
+     * @param {number} cost - Total repair cost
+     * @return {boolean} Whether repair was successful
+     */
+    repairBodyguards(cost) {
+        if (!this.spendCredits(cost)) {
+            return false;
+        }
+        
+        if (this.currentSystem && this.currentSystem.enemies) {
+            this.currentSystem.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.hull < enemy.maxHull &&
+                    !enemy.destroyed) {
+                    
+                    // Restore full hull
+                    enemy.hull = enemy.maxHull;
+                }
+            });
+        }
+        
+        return true;
+    }
 }// End of Player Class

@@ -505,6 +505,8 @@ class UIManager {
         this.repairsFullButtonArea = {};
         this.repairsHalfButtonArea = {};
         this.repairsBackButtonArea = {};
+        this.repairsBodyguardsButtonArea = {}; // New button area for bodyguard repairs
+        
         if (!player) return;
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
@@ -512,6 +514,8 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
+        
+        // Player ship repair section
         fill(220); textSize(20); textAlign(CENTER,TOP);
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
         let missing = player.maxHull - player.hull;
@@ -519,8 +523,34 @@ class UIManager {
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
         let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
+        
         this.repairsFullButtonArea = this._drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0,180,0], [100,255,100]);
         this.repairsHalfButtonArea = this._drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180,180,0], [220,220,100]);
+        
+        // Bodyguard repair section
+        const bodyguardInfo = player.getDamagedBodyguardsInfo();
+        let btnY3 = btnY2 + btnH + 40; // Extra spacing between sections
+        
+        if (bodyguardInfo.count > 0) {
+            // Draw separator
+            strokeWeight(1);
+            stroke(255, 180, 100);
+            line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
+            
+            // Draw bodyguard repair section header
+            noStroke();
+            fill(220);
+            textSize(20);
+            textAlign(CENTER, TOP);
+            
+            // Draw bodyguard repair button
+            this.repairsBodyguardsButtonArea = this._drawButton(
+                btnX, btnY3, btnW, btnH, 
+                `Repair All Guards (${bodyguardInfo.totalCost} cr)`, 
+                [0,120,180], [100,200,255]
+            );
+        }
+        
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
         this.repairsBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
         pop();
@@ -1723,6 +1753,26 @@ if (isIllegalInSystem || isMissionCargo) {
                     uiManager.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
                 } else {
                     uiManager.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
+                }
+                return true;
+            }
+            // Bodyguard repairs
+            if (this.isClickInArea(mx, my, this.repairsBodyguardsButtonArea)) {
+                const bodyguardInfo = player.getDamagedBodyguardsInfo();
+                if (bodyguardInfo.count <= 0) {
+                    uiManager.addMessage("No damaged bodyguards to repair.");
+                } else if (player.credits >= bodyguardInfo.totalCost) {
+                    // Use the new repair method
+                    if (player.repairBodyguards(bodyguardInfo.totalCost)) {
+                        uiManager.addMessage(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
+                        
+                        // Play repair sound if available
+                        if (typeof soundManager !== 'undefined') {
+                            soundManager.playSound('upgrade');
+                        }
+                    }
+                } else {
+                    uiManager.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
                 }
                 return true;
             }
