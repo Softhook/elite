@@ -46,7 +46,6 @@ class TitleScreen {
         this.displayShips = [];
         this.projectiles = [];
         this.beams = [];
-        this.explosions = []; 
 
         this.setupDynamicScene();
         
@@ -59,7 +58,6 @@ class TitleScreen {
         this.displayShips = []; 
         this.projectiles = [];
         this.beams = [];
-        this.explosions = [];
 
         // Filter ships that have a drawFunction and at least one weapon defined
         // CHANGED: Look for armament property instead of weapons
@@ -221,21 +219,6 @@ class TitleScreen {
                 if (b.isExpired()) {
                     this.beams.splice(i, 1);
                 }
-            }
-            
-            // Update explosions
-            for (let i = this.explosions.length - 1; i >= 0; i--) {
-                this.explosions[i].update();
-                if (this.explosions[i].isDone()) {
-                    this.explosions.splice(i, 1);
-                }
-            }
-            
-            // Occasionally create an explosion for visual effect
-            if (random() < 0.001) {
-                const x = random(width * 0.1, width * 0.9);
-                const y = random(height * 0.1, height * 0.7);
-                this.explosions.push(new Explosion(x, y, random(20, 40)));
             }
         }
     }
@@ -482,9 +465,6 @@ class TitleScreen {
             firedBy
         );
         this.beams.push(beam);
-        if (typeof soundManager !== 'undefined' && soundManager.playSound && weaponDef.soundFire) {
-            soundManager.playSound(weaponDef.soundFire);
-        }
     } else if (weaponDef.type === 'missile') {
         } else {
             const projectile = new Projectile(
@@ -503,21 +483,13 @@ class TitleScreen {
                 weaponDef.dragMultiplier || 10.0
             );
             this.projectiles.push(projectile);
-            if (typeof soundManager !== 'undefined' && soundManager.playSound && weaponDef.soundFire) {
-                soundManager.playSound(weaponDef.soundFire);
-            }
         }
     }
     
     drawTitleScreen() {
         background(0);
         this.drawStarfield();
-        
-        // Draw explosions behind ships
-        for (const explosion of this.explosions) {
-            explosion.draw();
-        }
-        
+    
         // Draw projectiles and beams behind ships
         for (const p of this.projectiles) {
             p.draw();
