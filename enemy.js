@@ -1408,6 +1408,26 @@ _updateState_GUARDING() {
     const distToFormationPoint = this.distanceTo(desiredWorldPos);
     const distDirectToPrincipal = this.distanceTo(this.principal.pos);
 
+    // SIMPLE APPROACH: First check if the principal is stationary - if so, guards freeze in place
+    let principalIsStationary = false;
+    if (this.principal && typeof Player !== 'undefined' && this.principal instanceof Player) {
+        // Special handling for player principal
+        principalIsStationary = this.principal.vel && this.principal.vel.mag() < 0.18; // ~0.18 visually stopped
+    } else {
+        principalIsStationary = this.principal.vel && this.principal.vel.magSq() < 0.01;
+    }
+
+    if (principalIsStationary) {
+        // New simplified behavior: if principal is stopped, guards stop immediately wherever they are
+        this.vel.mult(0.8); // Strong damping to stop quickly
+        if (this.vel.mag() < 0.05) this.vel.set(0, 0); // Hard stop when slow enough
+        
+        // Match principal's orientation for aesthetics
+        this.rotateTowards(this.principal.angle);
+        return; // Skip the formation positioning logic when principal is stopped
+    }
+    
+    // Principal is moving - normal formation behavior
     if (distDirectToPrincipal > this.guardLeashDistance || distToFormationPoint > this.size * 0.5) {
         // If too far from principal OR not in formation spot, move towards formation spot
         this.performRotationAndThrust(desiredWorldPos);
