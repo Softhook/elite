@@ -364,6 +364,66 @@ function drawImperialCutterLite(s, thrusting = false) {
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
 
+// --- Draw functions for new Alien Ships ---
+function drawObeliskSentinel(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ObeliskSentinel;
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawSpiralWarden(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.SpiralWarden;
+    push();
+    rotate(frameCount * 0.02); // Subtle spiral animation
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+function drawTriadProbe(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.TriadProbe;
+    push();
+    rotate(frameCount * 0.04); // Fast spinning probe
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+function drawHexaManta(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.HexaManta;
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawFractalRay(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.FractalRay;
+    push();
+    rotate(sin(frameCount * 0.03) * 0.2); // Subtle fractal shimmer
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+function drawPetalSpinner(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PetalSpinner;
+    push();
+    rotate(frameCount * 0.08); // Fast spinning petals
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+function drawCrescentMarauder(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.CrescentMarauder;
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawObsidianOrb(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ObsidianOrb;
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
+function drawTesseractScout(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.TesseractScout;
+    push();
+    rotate(frameCount * 0.05); // 4D shifting illusion
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+function drawLotusCarrier(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.LotusCarrier;
+    push();
+    rotate(sin(frameCount * 0.01) * 0.1); // Gentle petal sway
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+}
+
 // --- End Ship Drawing Functions ---
 
 
@@ -390,7 +450,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: [],
         price: 20000,
-        aiRoles: ["POLICE"]
+        aiRoles: ["POLICE"],
+        techLevel: 1 // Starter
     },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
@@ -410,7 +471,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
         typicalCargo: ["Food", "Textiles", "Minerals"],
         price: 27000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 1 // Starter
     },
     "Anaconda": {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
@@ -430,7 +492,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery","Minerals"],
         price: 120000,
-        aiRoles: ["HAULER", "MILITARY"]
+        aiRoles: ["HAULER", "MILITARY"],
+        techLevel: 3 // Mid-tier
     },
     "AspExplorer": {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
@@ -452,7 +515,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Minerals","Minerals","Minerals","Minerals", "Medicine", "Computers"],
         price: 82500,
-        aiRoles: ["EXPLORER"]
+        aiRoles: ["EXPLORER"],
+        techLevel: 3 // Mid-tier
     },
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
@@ -483,7 +547,8 @@ const SHIP_DEFINITIONS = {
 
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
         price: 200000,
-        aiRoles: ["ALIEN"]
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
     },
     "CenturionGunship": {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
@@ -505,7 +570,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 2.20,
         typicalCargo: ["Weapons", "Metals", "Machinery"],
         price: 30360,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY"],
+        techLevel: 3 // Mid-tier
     },
     "CobraMkIII": {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
@@ -528,7 +594,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Food"],
         price: 30000,
-        aiRoles: ["POLICE", "HAULER"]
+        aiRoles: ["POLICE", "HAULER"],
+        techLevel: 2 // Utility
     },
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
@@ -548,7 +615,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 65000,
-        aiRoles: ["EXPLORER"]
+        aiRoles: ["EXPLORER"],
+        techLevel: 3 // Mid-tier
     },
     "Destroyer": {
         name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
@@ -581,7 +649,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: [],
         price: 900000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY"],
+        techLevel: 4 // Advanced
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
@@ -618,7 +687,8 @@ const SHIP_DEFINITIONS = {
 
         typicalCargo: ["Computers","Computers","Computers","Weapons", "Metals", "Adv Components"],
         price: 120000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY"],
+        techLevel: 4 // Advanced
     },
     "FerDeLance": {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
@@ -656,7 +726,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
         typicalCargo: ["Computers","Computers","Computers","Computers","Luxury Goods", "Weapons", "Narcotics"],
         price: 117000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"],
+        techLevel: 4 // Advanced
     },
     "GeometricDrone": {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
@@ -668,7 +739,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [50, 50, 60], strokeColor: [200, 200, 255], strokeW: 1.0, // Dark metallic, light stroke
         typicalCargo: [],
         price: 18000,
-        aiRoles: ["ALIEN"]
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Cutting-edge
     },
     "GladiusFighter": {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
@@ -688,7 +760,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 60000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"],
+        techLevel: 3 // Mid-tier
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
@@ -700,7 +773,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8,
         typicalCargo: [],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"],
+        techLevel: 1 // Starter
     },
     "HammerheadCorvette": { // NEW - Unique 2
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
@@ -741,7 +815,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 2.00, // Blue-grey
         typicalCargo: ["Machinery", "Metals", "Food","Metals", "Weapons"],
         price: 100000,
-        aiRoles: ["MILITARY"]
+        aiRoles: ["MILITARY"],
+        techLevel: 4 // Advanced
     },
     "ImperialClipper": {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
@@ -767,7 +842,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 120000,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL"],
+        techLevel: 4 // Advanced
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
@@ -787,7 +863,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 50000,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL"],
+        techLevel: 2 // Utility
     },
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
@@ -811,7 +888,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 40000,
-        aiRoles: ["HAULER","MILITARY"]
+        aiRoles: ["HAULER","MILITARY"],
+        techLevel: 2 // Utility
     },
     "Keelback": {
         name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
@@ -834,7 +912,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Minerals", "Metals", "Machinery"],
         price: 35000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 2 // Utility
     },
     "KraitMKI": { 
         name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
@@ -857,7 +936,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: [],
         price: 9000,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["PIRATE"],
+        techLevel: 2 // Utility
     },
 
     "KraitMKII": { 
@@ -879,7 +959,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
         typicalCargo: ["Food","Minerals"],
         price: 20000,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["PIRATE"],
+        techLevel: 2 // Utility
     },
     "MantaHauler": { // NEW - Unique 1
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
@@ -905,7 +986,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
         price: 80000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 3 // Mid-tier
     },
     "MuleFreighter": { // NEW - Small Transporter
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
@@ -925,7 +1007,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
         price: 2000,
-        aiRoles: ["TRANSPORT"]
+        aiRoles: ["TRANSPORT"],
+        techLevel: 1 // Starter
     },
     "NomadVoyager": { 
         name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
@@ -945,7 +1028,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 93600,
-        aiRoles: ["EXPLORER"]
+        aiRoles: ["EXPLORER"],
+        techLevel: 4 // Advanced
     },
     "PathfinderSurvey": {
         name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
@@ -973,7 +1057,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
         typicalCargo: ["Food","Food", "Minerals","Minerals", "Metals"],
         price: 60000,
-        aiRoles: ["EXPLORER"]
+        aiRoles: ["EXPLORER"],
+        techLevel: 3 // Mid-tier
     },
     "ProspectorMiner": { // NEW - Miner
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
@@ -986,7 +1071,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
         typicalCargo: ["Minerals"],
         price: 8000,
-        aiRoles: ["TRANSPORT"]
+        aiRoles: ["TRANSPORT"],
+        techLevel: 2 // Utility
     },
     "Python": {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
@@ -1006,7 +1092,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals","Medicine", "Metals", "Chemicals"],
         price: 126000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 4 // Advanced
     },
     "ShardInterceptor": { // NEW - Alien 1
         name: "Shard Interceptor (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 30,
@@ -1028,7 +1115,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
         price: 90000,
-        aiRoles: ["ALIEN"]
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
     },
     "Sidewinder": {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
@@ -1040,7 +1128,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
         typicalCargo: ["Food"],
         price: 2500,
-        aiRoles: ["PIRATE"]
+        aiRoles: ["PIRATE"],
+        techLevel: 1 // Starter
     },
     "StarlinerCruiser": {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
@@ -1060,7 +1149,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine","Food", "Medicine"],
         price: 110000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 4 // Advanced
     },
     "Thargoid": { 
         name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
@@ -1071,7 +1161,8 @@ const SHIP_DEFINITIONS = {
         drawFunction: drawThargoid, vertexData: [], // Not editable via vertex data in this setup
         typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
         price: 9999999,
-        aiRoles: ["ALIEN"]
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
     },
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
@@ -1091,7 +1182,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
         typicalCargo: ["Food","Textiles", "Minerals", "Metals", "Machinery"],
         price: 80000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 2 // Utility
     },
      "Type9Heavy": {
         name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
@@ -1113,7 +1205,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 2.50,
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 120000,
-        aiRoles: ["HAULER"]
+        aiRoles: ["HAULER"],
+        techLevel: 3 // Mid-tier
     },
     "Viper": { 
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
@@ -1133,7 +1226,8 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Computers","Weapons", "Narcotics"],
         price: 60000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        techLevel: 3 // Mid-tier
     },
      "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
@@ -1155,7 +1249,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Computers","Computers","Weapons", "Narcotics", "Slaves"],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        techLevel: 3 // Mid-tier
     },
     "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1177,7 +1272,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 50000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        techLevel: 2 // Utility
     },
     "HummingBird": {
         name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1201,7 +1297,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"]
+        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"],
+        techLevel: 2 // Utility
     },
     "HarlequinJester": {
         name: "Harlequin Jester", role: "Light Fighter", sizeCategory: "Tiny", size: 22,
@@ -1507,9 +1604,9 @@ const SHIP_DEFINITIONS = {
         armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle"],
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         drawFunction: drawImperialPaladin,
-        vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:-0.3,y:0.8}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
+        vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:0.2,y:0.8}, {x:-0.3,y:0.5}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.2,y:-0.5}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
-        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 5,
+        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
         aiRoles: ["IMPERIAL"]
     },
     "ImperialLancer": {
@@ -1519,7 +1616,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Twin Pulse", "Sniper Rail"],
         costCategory: "Medium", description: "A high-speed Imperial interceptor designed for surgical strikes.",
         drawFunction: drawImperialLancer,
-        vertexData: [ {x:1.2,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
+        vertexData: [ {x:1,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
         fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
         typicalCargo: [], price: 62000, techLevel: 4,
         aiRoles: ["IMPERIAL", "GUARD"]
@@ -1552,7 +1649,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
-        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 5,
+        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
         aiRoles: ["IMPERIAL"]
     },
     "ImperialEnvoy": {
@@ -1602,59 +1699,151 @@ const SHIP_DEFINITIONS = {
         fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["HAULER", "IMPERIAL"]
+    },
+        "ObeliskSentinel": {
+        name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 6.2, baseThrust: 0.13, baseTurnRate: 0.075,
+        baseHull: 120, baseShield: 180, shieldRecharge: 2.0, cargoCapacity: 0,
+        armament: ["Disruptor", "Scatter Beam"],
+        costCategory: "N/A", description: "Tall, monolithic alien ship with layered crystal armor.",
+        drawFunction: drawObeliskSentinel,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.5,y:0.7}, {x:0.3,y:-1.0}, {x:-0.3,y:-1.0}, {x:-0.5,y:0.7} ], fillColor: [60, 255, 180], strokeColor: [0, 200, 120], strokeW: 2.0 },
+            { vertexData: [ {x:0.0,y:0.7}, {x:0.2,y:0.3}, {x:0.1,y:-0.7}, {x:-0.1,y:-0.7}, {x:-0.2,y:0.3} ], fillColor: [0, 255, 120], strokeColor: [0, 180, 90], strokeW: 1.0 }
+        ],
+        fillColor: [60, 255, 180], strokeColor: [0, 200, 120], strokeW: 2.0,
+        typicalCargo: ["Chemicals", "Metals"], price: 120000, aiRoles: ["ALIEN"]
+    },
+    "SpiralWarden": {
+        name: "Spiral Warden (Alien)", role: "Alien Interceptor", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 8.0, baseThrust: 0.19, baseTurnRate: 0.11,
+        baseHull: 60, baseShield: 90, shieldRecharge: 1.7, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with spiral, shell-like armor.",
+        drawFunction: drawSpiralWarden,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.7,y:0.7}, {x:1.0,y:0.0}, {x:0.7,y:-0.7}, {x:0.0,y:-1.0}, {x:-0.7,y:-0.7}, {x:-1.0,y:0.0}, {x:-0.7,y:0.7} ], fillColor: [180, 255, 220], strokeColor: [0, 200, 180], strokeW: 1.2 },
+            { vertexData: [ {x:0.0,y:0.5}, {x:0.35,y:0.35}, {x:0.5,y:0.0}, {x:0.35,y:-0.35}, {x:0.0,y:-0.5}, {x:-0.35,y:-0.35}, {x:-0.5,y:0.0}, {x:-0.35,y:0.35} ], fillColor: [100, 255, 200], strokeColor: [0, 180, 150], strokeW: 0.8 }
+        ],
+        fillColor: [180, 255, 220], strokeColor: [0, 200, 180], strokeW: 1.2,
+        typicalCargo: ["Chemicals"], price: 95000, aiRoles: ["ALIEN"]
+    },
+    "TriadProbe": {
+        name: "Triad Probe (Alien)", role: "Alien Scout", sizeCategory: "Tiny", size: 16,
+        baseMaxSpeed: 9.0, baseThrust: 0.25, baseTurnRate: 0.15,
+        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Three-lobed alien probe, fast and evasive.",
+        drawFunction: drawTriadProbe,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.5,y:0.5}, {x:1.0,y:0.0}, {x:0.5,y:-0.5}, {x:0.0,y:-1.0}, {x:-0.5,y:-0.5}, {x:-1.0,y:0.0}, {x:-0.5,y:0.5} ], fillColor: [200, 255, 180], strokeColor: [0, 200, 100], strokeW: 1.0 },
+            { vertexData: [ {x:0.0,y:0.3}, {x:0.2,y:0.0}, {x:0.0,y:-0.3}, {x:-0.2,y:0.0} ], fillColor: [255, 255,  100], strokeColor: [200, 200, 0], strokeW: 1.0 }
+        ],
+       
+        fillColor: [200, 255, 180], strokeColor: [0, 200, 100], strokeW: 1.0,
+        typicalCargo: [], price: 60000, aiRoles: ["ALIEN"]
+    },
+    "HexaManta": {
+        name: "Hexa-Manta (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 70,
+        baseMaxSpeed: 6.0, baseThrust: 0.12, baseTurnRate: 0.07,
+        baseHull: 220, baseShield: 320, shieldRecharge: 2.2, cargoCapacity: 30,
+        armament: ["Disruptor", "Force Blaster"],
+        costCategory: "N/A", description: "Wide, six-winged alien ship with layered fins.",
+        drawFunction: drawHexaManta,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.8,y:0.6}, {x:1.0,y:0.0}, {x:0.8,y:-0.6}, {x:0.0,y:-1.0}, {x:-0.8,y:-0.6}, {x:-1.0,y:0.0}, {x:-0.8,y:0.6} ], fillColor: [0, 255, 180], strokeColor: [0, 180, 120], strokeW: 2.0 },
+            { vertexData: [ {x:0.0,y:0.7}, {x:0.42,y:0.56}, {x:0.7,y:0.0}, {x:0.42,y:-0.56}, {x:0.0,y:-0.7}, {x:-0.42,y:-0.56}, {x:-0.7,y:0.0}, {x:-0.42,y:0.56} ], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 2.0 },
+            { vertexData: [ {x:0.0,y:0.3}, {x:0.21,y:0.21}, {x:0.3,y:0.0}, {x:0.21,y:-0.21}, {x:0.0,y:-0.3}, {x:-0.21,y:-0.21}, {x:-0.3,y:0.0}, {x:-0.21,y:0.21} ], fillColor: [255, 255, 255], strokeColor: [180, 0, 180], strokeW: 1.0 }
+        ],
+        fillColor: [0, 255, 180], strokeColor: [0, 180, 120], strokeW: 2.0,
+        typicalCargo: ["Metals", "Chemicals"], price: 180000, aiRoles: ["ALIEN"]
+    },
+    "FractalRay": {
+        name: "Fractal Ray (Alien)", role: "Alien Destroyer", sizeCategory: "Large", size: 85,
+        baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.09,
+        baseHull: 260, baseShield: 350, shieldRecharge: 2.5, cargoCapacity: 40,
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with fractal, lightning-like arms.",
+        drawFunction: drawFractalRay,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.5,y:0.5}, {x:1.0,y:0.0}, {x:0.5,y:-0.5}, {x:0.0,y:-1.0}, {x:-0.5,y:-0.5}, {x:-1.0,y:0.0}, {x:-0.5,y:0.5} ], fillColor: [255, 255, 180], strokeColor: [200, 200, 0], strokeW: 2.0 },
+            { vertexData: [ {x:0.0,y:0.3}, {x:0.2,y:0.0}, {x:0.0,y:-0.3}, {x:-0.2,y:0.0} ], fillColor: [255, 255,  100], strokeColor: [200, 200, 0], strokeW: 1.0 }
+        ],
+        fillColor: [255, 255, 180], strokeColor: [200, 200, 0], strokeW: 2.0,
+        typicalCargo: ["Weapons", "Chemicals"], price: 220000, aiRoles: ["ALIEN"]
+    },
+    "PetalSpinner": {
+        name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 8.2, baseThrust: 0.21, baseTurnRate: 0.12,
+        baseHull: 55, baseShield: 70, shieldRecharge: 1.5, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with spinning, flower-like petals.",
+        drawFunction: drawPetalSpinner,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.5,y:0.5}, {x:1.0,y:0.0}, {x:0.5,y:-0.5}, {x:0.0,y:-1.0}, {x:-0.5,y:-0.5}, {x:-1.0,y:0.0}, {x:-0.5,y:0.5} ], fillColor: [255, 180, 255], strokeColor: [180, 0, 180], strokeW: 1.2 },
+            { vertexData: [ {x:0.0,y:0.2}, {x:0.1,y:0.0}, {x:0.0,y:-0.2}, {x:-0.1,y:0.0} ], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 0.7 }
+        ],
+        fillColor: [255, 180, 255], strokeColor: [180, 0, 180], strokeW: 1.2,
+        typicalCargo: [], price: 70000, aiRoles: ["ALIEN"]
+    },
+    "CrescentMarauder": {
+        name: "Crescent Marauder (Alien)", role: "Alien Raider", sizeCategory: "Medium", size: 38,
+        baseMaxSpeed: 7.5, baseThrust: 0.16, baseTurnRate: 0.10,
+        baseHull: 100, baseShield: 120, shieldRecharge: 1.8, cargoCapacity: 10,
+        armament: ["Disruptor", "Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with a crescent, blade-like hull.",
+        drawFunction: drawCrescentMarauder,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.8,y:0.3}, {x:1.0,y:0.0}, {x:0.8,y:-0.3}, {x:0.0,y:-1.0}, {x:-0.8,y:-0.3}, {x:-1.0,y:0.0}, {x:-0.8,y:0.3} ], fillColor: [180, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.5 },
+            { vertexData: [ {x:0.0,y:0.7}, {x:0.56,y:0.21}, {x:0.7,y:0.0}, {x:0.56,y:-0.21}, {x:0.0,y:-0.7}, {x:-0.56,y:-0.21}, {x:-0.7,y:0.0}, {x:-0.56,y:0.21} ], fillColor: [0, 255, 255], strokeColor: [0, 120, 120], strokeW: 0.8 }
+        ],
+        fillColor: [180, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.5,
+        typicalCargo: ["Narcotics", "Chemicals"], price: 110000, aiRoles: ["ALIEN"]
+    },
+    "ObsidianOrb": {
+        name: "Obsidian Orb (Alien)", role: "Alien Tank", sizeCategory: "Large", size: 90,
+        baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.05,
+        baseHull: 400, baseShield: 500, shieldRecharge: 3.0, cargoCapacity: 60,
+        armament: ["Force Blaster", "Disruptor"],
+        costCategory: "N/A", description: "Massive, spherical alien ship with layered armor.",
+        drawFunction: drawObsidianOrb,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.7,y:0.7}, {x:1.0,y:0.0}, {x:0.7,y:-0.7}, {x:0.0,y:-1.0}, {x:-0.7,y:-0.7}, {x:-1.0,y:0.0}, {x:-0.7,y:0.7} ], fillColor: [40, 40, 60], strokeColor: [100, 100, 120], strokeW: 3.0 },
+            { vertexData: [ {x:0.0,y:0.5}, {x:0.35,y:0.35}, {x:0.5,y:0.0}, {x:0.35,y:-0.35}, {x:0.0,y:-0.5}, {x:-0.35,y:-0.35}, {x:-0.5,y:0.0}, {x:-0.35,y:0.35} ], fillColor: [80, 80, 120], strokeColor: [180, 180, 255], strokeW: 1.5 }
+        ],
+        fillColor: [40, 40, 60], strokeColor: [100, 100, 120], strokeW: 3.0,
+        typicalCargo: ["Metals", "Weapons"], price: 300000, aiRoles: ["ALIEN"]
+    },
+    "TesseractScout": {
+        name: "Tesseract Scout (Alien)", role: "Alien Recon", sizeCategory: "Tiny", size: 18,
+        baseMaxSpeed: 10.0, baseThrust: 0.25, baseTurnRate: 0.15,
+        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien scout with a shifting, four-dimensional shape.",
+        drawFunction: drawTesseractScout,
+        vertexLayers: [
+            { vertexData: [ {x:1.0,y:1.0}, {x:1.0,y:-1.0}, {x:-1.0,y:-1.0}, {x:-1.0,y:1.0} ], fillColor: [200, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.0 },
+            { vertexData: [ {x:0.0,y:0.7}, {x:0.7,y:0.0}, {x:0.0,y:-0.7}, {x:-0.7,y:0.0} ], fillColor: [0, 255, 255], strokeColor: [0, 120, 120], strokeW: 0.7 }
+        ],
+        fillColor: [200, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.0,
+        typicalCargo: [], price: 80000, aiRoles: ["ALIEN"]
+    },
+    "LotusCarrier": {
+        name: "Lotus Carrier (Alien)", role: "Alien Carrier", sizeCategory: "Very Large", size: 120,
+        baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.025,
+        baseHull: 800, baseShield: 900, shieldRecharge: 4.0, cargoCapacity: 200,
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
+        costCategory: "N/A", description: "Enormous alien carrier with layered, lotus-like petals.",
+        drawFunction: drawLotusCarrier,
+        vertexLayers: [
+            { vertexData: [ {x:0.0,y:1.0}, {x:0.6,y:0.8}, {x:1.0,y:0.0}, {x:0.6,y:-0.8}, {x:0.0,y:-1.0}, {x:-0.6,y:-0.8}, {x:-1.0,y:0.0}, {x:-0.6,y:0.8} ], fillColor: [255, 200, 255], strokeColor: [180, 0, 180], strokeW: 3.0 },
+            { vertexData: [ {x:0.0,y:0.7}, {x:0.42,y:0.56}, {x:0.7,y:0.0}, {x:0.42,y:-0.56}, {x:0.0,y:-0.7}, {x:-0.42,y:-0.56}, {x:-0.7,y:0.0}, {x:-0.42,y:0.56} ], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 2.0 },
+            { vertexData: [ {x:0.0,y:0.3}, {x:0.21,y:0.21}, {x:0.3,y:0.0}, {x:0.21,y:-0.21}, {x:0.0,y:-0.3}, {x:-0.21,y:-0.21}, {x:-0.3,y:0.0}, {x:-0.21,y:0.21} ], fillColor: [255, 255, 255], strokeColor: [180, 0, 180], strokeW: 1.0 }
+        ],
+        fillColor: [255, 200, 255], strokeColor: [180, 0, 180], strokeW: 3.0,
+        typicalCargo: ["Luxury Goods", "Chemicals", "Metals"], price: 600000, aiRoles: ["ALIEN"]
     }
 };
 // --- End Ship Definitions ---
-
-// For each ship definition, add the techLevel property
-
-// Basic/starter ships (Tech Level 1-2)
-SHIP_DEFINITIONS.Sidewinder.techLevel = 1;
-SHIP_DEFINITIONS.MuleFreighter.techLevel = 1;
-SHIP_DEFINITIONS.KraitMKI.techLevel = 2;
-
-// Common utility ships (Tech Level 2-3)
-SHIP_DEFINITIONS.Adder.techLevel = 2; 
-SHIP_DEFINITIONS.ACAB.techLevel = 2;
-SHIP_DEFINITIONS.WaspAssault.techLevel = 2;
-SHIP_DEFINITIONS.Viper.techLevel = 2;
-SHIP_DEFINITIONS.HummingBird.techLevel = 2;
-SHIP_DEFINITIONS.ProspectorMiner.techLevel = 2;
-
-// Mid-tier ships (Tech Level 3)
-SHIP_DEFINITIONS.CobraMkIII.techLevel = 3;
-SHIP_DEFINITIONS.JackalMultirole.techLevel = 3;
-SHIP_DEFINITIONS.Type6Transporter.techLevel = 3;
-SHIP_DEFINITIONS.Keelback.techLevel = 3;
-SHIP_DEFINITIONS.KraitMKII.techLevel = 3;
-SHIP_DEFINITIONS.GladiusFighter.techLevel = 3;
-SHIP_DEFINITIONS.Vulture.techLevel = 3;
-
-// Advanced ships (Tech Level 4)
-SHIP_DEFINITIONS.DiamondbackExplorer.techLevel = 4;
-SHIP_DEFINITIONS.AspExplorer.techLevel = 4;
-SHIP_DEFINITIONS.PathfinderSurvey.techLevel = 4;
-SHIP_DEFINITIONS.NomadVoyager.techLevel = 4;
-SHIP_DEFINITIONS.StarlinerCruiser.techLevel = 4;
-SHIP_DEFINITIONS.Python.techLevel = 4;
-SHIP_DEFINITIONS.Type9Heavy.techLevel = 4;
-SHIP_DEFINITIONS.CenturionGunship.techLevel = 4;
-SHIP_DEFINITIONS.MantaHauler.techLevel = 4;
-SHIP_DEFINITIONS.HammerheadCorvette.techLevel = 4;
-SHIP_DEFINITIONS.ImperialCourier.techLevel = 4;
-
-// Cutting-edge ships (Tech Level 5)
-SHIP_DEFINITIONS.FederalAssaultShip.techLevel = 5;
-SHIP_DEFINITIONS.ImperialClipper.techLevel = 5;
-SHIP_DEFINITIONS.FerDeLance.techLevel = 5;
-SHIP_DEFINITIONS.Anaconda.techLevel = 5;
-SHIP_DEFINITIONS.Destroyer.techLevel = 5;
-SHIP_DEFINITIONS.GnatInterceptor.techLevel = 5;
-
-// Alien ships (special case - very advanced but not purchasable)
-SHIP_DEFINITIONS.Thargoid.techLevel = 5;
-SHIP_DEFINITIONS.ShardInterceptor.techLevel = 5;
-SHIP_DEFINITIONS.BioFrigate.techLevel = 5;
-SHIP_DEFINITIONS.GeometricDrone.techLevel = 5;
 
 console.log(`ships.js (Editor Version with ${Object.keys(SHIP_DEFINITIONS).length} ships) loaded and SHIP_DEFINITIONS created.`); // Updated log
