@@ -436,24 +436,30 @@ function handleShipSelection() {
 
     if (descriptionDiv) {
         let propertyDisplay = "";
-        
         // If we have a valid ship definition, show its properties
         if (currentShipDef) {
             propertyDisplay = `<div style="text-align:left">
-                <p><strong>Description:</strong> ${descriptionText}</p>
+                <p><strong>Name:</strong> ${currentShipDef.name || currentShipKey}</p>
+                <p><strong>Description:</strong> ${currentShipDef.description || "No description available."}</p>
                 <p><strong>Role:</strong> ${currentShipDef.role || 'N/A'}</p>
                 <p><strong>Hull:</strong> ${currentShipDef.baseHull || 'N/A'}</p>
+                <p><strong>Shield:</strong> ${currentShipDef.baseShield || 'N/A'}</p>
+                <p><strong>Shield Recharge:</strong> ${currentShipDef.shieldRecharge || 'N/A'}</p>
                 <p><strong>Speed:</strong> ${currentShipDef.baseMaxSpeed || 'N/A'} | 
                    <strong>Thrust:</strong> ${currentShipDef.baseThrust || 'N/A'} | 
                    <strong>Turn Rate:</strong> ${currentShipDef.baseTurnRate?.toFixed(5) || 'N/A'} rad/frame</p>
                 <p><strong>Cargo Capacity:</strong> ${currentShipDef.cargoCapacity || 'N/A'} units</p>
                 <p><strong>Armament:</strong> ${Array.isArray(currentShipDef.armament) ? currentShipDef.armament.join(', ') : 'N/A'}</p>
                 <p><strong>Price:</strong> ${currentShipDef.price ? currentShipDef.price.toLocaleString() : 'N/A'} cr</p>
+                <p><strong>AI Roles:</strong> ${Array.isArray(currentShipDef.aiRoles) ? currentShipDef.aiRoles.join(', ') : 'N/A'}</p>
+                <p><strong>Tech Level:</strong> ${currentShipDef.techLevel || 'N/A'}</p>
+                <p><strong>Cost Category:</strong> ${currentShipDef.costCategory || 'N/A'}</p>
+                <p><strong>Typical Cargo:</strong> ${Array.isArray(currentShipDef.typicalCargo) ? currentShipDef.typicalCargo.join(', ') : 'N/A'}</p>
+                <p><strong>Size Category:</strong> ${currentShipDef.sizeCategory || 'N/A'} | <strong>Size:</strong> ${currentShipDef.size || 'N/A'}</p>
             </div>`;
         } else {
             propertyDisplay = descriptionText;
         }
-        
         descriptionDiv.html(propertyDisplay);
     }
     updateUIControls(); // Update button states

@@ -1095,12 +1095,12 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["HAULER"],
         techLevel: 4 // Advanced
     },
-    "ShardInterceptor": { // NEW - Alien 1
-        name: "Shard Interceptor (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 30,
+    "ShardInterceptor": {
+        name: "Shard Interceptor", role: "Fighter", sizeCategory: "Small", size: 30,
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
         baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
-        costCategory: "N/A", description: "Fast alien fighter composed of sharp, crystalline structures.",
+        costCategory: "N/A", description: "Fast fighter incorporating alien technology of crystalline structures.",
         drawFunction: drawShardInterceptor, 
         vertexLayers: [
             {
@@ -1115,8 +1115,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
         price: 90000,
-        aiRoles: ["ALIEN"],
-        techLevel: 5 // Alien
+        aiRoles: ["MILITARY","BOUNTY_HUNTER"],
+        techLevel: 5
     },
     "Sidewinder": {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
@@ -1708,8 +1708,18 @@ const SHIP_DEFINITIONS = {
         costCategory: "N/A", description: "Tall, monolithic alien ship with layered crystal armor.",
         drawFunction: drawObeliskSentinel,
         vertexLayers: [
-            { vertexData: [ {x:0.0,y:1.0}, {x:0.5,y:0.7}, {x:0.3,y:-1.0}, {x:-0.3,y:-1.0}, {x:-0.5,y:0.7} ], fillColor: [60, 255, 180], strokeColor: [0, 200, 120], strokeW: 2.0 },
-            { vertexData: [ {x:0.0,y:0.7}, {x:0.2,y:0.3}, {x:0.1,y:-0.7}, {x:-0.1,y:-0.7}, {x:-0.2,y:0.3} ], fillColor: [0, 255, 120], strokeColor: [0, 180, 90], strokeW: 1.0 }
+            {
+                vertexData: [ { x: 0.0000, y: 1.1037 }, { x: 0.4791, y: 0.7567 }, { x: 0.4276, y: 0.0000 }, { x: 0.4791, y: -0.7567 }, { x: 0.0000, y: -1.1037 }, { x: -0.4937, y: -0.7636 }, { x: -0.4276, y: 0.0000 }, { x: -0.4937, y: 0.7636 } ],
+                fillColor: [60, 255, 180],
+                strokeColor: [0, 200, 120],
+                strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: 0.9369, y: 0.0000 }, { x: 0.6113, y: -0.1659 }, { x: -0.9369, y: 0.0000 }, { x: 0.6113, y: 0.1659 } ],
+                fillColor: [0, 255, 120],
+                strokeColor: [0, 180, 90],
+                strokeW: 1.00
+            }
         ],
         fillColor: [60, 255, 180], strokeColor: [0, 200, 120], strokeW: 2.0,
         typicalCargo: ["Chemicals", "Metals"], price: 120000, aiRoles: ["ALIEN"]
