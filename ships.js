@@ -515,8 +515,8 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Minerals","Minerals","Minerals","Minerals", "Medicine", "Computers"],
         price: 82500,
-        aiRoles: ["EXPLORER"],
-        techLevel: 3 // Mid-tier
+        aiRoles: ["EXPLORER","HAULER"],
+        techLevel: 2 // Mid-tier
     },
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
@@ -615,7 +615,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 65000,
-        aiRoles: ["EXPLORER"],
+        aiRoles: ["EXPLORER","HAULER"],
         techLevel: 3 // Mid-tier
     },
     "Destroyer": {
@@ -1028,7 +1028,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 93600,
-        aiRoles: ["EXPLORER"],
+        aiRoles: ["EXPLORER","HAULER"],
         techLevel: 4 // Advanced
     },
     "PathfinderSurvey": {
@@ -1057,7 +1057,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
         typicalCargo: ["Food","Food", "Minerals","Minerals", "Metals"],
         price: 60000,
-        aiRoles: ["EXPLORER"],
+        aiRoles: ["EXPLORER","HAULER"],
         techLevel: 3 // Mid-tier
     },
     "ProspectorMiner": { // NEW - Miner
