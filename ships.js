@@ -1604,7 +1604,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle"],
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         drawFunction: drawImperialPaladin,
-        vertexData: [ {x:1,y:0.1}, {x:0.7,y:0.5}, {x:0.2,y:0.8}, {x:-0.3,y:0.5}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.3,y:-0.8}, {x:0.2,y:-0.5}, {x:0.7,y:-0.5}, {x:1,y:-0.1} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.6888, y: 0.0813 }, { x: 0.2340, y: 0.3191 }, { x: -0.5170, y: 0.3732 }, { x: -0.7275, y: 0.6322 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.7275, y: -0.6322 }, { x: -0.5170, y: -0.3732 }, { x: 0.2340, y: -0.3191 }, { x: 0.6888, y: -0.0813 } ],
+                fillColor: [240, 240, 250],
+                strokeColor: [180, 180, 100],
+                strokeW: 2.00
+            }
+        ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
         aiRoles: ["IMPERIAL"]

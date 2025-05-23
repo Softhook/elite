@@ -617,220 +617,368 @@ updateTargeting(system) {
 }
 
 /**
- * Evaluates how attractive a target is for this enemy - with isolation from global scope
+ * Evaluates how attractive a target is for this enemy
  * @param {Object} target - The target to evaluate
  * @param {Object} system - The current star system
  * @return {number} A score representing how attractive this target is
  */
 evaluateTargetScore(target, system) {
-    // Use an immediately-invoked function expression (IIFE) for complete scope isolation
-    return (function(enemy, target, system) {
-        // Basic validity check
-        if (!enemy.isTargetValid(target) || target === enemy) {
-            return TARGET_SCORE_INVALID;
-        }
+    // Basic validity check
+    if (!this.isTargetValid(target) || target === this) {
+        return TARGET_SCORE_INVALID;
+    }
 
-        // --- GUARD: Prioritize Principal's Attacker (with friendly fire prevention) ---
-        if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
-            // FRIENDLY FIRE PREVENTION: Never target principal
-            if (target === enemy.principal) {
-                return TARGET_SCORE_INVALID;
-            }
-            
-            // FRIENDLY FIRE PREVENTION: Never target fellow guards protecting same principal
-            if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
-                return TARGET_SCORE_INVALID;
-            }
-            
-            // Original code - high priority for principal's attacker
-            if (target === enemy.principal.lastAttacker && 
-                enemy.isTargetValid(target) && 
-                (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) {
-                //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
-                return 2000; // Very high score to engage principal's attacker
-            }
-            
-            // Original code - only engage in self-defense otherwise
-            if (target !== enemy.lastAttacker) { // If not self-defense
-                return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
-            }
-        }
+    // Check for role-specific early returns
+    const roleSpecificScore = this._evaluateRoleSpecificTarget(target, system);
+    if (roleSpecificScore !== null) {
+        return roleSpecificScore;
+    }
 
-        // FRIENDLY FIRE PREVENTION: Principals never target their own guards
-        if (target.role === AI_ROLE.GUARD && target.principal === enemy) {
-            return TARGET_SCORE_INVALID;
-        }
-        // --- END GUARD ---
+    // Calculate base score with modifiers
+    const scoreData = this._calculateBaseScore(target, system);
+    if (!scoreData.interesting) {
+        return TARGET_SCORE_INVALID;
+    }
 
-        // --- BOUNTY HUNTER: Only cares about the player ---
-        if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
-            if (target instanceof Player) {
-                return 1000; // Very high score for the player
-            } else {
-                return TARGET_SCORE_INVALID; // Ignore all other targets
-            }
-        }
-        // --- END BOUNTY HUNTER ---
+    // Apply distance and damage modifiers
+    const finalScore = this._applyScoreModifiers(scoreData, target);
+    
+    // Validate and return final score
+    return this._validateFinalScore(finalScore, scoreData.interesting, target);
+}
 
-        // Create completely private scoring variables
-        let _score = 0; 
-        let _interesting = false;
-        const isPlayer = target instanceof Player;
-        
-        if (isPlayer) {
-            //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
-        }
-        
-        // Check if target is attacker
-        let isAttacker = target === enemy.lastAttacker;
-        if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
-            isAttacker = true;
-            if (isPlayer) {
-                //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
-            }
-        }
-        
-        // Add attacker bonus
-        if (isAttacker && isPlayer) {
-            _score += TARGET_SCORE_RETALIATION_PIRATE;
-            _interesting = true;
-            //console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
-        } else if (isAttacker) {
-            _score += TARGET_SCORE_RETALIATION_PIRATE;
-            _interesting = true;
-        }
-        
-        // Role-specific scoring - add based on enemy role
-        switch (enemy.role) {
-            case AI_ROLE.PIRATE:
-                if (isPlayer) {
-                    _interesting = true;
-                    //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
-                    
-                    // Add cargo bonus
-                    const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
-                    if (cargoAmount > 5) {
-                        const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
-                        _score += cargoBonus;
-                        //console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
-                    }
-                } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
-                    _score += TARGET_SCORE_PIRATE_PREY_HAULER;
-                    _interesting = true;
-                } else if (target.constructor?.name === 'Cargo') {
-                    _score += TARGET_SCORE_PIRATE_CARGO_BASE;
-                    _interesting = true;
-                }
-                break;
-                
-            case AI_ROLE.POLICE:
-                if (isPlayer && system?.isPlayerWanted()) {
-                    _score += TARGET_SCORE_BASE_WANTED;
-                    _interesting = true;
-                    //console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
-                } else if (target.isWanted) {
-                    _score += TARGET_SCORE_BASE_WANTED;
-                    _interesting = true;
-                    if (target.role === AI_ROLE.PIRATE) {
-                        _score += TARGET_SCORE_WANTED_PIRATE_BONUS;
-                    }
-                }
-                break;
-            
-                
-            case AI_ROLE.ALIEN: // <<< NEW CASE
-            if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
-                _score += 50; // Base score for any non-alien target
-                _interesting = true;
- 
-            }
-            break;
+/**
+ * Handles role-specific targeting logic that may return early
+ * @param {Object} target - The target to evaluate
+ * @param {Object} system - The current star system
+ * @return {number|null} Score if role-specific logic applies, null otherwise
+ */
+_evaluateRoleSpecificTarget(target, system) {
+    // Guard role logic
+    if (this.role === AI_ROLE.GUARD) {
+        return this._evaluateGuardTarget(target);
+    }
 
-            case AI_ROLE.HAULER:
-            case AI_ROLE.TRANSPORT:
-                if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
-                    //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
-            _score += TARGET_SCORE_RETALIATION_HAULER;
-                    _interesting = true;
-                    
-                    if (enemy.hull < enemy.maxHull * 0.5) {
-                        _score -= 20;
-                        //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
-                    }
-                } else if (isAttacker && !isPlayer) {
-                    _score += TARGET_SCORE_RETALIATION_HAULER;
-                    _interesting = true;
-                    if (enemy.hull < enemy.maxHull * 0.5) _score -= 20;
-                }
-                break;
-        }
-        
-        // Log before distance penalties
-        if (isPlayer) {
-            //console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
-        }
-        
-        // Distance penalties - Only if interesting
-        if (_interesting) {
-            const distance = enemy.distanceTo(target);
+    // Bounty hunter role logic
+    if (this.role === AI_ROLE.BOUNTY_HUNTER) {
+        return this._evaluateBountyHunterTarget(target);
+    }
+
+    // Check friendly fire prevention for all other roles
+    if (target.role === AI_ROLE.GUARD && target.principal === this) {
+        return TARGET_SCORE_INVALID;
+    }
+
+    return null; // No role-specific early return
+}
+
+/**
+ * Evaluates targets for Guard role
+ * @param {Object} target - The target to evaluate
+ * @return {number} Target score
+ */
+_evaluateGuardTarget(target) {
+    if (!this.principal || !this.isTargetValid(this.principal)) {
+        return TARGET_SCORE_INVALID;
+    }
+
+    // Friendly fire prevention: Never target principal
+    if (target === this.principal) {
+        return TARGET_SCORE_INVALID;
+    }
+    
+    // Friendly fire prevention: Never target fellow guards protecting same principal
+    if (target.role === AI_ROLE.GUARD && target.principal === this.principal) {
+        return TARGET_SCORE_INVALID;
+    }
+    
+    // High priority for principal's recent attacker
+    if (target === this.principal.lastAttacker && 
+        this.isTargetValid(target) && 
+        (this.principal.lastAttackTime && millis() - this.principal.lastAttackTime < 5000)) {
+        return 2000; // Very high score to engage principal's attacker
+    }
+    
+    // Only engage in self-defense otherwise
+    if (target !== this.lastAttacker) {
+        return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
+    }
+
+    // Allow normal scoring for self-defense
+    return null;
+}
+
+/**
+ * Evaluates targets for Bounty Hunter role
+ * @param {Object} target - The target to evaluate
+ * @return {number} Target score
+ */
+_evaluateBountyHunterTarget(target) {
+    if (target instanceof Player) {
+        return 1000; // Very high score for the player
+    } else {
+        return TARGET_SCORE_INVALID; // Ignore all other targets
+    }
+}
+
+/**
+ * Calculates the base score and determines if target is interesting
+ * @param {Object} target - The target to evaluate
+ * @param {Object} system - The current star system
+ * @return {Object} Object containing score, interesting flag, and target info
+ */
+_calculateBaseScore(target, system) {
+    let score = 0;
+    let interesting = false;
+    const isPlayer = target instanceof Player;
+    const isAttacker = this._isTargetAttacker(target);
+
+    // Add attacker bonus
+    if (isAttacker) {
+        score += TARGET_SCORE_RETALIATION_PIRATE;
+        interesting = true;
+    }
+
+    // Add role-specific scoring
+    const roleScore = this._getRoleSpecificScore(target, system, isPlayer, isAttacker);
+    score += roleScore.points;
+    interesting = interesting || roleScore.interesting;
+
+    return { score, interesting, isPlayer, isAttacker };
+}
+
+/**
+ * Determines if target is considered an attacker
+ * @param {Object} target - The target to evaluate
+ * @return {boolean} True if target is an attacker
+ */
+_isTargetAttacker(target) {
+    if (target === this.lastAttacker) {
+        return true;
+    }
+    
+    // Special case for player targeting
+    if (target instanceof Player && this.lastAttacker instanceof Player) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Gets role-specific scoring for a target
+ * @param {Object} target - The target to evaluate
+ * @param {Object} system - The current star system
+ * @param {boolean} isPlayer - Whether target is a player
+ * @param {boolean} isAttacker - Whether target is an attacker
+ * @return {Object} Object containing points and interesting flag
+ */
+_getRoleSpecificScore(target, system, isPlayer, isAttacker) {
+    switch (this.role) {
+        case AI_ROLE.PIRATE:
+            return this._getPirateScore(target, isPlayer);
             
-            // Reduced penalty for important targets
-            let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
-            if (isAttacker || isPlayer) {
-                distancePenaltyMult *= 0.5;
-            }
+        case AI_ROLE.POLICE:
+            return this._getPoliceScore(target, system, isPlayer);
             
-            // Calculate penalty with cap
-            const distancePenalty = Math.min(40, distance * distancePenaltyMult);
+        case AI_ROLE.ALIEN:
+            return this._getAlienScore(target);
             
-            // Apply penalty with protection for important targets
-            if ((isAttacker || isPlayer) && isPlayer) {
-                const minScoreAfterPenalty = 10;
-                const adjustedPenalty = Math.min(distancePenalty, Math.max(0, _score - minScoreAfterPenalty));
-                _score -= adjustedPenalty;
-                //console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
-            } else {
-                _score -= distancePenalty;
-            }
+        case AI_ROLE.HAULER:
+        case AI_ROLE.TRANSPORT:
+            return this._getHaulerScore(target, isPlayer, isAttacker);
             
-            // Add hull damage bonus
-            if (target.hull !== undefined && target.maxHull !== undefined) {
-                const damagePercent = 1 - (target.hull / target.maxHull);
-                const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
-                _score += damageBonus;
-                
-                if (isPlayer && damageBonus > 0) {
-                    //console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
-                }
-            }
-        }
+        default:
+            return { points: 0, interesting: false };
+    }
+}
+
+/**
+ * Gets pirate-specific scoring for a target
+ * @param {Object} target - The target to evaluate
+ * @param {boolean} isPlayer - Whether target is a player
+ * @return {Object} Object containing points and interesting flag
+ */
+_getPirateScore(target, isPlayer) {
+    let points = 0;
+    let interesting = false;
+
+    if (isPlayer) {
+        interesting = true;
         
-        // Safety check
-        if (_score < -1000) {
-            //console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
-            _score = 10;
+        // Add cargo bonus for players
+        const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
+        if (cargoAmount > 5) {
+            points += TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
         }
-        
-        // Mark uninteresting if score too low
-        if (_interesting && _score <= 0) {
-            if (isPlayer) {
-                //console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
-            }
-            _interesting = false;
+    } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+        points += TARGET_SCORE_PIRATE_PREY_HAULER;
+        interesting = true;
+    } else if (target.constructor?.name === 'Cargo') {
+        points += TARGET_SCORE_PIRATE_CARGO_BASE;
+        interesting = true;
+    }
+
+    return { points, interesting };
+}
+
+/**
+ * Gets police-specific scoring for a target
+ * @param {Object} target - The target to evaluate
+ * @param {Object} system - The current star system
+ * @param {boolean} isPlayer - Whether target is a player
+ * @return {Object} Object containing points and interesting flag
+ */
+_getPoliceScore(target, system, isPlayer) {
+    let points = 0;
+    let interesting = false;
+
+    if (isPlayer && system?.isPlayerWanted()) {
+        points += TARGET_SCORE_BASE_WANTED;
+        interesting = true;
+    } else if (target.isWanted) {
+        points += TARGET_SCORE_BASE_WANTED;
+        interesting = true;
+        if (target.role === AI_ROLE.PIRATE) {
+            points += TARGET_SCORE_WANTED_PIRATE_BONUS;
         }
+    }
+
+    return { points, interesting };
+}
+
+/**
+ * Gets alien-specific scoring for a target
+ * @param {Object} target - The target to evaluate
+ * @return {Object} Object containing points and interesting flag
+ */
+_getAlienScore(target) {
+    if (target.role !== AI_ROLE.ALIEN) {
+        return { points: 50, interesting: true }; // Target anything that is not an Alien
+    }
+    return { points: 0, interesting: false };
+}
+
+/**
+ * Gets hauler/transport-specific scoring for a target
+ * @param {Object} target - The target to evaluate
+ * @param {boolean} isPlayer - Whether target is a player
+ * @param {boolean} isAttacker - Whether target is an attacker
+ * @return {Object} Object containing points and interesting flag
+ */
+_getHaulerScore(target, isPlayer, isAttacker) {
+    let points = 0;
+    let interesting = false;
+
+    if (isPlayer && (isAttacker || this.forcedCombatTimer > 0)) {
+        points += TARGET_SCORE_RETALIATION_HAULER;
+        interesting = true;
         
-        // Final debug log
-        if (isPlayer) {
-            //console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, _interesting ? 'color:green; font-weight:bold' : 'color:orange');
+        // Reduce score if damaged (may flee instead)
+        if (this.hull < this.maxHull * 0.5) {
+            points -= 20;
         }
-        
-        // Return appropriate final score
-        if (!_interesting) {
-            return TARGET_SCORE_INVALID;
+    } else if (isAttacker && !isPlayer) {
+        points += TARGET_SCORE_RETALIATION_HAULER;
+        interesting = true;
+        if (this.hull < this.maxHull * 0.5) {
+            points -= 20;
         }
-        
-        return _score;
-    })(this, target, system); // Pass current context to IIFE
+    }
+
+    return { points, interesting };
+}
+
+/**
+ * Applies distance penalties and damage bonuses to the score
+ * @param {Object} scoreData - The base score data
+ * @param {Object} target - The target being evaluated
+ * @return {number} The modified score
+ */
+_applyScoreModifiers(scoreData, target) {
+    if (!scoreData.interesting) {
+        return scoreData.score;
+    }
+
+    let score = scoreData.score;
+    const distance = this.distanceTo(target);
+    
+    // Apply distance penalty
+    score = this._applyDistancePenalty(score, distance, scoreData.isAttacker, scoreData.isPlayer);
+    
+    // Apply hull damage bonus
+    score = this._applyDamageBonus(score, target);
+    
+    return score;
+}
+
+/**
+ * Applies distance penalty to the score
+ * @param {number} score - Current score
+ * @param {number} distance - Distance to target
+ * @param {boolean} isAttacker - Whether target is an attacker
+ * @param {boolean} isPlayer - Whether target is a player
+ * @return {number} Score after distance penalty
+ */
+_applyDistancePenalty(score, distance, isAttacker, isPlayer) {
+    // Reduced penalty for important targets
+    let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
+    if (isAttacker || isPlayer) {
+        distancePenaltyMult *= 0.5;
+    }
+    
+    // Calculate penalty with cap
+    const distancePenalty = Math.min(40, distance * distancePenaltyMult);
+    
+    // Apply penalty with protection for important targets
+    if ((isAttacker || isPlayer) && isPlayer) {
+        const minScoreAfterPenalty = 10;
+        const adjustedPenalty = Math.min(distancePenalty, Math.max(0, score - minScoreAfterPenalty));
+        return score - adjustedPenalty;
+    } else {
+        return score - distancePenalty;
+    }
+}
+
+/**
+ * Applies hull damage bonus to the score
+ * @param {number} score - Current score
+ * @param {Object} target - The target being evaluated
+ * @return {number} Score after damage bonus
+ */
+_applyDamageBonus(score, target) {
+    if (target.hull !== undefined && target.maxHull !== undefined) {
+        const damagePercent = 1 - (target.hull / target.maxHull);
+        const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
+        return score + damageBonus;
+    }
+    return score;
+}
+
+/**
+ * Validates and returns the final score
+ * @param {number} score - The calculated score
+ * @param {boolean} interesting - Whether the target was marked as interesting
+ * @param {Object} target - The target being evaluated
+ * @return {number} The final validated score
+ */
+_validateFinalScore(score, interesting, target) {
+    // Safety check for corrupt scores
+    if (score < -1000) {
+        score = 10;
+    }
+    
+    // Mark uninteresting if score too low
+    if (interesting && score <= 0) {
+        interesting = false;
+    }
+    
+    // Return appropriate final score
+    if (!interesting) {
+        return TARGET_SCORE_INVALID;
+    }
+    
+    return score;
 }
 
     /**
