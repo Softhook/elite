@@ -46,7 +46,7 @@ class Player {
         // --- Current State ---
         this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
         this.currentSystem = null; this.fireCooldown = 0;
-        this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
+        this.currentWeapon = WEAPON_UPGRADES.find(w => w.name === "Tangle Projector") || WEAPON_UPGRADES[0]; // Default to Tangle Projector for testing
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
@@ -85,6 +85,8 @@ class Player {
         this.dragMultiplier = 1.0;   // Default - normal drag
         this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         this.tangleEffectTime = 0;   // Visual effect timestamp
+        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
+        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
 
         // Track enemy kills for Elite rating
         this.kills = 0;
@@ -455,24 +457,32 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     }
 
     /**
-     * Applies energy tangle effect to impair player movement
-     * @param {number} duration - How long drag lasts in seconds
+     * Applies energy tangle effect to impair player movement and rotation
+     * @param {number} tangleDuration - How long the tangle effect lasts in seconds
      * @param {number} multiplier - How much drag is increased
+     * @param {number} rotationBlockMultiplier - How much rotation speed is reduced
      */
-applyDragEffect(duration = 5.0, multiplier = 10.0) {
+applyDragEffect(tangleDuration = 5.0, multiplier = 10.0, rotationBlockMultiplier = 0.1) {
     // Use higher value if already affected
     this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
     
     // ENHANCED: Extend duration for consecutive hits
-    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
-                          (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, tangleDuration) + 
+                          (this.dragEffectTimer > 0 ? tangleDuration * 0.5 : 0);
+    
+    // Apply rotation blocking effect
+    this.rotationBlockMultiplier = Math.min(this.rotationBlockMultiplier || 1.0, rotationBlockMultiplier);
+    this.rotationBlockTimer = Math.max(this.rotationBlockTimer || 0, tangleDuration) +
+                              (this.rotationBlockTimer > 0 ? tangleDuration * 0.5 : 0);
+    
+
     
     // Visual effect timestamp
     this.tangleEffectTime = millis();
     
     // Player feedback
     if (typeof uiManager !== 'undefined') {
-        uiManager.addMessage("Ship caught in energy tangle! Engines affected!", "#30FFB4");
+        uiManager.addMessage("Ship caught in energy tangle! Engines and rotation affected!", "#30FFB4");
     }
     
     // Play sound effect if available
@@ -525,10 +535,12 @@ handleInput() {
   
     // 1) Rotation
     if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
-      this.angle -= this.rotationSpeed;
+      const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
+      this.angle -= effectiveRotationSpeed;
     }
     if (keyIsDown(RIGHT_ARROW) || keyIsDown(69)) {    // E 
-        this.angle += this.rotationSpeed;
+      const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
+      this.angle += effectiveRotationSpeed;
     }
   
     // 2) Sideways kiting (strafe)
@@ -739,6 +751,18 @@ handleInput() {
                 this.dragEffectTimer = 0;
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage("Engines restored to normal operation.", "#30FFB4");
+                }
+            }
+        }
+        
+        // Update rotation blocking timer
+        if (this.rotationBlockTimer > 0) {
+            this.rotationBlockTimer -= deltaTime / 1000; // Convert to seconds
+            if (this.rotationBlockTimer <= 0) {
+                this.rotationBlockMultiplier = 1.0;
+                this.rotationBlockTimer = 0;
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Rotation systems restored to normal operation.", "#30FFB4");
                 }
             }
         }

@@ -564,25 +564,28 @@ static fireTangle(owner, system, angle) {
     
     const weapon = owner.currentWeapon;
     const speed = weapon.speed || 6; // Slower than regular projectiles
-    const dragDuration = weapon.dragDuration || 5.0;
+    const tangleDuration = weapon.tangleDuration || 5.0;
     const dragMultiplier = weapon.dragMultiplier || 10.0;
+    const rotationBlockMultiplier = weapon.rotationBlockMultiplier || 0.1;
     
     let proj;
     
-    // Create projectile with tangle properties
+    // Create projectile with tangle properties using unified duration
     if (this.projectilePool) {
         proj = this.projectilePool.get(
             owner.pos.x, owner.pos.y, angle, owner,
             speed, weapon.damage, weapon.color, 
             "tangle", null, 60, 0, 0, 
-            dragDuration, dragMultiplier
+            tangleDuration, dragMultiplier,
+            rotationBlockMultiplier
         );
     } else {
         proj = new Projectile(
             owner.pos.x, owner.pos.y, angle, owner,
             speed, weapon.damage, weapon.color, 
             "tangle", null, 60, 0, 0,
-            dragDuration, dragMultiplier
+            tangleDuration, dragMultiplier,
+            rotationBlockMultiplier
         );
     }
     

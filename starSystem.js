@@ -1393,7 +1393,11 @@ checkProjectileCollisions() {
                 
                 // Apply Tangle effect if it's a tangle projectile
                 if (proj.type === "tangle" && typeof this.player.applyDragEffect === 'function') {
-                    this.player.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+                    this.player.applyDragEffect(
+                        proj.tangleDuration || 5.0, 
+                        proj.dragMultiplier || 10.0,
+                        proj.rotationBlockMultiplier || 0.1
+                    );
                     
                     // Add visual feedback
                     if (typeof uiManager !== 'undefined') {
@@ -1427,7 +1431,11 @@ checkProjectileCollisions() {
                     
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
-                        enemy.applyDragEffect(proj.dragDuration || 5.0, proj.dragMultiplier || 10.0);
+                        enemy.applyDragEffect(
+                            proj.tangleDuration || 5.0, 
+                            proj.dragMultiplier || 10.0,
+                            proj.rotationBlockMultiplier || 0.1
+                        );
                         
                         // Add visual feedback for player
                         if (typeof uiManager !== 'undefined') {
@@ -1459,7 +1467,11 @@ checkProjectileCollisions() {
                     
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
-                        enemy.applyDragEffect((proj.dragDuration || 5.0), (proj.dragMultiplier || 10.0));
+                        enemy.applyDragEffect(
+                            (proj.tangleDuration || 5.0), 
+                            (proj.dragMultiplier || 10.0),
+                            (proj.rotationBlockMultiplier || 0.1)
+                        );
                     }
                     
                     this.removeProjectile(i);

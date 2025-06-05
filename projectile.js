@@ -3,7 +3,8 @@
 class Projectile {
         constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
            type = "projectile", target = null, lifespan = 90, turnRate = 0, 
-           missileSpeed = 0, dragDuration = 5.0, dragMultiplier = 10.0) {
+           missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+           rotationBlockMultiplier = 0.1) {
         // Create vectors just once at construction time
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
@@ -20,20 +21,23 @@ class Projectile {
         this.turnRate = 0; // For homing missiles
         this.missileSpeed = 0; // Specific speed for missiles
 
-        this.dragDuration = dragDuration;
+        this.tangleDuration = tangleDuration;
         this.dragMultiplier = dragMultiplier;
+        this.rotationBlockMultiplier = rotationBlockMultiplier;
 
         // Call reset if parameters provided
         if (x !== undefined) {
             this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target, 
-                    lifespan, turnRate, missileSpeed, dragDuration, dragMultiplier);
+                    lifespan, turnRate, missileSpeed, tangleDuration, dragMultiplier,
+                    rotationBlockMultiplier);
         }
     }
 
     // Reset method for object pooling
     reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
      type = "projectile", target = null, lifespan = 90, turnRate = 0, 
-     missileSpeed = 0, dragDuration = 5.0, dragMultiplier = 10.0) {
+     missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+     rotationBlockMultiplier = 0.1) {
         try {
             // Validate position inputs
             if (isNaN(x) || isNaN(y)) {
@@ -53,8 +57,9 @@ class Projectile {
             this.turnRate = turnRate;
             this.missileSpeed = missileSpeed || speed; // Use missileSpeed if provided, else general speed
 
-            this.dragDuration = dragDuration;
+            this.tangleDuration = tangleDuration;
             this.dragMultiplier = dragMultiplier;
+            this.rotationBlockMultiplier = rotationBlockMultiplier;
 
             // Apply spawn offset (reuse velocity vector temporarily)
             if (owner && owner.size) {

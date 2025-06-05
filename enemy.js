@@ -307,6 +307,8 @@ class Enemy {
         this.dragMultiplier = 1.0;   // Default - normal drag 
         this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         this.tangleEffectTime = 0;   // Visual effect timestamp
+        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
+        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
 
         // --- Guard-specific properties ---
         this.principal = null; // The entity this guard is protecting
@@ -411,6 +413,15 @@ class Enemy {
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
+            }
+        }
+        
+        // Update rotation blocking timer
+        if (this.rotationBlockTimer > 0) {
+            this.rotationBlockTimer -= dtSeconds;
+            if (this.rotationBlockTimer <= 0) {
+                this.rotationBlockMultiplier = 1.0;
+                this.rotationBlockTimer = 0;
             }
         }
         
@@ -2396,9 +2407,12 @@ _determinePostFleeState() {
         
         const rotationThreshold = 0.02;
         if (abs(diff) > rotationThreshold) {
+            // Apply rotation blocking effect
+            const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
+            
             // Use Math.sign for browser compatibility 
             const rotationAmount = Math.sign(diff) * 
-                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
+                Math.min(Math.abs(diff), effectiveRotationSpeed * (deltaTime / 16.67));
             this.angle += rotationAmount;
         }
         return diff;
@@ -2452,17 +2466,25 @@ _determinePostFleeState() {
 
 
     /**
-     * Applies energy tangle effect to impair movement
-     * @param {number} duration - How long drag lasts in seconds
+     * Applies energy tangle effect to impair movement and rotation
+     * @param {number} tangleDuration - How long the tangle effect lasts in seconds
      * @param {number} multiplier - How much drag is increased
+     * @param {number} rotationBlockMultiplier - How much rotation speed is reduced
      */
-    applyDragEffect(duration = 5.0, multiplier = 10.0) {
+    applyDragEffect(tangleDuration = 5.0, multiplier = 10.0, rotationBlockMultiplier = 0.1) {
         // Use higher value if already affected
         this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
         
         // ENHANCED: Extend duration for consecutive hits
-        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
-                            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, tangleDuration) + 
+                            (this.dragEffectTimer > 0 ? tangleDuration * 0.5 : 0);
+        
+        // Apply rotation blocking effect
+        this.rotationBlockMultiplier = Math.min(this.rotationBlockMultiplier || 1.0, rotationBlockMultiplier);
+        this.rotationBlockTimer = Math.max(this.rotationBlockTimer || 0, tangleDuration) +
+                                  (this.rotationBlockTimer > 0 ? tangleDuration * 0.5 : 0);
+        
+
         
         // Visual effect timestamp
         this.tangleEffectTime = millis();

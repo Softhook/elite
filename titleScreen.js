@@ -479,8 +479,9 @@ class TitleScreen {
                 weaponDef.lifespan || (weaponDef.type === "missile" ? 240 : 90),
                 weaponDef.turnRate || 0,
                 weaponDef.speed || 8,
-                weaponDef.dragDuration || 5.0,
-                weaponDef.dragMultiplier || 10.0
+                weaponDef.tangleDuration || 5.0,
+                weaponDef.dragMultiplier || 10.0,
+                weaponDef.rotationBlockMultiplier || 0.1
             );
             this.projectiles.push(projectile);
         }
