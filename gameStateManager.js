@@ -89,7 +89,7 @@ this.showingInventory = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION"]; // Add other station states here later
+        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"]; // Add other station states here later
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             console.log("Undocking! Applying position offset.");
             if (player) {
@@ -291,6 +291,21 @@ this.showingInventory = false;
                     }
                 }
 
+                break;
+
+            case "VIEWING_IMPERIAL_RECRUITMENT":
+                // No update logic needed for Imperial recruitment menu
+                if (player) { player.vel.set(0, 0); }
+                break;
+
+            case "VIEWING_SEPARATIST_RECRUITMENT":
+                // No update logic needed for Separatist recruitment menu
+                if (player) { player.vel.set(0, 0); }
+                break;
+
+            case "VIEWING_MILITARY_RECRUITMENT":
+                // No update logic needed for Military recruitment menu
+                if (player) { player.vel.set(0, 0); }
                 break;
 
              case "GAME_OVER":
