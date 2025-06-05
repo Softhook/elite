@@ -1558,6 +1558,8 @@ handleInput() {
                             if (typeof uiManager !== 'undefined') {
                                 uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
                             }
+                            // Sync bodyguard targets with new player target
+                            this.syncBodyguardTargets();
                             return; // Target found and set
                         }
                     }
@@ -1569,6 +1571,8 @@ handleInput() {
                     }
                 }
                 this.target = null;
+                // Sync bodyguard targets when player clears target
+                this.syncBodyguardTargets();
             }
         }
     }
@@ -1730,6 +1734,56 @@ handleInput() {
         }
     }
 
+
+    /**
+     * Synchronizes all bodyguards to target the same enemy as the player
+     */
+    syncBodyguardTargets() {
+        if (!this.currentSystem || !this.currentSystem.enemies) return;
+        
+        // Find all bodyguards in the current system
+        const bodyguards = this.currentSystem.enemies.filter(enemy => 
+            enemy.role === AI_ROLE.GUARD && 
+            enemy.principal === this &&
+            !enemy.destroyed
+        );
+        
+        if (bodyguards.length === 0) return;
+        
+        // If player has a target, direct all bodyguards to target it
+        if (this.target && this.isValidEnemyTarget(this.target)) {
+            for (const bodyguard of bodyguards) {
+                // Only change target if it's different from current
+                if (bodyguard.target !== this.target) {
+                    bodyguard.target = this.target;
+                    bodyguard.lastAttacker = null; // Clear any previous attacker to prioritize player's target
+                    
+                    // Force bodyguard into combat state if not already
+                    if (bodyguard.currentState === AI_STATE.GUARDING || 
+                        bodyguard.currentState === AI_STATE.IDLE ||
+                        bodyguard.currentState === AI_STATE.PATROLLING) {
+                        bodyguard.changeState(AI_STATE.APPROACHING);
+                    }
+                }
+            }
+        } else {
+            // If player has no target, allow bodyguards to return to defensive behavior
+            for (const bodyguard of bodyguards) {
+                // Only clear target if they were targeting player's previous target
+                // Let them keep targeting attackers if they have any
+                if (!bodyguard.lastAttacker) {
+                    bodyguard.target = null;
+                    // Return to guarding state if not in combat
+                    if (bodyguard.currentState === AI_STATE.APPROACHING ||
+                        bodyguard.currentState === AI_STATE.ATTACK_PASS ||
+                        bodyguard.currentState === AI_STATE.REPOSITIONING ||
+                        bodyguard.currentState === AI_STATE.SNIPING) {
+                        bodyguard.changeState(AI_STATE.GUARDING);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Installs a weapon into a specific weapon slot
@@ -2031,6 +2085,9 @@ handleInput() {
                 bodyguard.update();
             }
         }
+        
+        // Sync bodyguard targets with player's target
+        this.syncBodyguardTargets();
     }
 
     /**
