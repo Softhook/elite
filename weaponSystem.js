@@ -146,7 +146,10 @@ static fireForce(owner, system) {
             case WEAPON_TYPE.SPREAD:
                 this.fireSpread(owner, system, angle, count);
                 break;
-            case WEAPON_TYPE.MISSILE: // New case for missiles
+            case WEAPON_TYPE.MISSILE:
+                if (!target) {
+                    target = WeaponSystem.findNearestTarget(owner, system);
+                }
                 this.fireMissile(owner, system, angle, target);
                 break;
             case WEAPON_TYPE.TANGLE: // Add this case

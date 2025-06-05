@@ -664,12 +664,9 @@ handleInput() {
         let effectiveTarget = target || this.target; // Use passed target, fallback to player's locked target
 
         if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
-            if (!effectiveTarget || effectiveTarget.destroyed || (effectiveTarget.hull !== undefined && effectiveTarget.hull <=0)) {
-                if (typeof uiManager !== 'undefined' && this === player) { // only show message for player
-                    uiManager.addMessage("No target locked for missile.", [255,100,100]);
-                }
-                return false; // Don't fire missile without a valid target
-            }
+            // Allow firing missiles without a lock; they will fly straight.
+            // If a target is locked (effectiveTarget is valid), the missile will home.
+            // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
             // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (this.pos.x - width/2);
