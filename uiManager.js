@@ -1,20 +1,29 @@
-// ===== UI MANAGER =====
+// ****** uiManager.js ******
+
 class UIManager {
     constructor() {
-        this._initializeState();
-        this._initializeConfig();
+        // --- UI Areas ---
+        this._initUIAreas();
+        // --- UI State ---
+        this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
+        // --- Minimap ---
+        this._initMinimap();
+        // --- Shipyard/Upgrade/Repairs ---
+        this._initShopAreas();
+        // --- FPS Tracking ---
+        this._initFPSTracking();
+        // --- Message System ---
+        this._initMessages();
+        // --- Weapon/Combat ---
+        this.selectedWeaponSlot = 0;
+        this.weaponSlotButtons = [];
+        this._initBattleIndicators();
+        // --- Panel Defaults ---
         this.setPanelDefaults();
     }
 
-    // === INITIALIZATION ===
-    _initializeState() {
-        // Core UI state
-        this.selectedSystemIndex = -1;
-        this.selectedWeaponSlot = 0;
-        this.weaponSlotButtons = [];
-        this.inactiveMissionIds = new Set();
-        
-        // Button areas
+    // --- Initialization Helpers ---
+    _initUIAreas() {
         this.marketButtonAreas = [];
         this.galaxyMapNodeAreas = [];
         this.jumpButtonArea = {};
@@ -22,7 +31,20 @@ class UIManager {
         this.missionListButtonAreas = [];
         this.missionDetailButtonAreas = {};
         this.policeButtonAreas = [];
+        this.inactiveMissionIds = new Set();
         this.marketBackButtonArea = {};
+    }
+
+    _initMinimap() {
+        this.minimapSize = 200;
+        this.minimapMargin = 15;
+        this.minimapX = 0;
+        this.minimapY = 0;
+        this.minimapWorldViewRange = 5000;
+        this.minimapScale = 1;
+    }
+
+    _initShopAreas() {
         this.shipyardListAreas = [];
         this.shipyardDetailButtons = {};
         this.upgradeListAreas = [];
@@ -30,45 +52,35 @@ class UIManager {
         this.repairsFullButtonArea = {};
         this.repairsHalfButtonArea = {};
         this.repairsBackButtonArea = {};
-        this.repairsBodyguardsButtonArea = {};
-        this.protectionServicesButtons = [];
-        this.shipyardScrollbarArea = null;
-        this.upgradeScrollbarArea = null;
-    }
-
-    _initializeConfig() {
-        // Minimap config
-        Object.assign(this, {
-            minimapSize: 200, minimapMargin: 15, minimapX: 0, minimapY: 0,
-            minimapWorldViewRange: 5000, minimapScale: 1
-        });
-        
-        // Shop config
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
-        this.upgradeScrollOffset = 0;
-        this.upgradeScrollMax = 0;
-        
-        // FPS tracking
-        Object.assign(this, {
-            fpsValues: [], fpsMaxSamples: 30, fpsUpdateInterval: 10,
-            fpsFrameCount: 0, fpsAverage: 0
-        });
-        
-        // Message system
-        Object.assign(this, {
-            messages: [], messageDisplayTime: 4000, maxMessagesToShow: 4,
-            marketButtonHeld: null, lastButtonAction: 0, buttonRepeatDelay: 150
-        });
-        
-        // Battle indicators
-        Object.assign(this, {
-            battleIndicators: [], battleIndicatorDuration: 1200,
-            battleIndicatorLineLength: 25, battleIndicatorEdgeBuffer: 10
-        });
     }
 
-    // === CORE UI UTILITIES ===
+    _initFPSTracking() {
+        this.fpsValues = [];
+        this.fpsMaxSamples = 30;
+        this.fpsUpdateInterval = 10;
+        this.fpsFrameCount = 0;
+        this.fpsAverage = 0;
+    }
+
+    _initMessages() {
+        this.messages = [];
+        this.messageDisplayTime = 4000;
+        this.maxMessagesToShow = 4;
+        this.marketButtonHeld = null;
+        this.lastButtonAction = 0;
+        this.buttonRepeatDelay = 150;
+    }
+
+    _initBattleIndicators() {
+        this.battleIndicators = [];
+        this.battleIndicatorDuration = 1200;
+        this.battleIndicatorLineLength = 25;
+        this.battleIndicatorEdgeBuffer = 10;
+    }
+
+    /** Sets standardized panel geometry for all station menus */
     setPanelDefaults() {
         this.panelX = () => width * 0.1;
         this.panelY = () => height * 0.1;
@@ -76,187 +88,53 @@ class UIManager {
         this.panelH = () => height * 0.8;
     }
 
+    /** Returns standardized panel geometry */
     getPanelRect() {
-        return { x: this.panelX(), y: this.panelY(), w: this.panelW(), h: this.panelH() };
+        return {
+            x: this.panelX(),
+            y: this.panelY(),
+            w: this.panelW(),
+            h: this.panelH()
+        };
     }
 
+    /** Draws a standardized panel background */
     drawPanelBG(fillCol, strokeCol) {
         const {x, y, w, h} = this.getPanelRect();
         fill(...fillCol); stroke(...strokeCol); rect(x, y, w, h, 10);
     }
 
-    drawStationHeader(title, station, player, system) {
-        if (!station || !player) return 0;
-        const {x: pX, y: pY, w: pW} = this.getPanelRect();
-        const headerHeight = 100;
-        
-        fill(255); noStroke(); textFont(font);
-        textSize(30); textAlign(CENTER, TOP);
-        text(title, pX + pW/2, pY + 20);
-        
-        textSize(20); textAlign(LEFT, TOP);
-        const stationName = station.name || "Unknown Station";
-        const systemName = system?.name || "Unknown System";
-        text(`${stationName} - ${systemName}`, pX+20, pY + 20);
-        
-        const econ = system?.securityLevel || "Unknown";
-        const tech = system?.techLevel || "?";
-        const econType = system?.economyType || "Unknown";
-        text(`${econ}   |   Tech: ${tech}   |   ${econType}`, pX +20, pY + 45);
-        
-        textAlign(RIGHT, TOP);
-        text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
-        text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, pX + pW - 30, pY + 45);
-
-        return headerHeight;
-    }
-
-    _drawButton(x, y, w, h, label, fillCol, strokeCol, radius = 5, extra = {}) {
-        if (typeof label === 'string' && label.trim().toLowerCase() === 'back') {
-            fillCol = [180, 0, 0]; strokeCol = [255, 150, 150];
-        }
-        fill(...fillCol); stroke(...strokeCol); strokeWeight(2);
-        rect(x, y, w, h, radius);
-        fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(22);
-        text(label, x + w / 2, y + h / 2);
-        return Object.assign({ x, y, w, h }, extra);
-    }
-
-    isClickInArea(mx, my, area) {
-        return area && area.w > 0 && area.h > 0 && mx > area.x && mx < area.x + area.w && my > area.y && my < area.y + area.h;
-    }
-
-    /** 
-     * Consolidated button action handler to reduce repetitive click handling patterns
-     * @param {number} mx - Mouse X coordinate
-     * @param {number} my - Mouse Y coordinate  
-     * @param {Array} buttonAreas - Array of button area objects
-     * @param {Object} handlers - Object mapping actions/states to handler functions
-     * @returns {boolean} - True if a button was clicked and handled
-     */
-    _handleButtonAreaClicks(mx, my, buttonAreas, handlers) {
-        for (const btn of buttonAreas) {
-            if (this.isClickInArea(mx, my, btn)) {
-                const actionKey = btn.action || btn.state;
-                const handler = handlers[actionKey];
-                
-                if (handler && typeof handler === 'function') {
-                    return handler(btn);
-                }
-                
-                console.warn(`UIManager: No handler for action/state: ${actionKey}`);
-                return true; // Still consumed the click
-            }
-        }
-        return false;
-    }
 
     /**
-     * Standardized transaction handler for purchases/payments
-     * @param {number} cost - Cost of the transaction
-     * @param {Function} onSuccess - Function to call on successful payment
-     * @param {Object} options - Additional options (player, messages, sounds, etc.)
-     * @returns {boolean} - True if transaction was successful
+     * Tracks a combat sound event that might be off-screen.
+     * Called by SoundManager.
+     * @param {number} x - World X coordinate of the sound event.
+     * @param {number} y - World Y coordinate of the sound event.
+     * @param {string} soundType - The type/name of the sound (e.g., "laser", "explosion").
      */
-    _performTransaction(cost, onSuccess, options = {}) {
-        const {
-            player,
-            successMessage,
-            failureMessage = "Not enough credits!",
-            successColor = [150, 255, 150],
-            failureColor = [255, 100, 100],
-            soundEffect = 'upgrade',
-            autoSave = true
-        } = options;
-
-        if (!player) {
-            console.warn("UIManager: No player provided for transaction");
-            return false;
-        }
-
-        if (player.credits >= cost) {
-            player.spendCredits(cost);
-            
-            if (onSuccess && typeof onSuccess === 'function') {
-                onSuccess();
-            }
-            
-            if (successMessage) {
-                this.addMessage(successMessage, successColor);
-            }
-            
-            if (typeof soundManager !== 'undefined') {
-                soundManager.playSound(soundEffect);
-            }
-            
-            if (autoSave && typeof saveGame === 'function') {
-                saveGame();
-            }
-            
-            return true;
-        } else {
-            this.addMessage(failureMessage, failureColor);
-            if (typeof soundManager !== 'undefined') {
-                soundManager.playSound('error');
-            }
-            return false;
-        }
-    }
-
-    /**
-     * Draws standardized back button with consistent positioning and styling
-     * @param {number} customY - Optional custom Y position
-     * @returns {Object} - Button area object for click detection
-     */
-    _drawStandardBackButton(customY = null) {
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        const backW = 100, backH = 30;
-        const backX = pX + pW/2 - backW/2;
-        const backY = customY || (pY + pH - backH - 15);
-        
-        return this._drawButton(backX, backY, backW, backH, "Back", [180,0,0], [255,150,150]);
-    }
-
-    /** Helper method to draw a scrollbar with consistent styling */
-    _drawScrollbar(barX, barY, barW, barH, scrollOffset, scrollMax, visibleRows, totalRows, strokeColor = [120, 180, 255]) {
-        if (scrollMax <= 0) return null;
-        
-        // Draw scrollbar track
-        fill(60, 60, 100);
-        stroke(strokeColor[0], strokeColor[1], strokeColor[2]);
-        rect(barX, barY, barW, barH, 6);
-        
-        // Draw scrollbar handle
-        let handleH = max(30, barH * (visibleRows / totalRows));
-        let handleY = barY + (barH - handleH) * (scrollOffset / scrollMax);
-        fill(180, 180, 220);
-        noStroke();
-        rect(barX + 1, handleY, barW - 2, handleH, 6);
-        
-        // Return scrollbar area for interaction handling
-        return {
-            x: barX,
-            y: barY,
-            w: barW,
-            h: barH,
-            handleY: handleY,
-            handleH: handleH
-        };
-    }
-
-    // === BATTLE INDICATORS ===
     trackCombatSound(x, y, soundType) {
+
+        // Optional: Filter for specific combat-related sound types if needed
         const combatSounds = ['laser', 'explosion', 'hit', 'shield', 'missileLaunch', 'beam', 'turret'];
-        if (!combatSounds.includes(soundType)) return;
+        if (!combatSounds.includes(soundType)) {
+            // console.log(`UIManager: Sound '${soundType}' is not in combatSounds list for indicator.`); // DEBUG if filter active
+            // return; // Uncomment if you only want specific sounds to trigger indicators
+        }
 
         this.battleIndicators.push({
-            x: x, y: y,
+            x: x, // World X
+            y: y, // World Y
             timestamp: millis(),
             type: soundType
         });
+        //console.log(`UIManager: Indicator pushed. Total indicators: ${this.battleIndicators.length}`); // DEBUG
+
         this.cleanupBattleIndicators();
     }
 
+    /**
+     * Removes battle indicators that have exceeded their duration.
+     */
     cleanupBattleIndicators() {
         const now = millis();
         this.battleIndicators = this.battleIndicators.filter(indicator =>
@@ -264,17 +142,27 @@ class UIManager {
         );
     }
 
+    /**
+     * Draws battle indicators for off-screen events.
+     * These appear as white lines at the screen edge.
+     * @param {Player} player - The player object, needed for their position.
+     */
     drawBattleIndicators(player) {
-        if (!player?.pos || this.battleIndicators.length === 0) return;
+        if (!player || !player.pos || this.battleIndicators.length === 0) {
+            return;
+        }
 
+        // It's good practice to also call cleanup here in case trackCombatSound isn't called frequently
         this.cleanupBattleIndicators();
         if (this.battleIndicators.length === 0) return;
+
 
         push();
         const screenCenterX = width / 2;
         const screenCenterY = height / 2;
         const edgeBuffer = this.battleIndicatorEdgeBuffer;
 
+        // Calculate screen boundaries in world coordinates
         const viewRect = {
             left: player.pos.x - screenCenterX,
             right: player.pos.x + screenCenterX,
@@ -283,35 +171,46 @@ class UIManager {
         };
 
         for (const indicator of this.battleIndicators) {
+            // Check if the indicator's world position is off-screen
             const isOffScreen = (
-                indicator.x < viewRect.left || indicator.x > viewRect.right ||
-                indicator.y < viewRect.top || indicator.y > viewRect.bottom
+                indicator.x < viewRect.left ||
+                indicator.x > viewRect.right ||
+                indicator.y < viewRect.top ||
+                indicator.y > viewRect.bottom
             );
 
-            if (!isOffScreen) continue;
+            if (!isOffScreen) {
+                continue;
+            }
 
+            // Calculate direction vector from player to the sound event
             const dx = indicator.x - player.pos.x;
             const dy = indicator.y - player.pos.y;
-            const angleToEvent = atan2(dy, dx);
+            const angleToEvent = atan2(dy, dx); // Angle in world space
 
-            let edgeX, edgeY;
-            const h = height - 2 * edgeBuffer;
-            const w = width - 2 * edgeBuffer;
+            let edgeX, edgeY; // These will be screen coordinates
 
-            // Calculate intersection with screen edges
+            // Determine the point on the screen border in the direction of the event
+            // This logic finds an intersection point with a boundary slightly inset from the screen edge
+            const h = height - 2 * edgeBuffer; // Effective height for intersection
+            const w = width - 2 * edgeBuffer;  // Effective width for intersection
+
+            // Calculate intersection with vertical edges (left/right of screen)
+            // Relative distances from screen center to edge
             let tVert = Infinity;
-            if (abs(cos(angleToEvent)) > 1e-6) {
+            if (abs(cos(angleToEvent)) > 1e-6) { // Avoid division by zero
                 tVert = (cos(angleToEvent) > 0 ? w / 2 : -w / 2) / cos(angleToEvent);
             }
             const yAtScreenVertEdge = screenCenterY + sin(angleToEvent) * tVert;
 
+            // Calculate intersection with horizontal edges (top/bottom of screen)
             let tHoriz = Infinity;
-            if (abs(sin(angleToEvent)) > 1e-6) {
+            if (abs(sin(angleToEvent)) > 1e-6) { // Avoid division by zero
                 tHoriz = (sin(angleToEvent) > 0 ? h / 2 : -h / 2) / sin(angleToEvent);
             }
             const xAtScreenHorizEdge = screenCenterX + cos(angleToEvent) * tHoriz;
 
-            // Choose the closer intersection point
+            // Choose the closer valid intersection point on the screen border
             if (abs(yAtScreenVertEdge - screenCenterY) <= h / 2 && tVert < tHoriz) {
                 edgeX = (cos(angleToEvent) > 0 ? width - edgeBuffer : edgeBuffer);
                 edgeY = constrain(yAtScreenVertEdge, edgeBuffer, height - edgeBuffer);
@@ -319,6 +218,7 @@ class UIManager {
                 edgeY = (sin(angleToEvent) > 0 ? height - edgeBuffer : edgeBuffer);
                 edgeX = constrain(xAtScreenHorizEdge, edgeBuffer, width - edgeBuffer);
             } else {
+                // Fallback for corner cases: attempt to place based on dominant angle component
                 if (abs(cos(angleToEvent)) > abs(sin(angleToEvent))) {
                     edgeX = (cos(angleToEvent) > 0 ? width - edgeBuffer : edgeBuffer);
                     edgeY = constrain(screenCenterY + tan(angleToEvent) * (edgeX - screenCenterX), edgeBuffer, height - edgeBuffer);
@@ -328,21 +228,27 @@ class UIManager {
                 }
             }
             
+            // Final clamp to ensure it's on the visible border area
             edgeX = constrain(edgeX, edgeBuffer, width - edgeBuffer);
             edgeY = constrain(edgeY, edgeBuffer, height - edgeBuffer);
 
-            // Draw indicator with fade-out
+            // Calculate opacity based on age for fade-out effect
             const age = millis() - indicator.timestamp;
-            const opacity = map(age, 0, this.battleIndicatorDuration, 220, 0);
+            const opacity = map(age, 0, this.battleIndicatorDuration, 220, 0); // Max opacity 220
+
             if (opacity <= 0) continue;
 
             strokeWeight(2);
-            stroke(255, 255, 255, opacity);
+            stroke(255, 255, 255, opacity); // White, fading line
+
             const lineHalfLength = this.battleIndicatorLineLength / 2;
 
-            if (edgeX <= edgeBuffer + 1 || edgeX >= width - edgeBuffer - 1) {
+            // Draw line "alongside" the edge
+            if (edgeX <= edgeBuffer + 1 || edgeX >= width - edgeBuffer - 1) { // On left or right edge (allow for float precision)
+                // Draw a vertical line
                 line(edgeX, edgeY - lineHalfLength, edgeX, edgeY + lineHalfLength);
-            } else if (edgeY <= edgeBuffer + 1 || edgeY >= height - edgeBuffer - 1) {
+            } else if (edgeY <= edgeBuffer + 1 || edgeY >= height - edgeBuffer - 1) { // On top or bottom edge
+                // Draw a horizontal line
                 line(edgeX - lineHalfLength, edgeY, edgeX + lineHalfLength, edgeY);
             }
         }
@@ -350,160 +256,231 @@ class UIManager {
     }
 
 
-    // === HUD DRAWING ===
+
+    /** Draws the Heads-Up Display (HUD) during flight */
     drawHUD(player) {
         if (!player) { console.warn("drawHUD: Player object missing"); return; }
+        const csName = player.currentSystem?.name || 'N/A'; 
+        const cargoAmt = player.getCargoAmount() ?? 0;
+        const cargoCap = player.cargoCapacity ?? 0; 
+        const hull = player.hull ?? 0; 
+        const maxHull = player.maxHull || 1;
+        const credits = player.credits ?? 0;
+        const shipName = player.shipTypeName || "Unknown Ship";
+        const eliteRating = player.getEliteRating(); // Get elite rating
+    
+        this.drawBattleIndicators(player); 
+
+        // Top HUD bar background
+        push(); 
+        fill(0, 180, 0, 150); 
+        noStroke(); 
+        rect(0, 0, width, 40);
         
-        this.drawBattleIndicators(player);
-        const hudData = this._getHUDData(player);
+        // Left side - System name with additional info
+        fill(255); 
+        textFont(font);
+        textSize(20); 
+        textAlign(LEFT, CENTER); 
+        const systemType = player.currentSystem?.economyType || 'Unknown';
+        const secLevel = player.currentSystem?.securityLevel || 'Unknown';
+        const techLevel = player.currentSystem?.techLevel || '?';
+        text(`${csName}            ${systemType}   Tech: ${techLevel}   ${secLevel}`, 10, 20);
         
-        push();
-        this._drawMainHUDBar(hudData);
-        this._drawStatusBars(player);
-        this._drawWeaponSelector(player);
+        // ALIGNED: Status elements at consistent vertical position
+        const statusLineY = 20; // Central Y position for all status elements
+        
+        // Center - LEGAL status - aligned at statusLineY
+        if (player.currentSystem?.isPlayerWanted()) {
+            fill(255, 0, 0);
+            text(`${eliteRating} - Wanted`, width/2, statusLineY);
+        } else {
+            fill(255);
+            textAlign(CENTER, CENTER);
+            
+            // Add Elite rating to status display
+            text(`${eliteRating} - ` + (player.isPolice ? "POLICE" : "LEGAL"), width/2, statusLineY);
+        }
+        
+        // Right side - Ship info - aligned with statusLineY
+        fill(255);
+        textAlign(RIGHT, CENTER);
+        text(`Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width-300, statusLineY);
+        
+        // === Shield and Hull bars integration in top bar ===
+        const barWidth = 140;
+        const barHeight = 14;
+        const barX = width - 150;
+        const barMiddleY = 20;
+
+        // Upper bar - Shield
+        if (player.maxShield > 0) {
+            // Shield background 
+            fill(20, 20, 60);
+            rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
+            
+            // Shield level
+            const shieldPercent = player.shield / player.maxShield;
+            fill(50, 100, 255);
+            rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
+            
+            // Shield border
+            stroke(100, 150, 255);
+            noFill();
+            rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
+            
+            // Shield text
+            fill(255);
+            noStroke();
+            textFont(font);
+            textAlign(RIGHT, CENTER);
+            textSize(20);
+            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight/2 - 2);
+        }
+
+        // Lower bar - Hull
+        fill(60, 20, 20);
+        rect(barX, barMiddleY + 2, barWidth, barHeight);
+
+        // Hull level
+        const hullPercent = player.hull / player.maxHull;
+        fill(255, 50, 50);
+        rect(barX, barMiddleY + 2, barWidth * hullPercent, barHeight);
+
+        // Hull border
+        stroke(255, 100, 100);
+        noFill();
+        rect(barX, barMiddleY + 2, barWidth, barHeight);
+
+        // Hull text
+        fill(255);
+        noStroke();
+        textAlign(RIGHT, CENTER);
+        textSize(20);
+        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight/2 + 2);
+        
+        // Weapon selector (with integrated cooldown bar)
+        this.drawWeaponSelector(player);
+        
         pop();
     }
 
-    _getHUDData(player) {
-        const sys = player.currentSystem;
-        return {
-            systemName: sys?.name || 'N/A',
-            systemType: sys?.economyType || 'Unknown',
-            secLevel: sys?.securityLevel || 'Unknown',
-            techLevel: sys?.techLevel || '?',
-            cargoAmt: player.getCargoAmount() ?? 0,
-            cargoCap: player.cargoCapacity ?? 0,
-            credits: player.credits ?? 0,
-            eliteRating: player.getEliteRating(),
-            isWanted: sys?.isPlayerWanted(),
-            isPolice: player.isPolice
-        };
-    }
-
-    _drawMainHUDBar(data) {
-        fill(0, 180, 0, 150); noStroke(); rect(0, 0, width, 40);
-        
-        // System info (left)
-        fill(255); textFont(font); textSize(20); textAlign(LEFT, CENTER);
-        text(`${data.systemName}            ${data.systemType}   Tech: ${data.techLevel}   ${data.secLevel}`, 10, 20);
-        
-        // Status (center)
-        textAlign(CENTER, CENTER);
-        fill(data.isWanted ? [255, 0, 0] : [255]);
-        const status = data.isWanted ? "Wanted" : (data.isPolice ? "POLICE" : "LEGAL");
-        text(`${data.eliteRating} - ${status}`, width/2, 20);
-        
-        // Credits and cargo (right)
-        fill(255); textAlign(RIGHT, CENTER);
-        text(`Cargo: ${data.cargoAmt}/${data.cargoCap}   Credits: ${data.credits}`, width-300, 20);
-    }
-
-    _drawStatusBars(player) {
-        const config = { barWidth: 140, barHeight: 14, barX: width - 150, barMiddleY: 20 };
-        
-        if (player.maxShield > 0) {
-            this._drawStatusBar('Shield', player.shield, player.maxShield, 
-                config.barX, config.barMiddleY - config.barHeight - 2, config.barWidth, config.barHeight,
-                [20, 20, 60], [50, 100, 255], [100, 150, 255]);
-        }
-        
-        this._drawStatusBar('Hull', player.hull, player.maxHull,
-            config.barX, config.barMiddleY + 2, config.barWidth, config.barHeight,
-            [60, 20, 20], [255, 50, 50], [255, 100, 100]);
-    }
-
-    _drawStatusBar(label, current, max, x, y, w, h, bgColor, fillColor, strokeColor) {
-        // Background
-        fill(...bgColor); rect(x, y, w, h);
-        
-        // Fill bar
-        const percent = current / max;
-        fill(...fillColor); rect(x, y, w * percent, h);
-        
-        // Border
-        stroke(...strokeColor); noFill(); rect(x, y, w, h);
-        
-        // Text label
-        fill(255); noStroke(); textFont(font); textAlign(RIGHT, CENTER); textSize(20);
-        text(`${label}: ${Math.floor(current)}/${max}`, x - 10, y + h/2);
-    }
-
-    _drawWeaponSelector(player) {
+    /** Draws the weapon selector UI */
+    drawWeaponSelector(player) {
         if (!player?.weapons || player.weapons.length === 0) return;
         
-        const weaponBarY = 45;
+        const weaponBarY = 45; // Position below main HUD bar
         const weaponBarH = 24;
         
+        // Background for weapon bar
         push();
-        fill(0, 50, 80, 150); noStroke();
+        fill(0, 50, 80, 150);
+        noStroke();
         rect(0, weaponBarY, width, weaponBarH);
         
-        textAlign(LEFT, CENTER); textSize(20);
+        // Display weapon slots
+        textAlign(LEFT, CENTER);
+        textSize(20);
         let xPos = 10;
         
         player.weapons.forEach((weapon, index) => {
+            // Calculate width for this weapon slot
             const isSelected = (index === player.weaponIndex);
             const slotPadding = 10;
             const slotText = `${index+1}: ${weapon.name}`;
             const textW = textWidth(slotText);
             const slotW = textW + slotPadding * 2;
             
-            fill(isSelected ? 0 : 0, isSelected ? 100 : 80, isSelected ? 180 : 120, isSelected ? 200 : 120);
+            // Draw slot background
+            if (isSelected) {
+                fill(0, 100, 180, 200); // Highlight selected weapon
+            } else {
+                fill(0, 80, 120, 120); // Normal background
+            }
             rect(xPos, weaponBarY + 3, slotW, weaponBarH - 6, 5);
             
-            fill(isSelected ? 255 : 200, isSelected ? 255 : 200, isSelected ? 100 : 200);
+            // Draw weapon name with key number
+            if (isSelected) {
+                fill(255, 255, 100); // Bright text for selected
+            } else {
+                fill(200); // Regular text
+            }
             text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
             
-            // Cooldown bar
+            // Draw cooldown bar for the selected weapon
             if (isSelected && player.fireCooldown > 0 && player.fireRate > 0) {
                 let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
-                fill(255, 50, 50, 200); noStroke();
+                fill(255, 50, 50, 200);
+                noStroke();
+                // Place cooldown bar at the bottom of this weapon slot
                 rect(xPos, weaponBarY + weaponBarH - 3, slotW * c, 3);
             }
             
+            // Move to next position
             xPos += slotW + 5;
         });
         
-        // Active mission display
+        // NEW: Draw active mission on the RIGHT side of the weapon bar
         if (player.activeMission?.title) {
             const missionText = `Mission: ${player.activeMission.title}`;
+            
+            // Create a background for the mission text
             const missionPadding = 10;
             textSize(20);
             const missionTextW = textWidth(missionText);
             const missionBoxW = missionTextW + missionPadding * 2;
-            const missionBoxX = width - missionBoxW - 10;
+            const missionBoxX = width - missionBoxW - 10; // 10px from right edge
             
-            fill(0, 80, 140, 200); stroke(0, 100, 180); strokeWeight(1);
+            // Draw mission background
+            fill(0, 80, 140, 200); // Slightly brighter blue than weapon bar
+            stroke(0, 100, 180);
+            strokeWeight(1);
             rect(missionBoxX, weaponBarY + 3, missionBoxW, weaponBarH - 6, 5);
             
-            fill(255, 180, 0); noStroke(); textAlign(LEFT, CENTER);
+            // Draw mission text
+            fill(255, 180, 0); // Gold text for mission
+            noStroke();
+            textAlign(LEFT, CENTER);
             text(missionText, missionBoxX + missionPadding, weaponBarY + weaponBarH/2);
             
+            // Optional: Add a small indicator icon
             fill(255, 200, 0);
             circle(missionBoxX + 6, weaponBarY + weaponBarH/2, 5);
         }
 
-        // Autopilot indicator
-        if (player.autopilotEnabled) {
-            const target = player.autopilotTarget === 'station' ? 'Station' : 'Jump Zone';
-            const autopilotY = 45 + 24 + 5;
-            
-            fill(40, 80, 120, 200); noStroke();
-            rect(0, autopilotY, width, 20);
-            
-            textAlign(CENTER, CENTER); textSize(20); fill(255, 255, 100);
-            text(`Autopilot Engaged: ${target} — [${player.autopilotTarget === 'station' ? 'H' : 'J'} to disable]`, width/2, autopilotY + 10);
-        }
+                // Add Autopilot status indicator below weapon bar
+                if (player.autopilotEnabled) {
+                    const target = player.autopilotTarget === 'station' ? 'Station' : 'Jump Zone';
+                    const autopilotY = 45 + 24 + 5; // Position below weapon bar
+                    
+                    // Draw autopilot indicator background
+                    fill(40, 80, 120, 200);
+                    noStroke();
+                    rect(0, autopilotY, width, 20);
+                    
+                    // Draw autopilot text
+                    textAlign(CENTER, CENTER);
+                    textSize(20);
+                    fill(255, 255, 100);
+                    text(`Autopilot Engaged: ${target} — [${player.autopilotTarget === 'station' ? 'H' : 'J'} to disable]`, width/2, autopilotY + 10);
+                }
+                
         
         pop();
     }
 
-    // === STATION MENUS ===
+    /** Draws the Main Station Menu (when state is DOCKED) */
     drawStationMainMenu(station, player) {
         this.stationMenuButtonAreas = [];
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
-        
-        const menuOptions = [
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([20,20,50,220], [100,100,255]);
+        const system = galaxy?.getCurrentSystem();
+        const headerHeight = this.drawStationHeader("Station Services", station, player, system);
+        textFont(font);
+        let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
+        const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_MARKET" },
             { text: "Mission Board", state: "VIEWING_MISSIONS" },
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
@@ -513,39 +490,22 @@ class UIManager {
             { text: "Police Station", state: "VIEWING_POLICE" },
             { text: "Undock", action: "UNDOCK" }
         ];
-        
-        this._drawStationMenu("Station Services", [20,20,50,220], [100,100,255], 
-            menuOptions, this.stationMenuButtonAreas, station, player);
-    }
-
-    _drawStationMenu(title, bgColor, borderColor, menuOptions, buttonArray, station, player) {
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(bgColor, borderColor);
-        const system = galaxy?.getCurrentSystem();
-        const headerHeight = this.drawStationHeader(title, station, player, system);
-        
-        textFont(font);
-        const btnW = pW * 0.6, btnH = 45;
-        const btnX = pX + pW/2 - btnW/2;
-        const btnSY = pY + headerHeight;
-        const btnSp = btnH + 15;
-        
-        menuOptions.forEach((opt, i) => {
-            const btnY = btnSY + i * btnSp;
-            const area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50,50,90], [150,150,200]);
-            if (opt.state) area.state = opt.state;
-            if (opt.action) area.action = opt.action;
-            buttonArray.push(area);
+        menuOpts.forEach((opt, i) => {
+            let btnY=btnSY+i*btnSp;
+            let area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50,50,90], [150,150,200]);
+            if(opt.state) area.state=opt.state;
+            if(opt.action) area.action=opt.action;
+            this.stationMenuButtonAreas.push(area);
         });
         pop();
-    }
+    } // --- End drawStationMainMenu ---
 
+    /** Draws the Repairs Menu */
     drawRepairsMenu(player) {
         this.repairsFullButtonArea = {};
         this.repairsHalfButtonArea = {};
         this.repairsBackButtonArea = {};
-        this.repairsBodyguardsButtonArea = {};
+        this.repairsBodyguardsButtonArea = {}; // New button area for bodyguard repairs
         
         if (!player) return;
         push();
@@ -555,54 +515,48 @@ class UIManager {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
         
-        // Ship repair info and buttons
-        const repairData = this._getRepairData(player);
-        const btnConfig = { w: pW*0.5, h: 45, x: pX+pW/2-pW*0.25 };
-        
+        // Player ship repair section
         fill(220); textSize(20); textAlign(CENTER,TOP);
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
+        let missing = player.maxHull - player.hull;
+        let fullCost = Math.floor(missing * 10);
+        let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
+        let halfCost = Math.floor(halfRepair * 7);
+        let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
         
-        const btnY1 = pY+headerHeight+60;
-        this.repairsFullButtonArea = this._drawButton(btnConfig.x, btnY1, btnConfig.w, btnConfig.h, 
-            `Full Repair (${repairData.fullCost} cr)`, [0,180,0], [100,255,100]);
-        this.repairsHalfButtonArea = this._drawButton(btnConfig.x, btnY1+btnConfig.h+20, btnConfig.w, btnConfig.h, 
-            `50% Repair (${repairData.halfCost} cr)`, [180,180,0], [220,220,100]);
+        this.repairsFullButtonArea = this._drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0,180,0], [100,255,100]);
+        this.repairsHalfButtonArea = this._drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180,180,0], [220,220,100]);
         
-        // Bodyguard repairs
-        this._drawBodyguardRepairs(player, btnConfig, btnY1+btnConfig.h*2+40);
-        
-        // Back button using standardized helper
-        this.repairsBackButtonArea = this._drawStandardBackButton();
-        pop();
-    }
-
-    _getRepairData(player) {
-        const missing = player.maxHull - player.hull;
-        const halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
-        return {
-            fullCost: Math.floor(missing * 10),
-            halfCost: Math.floor(halfRepair * 7)
-        };
-    }
-
-    _drawBodyguardRepairs(player, btnConfig, startY) {
+        // Bodyguard repair section
         const bodyguardInfo = player.getDamagedBodyguardsInfo();
+        let btnY3 = btnY2 + btnH + 40; // Extra spacing between sections
+        
         if (bodyguardInfo.count > 0) {
-            const {x: pX, w: pW} = this.getPanelRect();
+            // Draw separator
+            strokeWeight(1);
+            stroke(255, 180, 100);
+            line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
             
-            // Divider line
-            strokeWeight(1); stroke(255, 180, 100);
-            line(pX + 50, startY - 20, pX + pW - 50, startY - 20);
+            // Draw bodyguard repair section header
+            noStroke();
+            fill(220);
+            textSize(20);
+            textAlign(CENTER, TOP);
             
-            noStroke(); fill(220); textSize(20); textAlign(CENTER, TOP);
+            // Draw bodyguard repair button
             this.repairsBodyguardsButtonArea = this._drawButton(
-                btnConfig.x, startY, btnConfig.w, btnConfig.h, 
+                btnX, btnY3, btnW, btnH, 
                 `Repair All Guards (${bodyguardInfo.totalCost} cr)`, 
                 [0,120,180], [100,200,255]
             );
         }
+        
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.repairsBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
+        pop();
     }
 
+    /** Draws the Police Menu */
     drawPoliceMenu(player) {
         this.policeButtonAreas = [];
         if (!player) return;
@@ -612,66 +566,50 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Police Station", station, player, system);
-        
-        const policeData = this._getPoliceData(player, system);
-        const contentY = pY + headerHeight + 10;
-        
-        // Status display
-        fill(255); textSize(20); textAlign(CENTER, TOP);
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
-        fill(...policeData.statusColor); textSize(24);
-        text(policeData.statusText, pX+pW/2, contentY+30);
-        
-        if (player.hasBeenPolice) {
-            fill(255, 200, 100); textSize(16);
-            text("Fines trippled for former police officer", pX + pW/2, contentY + 60);
-        }
-        
-        // Buttons
-        const btnConfig = { w: pW*0.5, h: 45, x: pX+pW/2-pW*0.25 };
-        const btnY1 = contentY + (player.hasBeenPolice ? 90 : 70);
-        
-        if (policeData.isWanted) {
-            this.policeButtonAreas.push(
-                this._drawButton(btnConfig.x, btnY1, btnConfig.w, btnConfig.h, 
-                    `Pay Fine (${policeData.fineAmount} cr)`, [0,180,0], [100,255,100], 5, 
-                    {action:'pay_fine', amount:policeData.fineAmount})
-            );
-        }
-        
-        const btnY2 = btnY1 + btnConfig.h + 20;
-        if (!player.isPolice) {
-            this.policeButtonAreas.push(
-                this._drawButton(btnConfig.x, btnY2, btnConfig.w, btnConfig.h, 
-                    "Join Police Force", [50,50,180], [100,100,255], 5, {action:'join_police'})
-            );
-        } else {
-            fill(255); textSize(18); textAlign(CENTER,CENTER);
-            text("You are a member of the Police Force", pX+pW/2, btnY2+btnConfig.h/2);
-        }
-        
-        // Back button
-        const backConfig = { w: 100, h: 30 };
-        this.policeButtonAreas.push(
-            this._drawButton(pX+pW/2-backConfig.w/2, pY+pH-backConfig.h-15, 
-                backConfig.w, backConfig.h, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
-        );
-        pop();
-    }
-
-    _getPoliceData(player, system) {
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER, TOP);
         const isWanted = system?.isPlayerWanted();
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        const contentY = pY + headerHeight + 10;
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX+pW/2, contentY+30);
         let fineAmount = 300;
         if (system?.securityLevel === 'High') fineAmount = 1000;
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
-        if (player.hasBeenPolice) fineAmount *= 3;
-        
-        return {
-            isWanted,
-            statusText: isWanted ? "WANTED" : "CLEAN",
-            statusColor: isWanted ? [255, 50, 50] : [50, 255, 50],
-            fineAmount
-        };
+        if (player.hasBeenPolice) {
+            fineAmount *= 3;
+            fill(255, 200, 100);
+            textSize(16);
+            text("Fines trippled for former police officer", pX + pW/2, contentY + 60);
+        }
+        let btnW = pW*0.5, btnH = 45;
+        let btnX = pX+pW/2-btnW/2;
+        let btnY1 = contentY + (player.hasBeenPolice ? 90 : 70);
+        if (isWanted) {
+            this.policeButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount})
+            );
+        }
+        const btnY2 = btnY1 + btnH + 20;
+        if (!player.isPolice) {
+            this.policeButtonAreas.push(
+                this._drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50,50,180], [100,100,255], 5, {action:'join_police'})
+            );
+        } else {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER,CENTER);
+            text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
+        }
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.policeButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        );
+        pop();
     }
 
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
@@ -730,31 +668,40 @@ class UIManager {
             rect(sX, yP, tW, rowH); // Draw background for the data part of the row
             // --- End Alternating Background ---
 
-            // Check if this is an illegal good in a non-Anarchy system
-            const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
-            
-            // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
-            if (isIllegalInSystem) {
-                fill(120); // Gray color for illegal goods
-            } else {
-                fill(255); // Normal white color
-            }
-            
+    // Check if this is an illegal good in a non-Anarchy system
+    const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
+    
+    // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
+    if (isIllegalInSystem) {
+        fill(120); // Gray color for illegal goods
+    } else {
+        fill(255); // Normal white color
+    }
+    
+    textAlign(LEFT, CENTER);
+    text(comm.name||'?', sX+10, tY, cW-15);
+    
+    // Add "ILLEGAL" indicator for illegal goods
+    if (!comm.isLegal) {
+        if (isIllegalInSystem) {
             textAlign(LEFT, CENTER);
+            fill(255, 0, 0);
+            text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
+        } 
+    }
+    
+    textAlign(RIGHT, CENTER);
+    text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
+    text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
+    text(comm.playerStock??'?', sX+cW*4-10, tY);
+
+            // Commodity name and prices
+            fill(255);
+            textAlign(LEFT,CENTER);
             text(comm.name||'?', sX+10, tY, cW-15);
-            
-            // Add "ILLEGAL" indicator for illegal goods
-            if (!comm.isLegal) {
-                if (isIllegalInSystem) {
-                    textAlign(LEFT, CENTER);
-                    fill(255, 0, 0);
-                    text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
-                } 
-            }
-            
-            textAlign(RIGHT, CENTER);
-            text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
-            text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
+            textAlign(RIGHT,CENTER);
+            text(comm.buyPrice??'?', sX+cW*2-10 - indicatorW, tY); // Shift price text left
+            text(comm.sellPrice??'?', sX+cW*3-10 - indicatorW, tY); // Shift price text left
             text(comm.playerStock??'?', sX+cW*4-10, tY);
 
             // --- Price Indicators ---
@@ -802,54 +749,106 @@ class UIManager {
             // --- End Price Indicators ---
 
 
-            // --- Buttons ---
-            const btnStartX = sX + cW * 4.2;
-            const btnY = yP + (rowH - btnH) / 2;
-            const isMissionCargo = player.activeMission?.cargoType === comm.name;
-            const isDisabled = isIllegalInSystem || isMissionCargo;
-            
-            this._drawMarketButtons(comm, btnStartX, btnY, btnW, btnH, isDisabled);
+            // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
+            let btnStartX = sX + cW * 4.2; // Start position for buttons
+
+ // Buy 1 button
+let buy1X = btnStartX;
+let buy1Y = yP+(rowH-btnH)/2;
+
+if (isIllegalInSystem) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy
+    fill(100); stroke(120); strokeWeight(1);
+    rect(buy1X, buy1Y, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(0,150,0); stroke(0,200,0); strokeWeight(1);
+    rect(buy1X, buy1Y, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+    this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
+}
+
+// Buy All button
+let buyAllX = buy1X + btnW + 5; // Position relative to previous button
+let buyAllY = buy1Y;
+
+if (isIllegalInSystem) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy
+    fill(100); stroke(120); strokeWeight(1);
+    rect(buyAllX, buyAllY, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(0,180,0); stroke(0,220,0); strokeWeight(1);
+    rect(buyAllX, buyAllY, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+    this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
+}
+
+// Sell 1 button
+let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
+let sell1Y = buy1Y;
+
+// Check if this commodity is needed for the active mission
+const isMissionCargo = player.activeMission?.cargoType === comm.name;
+
+if (isIllegalInSystem || isMissionCargo) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
+    fill(100); stroke(120); strokeWeight(1);
+    rect(sell1X, sell1Y, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(150,0,0); stroke(200,0,0); strokeWeight(1);
+    rect(sell1X, sell1Y, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
+    this.marketButtonAreas.push({ 
+        x: sell1X, y: sell1Y, w: btnW, h: btnH, 
+        action: 'sell', quantity: 1, commodity: comm.name 
+    });
+}
+
+// Sell All button
+let sellAllX = sell1X + btnW + 5; // Position relative to previous button
+let sellAllY = buy1Y;
+
+if (isIllegalInSystem || isMissionCargo) {
+    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
+    fill(100); stroke(120); strokeWeight(1);
+    rect(sellAllX, sellAllY, btnW, btnH, 3);
+    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+    // No marketButtonAreas.push here - button can't be clicked
+} else {
+    // Normal button - clickable
+    fill(180,0,0); stroke(220,0,0); strokeWeight(1);
+    rect(sellAllX, sellAllY, btnW, btnH, 3);
+    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
+    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
+    this.marketButtonAreas.push({ 
+        x: sellAllX, y: sellAllY, w: btnW, h: btnH, 
+        action: 'sellAll', commodity: comm.name 
+    });
+}
         });
 
-        // Back button using standardized helper
-        this.marketBackButtonArea = this._drawStandardBackButton();
+        // Back button
+        let backW = 100;
+        let backH = 30;
+        let backX = pX+pW/2-backW/2;
+        let backY = pY+pH-backH-15;
+        this.marketBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
         pop();
-    }
-
-    _drawMarketButtons(comm, startX, y, btnW, btnH, isDisabled) {
-        const buttons = [
-            { label: "Buy 1", action: 'buy', quantity: 1, colors: [[0,150,0], [0,200,0]], offset: 0 },
-            { label: "Buy All", action: 'buyAll', colors: [[0,180,0], [0,220,0]], offset: btnW + 5 },
-            { label: "Sell 1", action: 'sell', quantity: 1, colors: [[150,0,0], [200,0,0]], offset: 2*btnW + 15 },
-            { label: "Sell All", action: 'sellAll', colors: [[180,0,0], [220,0,0]], offset: 3*btnW + 20 }
-        ];
-        
-        buttons.forEach(btn => {
-            const x = startX + btn.offset;
-            if (isDisabled) {
-                this._drawDisabledButton(x, y, btnW, btnH, btn.label);
-            } else {
-                this._drawActiveMarketButton(x, y, btnW, btnH, btn.label, btn.colors, btn.action, comm.name, btn.quantity);
-            }
-        });
-    }
-
-    _drawDisabledButton(x, y, w, h, label) {
-        fill(100); stroke(120); strokeWeight(1);
-        rect(x, y, w, h, 3);
-        fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-        text(label, x + w/2, y + h/2);
-    }
-
-    _drawActiveMarketButton(x, y, w, h, label, colors, action, commodity, quantity) {
-        fill(...colors[0]); stroke(...colors[1]); strokeWeight(1);
-        rect(x, y, w, h, 3);
-        fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-        text(label, x + w/2, y + h/2);
-        
-        const buttonData = { x, y, w, h, action, commodity };
-        if (quantity) buttonData.quantity = quantity;
-        this.marketButtonAreas.push(buttonData);
     }
 
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
@@ -1545,42 +1544,24 @@ class UIManager {
 
         // --- DOCKED State (Main Station Menu) ---
         if (currentState === "DOCKED") {
-            const dockedHandlers = {
-                "UNDOCK": () => {
-                    if(gameStateManager) gameStateManager.setState("IN_FLIGHT");
-                    return true;
-                },
-                "VIEWING_MARKET": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_MARKET");
-                    return true;
-                },
-                "VIEWING_MISSIONS": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_MISSIONS");
-                    return true;
-                },
-                "VIEWING_SHIPYARD": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_SHIPYARD");
-                    return true;
-                },
-                "VIEWING_UPGRADES": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_UPGRADES");
-                    return true;
-                },
-                "VIEWING_REPAIRS": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_REPAIRS");
-                    return true;
-                },
-                "VIEWING_POLICE": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_POLICE");
-                    return true;
-                },
-                "VIEWING_PROTECTION": () => {
-                    if(gameStateManager) gameStateManager.setState("VIEWING_PROTECTION");
-                    return true;
+            for (const btn of this.stationMenuButtonAreas) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "UNDOCK") {
+                        if(gameStateManager)gameStateManager.setState("IN_FLIGHT");
+                        return true;
+                    } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
+                               btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
+                               btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE" ||
+                               btn.state === "VIEWING_PROTECTION") {
+                        if(gameStateManager)gameStateManager.setState(btn.state);
+                        return true;
+                    } else if (btn.state) {
+                        console.warn(`State ${btn.state} not handled.`);
+                        return true;
+                    }
                 }
-            };
-            
-            return this._handleButtonAreaClicks(mx, my, this.stationMenuButtonAreas, dockedHandlers);
+            }
+            return false;
         }
         // --- VIEWING_MARKET State ---
         else if (currentState === "VIEWING_MARKET") {
@@ -1646,14 +1627,15 @@ class UIManager {
                     const finalPrice = area.price; // Can be negative for refunds
                     
                     if (finalPrice > 0) {
-                        // Player needs to pay - use consolidated transaction handler
-                        this._performTransaction(finalPrice, () => {
+                        // Player needs to pay
+                        if (player.credits >= finalPrice) {
+                            player.spendCredits(finalPrice);
                             player.applyShipDefinition(area.shipTypeKey);
-                        }, {
-                            player,
-                            successMessage: `You bought a ${area.shipName}!`,
-                            soundEffect: 'upgrade'
-                        });
+                            saveGame && saveGame();
+                            uiManager.addMessage("You bought a " + area.shipName + "!");
+                        } else {
+                            uiManager.addMessage("Not enough credits!");
+                        }
                     } else {
                         // Player gets a refund or even swap
                         player.addCredits(-finalPrice); // Convert negative to positive for refund
@@ -1661,9 +1643,9 @@ class UIManager {
                         saveGame && saveGame();
                         
                         if (finalPrice < 0) {
-                            this.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
+                            uiManager.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
                         } else {
-                            this.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
+                            uiManager.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
                         }
                     }
                     return true;
@@ -2054,19 +2036,20 @@ class UIManager {
 
     
         // Draw scrollbar if needed
-        this.shipyardScrollbarArea = this._drawScrollbar(
-            pX + pW - 18, 
-            startY, 
-            12, 
-            scrollAreaH, 
-            this.shipyardScrollOffset, 
-            this.shipyardScrollMax, 
-            visibleRows, 
-            totalRows
-        );
+        if (this.shipyardScrollMax > 0) {
+            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
+            fill(60,60,100); stroke(120,180,255); rect(barX, barY, barW, barH, 6);
+            let handleH = max(30, barH * (visibleRows /totalRows));
+            let handleY = barY + (barH-handleH) * (this.shipyardScrollOffset / this.shipyardScrollMax);
+            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
+            this.shipyardScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
+        } else {
+            this.shipyardScrollbarArea = null;
+        }
     
-        // Back button using standardized helper
-        this.shipyardDetailButtons = {back: this._drawStandardBackButton()};
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.shipyardDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
         pop();
     }
 
@@ -2180,21 +2163,21 @@ class UIManager {
         }
     
         // Draw scrollbar if needed
-        this.upgradeScrollbarArea = this._drawScrollbar(
-            pX + pW - 18, 
-            startY, 
-            12, 
-            scrollAreaH, 
-            this.upgradeScrollOffset, 
-            this.upgradeScrollMax, 
-            visibleRows, 
-            totalRows,
-            [180, 100, 255]
-        );
+        if (this.upgradeScrollMax > 0) {
+            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
+            fill(60,60,100); stroke(180,100,255); rect(barX, barY, barW, barH, 6);
+            let handleH = max(30, barH * (visibleRows / totalRows));
+            let handleY = barY + (barH-handleH) * (this.upgradeScrollOffset / this.upgradeScrollMax);
+            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
+            // Store for click/drag if you want to implement it
+            this.upgradeScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
+        } else {
+            this.upgradeScrollbarArea = null;
+        }
     
         // Back button
-        // Back button using standardized helper
-        this.upgradeDetailButtons = {back: this._drawStandardBackButton()};
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.upgradeDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
         pop();
     }
 
