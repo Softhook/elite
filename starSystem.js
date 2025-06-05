@@ -1723,7 +1723,7 @@ checkProjectileCollisions() {
         noStroke();
         
         // Use much larger, irregular tiles to eliminate grid patterns
-        const bstarfieldaseTileSize = 1200; // Much larger base tile size
+        const baseTileSize = 1200; // Much larger base tile size
         
         // Use system seed for consistent star placement
         noiseSeed(this.systemIndex * 1337);
