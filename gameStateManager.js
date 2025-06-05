@@ -371,7 +371,30 @@ this.showingInventory = false;
                 break;
                 
             case "VIEWING_PROTECTION":
-                if (uiManager && player) uiManager.drawProtectionServicesMenu(player);
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(20,20,40); 
+                }
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawProtectionServicesMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing protection services menu:", e); 
+                    }
+                }
                 break;
 
             case "VIEWING_POLICE":
