@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cargo System Test</title>
+</head>
+<body>
+    <h1>Cargo System Test</h1>
+    <div id="results"></div>
+    
+    <script src="libraries/p5.min.js"></script>
+    <script src="player.js"></script>
+    <script src="ships.js"></script>
+    
+    <script>
+        // Test the cargo system
+        function testCargoSystem() {
+            const results = document.getElementById('results');
+            let testResults = [];
+            
+            try {
+                // Create a test player
+                const player = new Player("Sidewinder");
+                
+                // Test 1: Add cargo successfully
+                const result1 = player.addCargo("Food", 5);
+                testResults.push(`Test 1 - Add 5 Food: ${result1.success ? 'PASS' : 'FAIL'} (added: ${result1.added})`);
+                
+                // Test 2: Check cargo amount
+                const amount = player.getCargoAmount();
+                testResults.push(`Test 2 - Cargo amount: ${amount === 5 ? 'PASS' : 'FAIL'} (expected: 5, got: ${amount})`);
+                
+                // Test 3: Add more cargo
+                const result3 = player.addCargo("Food", 3);
+                testResults.push(`Test 3 - Add 3 more Food: ${result3.success ? 'PASS' : 'FAIL'} (total should be 8)`);
+                
+                // Test 4: Check if existing item was updated
+                const foodItem = player.cargo.find(item => item.name === "Food");
+                testResults.push(`Test 4 - Food quantity: ${foodItem && foodItem.quantity === 8 ? 'PASS' : 'FAIL'} (expected: 8, got: ${foodItem?.quantity})`);
+                
+                // Test 5: Add different cargo type
+                const result5 = player.addCargo("Metals", 2);
+                testResults.push(`Test 5 - Add 2 Metals: ${result5.success ? 'PASS' : 'FAIL'} (cargo types: ${player.cargo.length})`);
+                
+                // Test 6: Check hasCargo
+                const hasFood = player.hasCargo("Food", 5);
+                testResults.push(`Test 6 - Has 5 Food: ${hasFood ? 'PASS' : 'FAIL'}`);
+                
+                // Test 7: Remove cargo
+                const removed = player.removeCargo("Food", 3);
+                testResults.push(`Test 7 - Remove 3 Food: ${removed ? 'PASS' : 'FAIL'} (remaining should be 5)`);
+                
+                // Test 8: Final cargo amount
+                const finalAmount = player.getCargoAmount();
+                testResults.push(`Test 8 - Final cargo amount: ${finalAmount === 7 ? 'PASS' : 'FAIL'} (expected: 7, got: ${finalAmount})`);
+                
+            } catch (error) {
+                testResults.push(`ERROR: ${error.message}`);
+            }
+            
+            results.innerHTML = '<h2>Test Results:</h2><ul><li>' + testResults.join('</li><li>') + '</li></ul>';
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', testCargoSystem);
+    </script>
+</body>
+</html>

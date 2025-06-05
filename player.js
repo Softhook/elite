@@ -178,6 +178,47 @@ class Player {
         return true;
     }
 
+    /** 
+     * Adds cargo to the player's inventory 
+     * @param {string} commodityName - Name of the commodity to add
+     * @param {number} quantity - Quantity to add
+     * @param {boolean} allowPartial - Whether to allow partial additions when cargo space is limited
+     * @returns {Object} Object with success, added, and reason properties
+     */
+    addCargo(commodityName, quantity, allowPartial = false) {
+        if (!commodityName || quantity <= 0) {
+            return { success: false, added: 0, reason: 'INVALID_INPUT' };
+        }
+
+        const currentCargoAmount = this.getCargoAmount();
+        const availableSpace = this.cargoCapacity - currentCargoAmount;
+        
+        if (availableSpace <= 0) {
+            return { success: false, added: 0, reason: 'CARGO_FULL' };
+        }
+
+        // Determine how much we can actually add
+        let amountToAdd = quantity;
+        if (amountToAdd > availableSpace) {
+            if (allowPartial) {
+                amountToAdd = availableSpace;
+            } else {
+                return { success: false, added: 0, reason: 'INSUFFICIENT_SPACE' };
+            }
+        }
+
+        // Find existing item or create new one
+        const existingItem = this.cargo.find(item => item.name === commodityName);
+        if (existingItem) {
+            existingItem.quantity += amountToAdd;
+        } else {
+            this.cargo.push({ name: commodityName, quantity: amountToAdd });
+        }
+
+        console.log(`Added ${amountToAdd}t ${commodityName} to cargo. Total cargo: ${this.getCargoAmount()}/${this.cargoCapacity}`);
+        return { success: true, added: amountToAdd, reason: amountToAdd < quantity ? 'PARTIAL_ADD' : 'FULL_ADD' };
+    }
+
     /** Abandon the active mission and strip its cargo */
     abandonMission() {
         if (!this.activeMission) return false;
