@@ -480,6 +480,18 @@ class UIManager {
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         textFont(font);
         let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
+        // Determine faction recruitment option based on system economy type
+        let factionOption;
+        if (system?.economyType === "Imperial") {
+            factionOption = { text: "Imperial Navy Recruitment", state: "VIEWING_IMPERIAL_RECRUITMENT" };
+        } else if (system?.economyType === "Separatist") {
+            factionOption = { text: "Separatist Forces Recruitment", state: "VIEWING_SEPARATIST_RECRUITMENT" };
+        } else if (system?.economyType === "Military") {
+            factionOption = { text: "Military Academy Recruitment", state: "VIEWING_MILITARY_RECRUITMENT" };
+        } else {
+            factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
+        }
+
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_MARKET" },
             { text: "Mission Board", state: "VIEWING_MISSIONS" },
@@ -487,7 +499,7 @@ class UIManager {
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
             { text: "Protection Services", state: "VIEWING_PROTECTION" },
-            { text: "Police Station", state: "VIEWING_POLICE" },
+            factionOption,
             { text: "Undock", action: "UNDOCK" }
         ];
         menuOpts.forEach((opt, i) => {
@@ -1552,7 +1564,8 @@ if (isIllegalInSystem || isMissionCargo) {
                     } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
                                btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
                                btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE" ||
-                               btn.state === "VIEWING_PROTECTION") {
+                               btn.state === "VIEWING_PROTECTION" || btn.state === "VIEWING_IMPERIAL_RECRUITMENT" ||
+                               btn.state === "VIEWING_SEPARATIST_RECRUITMENT" || btn.state === "VIEWING_MILITARY_RECRUITMENT") {
                         if(gameStateManager)gameStateManager.setState(btn.state);
                         return true;
                     } else if (btn.state) {
@@ -1874,6 +1887,141 @@ if (isIllegalInSystem || isMissionCargo) {
             return false;
         }
 
+        // --- VIEWING_IMPERIAL_RECRUITMENT State ---
+        else if (currentState === "VIEWING_IMPERIAL_RECRUITMENT") {
+            for (const area of this.factionRecruitmentButtonAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (area.action === 'back') {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                    else if (area.action === 'pay_fine' && player) {
+                        // Pay fine to clear wanted status
+                        const success = player.spendCredits(area.amount);
+                        if (success) {
+                            // Clear wanted status in current system
+                            player.currentSystem.playerWanted = false;
+                            player.currentSystem.policeAlertSent = false;
+                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
+                            
+                            // Save game after payment
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Not enough credits to pay fine.", 'crimson');
+                        }
+                        return true;
+                    }
+                    else if (area.action === 'join_faction' && player) {
+                        // Try to join the Imperial faction
+                        if (player.joinFaction(area.faction)) {
+                            this.addMessage(`Welcome to the Imperial Navy! You have been assigned a ${player.factionShip}.`, 'lightblue');
+                            
+                            // Save game after joining
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Failed to join Imperial Navy.", 'crimson');
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // --- VIEWING_SEPARATIST_RECRUITMENT State ---
+        else if (currentState === "VIEWING_SEPARATIST_RECRUITMENT") {
+            for (const area of this.factionRecruitmentButtonAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (area.action === 'back') {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                    else if (area.action === 'pay_fine' && player) {
+                        // Pay fine to clear wanted status
+                        const success = player.spendCredits(area.amount);
+                        if (success) {
+                            // Clear wanted status in current system
+                            player.currentSystem.playerWanted = false;
+                            player.currentSystem.policeAlertSent = false;
+                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
+                            
+                            // Save game after payment
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Not enough credits to pay fine.", 'crimson');
+                        }
+                        return true;
+                    }
+                    else if (area.action === 'join_faction' && player) {
+                        // Try to join the Separatist faction
+                        if (player.joinFaction(area.faction)) {
+                            this.addMessage(`Fight for freedom! You have been assigned a ${player.factionShip}.`, 'orange');
+                            
+                            // Save game after joining
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Failed to join Separatist Forces.", 'crimson');
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // --- VIEWING_MILITARY_RECRUITMENT State ---
+        else if (currentState === "VIEWING_MILITARY_RECRUITMENT") {
+            for (const area of this.factionRecruitmentButtonAreas) {
+                if (this.isClickInArea(mx, my, area)) {
+                    if (area.action === 'back') {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                    else if (area.action === 'pay_fine' && player) {
+                        // Pay fine to clear wanted status
+                        const success = player.spendCredits(area.amount);
+                        if (success) {
+                            // Clear wanted status in current system
+                            player.currentSystem.playerWanted = false;
+                            player.currentSystem.policeAlertSent = false;
+                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
+                            
+                            // Save game after payment
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Not enough credits to pay fine.", 'crimson');
+                        }
+                        return true;
+                    }
+                    else if (area.action === 'join_faction' && player) {
+                        // Try to join the Military faction
+                        if (player.joinFaction(area.faction)) {
+                            this.addMessage(`Serve with honor! You have been assigned a ${player.factionShip}.`, 'lightblue');
+                            
+                            // Save game after joining
+                            if (typeof saveGame === 'function') {
+                                saveGame();
+                            }
+                        } else {
+                            this.addMessage("Failed to join Military Forces.", 'crimson');
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { 
             return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
@@ -1895,9 +2043,7 @@ if (isIllegalInSystem || isMissionCargo) {
         this.shipyardListAreas = [];
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [100,200,255]);
-        
-        // Use the standardized header
+        this.drawPanelBG([30,30,60,230], [220,190,90]); // Imperial gold theme
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
@@ -2543,6 +2689,282 @@ if (isIllegalInSystem || isMissionCargo) {
         backButton.state = "DOCKED";
         this.protectionServicesButtons.push(backButton);
         
+        pop();
+    }
+
+    /** Draws the Imperial Navy Recruitment Menu */
+    drawImperialRecruitmentMenu(player) {
+        this.factionRecruitmentButtonAreas = [];
+        if (!player) return;
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30,30,60,230], [220,190,90]); // Imperial gold theme
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Imperial Navy Recruitment", station, player, system);
+        
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER, TOP);
+        const contentY = pY + headerHeight + 10;
+        
+        // Check current faction status
+        const isWanted = system?.isPlayerWanted();
+        const canJoin = player.canJoinFaction("IMPERIAL");
+        
+        // Display faction info
+        fill(220, 190, 90);
+        textSize(24);
+        text("Imperial Navy Recruitment Office", pX+pW/2, contentY);
+        
+        fill(255);
+        textSize(18);
+        text("Serve the Empire. Restore order to the galaxy.", pX+pW/2, contentY + 40);
+        
+        // Show legal status
+        fill(255);
+        textSize(20);
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX+pW/2, contentY + 110);
+        
+        // Show current faction status
+        if (player.playerFaction) {
+            fill(255, 200, 100);
+            textSize(18);
+            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
+        }
+        
+        let btnW = pW*0.5, btnH = 45;
+        let btnX = pX+pW/2-btnW/2;
+        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        
+        // Fine payment if wanted
+        if (isWanted) {
+            let fineAmount = 500;
+            if (system?.securityLevel === 'High') fineAmount = 1200;
+            else if (system?.securityLevel === 'Medium') fineAmount = 800;
+            
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'IMPERIAL'})
+            );
+            btnY1 += btnH + 20;
+        }
+        
+        // Join faction button
+        if (canJoin && !isWanted) {
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, "Join Imperial Navy", [120,100,50], [220,190,90], 5, {action:'join_faction', faction:'IMPERIAL'})
+            );
+        } else if (player.playerFaction === 'IMPERIAL') {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER,CENTER);
+            text("You serve the Empire with honor", pX+pW/2, btnY1+btnH/2);
+        } else if (player.playerFaction && player.playerFaction !== 'IMPERIAL') {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
+        } else if (isWanted) {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
+        }
+        
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.factionRecruitmentButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        );
+        pop();
+    }
+
+    /** Draws the Separatist Forces Recruitment Menu */
+    drawSeparatistRecruitmentMenu(player) {
+        this.factionRecruitmentButtonAreas = [];
+        if (!player) return;
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30,30,60,230], [200,100,0]); // Separatist orange theme
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Separatist Forces Recruitment", station, player, system);
+        
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER, TOP);
+        const contentY = pY + headerHeight + 10;
+        
+        // Check current faction status
+        const isWanted = system?.isPlayerWanted();
+        const canJoin = player.canJoinFaction("SEPARATIST");
+        
+        // Display faction info
+        fill(200, 100, 0);
+        textSize(24);
+        text("Separatist Forces Recruitment", pX+pW/2, contentY);
+        
+        fill(255);
+        textSize(18);
+        text("Fight for freedom. Break the chains of tyranny.", pX+pW/2, contentY + 40);
+        
+        // Show legal status
+        fill(255);
+        textSize(20);
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX+pW/2, contentY + 110);
+        
+        // Show current faction status
+        if (player.playerFaction) {
+            fill(255, 200, 100);
+            textSize(18);
+            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
+        }
+        
+        let btnW = pW*0.5, btnH = 45;
+        let btnX = pX+pW/2-btnW/2;
+        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        
+        // Fine payment if wanted
+        if (isWanted) {
+            let fineAmount = 400; // Separatists are more lenient
+            if (system?.securityLevel === 'High') fineAmount = 1000;
+            else if (system?.securityLevel === 'Medium') fineAmount = 650;
+            
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'SEPARATIST'})
+            );
+            btnY1 += btnH + 20;
+        }
+        
+        // Join faction button
+        if (canJoin && !isWanted) {
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, "Join Separatist Forces", [100,50,0], [200,100,0], 5, {action:'join_faction', faction:'SEPARATIST'})
+            );
+        } else if (player.playerFaction === 'SEPARATIST') {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER,CENTER);
+            text("You fight for freedom and independence", pX+pW/2, btnY1+btnH/2);
+        } else if (player.playerFaction && player.playerFaction !== 'SEPARATIST') {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
+        } else if (isWanted) {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
+        }
+        
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.factionRecruitmentButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        );
+        pop();
+    }
+
+    /** Draws the Military Academy Recruitment Menu */
+    drawMilitaryRecruitmentMenu(player) {
+        this.factionRecruitmentButtonAreas = [];
+        if (!player) return;
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30,30,60,230], [100,120,140]); // Military grey-blue theme
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Military Academy Recruitment", station, player, system);
+        
+        fill(255); 
+        textSize(20); 
+        textAlign(CENTER, TOP);
+        const contentY = pY + headerHeight + 10;
+        
+        // Check current faction status
+        const isWanted = system?.isPlayerWanted();
+        const canJoin = player.canJoinFaction("MILITARY");
+        
+        // Display faction info
+        fill(100, 120, 140);
+        textSize(24);
+        text("Military Academy Recruitment", pX+pW/2, contentY);
+        
+        fill(255);
+        textSize(18);
+        text("Honor, duty, excellence. Defend the frontier.", pX+pW/2, contentY + 40);
+        
+        // Show legal status
+        fill(255);
+        textSize(20);
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX+pW/2, contentY + 110);
+        
+        // Show current faction status
+        if (player.playerFaction) {
+            fill(255, 200, 100);
+            textSize(18);
+            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
+        }
+        
+        let btnW = pW*0.5, btnH = 45;
+        let btnX = pX+pW/2-btnW/2;
+        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        
+        // Fine payment if wanted
+        if (isWanted) {
+            let fineAmount = 600; // Military is strict but fair
+            if (system?.securityLevel === 'High') fineAmount = 1500;
+            else if (system?.securityLevel === 'Medium') fineAmount = 900;
+            
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'MILITARY'})
+            );
+            btnY1 += btnH + 20;
+        }
+        
+        // Join faction button
+        if (canJoin && !isWanted) {
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, "Join Military Forces", [50,60,70], [100,120,140], 5, {action:'join_faction', faction:'MILITARY'})
+            );
+        } else if (player.playerFaction === 'MILITARY') {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER,CENTER);
+            text("You serve with honor and distinction", pX+pW/2, btnY1+btnH/2);
+        } else if (player.playerFaction && player.playerFaction !== 'MILITARY') {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
+        } else if (isWanted) {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER,CENTER);
+            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
+        }
+        
+        // Back button
+        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
+        this.factionRecruitmentButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        );
         pop();
     }
 } // End of UIManager Class

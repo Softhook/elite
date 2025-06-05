@@ -386,7 +386,59 @@ this.showingInventory = false;
                 }
                 break;
 
+            case "VIEWING_IMPERIAL_RECRUITMENT":
+                background(20,20,40); 
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawImperialRecruitmentMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing Imperial recruitment menu:", e); 
+                    }
+                }
+                break;
 
+            case "VIEWING_SEPARATIST_RECRUITMENT":
+                background(20,20,40); 
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawSeparatistRecruitmentMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing Separatist recruitment menu:", e); 
+                    }
+                }
+                break;
+
+            case "VIEWING_MILITARY_RECRUITMENT":
+                background(20,20,40); 
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawMilitaryRecruitmentMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing Military recruitment menu:", e); 
+                    }
+                }
+                break;
 
             case "GALAXY_MAP":
                 // First draw the regular game view behind the map

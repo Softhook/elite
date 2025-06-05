@@ -57,6 +57,11 @@ class Player {
         this.isPolice = false;
         this.hasBeenPolice = false;
 
+        // Add faction status properties
+        this.playerFaction = null; // Current faction: null, "IMPERIAL", "SEPARATIST", "MILITARY"
+        this.hasJoinedFaction = false; // Whether player has ever joined a faction
+        this.factionShip = null; // Ship received when joining faction
+
         // Initialize weapons array based on ship definition
         this.weapons = [];
         this.weaponIndex = 0;
@@ -1730,230 +1735,82 @@ handleInput() {
         }
     }
 
-    /** 
-     * Hire a new bodyguard if player has enough credits and space
-     * @param {string} shipType - The type of ship from GUARD_SHIPS array
-     * @param {number} cost - The cost in credits
-     * @return {boolean} Whether hiring was successful
+    /**
+     * Joins a faction and receives faction ship
+     * @param {string} faction - The faction to join: "IMPERIAL", "SEPARATIST", "MILITARY"
+     * @return {boolean} Whether joining was successful
      */
-    hireBodyguard(shipType, cost) {
-        // Validate inputs
-        if (!shipType || cost <= 0) {
-            console.warn(`Invalid bodyguard hire request: ${shipType}, ${cost}`);
+    joinFaction(faction) {
+        if (!faction || !["IMPERIAL", "SEPARATIST", "MILITARY"].includes(faction)) {
+            console.warn(`Invalid faction: ${faction}`);
             return false;
         }
-        
-        // Check if player has space for more bodyguards
-        if (this.activeBodyguards.length >= this.bodyguardLimit) {
-            console.log("Bodyguard limit reached");
-            return false;
+
+        // Set faction status
+        this.playerFaction = faction;
+        this.hasJoinedFaction = true;
+
+        // Get faction-specific ship
+        let factionShips = [];
+        switch (faction) {
+            case "IMPERIAL":
+                factionShips = IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : ["ImperialGuardian"];
+                break;
+            case "SEPARATIST": 
+                factionShips = SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : ["SeparatistLiberator"];
+                break;
+            case "MILITARY":
+                factionShips = MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : ["Viper"];
+                break;
         }
-        
-        // Check if player has enough credits
-        if (!this.spendCredits(cost)) {
-            console.log("Not enough credits to hire bodyguard");
-            return false;
+
+        // Select a ship from the faction
+        const factionShip = factionShips[Math.floor(Math.random() * factionShips.length)];
+        this.factionShip = factionShip;
+
+        // Apply the faction ship
+        this.applyShipDefinition(factionShip);
+
+        // Clear wanted status as a bonus
+        if (this.currentSystem) {
+            this.currentSystem.playerWanted = false;
+            this.currentSystem.policeAlertSent = false;
         }
-        
-        // Store info about the hired bodyguard
-        // // The actual guard ship will be spawned when player undocks
-        const bodyguard = {
-            shipType: shipType,
-            cost: cost,
-            hireTime: millis(),
-            id: Date.now() + "_" + Math.floor(Math.random() * 1000) // Unique ID
-        };
-        
-        this.activeBodyguards.push(bodyguard);
-        console.log(`Bodyguard hired: ${shipType} for ${cost} credits`);
-        
+
+        console.log(`Player joined ${faction} faction and received ${factionShip} ship`);
         return true;
-    }
-    
-    /**
-     * Spawns all hired bodyguards in the current system
-     * @param {StarSystem} system - The current system where guards should be spawned
-     */
-    spawnBodyguards(system) {
-        if (!system || !this.activeBodyguards.length) return;
-        
-        // No need to filter - destroyed bodyguards are automatically removed
-        const activeGuardsToSpawn = this.activeBodyguards;
-        
-        console.log(`Attempting to spawn ${activeGuardsToSpawn.length} bodyguards`);
-        
-        // Check for existing bodyguards to prevent duplicates
-        const alreadySpawnedIds = new Set();
-        
-        // Find existing bodyguards in the system
-        if (system.enemies) {
-            system.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this && enemy.guardId) {
-                    alreadySpawnedIds.add(enemy.guardId);
-                }
-            });
-        }
-        
-        console.log(`Found ${alreadySpawnedIds.size} bodyguards already spawned in system`);
-        
-        activeGuardsToSpawn.forEach(bodyguardInfo => {
-            // Skip if this bodyguard is already spawned in the system
-            if (alreadySpawnedIds.has(bodyguardInfo.id)) {
-                console.log(`Skipping bodyguard ${bodyguardInfo.id}, already present in system`);
-                return;
-            }
-            
-            try {
-                // Spawn the bodyguard ship near the player
-                const offsetDist = this.size * 3 + 50;
-                const angle = random(TWO_PI);
-                const spawnX = this.pos.x + cos(angle) * offsetDist;
-                const spawnY = this.pos.y + sin(angle) * offsetDist;
-                
-                // Create the bodyguard ship
-                const guard = new Enemy(spawnX, spawnY, this, bodyguardInfo.shipType, AI_ROLE.GUARD);
-                
-                // Store the bodyguard ID for tracking
-                guard.guardId = bodyguardInfo.id;
-                
-                // Set this player as the principal to protect
-                guard.principal = this;
-                guard.changeState(AI_STATE.GUARDING, { principal: this });
-                
-                // Add the guard to the system
-                if (system.addEnemy(guard)) {
-                    console.log(`Successfully spawned bodyguard ${bodyguardInfo.shipType} (ID: ${bodyguardInfo.id})`);
-                } else {
-                    console.warn(`Failed to add bodyguard to system: ${bodyguardInfo.shipType}`);
-                }
-            } catch (e) {
-                console.error(`Error spawning bodyguard ${bodyguardInfo.shipType}:`, e);
-            }
-        });
-    }
-    
-    /**
-     * Dismiss all bodyguards
-     */
-    dismissBodyguards() {
-        if (!this.currentSystem || this.activeBodyguards.length === 0) return;
-        
-        // Find and remove the actual guard ships from the system
-        const system = this.currentSystem;
-        
-        if (system && system.enemies) {
-            // Mark guards for removal
-            system.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this) {
-                    enemy.destroyed = true;
-                }
-            });
-        }
-        
-        // Clear the bodyguards list
-        const count = this.activeBodyguards.length;
-        this.activeBodyguards = [];
-        
-        console.log(`Dismissed ${count} bodyguards`);
-    }
-    
-    /**
-     * Remove a specific bodyguard from tracking by ID
-     * @param {string} bodyguardId - The ID of the bodyguard to remove
-     * @return {boolean} True if the bodyguard was removed, false otherwise
-     */
-    removeBodyguardById(bodyguardId) {
-        // Remove from activeBodyguards if it's there
-        const activeIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardId);
-        if (activeIndex !== -1) {
-            this.activeBodyguards.splice(activeIndex, 1);
-            console.log(`Removed bodyguard ${bodyguardId} from tracking`);
-            return true;
-        }
-        
-        return false;
     }
 
     /**
-     * Get the count of active bodyguards
-     * @return {number} Count of active bodyguards
+     * Removes faction status when player becomes wanted or betrays faction
      */
-    getActiveGuardsCount() {
-        // If there are no active bodyguards, return 0
-        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
-            return 0;
+    removeFactionStatus() {
+        if (this.playerFaction) {
+            const oldFaction = this.playerFaction;
+            this.playerFaction = null;
+            
+            // Show notification to player
+            if (typeof uiManager !== "undefined") {
+                uiManager.addMessage(`${oldFaction} faction status revoked due to criminal activity!`, [255, 0, 0]);
+            }
+            
+            console.log(`Player's ${oldFaction} faction status revoked`);
         }
-        
-        // Since destroyed bodyguards are automatically removed,
-        // we can just return the length of the activeBodyguards array
-        return this.activeBodyguards.length;
     }
-    
+
     /**
-     * Gets information about damaged bodyguards in the current system
-     * @return {Object} Information about damaged guards and repair cost
+     * Checks if player can join a specific faction
+     * @param {string} faction - The faction to check
+     * @return {boolean} Whether player can join the faction
      */
-    getDamagedBodyguardsInfo() {
-        if (!this.currentSystem || !this.activeBodyguards.length) {
-            return { count: 0, totalCost: 0, damagedGuards: [] };
-        }
+    canJoinFaction(faction) {
+        // Can't join if already in a faction
+        if (this.playerFaction) return false;
         
-        const damagedGuards = [];
-        let totalRepairCost = 0;
+        // Can't join if wanted (criminal record)
+        if (this.isWantedInCurrentSystem()) return false;
         
-        // Check each active bodyguard in the system
-        if (this.currentSystem.enemies) {
-            this.currentSystem.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.hull < enemy.maxHull &&
-                    !enemy.destroyed) {
-                    
-                    // Calculate repair cost - much cheaper than player ship repairs
-                    const missingHull = enemy.maxHull - enemy.hull;
-                    const repairCost = Math.floor(missingHull * 3); // 3 credits per hull point
-                    
-                    damagedGuards.push({
-                        enemy: enemy,
-                        missingHull: missingHull,
-                        repairCost: repairCost
-                    });
-                    
-                    totalRepairCost += repairCost;
-                }
-            });
-        }
-        
-        return {
-            count: damagedGuards.length,
-            totalCost: totalRepairCost,
-            damagedGuards: damagedGuards
-        };
-    }
-    
-    /**
-     * Repair all damaged bodyguards
-     * @param {number} cost - Total repair cost
-     * @return {boolean} Whether repair was successful
-     */
-    repairBodyguards(cost) {
-        if (!this.spendCredits(cost)) {
-            return false;
-        }
-        
-        if (this.currentSystem && this.currentSystem.enemies) {
-            this.currentSystem.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.hull < enemy.maxHull &&
-                    !enemy.destroyed) {
-                    
-                    // Restore full hull
-                    enemy.hull = enemy.maxHull;
-                }
-            });
-        }
-        
+        // Could add more requirements here (reputation, missions completed, etc.)
         return true;
     }
 }// End of Player Class
