@@ -864,17 +864,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
     update() {
         if (!this.player || !this.player.pos) return;
         try {
-            // Calculate screen bounds for visibility checks (used by asteroids and planets)
-            // Store as instance variable to reuse in draw() method
-            const tx = width / 2 - this.player.pos.x;
-            const ty = height / 2 - this.player.pos.y;
-            this.screenBounds = {
-                left: -tx - 100,
-                right: -tx + width + 100,
-                top: -ty - 100,
-                bottom: -ty + height + 100
-            };
-
             // Update Enemies
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i]; if (!enemy) { this.enemies.splice(i, 1); continue; }
@@ -893,8 +882,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // --- Update Asteroids & Handle Destruction/Despawn ---
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
                 const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
-                
-                // Update all asteroids regardless of visibility
                 try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
 
                 if (asteroid.isDestroyed()) {
@@ -921,19 +908,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
                     this.asteroids.splice(i, 1);
                     continue;
-                }
-            }
-
-            // --- Update Planets for rotation ---
-            for (let i = 0; i < this.planets.length; i++) {
-                const planet = this.planets[i];
-                if (planet && typeof planet.update === 'function') {
-                    // Update all planets regardless of visibility
-                    try {
-                        planet.update();
-                    } catch(e) {
-                        console.error("Error updating planet:", e, planet);
-                    }
                 }
             }
 

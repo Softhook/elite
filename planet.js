@@ -45,8 +45,8 @@ class Planet {
             this.ringColor2 = lerpColor(this.featureColor1, color(150), 0.6);
         }
 
-        // Enable slow rotation for all planets
-        this.rotationSpeed = random(0.0002, 0.0008); // Ultra slow rotation speed
+        // Stop rotation for all planets.
+        this.rotationSpeed = 0;
         this.currentRotation = 0;
 
         // Initialize shadowOffset to null. It will be set later.
@@ -238,19 +238,6 @@ class Planet {
         }
     }
 
-    /**
-     * Updates planet rotation over time
-     */
-    update() {
-        // Increment rotation based on rotation speed
-        this.currentRotation += this.rotationSpeed;
-        
-        // Keep rotation within 0 to TWO_PI for efficiency
-        if (this.currentRotation > TWO_PI) {
-            this.currentRotation -= TWO_PI;
-        }
-    }
-
     draw(sunPos) {
         // Create buffers on first draw
         if (!this.buffersCreated) {
@@ -265,14 +252,11 @@ class Planet {
         push();
         translate(this.pos.x, this.pos.y);
         
-        // Draw atmosphere if present (behind planet)
+        // Draw atmosphere if present
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             const atmSize = this.atmosphereBuffer.width;
             image(this.atmosphereBuffer, -atmSize/2, -atmSize/2);
         }
-        
-        // Apply planet rotation for planet surface only
-        rotate(this.currentRotation);
         
         if (this.hasRings) {
             this.drawRingedPlanet();
@@ -282,10 +266,7 @@ class Planet {
             image(this.planetBuffer, -bufferSize/2, -bufferSize/2);
         }
         
-        // Reset rotation to draw stationary shadow on top
-        rotate(-this.currentRotation);
-        
-        // Draw stationary shadow on top of the planet
+        // Apply shadow
         if (!this.isSun && this.shadowOffset) {
             noStroke();
             fill(0, 0, 0, 55);
