@@ -1167,54 +1167,63 @@ handleInput() {
     /** Returns the current number of active bodyguards. */
     getActiveGuardsCount() { return this.activeBodyguards.length; }
 
-    /** 
-     * Adds cargo to player inventory, respecting capacity limits.
-     * @param {string} commodityName - Type of cargo to add
-     * @param {number} quantity - Amount to add
-     * @param {boolean} [allowPartial=false] - Whether to add partial amount if full amount won't fit
-     * @returns {object} {success: boolean, added: number} - Success status and amount actually added
+    /**
+     * Hires a bodyguard if the player has enough credits and space.
+     * @param {string} shipType - The ship type to hire (e.g., "Viper", "GladiusFighter")
+     * @param {number} cost - The cost in credits to hire the bodyguard
+     * @returns {boolean} True if successfully hired, false otherwise
      */
-    addCargo(commodityName, quantity, allowPartial = false) { 
-        // Validate input
-        if (!commodityName || quantity <= 0) {
-            return { success: false, added: 0 };
+    hireBodyguard(shipType, cost) {
+        // Validate inputs
+        if (!shipType || cost <= 0) {
+            console.warn("Invalid shipType or cost for hiring bodyguard");
+            return false;
         }
-        
-        // Calculate available space
-        const currentAmount = this.getCargoAmount();
-        const spaceAvailable = this.cargoCapacity - currentAmount;
-        
-        // Nothing fits
-        if (spaceAvailable <= 0) {
-            return { success: false, added: 0 };
+
+        // Check if player has enough credits
+        if (this.credits < cost) {
+            return false;
         }
-        
-        // Determine how much we can add
-        let amountToAdd = quantity;
-        
-        // If it doesn't all fit and we allow partial collection
-        if (quantity > spaceAvailable && allowPartial) {
-            amountToAdd = spaceAvailable;
-        } 
-        // If it doesn't all fit and we don't allow partial collection
-        else if (quantity > spaceAvailable) {
-            return { success: false, added: 0 };
+
+        // Check if player has reached bodyguard limit
+        if (this.activeBodyguards.length >= this.bodyguardLimit) {
+            return false;
         }
-        
-        // MODIFIED: Find existing item by type OR name
-        const existingItem = this.cargo.find(item => 
-          item?.name === commodityName || item?.type === commodityName
-        );
-        
-        if (existingItem) {
-          // Update existing
-          existingItem.quantity += amountToAdd;
-        } else {
-          // Add new - standardize on using name property
-          this.cargo.push({ name: commodityName, quantity: amountToAdd });
+
+        // Spend the credits
+        if (!this.spendCredits(cost)) {
+            return false;
         }
+
+        // Create unique ID for the bodyguard
+        const guardId = Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+        // Add bodyguard to active list
+        const bodyguard = {
+            shipType: shipType,
+            cost: cost,
+            hireTime: millis(),
+            id: guardId
+        };
+
+        this.activeBodyguards.push(bodyguard);
         
-        return { success: true, added: amountToAdd };
+        console.log(`Hired ${shipType} bodyguard for ${cost} credits. ID: ${guardId}`);
+        return true;
+    }
+
+    /**
+     * Dismisses all active bodyguards
+     */
+    dismissBodyguards() {
+        if (this.activeBodyguards.length === 0) {
+            console.log("No bodyguards to dismiss");
+            return;
+        }
+
+        const count = this.activeBodyguards.length;
+        this.activeBodyguards = [];
+        console.log(`Dismissed ${count} bodyguard${count > 1 ? 's' : ''}`);
     }
 
     /**
@@ -1814,6 +1823,154 @@ handleInput() {
         if (this.isWantedInCurrentSystem()) return false;
         
         // Could add more requirements here (reputation, missions completed, etc.)
+        return true;
+    }
+
+    /**
+     * Spawns all active bodyguards in the current system
+     * @param {Object} system - The star system to spawn bodyguards in
+     */
+    spawnBodyguards(system) {
+        if (!system || this.activeBodyguards.length === 0) {
+            return;
+        }
+
+        console.log(`Spawning ${this.activeBodyguards.length} bodyguards in ${system.name}`);
+
+        this.activeBodyguards.forEach((bodyguardData, index) => {
+            try {
+                // Spawn bodyguard near the player
+                const spawnAngle = (TWO_PI * index) / this.activeBodyguards.length; // Spread around player
+                const spawnDistance = this.size + 100; // Spawn distance from player
+                const spawnX = this.pos.x + cos(spawnAngle) * spawnDistance;
+                const spawnY = this.pos.y + sin(spawnAngle) * spawnDistance;
+
+                // Create the bodyguard enemy
+                const bodyguard = new Enemy(spawnX, spawnY, this, bodyguardData.shipType, AI_ROLE.GUARD);
+                
+                // Set up the bodyguard
+                bodyguard.calculateRadianProperties();
+                bodyguard.initializeColors();
+                bodyguard.principal = this; // Set player as the principal to protect
+                bodyguard.guardId = bodyguardData.id; // Set the ID for tracking
+                
+                // Set formation offset based on index
+                const offsetDistance = 80;
+                const offsetAngle = spawnAngle;
+                bodyguard.guardFormationOffset = {
+                    x: cos(offsetAngle) * offsetDistance,
+                    y: sin(offsetAngle) * offsetDistance
+                };
+
+                // Initialize in guarding state
+                bodyguard.changeState(AI_STATE.GUARDING, { principal: this });
+
+                // Add to system
+                system.addEnemy(bodyguard);
+                
+                console.log(`Spawned ${bodyguardData.shipType} bodyguard (ID: ${bodyguardData.id})`);
+            } catch (error) {
+                console.error(`Failed to spawn bodyguard ${bodyguardData.shipType}:`, error);
+            }
+        });
+    }
+
+    /**
+     * Updates the player's bodyguards, removing any that are destroyed and respawning if necessary
+     */
+    updateBodyguards() {
+        if (!this.currentSystem) return;
+
+        // Remove destroyed bodyguards
+        this.activeBodyguards = this.activeBodyguards.filter(bodyguard => {
+            if (bodyguard.destroyed) {
+                console.log(`Removing destroyed bodyguard: ${bodyguard.guardId}`);
+                return false;
+            }
+            return true;
+        });
+
+        // Respawn bodyguards if below limit
+        while (this.activeBodyguards.length < this.bodyguardLimit) {
+            // Calculate cost of the next bodyguard to hire
+            const nextGuardCost = 1000 + this.activeBodyguards.length * 500;
+            
+            // Attempt to hire a new bodyguard
+            const hired = this.hireBodyguard("Viper", nextGuardCost);
+            if (!hired) {
+                console.log("Failed to hire new bodyguard, limit reached or not enough credits");
+                break; // Stop if hiring fails
+            }
+        }
+
+        // Inform bodyguards of the player's current state (position, velocity, etc.)
+        for (const bodyguard of this.activeBodyguards) {
+            if (bodyguard.update) {
+                bodyguard.update();
+            }
+        }
+    }
+
+    /**
+     * Gets information about damaged bodyguards and their repair costs
+     * @returns {Object} Object with count and totalCost properties
+     */
+    getDamagedBodyguardsInfo() {
+        if (!this.currentSystem) {
+            return { count: 0, totalCost: 0 };
+        }
+
+        let damagedCount = 0;
+        let totalRepairCost = 0;
+
+        // Find all bodyguards in the current system that are damaged
+        this.currentSystem.enemies.forEach(enemy => {
+            if (enemy.principal === this && enemy.guardId && enemy.hull < enemy.maxHull) {
+                damagedCount++;
+                // Calculate repair cost based on hull damage (similar to player repair)
+                const hullDamage = enemy.maxHull - enemy.hull;
+                const repairCost = Math.ceil(hullDamage * 10); // 10 credits per hull point
+                totalRepairCost += repairCost;
+            }
+        });
+
+        return {
+            count: damagedCount,
+            totalCost: totalRepairCost
+        };
+    }
+
+    /**
+     * Repairs all damaged bodyguards if the player has enough credits
+     * @param {number} cost - The total cost to repair all bodyguards
+     * @returns {boolean} True if repair was successful, false otherwise
+     */
+    repairBodyguards(cost) {
+        if (!this.currentSystem) {
+            return false;
+        }
+
+        // Check if player has enough credits
+        if (this.credits < cost) {
+            return false;
+        }
+
+        // Spend the credits
+        if (!this.spendCredits(cost)) {
+            return false;
+        }
+
+        let repairedCount = 0;
+
+        // Repair all damaged bodyguards
+        this.currentSystem.enemies.forEach(enemy => {
+            if (enemy.principal === this && enemy.guardId && enemy.hull < enemy.maxHull) {
+                enemy.hull = enemy.maxHull; // Fully repair the bodyguard
+                repairedCount++;
+            }
+        });
+
+        console.log(`Repaired ${repairedCount} bodyguard${repairedCount > 1 ? 's' : ''} for ${cost} credits`);
         return true;
     }
 }// End of Player Class
