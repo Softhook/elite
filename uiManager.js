@@ -285,7 +285,7 @@ class UIManager {
         const systemType = player.currentSystem?.economyType || 'Unknown';
         const secLevel = player.currentSystem?.securityLevel || 'Unknown';
         const techLevel = player.currentSystem?.techLevel || '?';
-        text(`${csName}            ${systemType}   Tech: ${techLevel}   ${secLevel}`, 10, 20);
+        text(`${csName}            ${systemType}   Tech: ${techLevel}   Security: ${secLevel}`, 10, 20);
         
         // ALIGNED: Status elements at consistent vertical position
         const statusLineY = 20; // Central Y position for all status elements
@@ -2344,7 +2344,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const tech = system?.techLevel || "?"; // Get tech level
         const econType = system?.economyType || "Unknown"; // Economy type
         textSize(20);
-        text(`${econ}   |   Tech: ${tech}   |   ${econType}`, pX +20, pY + 45);
+        text(`${econType}   |   Tech: ${tech}   |   Security:  ${econ}`, pX +20, pY + 45);
         
         // Credits (right-aligned)
         textAlign(RIGHT, TOP);
