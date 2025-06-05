@@ -1933,12 +1933,35 @@ handleInput() {
             return;
         }
 
-        console.log(`Spawning ${this.activeBodyguards.length} bodyguards in ${system.name}`);
+        // Check which bodyguards already exist in the system
+        const existingGuardIds = new Set();
+        if (system.enemies) {
+            system.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.guardId && 
+                    !enemy.destroyed) {
+                    existingGuardIds.add(enemy.guardId);
+                }
+            });
+        }
 
-        this.activeBodyguards.forEach((bodyguardData, index) => {
+        // Only spawn bodyguards that don't already exist
+        const bodyguardsToSpawn = this.activeBodyguards.filter(guardData => 
+            !existingGuardIds.has(guardData.id)
+        );
+
+        if (bodyguardsToSpawn.length === 0) {
+            console.log(`All ${this.activeBodyguards.length} bodyguards already exist in ${system.name}`);
+            return;
+        }
+
+        console.log(`Spawning ${bodyguardsToSpawn.length} new bodyguards in ${system.name} (${existingGuardIds.size} already exist)`);
+
+        bodyguardsToSpawn.forEach((bodyguardData, index) => {
             try {
                 // Spawn bodyguard near the player
-                const spawnAngle = (TWO_PI * index) / this.activeBodyguards.length; // Spread around player
+                const spawnAngle = (TWO_PI * index) / bodyguardsToSpawn.length; // Spread around player
                 const spawnDistance = this.size + 100; // Spawn distance from player
                 const spawnX = this.pos.x + cos(spawnAngle) * spawnDistance;
                 const spawnY = this.pos.y + sin(spawnAngle) * spawnDistance;
@@ -1952,9 +1975,10 @@ handleInput() {
                 bodyguard.principal = this; // Set player as the principal to protect
                 bodyguard.guardId = bodyguardData.id; // Set the ID for tracking
                 
-                // Set formation offset based on index
+                // Set formation offset based on total active bodyguards (not just spawning ones)
+                const totalActiveIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardData.id);
                 const offsetDistance = 80;
-                const offsetAngle = spawnAngle;
+                const offsetAngle = (TWO_PI * totalActiveIndex) / this.activeBodyguards.length;
                 bodyguard.guardFormationOffset = {
                     x: cos(offsetAngle) * offsetDistance,
                     y: sin(offsetAngle) * offsetDistance
@@ -1979,28 +2003,28 @@ handleInput() {
     updateBodyguards() {
         if (!this.currentSystem) return;
 
-        // Remove destroyed bodyguards
-        this.activeBodyguards = this.activeBodyguards.filter(bodyguard => {
-            if (bodyguard.destroyed) {
-                console.log(`Removing destroyed bodyguard: ${bodyguard.guardId}`);
-                return false;
-            }
-            return true;
-        });
-
-        // Respawn bodyguards if below limit
-        while (this.activeBodyguards.length < this.bodyguardLimit) {
-            // Calculate cost of the next bodyguard to hire
-            const nextGuardCost = 1000 + this.activeBodyguards.length * 500;
-            
-            // Attempt to hire a new bodyguard
-            const hired = this.hireBodyguard("Viper", nextGuardCost);
-            if (!hired) {
-                console.log("Failed to hire new bodyguard, limit reached or not enough credits");
-                break; // Stop if hiring fails
-            }
+        // Check for destroyed bodyguards in the system and remove them from tracking
+        if (this.currentSystem.enemies) {
+            // Find destroyed bodyguards and remove them from activeBodyguards
+            this.activeBodyguards = this.activeBodyguards.filter(bodyguardData => {
+                const guardInSystem = this.currentSystem.enemies.find(enemy => 
+                    enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.guardId === bodyguardData.id
+                );
+                
+                // Remove from tracking if the guard doesn't exist in system or is destroyed
+                if (!guardInSystem || guardInSystem.destroyed) {
+                    console.log(`Removing destroyed/missing bodyguard: ${bodyguardData.id}`);
+                    return false;
+                }
+                return true;
+            });
         }
 
+        // Note: Removed auto-respawn logic to prevent unwanted spawning
+        // Players must manually hire new bodyguards through the station interface
+        
         // Inform bodyguards of the player's current state (position, velocity, etc.)
         for (const bodyguard of this.activeBodyguards) {
             if (bodyguard.update) {
