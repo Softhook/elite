@@ -274,7 +274,7 @@ const WEAPON_UPGRADES = [
         price: 6800,
         tangleDuration: 8.0, // Seconds target is affected by tangle
         dragMultiplier: 2.0, // Strong drag effect
-        rotationBlockMultiplier: 0.01, // Severely reduces rotation speed
+        rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
         projectileSize: 5,   // Medium projectile
         desc: "Temporarily immobilizes enemy ships with energy tethers."
     },
