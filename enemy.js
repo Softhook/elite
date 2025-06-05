@@ -692,6 +692,12 @@ _evaluateGuardTarget(target) {
         return TARGET_SCORE_INVALID;
     }
     
+    // HIGHEST priority: Principal's manually selected target (player's target)
+    if (target === this.principal.target && 
+        this.principal.isValidEnemyTarget && this.principal.isValidEnemyTarget(target)) {
+        return 2500; // Higher than attacker priority to ensure player's target takes precedence
+    }
+    
     // High priority for principal's recent attacker
     if (target === this.principal.lastAttacker && 
         this.isTargetValid(target) && 

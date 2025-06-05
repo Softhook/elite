@@ -1758,6 +1758,11 @@ handleInput() {
                     bodyguard.target = this.target;
                     bodyguard.lastAttacker = null; // Clear any previous attacker to prioritize player's target
                     
+                    // Force targeting update to re-evaluate the new target
+                    if (bodyguard.updateTargeting) {
+                        bodyguard.updateTargeting(this.currentSystem);
+                    }
+                    
                     // Force bodyguard into combat state if not already
                     if (bodyguard.currentState === AI_STATE.GUARDING || 
                         bodyguard.currentState === AI_STATE.IDLE ||
