@@ -125,7 +125,6 @@ class StarSystem {
         this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
-        this.bgStars = [];     // Populated in initStaticElements
 
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
@@ -277,17 +276,7 @@ class StarSystem {
         try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
         try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
 
-        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 10000; // Default star count
-        try { numBgStars = floor(random(1000, 10000)); } catch(e) {} // Use default on error
-        try { // Generate background stars using seeded random
-            for (let i = 0; i < numBgStars; i++) {
-                this.bgStars.push({
-                    x: random(-worldBounds, worldBounds),
-                    y: random(-worldBounds, worldBounds),
-                    size: random(1, 3)
-                });
-            }
-        } catch(e) { console.error("Error generating background stars:", e); }
+        // Note: Stars are now generated procedurally in drawBackground() - no need to store them
 
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
@@ -457,6 +446,129 @@ try {
         // ---
 
         console.log(`      <<< ${this.name}: initStaticElements() Finished`); // Log completion
+    }
+
+    // --- Starfield Buffer System ---
+    
+    /**
+     * Generates a starfield buffer tile for a specific world region
+     * @param {number} tileX - X coordinate of the tile in world space
+     * @param {number} tileY - Y coordinate of the tile in world space  
+     * @returns {p5.Graphics} The pre-rendered starfield tile
+     */
+    generateStarfieldTile(tileX, tileY) {
+        if (!this.bgStars || this.bgStars.length === 0) {
+            return null;
+        }
+        
+        const buffer = createGraphics(this.starfieldTileSize, this.starfieldTileSize);
+        buffer.background(0, 0); // Transparent background
+        buffer.fill(255);
+        buffer.noStroke();
+        
+        // Add slight glow effect like the original
+        buffer.strokeWeight(1);
+        buffer.stroke(255, 255, 255, 100);
+        
+        // Calculate tile bounds in world space
+        const tileBounds = {
+            left: tileX - this.starfieldTileSize / 2,
+            right: tileX + this.starfieldTileSize / 2,
+            top: tileY - this.starfieldTileSize / 2,
+            bottom: tileY + this.starfieldTileSize / 2
+        };
+        
+        // Draw only stars that fall within this tile
+        this.bgStars.forEach(star => {
+            if (star.x >= tileBounds.left && star.x <= tileBounds.right &&
+                star.y >= tileBounds.top && star.y <= tileBounds.bottom) {
+                
+                // Convert world coordinates to tile-local coordinates
+                const localX = star.x - tileBounds.left;
+                const localY = star.y - tileBounds.top;
+                
+                buffer.ellipse(localX, localY, star.size, star.size);
+            }
+        });
+        
+        return buffer;
+    }
+    
+    /**
+     * Gets or creates a starfield tile for the given world coordinates
+     * @param {number} tileX - X coordinate of the tile center in world space
+     * @param {number} tileY - Y coordinate of the tile center in world space
+     * @returns {p5.Graphics|null} The starfield tile buffer
+     */
+    getStarfieldTile(tileX, tileY) {
+        const tileKey = `${Math.floor(tileX / this.starfieldTileSize)}_${Math.floor(tileY / this.starfieldTileSize)}`;
+        
+        // Check if tile exists in cache
+        if (this.starfieldBuffers.has(tileKey)) {
+            // Update access time for LRU cache
+            this.bufferAccessTime.set(tileKey, millis());
+            return this.starfieldBuffers.get(tileKey);
+        }
+        
+        // Generate new tile
+        const alignedTileX = Math.floor(tileX / this.starfieldTileSize) * this.starfieldTileSize + this.starfieldTileSize / 2;
+        const alignedTileY = Math.floor(tileY / this.starfieldTileSize) * this.starfieldTileSize + this.starfieldTileSize / 2;
+        
+        const tile = this.generateStarfieldTile(alignedTileX, alignedTileY);
+        
+        if (tile) {
+            // Clean cache if it's getting too large
+            this.cleanStarfieldCache();
+            
+            // Store in cache
+            this.starfieldBuffers.set(tileKey, tile);
+            this.bufferAccessTime.set(tileKey, millis());
+        }
+        
+        return tile;
+    }
+    
+    /**
+     * Cleans the starfield buffer cache using LRU eviction
+     */
+    cleanStarfieldCache() {
+        if (this.starfieldBuffers.size < this.maxBufferCacheSize) {
+            return;
+        }
+        
+        // Find oldest accessed tile
+        let oldestKey = null;
+        let oldestTime = Infinity;
+        
+        for (const [key, time] of this.bufferAccessTime.entries()) {
+            if (time < oldestTime) {
+                oldestTime = time;
+                oldestKey = key;
+            }
+        }
+        
+        // Remove oldest tile
+        if (oldestKey) {
+            const buffer = this.starfieldBuffers.get(oldestKey);
+            if (buffer && buffer.remove) {
+                buffer.remove(); // Free graphics memory
+            }
+            this.starfieldBuffers.delete(oldestKey);
+            this.bufferAccessTime.delete(oldestKey);
+        }
+    }
+    
+    /**
+     * Disposes all starfield buffers to free memory
+     */
+    disposeStarfieldBuffers() {
+        for (const buffer of this.starfieldBuffers.values()) {
+            if (buffer && buffer.remove) {
+                buffer.remove();
+            }
+        }
+        this.starfieldBuffers.clear();
+        this.bufferAccessTime.clear();
     }
 
     /** Creates random planets using seeded random. Called by initStaticElements. */
@@ -1599,22 +1711,160 @@ checkProjectileCollisions() {
         return false;
     }
 
-    /** Draws background stars. Assumes called within translated space. */
-    drawBackground() {
-        if (!this.bgStars) {
-            console.log(`No bgStars in ${this.name} system!`);
-            return;
-        }
+    /** Draws background stars using fast procedural generation. */
+    drawBackground(cameraX = 0, cameraY = 0) {
+        // Calculate visible area with margin for smooth scrolling
+        const margin = 300;
+        const left = cameraX - width / 2 - margin;
+        const right = cameraX + width / 2 + margin;
+        const top = cameraY - height / 2 - margin;
+        const bottom = cameraY + height / 2 + margin;
         
-        fill(255); 
         noStroke();
         
-        // Slight glow effect
-        strokeWeight(1);
-        stroke(255, 255, 255, 100);
-        this.bgStars.forEach(s => {
-            ellipse(s.x, s.y, s.size, s.size);
-        });
+        // Use much larger tiles for better performance and more natural distribution
+        const tileSize = 500;
+        
+        // Use system seed for consistent star placement
+        noiseSeed(this.systemIndex * 1337);
+        
+        // Sample the visible area with large tiles
+        for (let tileX = Math.floor(left / tileSize) * tileSize; tileX < right; tileX += tileSize) {
+            for (let tileY = Math.floor(top / tileSize) * tileSize; tileY < bottom; tileY += tileSize) {
+                
+                // Check for dense star clusters (rare but dramatic)
+                const clusterNoise = noise(tileX * 0.0005, tileY * 0.0005, this.systemIndex * 0.05);
+                const isCluster = clusterNoise > 0.92; // 8% chance of dense cluster
+                
+                // Base number of stars, much higher for clusters
+                const tileNoise = noise(tileX * 0.001, tileY * 0.001, this.systemIndex * 0.1);
+                let numStars;
+                if (isCluster) {
+                    numStars = Math.floor(tileNoise * 30 + 20); // 20-50 stars in cluster
+                } else {
+                    numStars = Math.floor(tileNoise * 15 + 5); // 5-20 normal stars
+                }
+                
+                // Generate individual stars within this tile
+                for (let i = 0; i < numStars; i++) {
+                    // Use multiple noise calls for different star properties
+                    const starX = tileX + noise(tileX * 0.001 + i * 123.456) * tileSize;
+                    const starY = tileY + noise(tileY * 0.001 + i * 789.012) * tileSize;
+                    
+                    // Enhanced brightness distribution with more variety
+                    const brightNoise = noise(starX * 0.003, starY * 0.003, i * 0.1);
+                    
+                    // Use deterministic noise for all random values to prevent flickering
+                    const brightVariation = noise(starX * 0.007, starY * 0.007, i * 0.3);
+                    const sizeVariation = noise(starX * 0.009, starY * 0.009, i * 0.7);
+                    const haloChance = noise(starX * 0.011, starY * 0.011, i * 1.1);
+                    
+                    let brightness, starSize, hasHalo = false;
+                    
+                    if (brightNoise > 0.995) {
+                        // Ultra massive giant stars (extremely rare)
+                        brightness = 250 + brightVariation * 5;
+                        starSize = 8 + sizeVariation * 4; // 8-12 pixels
+                        hasHalo = true;
+                    } else if (brightNoise > 0.985) {
+                        // Massive giant stars (very rare)
+                        brightness = 245 + brightVariation * 10;
+                        starSize = 5 + sizeVariation * 3; // 5-8 pixels
+                        hasHalo = true;
+                    } else if (brightNoise > 0.97) {
+                        // Super bright giant stars (rare)
+                        brightness = 235 + brightVariation * 20;
+                        starSize = 3 + sizeVariation * 3; // 3-6 pixels
+                        hasHalo = true;
+                    } else if (brightNoise > 0.92) {
+                        // Very bright stars
+                        brightness = 200 + brightVariation * 40;
+                        starSize = 2 + sizeVariation * 2.5; // 2-4.5 pixels
+                        hasHalo = haloChance > 0.3; // 70% chance of halo
+                    } else if (brightNoise > 0.8) {
+                        // Bright stars
+                        brightness = 150 + brightVariation * 60;
+                        starSize = 1.2 + sizeVariation * 2; // 1.2-3.2 pixels
+                        hasHalo = haloChance > 0.8; // 20% chance of halo
+                    } else if (brightNoise > 0.6) {
+                        // Medium stars
+                        brightness = 100 + brightVariation * 60;
+                        starSize = 0.8 + sizeVariation * 1.5; // 0.8-2.3 pixels
+                    } else {
+                        // Dim background stars
+                        brightness = 40 + brightVariation * 80;
+                        starSize = 0.3 + sizeVariation * 1.2; // 0.3-1.5 pixels
+                    }
+                    
+                    // In clusters, boost brightness and size slightly
+                    if (isCluster) {
+                        brightness = Math.min(255, brightness * 1.2);
+                        starSize *= 1.1;
+                    }
+                    
+                    // Draw halo first (behind star)
+                    if (hasHalo) {
+                        const haloSize = starSize * (starSize > 5 ? 4 : 3); // Bigger halos for giant stars
+                        const haloAlpha = Math.min(120, brightness * 0.2); // Brighter halos
+                        
+                        // Multi-layer halo for giant stars
+                        if (starSize > 5) {
+                            // Outer halo layer
+                            const outerHaloSize = haloSize * 1.5;
+                            const outerAlpha = haloAlpha * 0.3;
+                            
+                            const colorType = noise(starX * 0.01, starY * 0.01);
+                            if (colorType > 0.8) {
+                                fill(brightness, brightness * 0.6, brightness * 0.4, outerAlpha); // Red outer halo
+                            } else if (colorType > 0.6) {
+                                fill(brightness * 0.7, brightness * 0.8, brightness, outerAlpha); // Blue outer halo
+                            } else {
+                                fill(brightness, brightness, brightness, outerAlpha); // White outer halo
+                            }
+                            ellipse(starX, starY, outerHaloSize, outerHaloSize);
+                        }
+                        
+                        // Main halo
+                        const colorType = noise(starX * 0.01, starY * 0.01);
+                        if (colorType > 0.8) {
+                            fill(brightness, brightness * 0.6, brightness * 0.4, haloAlpha); // Red halo
+                        } else if (colorType > 0.6) {
+                            fill(brightness * 0.7, brightness * 0.8, brightness, haloAlpha); // Blue halo
+                        } else {
+                            fill(brightness, brightness, brightness, haloAlpha); // White halo
+                        }
+                        ellipse(starX, starY, haloSize, haloSize);
+                    }
+                    
+                    // Draw the main star
+                    const colorType = noise(starX * 0.01, starY * 0.01);
+                    if (brightNoise > 0.96) {
+                        // Rare colored giant stars
+                        if (colorType > 0.75) {
+                            fill(brightness, brightness * 0.7, brightness * 0.5); // Red giant
+                        } else if (colorType > 0.5) {
+                            fill(brightness * 0.8, brightness * 0.9, brightness); // Blue-white
+                        } else if (colorType > 0.25) {
+                            fill(brightness, brightness * 0.9, brightness * 0.6); // Yellow giant
+                        } else {
+                            fill(brightness); // White
+                        }
+                    } else if (brightNoise > 0.9 && isCluster) {
+                        // Cluster stars get more color variety
+                        if (colorType > 0.6) {
+                            fill(brightness * 0.9, brightness * 0.8, brightness); // Blue cluster star
+                        } else {
+                            fill(brightness); // White
+                        }
+                    } else {
+                        // Regular white/gray stars
+                        fill(brightness);
+                    }
+                    
+                    ellipse(starX, starY, starSize, starSize);
+                }
+            }
+        }
     }
 
     /** Draws all system contents. */
@@ -1635,8 +1885,8 @@ checkProjectileCollisions() {
             bottom: -ty + height + 100
         };
 
-        // Draw background (always visible)
-        this.drawBackground();
+        // Draw background (always visible) - pass camera position for efficient tiling
+        this.drawBackground(this.player.pos.x, this.player.pos.y);
 
         // --- Draw Jump Zone ---
         // Call this early so other objects draw on top if needed
@@ -1666,6 +1916,7 @@ checkProjectileCollisions() {
         }
 
         // Determine sun position using the first planet if it exists
+       
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
 
         // Draw only visible planets
@@ -1966,5 +2217,5 @@ addEnemy(enemy) {
     return false;
 }
 
-    
-} // End of StarSystem Class
+
+}
