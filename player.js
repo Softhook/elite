@@ -1164,6 +1164,9 @@ handleInput() {
     /** Calculates total cargo quantity. */
     getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
 
+    /** Returns the current number of active bodyguards. */
+    getActiveGuardsCount() { return this.activeBodyguards.length; }
+
     /** 
      * Adds cargo to player inventory, respecting capacity limits.
      * @param {string} commodityName - Type of cargo to add
