@@ -1213,7 +1213,7 @@ handleInput() {
     }
 
     /**
-     * Dismisses all active bodyguards
+     * Dismisses all active bodyguards by removing them from both the system and tracking
      */
     dismissBodyguards() {
         if (this.activeBodyguards.length === 0) {
@@ -1221,9 +1221,107 @@ handleInput() {
             return;
         }
 
+        // Find and remove the actual guard ships from the system by ID
+        if (this.currentSystem && this.currentSystem.enemies) {
+            this.activeBodyguards.forEach(bodyguardData => {
+                // Find the corresponding enemy in the system
+                const guardInSystem = this.currentSystem.enemies.find(enemy => 
+                    enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.guardId === bodyguardData.id
+                );
+                
+                if (guardInSystem) {
+                    guardInSystem.destroyed = true;
+                    console.log(`Marked bodyguard ${bodyguardData.id} for removal from system`);
+                }
+            });
+        }
+
         const count = this.activeBodyguards.length;
         this.activeBodyguards = [];
         console.log(`Dismissed ${count} bodyguard${count > 1 ? 's' : ''}`);
+    }
+
+    /**
+     * Remove a specific bodyguard from tracking by ID
+     * @param {string} bodyguardId - The ID of the bodyguard to remove
+     * @return {boolean} True if the bodyguard was removed, false otherwise
+     */
+    removeBodyguardById(bodyguardId) {
+        const activeIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardId);
+        if (activeIndex !== -1) {
+            this.activeBodyguards.splice(activeIndex, 1);
+            console.log(`Removed bodyguard ${bodyguardId} from active tracking`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get information about damaged bodyguards for repair interface
+     * @return {Object} Information about damaged bodyguards and repair costs
+     */
+    getDamagedBodyguardsInfo() {
+        const damagedGuards = [];
+        let totalRepairCost = 0;
+        
+        // Check each active bodyguard in the system
+        if (this.currentSystem && this.currentSystem.enemies) {
+            this.currentSystem.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.hull < enemy.maxHull &&
+                    !enemy.destroyed) {
+                    
+                    // Calculate repair cost - much cheaper than player ship repairs
+                    const missingHull = enemy.maxHull - enemy.hull;
+                    const repairCost = Math.floor(missingHull * 3); // 3 credits per hull point
+                    
+                    damagedGuards.push({
+                        enemy: enemy,
+                        missingHull: missingHull,
+                        repairCost: repairCost,
+                        guardId: enemy.guardId
+                    });
+                    
+                    totalRepairCost += repairCost;
+                }
+            });
+        }
+        
+        return {
+            count: damagedGuards.length,
+            totalCost: totalRepairCost,
+            damagedGuards: damagedGuards
+        };
+    }
+
+    /**
+     * Repair all damaged bodyguards
+     * @param {number} cost - Total repair cost
+     * @return {boolean} Whether repair was successful
+     */
+    repairBodyguards(cost) {
+        if (!this.spendCredits(cost)) {
+            return false;
+        }
+        
+        if (this.currentSystem && this.currentSystem.enemies) {
+            this.currentSystem.enemies.forEach(enemy => {
+                if (enemy.role === AI_ROLE.GUARD && 
+                    enemy.principal === this && 
+                    enemy.hull < enemy.maxHull &&
+                    !enemy.destroyed) {
+                    
+                    // Restore full hull
+                    enemy.hull = enemy.maxHull;
+                    console.log(`Repaired bodyguard ${enemy.guardId} to full hull`);
+                }
+            });
+        }
+        
+        return true;
     }
 
     /**
