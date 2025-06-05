@@ -1722,34 +1722,90 @@ checkProjectileCollisions() {
         
         noStroke();
         
-        // Use much larger tiles for better performance and more natural distribution
-        const tileSize = 500;
+        // Use much larger, irregular tiles to eliminate grid patterns
+        const bstarfieldaseTileSize = 1200; // Much larger base tile size
         
         // Use system seed for consistent star placement
         noiseSeed(this.systemIndex * 1337);
         
-        // Sample the visible area with large tiles
-        for (let tileX = Math.floor(left / tileSize) * tileSize; tileX < right; tileX += tileSize) {
-            for (let tileY = Math.floor(top / tileSize) * tileSize; tileY < bottom; tileY += tileSize) {
+        // Use overlapping tiles to ensure complete coverage without gaps
+        const tileSpacing = baseTileSize * 0.6; // Overlap tiles significantly to prevent gaps
+        
+        for (let tileX = Math.floor(left / tileSpacing) * tileSpacing; tileX < right + baseTileSize; tileX += tileSpacing) {
+            for (let tileY = Math.floor(top / tileSpacing) * tileSpacing; tileY < bottom + baseTileSize; tileY += tileSpacing) {
                 
-                // Check for dense star clusters (rare but dramatic)
-                const clusterNoise = noise(tileX * 0.0005, tileY * 0.0005, this.systemIndex * 0.05);
-                const isCluster = clusterNoise > 0.92; // 8% chance of dense cluster
+                // Add randomized tile size variation to break grid patterns
+                const tileSizeVariation = noise(tileX * 0.0001, tileY * 0.0001) * 400 + 1000; // 1000-1400 pixels
+                const tileOffsetX = noise(tileX * 0.0002, tileY * 0.0002) * 300 - 150; // -150 to +150 offset (reduced)
+                const tileOffsetY = noise(tileX * 0.0002 + 100, tileY * 0.0002 + 100) * 300 - 150;
                 
-                // Base number of stars, much higher for clusters
-                const tileNoise = noise(tileX * 0.001, tileY * 0.001, this.systemIndex * 0.1);
-                let numStars;
-                if (isCluster) {
-                    numStars = Math.floor(tileNoise * 30 + 20); // 20-50 stars in cluster
-                } else {
-                    numStars = Math.floor(tileNoise * 15 + 5); // 5-20 normal stars
+                const actualTileX = tileX + tileOffsetX;
+                const actualTileY = tileY + tileOffsetY;
+                const actualTileSize = tileSizeVariation;
+                
+                // === SPACE PHENOMENA GENERATION ===
+                
+                // Check for massive nebula clouds (3% chance)
+                const nebulaChance = noise(actualTileX * 0.0003, actualTileY * 0.0003, this.systemIndex * 0.02);
+                if (nebulaChance > 0.97) {
+                    const nebulaSize = 200 + noise(actualTileX * 0.002, actualTileY * 0.002) * 300; // 200-500 pixels
+                    const nebulaAlpha = 15 + noise(actualTileX * 0.004, actualTileY * 0.004) * 25; // 15-40 alpha
+                    const nebulaColor = noise(actualTileX * 0.006, actualTileY * 0.006);
+                    
+                    if (nebulaColor > 0.8) {
+                        fill(255, 100, 150, nebulaAlpha); // Pink nebula
+                    } else if (nebulaColor > 0.6) {
+                        fill(100, 150, 255, nebulaAlpha); // Blue nebula
+                    } else if (nebulaColor > 0.4) {
+                        fill(150, 255, 150, nebulaAlpha); // Green nebula
+                    } else {
+                        fill(255, 200, 100, nebulaAlpha); // Orange nebula
+                    }
+                    
+                    const nebulaX = actualTileX + actualTileSize * 0.5;
+                    const nebulaY = actualTileY + actualTileSize * 0.5;
+                    ellipse(nebulaX, nebulaY, nebulaSize, nebulaSize * 0.7);
                 }
                 
-                // Generate individual stars within this tile
+                // Check for stellar storm effects (1% chance)
+                const stormChance = noise(actualTileX * 0.0002, actualTileY * 0.0002, this.systemIndex * 0.03);
+                if (stormChance > 0.99) {
+                    const stormX = actualTileX + actualTileSize * 0.5;
+                    const stormY = actualTileY + actualTileSize * 0.5;
+                    const stormSize = 150 + noise(actualTileX * 0.003, actualTileY * 0.003) * 200;
+                    
+                    // Draw multiple lightning-like effects
+                    for (let s = 0; s < 5; s++) {
+                        const angle = noise(actualTileX * 0.01 + s * 0.5, actualTileY * 0.01) * TWO_PI;
+                        const length = 50 + noise(actualTileX * 0.02 + s, actualTileY * 0.02) * 100;
+                        const endX = stormX + cos(angle) * length;
+                        const endY = stormY + sin(angle) * length;
+                        
+                        strokeWeight(2 + noise(s * 10) * 3);
+                        stroke(255, 255, 100, 80 + noise(s * 20) * 100);
+                        line(stormX, stormY, endX, endY);
+                    }
+                    noStroke();
+                }
+                
+                // Check for dense star clusters (rare but dramatic)
+                const clusterNoise = noise(actualTileX * 0.0005, actualTileY * 0.0005, this.systemIndex * 0.05);
+                const isCluster = clusterNoise > 0.85; // 15% chance of dense cluster (increased from 8%)
+                
+                // Base number of stars, adjusted for overlapping tiles to prevent over-density
+                const tileNoise = noise(actualTileX * 0.001, actualTileY * 0.001, this.systemIndex * 0.1);
+                let numStars;
+                if (isCluster) {
+                    numStars = Math.floor(tileNoise * 35 + 25); // 25-60 stars in cluster (reduced for overlap)
+                } else {
+                    numStars = Math.floor(tileNoise * 20 + 8); // 8-28 normal stars (reduced for overlap)
+                }
+                
+                // Generate individual stars within this irregular tile
                 for (let i = 0; i < numStars; i++) {
-                    // Use multiple noise calls for different star properties
-                    const starX = tileX + noise(tileX * 0.001 + i * 123.456) * tileSize;
-                    const starY = tileY + noise(tileY * 0.001 + i * 789.012) * tileSize;
+                    // Use multiple noise calls for different star properties with tile-specific seeds
+                    const starX = actualTileX + noise(actualTileX * 0.001 + i * 123.456) * actualTileSize;
+                    const starY = actualTileY + noise(actualTileY * 0.001 + i * 789.012) * actualTileSize;
                     
                     // Enhanced brightness distribution with more variety
                     const brightNoise = noise(starX * 0.003, starY * 0.003, i * 0.1);
@@ -1761,39 +1817,39 @@ checkProjectileCollisions() {
                     
                     let brightness, starSize, hasHalo = false;
                     
-                    if (brightNoise > 0.995) {
-                        // Ultra massive giant stars (extremely rare)
+                    if (brightNoise > 0.98) {
+                        // Ultra massive giant stars (2% chance - much more common!)
                         brightness = 250 + brightVariation * 5;
-                        starSize = 8 + sizeVariation * 4; // 8-12 pixels
+                        starSize = 12 + sizeVariation * 8; // 12-20 pixels - HUGE!
                         hasHalo = true;
-                    } else if (brightNoise > 0.985) {
-                        // Massive giant stars (very rare)
-                        brightness = 245 + brightVariation * 10;
-                        starSize = 5 + sizeVariation * 3; // 5-8 pixels
+                    } else if (brightNoise > 0.95) {
+                        // Massive giant stars (5% chance)
+                        brightness = 240 + brightVariation * 15;
+                        starSize = 8 + sizeVariation * 6; // 8-14 pixels
                         hasHalo = true;
-                    } else if (brightNoise > 0.97) {
-                        // Super bright giant stars (rare)
-                        brightness = 235 + brightVariation * 20;
-                        starSize = 3 + sizeVariation * 3; // 3-6 pixels
+                    } else if (brightNoise > 0.9) {
+                        // Super bright giant stars (10% chance)
+                        brightness = 220 + brightVariation * 35;
+                        starSize = 5 + sizeVariation * 5; // 5-10 pixels
                         hasHalo = true;
-                    } else if (brightNoise > 0.92) {
-                        // Very bright stars
-                        brightness = 200 + brightVariation * 40;
-                        starSize = 2 + sizeVariation * 2.5; // 2-4.5 pixels
-                        hasHalo = haloChance > 0.3; // 70% chance of halo
                     } else if (brightNoise > 0.8) {
-                        // Bright stars
-                        brightness = 150 + brightVariation * 60;
-                        starSize = 1.2 + sizeVariation * 2; // 1.2-3.2 pixels
-                        hasHalo = haloChance > 0.8; // 20% chance of halo
+                        // Very bright stars (20% chance)
+                        brightness = 180 + brightVariation * 60;
+                        starSize = 3 + sizeVariation * 3; // 3-6 pixels
+                        hasHalo = haloChance > 0.3; // 70% chance of halo
                     } else if (brightNoise > 0.6) {
+                        // Bright stars (40% chance)
+                        brightness = 130 + brightVariation * 70;
+                        starSize = 1.5 + sizeVariation * 2.5; // 1.5-4 pixels
+                        hasHalo = haloChance > 0.7; // 30% chance of halo
+                    } else if (brightNoise > 0.4) {
                         // Medium stars
-                        brightness = 100 + brightVariation * 60;
+                        brightness = 90 + brightVariation * 60;
                         starSize = 0.8 + sizeVariation * 1.5; // 0.8-2.3 pixels
                     } else {
                         // Dim background stars
-                        brightness = 40 + brightVariation * 80;
-                        starSize = 0.3 + sizeVariation * 1.2; // 0.3-1.5 pixels
+                        brightness = 30 + brightVariation * 80;
+                        starSize = 0.3 + sizeVariation * 1; // 0.3-1.3 pixels
                     }
                     
                     // In clusters, boost brightness and size slightly
@@ -1804,14 +1860,30 @@ checkProjectileCollisions() {
                     
                     // Draw halo first (behind star)
                     if (hasHalo) {
-                        const haloSize = starSize * (starSize > 5 ? 4 : 3); // Bigger halos for giant stars
-                        const haloAlpha = Math.min(120, brightness * 0.2); // Brighter halos
+                        const haloSize = starSize * (starSize > 8 ? 6 : starSize > 5 ? 5 : 4); // Massive halos for giant stars
+                        const haloAlpha = Math.min(150, brightness * 0.35); // Much brighter and more visible halos
                         
-                        // Multi-layer halo for giant stars
+                        // Multi-layer halo system for dramatic effect
+                        if (starSize > 8) {
+                            // Ultra-wide outer halo for massive stars
+                            const ultraHaloSize = haloSize * 2.5;
+                            const ultraAlpha = haloAlpha * 0.15;
+                            
+                            const colorType = noise(starX * 0.01, starY * 0.01);
+                            if (colorType > 0.8) {
+                                fill(brightness, brightness * 0.5, brightness * 0.3, ultraAlpha); // Red ultra halo
+                            } else if (colorType > 0.6) {
+                                fill(brightness * 0.6, brightness * 0.7, brightness, ultraAlpha); // Blue ultra halo
+                            } else {
+                                fill(brightness, brightness, brightness, ultraAlpha); // White ultra halo
+                            }
+                            ellipse(starX, starY, ultraHaloSize, ultraHaloSize);
+                        }
+                        
                         if (starSize > 5) {
                             // Outer halo layer
-                            const outerHaloSize = haloSize * 1.5;
-                            const outerAlpha = haloAlpha * 0.3;
+                            const outerHaloSize = haloSize * 1.8;
+                            const outerAlpha = haloAlpha * 0.4;
                             
                             const colorType = noise(starX * 0.01, starY * 0.01);
                             if (colorType > 0.8) {
@@ -1824,7 +1896,7 @@ checkProjectileCollisions() {
                             ellipse(starX, starY, outerHaloSize, outerHaloSize);
                         }
                         
-                        // Main halo
+                        // Main halo - much brighter
                         const colorType = noise(starX * 0.01, starY * 0.01);
                         if (colorType > 0.8) {
                             fill(brightness, brightness * 0.6, brightness * 0.4, haloAlpha); // Red halo
@@ -1834,22 +1906,44 @@ checkProjectileCollisions() {
                             fill(brightness, brightness, brightness, haloAlpha); // White halo
                         }
                         ellipse(starX, starY, haloSize, haloSize);
+                        
+                        // Inner glow for massive stars
+                        if (starSize > 8) {
+                            const innerGlow = starSize * 2;
+                            const innerAlpha = haloAlpha * 0.6;
+                            fill(brightness, brightness, brightness, innerAlpha);
+                            ellipse(starX, starY, innerGlow, innerGlow);
+                        }
                     }
                     
-                    // Draw the main star
+                    // Draw the main star with enhanced colors
                     const colorType = noise(starX * 0.01, starY * 0.01);
-                    if (brightNoise > 0.96) {
-                        // Rare colored giant stars
-                        if (colorType > 0.75) {
-                            fill(brightness, brightness * 0.7, brightness * 0.5); // Red giant
-                        } else if (colorType > 0.5) {
-                            fill(brightness * 0.8, brightness * 0.9, brightness); // Blue-white
-                        } else if (colorType > 0.25) {
-                            fill(brightness, brightness * 0.9, brightness * 0.6); // Yellow giant
+                    
+                    if (starSize > 8) {
+                        // Ultra massive stars get special dramatic colors
+                        if (colorType > 0.85) {
+                            fill(brightness, brightness * 0.4, brightness * 0.2); // Deep red supergiant
+                        } else if (colorType > 0.7) {
+                            fill(brightness * 0.6, brightness * 0.7, brightness); // Brilliant blue supergiant
+                        } else if (colorType > 0.55) {
+                            fill(brightness, brightness * 0.8, brightness * 0.3); // Golden supergiant
+                        } else if (colorType > 0.4) {
+                            fill(brightness * 0.9, brightness * 0.6, brightness); // Purple supergiant
                         } else {
-                            fill(brightness); // White
+                            fill(brightness, brightness, brightness); // Blazing white supergiant
                         }
-                    } else if (brightNoise > 0.9 && isCluster) {
+                    } else if (brightNoise > 0.9) {
+                        // Large bright stars get rich colors
+                        if (colorType > 0.75) {
+                            fill(brightness, brightness * 0.6, brightness * 0.4); // Red giant
+                        } else if (colorType > 0.5) {
+                            fill(brightness * 0.7, brightness * 0.8, brightness); // Blue-white giant
+                        } else if (colorType > 0.25) {
+                            fill(brightness, brightness * 0.9, brightness * 0.5); // Yellow giant
+                        } else {
+                            fill(brightness, brightness, brightness); // White giant
+                        }
+                    } else if (brightNoise > 0.8 && isCluster) {
                         // Cluster stars get more color variety
                         if (colorType > 0.6) {
                             fill(brightness * 0.9, brightness * 0.8, brightness); // Blue cluster star
@@ -1862,6 +1956,28 @@ checkProjectileCollisions() {
                     }
                     
                     ellipse(starX, starY, starSize, starSize);
+                }
+            }
+        }
+        
+        // Add fallback sparse background stars to fill any remaining dark areas
+        // This ensures complete coverage even with the irregular tile system
+        const fallbackTileSize = 400; // Smaller, regular tiles for background coverage
+        for (let x = Math.floor(left / fallbackTileSize) * fallbackTileSize; x < right; x += fallbackTileSize) {
+            for (let y = Math.floor(top / fallbackTileSize) * fallbackTileSize; y < bottom; y += fallbackTileSize) {
+                // Very sparse background stars (3-7 per tile)
+                const bgStars = Math.floor(noise(x * 0.0007, y * 0.0007, this.systemIndex * 0.2) * 4 + 3);
+                
+                for (let i = 0; i < bgStars; i++) {
+                    const bgX = x + noise(x * 0.002 + i * 67.89) * fallbackTileSize;
+                    const bgY = y + noise(y * 0.002 + i * 43.21) * fallbackTileSize;
+                    
+                    // Only very dim background stars
+                    const bgBrightness = 20 + noise(bgX * 0.01, bgY * 0.01) * 40; // 20-60 brightness
+                    const bgSize = 0.2 + noise(bgX * 0.015, bgY * 0.015) * 0.6; // 0.2-0.8 pixels
+                    
+                    fill(bgBrightness);
+                    ellipse(bgX, bgY, bgSize, bgSize);
                 }
             }
         }
