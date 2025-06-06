@@ -20,11 +20,7 @@ class Galaxy {
     };
     // --- End Static Definition ---
 
-    constructor() {
-        this.systems = [];
-        this.currentSystemIndex = 0;
-        console.log("Galaxy constructor: Initialized systems array and currentSystemIndex");
-    }
+    // ... (constructor remains the same) ...
 
     initGalaxySystems(globalSessionSeed) { // Add globalSessionSeed parameter
         console.log(">>> Galaxy.initGalaxySystems() called for procedural generation.");
@@ -167,19 +163,6 @@ class Galaxy {
         }
 
         console.log("<<< Galaxy.initGalaxySystems() finished procedural generation.");
-        
-        // Add detailed debugging
-        console.log("=== DEBUGGING GALAXY SYSTEMS STATE ===");
-        console.log("this.systems:", this.systems);
-        console.log("this.systems.length:", this.systems.length);
-        console.log("this.currentSystemIndex:", this.currentSystemIndex);
-        console.log("typeof this.systems:", typeof this.systems);
-        console.log("Array.isArray(this.systems):", Array.isArray(this.systems));
-        if (this.systems && this.systems.length > 0) {
-            console.log("First system:", this.systems[0]);
-            console.log("First system name:", this.systems[0]?.name);
-        }
-        console.log("=== END DEBUGGING ===");
     }
 
     /**
@@ -266,20 +249,6 @@ class Galaxy {
      * @returns {StarSystem|null} The current StarSystem object or null.
      */
     getCurrentSystem() {
-        // Add debugging at the start
-        console.log("=== getCurrentSystem() called ===");
-        console.log("this.systems:", this.systems);
-        console.log("this.systems.length:", this.systems ? this.systems.length : "systems is null/undefined");
-        console.log("this.currentSystemIndex:", this.currentSystemIndex);
-        console.log("typeof this.systems:", typeof this.systems);
-        console.log("Array.isArray(this.systems):", Array.isArray(this.systems));
-        
-        // Check if systems array exists at all
-        if (!this.systems) {
-            console.error("getCurrentSystem: this.systems is null or undefined!");
-            return null;
-        }
-        
         // Check index bounds first
         if (this.currentSystemIndex < 0 || this.currentSystemIndex >= this.systems.length) {
             console.error(`getCurrentSystem: currentSystemIndex (${this.currentSystemIndex}) is out of bounds for systems array (length ${this.systems.length}).`);
@@ -291,7 +260,6 @@ class Galaxy {
              console.error(`getCurrentSystem: System object at index ${this.currentSystemIndex} is null or undefined.`);
              return null;
         }
-        console.log("getCurrentSystem returning:", system);
         return system;
     }
 
