@@ -1713,249 +1713,229 @@ checkProjectileCollisions() {
 
     /** Draws background stars using fast procedural generation. */
     drawBackground(cameraX = 0, cameraY = 0) {
-        // This method only renders the starfield background
-        // Nebulae and cosmic storms are drawn via their class instances in the main draw() method
+        // ULTRA-EFFICIENT HASH-BASED STARFIELD RENDERER
+        // Uses simple hash functions instead of expensive noise for maximum performance
         
-        // Calculate visible area with margin for smooth scrolling
-        const margin = 300;
+        // Calculate visible area with small margin
+        const margin = 200;
         const left = cameraX - width / 2 - margin;
         const right = cameraX + width / 2 + margin;
         const top = cameraY - height / 2 - margin;
         const bottom = cameraY + height / 2 + margin;
         
-        noStroke();
+        // Load pixels for direct manipulation
+        loadPixels();
         
-        // Use much larger, irregular tiles to eliminate grid patterns
-        const baseTileSize = 1200; // Much larger base tile size
+        // EFFICIENT HASH-BASED STAR GENERATION with organic variation
+        const baseSpacing = 80; // Base grid spacing
         
-        // Use system seed for consistent star placement
-        noiseSeed(this.systemIndex * 1337);
+        // Calculate grid bounds with smooth boundaries
+        const gridLeft = Math.floor(left / baseSpacing) * baseSpacing;
+        const gridTop = Math.floor(top / baseSpacing) * baseSpacing;
         
-        // Use overlapping tiles to ensure complete coverage without gaps
-        const tileSpacing = baseTileSize * 0.6; // Overlap tiles significantly to prevent gaps
-        
-        for (let tileX = Math.floor(left / tileSpacing) * tileSpacing; tileX < right + baseTileSize; tileX += tileSpacing) {
-            for (let tileY = Math.floor(top / tileSpacing) * tileSpacing; tileY < bottom + baseTileSize; tileY += tileSpacing) {
+        for (let x = gridLeft; x < right + baseSpacing; x += baseSpacing) {
+            for (let y = gridTop; y < bottom + baseSpacing; y += baseSpacing) {
                 
-                // Add randomized tile size variation to break grid patterns
-                const tileSizeVariation = noise(tileX * 0.0001, tileY * 0.0001) * 400 + 1000; // 1000-1400 pixels
-                const tileOffsetX = noise(tileX * 0.0002, tileY * 0.0002) * 300 - 150; // -150 to +150 offset (reduced)
-                const tileOffsetY = noise(tileX * 0.0002 + 100, tileY * 0.0002 + 100) * 300 - 150;
+                // Add FAST organic grid irregularity using hash
+                const gridSeed = this.simpleHash(x * 67 + y * 41 + this.systemIndex * 999);
+                const offsetX = ((gridSeed % 100) - 50) * 0.6; // ±30 pixel offset
+                const offsetY = (((gridSeed >> 8) % 100) - 50) * 0.6; // ±30 pixel offset
+                const actualX = x + offsetX;
+                const actualY = y + offsetY;
                 
-                const actualTileX = tileX + tileOffsetX;
-                const actualTileY = tileY + tileOffsetY;
-                const actualTileSize = tileSizeVariation;
+                // FAST HASH-BASED STAR GENERATION with cluster variation
+                const cellSeed = this.simpleHash(actualX * 73 + actualY * 37 + this.systemIndex * 1337);
                 
-                // === STAR GENERATION ===
+                // Create clusters by varying star count based on position
+                const clusterSeed = this.simpleHash((x >> 7) * 127 + (y >> 7) * 89 + this.systemIndex * 777);
+                const isCluster = (clusterSeed % 100) > 85; // 15% chance of clusters
                 
-                // Check for dense star clusters (rare but dramatic)
-                const clusterNoise = noise(actualTileX * 0.0005, actualTileY * 0.0005, this.systemIndex * 0.05);
-                const isCluster = clusterNoise > 0.8; // 20% chance of dense cluster (increased for more density)
-                
-                // Base number of stars, increased for denser starfield
-                const tileNoise = noise(actualTileX * 0.001, actualTileY * 0.001, this.systemIndex * 0.1);
                 let numStars;
                 if (isCluster) {
-                    numStars = Math.floor(tileNoise * 300 + 35); // 300-80 stars in cluster (increased density)
+                    numStars = 6 + (cellSeed % 8); // 6-13 stars in clusters
                 } else {
-                    numStars = Math.floor(tileNoise * 200 + 12); // 200-40 normal stars (increased density)
+                    numStars = 2 + (cellSeed % 5); // 2-6 normal stars
                 }
                 
-                // Generate individual stars within this irregular tile
                 for (let i = 0; i < numStars; i++) {
-                    // Use multiple noise calls for different star properties with tile-specific seeds
-                    const starX = actualTileX + noise(actualTileX * 0.001 + i * 123.456) * actualTileSize;
-                    const starY = actualTileY + noise(actualTileY * 0.001 + i * 789.012) * actualTileSize;
+                    // Use simple hash functions for star position with organic spread
+                    const starSeed = this.simpleHash(cellSeed + i * 127);
+                    const starSeed2 = this.simpleHash(starSeed + 89);
+                    const starSeed3 = this.simpleHash(starSeed2 + 213);
                     
-                    // Enhanced brightness distribution with more variety
-                    const brightNoise = noise(starX * 0.003, starY * 0.003, i * 0.1);
-                    
-                    // Use deterministic noise for all random values to prevent flickering
-                    const brightVariation = noise(starX * 0.007, starY * 0.007, i * 0.3);
-                    const sizeVariation = noise(starX * 0.009, starY * 0.009, i * 0.7);
-                    const haloChance = noise(starX * 0.011, starY * 0.011, i * 1.1);
-                    
-                    let brightness, starSize, hasHalo = false;
-                    
-                    if (brightNoise > 0.96) {
-                        // Ultra massive giant stars (4% chance - much more common!)
-                        brightness = 250 + brightVariation * 5;
-                        starSize = 12 + sizeVariation * 8; // 12-20 pixels - HUGE!
-                        hasHalo = true;
-                    } else if (brightNoise > 0.95) {
-                        // Massive giant stars (5% chance)
-                        brightness = 240 + brightVariation * 15;
-                        starSize = 8 + sizeVariation * 6; // 8-14 pixels
-                        hasHalo = true;
-                    } else if (brightNoise > 0.9) {
-                        // Super bright giant stars (10% chance)
-                        brightness = 220 + brightVariation * 35;
-                        starSize = 5 + sizeVariation * 5; // 5-10 pixels
-                        hasHalo = true;
-                    } else if (brightNoise > 0.8) {
-                        // Very bright stars (20% chance)
-                        brightness = 180 + brightVariation * 60;
-                        starSize = 3 + sizeVariation * 3; // 3-6 pixels
-                        hasHalo = haloChance > 0.3; // 70% chance of halo
-                    } else if (brightNoise > 0.6) {
-                        // Bright stars (20% chance, reduced from 40%)
-                        brightness = 130 + brightVariation * 70;
-                        starSize = 1.5 + sizeVariation * 2.5; // 1.5-4 pixels
-                        hasHalo = haloChance > 0.7; // 30% chance of halo
-                    } else if (brightNoise > 0.35) {
-                        // Medium stars (25% chance)
-                        brightness = 90 + brightVariation * 60;
-                        starSize = 0.8 + sizeVariation * 1.5; // 0.8-2.3 pixels
-                    } else if (brightNoise > 0.15) {
-                        // Dim background stars (20% chance)
-                        brightness = 30 + brightVariation * 80;
-                        starSize = 0.3 + sizeVariation * 1; // 0.3-1.3 pixels
-                    } else {
-                        // Very dim dust stars (35% chance - new category for max density)
-                        brightness = 15 + brightVariation * 45; // 15-60 brightness
-                        starSize = 0.2 + sizeVariation * 0.6; // 0.2-0.8 pixels
-                    }
-                    
-                    // In clusters, boost brightness and size slightly
+                    // Create organic star distribution with varying spread
+                    let spread = baseSpacing;
                     if (isCluster) {
-                        brightness = Math.min(255, brightness * 1.2);
-                        starSize *= 1.1;
+                        spread = baseSpacing * 1.3; // Larger spread in clusters
                     }
                     
-                    // Draw halo first (behind star)
-                    if (hasHalo) {
-                        const haloSize = starSize * (starSize > 8 ? 6 : starSize > 5 ? 5 : 4); // Massive halos for giant stars
-                        const haloAlpha = Math.min(150, brightness * 0.35); // Much brighter and more visible halos
-                        
-                        // Multi-layer halo system for dramatic effect
-                        if (starSize > 8) {
-                            // Ultra-wide outer halo for massive stars
-                            const ultraHaloSize = haloSize * 2.5;
-                            const ultraAlpha = haloAlpha * 0.15;
+                    // Generate star position with organic distribution
+                    const baseOffsetX = (starSeed % 200) / 200 * spread - spread * 0.5;
+                    const baseOffsetY = (starSeed2 % 200) / 200 * spread - spread * 0.5;
+                    
+                    // Add small irregular displacement for organic feel
+                    const microOffsetX = ((starSeed3 % 100) - 50) * 0.3;
+                    const microOffsetY = (((starSeed3 >> 8) % 100) - 50) * 0.3;
+                    
+                    const starX = actualX + baseOffsetX + microOffsetX;
+                    const starY = actualY + baseOffsetY + microOffsetY;
+                    
+                    // Only render stars that are actually on screen
+                    const screenX = Math.round(starX - cameraX + width / 2);
+                    const screenY = Math.round(starY - cameraY + height / 2);
+                    
+                    if (screenX >= -1 && screenX < width + 1 && screenY >= -1 && screenY < height + 1) {                            // Fast star property calculation using hash
+                            const propSeed = this.simpleHash(starSeed + 234);
+                            const brightLevel = propSeed % 100;
                             
-                            const colorType = noise(starX * 0.01, starY * 0.01);
-                            if (colorType > 0.8) {
-                                fill(brightness, brightness * 0.5, brightness * 0.3, ultraAlpha); // Red ultra halo
-                            } else if (colorType > 0.6) {
-                                fill(brightness * 0.6, brightness * 0.7, brightness, ultraAlpha); // Blue ultra halo
-                            } else {
-                                fill(brightness, brightness, brightness, ultraAlpha); // White ultra halo
-                            }
-                            ellipse(starX, starY, ultraHaloSize, ultraHaloSize);
-                        }
-                        
-                        if (starSize > 5) {
-                            // Outer halo layer
-                            const outerHaloSize = haloSize * 1.8;
-                            const outerAlpha = haloAlpha * 0.4;
+                            let brightness, starSize, red, green, blue;
                             
-                            const colorType = noise(starX * 0.01, starY * 0.01);
-                            if (colorType > 0.8) {
-                                fill(brightness, brightness * 0.6, brightness * 0.4, outerAlpha); // Red outer halo
-                            } else if (colorType > 0.6) {
-                                fill(brightness * 0.7, brightness * 0.8, brightness, outerAlpha); // Blue outer halo
+                            // Boost brightness in clusters for more dramatic effect
+                            let brightnessMult = 1.0;
+                            if (isCluster) {
+                                brightnessMult = 1.3; // 30% brighter in clusters
+                            }                            if (brightLevel > 96) {
+                                // Giant stars (4%) - use ellipse for halos
+                                brightness = Math.floor((200 + (propSeed % 55)) * brightnessMult);
+                                starSize = 4 + (propSeed % 4); // 4-7 pixels
+                            
+                            // Simple color variation for giants
+                            const colorSeed = propSeed % 4;
+                            if (colorSeed === 0) {
+                                red = brightness; green = brightness * 0.6; blue = brightness * 0.4; // Red
+                            } else if (colorSeed === 1) {
+                                red = brightness * 0.7; green = brightness * 0.8; blue = brightness; // Blue
+                            } else if (colorSeed === 2) {
+                                red = brightness; green = brightness * 0.9; blue = brightness * 0.5; // Yellow
                             } else {
-                                fill(brightness, brightness, brightness, outerAlpha); // White outer halo
+                                red = green = blue = brightness; // White
                             }
-                            ellipse(starX, starY, outerHaloSize, outerHaloSize);
-                        }
-                        
-                        // Main halo - much brighter
-                        const colorType = noise(starX * 0.01, starY * 0.01);
-                        if (colorType > 0.8) {
-                            fill(brightness, brightness * 0.6, brightness * 0.4, haloAlpha); // Red halo
-                        } else if (colorType > 0.6) {
-                            fill(brightness * 0.7, brightness * 0.8, brightness, haloAlpha); // Blue halo
-                        } else {
-                            fill(brightness, brightness, brightness, haloAlpha); // White halo
-                        }
-                        ellipse(starX, starY, haloSize, haloSize);
-                        
-                        // Inner glow for massive stars
-                        if (starSize > 8) {
-                            const innerGlow = starSize * 2;
-                            const innerAlpha = haloAlpha * 0.6;
-                            fill(brightness, brightness, brightness, innerAlpha);
-                            ellipse(starX, starY, innerGlow, innerGlow);
+                            
+                            // Draw giant star with simple halo
+                            push();
+                            translate(-cameraX + width / 2, -cameraY + height / 2);
+                            noStroke();
+                            fill(red, green, blue, brightness * 0.2);
+                            ellipse(starX, starY, starSize * 3, starSize * 3);
+                            fill(red, green, blue);
+                            ellipse(starX, starY, starSize, starSize);
+                            pop();                            } else {
+                                // Regular stars - use fast pixel manipulation
+                                
+                                if (brightLevel > 85) {
+                                    // Bright stars (11%)
+                                    brightness = Math.floor((120 + (propSeed % 80)) * brightnessMult);
+                                    starSize = 2 + (propSeed % 2); // 2-3 pixels
+                                } else if (brightLevel > 60) {
+                                    // Medium stars (25%)
+                                    brightness = Math.floor((80 + (propSeed % 60)) * brightnessMult);
+                                    starSize = 1 + (propSeed % 2); // 1-2 pixels
+                                } else if (brightLevel > 30) {
+                                    // Dim stars (30%)
+                                    brightness = Math.floor((40 + (propSeed % 50)) * brightnessMult);
+                                    starSize = 1; // 1 pixel
+                                } else {
+                                    // Background dust (30%)
+                                    brightness = Math.floor((15 + (propSeed % 35)) * brightnessMult);
+                                    starSize = 1; // 1 pixel
+                                }
+                            
+                            // Simple color variation
+                            const colorType = (propSeed % 10);
+                            if (colorType === 0) {
+                                // Red tint (10%)
+                                red = brightness;
+                                green = brightness * 0.7;
+                                blue = brightness * 0.5;
+                            } else if (colorType === 1) {
+                                // Blue tint (10%)
+                                red = brightness * 0.8;
+                                green = brightness * 0.9;
+                                blue = brightness;
+                            } else if (colorType === 2) {
+                                // Yellow tint (10%)
+                                red = brightness;
+                                green = brightness * 0.9;
+                                blue = brightness * 0.6;
+                            } else {
+                                // White (70%)
+                                red = green = blue = brightness;
+                            }
+                            
+                            // Draw the star using fast pixel manipulation
+                            this.setPixelStar(screenX, screenY, red, green, blue, starSize);
                         }
                     }
-                    
-                    // Draw the main star with enhanced colors
-                    const colorType = noise(starX * 0.01, starY * 0.01);
-                    
-                    if (starSize > 8) {
-                        // Ultra massive stars get special dramatic colors
-                        if (colorType > 0.85) {
-                            fill(brightness, brightness * 0.4, brightness * 0.2); // Deep red supergiant
-                        } else if (colorType > 0.7) {
-                            fill(brightness * 0.6, brightness * 0.7, brightness); // Brilliant blue supergiant
-                        } else if (colorType > 0.55) {
-                            fill(brightness, brightness * 0.8, brightness * 0.3); // Golden supergiant
-                        } else if (colorType > 0.4) {
-                            fill(brightness * 0.9, brightness * 0.6, brightness); // Purple supergiant
-                        } else {
-                            fill(brightness, brightness, brightness); // Blazing white supergiant
-                        }
-                    } else if (brightNoise > 0.9) {
-                        // Large bright stars get rich colors
-                        if (colorType > 0.75) {
-                            fill(brightness, brightness * 0.6, brightness * 0.4); // Red giant
-                        } else if (colorType > 0.5) {
-                            fill(brightness * 0.7, brightness * 0.8, brightness); // Blue-white giant
-                        } else if (colorType > 0.25) {
-                            fill(brightness, brightness * 0.9, brightness * 0.5); // Yellow giant
-                        } else {
-                            fill(brightness, brightness, brightness); // White giant
-                        }
-                    } else if (brightNoise > 0.8 && isCluster) {
-                        // Cluster stars get more color variety
-                        if (colorType > 0.6) {
-                            fill(brightness * 0.9, brightness * 0.8, brightness); // Blue cluster star
-                        } else {
-                            fill(brightness); // White
-                        }
-                    } else {
-                        // Regular white/gray stars
-                        fill(brightness);
-                    }
-                    
-                    ellipse(starX, starY, starSize, starSize);
                 }
             }
         }
         
-        // Add fallback sparse background stars to fill any remaining dark areas
-        // This ensures complete coverage even with the irregular tile system
-        const fallbackTileSize = 400; // Smaller, regular tiles for background coverage
-        for (let x = Math.floor(left / fallbackTileSize) * fallbackTileSize; x < right; x += fallbackTileSize) {
-            for (let y = Math.floor(top / fallbackTileSize) * fallbackTileSize; y < bottom; y += fallbackTileSize) {
-                // Increased background star density (5-10 per tile for denser starfield)
-                const bgStars = Math.floor(noise(x * 0.0007, y * 0.0007, this.systemIndex * 0.2) * 5 + 5);
-                
-                for (let i = 0; i < bgStars; i++) {
-                    const bgX = x + noise(x * 0.002 + i * 67.89) * fallbackTileSize;
-                    const bgY = y + noise(y * 0.002 + i * 43.21) * fallbackTileSize;
+        // Update pixels to screen
+        updatePixels();
+    }
+    
+    // ULTRA-FAST simple hash function (much faster than noise)
+    simpleHash(x) {
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = (x >> 16) ^ x;
+        return Math.abs(x);
+    }
+    
+    // ULTRA-FAST pixel manipulation for colorful stars of different sizes
+    setPixelStar(x, y, red, green, blue, size = 1) {
+        // Direct pixel buffer manipulation - much faster than ellipse()
+        const pixelDensity = this._pixelDensity || 1;
+        
+        // Handle different star sizes efficiently
+        if (size === 1) {
+            // Single pixel star (fastest)
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                const index = 4 * ((y * width + x) * pixelDensity * pixelDensity);
+                pixels[index] = red;         // Red
+                pixels[index + 1] = green;   // Green  
+                pixels[index + 2] = blue;    // Blue
+                pixels[index + 3] = 255;     // Alpha
+            }
+        } else if (size === 2) {
+            // 2x2 pixel star with center bright, edges dimmer
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dy = 0; dy < 2; dy++) {
+                    const px = x + dx;
+                    const py = y + dy;
                     
-                    // Only very dim background stars
-                    const bgBrightness = 20 + noise(bgX * 0.01, bgY * 0.01) * 40; // 20-60 brightness
-                    const bgSize = 0.2 + noise(bgX * 0.015, bgY * 0.015) * 0.6; // 0.2-0.8 pixels
-                    
-                    fill(bgBrightness);
-                    ellipse(bgX, bgY, bgSize, bgSize);
+                    if (px >= 0 && px < width && py >= 0 && py < height) {
+                        const index = 4 * ((py * width + px) * pixelDensity * pixelDensity);
+                        const brightness = (dx === 0 && dy === 0) ? 1.0 : 0.7; // Center brighter
+                        
+                        pixels[index] = red * brightness;
+                        pixels[index + 1] = green * brightness;
+                        pixels[index + 2] = blue * brightness;
+                        pixels[index + 3] = 255;
+                    }
                 }
-                
-                // Add ultra-dim dust stars for maximum density (2-4 per tile)
-                const dustStars = Math.floor(noise(x * 0.0011, y * 0.0011, this.systemIndex * 0.3) * 2 + 2);
-                for (let i = 0; i < dustStars; i++) {
-                    const dustX = x + noise(x * 0.003 + i * 91.23) * fallbackTileSize;
-                    const dustY = y + noise(y * 0.003 + i * 54.67) * fallbackTileSize;
+            }
+        } else if (size === 3) {
+            // 3x3 pixel star with gradient
+            for (let dx = 0; dx < 3; dx++) {
+                for (let dy = 0; dy < 3; dy++) {
+                    const px = x + dx - 1; // Center the 3x3
+                    const py = y + dy - 1;
                     
-                    // Very faint dust-like stars
-                    const dustBrightness = 10 + noise(dustX * 0.02, dustY * 0.02) * 25; // 10-35 brightness
-                    const dustSize = 0.1 + noise(dustX * 0.025, dustY * 0.025) * 0.3; // 0.1-0.4 pixels
-                    
-                    fill(dustBrightness);
-                    ellipse(dustX, dustY, dustSize, dustSize);
+                    if (px >= 0 && px < width && py >= 0 && py < height) {
+                        const index = 4 * ((py * width + px) * pixelDensity * pixelDensity);
+                        
+                        // Create gradient: center=1.0, edges=0.4, corners=0.2
+                        let brightness;
+                        if (dx === 1 && dy === 1) brightness = 1.0;      // Center
+                        else if (dx === 1 || dy === 1) brightness = 0.6; // Edges
+                        else brightness = 0.3;                           // Corners
+                        
+                        pixels[index] = red * brightness;
+                        pixels[index + 1] = green * brightness;
+                        pixels[index + 2] = blue * brightness;
+                        pixels[index + 3] = 255;
+                    }
                 }
             }
         }
