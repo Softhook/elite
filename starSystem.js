@@ -1750,15 +1750,15 @@ checkProjectileCollisions() {
                 
                 // Check for dense star clusters (rare but dramatic)
                 const clusterNoise = noise(actualTileX * 0.0005, actualTileY * 0.0005, this.systemIndex * 0.05);
-                const isCluster = clusterNoise > 0.85; // 15% chance of dense cluster (increased from 8%)
+                const isCluster = clusterNoise > 0.8; // 20% chance of dense cluster (increased for more density)
                 
-                // Base number of stars, adjusted for overlapping tiles to prevent over-density
+                // Base number of stars, increased for denser starfield
                 const tileNoise = noise(actualTileX * 0.001, actualTileY * 0.001, this.systemIndex * 0.1);
                 let numStars;
                 if (isCluster) {
-                    numStars = Math.floor(tileNoise * 35 + 25); // 25-60 stars in cluster (reduced for overlap)
+                    numStars = Math.floor(tileNoise * 300 + 35); // 300-80 stars in cluster (increased density)
                 } else {
-                    numStars = Math.floor(tileNoise * 20 + 8); // 8-28 normal stars (reduced for overlap)
+                    numStars = Math.floor(tileNoise * 200 + 12); // 200-40 normal stars (increased density)
                 }
                 
                 // Generate individual stars within this irregular tile
@@ -1777,8 +1777,8 @@ checkProjectileCollisions() {
                     
                     let brightness, starSize, hasHalo = false;
                     
-                    if (brightNoise > 0.98) {
-                        // Ultra massive giant stars (2% chance - much more common!)
+                    if (brightNoise > 0.96) {
+                        // Ultra massive giant stars (4% chance - much more common!)
                         brightness = 250 + brightVariation * 5;
                         starSize = 12 + sizeVariation * 8; // 12-20 pixels - HUGE!
                         hasHalo = true;
@@ -1798,18 +1798,22 @@ checkProjectileCollisions() {
                         starSize = 3 + sizeVariation * 3; // 3-6 pixels
                         hasHalo = haloChance > 0.3; // 70% chance of halo
                     } else if (brightNoise > 0.6) {
-                        // Bright stars (40% chance)
+                        // Bright stars (20% chance, reduced from 40%)
                         brightness = 130 + brightVariation * 70;
                         starSize = 1.5 + sizeVariation * 2.5; // 1.5-4 pixels
                         hasHalo = haloChance > 0.7; // 30% chance of halo
-                    } else if (brightNoise > 0.4) {
-                        // Medium stars
+                    } else if (brightNoise > 0.35) {
+                        // Medium stars (25% chance)
                         brightness = 90 + brightVariation * 60;
                         starSize = 0.8 + sizeVariation * 1.5; // 0.8-2.3 pixels
-                    } else {
-                        // Dim background stars
+                    } else if (brightNoise > 0.15) {
+                        // Dim background stars (20% chance)
                         brightness = 30 + brightVariation * 80;
                         starSize = 0.3 + sizeVariation * 1; // 0.3-1.3 pixels
+                    } else {
+                        // Very dim dust stars (35% chance - new category for max density)
+                        brightness = 15 + brightVariation * 45; // 15-60 brightness
+                        starSize = 0.2 + sizeVariation * 0.6; // 0.2-0.8 pixels
                     }
                     
                     // In clusters, boost brightness and size slightly
@@ -1925,8 +1929,8 @@ checkProjectileCollisions() {
         const fallbackTileSize = 400; // Smaller, regular tiles for background coverage
         for (let x = Math.floor(left / fallbackTileSize) * fallbackTileSize; x < right; x += fallbackTileSize) {
             for (let y = Math.floor(top / fallbackTileSize) * fallbackTileSize; y < bottom; y += fallbackTileSize) {
-                // Very sparse background stars (3-7 per tile)
-                const bgStars = Math.floor(noise(x * 0.0007, y * 0.0007, this.systemIndex * 0.2) * 4 + 3);
+                // Increased background star density (5-10 per tile for denser starfield)
+                const bgStars = Math.floor(noise(x * 0.0007, y * 0.0007, this.systemIndex * 0.2) * 5 + 5);
                 
                 for (let i = 0; i < bgStars; i++) {
                     const bgX = x + noise(x * 0.002 + i * 67.89) * fallbackTileSize;
@@ -1938,6 +1942,20 @@ checkProjectileCollisions() {
                     
                     fill(bgBrightness);
                     ellipse(bgX, bgY, bgSize, bgSize);
+                }
+                
+                // Add ultra-dim dust stars for maximum density (2-4 per tile)
+                const dustStars = Math.floor(noise(x * 0.0011, y * 0.0011, this.systemIndex * 0.3) * 2 + 2);
+                for (let i = 0; i < dustStars; i++) {
+                    const dustX = x + noise(x * 0.003 + i * 91.23) * fallbackTileSize;
+                    const dustY = y + noise(y * 0.003 + i * 54.67) * fallbackTileSize;
+                    
+                    // Very faint dust-like stars
+                    const dustBrightness = 10 + noise(dustX * 0.02, dustY * 0.02) * 25; // 10-35 brightness
+                    const dustSize = 0.1 + noise(dustX * 0.025, dustY * 0.025) * 0.3; // 0.1-0.4 pixels
+                    
+                    fill(dustBrightness);
+                    ellipse(dustX, dustY, dustSize, dustSize);
                 }
             }
         }
