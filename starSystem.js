@@ -1713,6 +1713,9 @@ checkProjectileCollisions() {
 
     /** Draws background stars using fast procedural generation. */
     drawBackground(cameraX = 0, cameraY = 0) {
+        // This method only renders the starfield background
+        // Nebulae and cosmic storms are drawn via their class instances in the main draw() method
+        
         // Calculate visible area with margin for smooth scrolling
         const margin = 300;
         const left = cameraX - width / 2 - margin;
@@ -1743,50 +1746,7 @@ checkProjectileCollisions() {
                 const actualTileY = tileY + tileOffsetY;
                 const actualTileSize = tileSizeVariation;
                 
-                // === SPACE PHENOMENA GENERATION ===
-                
-                // Check for massive nebula clouds (3% chance)
-                const nebulaChance = noise(actualTileX * 0.0003, actualTileY * 0.0003, this.systemIndex * 0.02);
-                if (nebulaChance > 0.97) {
-                    const nebulaSize = 200 + noise(actualTileX * 0.002, actualTileY * 0.002) * 300; // 200-500 pixels
-                    const nebulaAlpha = 15 + noise(actualTileX * 0.004, actualTileY * 0.004) * 25; // 15-40 alpha
-                    const nebulaColor = noise(actualTileX * 0.006, actualTileY * 0.006);
-                    
-                    if (nebulaColor > 0.8) {
-                        fill(255, 100, 150, nebulaAlpha); // Pink nebula
-                    } else if (nebulaColor > 0.6) {
-                        fill(100, 150, 255, nebulaAlpha); // Blue nebula
-                    } else if (nebulaColor > 0.4) {
-                        fill(150, 255, 150, nebulaAlpha); // Green nebula
-                    } else {
-                        fill(255, 200, 100, nebulaAlpha); // Orange nebula
-                    }
-                    
-                    const nebulaX = actualTileX + actualTileSize * 0.5;
-                    const nebulaY = actualTileY + actualTileSize * 0.5;
-                    ellipse(nebulaX, nebulaY, nebulaSize, nebulaSize * 0.7);
-                }
-                
-                // Check for stellar storm effects (1% chance)
-                const stormChance = noise(actualTileX * 0.0002, actualTileY * 0.0002, this.systemIndex * 0.03);
-                if (stormChance > 0.99) {
-                    const stormX = actualTileX + actualTileSize * 0.5;
-                    const stormY = actualTileY + actualTileSize * 0.5;
-                    const stormSize = 150 + noise(actualTileX * 0.003, actualTileY * 0.003) * 200;
-                    
-                    // Draw multiple lightning-like effects
-                    for (let s = 0; s < 5; s++) {
-                        const angle = noise(actualTileX * 0.01 + s * 0.5, actualTileY * 0.01) * TWO_PI;
-                        const length = 50 + noise(actualTileX * 0.02 + s, actualTileY * 0.02) * 100;
-                        const endX = stormX + cos(angle) * length;
-                        const endY = stormY + sin(angle) * length;
-                        
-                        strokeWeight(2 + noise(s * 10) * 3);
-                        stroke(255, 255, 100, 80 + noise(s * 20) * 100);
-                        line(stormX, stormY, endX, endY);
-                    }
-                    noStroke();
-                }
+                // === STAR GENERATION ===
                 
                 // Check for dense star clusters (rare but dramatic)
                 const clusterNoise = noise(actualTileX * 0.0005, actualTileY * 0.0005, this.systemIndex * 0.05);
