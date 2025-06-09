@@ -6,12 +6,12 @@
 // --- Global Constants ---
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
-const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
-let globalSessionSeed; 
 
 // --- Global Variables ---
 let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, saveSelectionScreen;
 let loadGameWasSuccessful = false;
+window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
+let globalSessionSeed; // Declaration for the session seed
 // --- End Global Variables ---
 
 // --- p5.js Setup Function ---
@@ -427,87 +427,102 @@ function mouseWheel(event) {
 
 // --- Save/Load Functionality ---
 function saveGame() {
-    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
-        try {
-            if (player.hull <= 0) {
-                console.warn("Cannot save game: Player is dead!");
-                return false;
-            }
-            
-            // Fix for station docking position issue:
-            // If player is DOCKED or in any station sub-menu, ensure position is exactly at the station
-            const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_POLICE"];
-            if (stationStates.includes(gameStateManager.currentState)) {
-                const currentSystem = galaxy?.getCurrentSystem();
-                if (currentSystem && currentSystem.station && currentSystem.station.pos) {
-                    // Snap player position to station position before saving
-                    player.pos = currentSystem.station.pos.copy();
-                    player.vel.set(0, 0); // Ensure velocity is zero
-                    console.log("SaveGame: Adjusted player position to match station position");
-                }
-            }
-            
+    try {
+        if (typeof(Storage) !== "undefined") {
+            const currentSlotIndex = window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0;
+            const saveKey = SAVE_KEY_PREFIX + currentSlotIndex;
+
             const saveData = {
                 playerData: player.getSaveData(),
                 galaxyData: galaxy.getSaveData(),
                 currentSystemIndex: galaxy.currentSystemIndex
+                // currentView: { ...uiManager.currentView } // Consider what to save from currentView
             };
-            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-        } catch (e) {
-            showCriticalError("Error saving game: " + e.message);
-            console.error("Error saving game:", e);
+            localStorage.setItem(saveKey, JSON.stringify(saveData));
+            console.log(`Game saved to slot ${currentSlotIndex} (Key: ${saveKey})`);
+            
+            // Refresh save previews in SaveSelectionScreen
+            // Check if saveSelectionScreen instance exists and has the method
+            if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.loadAllSavePreviews === 'function') {
+                saveSelectionScreen.loadAllSavePreviews(); 
+            } else if (window.saveScreen && typeof window.saveScreen.loadAllSavePreviews === 'function') {
+                 // Fallback for older potential global reference, though direct reference is better
+                window.saveScreen.loadAllSavePreviews();
+            }
+
+        } else {
+            console.warn("localStorage is not supported. Game cannot be saved.");
         }
-    } else {
-        showCriticalError("Could not save game (LocalStorage missing or objects not ready).");
-        console.warn("Could not save game (LocalStorage missing or objects not ready).");
+    } catch (e) {
+        console.error("Error saving game:", e);
     }
 }
 
-function loadGame() {
-    loadGameWasSuccessful = false;
-    if (typeof(Storage) !== "undefined" && player && galaxy && gameStateManager) {
-        const savedDataString = localStorage.getItem(SAVE_KEY);
-        if (savedDataString) {
-            try {
-                const saveData = JSON.parse(savedDataString);
-                console.log("Loading game data...");
-                if (saveData.playerData && saveData.playerData.hull <= 0) {
-                    console.warn("Save game contains dead player (hull = 0). Cannot load.");
+function loadGame(slotIndex) {
+    try {
+        if (typeof(Storage) !== "undefined") {
+            const keyToLoad = SAVE_KEY_PREFIX + (slotIndex !== undefined ? slotIndex : 0);
+            const savedDataString = localStorage.getItem(keyToLoad);
+            if (savedDataString) {
+                const savedData = JSON.parse(savedDataString);
+                
+                // 1. Restore Galaxy Data
+                if (savedData.galaxyData) {
+                    galaxy.loadSaveData(savedData.galaxyData); // This populates galaxy.systems
+                } else {
+                    console.error(`No galaxyData found in save file for slot ${slotIndex} (Key: ${keyToLoad})`);
+                    showCriticalError("Corrupt save: Missing galaxy data.");
                     return false;
                 }
-                if (saveData.galaxyData) {
-                    galaxy.loadSaveData(saveData.galaxyData);
+
+                // 2. Restore Current System Index
+                if (savedData.currentSystemIndex !== undefined) {
+                    // Validate index against loaded systems
+                    if (galaxy.systems && galaxy.systems.length > 0 &&
+                        (savedData.currentSystemIndex < 0 || savedData.currentSystemIndex >= galaxy.systems.length)) {
+                        console.error(`Invalid currentSystemIndex (${savedData.currentSystemIndex}) for loaded systems count (${galaxy.systems.length}) in slot ${slotIndex}.`);
+                        showCriticalError("Corrupt save: Invalid system index.");
+                        return false;
+                    }
+                    galaxy.currentSystemIndex = savedData.currentSystemIndex;
+                } else {
+                    // If galaxyData was supposed to provide systems, missing index is an error.
+                    if (galaxy.systems && galaxy.systems.length > 0) {
+                        console.error(`No currentSystemIndex found in save file for slot ${slotIndex}, but galaxy systems are present!`);
+                        showCriticalError("Corrupt save: Missing system index.");
+                        return false;
+                    }
+                    // If galaxy.systems is empty (e.g., galaxyData was empty/corrupt), this will be caught below.
                 }
-                // Ensure economy types are synchronized after loading
-                if (galaxy.systems) {
-                    galaxy.systems.forEach(system => {
-                        if (system && system.economyType) {
-                            system.setEconomyType(system.economyType);
-                            console.log(`Synchronized economy for ${system.name}: ${system.economyType}`);
-                        }
-                    });
-                }
-                if (saveData.playerData) {
-                    player.loadSaveData(saveData.playerData);
-                }
+
+                // 3. Check if galaxy systems are populated BEFORE loading player
                 if (!galaxy.systems || galaxy.systems.length === 0) {
-                    showCriticalError("Galaxy systems array is empty after loading save!");
-                    console.error("Galaxy systems array is empty after loading save!");
+                    showCriticalError("Galaxy systems array is empty AFTER attempting to load galaxy data!");
+                    console.error(`Galaxy systems array is empty AFTER attempting to load galaxy data from slot ${slotIndex}.`);
                     return false;
                 }
-                player.currentSystem = galaxy?.getCurrentSystem();
+                
+                // 4. Restore Player Data
+                if (savedData.playerData) {
+                    player.loadSaveData(savedData.playerData);
+                } else {
+                    console.error(`No playerData found in save file for slot ${slotIndex}.`);
+                    showCriticalError("Corrupt save: Missing player data.");
+                    return false;
+                }
+
+                // 5. Link Player to the (now loaded) Current System
+                player.currentSystem = galaxy.getCurrentSystem(); 
+
                 if (player.currentSystem) {
-                    player.currentSystem.player = player;
+                    player.currentSystem.player = player; // Link player object to the system instance
                     
                     // Fix for initial station positioning: 
-                    // Check if player position is far away from station but the system has one
                     if (player.currentSystem.station && player.currentSystem.station.pos) {
                         const distToStation = dist(player.pos.x, player.pos.y, 
                                                  player.currentSystem.station.pos.x, 
                                                  player.currentSystem.station.pos.y);
                         
-                        // If player is suspiciously far from station (may be a new game that saved without proper docking)
-                        // or if position appears to be invalid
                         if (distToStation > 10000 || isNaN(player.pos.x) || isNaN(player.pos.y)) {
                             console.warn("Player position appears invalid or too far from station. Repositioning near station.");
                             player.pos.set(player.currentSystem.station.pos.x + player.currentSystem.station.size + 100, 
@@ -521,27 +536,42 @@ function loadGame() {
                     }
                 } else {
                     showCriticalError("CRITICAL: Failed to link player to a valid currentSystem after load!");
-                    console.error("CRITICAL: Failed to link player to a valid currentSystem after load!");
+                    console.error(`CRITICAL: Failed to link player to a valid currentSystem after load! Index: ${galaxy.currentSystemIndex}, Systems count: ${galaxy.systems ? galaxy.systems.length : 'N/A'}, Slot: ${slotIndex}`);
                     return false;
                 }
-                loadGameWasSuccessful = true;
-                console.log("Game Loaded Successfully.");
-                return true;
-            } catch (e) {
-                showCriticalError("Error parsing or applying saved game data: " + e.message);
-                console.error("Error parsing or applying saved game data:", e);
-                return false;
+
+                // 6. Ensure economy types are synchronized after loading
+                if (galaxy.systems) {
+                    galaxy.systems.forEach(system => {
+                        if (system && system.economyType) {
+                            system.setEconomyType(system.economyType);
+                        }
+                    });
+                }
+                
+                // 7. Restore current view and other relevant states
+                if (savedData.currentView) {
+                    Object.assign(uiManager.currentView, savedData.currentView);
+                }
+                
+                window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
+                console.log(`Game loaded from slot ${window.activeSaveSlotIndex} (Key: ${keyToLoad})`);
+                return true; // Indicate success
+            } else {
+                console.warn(`No saved game found in slot ${slotIndex !== undefined ? slotIndex : 0} (Key: ${keyToLoad})`);
+                return false; // Indicate failure
             }
         } else {
-            console.log("No saved game found.");
-            return false;
+            console.warn("localStorage is not supported. Game cannot be loaded.");
+            return false; // Indicate failure
         }
-    } else {
-        showCriticalError("Could not load game (LocalStorage missing or objects not ready).");
-        console.warn("Could not load game (LocalStorage missing or objects not ready).");
-        return false;
+    } catch (e) {
+        console.error(`Error loading game from slot ${slotIndex}:`, e);
+        showCriticalError(`Error loading game. Check console.\\n${e.message}`);
+        return false; // Indicate failure
     }
 }
+
 // --- End Save/Load ---
 
 

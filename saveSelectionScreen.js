@@ -1,24 +1,28 @@
 // ****** saveSelectionScreen.js ******
 
+const NUM_SAVE_SLOTS = 3;
+const SAVE_KEY_PREFIX = "eliteP5_save_"; // Ensure this matches sketch.js
+
 class SaveSelectionScreen {
     constructor() {
-        this.selectedSlot = 0; // 0 = New Game, 1 = Saved Game (if exists)
-        this.maxSlots = 2; // New Game + 1 save slot for now
+        this.selectedOption = 0; // 0, 1, 2 for save slots; NUM_SAVE_SLOTS for rookie option
+        this.totalOptions = NUM_SAVE_SLOTS + 1;
         this.animationOffset = 0;
         this.buttonHoverEffects = [];
         
-        // Load saved game data for preview
-        this.savedGameData = null;
-        this.loadSavedGamePreview();
-
-        // If a saved game exists, make it the default selection
-        if (this.savedGameData) {
-            this.selectedSlot = 1;
-        }
+        this.savedGamePreviews = new Array(NUM_SAVE_SLOTS).fill(null);
+        this.loadAllSavePreviews();
         
         // Visual effects
         this.bgStars = [];
         this.initBackgroundStars();
+
+        // Bind methods to ensure 'this' context is correct when called by GameStateManager or other external callers
+        this.draw = this.draw.bind(this);
+        this.update = this.update.bind(this);
+        this.handleKeyPressed = this.handleKeyPressed.bind(this);
+        this.handleClick = this.handleClick.bind(this);
+        this.resize = this.resize.bind(this);
     }
     
     initBackgroundStars() {
@@ -35,21 +39,28 @@ class SaveSelectionScreen {
         }
     }
     
-    loadSavedGamePreview() {
-        try {
-            if (typeof(Storage) !== "undefined") {
-                const savedDataString = localStorage.getItem(SAVE_KEY);
+    loadAllSavePreviews() {
+        if (typeof(Storage) !== "undefined") {
+            for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
+                const savedDataString = localStorage.getItem(SAVE_KEY_PREFIX + i);
                 if (savedDataString) {
-                    this.savedGameData = JSON.parse(savedDataString);
-                    console.log("SaveSelectionScreen: Loaded save preview data");
+                    try {
+                        this.savedGamePreviews[i] = JSON.parse(savedDataString);
+                        console.log(`SaveSelectionScreen: Loaded preview for slot ${i} - data found.`);
+                    } catch (e) {
+                        console.error(`SaveSelectionScreen: Error parsing JSON for slot ${i} (Key: ${SAVE_KEY_PREFIX + i}). Treating as empty. Error:`, e);
+                        this.savedGamePreviews[i] = null; // Only this slot is null
+                        // Optional: localStorage.removeItem(SAVE_KEY_PREFIX + i); // to clear out bad data
+                    }
                 } else {
-                    this.savedGameData = null;
-                    console.log("SaveSelectionScreen: No saved game found");
+                    this.savedGamePreviews[i] = null;
+                    console.log(`SaveSelectionScreen: No saved game found for slot ${i}`);
                 }
             }
-        } catch (e) {
-            console.error("SaveSelectionScreen: Error loading save preview:", e);
-            this.savedGameData = null;
+        } else {
+            console.warn("SaveSelectionScreen: localStorage is not supported. Cannot load save previews.");
+            // If localStorage is not supported at all, all previews will be null.
+            this.savedGamePreviews = new Array(NUM_SAVE_SLOTS).fill(null);
         }
     }
     
@@ -59,7 +70,7 @@ class SaveSelectionScreen {
         
         // Update background star twinkling
         for (let star of this.bgStars) {
-            star.twinkle += deltaTime * 0.002;
+            star.twinkle += deltaTime * 0.002; // Consider using this.animationOffset for a more continuous effect if desired
         }
         
         // Update button hover effects
@@ -69,21 +80,7 @@ class SaveSelectionScreen {
             return effect.life > 0;
         });
     }
-    
-    draw() {
-        // Draw background
-        this.drawBackground();
-        
-        // Draw title
-        this.drawTitle();
-        
-        // Draw save slots
-        this.drawSaveSlots();
-        
-        // Draw instructions
-        this.drawInstructions();
-    }
-    
+
     drawBackground() {
         // Dark space background
         background(5, 5, 15);
@@ -92,62 +89,94 @@ class SaveSelectionScreen {
         push();
         noStroke();
         for (let star of this.bgStars) {
-            const twinkleAlpha = (sin(star.twinkle) * 0.3 + 0.7);
+            // Use this.animationOffset in the twinkle calculation for continuous animation
+            const twinkleAlpha = (sin(star.twinkle + this.animationOffset * 0.5) * 0.4 + 0.6); 
             fill(star.brightness * twinkleAlpha);
             ellipse(star.x, star.y, star.size);
         }
         pop();
         
-        // Subtle gradient overlay
+        // Subtle gradient overlay from top
         push();
-        for (let i = 0; i < height * 0.3; i++) {
-            const alpha = map(i, 0, height * 0.3, 0, 30);
-            stroke(10, 20, 40, alpha);
+        for (let i = 0; i < height * 0.4; i++) { // Increased gradient height
+            const alpha = map(i, 0, height * 0.4, 0, 35); // Slightly increased alpha
+            stroke(10, 15, 30, alpha); // Darker, bluer gradient
             line(0, i, width, i);
         }
         pop();
     }
-    
+
     drawTitle() {
         push();
         textAlign(CENTER, CENTER);
         
-        // Use the game font if available
-        if (font) {
+        if (typeof font !== 'undefined') {
             textFont(font);
         }
         
         // Main title
         textSize(48);
-        fill(200, 180, 255);
+        fill(210, 200, 255); // Slightly brighter purple
+        // Shadow for title
+        fill(0, 0, 0, 80);
+        text("COMMANDER", width/2 + 2, height * 0.15 + 2);
+        fill(210, 200, 255);
         text("COMMANDER", width/2, height * 0.15);
         
         // Subtitle
         textSize(24);
-        fill(150, 150, 200);
+        fill(160, 160, 210); // Slightly brighter blue/purple
+        // Shadow for subtitle
+        fill(0, 0, 0, 70);
+        text("Select Your Destiny", width/2 + 1, height * 0.22 + 1);
+        fill(160, 160, 210);
         text("Select Your Destiny", width/2, height * 0.22);
         
         pop();
     }
     
-    drawSaveSlots() {
-        const slotHeight = 120;
-        const slotWidth = width * 0.6;
-        const startY = height * 0.35;
-        const spacing = slotHeight + 20;
+    draw() {
+        // Draw background
+        this.drawBackground();
         
-        // Draw New Game slot
-        this.drawSlot(0, "NEW GAME", null, width/2 - slotWidth/2, startY, slotWidth, slotHeight);
+        // Draw title
+        this.drawTitle();
         
-        // Draw saved game slot if it exists
-        if (this.savedGameData) {
-            this.drawSlot(1, "CONTINUE", this.savedGameData, width/2 - slotWidth/2, startY + spacing, slotWidth, slotHeight);
-        } else {
-            this.drawEmptySlot(1, width/2 - slotWidth/2, startY + spacing, slotWidth, slotHeight);
+        // Draw save slots and rookie option
+        this.drawOptionsUI();
+        
+        // Draw instructions
+        this.drawInstructions();
+    }
+
+    drawOptionsUI() {
+        const slotHeight = 90; 
+        const slotWidth = width * 0.7;
+        const spacing = 15;
+        // Height for the 3 save slots
+        const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
+        const rookieOptionHeight = 60; 
+        // Total height for all UI elements (3 slots + 1 rookie option + spacing between groups)
+        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+
+        let startY = (height - totalUIHeight) / 2 + 20; 
+        if (startY < height * 0.25) startY = height * 0.25; // Ensure it's not too high, adjusted margin
+
+        // Draw the 3 save slots
+        for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
+            const currentSlotY = startY + i * (slotHeight + spacing);
+            const slotData = this.savedGamePreviews[i];
+            const title = slotData ? `CONTINUE (Slot ${i + 1})` : `NEW GAME (Slot ${i + 1})`;
+            this.drawSlot(i, title, slotData, width/2 - slotWidth/2, currentSlotY, slotWidth, slotHeight, this.selectedOption === i);
         }
+
+        // Draw the "Start New Rookie Pilot" option
+        const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0) ; // Position after all slots and their spacing
+        this.drawRookieOption(width/2 - slotWidth/2, rookieY, slotWidth, rookieOptionHeight, this.selectedOption === NUM_SAVE_SLOTS);
     }
     
-    drawSlot(slotIndex, title, data, x, y, w, h) {
+    // drawSlot signature changes: add isSelected parameter
+    drawSlot(slotIndex, title, data, x, y, w, h, isSelected) {
         push();
         
         // Use the game font if available
@@ -155,7 +184,7 @@ class SaveSelectionScreen {
             textFont(font);
         }
         
-        const isSelected = this.selectedSlot === slotIndex;
+        // const isSelected = this.selectedSlot === slotIndex; // This line is replaced by the parameter
         const hoverOffset = isSelected ? sin(this.animationOffset * 2) * 3 : 0;
         
         // Slot background
@@ -177,19 +206,19 @@ class SaveSelectionScreen {
         textAlign(LEFT, TOP);
         
         // Title
-        textSize(20);
+        textSize(18); // Slightly smaller for more slots
         fill(isSelected ? color(150, 200, 255) : color(120, 140, 180));
-        text(title, x + 20 + hoverOffset, y + 15);
+        text(title, x + 20 + hoverOffset, y + 10); // Adjusted y for title
 
         // Draw a star next to "CONTINUE" if it's a saved game slot
-        if (data && title === "CONTINUE") {
+        if (data && title.startsWith("CONTINUE")) {
             push();
             fill(255, 223, 0); // Gold color for the star
             noStroke();
             beginShape();
             const starX = x + textWidth(title) + 30 + hoverOffset; // Position after the title
-            const starY = y + 25; // Align with title
-            const starSize = 8;
+            const starY = y + 20; // Align with title
+            const starSize = 7; // Slightly smaller
             for (let i = 0; i < 5; i++) {
                 vertex(starX + cos(TWO_PI * i / 5 - HALF_PI) * starSize, starY + sin(TWO_PI * i / 5 - HALF_PI) * starSize);
                 vertex(starX + cos(TWO_PI * (i + 0.5) / 5 - HALF_PI) * starSize / 2, starY + sin(TWO_PI * (i + 0.5) / 5 - HALF_PI) * starSize / 2);
@@ -200,20 +229,22 @@ class SaveSelectionScreen {
         
         if (data) {
             // Show saved game details
-            textSize(14);
+            textSize(12); // Adjusted for smaller slot
             fill(isSelected ? color(200, 220, 255) : color(100, 120, 150));
             
             const playerData = data.playerData;
             const galaxyData = data.galaxyData;
             
+            let lineY = y + 35; // Start position for details
+            const lineSpacing = 18;
+
             if (playerData) {
-                // Credits
-                text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, x + 20 + hoverOffset, y + 45);
+                text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, x + 20 + hoverOffset, lineY);
+                lineY += lineSpacing;
                 
-                // Ship
-                text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, x + 20 + hoverOffset, y + 65);
+                text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, x + 20 + hoverOffset, lineY);
+                lineY += lineSpacing;
                 
-                // Current system (try to get from galaxy data)
                 let systemName = "Unknown System";
                 if (galaxyData && galaxyData.systems && data.currentSystemIndex !== undefined) {
                     const currentSystem = galaxyData.systems[data.currentSystemIndex];
@@ -221,49 +252,23 @@ class SaveSelectionScreen {
                         systemName = currentSystem.name;
                     }
                 }
-                text(`System: ${systemName}`, x + 20 + hoverOffset, y + 85);
+                text(`System: ${systemName}`, x + 20 + hoverOffset, lineY);
             }
             
-            // Ship silhouette on the right
             this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', 
-                                  x + w - 80 + hoverOffset, y + h/2, isSelected);
-        } else if (title === "NEW GAME") {
+                                  x + w - 70 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
+        } else if (title.startsWith("NEW GAME")) {
             // New game description
-            textSize(14);
+            textSize(12); // Adjusted for smaller slot
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
-            text("Begin a new adventure as a rookie pilot", x + 20 + hoverOffset, y + 45);
-            text("with a Sidewinder in a random system", x + 20 + hoverOffset, y + 65);
-            text("and 1000 credits", x + 20 + hoverOffset, y + 85);
+            let lineY = y + 35;
+            const lineSpacing = 18;
+            text("Begin a new adventure.", x + 20 + hoverOffset, lineY);
+            lineY += lineSpacing;
+            text("Sidewinder, 1000 CR.", x + 20 + hoverOffset, lineY);
             
-            // New game icon
-            this.drawNewGameIcon(x + w - 60 + hoverOffset, y + h/2, isSelected);
+            this.drawNewGameIcon(x + w - 50 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
         }
-        
-        pop();
-    }
-    
-    drawEmptySlot(slotIndex, x, y, w, h) {
-        push();
-        
-        // Use the game font if available
-        if (font) {
-            textFont(font);
-        }
-        
-        const isSelected = this.selectedSlot === slotIndex;
-        
-        // Empty slot appearance
-        stroke(40, 40, 60, 80);
-        strokeWeight(1);
-        fill(10, 15, 25, 50);
-        rect(x, y, w, h, 8);
-        
-        // Empty slot text
-        textAlign(CENTER, CENTER);
-        textSize(16);
-        fill(60, 70, 90);
-        text("No Saved Game", x + w/2, y + h/2 - 10);
-        text("(Game will be saved when you visit stations)", x + w/2, y + h/2 + 10);
         
         pop();
     }
@@ -319,6 +324,36 @@ class SaveSelectionScreen {
         pop();
     }
     
+    drawRookieOption(x, y, w, h, isSelected) {
+        push();
+        if (font) textFont(font);
+
+        const hoverOffset = isSelected ? sin(this.animationOffset * 2) * 3 : 0;
+
+        if (isSelected) {
+            stroke(100, 255, 100, 200); // Greenish glow for rookie
+            strokeWeight(3);
+            fill(20, 80, 40, 150);
+        } else {
+            stroke(80, 120, 80, 120);
+            strokeWeight(1);
+            fill(15, 45, 25, 100);
+        }
+        rect(x + hoverOffset, y, w, h, 8);
+
+        textAlign(CENTER, CENTER);
+        
+        fill(isSelected ? color(180, 255, 180) : color(120, 180, 120));
+        textSize(18);
+        text("START NEW ROOKIE PILOT", x + w/2 + hoverOffset, y + h/2 - 5); // Adjusted for two lines
+        
+        textSize(12);
+        fill(isSelected ? color(150, 200, 150) : color(100, 140, 100));
+        text("Sidewinder, 100 Credits, Fresh Start", x + w/2 + hoverOffset, y + h/2 + 15); // Second line
+
+        pop();
+    }
+
     drawInstructions() {
         push();
         textAlign(CENTER, CENTER);
@@ -338,14 +373,10 @@ class SaveSelectionScreen {
     
     handleKeyPressed(key, keyCode) {
         if (keyCode === UP_ARROW) {
-            this.selectedSlot = Math.max(0, this.selectedSlot - 1);
+            this.selectedOption = (this.selectedOption - 1 + this.totalOptions) % this.totalOptions;
             this.addHoverEffect();
         } else if (keyCode === DOWN_ARROW) {
-            // Only allow selection of slot 1 if saved game exists
-            // If no saved game, maxSlot is 0 (only "New Game" can be selected)
-            // If saved game exists, maxSlot is 1 ("New Game" or "Continue")
-            const maxSlot = this.savedGameData ? 1 : 0;
-            this.selectedSlot = Math.min(maxSlot, this.selectedSlot + 1);
+            this.selectedOption = (this.selectedOption + 1) % this.totalOptions;
             this.addHoverEffect();
         } else if (keyCode === ENTER) {
             this.confirmSelection();
@@ -358,55 +389,85 @@ class SaveSelectionScreen {
     }
     
     handleClick(mouseX, mouseY) {
-        const slotHeight = 120;
-        const slotWidth = width * 0.6;
-        const startY = height * 0.35;
-        const spacing = slotHeight + 20;
+        const slotHeight = 90;
+        const slotWidth = width * 0.7;
+        const spacing = 15;
+        const rookieOptionHeight = 60;
+        const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
+        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+        let startY = (height - totalUIHeight) / 2 + 20;
+        if (startY < height * 0.25) startY = height * 0.25;
+        
         const xPos = width/2 - slotWidth/2;
 
-        // Check click on New Game slot
-        if (mouseX >= xPos && mouseX <= xPos + slotWidth &&
-            mouseY >= startY && mouseY <= startY + slotHeight) {
-            this.selectedSlot = 0;
-            this.confirmSelection();
-            return;
-        }
-
-        // Check click on Continue slot (if it exists)
-        if (this.savedGameData) {
-            const continueY = startY + spacing;
+        // Check save slots
+        for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
+            const currentSlotY = startY + i * (slotHeight + spacing);
             if (mouseX >= xPos && mouseX <= xPos + slotWidth &&
-                mouseY >= continueY && mouseY <= continueY + slotHeight) {
-                this.selectedSlot = 1;
+                mouseY >= currentSlotY && mouseY <= currentSlotY + slotHeight) {
+                this.selectedOption = i;
                 this.confirmSelection();
                 return;
             }
         }
+
+        // Check rookie pilot option
+        const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0);
+        if (mouseX >= xPos && mouseX <= xPos + slotWidth &&
+            mouseY >= rookieY && mouseY <= rookieY + rookieOptionHeight) {
+            this.selectedOption = NUM_SAVE_SLOTS;
+            this.confirmSelection();
+            return;
+        }
     }
 
     addHoverEffect() {
-        // Add visual effect when selection changes
+        const slotHeight = 90;
+        const spacing = 15;
+        const rookieOptionHeight = 60;
+        const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
+        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+        let startY = (height - totalUIHeight) / 2 + 20;
+        if (startY < height * 0.25) startY = height * 0.25;
+
+        let effectY;
+        if (this.selectedOption < NUM_SAVE_SLOTS) {
+            // It's one of the save slots
+            effectY = startY + this.selectedOption * (slotHeight + spacing) + slotHeight / 2;
+        } else {
+            // It's the rookie pilot option
+            const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0);
+            effectY = rookieY + rookieOptionHeight / 2;
+        }
+
         this.buttonHoverEffects.push({
             x: width/2,
-            y: height * 0.35 + this.selectedSlot * 140,
+            y: effectY,
             size: 0,
             life: 1.0
         });
     }
     
     confirmSelection() {
-        if (this.selectedSlot === 0) {
-            // New Game
-            console.log("Starting new game...");
-            this.startNewGame();
-        } else if (this.selectedSlot === 1 && this.savedGameData) {
-            // Load saved game
-            console.log("Loading saved game...");
-            this.loadSavedGame();
+        if (this.selectedOption < NUM_SAVE_SLOTS) {
+            const slotIndex = this.selectedOption;
+            if (this.savedGamePreviews[slotIndex]) {
+                // Load saved game
+                console.log(`Loading saved game from slot ${slotIndex}...`);
+                this.loadSavedGame(slotIndex);
+            } else {
+                // New Game
+                console.log(`Starting new game in slot ${slotIndex}...`);
+                this.startNewGame(slotIndex);
+            }
+        } else if (this.selectedOption === NUM_SAVE_SLOTS) {
+            // Start New Rookie Pilot game
+            console.log("Attempting to start new rookie pilot game...");
+            this.startNewRookieGame();
         }
     }
     
-    startNewGame() {
+    startNewGame(slotIndex) {
         // Reset game state for new game
         if (player) {
             // Reset player to default new game state
@@ -441,26 +502,110 @@ class SaveSelectionScreen {
             }
         }
         
-        // Clear any existing save
-        localStorage.removeItem(SAVE_KEY);
+        // Clear any existing save in this specific slot
+        localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex);
+        window.activeSaveSlotIndex = slotIndex; // Set active slot for saving
         
         // Transition to game
         gameStateManager.setState("IN_FLIGHT");
     }
     
-    loadSavedGame() {
-        // Use existing loadGame function
-        const success = loadGame();
+    loadSavedGame(slotIndex) {
+        // Use existing global loadGame function, now expecting a slotIndex
+        const success = loadGame(slotIndex); // loadGame in sketch.js should handle setting activeSaveSlotIndex
         if (success) {
+            // window.activeSaveSlotIndex = slotIndex; // Already set by global loadGame
             gameStateManager.setState("IN_FLIGHT");
         } else {
-            console.error("Failed to load saved game");
-            // Could show error message or fallback to new game
+            console.error(`Failed to load saved game from slot ${slotIndex}`);
+            // Could show error message or fallback
+            // For now, let's try to load previews again in case something was cleared
+            this.loadAllSavePreviews(); // Ensure previews are up-to-date if load failed
+        }
+    }
+
+    startNewRookieGame() {
+        let chosenSlotIndex = -1;
+        // Try to find an empty slot
+        for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
+            if (!this.savedGamePreviews[i]) {
+                chosenSlotIndex = i;
+                break;
+            }
+        }
+        // If all slots are full, overwrite the first slot (index 0)
+        if (chosenSlotIndex === -1) {
+            chosenSlotIndex = 0;
+            console.warn(`All save slots full. Rookie game will overwrite slot ${chosenSlotIndex + 1}.`);
+        } else {
+            console.log(`New rookie game will use empty slot ${chosenSlotIndex + 1}.`);
+        }
+
+        // Reset player for rookie game
+        if (player) {
+            player.credits = 100; // Rookie credits
+            player.hull = player.maxHull; 
+            player.shield = player.maxShield; 
+            player.cargo = [];
+            player.kills = 0;
+            player.isWanted = false;
+            player.activeMission = null;
+            if (typeof player.applyShipDefinition === 'function') {
+                player.applyShipDefinition("Sidewinder"); 
+            } else {
+                console.error("player.applyShipDefinition is not a function. Cannot set ship for rookie.");
+            }
+            // Any other rookie-specific setup
+        } else {
+            console.error("Player object not found. Cannot start rookie game.");
+            return;
+        }
+
+        if (galaxy) {
+            globalSessionSeed = millis(); 
+            galaxy.initGalaxySystems(globalSessionSeed);
+
+            const startingSystem = galaxy.getCurrentSystem();
+            if (startingSystem && startingSystem.station && startingSystem.station.pos) {
+                player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100,
+                                 startingSystem.station.pos.y);
+                player.angle = PI;
+                player.currentSystem = startingSystem;
+                startingSystem.player = player; // Link player to system
+                if (typeof startingSystem.enterSystem === 'function') {
+                    startingSystem.enterSystem(player);
+                }
+
+
+                if (eventManager && typeof eventManager.initializeReferences === 'function') {
+                    eventManager.initializeReferences(startingSystem, player, uiManager);
+                }
+            } else {
+                console.error("Failed to set up starting system for rookie game.");
+                return; 
+            }
+        } else {
+            console.error("Galaxy object not found. Cannot start rookie game.");
+            return;
+        }
+
+        // Clear the chosen slot in localStorage
+        localStorage.removeItem(SAVE_KEY_PREFIX + chosenSlotIndex);
+        window.activeSaveSlotIndex = chosenSlotIndex; // Associate this game with the chosen slot
+
+        this.loadAllSavePreviews(); // Refresh previews as one slot is now effectively new/empty
+        
+        if (gameStateManager && typeof gameStateManager.setState === 'function') {
+            gameStateManager.setState("IN_FLIGHT");
+        } else {
+            console.error("GameStateManager not found. Cannot transition to in-flight state.");
         }
     }
     
     // Method to reinitialize stars when window is resized
     resize() {
         this.initBackgroundStars();
+        // Potentially re-calculate slot positions if they depend on width/height directly
+        // and are not recalculated in drawSaveSlots.
     }
 }
