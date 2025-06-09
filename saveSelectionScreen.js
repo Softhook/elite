@@ -291,23 +291,32 @@ class SaveSelectionScreen {
     }
     
     drawShipSilhouette(shipType, x, y, isSelected) {
+        //console.log(`drawShipSilhouette called for shipType: ${shipType} at x:${x}, y:${y}`);
         push();
         translate(x, y);
         
         const shipDef = SHIP_DEFINITIONS[shipType];
         if (shipDef && typeof shipDef.drawFunction === 'function') {
-            scale(0.3); // Small silhouette
-            fill(isSelected ? color(120, 180, 255, 150) : color(80, 100, 120, 100));
+            //console.log(`Using shipDef for ${shipType}. Attempting to draw ACTUAL ship with size: ${shipDef.size}`);
+            scale(0.8); // Reverted to previous scale
+            fill(255, 0, 0); // Reverted to red fill for visibility
             noStroke();
             
-            // Draw simplified ship shape
-            shipDef.drawFunction();
+            // Call the ship's draw function with its defined size
+            if (typeof shipDef.size === 'number') {
+                shipDef.drawFunction(shipDef.size); // Pass the base size
+            } else {
+                console.warn(`Ship type ${shipType} has no defined size. Drawing with default size 30.`);
+                shipDef.drawFunction(30); // Fallback size
+            }
+
         } else {
-            // Fallback generic ship shape
-            fill(isSelected ? color(120, 180, 255, 150) : color(80, 100, 120, 100));
+            console.log(`Using FALLBACK drawing for ${shipType}`); 
+            scale(0.8); 
+            fill(255, 0, 0); 
             noStroke();
-            triangle(-10, 8, 10, 0, -10, -8);
-            rect(-8, -2, 6, 4);
+            ellipseMode(CENTER);
+            ellipse(0, 0, 30, 30); 
         }
         
         pop();
