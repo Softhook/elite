@@ -1608,22 +1608,22 @@ checkProjectileCollisions() {
         const bottom = this.player.pos.y + height/2 + padding;
         
         // Optimized 2-layer approach for better performance
-        // Layer 1: Background stars (most stars, simple)
+        // Layer 1: Background stars (most stars, mostly white)
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 45,
             maxStarsPerCell: 3,
             sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
-            brightnessRange: [40, 120],
-            colorTypes: ['white', 'blue', 'yellow', 'red']
+            brightnessRange: [80, 160],
+            colorTypes: ['white', 'white', 'white', 'blue', 'yellow'] // Mostly white
         });
         
-        // Layer 2: Bright feature stars (fewer, more varied)
+        // Layer 2: Rare bright feature stars (much fewer, subtle colors)
         this.drawStarLayer(left, right, top, bottom, {
-            gridSize: 120,
-            maxStarsPerCell: 2,
-            sizeRange: [baseStarSize * 2.0, baseStarSize * 5.0],
-            brightnessRange: [150, 255],
-            colorTypes: ['white', 'blue', 'yellow', 'red', 'orange', 'purple', 'cyan']
+            gridSize: 200,
+            maxStarsPerCell: 1,
+            sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
+            brightnessRange: [180, 255],
+            colorTypes: ['white', 'white', 'blue', 'yellow', 'red'] // Mostly white, few colors
         });
     }
     
@@ -1637,15 +1637,12 @@ checkProjectileCollisions() {
         const cullTop = this.player.pos.y - height/2 - 50;
         const cullBottom = this.player.pos.y + height/2 + 50;
         
-        // Color lookup table for performance
+        // Color lookup table for performance - more subtle palette
         const colors = {
             white: [255, 255, 255],
-            blue: [150, 200, 255],
-            yellow: [255, 240, 150],
-            red: [255, 150, 120],
-            orange: [255, 180, 100],
-            purple: [200, 150, 255],
-            cyan: [150, 255, 230]
+            blue: [200, 220, 255],
+            yellow: [255, 250, 200],
+            red: [255, 200, 180]
         };
         
         // Loop through grid cells in viewport only
@@ -1667,8 +1664,9 @@ checkProjectileCollisions() {
                     return (rng >>> 0) / 4294967296;
                 }
                 
-                // Skip some cells for organic distribution
-                if (fastRandom() > 0.7) continue;
+                // Skip some cells for organic distribution - make large stars much rarer
+                const skipChance = (config.gridSize > 100) ? 0.85 : 0.7; // Large stars much rarer
+                if (fastRandom() > skipChance) continue;
                 
                 // Generate 1-3 stars per cell
                 const starCount = Math.floor(fastRandom() * config.maxStarsPerCell) + 1;
@@ -1688,7 +1686,12 @@ checkProjectileCollisions() {
                     const size = config.sizeRange[0] + sizeRand * (config.sizeRange[1] - config.sizeRange[0]);
                     
                     const brightRand = fastRandom();
-                    const brightness = config.brightnessRange[0] + brightRand * (config.brightnessRange[1] - config.brightnessRange[0]);
+                    let brightness = config.brightnessRange[0] + brightRand * (config.brightnessRange[1] - config.brightnessRange[0]);
+                    
+                    // Boost brightness for smaller stars to make them more visible
+                    if (size < 2) {
+                        brightness = Math.min(255, brightness * 1.4);
+                    }
                     
                     // Color selection with variety
                     const colorTypeIndex = Math.floor(fastRandom() * config.colorTypes.length);
