@@ -89,7 +89,8 @@ const JUMP_ZONE_MIN_ALPHA = 20;
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
-     * Seeded elements (planets, bgStars) are generated later via initStaticElements().
+     * Seeded elements (planets, stations, nebulae) are generated later via initStaticElements().
+     * Background stars are generated procedurally in drawBackground().
      * @param {string} name - The name of the system.
      * @param {string} economy - The actual economy type (e.g., "Industrial").
      * @param {number} galaxyX - The X coordinate on the main galaxy map.
@@ -125,7 +126,7 @@ class StarSystem {
         this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
-        this.bgStars = [];     // Populated in initStaticElements
+        // Background stars are now procedurally generated in drawBackground()
 
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
@@ -230,8 +231,8 @@ class StarSystem {
      * @param {number} [sessionSeed] - An optional seed component from the current game session.
      */
     initStaticElements(sessionSeed) {
-        // Don't skip initialization if stars are missing
-        if (this.staticElementsInitialized && this.bgStars && this.bgStars.length > 0) {
+        // Only check for essential elements, not background stars
+        if (this.staticElementsInitialized) {
             console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
             return;
         }
@@ -273,21 +274,12 @@ class StarSystem {
             this.despawnRadius = 10000; // Use fixed fallback
         }
 
-        // --- Seeded Visual Background Elements ---
+        // --- Seeded Visual Background Elements (for main star/sun only) ---
         try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
         try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
 
-        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 10000; // Default star count
-        try { numBgStars = floor(random(1000, 10000)); } catch(e) {} // Use default on error
-        try { // Generate background stars using seeded random
-            for (let i = 0; i < numBgStars; i++) {
-                this.bgStars.push({
-                    x: random(-worldBounds, worldBounds),
-                    y: random(-worldBounds, worldBounds),
-                    size: random(1, 3)
-                });
-            }
-        } catch(e) { console.error("Error generating background stars:", e); }
+        // NOTE: Background stars are now generated procedurally in drawBackground()
+        // No need to pre-generate and store thousands of star positions
 
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
@@ -1599,22 +1591,173 @@ checkProjectileCollisions() {
         return false;
     }
 
-    /** Draws background stars. Assumes called within translated space. */
+    /** Draws background stars using noise-based organic generation with smart caching. */
     drawBackground() {
-        if (!this.bgStars) {
-            console.log(`No bgStars in ${this.name} system!`);
-            return;
+        // Clear background with dark space color
+        fill(0, 0, 8); // Very dark blue-black space
+        noStroke();
+        rect(-width * 2, -height * 2, width * 4, height * 4);
+        
+        this.drawOrganicStarfield();
+    }
+    
+    initStarfieldState() {
+        this.starfieldState = {
+            lastUpdateX: null,
+            lastUpdateY: null,
+            updateThreshold: 200, // Only update when player moves 200 pixels
+            cachedStars: [],
+            viewportSize: 1000 // Generate stars in 1000px radius around player
+        };
+    }
+    
+    drawOrganicStarfield() {
+        if (!this.starfieldState) {
+            this.initStarfieldState();
         }
         
-        fill(255); 
+        const state = this.starfieldState;
+        const playerX = this.player.pos.x;
+        const playerY = this.player.pos.y;
+        
+        // Only regenerate stars if player moved significantly
+        const needsUpdate = (
+            state.lastUpdateX === null ||
+            Math.abs(playerX - state.lastUpdateX) > state.updateThreshold ||
+            Math.abs(playerY - state.lastUpdateY) > state.updateThreshold
+        );
+        
+        if (needsUpdate) {
+            this.generateStarfieldCache(playerX, playerY);
+            state.lastUpdateX = playerX;
+            state.lastUpdateY = playerY;
+        }
+        
+        // Draw cached stars (very fast)
+        this.drawCachedStars();
+    }
+    
+    generateStarfieldCache(centerX, centerY) {
+        const state = this.starfieldState;
+        const stars = [];
+        const radius = state.viewportSize;
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Use noise to create organic star distribution
+        const gridSize = 40; // Small grid for dense stars
+        const startX = Math.floor((centerX - radius) / gridSize);
+        const endX = Math.ceil((centerX + radius) / gridSize);
+        const startY = Math.floor((centerY - radius) / gridSize);
+        const endY = Math.ceil((centerY + radius) / gridSize);
+        
+        for (let gx = startX; gx <= endX; gx++) {
+            for (let gy = startY; gy <= endY; gy++) {
+                // Use noise to determine star density in this region
+                const noiseScale = 0.02;
+                const density = noise(gx * noiseScale + systemSeed * 0.001, 
+                                    gy * noiseScale + systemSeed * 0.001);
+                
+                // Skip sparse regions
+                if (density < 0.3) continue;
+                
+                // Number of stars based on noise density
+                const starCount = Math.floor(density * 6) + 1;
+                
+                for (let i = 0; i < starCount; i++) {
+                    // Use noise for organic positioning within grid cell
+                    const subSeed = gx * 7919 + gy * 6151 + i * 1000 + systemSeed;
+                    const offsetNoise1 = noise(subSeed * 0.01);
+                    const offsetNoise2 = noise(subSeed * 0.01 + 100);
+                    
+                    const x = gx * gridSize + (offsetNoise1 - 0.5) * gridSize * 1.8;
+                    const y = gy * gridSize + (offsetNoise2 - 0.5) * gridSize * 1.8;
+                    
+                    // Distance check - only include stars within viewport
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    if (dx * dx + dy * dy > radius * radius) continue;
+                    
+                    // Star properties using noise
+                    const sizeSeed = subSeed + 12345;
+                    const brightnessSeed = subSeed + 23456;
+                    const colorSeed = subSeed + 34567;
+                    
+                    const sizeNoise = noise(sizeSeed * 0.003);
+                    const brightnessNoise = noise(brightnessSeed * 0.003);
+                    const colorNoise = noise(colorSeed * 0.003);
+                    
+                    let size, brightness, r, g, b;
+                    
+                    // Layer-based size distribution
+                    if (sizeNoise < 0.7) {
+                        // Small background stars (70%)
+                        size = 0.8 + sizeNoise * 0.8;
+                        brightness = 40 + brightnessNoise * 60;
+                    } else if (sizeNoise < 0.9) {
+                        // Medium stars (20%)
+                        size = 1.5 + sizeNoise * 1.5;
+                        brightness = 100 + brightnessNoise * 80;
+                    } else {
+                        // Large bright stars (10%)
+                        size = 2.5 + sizeNoise * 2.0;
+                        brightness = 150 + brightnessNoise * 105;
+                    }
+                    
+                    // Color variation for larger stars
+                    if (size > 1.8 && colorNoise > 0.8) {
+                        const colorType = noise(colorSeed * 0.005);
+                        if (colorType < 0.33) {
+                            // Red giant
+                            r = brightness;
+                            g = brightness * 0.6;
+                            b = brightness * 0.4;
+                        } else if (colorType < 0.66) {
+                            // Blue star
+                            r = brightness * 0.7;
+                            g = brightness * 0.8;
+                            b = brightness;
+                        } else {
+                            // Yellow star
+                            r = brightness;
+                            g = brightness * 0.9;
+                            b = brightness * 0.6;
+                        }
+                    } else {
+                        // White star
+                        r = g = b = brightness;
+                    }
+                    
+                    stars.push({ x, y, size, r, g, b });
+                }
+            }
+        }
+        
+        state.cachedStars = stars;
+    }
+    
+    drawCachedStars() {
+        const stars = this.starfieldState.cachedStars;
         noStroke();
         
-        // Slight glow effect
-        strokeWeight(1);
-        stroke(255, 255, 255, 100);
-        this.bgStars.forEach(s => {
-            ellipse(s.x, s.y, s.size, s.size);
-        });
+        // Very fast rendering loop - just draw pre-computed stars
+        for (let i = 0; i < stars.length; i++) {
+            const star = stars[i];
+            fill(star.r, star.g, star.b);
+            
+            if (star.size <= 1.5) {
+                // Small stars - single pixel
+                rect(star.x, star.y, Math.max(1, star.size), Math.max(1, star.size));
+            } else {
+                // Medium/large stars
+                ellipse(star.x, star.y, star.size, star.size);
+                
+                // Subtle halo for largest stars
+                if (star.size > 3.0) {
+                    fill(star.r, star.g, star.b, star.r * 0.2);
+                    ellipse(star.x, star.y, star.size * 1.4, star.size * 1.4);
+                }
+            }
+        }
     }
 
     /** Draws all system contents. */
@@ -1917,7 +2060,7 @@ checkProjectileCollisions() {
 
         // NOTE: We do NOT call initStaticElements here because planets/station/jumpzone
         // are being restored directly from JSON data. If initStaticElements *needs* to run
-        // on load for other reasons (like regenerating bgStars), the logic inside
+        // on load for other reasons (like regenerating procedural elements), the logic inside
         // initStaticElements needs to be adjusted to skip regeneration of loaded elements.
         // The current structure seems to load everything directly.
 
