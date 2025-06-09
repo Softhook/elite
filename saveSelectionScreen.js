@@ -2,10 +2,23 @@
 
 const NUM_SAVE_SLOTS = 3;
 const SAVE_KEY_PREFIX = "eliteP5_save_"; // Ensure this matches sketch.js
+const LAST_ACTIVE_SLOT_KEY = "eliteP5_lastActiveSlot"; // Key for storing the last active slot
 
 class SaveSelectionScreen {
     constructor() {
-        this.selectedOption = 0; // 0, 1, 2 for save slots; NUM_SAVE_SLOTS for rookie option
+        this.selectedOption = 0; // Default selection
+        // Attempt to load and set the last active slot as the selected option
+        const lastActiveSlot = localStorage.getItem(LAST_ACTIVE_SLOT_KEY);
+        if (lastActiveSlot !== null) {
+            const lastActiveSlotIndex = parseInt(lastActiveSlot, 10);
+            if (!isNaN(lastActiveSlotIndex) && lastActiveSlotIndex >= 0 && lastActiveSlotIndex < NUM_SAVE_SLOTS) {
+                this.selectedOption = lastActiveSlotIndex;
+            } else {
+                // Clear invalid stored data
+                localStorage.removeItem(LAST_ACTIVE_SLOT_KEY);
+            }
+        }
+
         this.totalOptions = NUM_SAVE_SLOTS + 1;
         this.animationOffset = 0;
         this.buttonHoverEffects = [];
@@ -505,6 +518,7 @@ class SaveSelectionScreen {
         // Clear any existing save in this specific slot
         localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex);
         window.activeSaveSlotIndex = slotIndex; // Set active slot for saving
+        localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
         
         // Transition to game
         gameStateManager.setState("IN_FLIGHT");
@@ -515,6 +529,7 @@ class SaveSelectionScreen {
         const success = loadGame(slotIndex); // loadGame in sketch.js should handle setting activeSaveSlotIndex
         if (success) {
             // window.activeSaveSlotIndex = slotIndex; // Already set by global loadGame
+            // The global loadGame function should also set LAST_ACTIVE_SLOT_KEY
             gameStateManager.setState("IN_FLIGHT");
         } else {
             console.error(`Failed to load saved game from slot ${slotIndex}`);
@@ -592,6 +607,7 @@ class SaveSelectionScreen {
         // Clear the chosen slot in localStorage
         localStorage.removeItem(SAVE_KEY_PREFIX + chosenSlotIndex);
         window.activeSaveSlotIndex = chosenSlotIndex; // Associate this game with the chosen slot
+        localStorage.setItem(LAST_ACTIVE_SLOT_KEY, chosenSlotIndex.toString()); // Store as last active slot
 
         this.loadAllSavePreviews(); // Refresh previews as one slot is now effectively new/empty
         

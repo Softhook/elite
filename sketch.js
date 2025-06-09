@@ -438,8 +438,11 @@ function saveGame() {
                 currentSystemIndex: galaxy.currentSystemIndex
                 // currentView: { ...uiManager.currentView } // Consider what to save from currentView
             };
-            localStorage.setItem(saveKey, JSON.stringify(saveData));
-            console.log(`Game saved to slot ${currentSlotIndex} (Key: ${saveKey})`);
+            const saveDataString = JSON.stringify(saveData);
+            localStorage.setItem(saveKey, saveDataString);
+            localStorage.setItem(LAST_ACTIVE_SLOT_KEY, window.activeSaveSlotIndex.toString()); // Store as last active slot
+
+            console.log(`Game saved to slot ${window.activeSaveSlotIndex + 1} (Key: ${saveKey})`);
             
             // Refresh save previews in SaveSelectionScreen
             // Check if saveSelectionScreen instance exists and has the method
@@ -459,18 +462,24 @@ function saveGame() {
 }
 
 function loadGame(slotIndex) {
-    try {
-        if (typeof(Storage) !== "undefined") {
-            const keyToLoad = SAVE_KEY_PREFIX + (slotIndex !== undefined ? slotIndex : 0);
-            const savedDataString = localStorage.getItem(keyToLoad);
-            if (savedDataString) {
+    if (typeof(Storage) !== "undefined") {
+        if (slotIndex === undefined || slotIndex === null) {
+            console.error("loadGame: slotIndex is undefined. Cannot load.");
+            return false;
+        }
+        const loadKey = SAVE_KEY_PREFIX + slotIndex; // Define loadKey here
+
+        const savedDataString = localStorage.getItem(loadKey);
+
+        if (savedDataString) {
+            try {
                 const savedData = JSON.parse(savedDataString);
                 
-                // 1. Restore Galaxy Data
+                // 1. Load Galaxy Data First
                 if (savedData.galaxyData) {
                     galaxy.loadSaveData(savedData.galaxyData); // This populates galaxy.systems
                 } else {
-                    console.error(`No galaxyData found in save file for slot ${slotIndex} (Key: ${keyToLoad})`);
+                    console.error(`No galaxyData found in save file for slot ${slotIndex} (Key: ${loadKey})`);
                     showCriticalError("Corrupt save: Missing galaxy data.");
                     return false;
                 }
@@ -555,20 +564,21 @@ function loadGame(slotIndex) {
                 }
                 
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
-                console.log(`Game loaded from slot ${window.activeSaveSlotIndex} (Key: ${keyToLoad})`);
-                return true; // Indicate success
-            } else {
-                console.warn(`No saved game found in slot ${slotIndex !== undefined ? slotIndex : 0} (Key: ${keyToLoad})`);
-                return false; // Indicate failure
+                localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
+                console.log(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
+                return true;
+            } catch (e) {
+                console.error(`Error loading game from slot ${slotIndex + 1} (Key: ${loadKey}):`, e);
+                localStorage.removeItem(loadKey); // Clear corrupted data
+                return false;
             }
         } else {
-            console.warn("localStorage is not supported. Game cannot be loaded.");
-            return false; // Indicate failure
+            console.log(`No saved game found in slot ${slotIndex + 1} (Key: ${loadKey})`);
+            return false;
         }
-    } catch (e) {
-        console.error(`Error loading game from slot ${slotIndex}:`, e);
-        showCriticalError(`Error loading game. Check console.\\n${e.message}`);
-        return false; // Indicate failure
+    } else {
+        console.warn("localStorage is not supported. Cannot load game.");
+        return false;
     }
 }
 
