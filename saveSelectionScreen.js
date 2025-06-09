@@ -10,6 +10,11 @@ class SaveSelectionScreen {
         // Load saved game data for preview
         this.savedGameData = null;
         this.loadSavedGamePreview();
+
+        // If a saved game exists, make it the default selection
+        if (this.savedGameData) {
+            this.selectedSlot = 1;
+        }
         
         // Visual effects
         this.bgStars = [];
@@ -175,6 +180,23 @@ class SaveSelectionScreen {
         textSize(20);
         fill(isSelected ? color(150, 200, 255) : color(120, 140, 180));
         text(title, x + 20 + hoverOffset, y + 15);
+
+        // Draw a star next to "CONTINUE" if it's a saved game slot
+        if (data && title === "CONTINUE") {
+            push();
+            fill(255, 223, 0); // Gold color for the star
+            noStroke();
+            beginShape();
+            const starX = x + textWidth(title) + 30 + hoverOffset; // Position after the title
+            const starY = y + 25; // Align with title
+            const starSize = 8;
+            for (let i = 0; i < 5; i++) {
+                vertex(starX + cos(TWO_PI * i / 5 - HALF_PI) * starSize, starY + sin(TWO_PI * i / 5 - HALF_PI) * starSize);
+                vertex(starX + cos(TWO_PI * (i + 0.5) / 5 - HALF_PI) * starSize / 2, starY + sin(TWO_PI * (i + 0.5) / 5 - HALF_PI) * starSize / 2);
+            }
+            endShape(CLOSE);
+            pop();
+        }
         
         if (data) {
             // Show saved game details
@@ -209,8 +231,8 @@ class SaveSelectionScreen {
             // New game description
             textSize(14);
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
-            text("Begin a new adventure as a", x + 20 + hoverOffset, y + 45);
-            text("rookie pilot with a Sidewinder", x + 20 + hoverOffset, y + 65);
+            text("Begin a new adventure as a rookie pilot", x + 20 + hoverOffset, y + 45);
+            text("with a Sidewinder in a random system", x + 20 + hoverOffset, y + 65);
             text("and 1000 credits", x + 20 + hoverOffset, y + 85);
             
             // New game icon
@@ -241,7 +263,7 @@ class SaveSelectionScreen {
         textSize(16);
         fill(60, 70, 90);
         text("No Saved Game", x + w/2, y + h/2 - 10);
-        text("(Save will be created when you play)", x + w/2, y + h/2 + 10);
+        text("(Game will be saved when you visit stations)", x + w/2, y + h/2 + 10);
         
         pop();
     }
