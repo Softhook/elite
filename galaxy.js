@@ -20,7 +20,12 @@ class Galaxy {
     };
     // --- End Static Definition ---
 
-    // ... (constructor remains the same) ...
+    constructor() {
+        this.systems = []; // Initialize systems as an empty array
+        this.currentSystemIndex = 0;
+        this.hyperdriveRange = 7; // Default hyperdrive range in light years
+        // Add other galaxy-wide properties here (e.g., faction data, global events)
+    }
 
     initGalaxySystems(globalSessionSeed) { // Add globalSessionSeed parameter
         console.log(">>> Galaxy.initGalaxySystems() called for procedural generation.");
@@ -249,7 +254,13 @@ class Galaxy {
      * @returns {StarSystem|null} The current StarSystem object or null.
      */
     getCurrentSystem() {
-        // Check index bounds first
+        // Check if systems array exists and has been initialized
+        if (!this.systems || !Array.isArray(this.systems)) {
+            console.warn(`getCurrentSystem: Systems array not initialized yet.`);
+            return null;
+        }
+        
+        // Check index bounds
         if (this.currentSystemIndex < 0 || this.currentSystemIndex >= this.systems.length) {
             console.error(`getCurrentSystem: currentSystemIndex (${this.currentSystemIndex}) is out of bounds for systems array (length ${this.systems.length}).`);
             return null;

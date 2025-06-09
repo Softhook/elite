@@ -1051,7 +1051,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const currentIdx = galaxy.currentSystemIndex;
         const reachable = galaxy.getReachableSystems(); // Now gets indices based on actual connections
 
-        const currentSystem = galaxy.getCurrentSystem();
+        const currentSystem = galaxy?.getCurrentSystem();
         const canJump = isPlayerInJumpZone(player, currentSystem); // Use the helper function
 
         push(); // Isolate map drawing
@@ -1227,7 +1227,7 @@ if (isIllegalInSystem || isMissionCargo) {
     handleGalaxyMapClicks(mouseX, mouseY, galaxy, player, gameStateManager) {
         if (!galaxy || !player) return false;
 
-        const currentSystem = galaxy.getCurrentSystem();
+        const currentSystem = galaxy?.getCurrentSystem();
         const canJump = isPlayerInJumpZone(player, currentSystem); // Check jump zone status
         const reachable = galaxy.getReachableSystems(); // Get reachable systems for click logic
 

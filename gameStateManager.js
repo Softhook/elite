@@ -81,6 +81,17 @@ this.showingInventory = false;
 
         // --- Handle Logic Specific to State Transitions ---
 
+        // Refresh save game preview when entering save selection screen
+        if (newState === "SAVE_SELECTION") {
+            if (saveSelectionScreen && typeof saveSelectionScreen.loadSavedGamePreview === 'function') {
+                saveSelectionScreen.loadSavedGamePreview();
+                // If "Continue" was selected but save data is now gone, reset to "New Game"
+                if (saveSelectionScreen.savedGameData === null && saveSelectionScreen.selectedSlot === 1) {
+                    saveSelectionScreen.selectedSlot = 0;
+                }
+            }
+        }
+
         // Reset jump state
         if (newState !== "JUMPING" && newState !== "GALAXY_MAP") { this.jumpTargetSystemIndex = -1; this.jumpChargeTimer = 0; }
         // Reset mission board selection
@@ -100,7 +111,7 @@ this.showingInventory = false;
                 // Spawn any hired bodyguards when undocking
                 if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
                     console.log("Spawning bodyguards when undocking from station");
-                    player.spawnBodyguards(galaxy.getCurrentSystem());
+                    player.spawnBodyguards(galaxy?.getCurrentSystem());
                 }
                 
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
@@ -110,7 +121,7 @@ this.showingInventory = false;
         else if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
              console.log("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
              if (player && galaxy?.getCurrentSystem()?.station?.pos) { // Safe access
-                 player.pos = galaxy.getCurrentSystem().station.pos.copy(); player.vel.mult(0);
+                 player.pos = galaxy?.getCurrentSystem()?.station?.pos?.copy() || player.pos; player.vel.mult(0);
              } else { console.error("Could not snap player to station - required objects missing."); }
         }
         // Ensure player stopped when entering DOCKED from sub-menus or other states
@@ -126,7 +137,14 @@ this.showingInventory = false;
      * @param {Player} player - Reference to the player object.
      */
     update(player) {
-        const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system
+        // const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system // MOVED
+        let currentSystem = null; // Initialize to null
+
+        // Only get currentSystem if in a state where it's expected to exist
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+        if (statesExpectingSystem.includes(this.currentState)) {
+            currentSystem = galaxy?.getCurrentSystem();
+        }
 
         switch (this.currentState) {
             case "TITLE_SCREEN":
@@ -251,7 +269,7 @@ this.showingInventory = false;
                     if (this.jumpFadeOpacity >= 1) {
                         // Execute jump during full white
                         galaxy.jumpToSystem(this.jumpTargetSystemIndex);
-                        player.currentSystem = galaxy.getCurrentSystem();
+                        player.currentSystem = galaxy?.getCurrentSystem();
                         player.vel.mult(0.3); // Reduce velocity after jump
                         this.jumpChargeTimer = 0;
                         this.isJumpCharging = false;
@@ -312,6 +330,13 @@ this.showingInventory = false;
              case "LOADING":
                 break;
 
+            case "SAVE_SELECTION":
+                // Save selection screen updates
+                if (saveSelectionScreen) {
+                    saveSelectionScreen.update(deltaTime);
+                }
+                break;
+
             default:
                 console.warn(`Unknown game state in update(): ${this.currentState}`);
                 this.setState("IN_FLIGHT");
@@ -325,7 +350,14 @@ this.showingInventory = false;
      * @param {Player} player - Reference to the player object.
      */
     draw(player) {
-        const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system
+        // const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system // MOVED
+        let currentSystem = null; // Initialize to null
+
+        // Only get currentSystem if in a state where it's expected to exist
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+        if (statesExpectingSystem.includes(this.currentState)) {
+            currentSystem = galaxy?.getCurrentSystem();
+        }
 
         switch (this.currentState) {
             case "IN_FLIGHT":
@@ -590,6 +622,12 @@ this.showingInventory = false;
              case "LOADING":
                  background(0); fill(255); textAlign(CENTER, CENTER); textSize(32); text("Loading...", width / 2, height / 2);
                  break;
+             case "SAVE_SELECTION":
+                if (saveSelectionScreen) {
+                    saveSelectionScreen.draw();
+                }
+                break;
+
              default:
                  console.error(`Unknown game state encountered in draw(): ${this.currentState}`);
                  background(255,0,0); fill(0); textAlign(CENTER,CENTER); textSize(20); text(`Error: Unknown game state "${this.currentState}"`, width/2, height/2);
@@ -610,7 +648,7 @@ this.showingInventory = false;
      */
     startJump(targetIndex) {
         console.log(`[startJump] Attempting jump to system index: ${targetIndex}`);
-        const currentSystem = galaxy.getCurrentSystem();
+        const currentSystem = galaxy?.getCurrentSystem();
         const targetSystem = galaxy.getSystemByIndex(targetIndex);
 
         // --- ADDED: Log state right before the check ---

@@ -10,7 +10,7 @@ const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in
 let globalSessionSeed; 
 
 // --- Global Variables ---
-let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager;
+let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, saveSelectionScreen;
 let loadGameWasSuccessful = false;
 // --- End Global Variables ---
 
@@ -59,6 +59,7 @@ function setup() {
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
     inventoryScreen = new InventoryScreen();
+    saveSelectionScreen = new SaveSelectionScreen();
 
     // --- Calculate Player Radian Properties ---
     // Now that p5 is ready, calculate radian speed based on degree definition
@@ -69,68 +70,15 @@ function setup() {
          noLoop(); return;
     }
 
-    // --- Load Saved Game Data (if exists) ---
-    console.log("Attempting to load game data...");
-    loadGameWasSuccessful = loadGame(); // Attempt to load save data
+    // --- Don't auto-load game data - let save selection screen handle it ---
+    console.log("Game initialization complete. Waiting for user save selection...");
+    loadGameWasSuccessful = false; // We'll handle loading in the save selection screen
 
-    // --- Initialize Galaxy Systems ONLY if no save data was loaded ---
-    if (!loadGameWasSuccessful) {
-        console.log("No save game found, generating procedural galaxy...");
-        globalSessionSeed = millis(); // Or some other random value for the session
-        if (galaxy && typeof galaxy.initGalaxySystems === 'function') {
-            galaxy.initGalaxySystems(globalSessionSeed); // Pass the globalSessionSeed
-            // Position player near station for new game
-            const startingSystem = galaxy.getCurrentSystem();
-            if (startingSystem && startingSystem.station && startingSystem.station.pos) {
-                player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100, startingSystem.station.pos.y);
-                player.angle = PI; // Face away from the typical station spawn side
-                console.log(`New game: Player positioned near station ${startingSystem.station.name} in ${startingSystem.name}`);
-            } else {
-                // Fallback if no station or system, though initGalaxySystems should create one
-                player.pos.set(0,0); 
-                console.warn("New game: Could not position player near station (station or system not found). Defaulting to 0,0.");
-            }
-        } else {
-            console.error("FATAL ERROR: Galaxy object or initGalaxySystems method missing!");
-            noLoop(); return;
-        }
-    } else {
-        console.log("Save game loaded successfully, using saved galaxy data.");
-    }
+    // --- Don't initialize Galaxy Systems automatically ---
+    // The save selection screen will handle new game or load game logic
 
-    // --- Link Player to Current System & Run Initial Entry Logic ---
-    const systemToStartIn = galaxy.getCurrentSystem(); // Get system based on load or default index
-
-    if (systemToStartIn) {
-        player.currentSystem = systemToStartIn; // Set player's current system reference
-        systemToStartIn.player = player; // Assign the player to the system
-        // If no save game was loaded, the starting system needs its initial setup
-        if (!loadGameWasSuccessful) {
-            console.log("Running initial enterSystem for starting system..."); 
-            if (typeof systemToStartIn.enterSystem === 'function') {
-                systemToStartIn.enterSystem(player); // Spawn initial NPCs/Asteroids etc.
-                if (eventManager) { // Initialize EventManager references for a new game
-                    eventManager.initializeReferences(systemToStartIn, player, uiManager);
-                }
-            } else {
-                console.error("ERROR: systemToStartIn object missing enterSystem method!");
-            }
-        } else {
-             console.log(`Player starting/loaded in system: ${player.currentSystem.name}`);
-             if (eventManager) { // Initialize EventManager references after loading a game
-                eventManager.initializeReferences(player.currentSystem, player, uiManager);
-            }
-            }
-    } else {
-        // This is a critical failure if no starting system can be assigned
-        console.error("CRITICAL Error: Could not assign a starting system to the player after initialization!");
-        if(gameStateManager) gameStateManager.setState("LOADING"); // Stay in loading state to indicate error
-        else console.error("GameStateManager missing, cannot set error state.");
-        // Optionally draw error message directly here as setup failed
-        background(0); fill(255,0,0); textSize(20); text("ERROR: Failed to initialize starting system!", width/2, height/2);
-        noLoop(); // Stop
-        return; // Stop setup function
-    }
+    // --- System linking will be handled by save selection screen ---
+    // We don't link the player to a system yet since no galaxy is initialized
 
     // --- Set Initial Game State ---
     // If everything above succeeded and state is still LOADING, transition to IN_FLIGHT
@@ -156,25 +104,41 @@ function draw() {
     background(0); // Clear the canvas each frame
     const currentState = gameStateManager?.currentState;
 
-    // Title/instructions screen animation
+    // Title/instructions/save selection screen animation
     if (currentState === "TITLE_SCREEN" || currentState === "INSTRUCTIONS") {
         titleScreen.update(deltaTime);
+    } else if (currentState === "SAVE_SELECTION") {
+        saveSelectionScreen.update(deltaTime);
     }
 
     // Main game state update and draw
     if (gameStateManager && player) {
         try {
-            gameStateManager.update(player);
-            // Update EventManager if in flight and references are set
-            const currentSystemForEventManager = galaxy.getCurrentSystem();
-            if (eventManager && currentSystemForEventManager && player && uiManager) {
-                if (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player) {
-                    eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
-                }
-                if (currentState === "IN_FLIGHT") {
-                    eventManager.update();
+            gameStateManager.update(player); // This calls update methods of current screen/state
+
+            // EventManager logic - only if in relevant game states
+            const activeGameStatesForEventManager = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP"];
+            if (activeGameStatesForEventManager.includes(currentState)) {
+                const currentSystemForEventManager = galaxy?.getCurrentSystem(); // Call is now conditional
+
+                if (currentSystemForEventManager) { // Only proceed if a system actually exists
+                    if (eventManager && player && uiManager) {
+                        // Initialize/Re-initialize EventManager if system/player changed or if it's not pointing to the current one.
+                        // Assuming EventManager has 'starSystem' and 'player' properties to check against.
+                        // And that initializeReferences is safe to call.
+                        if (typeof eventManager.initializeReferences === 'function' && 
+                            (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player /* || add other relevant checks if EventManager stores them */)) {
+                            eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
+                        }
+
+                        // Update EventManager only when IN_FLIGHT and if it seems initialized (has a starSystem reference)
+                        if (currentState === "IN_FLIGHT" && eventManager.starSystem && typeof eventManager.update === 'function') {
+                            eventManager.update();
+                        }
+                    }
                 }
             }
+
             // Continuous firing logic
             if (currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
                 player.handleFireInput();
@@ -231,6 +195,13 @@ function keyPressed() {
     if (gameStateManager.currentState === "INSTRUCTIONS") {
         titleScreen.handleKeyPress(keyCode);
         return;
+    }
+    // Save Selection screen keyboard input
+    if (gameStateManager.currentState === "SAVE_SELECTION") {
+        if (saveSelectionScreen && typeof saveSelectionScreen.handleKeyPressed === 'function') {
+            saveSelectionScreen.handleKeyPressed(key, keyCode);
+        }
+        return; // Explicitly return to prevent further processing in this state
     }
     // Spacebar triggers initial shot
     if ((key === ' ' || keyCode === 32) && gameStateManager.currentState === "IN_FLIGHT" && player) {
@@ -369,6 +340,14 @@ function mousePressed() {
         return;
     }
 
+    // Handle Save Selection screen clicks
+    if (gameStateManager.currentState === "SAVE_SELECTION") {
+        if (saveSelectionScreen && typeof saveSelectionScreen.handleClick === 'function') {
+            saveSelectionScreen.handleClick(mouseX, mouseY);
+        }
+        return; // Explicitly return to prevent further processing in this state
+    }
+
     // --- Fullscreen ON only once, on first click inside canvas ---
     if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
         fullscreen(true);
@@ -459,7 +438,7 @@ function saveGame() {
             // If player is DOCKED or in any station sub-menu, ensure position is exactly at the station
             const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_POLICE"];
             if (stationStates.includes(gameStateManager.currentState)) {
-                const currentSystem = galaxy.getCurrentSystem();
+                const currentSystem = galaxy?.getCurrentSystem();
                 if (currentSystem && currentSystem.station && currentSystem.station.pos) {
                     // Snap player position to station position before saving
                     player.pos = currentSystem.station.pos.copy();
@@ -516,7 +495,7 @@ function loadGame() {
                     console.error("Galaxy systems array is empty after loading save!");
                     return false;
                 }
-                player.currentSystem = galaxy.getCurrentSystem();
+                player.currentSystem = galaxy?.getCurrentSystem();
                 if (player.currentSystem) {
                     player.currentSystem.player = player;
                     
@@ -570,6 +549,10 @@ function loadGame() {
 // Called automatically by p5.js when the browser window is resized.
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight); // Adjust canvas size
+    // Resize save selection screen stars if it exists
+    if (saveSelectionScreen && typeof saveSelectionScreen.resize === 'function') {
+        saveSelectionScreen.resize();
+    }
     // console.log("Window resized."); // Optional log
     // Note: UI elements using width/height might need repositioning logic here or in their draw methods.
 }
