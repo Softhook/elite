@@ -230,8 +230,8 @@ class StarSystem {
      * @param {number} [sessionSeed] - An optional seed component from the current game session.
      */
     initStaticElements(sessionSeed) {
-        // Don't skip initialization if stars are missing
-        if (this.staticElementsInitialized && this.bgStars && this.bgStars.length > 0) {
+        // Don't skip initialization if already done
+        if (this.staticElementsInitialized) {
             console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
             return;
         }
@@ -273,21 +273,7 @@ class StarSystem {
             this.despawnRadius = 10000; // Use fixed fallback
         }
 
-        // --- Seeded Visual Background Elements ---
-        try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
-        try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
-
-        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 10000; // Default star count
-        try { numBgStars = floor(random(1000, 10000)); } catch(e) {} // Use default on error
-        try { // Generate background stars using seeded random
-            for (let i = 0; i < numBgStars; i++) {
-                this.bgStars.push({
-                    x: random(-worldBounds, worldBounds),
-                    y: random(-worldBounds, worldBounds),
-                    size: random(1, 3)
-                });
-            }
-        } catch(e) { console.error("Error generating background stars:", e); }
+        // Note: Stars are now generated procedurally in drawBackground() - no need to pre-generate them
 
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
@@ -1599,22 +1585,154 @@ checkProjectileCollisions() {
         return false;
     }
 
-    /** Draws background stars. Assumes called within translated space. */
+    /** Draws background stars using optimal multi-layer noise-based rendering. */
     drawBackground() {
-        if (!this.bgStars) {
-            console.log(`No bgStars in ${this.name} system!`);
-            return;
-        }
-        
-        fill(255); 
+        // Clear background with dark space color
+        fill(0, 0, 8); 
         noStroke();
+        rect(-width * 2, -height * 2, width * 4, height * 4);
         
-        // Slight glow effect
-        strokeWeight(1);
-        stroke(255, 255, 255, 100);
-        this.bgStars.forEach(s => {
-            ellipse(s.x, s.y, s.size, s.size);
+        this.drawOptimalStarfield();
+    }
+    
+    drawOptimalStarfield() {
+        // Resolution-independent base sizing
+        const pixelRatio = pixelDensity();
+        const baseStarSize = Math.max(1, pixelRatio * 0.6);
+        
+        // Viewport bounds with smaller padding for performance
+        const padding = 200;
+        const left = this.player.pos.x - width/2 - padding;
+        const right = this.player.pos.x + width/2 + padding;
+        const top = this.player.pos.y - height/2 - padding;
+        const bottom = this.player.pos.y + height/2 + padding;
+        
+        // Optimized 2-layer approach for better performance
+        // Layer 1: Background stars (most stars, simple)
+        this.drawStarLayer(left, right, top, bottom, {
+            gridSize: 45,
+            maxStarsPerCell: 3,
+            sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
+            brightnessRange: [40, 120],
+            colorTypes: ['white', 'blue', 'yellow', 'red']
         });
+        
+        // Layer 2: Bright feature stars (fewer, more varied)
+        this.drawStarLayer(left, right, top, bottom, {
+            gridSize: 120,
+            maxStarsPerCell: 2,
+            sizeRange: [baseStarSize * 2.0, baseStarSize * 5.0],
+            brightnessRange: [150, 255],
+            colorTypes: ['white', 'blue', 'yellow', 'red', 'orange', 'purple', 'cyan']
+        });
+    }
+    
+    drawStarLayer(left, right, top, bottom, config) {
+        const gridSize = config.gridSize;
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Pre-calculate viewport culling bounds
+        const cullLeft = this.player.pos.x - width/2 - 50;
+        const cullRight = this.player.pos.x + width/2 + 50;
+        const cullTop = this.player.pos.y - height/2 - 50;
+        const cullBottom = this.player.pos.y + height/2 + 50;
+        
+        // Color lookup table for performance
+        const colors = {
+            white: [255, 255, 255],
+            blue: [150, 200, 255],
+            yellow: [255, 240, 150],
+            red: [255, 150, 120],
+            orange: [255, 180, 100],
+            purple: [200, 150, 255],
+            cyan: [150, 255, 230]
+        };
+        
+        // Loop through grid cells in viewport only
+        const startGX = Math.floor(left / gridSize);
+        const endGX = Math.ceil(right / gridSize);
+        const startGY = Math.floor(top / gridSize);
+        const endGY = Math.ceil(bottom / gridSize);
+        
+        for (let gx = startGX; gx <= endGX; gx++) {
+            for (let gy = startGY; gy <= endGY; gy++) {
+                
+                // Simple deterministic random for this cell
+                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                let rng = cellSeed;
+                
+                // Fast pseudo-random function
+                function fastRandom() {
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    return (rng >>> 0) / 4294967296;
+                }
+                
+                // Skip some cells for organic distribution
+                if (fastRandom() > 0.7) continue;
+                
+                // Generate 1-3 stars per cell
+                const starCount = Math.floor(fastRandom() * config.maxStarsPerCell) + 1;
+                
+                for (let i = 0; i < starCount; i++) {
+                    // Random position within expanded cell bounds
+                    const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 2;
+                    const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 2;
+                    
+                    // Early viewport culling
+                    if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
+                        continue;
+                    }
+                    
+                    // Star properties
+                    const sizeRand = fastRandom();
+                    const size = config.sizeRange[0] + sizeRand * (config.sizeRange[1] - config.sizeRange[0]);
+                    
+                    const brightRand = fastRandom();
+                    const brightness = config.brightnessRange[0] + brightRand * (config.brightnessRange[1] - config.brightnessRange[0]);
+                    
+                    // Color selection with variety
+                    const colorTypeIndex = Math.floor(fastRandom() * config.colorTypes.length);
+                    const colorType = config.colorTypes[colorTypeIndex];
+                    const baseColor = colors[colorType];
+                    
+                    // Add brightness variation to color
+                    const brightnessFactor = brightness / 255;
+                    const r = Math.min(255, baseColor[0] * brightnessFactor);
+                    const g = Math.min(255, baseColor[1] * brightnessFactor);
+                    const b = Math.min(255, baseColor[2] * brightnessFactor);
+                    
+                    // Render star efficiently
+                    fill(r, g, b);
+                    noStroke();
+                    
+                    if (size <= 2) {
+                        // Small stars - fast rectangles
+                        const starSize = Math.max(1, Math.round(size));
+                        rect(worldX, worldY, starSize, starSize);
+                    } else {
+                        // Medium/large stars - circles with optional glow
+                        ellipse(worldX, worldY, size, size);
+                        
+                        // Glow effect for brightest stars only
+                        if (brightness > 200 && size > 3) {
+                            fill(r, g, b, 40);
+                            ellipse(worldX, worldY, size * 1.5, size * 1.5);
+                        }
+                    }
+                    
+                    // Twinkling effect for large bright stars
+                    if (size > 4 && brightness > 180) {
+                        const twinkle = 0.3 + 0.4 * Math.sin(millis() * 0.005 + worldX * 0.01 + worldY * 0.01);
+                        fill(r, g, b, brightness * twinkle * 0.3);
+                        
+                        // Cross-shaped twinkle
+                        const twinkleSize = size * 0.3;
+                        rect(worldX - size, worldY - twinkleSize/2, size * 2, twinkleSize);
+                        rect(worldX - twinkleSize/2, worldY - size, twinkleSize, size * 2);
+                    }
+                }
+            }
+        }
     }
 
     /** Draws all system contents. */
