@@ -1607,7 +1607,7 @@ checkProjectileCollisions() {
         const top = this.player.pos.y - height/2 - padding;
         const bottom = this.player.pos.y + height/2 + padding;
         
-        // Optimized 2-layer approach for better performance
+        // Optimized 3-layer approach for better visuals
         // Layer 1: Background stars (most stars, mostly white)
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 45,
@@ -1625,6 +1625,9 @@ checkProjectileCollisions() {
             brightnessRange: [180, 255],
             colorTypes: ['white', 'white', 'blue', 'yellow', 'red'] // Mostly white, few colors
         });
+        
+        // Layer 3: Spectacular phenomena (very rare, dramatic effects)
+        this.drawSpectacularStars(left, right, top, bottom, baseStarSize);
     }
     
     drawStarLayer(left, right, top, bottom, config) {
@@ -1736,6 +1739,228 @@ checkProjectileCollisions() {
                 }
             }
         }
+    }
+
+    drawSpectacularStars(left, right, top, bottom, baseStarSize) {
+        const gridSize = 400; // Very large grid for rare phenomena
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Pre-calculate viewport culling bounds
+        const cullLeft = this.player.pos.x - width/2 - 100;
+        const cullRight = this.player.pos.x + width/2 + 100;
+        const cullTop = this.player.pos.y - height/2 - 100;
+        const cullBottom = this.player.pos.y + height/2 + 100;
+        
+        // Loop through very sparse grid
+        const startGX = Math.floor(left / gridSize);
+        const endGX = Math.ceil(right / gridSize);
+        const startGY = Math.floor(top / gridSize);
+        const endGY = Math.ceil(bottom / gridSize);
+        
+        for (let gx = startGX; gx <= endGX; gx++) {
+            for (let gy = startGY; gy <= endGY; gy++) {
+                
+                // Deterministic random for this cell
+                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                let rng = cellSeed;
+                
+                function fastRandom() {
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    return (rng >>> 0) / 4294967296;
+                }
+                
+                // Very rare phenomena - only 5% chance per cell
+                if (fastRandom() > 0.05) continue;
+                
+                // Random position within cell
+                const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                
+                // Viewport culling
+                if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
+                    continue;
+                }
+                
+                // Determine phenomenon type
+                const phenomType = fastRandom();
+                
+                if (phenomType < 0.3) {
+                    // SUPERNOVA - Brilliant expanding shell
+                    this.drawSupernova(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.5) {
+                    // NEUTRON STAR - Pulsing with beams
+                    this.drawNeutronStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.7) {
+                    // BINARY STAR SYSTEM - Two orbiting stars
+                    this.drawBinaryStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.85) {
+                    // NEBULA STAR - Star with colorful gas cloud
+                    this.drawNebulaStar(worldX, worldY, baseStarSize, fastRandom);
+                } else {
+                    // GIANT STAR WITH MASSIVE HALO
+                    this.drawGiantStar(worldX, worldY, baseStarSize, fastRandom);
+                }
+            }
+        }
+    }
+    
+    drawSupernova(x, y, baseSize, rng) {
+        const time = millis() * 0.003;
+        const phase = Math.sin(time + x * 0.01 + y * 0.01);
+        
+        // Core - brilliant white center
+        const coreSize = baseSize * (3 + phase * 0.5);
+        fill(255, 255, 255);
+        ellipse(x, y, coreSize, coreSize);
+        
+        // Expanding shell - multiple rings
+        for (let ring = 1; ring <= 3; ring++) {
+            const ringSize = coreSize * (1.5 + ring * 0.8 + phase * 0.3);
+            const opacity = 80 / ring;
+            
+            // Color shifts from white to red to purple
+            if (ring === 1) {
+                fill(255, 200, 150, opacity);
+            } else if (ring === 2) {
+                fill(255, 100, 100, opacity);
+            } else {
+                fill(150, 50, 200, opacity);
+            }
+            
+            ellipse(x, y, ringSize, ringSize);
+        }
+        
+        // Radiating filaments
+        stroke(255, 150, 100, 60);
+        strokeWeight(1);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * PI / 4) + time * 0.5;
+            const length = baseSize * (8 + phase * 2);
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
+    }
+    
+    drawNeutronStar(x, y, baseSize, rng) {
+        const time = millis() * 0.003; // Much slower time progression
+        const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01); // Gentler pulse, slower frequency
+        
+        // Core - intense white-blue
+        fill(180, 200, 230, 200 * pulse); // More subtle color and lower intensity
+        ellipse(x, y, baseSize * 1.5 * pulse, baseSize * 1.5 * pulse); // Smaller core
+        
+        // Magnetic field lines - pulsing beams
+        if (pulse > 0.9) { // Higher threshold for beams
+            stroke(120, 150, 200, 60); // More subtle beam color
+            strokeWeight(1); // Thinner beams
+            
+            // Two opposing beams
+            const beamLength = baseSize * 6; // Much shorter beams
+            const beamAngle = time * 0.5 + x * 0.002; // Slower rotation
+            
+            line(x + cos(beamAngle) * baseSize, y + sin(beamAngle) * baseSize,
+                 x + cos(beamAngle) * beamLength, y + sin(beamAngle) * beamLength);
+            line(x - cos(beamAngle) * baseSize, y - sin(beamAngle) * baseSize,
+                 x - cos(beamAngle) * beamLength, y - sin(beamAngle) * beamLength);
+        }
+        noStroke();
+    }
+    
+    drawBinaryStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const orbitRadius = baseSize * 4;
+        const angle = time + x * 0.01 + y * 0.01;
+        
+        // Primary star (larger, yellow)
+        const star1X = x + cos(angle) * orbitRadius * 0.6;
+        const star1Y = y + sin(angle) * orbitRadius * 0.6;
+        fill(255, 240, 180);
+        ellipse(star1X, star1Y, baseSize * 3, baseSize * 3);
+        
+        // Secondary star (smaller, blue)
+        const star2X = x - cos(angle) * orbitRadius * 0.4;
+        const star2Y = y - sin(angle) * orbitRadius * 0.4;
+        fill(180, 200, 255);
+        ellipse(star2X, star2Y, baseSize * 2, baseSize * 2);
+        
+        // Material transfer stream
+        stroke(255, 150, 100, 100);
+        strokeWeight(1);
+        const steps = 10;
+        for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const streamX = lerp(star1X, star2X, t) + sin(time * 2 + t * PI) * baseSize * 0.5;
+            const streamY = lerp(star1Y, star2Y, t) + cos(time * 2 + t * PI) * baseSize * 0.3;
+            point(streamX, streamY);
+        }
+        noStroke();
+    }
+    
+    drawNebulaStar(x, y, baseSize, rng) {
+        const time = millis() * 0.001;
+        
+        // Nebula cloud - multiple layers
+        for (let layer = 0; layer < 3; layer++) {
+            const cloudSize = baseSize * (8 + layer * 3);
+            const opacity = 25 / (layer + 1);
+            const offset = sin(time + layer) * baseSize * 0.5;
+            
+            // Different nebula colors
+            if (layer === 0) {
+                fill(100, 50, 200, opacity); // Purple
+            } else if (layer === 1) {
+                fill(200, 50, 100, opacity); // Magenta
+            } else {
+                fill(50, 100, 200, opacity); // Blue
+            }
+            
+            ellipse(x + offset, y - offset, cloudSize, cloudSize * 0.7);
+        }
+        
+        // Central star
+        fill(255, 255, 255);
+        ellipse(x, y, baseSize * 2.5, baseSize * 2.5);
+        
+        // Glow
+        fill(255, 255, 255, 60);
+        ellipse(x, y, baseSize * 5, baseSize * 5);
+    }
+    
+    drawGiantStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const breathe = 0.9 + 0.1 * sin(time + x * 0.005);
+        
+        // Multiple halos - largest first
+        const halos = [
+            { size: 15, color: [255, 100, 50, 15], offset: 0 },
+            { size: 10, color: [255, 150, 100, 25], offset: 0.5 },
+            { size: 6, color: [255, 200, 150, 40], offset: 1.0 },
+            { size: 3, color: [255, 220, 180, 80], offset: 1.5 }
+        ];
+        
+        // Draw halos from largest to smallest
+        for (let halo of halos) {
+            const haloSize = baseSize * halo.size * breathe;
+            const phase = time + halo.offset;
+            const shimmer = 0.8 + 0.2 * sin(phase * 2);
+            
+            fill(halo.color[0], halo.color[1], halo.color[2], halo.color[3] * shimmer);
+            ellipse(x, y, haloSize, haloSize);
+        }
+        
+        // Core star
+        fill(255, 200, 100);
+        ellipse(x, y, baseSize * 4 * breathe, baseSize * 4 * breathe);
+        
+        // Corona effects
+        stroke(255, 150, 50, 40);
+        strokeWeight(1);
+        for (let i = 0; i < 12; i++) {
+            const angle = (i * PI / 6) + time;
+            const length = baseSize * (8 + 2 * sin(time * 3 + i));
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
     }
 
     /** Draws all system contents. */
@@ -1889,7 +2114,7 @@ checkProjectileCollisions() {
             if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 noFill();
                 stroke(wave.color[0], wave.color[1], wave.color[2], 150);
-                strokeWeight(2);
+                strokeWeight(1); // Thinner beams
                 ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
             }
         }
@@ -2087,5 +2312,953 @@ addEnemy(enemy) {
     return false;
 }
 
+    drawSpectacularStars(left, right, top, bottom, baseStarSize) {
+        const gridSize = 400; // Very large grid for rare phenomena
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Pre-calculate viewport culling bounds
+        const cullLeft = this.player.pos.x - width/2 - 100;
+        const cullRight = this.player.pos.x + width/2 + 100;
+        const cullTop = this.player.pos.y - height/2 - 100;
+        const cullBottom = this.player.pos.y + height/2 + 100;
+        
+        // Loop through very sparse grid
+        const startGX = Math.floor(left / gridSize);
+        const endGX = Math.ceil(right / gridSize);
+        const startGY = Math.floor(top / gridSize);
+        const endGY = Math.ceil(bottom / gridSize);
+        
+        for (let gx = startGX; gx <= endGX; gx++) {
+            for (let gy = startGY; gy <= endGY; gy++) {
+                
+                // Deterministic random for this cell
+                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                let rng = cellSeed;
+                
+                function fastRandom() {
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    return (rng >>> 0) / 4294967296;
+                }
+                
+                // Very rare phenomena - only 5% chance per cell
+                if (fastRandom() > 0.05) continue;
+                
+                // Random position within cell
+                const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                
+                // Viewport culling
+                if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
+                    continue;
+                }
+                
+                // Determine phenomenon type
+                const phenomType = fastRandom();
+                
+                if (phenomType < 0.3) {
+                    // SUPERNOVA - Brilliant expanding shell
+                    this.drawSupernova(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.5) {
+                    // NEUTRON STAR - Pulsing with beams
+                    this.drawNeutronStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.7) {
+                    // BINARY STAR SYSTEM - Two orbiting stars
+                    this.drawBinaryStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.85) {
+                    // NEBULA STAR - Star with colorful gas cloud
+                    this.drawNebulaStar(worldX, worldY, baseStarSize, fastRandom);
+                } else {
+                    // GIANT STAR WITH MASSIVE HALO
+                    this.drawGiantStar(worldX, worldY, baseStarSize, fastRandom);
+                }
+            }
+        }
+    }
     
-} // End of StarSystem Class
+    drawSupernova(x, y, baseSize, rng) {
+        const time = millis() * 0.003;
+        const phase = Math.sin(time + x * 0.01 + y * 0.01);
+        
+        // Core - brilliant white center
+        const coreSize = baseSize * (3 + phase * 0.5);
+        fill(255, 255, 255);
+        ellipse(x, y, coreSize, coreSize);
+        
+        // Expanding shell - multiple rings
+        for (let ring = 1; ring <= 3; ring++) {
+            const ringSize = coreSize * (1.5 + ring * 0.8 + phase * 0.3);
+            const opacity = 80 / ring;
+            
+            // Color shifts from white to red to purple
+            if (ring === 1) {
+                fill(255, 200, 150, opacity);
+            } else if (ring === 2) {
+                fill(255, 100, 100, opacity);
+            } else {
+                fill(150, 50, 200, opacity);
+            }
+            
+            ellipse(x, y, ringSize, ringSize);
+        }
+        
+        // Radiating filaments
+        stroke(255, 150, 100, 60);
+        strokeWeight(1);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * PI / 4) + time * 0.5;
+            const length = baseSize * (8 + phase * 2);
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
+    }
+    
+    drawNeutronStar(x, y, baseSize, rng) {
+        const time = millis() * 0.003; // Much slower time progression
+        const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01); // Gentler pulse, slower frequency
+        
+        // Core - intense white-blue
+        fill(180, 200, 230, 200 * pulse); // More subtle color and lower intensity
+        ellipse(x, y, baseSize * 1.5 * pulse, baseSize * 1.5 * pulse); // Smaller core
+        
+        // Magnetic field lines - pulsing beams
+        if (pulse > 0.9) { // Higher threshold for beams
+            stroke(120, 150, 200, 60); // More subtle beam color
+            strokeWeight(1); // Thinner beams
+            
+            // Two opposing beams
+            const beamLength = baseSize * 6; // Much shorter beams
+            const beamAngle = time * 0.5 + x * 0.002; // Slower rotation
+            
+            line(x + cos(beamAngle) * baseSize, y + sin(beamAngle) * baseSize,
+                 x + cos(beamAngle) * beamLength, y + sin(beamAngle) * beamLength);
+            line(x - cos(beamAngle) * baseSize, y - sin(beamAngle) * baseSize,
+                 x - cos(beamAngle) * beamLength, y - sin(beamAngle) * beamLength);
+        }
+        noStroke();
+    }
+    
+    drawBinaryStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const orbitRadius = baseSize * 4;
+        const angle = time + x * 0.01 + y * 0.01;
+        
+        // Primary star (larger, yellow)
+        const star1X = x + cos(angle) * orbitRadius * 0.6;
+        const star1Y = y + sin(angle) * orbitRadius * 0.6;
+        fill(255, 240, 180);
+        ellipse(star1X, star1Y, baseSize * 3, baseSize * 3);
+        
+        // Secondary star (smaller, blue)
+        const star2X = x - cos(angle) * orbitRadius * 0.4;
+        const star2Y = y - sin(angle) * orbitRadius * 0.4;
+        fill(180, 200, 255);
+        ellipse(star2X, star2Y, baseSize * 2, baseSize * 2);
+        
+        // Material transfer stream
+        stroke(255, 150, 100, 100);
+        strokeWeight(1);
+        const steps = 10;
+        for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const streamX = lerp(star1X, star2X, t) + sin(time * 2 + t * PI) * baseSize * 0.5;
+            const streamY = lerp(star1Y, star2Y, t) + cos(time * 2 + t * PI) * baseSize * 0.3;
+            point(streamX, streamY);
+        }
+        noStroke();
+    }
+    
+    drawNebulaStar(x, y, baseSize, rng) {
+        const time = millis() * 0.001;
+        
+        // Nebula cloud - multiple layers
+        for (let layer = 0; layer < 3; layer++) {
+            const cloudSize = baseSize * (8 + layer * 3);
+            const opacity = 25 / (layer + 1);
+            const offset = sin(time + layer) * baseSize * 0.5;
+            
+            // Different nebula colors
+            if (layer === 0) {
+                fill(100, 50, 200, opacity); // Purple
+            } else if (layer === 1) {
+                fill(200, 50, 100, opacity); // Magenta
+            } else {
+                fill(50, 100, 200, opacity); // Blue
+            }
+            
+            ellipse(x + offset, y - offset, cloudSize, cloudSize * 0.7);
+        }
+        
+        // Central star
+        fill(255, 255, 255);
+        ellipse(x, y, baseSize * 2.5, baseSize * 2.5);
+        
+        // Glow
+        fill(255, 255, 255, 60);
+        ellipse(x, y, baseSize * 5, baseSize * 5);
+    }
+    
+    drawGiantStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const breathe = 0.9 + 0.1 * sin(time + x * 0.005);
+        
+        // Multiple halos - largest first
+        const halos = [
+            { size: 15, color: [255, 100, 50, 15], offset: 0 },
+            { size: 10, color: [255, 150, 100, 25], offset: 0.5 },
+            { size: 6, color: [255, 200, 150, 40], offset: 1.0 },
+            { size: 3, color: [255, 220, 180, 80], offset: 1.5 }
+        ];
+        
+        // Draw halos from largest to smallest
+        for (let halo of halos) {
+            const haloSize = baseSize * halo.size * breathe;
+            const phase = time + halo.offset;
+            const shimmer = 0.8 + 0.2 * sin(phase * 2);
+            
+            fill(halo.color[0], halo.color[1], halo.color[2], halo.color[3] * shimmer);
+            ellipse(x, y, haloSize, haloSize);
+        }
+        
+        // Core star
+        fill(255, 200, 100);
+        ellipse(x, y, baseSize * 4 * breathe, baseSize * 4 * breathe);
+        
+        // Corona effects
+        stroke(255, 150, 50, 40);
+        strokeWeight(1);
+        for (let i = 0; i < 12; i++) {
+            const angle = (i * PI / 6) + time;
+            const length = baseSize * (8 + 2 * sin(time * 3 + i));
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
+    }
+
+    /** Draws all system contents. */
+    draw() {
+        if (!this.player || !this.player.pos) return;
+
+        push();
+        // Calculate translation based on this.player position
+        let tx = width / 2 - this.player.pos.x;
+        let ty = height / 2 - this.player.pos.y;
+        translate(tx, ty);
+
+        // Calculate screen bounds once (with margin)
+        const screenBounds = {
+            left: -tx - 100,
+            right: -tx + width + 100,
+            top: -ty - 100,
+            bottom: -ty + height + 100
+        };
+
+        // Draw background (always visible)
+        this.drawBackground();
+
+        // --- Draw Jump Zone ---
+        // Call this early so other objects draw on top if needed
+        this.drawJumpZone(this.player.pos);
+        // ---
+
+        // Draw nebulae (draw first for background effect)
+        for (let nebula of this.nebulae) {
+            nebula.draw(screenBounds);
+        }
+
+        // Draw cosmic storms (after nebulae but before ships)
+        for (let storm of this.cosmicStorms) {
+            storm.draw(screenBounds);
+        }
+        // Draw station only if visible
+        if (this.station && 
+            this.isInView(this.station.pos.x, this.station.pos.y, 
+                          this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+            this.station.draw();
+        }
+        // Draw discovered secret stations
+        for (const s of this.secretStations) {
+            if (s.discovered && this.isInView(s.pos.x, s.pos.y, s.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                s.draw();
+            }
+        }
+
+        // Determine sun position using the first planet if it exists
+        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
+
+        // Draw only visible planets
+        for (let i = 0; i < this.planets.length; i++) {
+            const p = this.planets[i];
+            if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                p.draw(sunPos);
+            }
+        }
+
+        // Draw only visible asteroids
+        for (let i = 0; i < this.asteroids.length; i++) {
+            const a = this.asteroids[i];
+            if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                a.draw();
+            }
+        }
+
+        // Draw only visible cargo
+        if (this.cargo && this.cargo.length > 0) {
+            for (let i = 0; i < this.cargo.length; i++) {
+                const c = this.cargo[i];
+                // Use 1.5 instead of 4, matching other objects' visibility ranges
+                if (this.isInView(c.pos.x, c.pos.y, c.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                    c.draw();
+                }
+            }
+        }
+
+        // Draw only visible enemies
+        for (let i = 0; i < this.enemies.length; i++) {
+            const e = this.enemies[i];
+            if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                e.draw();
+            }
+        }
+
+        // Draw only visible projectiles
+        for (let i = 0; i < this.projectiles.length; i++) {
+            const proj = this.projectiles[i];
+            if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                proj.draw();
+            }
+        }
+
+        // Special effects culling
+        if (this.beams && this.beams.length > 0) {
+            this.drawBeamsWithCulling(screenBounds);
+        }
+
+        if (this.forceWaves && this.forceWaves.length > 0) {
+            this.drawForceWavesWithCulling(screenBounds);
+        }
+
+        // Draw only visible explosions
+        for (let i = 0; i < this.explosions.length; i++) {
+            const exp = this.explosions[i];
+            if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                exp.draw();
+            }
+        }
+
+        // Player is always drawn (center of view)
+        this.player.draw();
+
+        pop();
+    }
+
+    /**
+     * Faster check using primitive values instead of object parameter
+     */
+    isInView(x, y, size, left, right, top, bottom) {
+        return (x + size >= left && x - size <= right && y + size >= top && y - size <= bottom);
+    }
+
+    /** Draw beams with visibility culling */
+    drawBeamsWithCulling(screenBounds) {
+        for (let i = 0; i < this.beams.length; i++) {
+            const beam = this.beams[i];
+            
+            // Fast check if either beam endpoint is in view
+            const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
+            const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
+            
+            // If either end is visible, or beam crosses screen, draw it
+            if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
+                stroke(beam.color);
+                strokeWeight(beam.width || 2);
+                line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+            }
+        }
+    }
+
+    /** Draw force waves with visibility culling */
+    drawForceWavesWithCulling(screenBounds) {
+        for (let i = 0; i < this.forceWaves.length; i++) {
+            const wave = this.forceWaves[i];
+            
+            // Only draw if wave intersects screen
+            if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                noFill();
+                stroke(wave.color[0], wave.color[1], wave.color[2], 150);
+                strokeWeight(1); // Thinner beams
+                ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
+            }
+        }
+    }
+
+    /**
+     * Checks if a line segment intersects the screen
+     * Used for beams that might cross screen without endpoints being visible
+     * @param {p5.Vector} p1 - Start point
+     * @param {p5.Vector} p2 - End point
+     * @param {Object} bounds - Screen boundaries
+     * @return {boolean} Whether line intersects screen
+     */
+    lineIntersectsScreen(p1, p2, bounds) {
+        // Simple check: if line is entirely left/right/above/below screen
+        if ((p1.x < bounds.left && p2.x < bounds.left) ||
+            (p1.x > bounds.right && p2.x > bounds.right) ||
+            (p1.y < bounds.top && p2.y < bounds.top) ||
+            (p1.y > bounds.bottom && p2.y > bounds.bottom)) {
+            return false;
+        }
+        return true; // Line potentially intersects screen
+    }
+
+    // --- Save/Load System State ---
+    getSaveData() { return { visited: this.visited }; }
+    loadSaveData(data) { if (data?.visited !== undefined) this.visited = data.visited; }
+
+    /** Generates or retrieves missions for the station in this system */
+    getAvailableMissions(galaxy, player) {
+         if (this.station && typeof MissionGenerator?.generateMissions === 'function' && galaxy && player) {
+             try { this.availableMissions = MissionGenerator.generateMissions(this, this.station, galaxy, player); return this.availableMissions; }
+             catch(e) { console.error("Error generating missions:", e); this.availableMissions = []; return [];}
+         }
+         console.warn(`Cannot get missions for ${this.name}: Missing station, MissionGenerator, galaxy, or player.`);
+         return []; // Return empty if cannot generate
+    }
+
+    getEnemyRoleProbabilities() {
+        // Adjust these as needed for your game balance
+        switch ((this.securityLevel || '').toLowerCase()) {
+            case 'high':
+                return { PIRATE: 0.15, POLICE: 0.55, HAULER: 0.3 };
+            case 'medium':
+                return { PIRATE: 0.35, POLICE: 0.35, HAULER: 0.3 };
+            case 'low':
+                return { PIRATE: 0.55, POLICE: 0.2, HAULER: 0.25 };
+            case 'anarchy':
+                return { PIRATE: 0.8, POLICE: 0.05, HAULER: 0.15 };
+            default:
+                return { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
+        }
+    }
+
+    toJSON() {
+        return {
+            name: this.name,
+            economyType: this.economyType,
+            galaxyPos: { x: this.galaxyPos?.x || 0, y: this.galaxyPos?.y || 0 },
+            systemIndex: this.systemIndex,
+            techLevel: this.techLevel,
+            securityLevel: this.securityLevel,
+            visited: this.visited,
+            connectedSystemIndices: this.connectedSystemIndices ? [...this.connectedSystemIndices] : [],
+            // Save planets if present
+            planets: Array.isArray(this.planets)
+                ? this.planets.map(p => (typeof p.toJSON === 'function' ? p.toJSON() : null))
+                : [],
+            // Save station if present
+            station: this.station && typeof this.station.toJSON === 'function'
+                ? this.station.toJSON()
+                : null,
+            secretStations: this.secretStations && this.secretStations.length > 0
+                ? this.secretStations.map(s => s.toJSON())
+                : [],
+            // Save nebulae if present
+            nebulae: Array.isArray(this.nebulae) && this.nebulae.length > 0
+                ? this.nebulae.map(n => (typeof n.toJSON === 'function' ? n.toJSON() : null))
+                : [],
+            // --- Add Jump Zone Data ---
+            jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
+            jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
+            jumpZoneRadius: this.jumpZoneRadius,
+            // Add wanted status properties
+            playerWanted: this.playerWanted || false,
+            playerWantedLevel: this.playerWantedLevel || 0,
+            playerWantedExpiry: this.playerWantedExpiry,
+            policeAlertSent: this.policeAlertSent || false,
+            // ---
+            staticElementsInitialized: this.staticElementsInitialized // Save initialization state
+        };
+    }
+
+    static fromJSON(data) {
+        const sys = new StarSystem(
+            data.name,
+            data.economyType, // <-- Use economyType directly
+            data.galaxyPos.x,
+            data.galaxyPos.y,
+            data.systemIndex,
+            data.techLevel,
+            data.securityLevel
+        );
+        sys.visited = data.visited;
+        sys.economyType = data.economyType;
+        sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
+
+        // Restore planets if present
+        if (Array.isArray(data.planets) && typeof Planet !== "undefined" && typeof Planet.fromJSON === "function") {
+            sys.planets = data.planets.map(p => Planet.fromJSON(p));
+        } else {
+            sys.planets = [];
+        }
+
+        // Restore station if present
+        if (data.station && typeof Station !== "undefined" && typeof Station.fromJSON === "function") {
+            sys.station = Station.fromJSON(data.station);
+        } else {
+            sys.station = null;
+        }
+        
+        // Restore Nebulae if present
+        if (data.nebulae && Array.isArray(data.nebulae)) {
+            sys.nebulae = data.nebulae.map(nebulaData => Nebula.fromJSON(nebulaData));
+        }
+
+        // --- Restore Jump Zone Data ---
+        if (data.jumpZoneCenterX !== null && data.jumpZoneCenterY !== null && typeof createVector === 'function') {
+            sys.jumpZoneCenter = createVector(data.jumpZoneCenterX, data.jumpZoneCenterY);
+        } else {
+            sys.jumpZoneCenter = null; // Ensure it's null if not saved properly or p5 not ready
+        }
+        sys.jumpZoneRadius = data.jumpZoneRadius || JUMP_ZONE_DEFAULT_RADIUS;
+        // ---
+
+        // Restore wanted status
+        sys.playerWanted = data.playerWanted || false;
+        sys.playerWantedLevel = data.playerWantedLevel || 0;
+        sys.playerWantedExpiry = data.playerWantedExpiry || null;
+        sys.policeAlertSent = data.policeAlertSent || false;
+        
+        // --- Restore initialization state ---
+        // This prevents initStaticElements from running again if it already ran before saving
+        sys.staticElementsInitialized = data.staticElementsInitialized || false;
+        // ---
+
+        // NOTE: We do NOT call initStaticElements here because planets/station/jumpzone
+        // are being restored directly from JSON data. If initStaticElements *needs* to run
+        // on load for other reasons (like regenerating bgStars), the logic inside
+        // initStaticElements needs to be adjusted to skip regeneration of loaded elements.
+        // The current structure seems to load everything directly.
+
+        return sys;
+    }
+
+    // Add this method to the StarSystem class - place it after constructor
+    setEconomyType(economyType) {
+        // Store the economy type in the system
+        this.economyType = economyType;
+        
+        // CRITICAL: Update market's economy type when system's type changes
+        if (this.station && this.station.market) {
+            this.station.market.systemType = economyType;
+            this.station.market.updatePrices();
+        }
+    }
+
+    /**
+     * Checks if an entity should be despawned based on distance from player
+     * @param {Object} entity - The entity to check (must have pos property)
+     * @param {number} [factorMultiplier=1.1] - Optional multiplier for despawn radius
+     * @return {boolean} Whether the entity should be despawned
+     */
+    shouldDespawnEntity(entity, factorMultiplier = 1.1) {
+        if (!this.player || !entity || !entity.pos) return false;
+        
+        const distToPlayerSq = sq(entity.pos.x - this.player.pos.x) + sq(entity.pos.y - this.player.pos.y);
+        const despawnDistanceSq = sq(this.despawnRadius * factorMultiplier);
+        
+        return distToPlayerSq > despawnDistanceSq;
+    }
+    /**
+ * Adds an enemy to the system with proper references
+ * @param {Enemy} enemy - The enemy to add
+ * @returns {boolean} Whether enemy was successfully added
+ */
+addEnemy(enemy) {
+    if (enemy) {
+        // Set bidirectional reference
+        enemy.currentSystem = this;
+        window.currentSystem = this;
+        this.enemies.push(enemy);
+        return true;
+    }
+    return false;
+}
+
+    drawSpectacularStars(left, right, top, bottom, baseStarSize) {
+        const gridSize = 400; // Very large grid for rare phenomena
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Pre-calculate viewport culling bounds
+        const cullLeft = this.player.pos.x - width/2 - 100;
+        const cullRight = this.player.pos.x + width/2 + 100;
+        const cullTop = this.player.pos.y - height/2 - 100;
+        const cullBottom = this.player.pos.y + height/2 + 100;
+        
+        // Loop through very sparse grid
+        const startGX = Math.floor(left / gridSize);
+        const endGX = Math.ceil(right / gridSize);
+        const startGY = Math.floor(top / gridSize);
+        const endGY = Math.ceil(bottom / gridSize);
+        
+        for (let gx = startGX; gx <= endGX; gx++) {
+            for (let gy = startGY; gy <= endGY; gy++) {
+                
+                // Deterministic random for this cell
+                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                let rng = cellSeed;
+                
+                function fastRandom() {
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    return (rng >>> 0) / 4294967296;
+                }
+                
+                // Very rare phenomena - only 5% chance per cell
+                if (fastRandom() > 0.05) continue;
+                
+                // Random position within cell
+                const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                
+                // Viewport culling
+                if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
+                    continue;
+                }
+                
+                // Determine phenomenon type
+                const phenomType = fastRandom();
+                
+                if (phenomType < 0.3) {
+                    // SUPERNOVA - Brilliant expanding shell
+                    this.drawSupernova(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.5) {
+                    // NEUTRON STAR - Pulsing with beams
+                    this.drawNeutronStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.7) {
+                    // BINARY STAR SYSTEM - Two orbiting stars
+                    this.drawBinaryStar(worldX, worldY, baseStarSize, fastRandom);
+                } else if (phenomType < 0.85) {
+                    // NEBULA STAR - Star with colorful gas cloud
+                    this.drawNebulaStar(worldX, worldY, baseStarSize, fastRandom);
+                } else {
+                    // GIANT STAR WITH MASSIVE HALO
+                    this.drawGiantStar(worldX, worldY, baseStarSize, fastRandom);
+                }
+            }
+        }
+    }
+    
+    drawSupernova(x, y, baseSize, rng) {
+        const time = millis() * 0.003;
+        const phase = Math.sin(time + x * 0.01 + y * 0.01);
+        
+        // Core - brilliant white center
+        const coreSize = baseSize * (3 + phase * 0.5);
+        fill(255, 255, 255);
+        ellipse(x, y, coreSize, coreSize);
+        
+        // Expanding shell - multiple rings
+        for (let ring = 1; ring <= 3; ring++) {
+            const ringSize = coreSize * (1.5 + ring * 0.8 + phase * 0.3);
+            const opacity = 80 / ring;
+            
+            // Color shifts from white to red to purple
+            if (ring === 1) {
+                fill(255, 200, 150, opacity);
+            } else if (ring === 2) {
+                fill(255, 100, 100, opacity);
+            } else {
+                fill(150, 50, 200, opacity);
+            }
+            
+            ellipse(x, y, ringSize, ringSize);
+        }
+        
+        // Radiating filaments
+        stroke(255, 150, 100, 60);
+        strokeWeight(1);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * PI / 4) + time * 0.5;
+            const length = baseSize * (8 + phase * 2);
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
+    }
+    
+    drawNeutronStar(x, y, baseSize, rng) {
+        const time = millis() * 0.003; // Much slower time progression
+        const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01); // Gentler pulse, slower frequency
+        
+        // Core - intense white-blue
+        fill(180, 200, 230, 200 * pulse); // More subtle color and lower intensity
+        ellipse(x, y, baseSize * 1.5 * pulse, baseSize * 1.5 * pulse); // Smaller core
+        
+        // Magnetic field lines - pulsing beams
+        if (pulse > 0.9) { // Higher threshold for beams
+            stroke(120, 150, 200, 60); // More subtle beam color
+            strokeWeight(1); // Thinner beams
+            
+            // Two opposing beams
+            const beamLength = baseSize * 6; // Much shorter beams
+            const beamAngle = time * 0.5 + x * 0.002; // Slower rotation
+            
+            line(x + cos(beamAngle) * baseSize, y + sin(beamAngle) * baseSize,
+                 x + cos(beamAngle) * beamLength, y + sin(beamAngle) * beamLength);
+            line(x - cos(beamAngle) * baseSize, y - sin(beamAngle) * baseSize,
+                 x - cos(beamAngle) * beamLength, y - sin(beamAngle) * beamLength);
+        }
+        noStroke();
+    }
+    
+    drawBinaryStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const orbitRadius = baseSize * 4;
+        const angle = time + x * 0.01 + y * 0.01;
+        
+        // Primary star (larger, yellow)
+        const star1X = x + cos(angle) * orbitRadius * 0.6;
+        const star1Y = y + sin(angle) * orbitRadius * 0.6;
+        fill(255, 240, 180);
+        ellipse(star1X, star1Y, baseSize * 3, baseSize * 3);
+        
+        // Secondary star (smaller, blue)
+        const star2X = x - cos(angle) * orbitRadius * 0.4;
+        const star2Y = y - sin(angle) * orbitRadius * 0.4;
+        fill(180, 200, 255);
+        ellipse(star2X, star2Y, baseSize * 2, baseSize * 2);
+        
+        // Material transfer stream
+        stroke(255, 150, 100, 100);
+        strokeWeight(1);
+        const steps = 10;
+        for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const streamX = lerp(star1X, star2X, t) + sin(time * 2 + t * PI) * baseSize * 0.5;
+            const streamY = lerp(star1Y, star2Y, t) + cos(time * 2 + t * PI) * baseSize * 0.3;
+            point(streamX, streamY);
+        }
+        noStroke();
+    }
+    
+    drawNebulaStar(x, y, baseSize, rng) {
+        const time = millis() * 0.001;
+        
+        // Nebula cloud - multiple layers
+        for (let layer = 0; layer < 3; layer++) {
+            const cloudSize = baseSize * (8 + layer * 3);
+            const opacity = 25 / (layer + 1);
+            const offset = sin(time + layer) * baseSize * 0.5;
+            
+            // Different nebula colors
+            if (layer === 0) {
+                fill(100, 50, 200, opacity); // Purple
+            } else if (layer === 1) {
+                fill(200, 50, 100, opacity); // Magenta
+            } else {
+                fill(50, 100, 200, opacity); // Blue
+            }
+            
+            ellipse(x + offset, y - offset, cloudSize, cloudSize * 0.7);
+        }
+        
+        // Central star
+        fill(255, 255, 255);
+        ellipse(x, y, baseSize * 2.5, baseSize * 2.5);
+        
+        // Glow
+        fill(255, 255, 255, 60);
+        ellipse(x, y, baseSize * 5, baseSize * 5);
+    }
+    
+    drawGiantStar(x, y, baseSize, rng) {
+        const time = millis() * 0.002;
+        const breathe = 0.9 + 0.1 * sin(time + x * 0.005);
+        
+        // Multiple halos - largest first
+        const halos = [
+            { size: 15, color: [255, 100, 50, 15], offset: 0 },
+            { size: 10, color: [255, 150, 100, 25], offset: 0.5 },
+            { size: 6, color: [255, 200, 150, 40], offset: 1.0 },
+            { size: 3, color: [255, 220, 180, 80], offset: 1.5 }
+        ];
+        
+        // Draw halos from largest to smallest
+        for (let halo of halos) {
+            const haloSize = baseSize * halo.size * breathe;
+            const phase = time + halo.offset;
+            const shimmer = 0.8 + 0.2 * sin(phase * 2);
+            
+            fill(halo.color[0], halo.color[1], halo.color[2], halo.color[3] * shimmer);
+            ellipse(x, y, haloSize, haloSize);
+        }
+        
+        // Core star
+        fill(255, 200, 100);
+        ellipse(x, y, baseSize * 4 * breathe, baseSize * 4 * breathe);
+        
+        // Corona effects
+        stroke(255, 150, 50, 40);
+        strokeWeight(1);
+        for (let i = 0; i < 12; i++) {
+            const angle = (i * PI / 6) + time;
+            const length = baseSize * (8 + 2 * sin(time * 3 + i));
+            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+        }
+        noStroke();
+    }
+
+    /** Draws all system contents. */
+    draw() {
+        if (!this.player || !this.player.pos) return;
+
+        push();
+        // Calculate translation based on this.player position
+        let tx = width / 2 - this.player.pos.x;
+        let ty = height / 2 - this.player.pos.y;
+        translate(tx, ty);
+
+        // Calculate screen bounds once (with margin)
+        const screenBounds = {
+            left: -tx - 100,
+            right: -tx + width + 100,
+            top: -ty - 100,
+            bottom: -ty + height + 100
+        };
+
+        // Draw background (always visible)
+        this.drawBackground();
+
+        // --- Draw Jump Zone ---
+        // Call this early so other objects draw on top if needed
+        this.drawJumpZone(this.player.pos);
+        // ---
+
+        // Draw nebulae (draw first for background effect)
+        for (let nebula of this.nebulae) {
+            nebula.draw(screenBounds);
+        }
+
+        // Draw cosmic storms (after nebulae but before ships)
+        for (let storm of this.cosmicStorms) {
+            storm.draw(screenBounds);
+        }
+        // Draw station only if visible
+        if (this.station && 
+            this.isInView(this.station.pos.x, this.station.pos.y, 
+                          this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+            this.station.draw();
+        }
+        // Draw discovered secret stations
+        for (const s of this.secretStations) {
+            if (s.discovered && this.isInView(s.pos.x, s.pos.y, s.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                s.draw();
+            }
+        }
+
+        // Determine sun position using the first planet if it exists
+        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
+
+        // Draw only visible planets
+        for (let i = 0; i < this.planets.length; i++) {
+            const p = this.planets[i];
+            if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                p.draw(sunPos);
+            }
+        }
+
+        // Draw only visible asteroids
+        for (let i = 0; i < this.asteroids.length; i++) {
+            const a = this.asteroids[i];
+            if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                a.draw();
+            }
+        }
+
+        // Draw only visible cargo
+        if (this.cargo && this.cargo.length > 0) {
+            for (let i = 0; i < this.cargo.length; i++) {
+                const c = this.cargo[i];
+                // Use 1.5 instead of 4, matching other objects' visibility ranges
+                if (this.isInView(c.pos.x, c.pos.y, c.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                    c.draw();
+                }
+            }
+        }
+
+        // Draw only visible enemies
+        for (let i = 0; i < this.enemies.length; i++) {
+            const e = this.enemies[i];
+            if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                e.draw();
+            }
+        }
+
+        // Draw only visible projectiles
+        for (let i = 0; i < this.projectiles.length; i++) {
+            const proj = this.projectiles[i];
+            if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                proj.draw();
+            }
+        }
+
+        // Special effects culling
+        if (this.beams && this.beams.length > 0) {
+            this.drawBeamsWithCulling(screenBounds);
+        }
+
+        if (this.forceWaves && this.forceWaves.length > 0) {
+            this.drawForceWavesWithCulling(screenBounds);
+        }
+
+        // Draw only visible explosions
+        for (let i = 0; i < this.explosions.length; i++) {
+            const exp = this.explosions[i];
+            if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                exp.draw();
+            }
+        }
+
+        // Player is always drawn (center of view)
+        this.player.draw();
+
+        pop();
+    }
+
+    /**
+     * Faster check using primitive values instead of object parameter
+     */
+    isInView(x, y, size, left, right, top, bottom) {
+        return (x + size >= left && x - size <= right && y + size >= top && y - size <= bottom);
+    }
+
+    /** Draw beams with visibility culling */
+    drawBeamsWithCulling(screenBounds) {
+        for (let i = 0; i < this.beams.length; i++) {
+            const beam = this.beams[i];
+            
+            // Fast check if either beam endpoint is in view
+            const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
+            const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
+            
+            // If either end is visible, or beam crosses screen, draw it
+            if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
+                stroke(beam.color);
+                strokeWeight(beam.width || 2);
+                line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+            }
+        }
+    }
+
+    /** Draw force waves with visibility culling */
+    drawForceWavesWithCulling(screenBounds) {
+        for (let i = 0; i < this.forceWaves.length; i++) {
+            const wave = this.forceWaves[i];
+            
+            // Only draw if wave intersects screen
+            if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                noFill();
+                stroke(wave.color);
+                strokeWeight(1); // Thinner beams
+                ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
+            }
+        }
+    }
+} // End of StarSystem class
