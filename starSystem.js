@@ -125,7 +125,6 @@ class StarSystem {
         this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
-        this.bgStars = [];     // Populated in initStaticElements
 
         // --- Config (can be set here, despawnRadius updated later) ---
         this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
@@ -277,17 +276,7 @@ class StarSystem {
         try { this.starColor = color(random(200, 255), random(150, 255), random(50, 150)); } catch(e) { this.starColor = color(255, 255, 0);} // Fallback color yellow
         try { this.starSize = random(50, 150); } catch(e) { this.starSize = 100; } // Fallback size
 
-        this.bgStars = []; let worldBounds = this.despawnRadius * 1.5; let numBgStars = 10000; // Default star count
-        try { numBgStars = floor(random(1000, 10000)); } catch(e) {} // Use default on error
-        try { // Generate background stars using seeded random
-            for (let i = 0; i < numBgStars; i++) {
-                this.bgStars.push({
-                    x: random(-worldBounds, worldBounds),
-                    y: random(-worldBounds, worldBounds),
-                    size: random(1, 3)
-                });
-            }
-        } catch(e) { console.error("Error generating background stars:", e); }
+        // Note: Stars are now generated procedurally in drawBackground() - no need to store them
 
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
@@ -457,6 +446,129 @@ try {
         // ---
 
         console.log(`      <<< ${this.name}: initStaticElements() Finished`); // Log completion
+    }
+
+    // --- Starfield Buffer System ---
+    
+    /**
+     * Generates a starfield buffer tile for a specific world region
+     * @param {number} tileX - X coordinate of the tile in world space
+     * @param {number} tileY - Y coordinate of the tile in world space  
+     * @returns {p5.Graphics} The pre-rendered starfield tile
+     */
+    generateStarfieldTile(tileX, tileY) {
+        if (!this.bgStars || this.bgStars.length === 0) {
+            return null;
+        }
+        
+        const buffer = createGraphics(this.starfieldTileSize, this.starfieldTileSize);
+        buffer.background(0, 0); // Transparent background
+        buffer.fill(255);
+        buffer.noStroke();
+        
+        // Add slight glow effect like the original
+        buffer.strokeWeight(1);
+        buffer.stroke(255, 255, 255, 100);
+        
+        // Calculate tile bounds in world space
+        const tileBounds = {
+            left: tileX - this.starfieldTileSize / 2,
+            right: tileX + this.starfieldTileSize / 2,
+            top: tileY - this.starfieldTileSize / 2,
+            bottom: tileY + this.starfieldTileSize / 2
+        };
+        
+        // Draw only stars that fall within this tile
+        this.bgStars.forEach(star => {
+            if (star.x >= tileBounds.left && star.x <= tileBounds.right &&
+                star.y >= tileBounds.top && star.y <= tileBounds.bottom) {
+                
+                // Convert world coordinates to tile-local coordinates
+                const localX = star.x - tileBounds.left;
+                const localY = star.y - tileBounds.top;
+                
+                buffer.ellipse(localX, localY, star.size, star.size);
+            }
+        });
+        
+        return buffer;
+    }
+    
+    /**
+     * Gets or creates a starfield tile for the given world coordinates
+     * @param {number} tileX - X coordinate of the tile center in world space
+     * @param {number} tileY - Y coordinate of the tile center in world space
+     * @returns {p5.Graphics|null} The starfield tile buffer
+     */
+    getStarfieldTile(tileX, tileY) {
+        const tileKey = `${Math.floor(tileX / this.starfieldTileSize)}_${Math.floor(tileY / this.starfieldTileSize)}`;
+        
+        // Check if tile exists in cache
+        if (this.starfieldBuffers.has(tileKey)) {
+            // Update access time for LRU cache
+            this.bufferAccessTime.set(tileKey, millis());
+            return this.starfieldBuffers.get(tileKey);
+        }
+        
+        // Generate new tile
+        const alignedTileX = Math.floor(tileX / this.starfieldTileSize) * this.starfieldTileSize + this.starfieldTileSize / 2;
+        const alignedTileY = Math.floor(tileY / this.starfieldTileSize) * this.starfieldTileSize + this.starfieldTileSize / 2;
+        
+        const tile = this.generateStarfieldTile(alignedTileX, alignedTileY);
+        
+        if (tile) {
+            // Clean cache if it's getting too large
+            this.cleanStarfieldCache();
+            
+            // Store in cache
+            this.starfieldBuffers.set(tileKey, tile);
+            this.bufferAccessTime.set(tileKey, millis());
+        }
+        
+        return tile;
+    }
+    
+    /**
+     * Cleans the starfield buffer cache using LRU eviction
+     */
+    cleanStarfieldCache() {
+        if (this.starfieldBuffers.size < this.maxBufferCacheSize) {
+            return;
+        }
+        
+        // Find oldest accessed tile
+        let oldestKey = null;
+        let oldestTime = Infinity;
+        
+        for (const [key, time] of this.bufferAccessTime.entries()) {
+            if (time < oldestTime) {
+                oldestTime = time;
+                oldestKey = key;
+            }
+        }
+        
+        // Remove oldest tile
+        if (oldestKey) {
+            const buffer = this.starfieldBuffers.get(oldestKey);
+            if (buffer && buffer.remove) {
+                buffer.remove(); // Free graphics memory
+            }
+            this.starfieldBuffers.delete(oldestKey);
+            this.bufferAccessTime.delete(oldestKey);
+        }
+    }
+    
+    /**
+     * Disposes all starfield buffers to free memory
+     */
+    disposeStarfieldBuffers() {
+        for (const buffer of this.starfieldBuffers.values()) {
+            if (buffer && buffer.remove) {
+                buffer.remove();
+            }
+        }
+        this.starfieldBuffers.clear();
+        this.bufferAccessTime.clear();
     }
 
     /** Creates random planets using seeded random. Called by initStaticElements. */
@@ -1599,22 +1711,234 @@ checkProjectileCollisions() {
         return false;
     }
 
-    /** Draws background stars. Assumes called within translated space. */
-    drawBackground() {
-        if (!this.bgStars) {
-            console.log(`No bgStars in ${this.name} system!`);
-            return;
+    /** Draws background stars using fast procedural generation. */
+    drawBackground(cameraX = 0, cameraY = 0) {
+        // ULTRA-EFFICIENT HASH-BASED STARFIELD RENDERER
+        // Uses simple hash functions instead of expensive noise for maximum performance
+        
+        // Calculate visible area with small margin
+        const margin = 200;
+        const left = cameraX - width / 2 - margin;
+        const right = cameraX + width / 2 + margin;
+        const top = cameraY - height / 2 - margin;
+        const bottom = cameraY + height / 2 + margin;
+        
+        // Load pixels for direct manipulation
+        loadPixels();
+        
+        // EFFICIENT HASH-BASED STAR GENERATION with organic variation
+        const baseSpacing = 80; // Base grid spacing
+        
+        // Calculate grid bounds with smooth boundaries
+        const gridLeft = Math.floor(left / baseSpacing) * baseSpacing;
+        const gridTop = Math.floor(top / baseSpacing) * baseSpacing;
+        
+        for (let x = gridLeft; x < right + baseSpacing; x += baseSpacing) {
+            for (let y = gridTop; y < bottom + baseSpacing; y += baseSpacing) {
+                
+                // Add FAST organic grid irregularity using hash
+                const gridSeed = this.simpleHash(x * 67 + y * 41 + this.systemIndex * 999);
+                const offsetX = ((gridSeed % 100) - 50) * 0.6; // ±30 pixel offset
+                const offsetY = (((gridSeed >> 8) % 100) - 50) * 0.6; // ±30 pixel offset
+                const actualX = x + offsetX;
+                const actualY = y + offsetY;
+                
+                // FAST HASH-BASED STAR GENERATION with cluster variation
+                const cellSeed = this.simpleHash(actualX * 73 + actualY * 37 + this.systemIndex * 1337);
+                
+                // Create clusters by varying star count based on position
+                const clusterSeed = this.simpleHash((x >> 7) * 127 + (y >> 7) * 89 + this.systemIndex * 777);
+                const isCluster = (clusterSeed % 100) > 85; // 15% chance of clusters
+                
+                let numStars;
+                if (isCluster) {
+                    numStars = 6 + (cellSeed % 8); // 6-13 stars in clusters
+                } else {
+                    numStars = 2 + (cellSeed % 5); // 2-6 normal stars
+                }
+                
+                for (let i = 0; i < numStars; i++) {
+                    // Use simple hash functions for star position with organic spread
+                    const starSeed = this.simpleHash(cellSeed + i * 127);
+                    const starSeed2 = this.simpleHash(starSeed + 89);
+                    const starSeed3 = this.simpleHash(starSeed2 + 213);
+                    
+                    // Create organic star distribution with varying spread
+                    let spread = baseSpacing;
+                    if (isCluster) {
+                        spread = baseSpacing * 1.3; // Larger spread in clusters
+                    }
+                    
+                    // Generate star position with organic distribution
+                    const baseOffsetX = (starSeed % 200) / 200 * spread - spread * 0.5;
+                    const baseOffsetY = (starSeed2 % 200) / 200 * spread - spread * 0.5;
+                    
+                    // Add small irregular displacement for organic feel
+                    const microOffsetX = ((starSeed3 % 100) - 50) * 0.3;
+                    const microOffsetY = (((starSeed3 >> 8) % 100) - 50) * 0.3;
+                    
+                    const starX = actualX + baseOffsetX + microOffsetX;
+                    const starY = actualY + baseOffsetY + microOffsetY;
+                    
+                    // Only render stars that are actually on screen
+                    const screenX = Math.round(starX - cameraX + width / 2);
+                    const screenY = Math.round(starY - cameraY + height / 2);
+                    
+                    if (screenX >= -1 && screenX < width + 1 && screenY >= -1 && screenY < height + 1) {                            // Fast star property calculation using hash
+                            const propSeed = this.simpleHash(starSeed + 234);
+                            const brightLevel = propSeed % 100;
+                            
+                            let brightness, starSize, red, green, blue;
+                            
+                            // Boost brightness in clusters for more dramatic effect
+                            let brightnessMult = 1.0;
+                            if (isCluster) {
+                                brightnessMult = 1.3; // 30% brighter in clusters
+                            }                            if (brightLevel > 96) {
+                                // Giant stars (4%) - use ellipse for halos
+                                brightness = Math.floor((200 + (propSeed % 55)) * brightnessMult);
+                                starSize = 4 + (propSeed % 4); // 4-7 pixels
+                            
+                            // Simple color variation for giants
+                            const colorSeed = propSeed % 4;
+                            if (colorSeed === 0) {
+                                red = brightness; green = brightness * 0.6; blue = brightness * 0.4; // Red
+                            } else if (colorSeed === 1) {
+                                red = brightness * 0.7; green = brightness * 0.8; blue = brightness; // Blue
+                            } else if (colorSeed === 2) {
+                                red = brightness; green = brightness * 0.9; blue = brightness * 0.5; // Yellow
+                            } else {
+                                red = green = blue = brightness; // White
+                            }
+                            
+                            // Draw giant star with simple halo
+                            push();
+                            translate(-cameraX + width / 2, -cameraY + height / 2);
+                            noStroke();
+                            fill(red, green, blue, brightness * 0.2);
+                            ellipse(starX, starY, starSize * 3, starSize * 3);
+                            fill(red, green, blue);
+                            ellipse(starX, starY, starSize, starSize);
+                            pop();                            } else {
+                                // Regular stars - use fast pixel manipulation
+                                
+                                if (brightLevel > 85) {
+                                    // Bright stars (11%)
+                                    brightness = Math.floor((120 + (propSeed % 80)) * brightnessMult);
+                                    starSize = 2 + (propSeed % 2); // 2-3 pixels
+                                } else if (brightLevel > 60) {
+                                    // Medium stars (25%)
+                                    brightness = Math.floor((80 + (propSeed % 60)) * brightnessMult);
+                                    starSize = 1 + (propSeed % 2); // 1-2 pixels
+                                } else if (brightLevel > 30) {
+                                    // Dim stars (30%)
+                                    brightness = Math.floor((40 + (propSeed % 50)) * brightnessMult);
+                                    starSize = 1; // 1 pixel
+                                } else {
+                                    // Background dust (30%)
+                                    brightness = Math.floor((15 + (propSeed % 35)) * brightnessMult);
+                                    starSize = 1; // 1 pixel
+                                }
+                            
+                            // Simple color variation
+                            const colorType = (propSeed % 10);
+                            if (colorType === 0) {
+                                // Red tint (10%)
+                                red = brightness;
+                                green = brightness * 0.7;
+                                blue = brightness * 0.5;
+                            } else if (colorType === 1) {
+                                // Blue tint (10%)
+                                red = brightness * 0.8;
+                                green = brightness * 0.9;
+                                blue = brightness;
+                            } else if (colorType === 2) {
+                                // Yellow tint (10%)
+                                red = brightness;
+                                green = brightness * 0.9;
+                                blue = brightness * 0.6;
+                            } else {
+                                // White (70%)
+                                red = green = blue = brightness;
+                            }
+                            
+                            // Draw the star using fast pixel manipulation
+                            this.setPixelStar(screenX, screenY, red, green, blue, starSize);
+                        }
+                    }
+                }
+            }
         }
         
-        fill(255); 
-        noStroke();
+        // Update pixels to screen
+        updatePixels();
+    }
+    
+    // ULTRA-FAST simple hash function (much faster than noise)
+    simpleHash(x) {
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = (x >> 16) ^ x;
+        return Math.abs(x);
+    }
+    
+    // ULTRA-FAST pixel manipulation for colorful stars of different sizes
+    setPixelStar(x, y, red, green, blue, size = 1) {
+        // Direct pixel buffer manipulation - much faster than ellipse()
+        const pixelDensity = this._pixelDensity || 1;
         
-        // Slight glow effect
-        strokeWeight(1);
-        stroke(255, 255, 255, 100);
-        this.bgStars.forEach(s => {
-            ellipse(s.x, s.y, s.size, s.size);
-        });
+        // Handle different star sizes efficiently
+        if (size === 1) {
+            // Single pixel star (fastest)
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                const index = 4 * ((y * width + x) * pixelDensity * pixelDensity);
+                pixels[index] = red;         // Red
+                pixels[index + 1] = green;   // Green  
+                pixels[index + 2] = blue;    // Blue
+                pixels[index + 3] = 255;     // Alpha
+            }
+        } else if (size === 2) {
+            // 2x2 pixel star with center bright, edges dimmer
+            for (let dx = 0; dx < 2; dx++) {
+                for (let dy = 0; dy < 2; dy++) {
+                    const px = x + dx;
+                    const py = y + dy;
+                    
+                    if (px >= 0 && px < width && py >= 0 && py < height) {
+                        const index = 4 * ((py * width + px) * pixelDensity * pixelDensity);
+                        const brightness = (dx === 0 && dy === 0) ? 1.0 : 0.7; // Center brighter
+                        
+                        pixels[index] = red * brightness;
+                        pixels[index + 1] = green * brightness;
+                        pixels[index + 2] = blue * brightness;
+                        pixels[index + 3] = 255;
+                    }
+                }
+            }
+        } else if (size === 3) {
+            // 3x3 pixel star with gradient
+            for (let dx = 0; dx < 3; dx++) {
+                for (let dy = 0; dy < 3; dy++) {
+                    const px = x + dx - 1; // Center the 3x3
+                    const py = y + dy - 1;
+                    
+                    if (px >= 0 && px < width && py >= 0 && py < height) {
+                        const index = 4 * ((py * width + px) * pixelDensity * pixelDensity);
+                        
+                        // Create gradient: center=1.0, edges=0.4, corners=0.2
+                        let brightness;
+                        if (dx === 1 && dy === 1) brightness = 1.0;      // Center
+                        else if (dx === 1 || dy === 1) brightness = 0.6; // Edges
+                        else brightness = 0.3;                           // Corners
+                        
+                        pixels[index] = red * brightness;
+                        pixels[index + 1] = green * brightness;
+                        pixels[index + 2] = blue * brightness;
+                        pixels[index + 3] = 255;
+                    }
+                }
+            }
+        }
     }
 
     /** Draws all system contents. */
@@ -1635,8 +1959,8 @@ checkProjectileCollisions() {
             bottom: -ty + height + 100
         };
 
-        // Draw background (always visible)
-        this.drawBackground();
+        // Draw background (always visible) - pass camera position for efficient tiling
+        this.drawBackground(this.player.pos.x, this.player.pos.y);
 
         // --- Draw Jump Zone ---
         // Call this early so other objects draw on top if needed
@@ -1666,6 +1990,7 @@ checkProjectileCollisions() {
         }
 
         // Determine sun position using the first planet if it exists
+       
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
 
         // Draw only visible planets
@@ -1966,5 +2291,5 @@ addEnemy(enemy) {
     return false;
 }
 
-    
-} // End of StarSystem Class
+
+}
