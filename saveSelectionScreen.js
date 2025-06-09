@@ -130,9 +130,7 @@ class SaveSelectionScreen {
         // Main title
         textSize(48);
         fill(210, 200, 255); // Slightly brighter purple
-        // Shadow for title
-        fill(0, 0, 0, 80);
-        text("COMMANDER", width/2 + 2, height * 0.15 + 2);
+
         fill(210, 200, 255);
         text("COMMANDER", width/2, height * 0.15);
         
@@ -140,10 +138,9 @@ class SaveSelectionScreen {
         textSize(24);
         fill(160, 160, 210); // Slightly brighter blue/purple
         // Shadow for subtitle
-        fill(0, 0, 0, 70);
-        text("Select Your Destiny", width/2 + 1, height * 0.22 + 1);
+
         fill(160, 160, 210);
-        text("Select Your Destiny", width/2, height * 0.22);
+        text("Select Save Game", width/2, height * 0.22);
         
         pop();
     }
@@ -242,22 +239,27 @@ class SaveSelectionScreen {
         
         if (data) {
             // Show saved game details
-            textSize(12); // Adjusted for smaller slot
+            textSize(20); // Adjusted for smaller slot
             fill(isSelected ? color(200, 220, 255) : color(100, 120, 150));
             
             const playerData = data.playerData;
             const galaxyData = data.galaxyData;
             
-            let lineY = y + 35; // Start position for details
-            const lineSpacing = 18;
+            const lineSpacing = 20; // Reverted to 18, or adjust as needed for two columns
+            const col1X = x + 20 + hoverOffset;
+            const col2X = x + w / 2 + hoverOffset; // Start second column halfway across the slot
+            let line1Y = y + 35; // Initial Y for the first line in col1
+            let line2Y = y + 35; // Initial Y for the first line in col2
 
             if (playerData) {
-                text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, x + 20 + hoverOffset, lineY);
-                lineY += lineSpacing;
+                // Column 1
+                text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, col1X, line1Y);
+                line1Y += lineSpacing;
                 
-                text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, x + 20 + hoverOffset, lineY);
-                lineY += lineSpacing;
-                
+                text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, col1X, line1Y);
+                // line1Y += lineSpacing; // Increment if more items in col1
+
+                // Column 2
                 let systemName = "Unknown System";
                 if (galaxyData && galaxyData.systems && data.currentSystemIndex !== undefined) {
                     const currentSystem = galaxyData.systems[data.currentSystemIndex];
@@ -265,21 +267,23 @@ class SaveSelectionScreen {
                         systemName = currentSystem.name;
                     }
                 }
-                text(`System: ${systemName}`, x + 20 + hoverOffset, lineY);
+                text(`System: ${systemName}`, col2X, line2Y);
+                line2Y += lineSpacing;
+
+                text(`Rank: ${playerData.rank || 'Harmless'}`, col2X, line2Y);
+                // line2Y += lineSpacing; // Increment if more items in col2
             }
             
             this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', 
                                   x + w - 70 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
         } else if (title.startsWith("NEW GAME")) {
             // New game description
-            textSize(12); // Adjusted for smaller slot
+            textSize(20); // Adjusted for smaller slot
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
             let lineY = y + 35;
-            const lineSpacing = 18;
+            const lineSpacing = 20;
             text("Begin a new adventure.", x + 20 + hoverOffset, lineY);
-            lineY += lineSpacing;
-            text("Sidewinder, 1000 CR.", x + 20 + hoverOffset, lineY);
-            
+ 
             this.drawNewGameIcon(x + w - 50 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
         }
         
