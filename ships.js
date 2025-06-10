@@ -1135,7 +1135,7 @@ const SHIP_DEFINITIONS = {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
         baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
         baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
-        armament: ["Mini-Turret", "Force Blaster","Barrier Field"], // Defensive passenger ship
+        armament: ["Mini-Turret", "Force Blaster","Halo"], // Defensive passenger ship
         costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
         drawFunction: drawStarlinerCruiser, 
         vertexLayers: [
@@ -1359,7 +1359,7 @@ const SHIP_DEFINITIONS = {
         name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
-        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition"],
+        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition", "Barrier Field"],
         costCategory: "High", description: "A versatile and deadly Harlequin ship, adaptable to many combat roles.",
         drawFunction: drawHarlequinScaramouche,
          vertexLayers: [
@@ -1414,7 +1414,7 @@ const SHIP_DEFINITIONS = {
         name: "Cargo Wagon", role: "Heavy Local Transport", sizeCategory: "Medium", size: 45,
         baseMaxSpeed: 3.0, baseThrust: 0.045, baseTurnRate: 0.03,
         baseHull: 120, baseShield: 30, shieldRecharge: 0.5, cargoCapacity: 120,
-        armament: ["Mini-Turret"],
+        armament: [],
         costCategory: "Low-Medium", description: "Slow but spacious, for bulk local transport. Little more than an engine strapped to containers.",
         drawFunction: drawCargoWagon,
         vertexData: [ {x:1,y:0.6}, {x:0.8,y:0.8}, {x:-0.8,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.8,y:-0.8}, {x:0.8,y:-0.8}, {x:1,y:-0.6} ],
@@ -1601,7 +1601,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
         baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
-        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle","Barrier Field"],
+        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle","Halo"],
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         drawFunction: drawImperialPaladin,
         vertexLayers: [
@@ -1849,7 +1849,7 @@ const SHIP_DEFINITIONS = {
         name: "Lotus Carrier (Alien)", role: "Alien Carrier", sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.025,
         baseHull: 800, baseShield: 900, shieldRecharge: 4.0, cargoCapacity: 200,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam", "Halo"],
         costCategory: "N/A", description: "Enormous alien carrier with layered, lotus-like petals.",
         drawFunction: drawLotusCarrier,
         vertexLayers: [
