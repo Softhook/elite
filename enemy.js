@@ -52,7 +52,6 @@ const FLEE_MIN_DURATION_MS = 2000;
 const FLEE_ESCAPE_DIST_MULT = 2.5; // Base multiplier for detectionRange
 const TARGET_SCORE_INVALID = -Infinity; // Score for invalid/ignored targets
 const TARGET_SCORE_BASE_WANTED = 100;   // Base score for police targeting wanted
-const JUMP_EFFECT_DURATION_MS = 1500;   // Duration of the jump visual effect in milliseconds
 const TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
 const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
 const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
@@ -302,13 +301,6 @@ class Enemy {
         // Shield recharge delay
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
-        
-        // Initialize tangle effect properties
-        this.dragMultiplier = 1.0;   // Default - normal drag 
-        this.dragEffectTimer = 0;    // Countdown timer for tangle effect
-        this.tangleEffectTime = 0;   // Visual effect timestamp
-        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
-        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
 
         // --- Guard-specific properties ---
         this.principal = null; // The entity this guard is protecting
@@ -316,9 +308,6 @@ class Enemy {
         this.guardLeashDistance = 450;    // Max distance to stray from principal when not engaging
         this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
         this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
-        this.currentEngagementTarget = null; // Track who the guard is currently engaging
-        this.lastEngagementTime = 0;      // When the guard started engaging the current target
-        this.engagementDuration = 12000;  // Min time to stick with a target (12 seconds)
         // ---
 
         // --- Combat AI Flags ---
@@ -371,143 +360,134 @@ class Enemy {
     update(system) {
         if (this.destroyed || !system) return;
     
-        // Check if jump effect is active and should be completed
-        if (this.jumpingEffect && this.jumpEffectStartTime) {
-            const currentTime = millis();
-            const elapsedTime = currentTime - this.jumpEffectStartTime;
-            
-            if (elapsedTime >= JUMP_EFFECT_DURATION_MS) {
-                // Jump effect finished, destroy the enemy
-                console.log(`${this.role} ${this.shipTypeName} jump effect complete, destroying.`);
-                this.destroy();
-                return;
-            }
-        }
-    
-        // Always update system reference
+        // Always update system reference when update is called
         this.currentSystem = system;
         
-        // Use a single multiplier for time-based cooldowns (deltaTime in seconds)
-        const dtSeconds = deltaTime / 1000;
+        // Update weapon cooldown
+        this.fireCooldown -= deltaTime / 1000;
         
-        // Process all cooldowns in a batch with a single calculation
-        this.fireCooldown -= dtSeconds;
-        if (this.cargoCollectionCooldown > 0) this.cargoCollectionCooldown -= dtSeconds;
-        if (this.attackCooldown > 0) this.attackCooldown -= dtSeconds;
-        
-        // Optimize shield regeneration with cached values and faster checks
-        if (this.shield < this.maxShield && !this.destroyed) {
-            const currentTime = millis();
-            if (currentTime - this.lastShieldHitTime > this.shieldRechargeDelay) {
-                // Cache the time scale computation
-                const timeScaleFactor = this._getTimeScale() * 0.016;
-                const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScaleFactor;
-                
-                this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
-            }
+        // Cargo collection cooldown
+        if (this.cargoCollectionCooldown > 0) {
+            this.cargoCollectionCooldown -= deltaTime / 1000;
         }
-        
-        // Update tangle effect timer
+
+        // Process hauler attack cooldown
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= deltaTime / 1000;
+        }
+
+        // Regenerate shields only after recharge delay has passed
+        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
+        if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
+            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+        }
+
+            // Update drag effect timer
         if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= dtSeconds;
+            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
             }
         }
-        
-        // Update rotation blocking timer
-        if (this.rotationBlockTimer > 0) {
-            this.rotationBlockTimer -= dtSeconds;
-            if (this.rotationBlockTimer <= 0) {
-                this.rotationBlockMultiplier = 1.0;
-                this.rotationBlockTimer = 0;
-            }
-        }
-        
-        // Optimize cargo detection logic - only run every 5 frames
-        if (frameCount % 5 === 0) {
-            // For pirates and transporters - only check for cargo when needed
-            if ((this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.TRANSPORT) && 
-                this.currentState !== AI_STATE.COLLECTING_CARGO && 
-                this.cargoCollectionCooldown <= 0) {
-                
-                const cargoTarget = this.detectCargo(system);
-                if (cargoTarget) {
-                    if (this.role === AI_ROLE.TRANSPORT) {
-                        this.previousState = this.currentState;  // Remember state for transports
-                    }
-                    this.cargoTarget = cargoTarget;
-                    this.changeState(AI_STATE.COLLECTING_CARGO);
-                }
+
+        // For pirates: Look for cargo first if not already collecting
+        if (this.role === AI_ROLE.PIRATE && 
+            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+            this.cargoCollectionCooldown <= 0) {
+            
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                this.cargoTarget = cargoTarget;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
+                console.log(`${this.shipTypeName} detected cargo - moving to collect`);
             }
         }
 
-        // Role-specific AI behavior updates - optimize with lookup table instead of if/else chain
+        // For transporters: Check for cargo like pirates do
+        if (this.role === AI_ROLE.TRANSPORT && 
+            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+            this.cargoCollectionCooldown <= 0) {
+            
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                // Remember current state to return to after collection
+                this.previousState = this.currentState;
+                this.cargoTarget = cargoTarget;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
+                console.log(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
+            }
+        }
+
+        // Role-specific AI behavior updates
         try {
-            // Use role as key for direct lookup
-            switch (this.role) {
-                case AI_ROLE.TRANSPORT:
-                    if (this.currentState === AI_STATE.COLLECTING_CARGO) {
-                        if (!this.updateCargoCollectionAI(system)) {
-                            this.changeState(this.previousState || AI_STATE.TRANSPORTING);
-                        }
-                        this.updatePhysics();
-                    } else {
-                        this.updateTransportAI(system);
+            if (this.role === AI_ROLE.TRANSPORT) {
+                // Handle cargo collection first if applicable
+                if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                    if (!this.updateCargoCollectionAI(system)) {
+                        // When done collecting, return to previous state
+                        this.changeState(this.previousState || AI_STATE.TRANSPORTING);
                     }
-                    break;
-                    
-                case AI_ROLE.GUARD:
-                    if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
-                        this.updateHaulerAI(system);
-                        this.updatePhysics();
-                    } else if (this.currentState === AI_STATE.GUARDING) {
-                        this._updateState_GUARDING();
-                        this.updatePhysics();
-                    } else {
-                        this.updateCombatAI(system);
-                        this.updatePhysics();
-                    }
-                    break;
-                    
-                case AI_ROLE.PIRATE:
-                    if (this.currentState === AI_STATE.COLLECTING_CARGO) {
-                        if (!this.updateCargoCollectionAI(system)) {
+                    this.updatePhysics();
+                } else {
+                    // Normal transport behavior
+                    this.updateTransportAI(system);
+                }
+            } 
+            // --- START OF NEW GUARD ROLE LOGIC ---
+            else if (this.role === AI_ROLE.GUARD) {
+                // *** ADD THIS CHECK ***
+                if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                    // Use hauler jump logic for guards following their principal
+                    this.updateHaulerAI(system);
+                }
+                else if (this.currentState === AI_STATE.GUARDING) {
+                    this._updateState_GUARDING();
+                }
+                else {
+                    this.updateCombatAI(system);
+                }
+                this.updatePhysics();
+            }
+            // --- END OF NEW GUARD ROLE LOGIC ---
+
+            else {
+                // Handle other role behaviors
+                switch (this.role) {
+                    case AI_ROLE.PIRATE:
+                        if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                            if (!this.updateCargoCollectionAI(system)) {
+                                this.updateCombatAI(system);
+                            }
+                        } else {
                             this.updateCombatAI(system);
                         }
-                    } else {
+                        break;
+                    case AI_ROLE.POLICE: 
+                        this.updatePoliceAI(system); 
+                        break;
+                    case AI_ROLE.HAULER: 
+                        this.updateHaulerAI(system); 
+                        break;
+                    case AI_ROLE.ALIEN: 
                         this.updateCombatAI(system);
-                    }
-                    this.updatePhysics();
-                    break;
-                    
-                case AI_ROLE.POLICE:
-                    this.updatePoliceAI(system);
-                    this.updatePhysics();
-                    break;
-                    
-                case AI_ROLE.HAULER:
-                    this.updateHaulerAI(system);
-                    this.updatePhysics();
-                    break;
-                    
-                case AI_ROLE.ALIEN:
-                case AI_ROLE.BOUNTY_HUNTER:
-                    // Both use the same combat AI
-                    this.updateCombatAI(system);
-                    this.updatePhysics();
-                    break;
-                    
-                default:
-                    // Minimal default behavior
-                    this.vel.x *= (this.drag * 0.95);
-                    this.vel.y *= (this.drag * 0.95);
-                    this.updatePhysics();
-                    break;
+                        break;
+                    case AI_ROLE.BOUNTY_HUNTER:
+                        this.updateCombatAI(system); // Bounty Hunters use combat AI
+                        break;
+                    default: 
+                        // Default behavior for unknown roles
+                        this.vel.mult(this.drag * 0.95); 
+                        break;
+                }
+                
+                // Update physics - except for Transport role which handles its own physics
+                this.updatePhysics();
             }
         } catch (e) {
-            console.error(`Error in ${this.role} ${this.shipTypeName} update:`, e);
+            console.error(`Error during AI update for ${this.role} ${this.shipTypeName}:`, e);
             this.changeState(AI_STATE.IDLE);
             this.updatePhysics(); // Still update physics even on error
         }
@@ -628,497 +608,332 @@ updateTargeting(system) {
 }
 
 /**
- * Evaluates how attractive a target is for this enemy
+ * Evaluates how attractive a target is for this enemy - with isolation from global scope
  * @param {Object} target - The target to evaluate
  * @param {Object} system - The current star system
  * @return {number} A score representing how attractive this target is
  */
 evaluateTargetScore(target, system) {
-    // Basic validity check
-    if (!this.isTargetValid(target) || target === this) {
-        return TARGET_SCORE_INVALID;
-    }
+    // Use an immediately-invoked function expression (IIFE) for complete scope isolation
+    return (function(enemy, target, system) {
+        // Basic validity check
+        if (!enemy.isTargetValid(target) || target === enemy) {
+            return TARGET_SCORE_INVALID;
+        }
 
-    // Check for role-specific early returns
-    const roleSpecificScore = this._evaluateRoleSpecificTarget(target, system);
-    if (roleSpecificScore !== null) {
-        return roleSpecificScore;
-    }
-
-    // Calculate base score with modifiers
-    const scoreData = this._calculateBaseScore(target, system);
-    if (!scoreData.interesting) {
-        return TARGET_SCORE_INVALID;
-    }
-
-    // Apply distance and damage modifiers
-    const finalScore = this._applyScoreModifiers(scoreData, target);
-    
-    // Validate and return final score
-    return this._validateFinalScore(finalScore, scoreData.interesting, target);
-}
-
-/**
- * Handles role-specific targeting logic that may return early
- * @param {Object} target - The target to evaluate
- * @param {Object} system - The current star system
- * @return {number|null} Score if role-specific logic applies, null otherwise
- */
-_evaluateRoleSpecificTarget(target, system) {
-    // Guard role logic
-    if (this.role === AI_ROLE.GUARD) {
-        return this._evaluateGuardTarget(target);
-    }
-
-    // Bounty hunter role logic
-    if (this.role === AI_ROLE.BOUNTY_HUNTER) {
-        return this._evaluateBountyHunterTarget(target);
-    }
-
-    // Check friendly fire prevention for all other roles
-    if (target.role === AI_ROLE.GUARD && target.principal === this) {
-        return TARGET_SCORE_INVALID;
-    }
-
-    return null; // No role-specific early return
-}
-
-/**
- * Evaluates targets for Guard role
- * @param {Object} target - The target to evaluate
- * @return {number} Target score
- */
-_evaluateGuardTarget(target) {
-    if (!this.principal || !this.isTargetValid(this.principal)) {
-        return TARGET_SCORE_INVALID;
-    }
-
-    // Friendly fire prevention: Never target principal
-    if (target === this.principal) {
-        return TARGET_SCORE_INVALID;
-    }
-    
-    // Friendly fire prevention: Never target fellow guards protecting same principal
-    if (target.role === AI_ROLE.GUARD && target.principal === this.principal) {
-        return TARGET_SCORE_INVALID;
-    }
-    
-    // HIGHEST priority: Principal's manually selected target (player's target)
-    if (target === this.principal.target && 
-        this.principal.isValidEnemyTarget && this.principal.isValidEnemyTarget(target)) {
-        return 2500; // Higher than attacker priority to ensure player's target takes precedence
-    }
-    
-    // High priority for principal's recent attacker
-    if (target === this.principal.lastAttacker && 
-        this.isTargetValid(target) && 
-        (this.principal.lastAttackTime && millis() - this.principal.lastAttackTime < 5000)) {
-        return 2000; // Very high score to engage principal's attacker
-    }
-    
-    // Only engage in self-defense otherwise
-    if (target !== this.lastAttacker) {
-        return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
-    }
-
-    // Allow normal scoring for self-defense
-    return null;
-}
-
-/**
- * Evaluates targets for Bounty Hunter role
- * @param {Object} target - The target to evaluate
- * @return {number} Target score
- */
-_evaluateBountyHunterTarget(target) {
-    if (target instanceof Player) {
-        return 1000; // Very high score for the player
-    } else {
-        return TARGET_SCORE_INVALID; // Ignore all other targets
-    }
-}
-
-/**
- * Calculates the base score and determines if target is interesting
- * @param {Object} target - The target to evaluate
- * @param {Object} system - The current star system
- * @return {Object} Object containing score, interesting flag, and target info
- */
-_calculateBaseScore(target, system) {
-    let score = 0;
-    let interesting = false;
-    const isPlayer = target instanceof Player;
-    const isAttacker = this._isTargetAttacker(target);
-
-    // Add attacker bonus
-    if (isAttacker) {
-        score += TARGET_SCORE_RETALIATION_PIRATE;
-        interesting = true;
-    }
-
-    // Add role-specific scoring
-    const roleScore = this._getRoleSpecificScore(target, system, isPlayer, isAttacker);
-    score += roleScore.points;
-    interesting = interesting || roleScore.interesting;
-
-    return { score, interesting, isPlayer, isAttacker };
-}
-
-/**
- * Determines if target is considered an attacker
- * @param {Object} target - The target to evaluate
- * @return {boolean} True if target is an attacker
- */
-_isTargetAttacker(target) {
-    if (target === this.lastAttacker) {
-        return true;
-    }
-    
-    // Special case for player targeting
-    if (target instanceof Player && this.lastAttacker instanceof Player) {
-        return true;
-    }
-    
-    return false;
-}
-
-/**
- * Gets role-specific scoring for a target
- * @param {Object} target - The target to evaluate
- * @param {Object} system - The current star system
- * @param {boolean} isPlayer - Whether target is a player
- * @param {boolean} isAttacker - Whether target is an attacker
- * @return {Object} Object containing points and interesting flag
- */
-_getRoleSpecificScore(target, system, isPlayer, isAttacker) {
-    switch (this.role) {
-        case AI_ROLE.PIRATE:
-            return this._getPirateScore(target, isPlayer);
+        // --- GUARD: Prioritize Principal's Attacker (with friendly fire prevention) ---
+        if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
+            // FRIENDLY FIRE PREVENTION: Never target principal
+            if (target === enemy.principal) {
+                return TARGET_SCORE_INVALID;
+            }
             
-        case AI_ROLE.POLICE:
-            return this._getPoliceScore(target, system, isPlayer);
+            // FRIENDLY FIRE PREVENTION: Never target fellow guards protecting same principal
+            if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
+                return TARGET_SCORE_INVALID;
+            }
             
-        case AI_ROLE.ALIEN:
-            return this._getAlienScore(target);
+            // Original code - high priority for principal's attacker
+            if (target === enemy.principal.lastAttacker && 
+                enemy.isTargetValid(target) && 
+                (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) {
+                //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
+                return 2000; // Very high score to engage principal's attacker
+            }
             
-        case AI_ROLE.HAULER:
-        case AI_ROLE.TRANSPORT:
-            return this._getHaulerScore(target, isPlayer, isAttacker);
-            
-        default:
-            return { points: 0, interesting: false };
-    }
-}
+            // Original code - only engage in self-defense otherwise
+            if (target !== enemy.lastAttacker) { // If not self-defense
+                return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
+            }
+        }
 
-/**
- * Gets pirate-specific scoring for a target
- * @param {Object} target - The target to evaluate
- * @param {boolean} isPlayer - Whether target is a player
- * @return {Object} Object containing points and interesting flag
- */
-_getPirateScore(target, isPlayer) {
-    let points = 0;
-    let interesting = false;
+        // FRIENDLY FIRE PREVENTION: Principals never target their own guards
+        if (target.role === AI_ROLE.GUARD && target.principal === enemy) {
+            return TARGET_SCORE_INVALID;
+        }
+        // --- END GUARD ---
 
-    if (isPlayer) {
-        interesting = true;
+        // --- BOUNTY HUNTER: Only cares about the player ---
+        if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
+            if (target instanceof Player) {
+                return 1000; // Very high score for the player
+            } else {
+                return TARGET_SCORE_INVALID; // Ignore all other targets
+            }
+        }
+        // --- END BOUNTY HUNTER ---
+
+        // Create completely private scoring variables
+        let _score = 0; 
+        let _interesting = false;
+        const isPlayer = target instanceof Player;
         
-        // Add cargo bonus for players
-        const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
-        if (cargoAmount > 5) {
-            points += TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
+        if (isPlayer) {
+            //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
         }
-    } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
-        points += TARGET_SCORE_PIRATE_PREY_HAULER;
-        interesting = true;
-    } else if (target.constructor?.name === 'Cargo') {
-        points += TARGET_SCORE_PIRATE_CARGO_BASE;
-        interesting = true;
-    }
-
-    return { points, interesting };
-}
-
-/**
- * Gets police-specific scoring for a target
- * @param {Object} target - The target to evaluate
- * @param {Object} system - The current star system
- * @param {boolean} isPlayer - Whether target is a player
- * @return {Object} Object containing points and interesting flag
- */
-_getPoliceScore(target, system, isPlayer) {
-    let points = 0;
-    let interesting = false;
-
-    if (isPlayer && system?.isPlayerWanted()) {
-        points += TARGET_SCORE_BASE_WANTED;
-        interesting = true;
-    } else if (target.isWanted) {
-        points += TARGET_SCORE_BASE_WANTED;
-        interesting = true;
-        if (target.role === AI_ROLE.PIRATE) {
-            points += TARGET_SCORE_WANTED_PIRATE_BONUS;
-        }
-    }
-
-    return { points, interesting };
-}
-
-/**
- * Gets alien-specific scoring for a target
- * @param {Object} target - The target to evaluate
- * @return {Object} Object containing points and interesting flag
- */
-_getAlienScore(target) {
-    if (target.role !== AI_ROLE.ALIEN) {
-        return { points: 50, interesting: true }; // Target anything that is not an Alien
-    }
-    return { points: 0, interesting: false };
-}
-
-/**
- * Gets hauler/transport-specific scoring for a target
- * @param {Object} target - The target to evaluate
- * @param {boolean} isPlayer - Whether target is a player
- * @param {boolean} isAttacker - Whether target is an attacker
- * @return {Object} Object containing points and interesting flag
- */
-_getHaulerScore(target, isPlayer, isAttacker) {
-    let points = 0;
-    let interesting = false;
-
-    if (isPlayer && (isAttacker || this.forcedCombatTimer > 0)) {
-        points += TARGET_SCORE_RETALIATION_HAULER;
-        interesting = true;
         
-        // Reduce score if damaged (may flee instead)
-        if (this.hull < this.maxHull * 0.5) {
-            points -= 20;
+        // Check if target is attacker
+        let isAttacker = target === enemy.lastAttacker;
+        if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
+            isAttacker = true;
+            if (isPlayer) {
+                //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
+            }
         }
-    } else if (isAttacker && !isPlayer) {
-        points += TARGET_SCORE_RETALIATION_HAULER;
-        interesting = true;
-        if (this.hull < this.maxHull * 0.5) {
-            points -= 20;
+        
+        // Add attacker bonus
+        if (isAttacker && isPlayer) {
+            _score += TARGET_SCORE_RETALIATION_PIRATE;
+            _interesting = true;
+            //console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
+        } else if (isAttacker) {
+            _score += TARGET_SCORE_RETALIATION_PIRATE;
+            _interesting = true;
         }
-    }
+        
+        // Role-specific scoring - add based on enemy role
+        switch (enemy.role) {
+            case AI_ROLE.PIRATE:
+                if (isPlayer) {
+                    _interesting = true;
+                    //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
+                    
+                    // Add cargo bonus
+                    const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
+                    if (cargoAmount > 5) {
+                        const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
+                        _score += cargoBonus;
+                        //console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
+                    }
+                } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                    _score += TARGET_SCORE_PIRATE_PREY_HAULER;
+                    _interesting = true;
+                } else if (target.constructor?.name === 'Cargo') {
+                    _score += TARGET_SCORE_PIRATE_CARGO_BASE;
+                    _interesting = true;
+                }
+                break;
+                
+            case AI_ROLE.POLICE:
+                if (isPlayer && system?.isPlayerWanted()) {
+                    _score += TARGET_SCORE_BASE_WANTED;
+                    _interesting = true;
+                    //console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
+                } else if (target.isWanted) {
+                    _score += TARGET_SCORE_BASE_WANTED;
+                    _interesting = true;
+                    if (target.role === AI_ROLE.PIRATE) {
+                        _score += TARGET_SCORE_WANTED_PIRATE_BONUS;
+                    }
+                }
+                break;
+            
+                
+            case AI_ROLE.ALIEN: // <<< NEW CASE
+            if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
+                _score += 50; // Base score for any non-alien target
+                _interesting = true;
+ 
+            }
+            break;
 
-    return { points, interesting };
-}
-
-/**
- * Applies distance penalties and damage bonuses to the score
- * @param {Object} scoreData - The base score data
- * @param {Object} target - The target being evaluated
- * @return {number} The modified score
- */
-_applyScoreModifiers(scoreData, target) {
-    if (!scoreData.interesting) {
-        return scoreData.score;
-    }
-
-    let score = scoreData.score;
-    const distance = this.distanceTo(target);
-    
-    // Apply distance penalty
-    score = this._applyDistancePenalty(score, distance, scoreData.isAttacker, scoreData.isPlayer);
-    
-    // Apply hull damage bonus
-    score = this._applyDamageBonus(score, target);
-    
-    return score;
-}
-
-/**
- * Applies distance penalty to the score
- * @param {number} score - Current score
- * @param {number} distance - Distance to target
- * @param {boolean} isAttacker - Whether target is an attacker
- * @param {boolean} isPlayer - Whether target is a player
- * @return {number} Score after distance penalty
- */
-_applyDistancePenalty(score, distance, isAttacker, isPlayer) {
-    // Reduced penalty for important targets
-    let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
-    if (isAttacker || isPlayer) {
-        distancePenaltyMult *= 0.5;
-    }
-    
-    // Calculate penalty with cap
-    const distancePenalty = Math.min(40, distance * distancePenaltyMult);
-    
-    // Apply penalty with protection for important targets
-    if ((isAttacker || isPlayer) && isPlayer) {
-        const minScoreAfterPenalty = 10;
-        const adjustedPenalty = Math.min(distancePenalty, Math.max(0, score - minScoreAfterPenalty));
-        return score - adjustedPenalty;
-    } else {
-        return score - distancePenalty;
-    }
-}
-
-/**
- * Applies hull damage bonus to the score
- * @param {number} score - Current score
- * @param {Object} target - The target being evaluated
- * @return {number} Score after damage bonus
- */
-_applyDamageBonus(score, target) {
-    if (target.hull !== undefined && target.maxHull !== undefined) {
-        const damagePercent = 1 - (target.hull / target.maxHull);
-        const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
-        return score + damageBonus;
-    }
-    return score;
-}
-
-/**
- * Validates and returns the final score
- * @param {number} score - The calculated score
- * @param {boolean} interesting - Whether the target was marked as interesting
- * @param {Object} target - The target being evaluated
- * @return {number} The final validated score
- */
-_validateFinalScore(score, interesting, target) {
-    // Safety check for corrupt scores
-    if (score < -1000) {
-        score = 10;
-    }
-    
-    // Mark uninteresting if score too low
-    if (interesting && score <= 0) {
-        interesting = false;
-    }
-    
-    // Return appropriate final score
-    if (!interesting) {
-        return TARGET_SCORE_INVALID;
-    }
-    
-    return score;
+            case AI_ROLE.HAULER:
+            case AI_ROLE.TRANSPORT:
+                if (isPlayer && (isAttacker || enemy.forcedCombatTimer > 0)) {
+                    //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
+            _score += TARGET_SCORE_RETALIATION_HAULER;
+                    _interesting = true;
+                    
+                    if (enemy.hull < enemy.maxHull * 0.5) {
+                        _score -= 20;
+                        //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
+                    }
+                } else if (isAttacker && !isPlayer) {
+                    _score += TARGET_SCORE_RETALIATION_HAULER;
+                    _interesting = true;
+                    if (enemy.hull < enemy.maxHull * 0.5) _score -= 20;
+                }
+                break;
+        }
+        
+        // Log before distance penalties
+        if (isPlayer) {
+            //console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
+        }
+        
+        // Distance penalties - Only if interesting
+        if (_interesting) {
+            const distance = enemy.distanceTo(target);
+            
+            // Reduced penalty for important targets
+            let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
+            if (isAttacker || isPlayer) {
+                distancePenaltyMult *= 0.5;
+            }
+            
+            // Calculate penalty with cap
+            const distancePenalty = Math.min(40, distance * distancePenaltyMult);
+            
+            // Apply penalty with protection for important targets
+            if ((isAttacker || isPlayer) && isPlayer) {
+                const minScoreAfterPenalty = 10;
+                const adjustedPenalty = Math.min(distancePenalty, Math.max(0, _score - minScoreAfterPenalty));
+                _score -= adjustedPenalty;
+                //console.log(`%c🔍 PLAYER DISTANCE PENALTY: ${adjustedPenalty.toFixed(1)} (capped from ${distancePenalty.toFixed(1)}), score now ${_score.toFixed(1)}`, 'color:blue');
+            } else {
+                _score -= distancePenalty;
+            }
+            
+            // Add hull damage bonus
+            if (target.hull !== undefined && target.maxHull !== undefined) {
+                const damagePercent = 1 - (target.hull / target.maxHull);
+                const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
+                _score += damageBonus;
+                
+                if (isPlayer && damageBonus > 0) {
+                    //console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
+                }
+            }
+        }
+        
+        // Safety check
+        if (_score < -1000) {
+            //console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
+            _score = 10;
+        }
+        
+        // Mark uninteresting if score too low
+        if (_interesting && _score <= 0) {
+            if (isPlayer) {
+                //console.log(`%c🔍 PLAYER TARGET REJECTED: Score too low (${_score})`, 'color:orange');
+            }
+            _interesting = false;
+        }
+        
+        // Final debug log
+        if (isPlayer) {
+            //console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, _interesting ? 'color:green; font-weight:bold' : 'color:orange');
+        }
+        
+        // Return appropriate final score
+        if (!_interesting) {
+            return TARGET_SCORE_INVALID;
+        }
+        
+        return _score;
+    })(this, target, system); // Pass current context to IIFE
 }
 
     /**
-     * Calculate optimal weapon for current combat situation with optimized scoring
+     * Calculate optimal weapon for current combat situation
+     * Takes into account range, target type, and weapon capabilities
      * @param {number} distanceToTarget - Distance to current target
      * @param {Object} target - The current target
      * @return {Object} The selected weapon definition
      */
     selectOptimalWeapon(distanceToTarget, target) {
-        // Fast path for common case
+        // If we only have one weapon, just use it
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
         
-        // Cache range calculations once
-        const visualFiringRange = this.visualFiringRange;
-        const mediumRangeThreshold = visualFiringRange * MEDIUM_RANGE_MULT;
-        const closeRangeThreshold = visualFiringRange * CLOSE_RANGE_MULT;
-        const veryCloseRangeThreshold = visualFiringRange * 0.2;
-        
-        // Fast range classification using single checks
-        let rangeType;
-        if (distanceToTarget <= veryCloseRangeThreshold) {
-            rangeType = 0; // Very close
-        } else if (distanceToTarget <= closeRangeThreshold) {
-            rangeType = 1; // Short range
-        } else if (distanceToTarget <= mediumRangeThreshold) {
-            rangeType = 2; // Medium range
-        } else {
-            rangeType = 3; // Long range
-        }
-        
-        // Cache target properties once to avoid repeated property access
-        const targetAlreadyEntangled = target?.dragMultiplier > 1.0 && target?.dragEffectTimer > 0;
-        const targetMaxSpeed = target?.maxSpeed || 0;
-        const targetSize = target?.size || 0;
-        const targetIsFast = targetMaxSpeed > 5;
-        const targetIsVerySlow = targetMaxSpeed < 5;
-        const targetIsLarge = targetSize > 50;
-        
-        // Lookup tables for optimal performance
-        // Organized as [veryClose, shortRange, mediumRange, longRange]
-        const weaponRangeScores = {
-            'beam': [1, 1, 2, 3],
-            'spread': [3, 3, 1, 0],
-            'straight': [1, 0, 2, 1],
-            'missile': [0, 1, 3, 3],
-            'turret': [2, 2, 2, 2],
-            'force': [5, 2, 0, 0],
-            'tangle': targetAlreadyEntangled ? [-10, -10, -10, -10] : [3, 2, 1, 0]
-        };
-        
-        // Weapon match bonuses for target types to avoid nested ifs
-        const targetTypeScores = {
-            // Faster target - spread weapons bonus
-            'spread_fast': targetIsFast ? 3 : 0,
-            // Slow target - missile bonus
-            'missile_slow': targetIsVerySlow ? 2 : 0,
-            // Very fast target - additional tangle weapon bonus
-            'tangle_veryFast': targetMaxSpeed > 6.5 ? 2 : 0
-        };
-        
+        // Score each weapon based on situation
         let bestScore = -1;
         let bestWeapon = this.currentWeapon;
+
+        // Check if target is already entangled
+        const targetAlreadyEntangled = target && 
+                                    target.dragMultiplier > 1.0 && 
+                                    target.dragEffectTimer > 0;
         
-        // Use traditional loop for better performance
-        const weaponCount = this.weapons.length;
-        for (let i = 0; i < weaponCount; i++) {
-            const weapon = this.weapons[i];
+        for (const weapon of this.weapons) {
             let score = 0;
             
-            // Fast base type determination
-            let baseType = '';
-            const weaponType = weapon.type;
+            // Range considerations
+            const isLongRange = distanceToTarget > this.visualFiringRange * MEDIUM_RANGE_MULT;
+            const isMediumRange = distanceToTarget > this.visualFiringRange * CLOSE_RANGE_MULT && distanceToTarget <= this.visualFiringRange * MEDIUM_RANGE_MULT;
+            const isShortRange = distanceToTarget <= this.visualFiringRange * CLOSE_RANGE_MULT;
+            const isVeryCloseRange = distanceToTarget <= this.visualFiringRange * 0.2; // Very close = 20% of firing range
             
-            // Use early-return string operations for efficient type detection
-            // Order these by frequency of occurrence for optimization
-            if (weaponType === 'missile') baseType = 'missile';
-            else if (weaponType === 'turret') baseType = 'turret';
-            else if (weaponType.startsWith('spread')) baseType = 'spread';
-            else if (weaponType.startsWith('straight')) baseType = 'straight';
-            else if (weaponType.includes('beam')) baseType = 'beam';
-            else if (weaponType.includes('force')) baseType = 'force';
-            else if (weaponType.includes('tangle')) baseType = 'tangle';
-            
-            // Score by range using direct lookup - one access instead of multiple conditions
-            if (baseType in weaponRangeScores) {
-                score += weaponRangeScores[baseType][rangeType];
+            // --- FORCE WEAPON LOGIC ---
+            // Force weapons are highly effective at very close range
+            if (weapon.type.includes('force') && isVeryCloseRange) {
+                score += 5; // Highest priority at very close rangee
+            }
+
+            // --- TANGLE WEAPON LOGIC ---
+            if (weapon.type.includes('tangle') && target) {
+                // Only consider tangle weapons if target is NOT already entangled
+                if (!targetAlreadyEntangled) {
+                    // Extra effective against very fast targets
+                    if (target.maxSpeed > 6.5) {
+                        score += 5; // Highest priority for very fast targets
+                    } 
+                    // Good for fast targets
+                    else if (target.maxSpeed > 5) {
+                        score += 3;
+                    } 
+                } else {
+                    // Target is already entangled - significant penalty
+                    score -= 10; // Strong negative score to discourage selection
+                }
+            }
+
+            // Score based on weapon type and range
+            if (weapon.type.includes('beam') && isLongRange) {
+                score += 3; // Beams are good at long range
+            } else if (weapon.type.includes('beam') && isMediumRange) {
+                score += 2;
+            } else if (weapon.type.includes('beam') && isShortRange) {
+                score += 1;
             }
             
-            // Add target-specific bonuses using lookup tables
+            if (weapon.type.startsWith('spread') && isShortRange) {
+                score += 3; // now catches spread2/3/4/5
+            } else if (weapon.type.startsWith('straight') && isMediumRange) {
+                score += 2; // now catches straight2/3/4…
+            } else if (weapon.type.startsWith('straight') && isLongRange) {
+                score += 1;
+            }
+            
+            if (weapon.type === 'missile' && (isMediumRange || isLongRange)) {
+                score += 3; // Missiles are best at medium to long range
+            } else if (weapon.type === 'missile' && isShortRange) {
+                score += 1;
+            }
+            
+            if (weapon.type === 'turret') {
+                score += 2; // Turrets are flexible at any range
+            }
+            
+            // Target-specific considerations
             if (target) {
-                // Add spread weapon bonus against fast targets
-                if (baseType === 'spread') {
-                    score += targetTypeScores.spread_fast;
-                }
-                
-                // Add missile bonus against slow targets
-                if (baseType === 'missile') {
-                    score += targetTypeScores.missile_slow;
-                }
-                
-                // Add extra tangle bonus for very fast targets
-                if (baseType === 'tangle' && !targetAlreadyEntangled) {
-                    score += targetTypeScores.tangle_veryFast;
-                }
-                
-                // Add damage bonus against large targets - use direct property access
-                if (targetIsLarge && (weapon.damage || 0) > 10) {
+                // Against fast targets, prefer wide-angle weapons like spread
+                if (target.maxSpeed > 5 && weapon.type.startsWith('spread')) {
+                    score += 3;
+                }    
+                // Against slow targets, prefer missile weapons
+                if (target.maxSpeed < 5 && weapon.type === 'missile') {
                     score += 2;
                 }
+                // Against large targets, prefer high damage weapons
+                if (target.size > 50 && weapon.damage > 10) {
+                    score += 2;
+                }
+                
             }
             
-            // Update best weapon using direct comparison
+            // If this weapon scores better, select it
             if (score > bestScore) {
                 bestScore = score;
                 bestWeapon = weapon;
             }
         }
         
-        // Only change weapons if significant improvement
+        // Only change weapons if the selected one is different and better by at least 2 points
         if (bestWeapon !== this.currentWeapon && bestScore > 0) {
             return bestWeapon;
         }
         
+        // Otherwise stick with current weapon
         return this.currentWeapon;
     }
 
@@ -1127,47 +942,28 @@ _validateFinalScore(score, interesting, target) {
      * @param {number} distanceToTarget - Distance to current target
      */
     selectBestWeapon(distanceToTarget) {
-        // Fast path for common case - only one weapon
         if (!this.weapons || this.weapons.length <= 1) return;
         
-        // Don't switch weapons too frequently - add rate limiting
-        const currentTime = millis();
-        if (this._lastWeaponCheckTime && currentTime - this._lastWeaponCheckTime < 500) {
-            // Only check weapon every 500ms to reduce processing
-            return;
-        }
-        this._lastWeaponCheckTime = currentTime;
-        
-        // Use optimal weapon selection algorithm
+        // Use our new optimal weapon selection algorithm
         const optimalWeapon = this.selectOptimalWeapon(distanceToTarget, this.target);
         
-        // Skip further processing if already using optimal weapon
-        if (optimalWeapon === this.currentWeapon) return;
-        
-        // Find the index directly instead of using indexOf
-        let newIndex = -1;
-        const len = this.weapons.length;
-        for (let i = 0; i < len; i++) {
-            if (this.weapons[i] === optimalWeapon) {
-                newIndex = i;
-                break;
-            }
-        }
-        
-        if (newIndex !== -1) {
-            this.weaponIndex = newIndex;
-            this.currentWeapon = this.weapons[this.weaponIndex];
-            this.fireRate = this.currentWeapon.fireRate;
-            
-            // Reset cooldown when switching weapons (half normal delay)
-            this.fireCooldown = this.fireRate * 0.5;
-            
-            // Rate-limit debug logging
-            if (this.lastWeaponSwitch === undefined || 
-                currentTime - this.lastWeaponSwitch > 2000) {
-                // Only log weapon changes every 2 seconds to reduce console spam
-                console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${Math.round(distanceToTarget)}`);
-                this.lastWeaponSwitch = currentTime;
+        // If we got a different weapon, switch to it
+        if (optimalWeapon !== this.currentWeapon) {
+            // Find the index of the optimal weapon
+            const newIndex = this.weapons.indexOf(optimalWeapon);
+            if (newIndex !== -1) {
+                this.weaponIndex = newIndex;
+                this.currentWeapon = this.weapons[this.weaponIndex];
+                this.fireRate = this.currentWeapon.fireRate;
+                // Reset cooldown when switching weapons (half normal delay)
+                this.fireCooldown = this.fireRate * 0.5;
+                
+                // Log weapon change for debugging
+                if (this.lastWeaponSwitch === undefined || 
+                    millis() - this.lastWeaponSwitch > 2000) {
+                    console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
+                    this.lastWeaponSwitch = millis();
+                }
             }
         }
     }
@@ -1178,30 +974,26 @@ _validateFinalScore(score, interesting, target) {
      * @return {p5.Vector|null} Position vector to move toward
      */
     getMovementTargetForState(distanceToTarget) {
-        // Cache target validity check to avoid multiple calls
-        const targetValid = this.isTargetValid(this.target);
-        
-        // Initialize the movement target vector that will be returned
         let desiredMovementTargetPos = null;
         
         switch (this.currentState) {
             case AI_STATE.APPROACHING:
-                if (targetValid) {
-                    return this.predictTargetPosition();
+                if (this.isTargetValid(this.target)) {
+                    desiredMovementTargetPos = this.predictTargetPosition();
                 }
                 break;
                 
             case AI_STATE.ATTACK_PASS:
-                if (this.attackPassTargetPos && targetValid) {
+                if (this.attackPassTargetPos && this.isTargetValid(this.target)) {
                     // Use the pre-calculated target position
-                    return this.attackPassTargetPos;
-                } else if (targetValid) {
+                    desiredMovementTargetPos = this.attackPassTargetPos;
+                } else if (this.isTargetValid(this.target)) {
                     // Fallback if somehow we don't have a pre-calculated target
                     this.attackPassTargetPos = this.calculateAttackPassTarget();
-                    return this.attackPassTargetPos;
+                    desiredMovementTargetPos = this.attackPassTargetPos;
                 } else {
                     // If target becomes invalid during attack pass, aim at current position
-                    return this.pos.copy();
+                    desiredMovementTargetPos = this.pos.copy();
                 }
                 break;
                 
@@ -1212,38 +1004,29 @@ _validateFinalScore(score, interesting, target) {
             case AI_STATE.PATROLLING:
                 desiredMovementTargetPos = this.patrolTargetPos;
                 break;
-                        
-            case AI_STATE.SNIPING:
+                        case AI_STATE.SNIPING: // <<< NEW CASE
                 if (this.isTargetValid(this.target)) {
-                    const distanceToTarget = this.pos.dist(this.target.pos); // ADD THIS LINE
-                    // Cache calculations for reuse
                     const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
                     const rangeTolerance = idealSnipeRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
 
                     if (distanceToTarget > idealSnipeRange + rangeTolerance) {
                         // Too far, move slightly closer to target
-                        // Reuse this.tempVector instead of creating new vectors
-                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
-                        this.tempVector.setMag(distanceToTarget - idealSnipeRange);
-                        return createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                        let vecToTarget = p5.Vector.sub(this.target.pos, this.pos);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecToTarget.setMag(distanceToTarget - idealSnipeRange));
                     } else if (distanceToTarget < idealSnipeRange - rangeTolerance) {
                         // Too close, move slightly away from target
-                        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-                        this.tempVector.setMag(idealSnipeRange - distanceToTarget);
-                        return createVector(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                        let vecFromTarget = p5.Vector.sub(this.pos, this.target.pos);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecFromTarget.setMag(idealSnipeRange - distanceToTarget));
                     } else {
-                        // Within tolerance, try to stay put BUT ALWAYS FACE THE TARGET
-                        // Return the target's position for rotation purposes
-                        // This will ensure the ship always faces the target even when not moving
-                        return this.predictTargetPosition();
+                        // Within tolerance, try to stay put
+                        desiredMovementTargetPos = this.pos.copy();
                     }
                 } else {
-                    return this.pos.copy(); // No valid target, stay put
+                    desiredMovementTargetPos = this.pos.copy(); // No valid target, stay put
                 }
                 break;
         }
         
-        // Return the calculated position or null if no valid position found
         return desiredMovementTargetPos;
     }
 
@@ -1487,44 +1270,10 @@ _updateState_GUARDING() {
         this.guardReactionTime -= deltaTime / 1000;
     }
 
-    // If we're currently engaged in combat to protect the principal, 
-    // don't immediately switch back to formation
-    if (this.currentEngagementTarget && 
-        this.isTargetValid(this.currentEngagementTarget) && 
-        (this.currentState === AI_STATE.APPROACHING || 
-        this.currentState === AI_STATE.ATTACK_PASS || 
-        this.currentState === AI_STATE.REPOSITIONING ||
-        this.currentState === AI_STATE.SNIPING)) {
-        
-        // Stay with current target until combat is resolved (or attacker escapes)
-        return;
-    }
-
     // Check if principal is being attacked
     const principalAttacker = this.principal.lastAttacker;
     const timeSincePrincipalAttack = this.principal.lastAttackTime ? millis() - this.principal.lastAttackTime : Infinity;
-    const currentTime = millis();
-    
-    // If we're already engaged with a target and the engagement is still fresh, 
-    // stay with the current target even if the principal is being attacked by someone else
-    if (this.currentEngagementTarget && 
-        this.isTargetValid(this.currentEngagementTarget) && 
-        currentTime - this.lastEngagementTime < this.engagementDuration) {
-        
-        // Continue with current target even if principal is attacked by someone else
-        this.target = this.currentEngagementTarget;
-        
-        // Only change state if not already in a combat state
-        if (this.currentState !== AI_STATE.APPROACHING && 
-            this.currentState !== AI_STATE.ATTACK_PASS && 
-            this.currentState !== AI_STATE.REPOSITIONING &&
-            this.currentState !== AI_STATE.SNIPING) {
-            this.changeState(AI_STATE.APPROACHING); // Ensure we're in combat mode
-        }
-        return;
-    }
 
-    // Check for new threats to the principal
     if (this.guardReactionTime <= 0 && 
         principalAttacker && 
         this.isTargetValid(principalAttacker) && 
@@ -1533,19 +1282,11 @@ _updateState_GUARDING() {
         
         const distToPrincipalAttacker = this.distanceTo(principalAttacker);
 
-        // Don't keep announcing the same engagement
-        const isNewEngagement = this.currentEngagementTarget !== principalAttacker;
-
         if (distToPrincipalAttacker < this.guardEngageRange) {
-            if (isNewEngagement) {
-                console.log(`${this.shipTypeName} (Guard): ${this.principal.shipTypeName || 'Principal'} is under attack by ${principalAttacker.shipTypeName || 'Unknown Attacker'}. Engaging!`);
-            }
-            
+            console.log(`${this.shipTypeName} (Guard): ${this.principal.shipTypeName || 'Principal'} is under attack by ${principalAttacker.shipTypeName || 'Unknown Attacker'}. Engaging!`);
             this.target = principalAttacker; // Set the attacker as the guard's target
-            this.currentEngagementTarget = principalAttacker; // Remember who we're engaging
-            this.lastEngagementTime = currentTime; // Track when we started this engagement
             this.changeState(AI_STATE.APPROACHING); // Switch to combat mode
-            this.guardReactionTime = 10.0; // Extended cooldown to reduce constant re-engaging
+            this.guardReactionTime = 5.0; // Cooldown before checking for new attacker for principal
             return;
         }
     }
@@ -1573,26 +1314,6 @@ _updateState_GUARDING() {
     const distToFormationPoint = this.distanceTo(desiredWorldPos);
     const distDirectToPrincipal = this.distanceTo(this.principal.pos);
 
-    // SIMPLE APPROACH: First check if the principal is stationary - if so, guards freeze in place
-    let principalIsStationary = false;
-    if (this.principal && typeof Player !== 'undefined' && this.principal instanceof Player) {
-        // Special handling for player principal
-        principalIsStationary = this.principal.vel && this.principal.vel.mag() < 0.18; // ~0.18 visually stopped
-    } else {
-        principalIsStationary = this.principal.vel && this.principal.vel.magSq() < 0.01;
-    }
-
-    if (principalIsStationary) {
-        // New simplified behavior: if principal is stopped, guards stop immediately wherever they are
-        this.vel.mult(0.8); // Strong damping to stop quickly
-        if (this.vel.mag() < 0.05) this.vel.set(0, 0); // Hard stop when slow enough
-        
-        // Match principal's orientation for aesthetics
-        this.rotateTowards(this.principal.angle);
-        return; // Skip the formation positioning logic when principal is stopped
-    }
-    
-    // Principal is moving - normal formation behavior
     if (distDirectToPrincipal > this.guardLeashDistance || distToFormationPoint > this.size * 0.5) {
         // If too far from principal OR not in formation spot, move towards formation spot
         this.performRotationAndThrust(desiredWorldPos);
@@ -1771,11 +1492,6 @@ _determinePostFleeState() {
                 this.target.pos.x - this.pos.x
             );
         }
-
-        // NEW: Select best weapon for the current situation if we have a target
-        if (targetExists) {
-            this.selectBestWeapon(distanceToTarget);
-        }
     
         // 4. Run state‐transition logic.
         //    REMOVED: if (!isInForcedCombat)
@@ -1830,9 +1546,6 @@ _determinePostFleeState() {
             return;
         } else {
             // Reset flags when player is no longer wanted
-           
-           
-
             this.hasReportedWantedPlayer = false;
             this.reportedWantedTarget = false;
             
@@ -2107,16 +1820,12 @@ _determinePostFleeState() {
                 // ---  Exit Condition ---
                 // Exit if:
                 // 1. Arrived at the jump zone target (dE < 150)
-                if (dE < 150 && !this.jumpingEffect) {
-                    this.inCombat = false;
-                    this.haulerCombatTimer = undefined;
-                    
-                    // Start jump effect instead of immediately destroying
-                    this.jumpingEffect = true;
-                    this.jumpEffectStartTime = millis();
-                    
+                if (dE < 150) {
+                    this.inCombat = false; // Add this line
+                    this.haulerCombatTimer = undefined; // Add this line
+                    this.destroyed = true;
                     // This log confirms the condition was met
-                    console.log(`${this.role} ${this.shipTypeName} triggered jump effect.`);
+                    console.log(`${this.role} ${this.shipTypeName} left the system.`);
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case
@@ -2230,7 +1939,7 @@ _determinePostFleeState() {
                         console.log(`Transporter ${this.shipTypeName} switching destination.`);
                         this.waitTimer = 0;
                         this.vel.set(0, 0); // Reset velocity
-                      }
+                    }
                 }
             }
         }
@@ -2324,18 +2033,10 @@ _determinePostFleeState() {
         
         // Reuse the temp vector instead of creating new ones
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
-        // Cache deltaTime calculation to avoid conditional in high-frequency calls
-        const timeScale = this._getTimeScale();
-        let pf = this.predictionTime * timeScale;
+        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
         return this.tempVector;
-    }
-    
-    /** @private Get normalized time scale factor for consistent speed regardless of framerate */
-    _getTimeScale() {
-        // Cache this calculation since multiple methods use it
-        return deltaTime ? (60 / (1000/deltaTime)) : 60;
     }
 
     /** 
@@ -2366,22 +2067,7 @@ _determinePostFleeState() {
      */
     distanceTo(target) {
         if (!target?.pos) return Infinity;
-        // Direct component calculation is faster than dist() function call
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    /** 
-     * Calculates squared distance to target entity (faster than distanceTo when just comparing)
-     * @param {Object} target - Entity with pos property
-     * @return {number} Squared distance to target or Infinity if invalid
-     */
-    distanceToSquared(target) {
-        if (!target?.pos) return Infinity;
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        return dx * dx + dy * dy;
+        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
     }
 
     /**
@@ -2407,12 +2093,9 @@ _determinePostFleeState() {
         
         const rotationThreshold = 0.02;
         if (abs(diff) > rotationThreshold) {
-            // Apply rotation blocking effect
-            const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
-            
             // Use Math.sign for browser compatibility 
             const rotationAmount = Math.sign(diff) * 
-                Math.min(Math.abs(diff), effectiveRotationSpeed * (deltaTime / 16.67));
+                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
             this.angle += rotationAmount;
         }
         return diff;
@@ -2466,38 +2149,29 @@ _determinePostFleeState() {
 
 
     /**
-     * Applies energy tangle effect to impair movement and rotation
-     * @param {number} tangleDuration - How long the tangle effect lasts in seconds
+     * Applies energy tangle effect to impair movement
+     * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
-     * @param {number} rotationBlockMultiplier - How much rotation speed is reduced
      */
-    applyDragEffect(tangleDuration = 5.0, multiplier = 10.0, rotationBlockMultiplier = 0.1) {
+    applyDragEffect(duration = 5.0, multiplier = 10.0) {
         // Use higher value if already affected
         this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
         
         // ENHANCED: Extend duration for consecutive hits
-        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, tangleDuration) + 
-                            (this.dragEffectTimer > 0 ? tangleDuration * 0.5 : 0);
-        
-        // Apply rotation blocking effect
-        this.rotationBlockMultiplier = Math.min(this.rotationBlockMultiplier || 1.0, rotationBlockMultiplier);
-        this.rotationBlockTimer = Math.max(this.rotationBlockTimer || 0, tangleDuration) +
-                                  (this.rotationBlockTimer > 0 ? tangleDuration * 0.5 : 0);
-        
-
+        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
+                            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
         
         // Visual effect timestamp
         this.tangleEffectTime = millis();
     }
 
-    /**
-     * Helper: Rotates towards the target position.
-     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
-     * @return {number} The angle difference in radians.
-     * @private
+    /** 
+     * Helper: Rotates towards target, applies thrust if aligned. Returns angle difference.
+     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
+     * @return {number} The angle difference in radians
      */
-    _performRotation(desiredMovementTargetPos) {
-        let angleDifference = Math.PI; // Default to max difference
+    performRotationAndThrust(desiredMovementTargetPos) {
+        let angleDifference = PI; // Default to max difference
         
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
             let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
@@ -2506,165 +2180,90 @@ _determinePostFleeState() {
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
-        return angleDifference;
-    }
-
-    /**
-     * Helper: Calculates thrust parameters for the ATTACK_PASS state.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
-     * @private
-     */
-    _getAttackPassThrustParams(angleDifference) {
-        let effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
-        let canThrust = false;
-        let forceThrustForAttackPassEmergency = false;
-
-        if (this.isTargetValid(this.target)) {
-            let distToActualTarget = this.distanceTo(this.target);
-            let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
-            if (distToActualTarget < criticalCollisionRange) {
-                let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
-                let angleToActualTargetCurrent = vecToActualTarget.heading();
-                let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
-                if (Math.abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && Math.abs(angleDifference) > this.angleTolerance * 0.5) {
-                    effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
-                    forceThrustForAttackPassEmergency = true;
-                }
-            }
-        }
-        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
-        if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
-            canThrust = true;
-        }
-        return { canThrust, effectiveThrustMultiplier };
-    }
-
-    /**
-     * Helper: Calculates thrust parameters for the APPROACHING state.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
-     * @private
-     */
-    _getApproachingThrustParams(angleDifference) {
+        
+        // Default thrust multiplier
         let effectiveThrustMultiplier = 1.0;
-        let canThrust = false;
+        let canThrust = false; // Master flag to decide if thrusting happens
+        let forceThrustForAttackPassEmergency = false; // Special flag for attack pass emergency
 
-        if (this.isTargetValid(this.target)) {
-            let distToActualTarget = this.distanceTo(this.target);
-            let targetSize = this.target.size || (this.target.width / 2) || this.size;
-            let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
-            
-            if (distToActualTarget < approachBrakingZone) {
-                effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
-            }
-        }
-        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
-        if (isAlignedForThrust) {
-            canThrust = true;
-        }
-        return { canThrust, effectiveThrustMultiplier };
-    }
+        // Determine thrust conditions based on state
+        if (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.NEAR_STATION) {
+            canThrust = false;
+        } else {
+            // For all other active states, assume thrust is possible if aligned,
+            // then apply state-specific multipliers or conditions.
+            const isAlignedForThrust = abs(angleDifference) < this.angleTolerance;
 
-    /**
-     * Helper: Calculates thrust parameters for the FLEEING state.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
-     * @private
-     */
-    _getFleeingThrustParams(angleDifference) {
-        let effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
+            if (this.currentState === AI_STATE.ATTACK_PASS) {
+                effectiveThrustMultiplier = ATTACK_PASS_SPEED_BOOST_MULT;
+                if (this.isTargetValid(this.target)) {
+                    let distToActualTarget = this.distanceTo(this.target);
+                    let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
+                    if (distToActualTarget < criticalCollisionRange) {
+                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
+                        let angleToActualTargetCurrent = vecToActualTarget.heading();
+                        let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
+                        if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
+                            effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
+                            forceThrustForAttackPassEmergency = true; // Force thrust for emergency maneuver
+                        }
+                    }
+                }
+                if (isAlignedForThrust || forceThrustForAttackPassEmergency) {
+                    canThrust = true;
+                }
+
+            } else if (this.currentState === AI_STATE.APPROACHING) {
+                // effectiveThrustMultiplier is 1.0 by default for APPROACHING
+                if (this.isTargetValid(this.target)) {
+                    let distToActualTarget = this.distanceTo(this.target);
+                    // Calculate the distance at which braking should occur
+                    let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
+                    let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
+                    
+                    if (distToActualTarget < approachBrakingZone) {
+                        effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
+                        // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
+                    }
+                }
+                if (isAlignedForThrust) {
+                    // If APPROACH_CLOSE_THRUST_REDUCTION is 0, this will result in no thrust.
+                    // If it's > 0, minimal thrust will be applied if aligned.
+                    canThrust = true;
+                }
+
+            } else if (this.currentState === AI_STATE.FLEEING) {
+                effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
                                         ? FLEE_THRUST_MULT_TRANSPORT
                                         : FLEE_THRUST_MULT_DEFAULT;
-        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
-        return { canThrust: isAlignedForThrust, effectiveThrustMultiplier };
-    }
-
-    /**
-     * Helper: Calculates thrust parameters for the SNIPING state.
-     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, thrustMultiplier: number, shouldBrake: boolean}}
-     * @private
-     */
-    _getSnipingThrustParams(desiredMovementTargetPos, angleDifference) {
-        let thrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
-        let canThrust = false;
-        let shouldBrake = false;
-
-        const isAlignedForSnipeThrust = Math.abs(angleDifference) < this.angleTolerance * 1.5; 
-        
-        if (desiredMovementTargetPos && desiredMovementTargetPos instanceof p5.Vector && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) {
-            if (isAlignedForSnipeThrust) {
-                canThrust = true;
-            }
-        } else { 
-            shouldBrake = true;
-        }
-        return { canThrust, thrustMultiplier, shouldBrake };
-    }
-
-    /**
-     * Helper: Calculates thrust parameters for default active states.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
-     * @private
-     */
-    _getDefaultActiveStateThrustParams(angleDifference) {
-        const effectiveThrustMultiplier = 1.0;
-        const isAlignedForThrust = Math.abs(angleDifference) < this.angleTolerance;
-        return { canThrust: isAlignedForThrust, effectiveThrustMultiplier };
-    }
-
-    /**
-     * Helper: Determines thrust applicability and multiplier based on current AI state.
-     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards.
-     * @param {number} angleDifference - Current angle difference to the movement target.
-     * @return {{canThrust: boolean, effectiveThrustMultiplier: number}}
-     * @private
-     */
-    _calculateThrustParameters(desiredMovementTargetPos, angleDifference) {
-        let effectiveThrustMultiplier = 1.0;
-        let canThrust = false;
-
-        switch (this.currentState) {
-            case AI_STATE.IDLE:
-            case AI_STATE.NEAR_STATION:
-                // canThrust remains false
-                break;
-            case AI_STATE.ATTACK_PASS:
-                ({ canThrust, effectiveThrustMultiplier } = this._getAttackPassThrustParams(angleDifference));
-                break;
-            case AI_STATE.APPROACHING:
-                ({ canThrust, effectiveThrustMultiplier } = this._getApproachingThrustParams(angleDifference));
-                break;
-            case AI_STATE.FLEEING:
-                ({ canThrust, effectiveThrustMultiplier } = this._getFleeingThrustParams(angleDifference));
-                break;
-            case AI_STATE.SNIPING:
-                const snipeResult = this._getSnipingThrustParams(desiredMovementTargetPos, angleDifference);
-                canThrust = snipeResult.canThrust;
-                effectiveThrustMultiplier = snipeResult.thrustMultiplier;
-                if (snipeResult.shouldBrake) {
-                    this.vel.mult(SNIPING_BRAKE_FACTOR);
+                if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
+                    canThrust = true;
                 }
-                break;
-            default: // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
-                ({ canThrust, effectiveThrustMultiplier } = this._getDefaultActiveStateThrustParams(angleDifference));
-                break;
+            } else if (this.currentState === AI_STATE.SNIPING) { // <<<--- THIS IS THE NEWLY INTEGRATED BLOCK
+                // For sniping, alignment for thrust can be more lenient for minor adjustments
+                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
+                
+                // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
+                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
+                    if (isAlignedForSnipeThrust) {
+                        effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
+                        canThrust = true;
+                    } else {
+                        canThrust = false; // Don't thrust if not aligned for adjustment
+                    }
+                } else { 
+                    // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
+                    this.vel.mult(SNIPING_BRAKE_FACTOR); 
+                    canThrust = false; // No active thrust, just braking
+                }
+            } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
+                // effectiveThrustMultiplier is 1.0 by default
+                if (isAlignedForThrust) {
+                    canThrust = true;
+                }
+            }
         }
-        return { canThrust, effectiveThrustMultiplier };
-    }
-
-    /** 
-     * Rotates towards target, applies thrust if aligned. Returns angle difference.
-     * @param {p5.Vector} desiredMovementTargetPos - Position to move towards
-     * @return {number} The angle difference in radians
-     */
-    performRotationAndThrust(desiredMovementTargetPos) {
-        const angleDifference = this._performRotation(desiredMovementTargetPos);
-        const { canThrust, effectiveThrustMultiplier } = this._calculateThrustParameters(desiredMovementTargetPos, angleDifference);
-
+        
         if (canThrust) {
             this.thrustForward(effectiveThrustMultiplier);
         }
@@ -2681,34 +2280,22 @@ updatePhysics() {
     // Skip if destroyed
     if (this.destroyed) return;
     
-    // Cache frequently used values
-    const velX = this.vel.x;
-    const velY = this.vel.y;
-    
-    let dragFactor;
-    
     // --- TANGLE WEAPON EFFECT ---
     if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-        // First apply normal drag
-        dragFactor = this.drag;
+        // First apply normal drag (always safe)
+        this.vel.mult(this.drag);
         
-        // Then apply tangle effect with safety bounds
-        const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001);
-        const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0);
+        // Then apply the tangle effect with safety bounds
+        const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
+        const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
         
-        // Apply combined drag factor directly to components
+        // Apply tangle effect if values are valid
         if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
-            dragFactor *= tangledSpeedFactor;
+            this.vel.mult(tangledSpeedFactor);
             
-            // Add randomness only occasionally to reduce calculations
+            // Add slight directional randomness to simulate being caught in energy net
             if (frameCount % 5 === 0) {
-                const randomAngle = random(-0.1, 0.1);
-                const cosAngle = Math.cos(randomAngle);
-                const sinAngle = Math.sin(randomAngle);
-                
-                // Manual rotation calculation
-                this.vel.x = velX * cosAngle - velY * sinAngle;
-                this.vel.y = velX * sinAngle + velY * cosAngle;
+                this.vel.rotate(random(-0.1, 0.1));
             }
         }
         
@@ -2721,33 +2308,21 @@ updatePhysics() {
     } 
     // --- STATION PROXIMITY EFFECT ---
     else if (this.currentState === AI_STATE.NEAR_STATION) {
-        // Stronger braking - avoid extra multiplication
-        dragFactor = this.drag * 0.8;
+        // Station braking - stronger effect than normal drag
+        this.vel.mult(this.drag * 0.8);
     } 
     // --- DEFAULT DRAG ---
     else {
-        dragFactor = this.drag;
+        // Normal drag
+        this.vel.mult(this.drag);
     }
     
-    // Apply drag directly to components
-    this.vel.x *= dragFactor;
-    this.vel.y *= dragFactor;
+    // Ensure we don't exceed max speed
+    this.vel.limit(this.maxSpeed);
     
-    // Optimized max speed check using squared magnitude comparison
-    const speedSquared = this.vel.x * this.vel.x + this.vel.y * this.vel.y;
-    const maxSpeedSquared = this.maxSpeed * this.maxSpeed;
-    
-    if (speedSquared > maxSpeedSquared) {
-        const scaleFactor = this.maxSpeed / Math.sqrt(speedSquared);
-        this.vel.x *= scaleFactor;
-        this.vel.y *= scaleFactor;
-    }
-    
-    // Fast NaN check without using isNaN
-    if (this.vel.x === this.vel.x && this.vel.y === this.vel.y) {
-        // Direct component addition for better performance
-        this.pos.x += this.vel.x;
-        this.pos.y += this.vel.y;
+    // Update position only if velocity is valid
+    if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+        this.pos.add(this.vel);
     } else {
         console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
         this.vel.set(0, 0);
@@ -2779,19 +2354,11 @@ updatePhysics() {
      * @return {boolean} Whether firing angle is acceptable
      */
     canFireAtTarget(targetAngle) {
-        // Check weapon type for special aiming rules
-        const currentWeaponType = this.currentWeapon?.type;
-        const isTurretWeapon = currentWeaponType === 'turret';
-        const isMissileWeapon = currentWeaponType === 'missile';
+        const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
         const angleDiff = this.getAngleDifference(targetAngle);
         
-        // Allow wider angle for missile weapons (missiles can be fired at greater angles than standard weapons)
-        const missileAngleTolerance = WIDE_ANGLE_RAD * 2.5; // Much wider acceptance angle for missiles
-        
         return this.currentState !== AI_STATE.IDLE && 
-               (isTurretWeapon || 
-                isMissileWeapon && Math.abs(angleDiff) < missileAngleTolerance ||
-                Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Standard weapons use normal tolerance
+               (isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Use constant
     }
 
 /** 
@@ -2802,178 +2369,103 @@ updatePhysics() {
  * @param {number} shootingAngle - Angle to target in radians
  */
 performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-    // Early exit conditions - quick checks first
-    if (!targetExists || !this.isWeaponReady() || this.currentState === AI_STATE.IDLE) return;
+
+    if (!targetExists) return;
     
-    // Fast path check for weapon
-    if (!this.currentWeapon) {
-        // No weapon to fire
-        return;
-    }
+    // Only debug firing decisions against player
+    const targetingPlayer = this.target instanceof Player;
     
-    // Cache weapon type
-    const weaponType = this.currentWeapon.type;
+    // Select best weapon (no debug)
+    this.selectBestWeapon(distanceToTarget);
     
-    // Fast weapon range calculation with lookup
-    const rangeFactor = 
-        weaponType === 'beam' ? 1.2 :
-        weaponType === 'missile' ? 1.8 :
-        weaponType === 'turret' ? 0.8 : 1.0;
-    
-    const effectiveFiringRange = this.firingRange * rangeFactor;
-    
-    // Store for visualization
-    this.visualFiringRange = effectiveFiringRange;
-    
-    // Early range check
-    if (distanceToTarget >= effectiveFiringRange) return;
-    
-    // Firing angle check
-    if (!this.canFireAtTarget(shootingAngle)) {
-        // Only log for player targets in certain conditions (reduced logging)
-        if (this.target instanceof Player && frameCount % 60 === 0) {
-            // Log once per second instead of every frame
-            console.log(`${this.shipTypeName} targeting player but angle not aligned`);
+    // Adjust firing range based on weapon type
+    let effectiveFiringRange = this.firingRange;
+    if (this.currentWeapon) {
+        switch (this.currentWeapon.type) {
+            case 'beam': effectiveFiringRange *= 1.2; break;
+            case 'missile': effectiveFiringRange *= 1.8; break;
+            case 'turret': effectiveFiringRange *= 0.8; break;
         }
-        return;
     }
-    
-    // System reference check
-    if (!this.currentSystem) this.currentSystem = system;
-    
-    // Fire the weapon
-    this.fireWeapon(this.target);
-    
-    // Reset cooldown
-    this.fireCooldown = this.fireRate;
-    
-    // Only log player targeting when it actually happens
-    if (this.target instanceof Player && frameCount % 30 === 0) {
-        // Reduce logging frequency to every half second
-        console.log(`${this.shipTypeName} firing ${this.currentWeapon.name} at player`);
+    this.visualFiringRange = effectiveFiringRange;
+
+    // Enhanced firing logic
+    if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
+        if (this.canFireAtTarget(shootingAngle)) {
+            if (!this.currentSystem) this.currentSystem = system;
+            
+            // Player-specific targeting debug
+            if (targetingPlayer) {
+                console.log(`%c🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
+                    'color:red; font-weight:bold');
+            }
+            
+            // Weapon-specific behavior
+            if (this.currentWeapon) {
+                // Standard firing for all weapon types (including missile, beam, and turret)
+                this.fireWeapon(this.target);
+            } else {
+                // Fallback if no weapon defined
+                this.fireWeapon();
+            }
+            
+            this.fireCooldown = this.fireRate;
+        } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
+            // Debug when IDLE pirates spot player
+            console.log(`%c🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
+        }
     }
 }
 
-    /**
-     * Creates and adds a projectile aimed in the specified direction (radians)
-     * Optimized with improved vector calculations
-     * @param {Object} system - The current star system
-     * @param {number} fireAngleRadians - The angle to fire at
-     */
+    /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
-        // Early exit for hauler safety check
-        const isHaulerCanFire = this.role !== AI_ROLE.HAULER || 
-                              this.currentState === AI_STATE.APPROACHING || 
-                              this.currentState === AI_STATE.ATTACK_PASS || 
-                              this.currentState === AI_STATE.REPOSITIONING;
-                              
-        if (!isHaulerCanFire) return;
+        // Allow haulers to fire if they're in a defensive combat mode
+        if (this.role === AI_ROLE.HAULER && 
+            !(this.currentState === AI_STATE.APPROACHING || 
+              this.currentState === AI_STATE.ATTACK_PASS || 
+              this.currentState === AI_STATE.REPOSITIONING)) {
+            return; // Only block firing when not in combat states
+        }
         
-        // System validity check
-        if (!system || typeof system.addProjectile !== 'function') return;
-        
-        // Angle validity check (NaN protection)
-        if (isNaN(this.angle) || isNaN(fireAngleRadians)) return;
-        
-        // Calculate spawn position directly with trig functions - avoid vector creation
-        const spawnDistance = this.size * 0.7;
-        const cosAngle = Math.cos(this.angle);
-        const sinAngle = Math.sin(this.angle);
-        
-        const spawnX = this.pos.x + cosAngle * spawnDistance;
-        const spawnY = this.pos.y + sinAngle * spawnDistance;
-        
-        // Create projectile directly with coordinates
-        const proj = new Projectile(spawnX, spawnY, fireAngleRadians, 'ENEMY', 5, 5);
+        if (!system || typeof system.addProjectile !== 'function') { return; }
+        if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
+        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
+        let spawnPos = p5.Vector.add(this.pos, spawnOffset);
+        let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
         system.addProjectile(proj);
     }
 
-    /**
-     * Fires the currently equipped weapon with advanced targeting
-     * Optimized for different weapon types and targeting scenarios
-     * @param {Object} targetToPass - The target to fire at
-     */
     fireWeapon(targetToPass = null) {
-        // Early return checks with combined condition
-        if (!this.currentWeapon || !this.currentSystem) return;
+        if (!this.currentWeapon || this.fireCooldown > 0 || !this.currentSystem) return;
+    
+        // Default firing angle (ship's current heading)
+        let fireAngle = this.angle;
+    
+        // Check if target is stationary or very slow-moving
+        if (targetToPass && targetToPass.vel && 
+            targetToPass.vel.magSq() < 0.25) { // threshold for "almost stationary"
+            
+            // Aim directly at the target's current position instead of predicted position
+            fireAngle = atan2(
+                targetToPass.pos.y - this.pos.y,
+                targetToPass.pos.x - this.pos.x
+            );
+        }
         
-        // Check if weapons are disabled (by EMP nebula, for example)
-        if (this.weaponsDisabled) {
-            // Cannot fire weapons when disabled
+        // Rest of existing code remains unchanged
+        if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
+            if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
+                return; // Don't fire missile without a valid target
+            }
+        }
+        
+        // Check: EMP nebula check
+        if (this.currentSystem?.isInEMPNebula && this.currentSystem.isInEMPNebula(this.pos)) {
             return;
         }
-        
-        // Cached system and weapon type for multiple uses
-        const system = this.currentSystem;
-        const weaponType = this.currentWeapon.type;
-        
-        // For missiles, ensure we always have the main target
-        if (weaponType === WEAPON_TYPE.MISSILE) {
-            // If no target was passed in, use the enemy's current target
-            if (!targetToPass && this.target) {
-                targetToPass = this.target;
-                console.log(`${this.shipTypeName}: Using main target for missile firing`);
-            }
-            
-            // Debug output if we're still missing a target
-            if (!targetToPass) {
-                console.log(`${this.shipTypeName}: Tried to fire missile but no target available`);
-            }
-        }
-        
-        // Combined target validation with short-circuit evaluation
-        const isValidMissileTarget = !(
-            weaponType === WEAPON_TYPE.MISSILE && 
-            (!targetToPass || 
-             targetToPass.destroyed || 
-             (targetToPass.hull !== undefined && targetToPass.hull <= 0))
-        );
-        
-        if (!isValidMissileTarget) {
-            console.log(`${this.shipTypeName}: Invalid missile target, aborting missile launch`);
-            return;
-        }
-        
-        // Remove legacy EMP check that uses a non-existent method
-        // if (system.isInEMPNebula?.(this.pos)) return;
-        
-        // Calculate firing angle with optimized path selection
-        let fireAngle;
-        
-        if (!targetToPass || !targetToPass.pos) {
-            // No target - use ship angle
-            fireAngle = this.angle;
-        } else {
-            // Cache position components for multiple calculations
-            const targetX = targetToPass.pos.x;
-            const targetY = targetToPass.pos.y;
-            const shipX = this.pos.x;
-            const shipY = this.pos.y;
-            
-            // Compute target vector components
-            const dX = targetX - shipX;
-            const dY = targetY - shipY;
-            
-            // Fast stationary target check with direct component calculation
-            const isStationaryTarget = !targetToPass.vel || 
-                         (targetToPass.vel.x * targetToPass.vel.x + 
-                          targetToPass.vel.y * targetToPass.vel.y) < 0.25;
-                          
-            if (isStationaryTarget) {
-                // Direct angle calculation for stationary or slow targets
-                fireAngle = Math.atan2(dY, dX);
-            } else {
-                // For fast-moving targets, use ship's current facing
-                fireAngle = this.angle;
-                
-                // Future enhancement: Add predictive targeting here
-                // We could calculate target's future position based on velocity
-                // and distance, then aim at that predicted position
-            }
-        }
-        
-        // Fire the weapon using the WeaponSystem
-        WeaponSystem.fire(this, system, fireAngle, weaponType, targetToPass);
+    
+        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+        this.fireCooldown = this.fireRate;
     }
 
     /** Cycles to the next available weapon */
@@ -3011,71 +2503,12 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     
     /** Draws the enemy ship using its specific draw function and adds UI elements. */
     draw() {
-        // Quick early returns - fundamental checks first
         if (this.destroyed || isNaN(this.angle)) return;
-        if (!this.p5FillColor || !this.p5StrokeColor) { 
-            this.initializeColors(); 
-            if (!this.p5FillColor || !this.p5StrokeColor) return; // Still missing colors after init
-        }
 
-        // Handle jump effect animation if active
-        if (this.jumpingEffect && this.jumpEffectStartTime) {
-            const currentTime = millis();
-            const elapsedTime = currentTime - this.jumpEffectStartTime;
-            const progress = Math.min(elapsedTime / JUMP_EFFECT_DURATION_MS, 1.0);
-            
-            push();
-            translate(this.pos.x, this.pos.y);
-            
-            // Phase 1: Ship fades to white (0% to 30%)
-            if (progress < 0.3) {
-                const fadeToWhite = progress / 0.3;
-                const whiteness = 255 * fadeToWhite;
-                const originalColor = 255 * (1 - fadeToWhite);
-                
-                rotate(this.angle);
-                // Blend original color with white
-                const r = originalColor + whiteness;
-                const g = originalColor + whiteness;
-                const b = originalColor + whiteness;
-                fill(r, g, b);
-                stroke(255);
-                strokeWeight(1);
-                
-                // Draw the ship using its defined drawing function
-                const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-                const drawFunc = shipDef?.drawFunction;
-                if (typeof drawFunc === 'function') {
-                    drawFunc(this.size, false);
-                } else {
-                    ellipse(0, 0, this.size, this.size);
-                }
-            } 
-            // Phase 2: Transform to white ball and fade out (30% to 100%)
-            else {
-                const fadeOutProgress = (progress - 0.3) / 0.7;
-                const alpha = 255 * (1 - fadeOutProgress);
-                
-                // No rotation needed for ball
-                fill(255, 255, 255, alpha);
-                noStroke();
-                
-                // Ball starts at ship size and shrinks slightly
-                const ballSize = this.size * (1 - fadeOutProgress * 0.2);
-                ellipse(0, 0, ballSize, ballSize);
-                
-                // Optional: Add a subtle glow effect
-                if (alpha > 30) {
-                    fill(255, 255, 255, alpha * 0.5);
-                    ellipse(0, 0, ballSize * 1.5, ballSize * 1.5);
-                }
-            }
-            
-            pop();
-            return;  // Skip normal drawing when jump effect is active
-        }
 
-        // Cache ship definition and draw function - multiple accesses previously
+        if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
+        if (!this.p5FillColor || !this.p5StrokeColor) { return; }
+
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         const drawFunc = shipDef?.drawFunction;
         if (typeof drawFunc !== 'function') {
@@ -3083,464 +2516,251 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop();
             return;
         }
-        
-        // Handle thrust drawing first - this was isolated before
-        this.thrustManager.draw();
-        
-        // Cache current time - used multiple times for various effects
-        const currentTime = millis();
-        
-        // Cache common size calculations for various elements
-        const shieldRadius = this.size * 1.3;
-        const shieldHitRadius = this.size * 1.4;
-        const targetCircleRadius = this.size * 1.6;
 
-        // --- START MAIN SHIP DRAWING BLOCK ---
+       
+        this.thrustManager.draw();
+
+
+
+        // --- Start Ship Drawing Block ---
         push();
         translate(this.pos.x, this.pos.y);
 
         // --- Draw Info Label (BEFORE rotation) ---
         if (!this.destroyed) {
-            this._drawInfoLabel(shipDef);
-        }
-
-        // Apply rotation and draw the ship itself - core drawing
-        rotate(this.angle);
-        fill(this.p5FillColor); 
-        stroke(this.p5StrokeColor);
-        strokeWeight(1);
-        
-        // Optimize showThrust condition - used in drawFunc
-        const showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        
-        // Draw the ship
-        try { 
-            drawFunc(this.size, showThrust);
-        } catch (e) { 
-            console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); 
-            ellipse(0, 0, this.size, this.size);
-        }
-        
-        // Draw tangle effect if active - this remains in the rotated context
-        this._drawTangleEffectIfActive(currentTime);
-
-        // Draw player's target indicator - remains in rotated context
-        if (typeof player !== 'undefined' && player.target === this) {
-            this._drawTargetIndicator(targetCircleRadius);
-        }
-
-        // Draw health bar (counter-rotated to stay level)
-        if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {
-            this._drawHealthBar();
-        }
-
-        pop(); // End ship drawing block (resets the translation and rotation)
-        
-        // --- Draw Shield Effect (new transformation) ---
-        if (!this.destroyed && this.shield > 0 && !this.shieldsDisabled) {
-            this._drawShieldEffect(currentTime, shieldRadius, shieldHitRadius);
-        }
-
-        // --- Draw special effects (target line, force waves, beams, etc) ---
-        this._drawTargetLockOnEffect();
-        this._drawForceWaveEffect(currentTime);
-        this._drawBeamEffect(currentTime);
-        this._drawWeaponRangeIndicator();
-    } // End draw()
-    
-    /**
-     * @private
-     * Draw the info label above the ship
-     */
-    _drawInfoLabel(shipDef) {
-        push();
-        textFont(font);
-        textAlign(CENTER, BOTTOM);
-        textSize(20);
-        fill(255);
-        noStroke();
-
-        // Get target label with optimized determination logic
-        const targetLabel = this._getTargetLabel();
-        
-        // Draw the label with ship name and target info
-        const label = `${shipDef?.name}  Target: ${targetLabel}`;
-        text(label, 0, -this.size / 2 - 15);
-        pop();
-    }
-    
-    /**
-     * @private
-     * Determine target label with optimized branching
-     * @return {string} The appropriate target label
-     */
-    _getTargetLabel() {
-        // Fast path for most common states with fixed labels - no distance checks needed
-        if (this.currentState === AI_STATE.TRANSPORTING) return "Delivery";
-        if (!this.target && this.currentState !== AI_STATE.PATROLLING && 
-            this.currentState !== AI_STATE.NEAR_STATION && 
-            this.currentState !== AI_STATE.LEAVING_SYSTEM) return "None";
-        
-        // Cache target for multiple accesses
-        const target = this.target;
-        
-        // Cache frequently used values to reduce repeated property access
-        switch (this.currentState) {
-            case AI_STATE.PATROLLING:
-            case AI_STATE.NEAR_STATION: {
-                // Use squared distance check - more efficient than dist()
-                const patrolPos = this.patrolTargetPos;
-                const station = this.currentSystem?.station?.pos;
-                
-                if (patrolPos && station) {
-                    const dx = patrolPos.x - station.x;
-                    const dy = patrolPos.y - station.y;
-                    if (dx * dx + dy * dy < 2500) { // 50^2 = 2500
-                        return "Station";
-                    }
-                }
-                return "Patrol Point";
-            }
-                
-            case AI_STATE.LEAVING_SYSTEM: {
-                // Use squared distance check
-                const patrolPos = this.patrolTargetPos;
-                const jumpZone = this.currentSystem?.jumpZoneCenter;
-                
-                if (patrolPos && jumpZone) {
-                    const dx = patrolPos.x - jumpZone.x;
-                    const dy = patrolPos.y - jumpZone.y;
-                    if (dx * dx + dy * dy < 2500) { // 50^2 = 2500
-                        return "Jump Zone";
-                    }
-                }
-                return "System Edge";
-            }
-        }
-        
-        // Fast path for common target types - check specific properties first, then instanceof
-        if (!target) return "None";
-        
-        // Check for specific properties that identify object types
-        // This avoids costly instanceof checks when possible
-        if (target.isPlayer === true) return "Player"; 
-        if (target.shipTypeName) return target.shipTypeName; // Enemy ships
-        if (target.type && !target.shipTypeName) return `Cargo (${target.type})`;
-        
-        // Only do instanceof checks if absolutely necessary
-        if (typeof Player !== 'undefined' && target instanceof Player) return "Player";
-        if (typeof Enemy !== 'undefined' && target instanceof Enemy) return target.shipTypeName || "Enemy Ship";
-        if (typeof Cargo !== 'undefined' && target instanceof Cargo) return `Cargo (${target.type})`;
-        
-        // Final checks for other known types
-        if (target.constructor) {
-            const targetType = target.constructor.name;
-            if (targetType === 'Station') return "Station";
-            if (targetType === 'Planet') return target.name || "Planet";
-            return targetType || "Unknown";
-        }
-        
-        // Last resort
-        return target.name || "Unknown";
-    }
-    
-    /**
-     * @private
-     * Draw tangle effect if the enemy ship is affected
-     * Heavily optimized with lookup tables, reduced calculations, and better caching
-     */
-    _drawTangleEffectIfActive(currentTime) {
-        // Fast early exit
-        if (this.dragMultiplier <= 1.0 || this.dragEffectTimer <= 0) return;
-        
-        // Initialize tangle effect cache if needed
-        if (!this._tangleCache) {
-            this._tangleCache = {
-                // Pre-calculate angle offsets and store them
-                angleOffsets: [0, 0.4, 0.8, 1.2, 1.6],
-                // Scale random ranges for each vertex
-                randomFactors: [1.25, 2.5, 3.75, 5.0, 6.25],
-                // Vertex coordinate caches
-                xCache: new Array(30), // 6 segments * 5 vertices
-                yCache: new Array(30),
-                // Animation state
-                lastUpdateFrame: 0,
-                // Reusable segment angle values
-                segmentAngles: new Array(6),
-                // Pre-computed sin values for animation
-                tangleSinValues: new Array(6),
-                // Static random values (update less frequently)
-                randomCache: new Array(30),
-                // Last time randomization occurred
-                lastRandomTime: 0,
-                // Store pre-calculated vertex coordinates
-                vertices: new Array(6).fill().map(() => []),
-                // Reuse a single shape for better performance
-                shape: null
-            };
-            
-            // Precalculate the segment angles once (these don't change)
-            const segmentAngle = TWO_PI / 6;
-            for (let i = 0; i < 6; i++) {
-                this._tangleCache.segmentAngles[i] = i * segmentAngle;
-                // Initialize vertex arrays
-                this._tangleCache.vertices[i] = new Array(5);
-            }
-        }
-        
-        // Calculate opacity - fade out during last second
-        const opacity = this.dragEffectTimer < 1.0 ? 
-            Math.floor(this.dragEffectTimer * 180) : 180;
-        
-        // Cache calculations that don't change during this frame
-        const innerRadius = this.size * 0.6;
-        const baseOuterRadius = this.size * 1.2;
-        const radiusFactor = this.size * 0.2;
-        const cache = this._tangleCache;
-        
-        // OPTIMIZATION: Update animation parameters less frequently (every 10 frames)
-        // This significantly reduces computation while maintaining visual quality
-        if (frameCount % 10 === 0 || frameCount !== cache.lastUpdateFrame) {
-            cache.lastUpdateFrame = frameCount;
-            
-            // Animation timing - modulo to keep values from growing too large
-            const animFrame = frameCount % 360;
-            const frameAngle = animFrame * 0.03;
-            const frameSin = animFrame * 0.1;
-            
-            // Pre-compute sin values for animation (once per update)
-            for (let i = 0; i < 6; i++) {
-                cache.tangleSinValues[i] = sin(frameSin + i);
-            }
-            
-            // OPTIMIZATION: Update random values less frequently (every 200ms)
-            // Reduces CPU usage while maintaining visual variation
-            const now = millis();
-            if (now - cache.lastRandomTime > 200) {
-                cache.lastRandomTime = now;
-                
-                // Pre-generate random values (less frequently)
-                for (let idx = 0; idx < cache.randomCache.length; idx++) {
-                    const j = idx % cache.angleOffsets.length;
-                    const randomFactor = cache.randomFactors[j];
-                    cache.randomCache[idx] = [
-                        random(-randomFactor, randomFactor),
-                        random(-randomFactor, randomFactor)
-                    ];
-                }
-            }
-            
-            // Pre-generate all vertex coordinates
-            for (let i = 0; i < 6; i++) {
-                const baseAngle = frameAngle + cache.segmentAngles[i];
-                const outerRadius = baseOuterRadius + radiusFactor * cache.tangleSinValues[i];
-                
-                // Generate vertices for this segment
-                for (let j = 0; j < cache.angleOffsets.length; j++) {
-                    const idx = i * cache.angleOffsets.length + j;
-                    const angle = baseAngle + cache.angleOffsets[j];
-                    const radius = (j % 2 === 0) ? innerRadius : outerRadius;
-                    
-                    // Calculate base coordinates
-                    const cosVal = cos(angle);
-                    const sinVal = sin(angle);
-                    
-                    // Store pre-calculated vertex coordinates
-                    const randomOffset = cache.randomCache[idx];
-                    cache.vertices[i][j] = [
-                        cosVal * radius + randomOffset[0],
-                        sinVal * radius + randomOffset[1]
-                    ];
-                }
-            }
-        }
-        
-        // Set up drawing style once
-        noFill();
-        stroke(200, opacity);
-        strokeWeight(2);
-        
-        // OPTIMIZATION: Draw fewer segments at greater distances
-        // Reduces draw calls based on distance from camera
-        const segmentsToRender = this.distFromCamera ? 
-            Math.min(6, Math.max(2, Math.ceil(12 / (this.distFromCamera * 0.01 + 1)))) : 6;
-        
-        // Draw all segments with cached values
-        for (let i = 0; i < segmentsToRender; i++) {
-            beginShape();
-            
-            // Use pre-computed vertices directly
-            const vertices = cache.vertices[i];
-            for (let j = 0; j < vertices.length; j++) {
-                vertex(vertices[j][0], vertices[j][1]);
-            }
-            
-            endShape();
-        }
-    }
-    
-    /**
-     * @private
-     * Draw the target indicator when this ship is the player's target
-     */
-    _drawTargetIndicator(radius) {
-        // Reuse rendering constants
-        const strokeAlpha = 200;
-        const bracketSize = this.size * 0.3;
-        const offset = this.size * 0.7;
-        
-        // Set styles only once
-        noFill();
-        stroke(0, 255, 0, strokeAlpha);
-        strokeWeight(2);
-        
-        // Draw circle - more visible than individual elements
-        ellipse(0, 0, radius, radius);
-        
-        // Draw brackets in a single loop with pre-calculated positions
-        const positions = [
-            {x: -offset, y: -offset, dx: bracketSize, dy: 0},  // Top-left horizontal
-            {x: -offset, y: -offset, dx: 0, dy: bracketSize},  // Top-left vertical
-            {x: offset, y: -offset, dx: -bracketSize, dy: 0},  // Top-right horizontal
-            {x: offset, y: -offset, dx: 0, dy: bracketSize},   // Top-right vertical
-            {x: -offset, y: offset, dx: bracketSize, dy: 0},   // Bottom-left horizontal
-            {x: -offset, y: offset, dx: 0, dy: -bracketSize},  // Bottom-left vertical
-            {x: offset, y: offset, dx: -bracketSize, dy: 0},   // Bottom-right horizontal
-            {x: offset, y: offset, dx: 0, dy: -bracketSize}    // Bottom-right vertical
-        ];
-        
-        for (const pos of positions) {
-            line(pos.x, pos.y, pos.x + pos.dx, pos.y + pos.dy);
-        }
-    }
-    
-    /**
-     * @private
-     * Draw the health bar below the ship
-     */
-    _drawHealthBar() {
-        push();
-        rotate(-this.angle); // Counter-rotate to keep bar level
-        
-        const healthPercent = this.hull / this.maxHull;
-        const barW = this.size * 0.9;
-        const barH = 6;
-        const barX = -barW / 2;
-        const barY = this.size / 2 + 5;
-        
-        noStroke();
-        
-        // Draw red background and green health in one pass with fewer state changes
-        fill(255, 0, 0);
-        rect(barX, barY, barW, barH);
-        
-        fill(0, 255, 0);
-        rect(barX, barY, barW * healthPercent, barH);
-        
-        pop();
-    }
-    
-    /**
-     * @private
-     * Draw shield effects
-     */
-    _drawShieldEffect(currentTime, shieldRadius, shieldHitRadius) {
-        push();
-        translate(this.pos.x, this.pos.y);
-        
-        const shieldPercent = this.shield / this.maxShield;
-        const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
-        
-        noFill();
-        stroke(100, 180, 255, shieldAlpha);
-        strokeWeight(1.5);
-        ellipse(0, 0, shieldRadius, shieldRadius);
-        
-        // Only draw hit effect if a recent hit occurred
-        const timeSinceHit = currentTime - this.shieldHitTime;
-        if (timeSinceHit < 300) {
-            const hitOpacity = map(timeSinceHit, 0, 300, 200, 0);
-            stroke(150, 220, 255, hitOpacity);
-            strokeWeight(3);
-            ellipse(0, 0, shieldHitRadius, shieldHitRadius);
-        }
-        
-        pop();
-    }
-    
-    /**
-     * @private
-     * Draw force wave visual effect
-     */
-    _drawForceWaveEffect(currentTime) {
-        if (this.lastForceWave && currentTime - this.lastForceWave.time < 300) {
-            const timeSinceForce = currentTime - this.lastForceWave.time;
-            const alpha = map(timeSinceForce, 0, 300, 200, 0);
-            const radius = map(timeSinceForce, 0, 300, 10, 40);
-            
             push();
-            translate(this.pos.x, this.pos.y);
+            textFont(font);
+            textAlign(CENTER, BOTTOM);
+            textSize(20);
+            fill(255);
+            noStroke();
+
+            let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
+            let targetLabel = "None"; // Default
+
+            // State-based target labeling for non-combat roles
+            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
+                // Check if patrol target is the station
+                if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
+                    this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
+                    targetLabel = "Station";
+                } else {
+                    targetLabel = "Patrol Point"; // Or just "Patrolling"
+                }
+            } else if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                 // Check if patrol target is the jump zone
+                 if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
+                     this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
+                     targetLabel = "Jump Zone";
+                 } else {
+                     targetLabel = "System Edge"; // Fallback if jump zone unknown/not targeted
+                 }
+            } else if (this.currentState === AI_STATE.TRANSPORTING) {
+                 // Could add logic here to identify destination type (planet/station)
+                 targetLabel = "Delivery"; // Simple label for now
+            }
+            // --- End State-Based Labeling ---
+
+            // --- Fallback to this.target if no state-based label was set ---
+            // (Or if in a combat/other state where this.target is relevant)
+            else if (this.target) { // Check if target exists
+                if (this.currentState === AI_STATE.COLLECTING_CARGO && this.target instanceof Cargo) {
+                    targetLabel = `Cargo (${this.target.type})`;
+                } else if (this.target instanceof Player) {
+                    targetLabel = "Player";
+                } else if (this.target instanceof Enemy && this.target.shipTypeName) {
+                    targetLabel = this.target.shipTypeName;
+                } else if (this.target instanceof Cargo) {
+                     targetLabel = `Cargo (${this.target.type})`;
+                } else {
+                    // Check for Station/Planet if targeted directly (less common now)
+                    if (this.target.constructor.name === 'Station') targetLabel = "Station";
+                    else if (this.target.constructor.name === 'Planet') targetLabel = this.target.name || "Planet";
+                    else targetLabel = this.target.name || this.target.constructor.name || "Unknown";
+                }
+            } // targetLabel remains "None" if this.target is null and no state-based label applied
+
+            // UPDATED: Add system name to label
+            const system = this.getSystem();
+
+            
+            //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
+            let label = `${shipDef?.name}  Target: ${targetLabel}`;
+            text(label, 0, -this.size / 2 - 15);
+
+            pop();
+        }
+        // --- End Info Label ---
+
+        rotate(this.angle);
+
+        fill(this.p5FillColor); stroke(this.p5StrokeColor);
+        strokeWeight(1);
+        let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
+        try { drawFunc(this.size, showThrust); } // Call specific draw function
+        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+
+        // Draw tangle effect if active
+        if (this.dragMultiplier > 1.0) {
+            // Simply check if we still have drag effect time remaining
+            if (this.dragEffectTimer > 0) {
+                // Calculate opacity - fade out during last second
+                const opacity = this.dragEffectTimer < 1.0 ? 
+                    map(this.dragEffectTimer, 0, 1.0, 0, 180) : 
+                    180;
+                
+                // Draw energy tethers with proper opacity
+                noFill();
+                //stroke(30, 220, 120, opacity);
+                stroke(200, 180);
+                strokeWeight(2);
+                
+                for (let i = 0; i < 6; i++) {
+                    let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                    let innerRadius = this.size * 0.6;
+                    let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                    
+                    beginShape();
+                    for (let j = 0; j < 5; j++) {
+                        let r = map(j % 2, 0, 1, innerRadius, outerRadius);
+                        let jitterAmount = map(j, 0, 4, 0, 5);
+                        let jitter = random(-jitterAmount, jitterAmount);
+                        let x = cos(angle + j * 0.4) * r + jitter;
+                        let y = sin(angle + j * 0.4) * r + jitter;
+                        vertex(x, y);
+                    }
+                    endShape();
+                }
+            }
+        }
+
+        // --- NEW: Draw Player's Target Indicator ---
+        // Check if THIS enemy instance is the player's current target.
+        // Assumes 'player' is globally accessible (which it is in your sketch.js).
+        if (typeof player !== 'undefined' && player.target === this) {
+            push(); // Isolate transformations for this indicator
+
+            // The canvas is already rotated to the enemy's angle.
+            // Drawing here will make the indicator rotate with the enemy.
             noFill();
-            strokeWeight(3);
-            
-            // Use destructured color for more readable code
-            const [r, g, b] = this.lastForceWave.color;
-            stroke(r, g, b, alpha);
-            
+            stroke(0, 255, 0, 200); // Bright green, semi-transparent
+            strokeWeight(2);
+
+            // Example: A circle around the ship
+            ellipse(0, 0, this.size * 1.6, this.size * 1.6); // Slightly larger than shield
+
+            // Example: Corner brackets
+            const bracketSize = this.size * 0.3;
+            const offset = this.size * 0.7; // Adjust offset to position brackets correctly
+            // Top-left
+            line(-offset, -offset, -offset + bracketSize, -offset);
+            line(-offset, -offset, -offset, -offset + bracketSize);
+            // Top-right
+            line(offset, -offset, offset - bracketSize, -offset);
+            line(offset, -offset, offset, -offset + bracketSize);
+            // Bottom-left
+            line(-offset, offset, -offset + bracketSize, offset);
+            line(-offset, offset, -offset, offset - bracketSize);
+            // Bottom-right
+            line(offset, offset, offset - bracketSize, offset);
+            line(offset, offset, offset, offset - bracketSize);
+
+            pop(); // Restore drawing state
+        }
+        // --- END NEW: Draw Player's Target Indicator ---
+
+        // --- Draw Health Bar (AFTER rotation, relative to 0,0) ---
+        if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {
+            // Rotate canvas back temporarily to draw horizontal bar
+            push();
+            rotate(-this.angle); // Counter-rotate
+
+            let healthPercent = this.hull / this.maxHull;
+            let barW = this.size * 0.9;
+            let barH = 6;
+            // Position relative to the translated origin (0,0), offset below
+            let barX = -barW / 2;
+            let barY = this.size / 2 + 5;
+
+            noStroke();
+            fill(255, 0, 0); // Red background
+            rect(barX, barY, barW, barH);
+            fill(0, 255, 0); // Green health remaining
+            rect(barX, barY, barW * healthPercent, barH);
+            //stroke(0); strokeWeight(1); noFill(); // Black outline
+            //rect(barX, barY, barW, barH);
+
+            pop(); // Restore rotation state (ship is still rotated)
+        }
+        // --- End Health Bar ---
+
+        pop(); // End Ship Drawing Block
+
+        // --- Draw Shield Effect (Separate transformation) ---
+        if (!this.destroyed && this.shield > 0 && !this.shieldsDisabled) {
+            push(); // Isolate shield drawing
+            translate(this.pos.x, this.pos.y); // Translate to ship center
+
+            const shieldPercent = this.shield / this.maxShield;
+            const shieldAlpha = map(shieldPercent, 0, 1, 40, 80);
+            noFill(); stroke(100, 180, 255, shieldAlpha); strokeWeight(1.5);
+            ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+
+            // Shield hit visual effect
+            if (millis() - this.shieldHitTime < 300) {
+                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
+                stroke(150, 220, 255, hitOpacity); strokeWeight(3);
+                ellipse(0, 0, this.size * 1.4, this.size * 1.4);
+            }
+            pop(); // End shield drawing
+        }
+        // --- End Shield Effect ---
+
+        // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
+        // These use absolute coordinates or manage their own transformations
+
+        this._drawTargetLockOnEffect();
+        // DEBUG LINE
+        //if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.role === AI_ROLE.ALIEN)) { 
+        //     push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
+        //}
+
+        // Force wave effect
+        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+            const timeSinceForce = millis() - this.lastForceWave.time;
+            const alpha = map(timeSinceForce, 0, 300, 200, 0);
+            push();
+            translate(this.pos.x, this.pos.y); // Use absolute position
+            noFill(); strokeWeight(3);
+            stroke(this.lastForceWave.color[0], this.lastForceWave.color[1], this.lastForceWave.color[2], alpha);
+            const radius = map(timeSinceForce, 0, 300, 10, 40);
             circle(0, 0, radius * 2);
             pop();
         }
-    }
-    
-    /**
-     * @private
-     * Draw beam visual effect 
-     */
-    _drawBeamEffect(currentTime) {
-        if (this.lastBeam && currentTime - this.lastBeam.time < 150) {
+
+        // Beam effect
+        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
             push();
-            const color = this.lastBeam.color;
-            const [r, g, b] = color; // Destructure once for multiple uses
-            
-            // Draw the beam with inner and outer glow in one push/pop cycle
-            stroke(color);
-            strokeWeight(3);
+            stroke(this.lastBeam.color); strokeWeight(3);
             line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
-            
-            stroke(r, g, b, 100);
-            strokeWeight(6);
+            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100); strokeWeight(6);
             line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
-            
             pop();
         }
-    }
-    
-    /**
-     * @private
-     * Draw weapon range indicator with improved performance
-     */
-    _drawWeaponRangeIndicator() {
-        // Early return for the most common case
-        if (!this.currentWeapon || !this.target) return;
-        
-        // Fast path checking: First check the state as it's fastest
-        const isAttackState = (this.currentState === AI_STATE.APPROACHING ||
-                              this.currentState === AI_STATE.ATTACK_PASS ||
-                              this.currentState === AI_STATE.REPOSITIONING);
-        
-        if (!isAttackState) return;
-        
-        // Only then check target validity which is more expensive
-        if (!this.isTargetValid(this.target)) return;
-        
-        // Draw the circle without push/pop for better performance
-        // The global drawing state is already clean at this point in the draw() method
-        stroke(200, 200, 0, 100);
-        noFill();
-        strokeWeight(1);
-        circle(this.pos.x, this.pos.y, this.visualFiringRange * 2);
-        // No need for pop() as there was no push()
-    }
+
+        // Weapon range indicator
+        if (this.currentWeapon && this.target && this.isTargetValid(this.target) &&
+            (this.currentState === AI_STATE.APPROACHING ||
+             this.currentState === AI_STATE.ATTACK_PASS ||
+             this.currentState === AI_STATE.REPOSITIONING)) {
+            push();
+            stroke(200, 200, 0, 100); noFill(); strokeWeight(1);
+            circle(this.pos.x, this.pos.y, this.visualFiringRange * 2); // Use absolute position
+            pop();
+        }
+        // --- End Other Effects ---
+
+    } // End draw()
 
 
 
@@ -3550,64 +2770,46 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * when specific conditions are met.
      */
     _drawTargetLockOnEffect() {
-        // Short-circuit if no target - avoids unnecessary checks
-        if (!this.target || !this.isTargetValid(this.target)) {
-            this.hasPlayedLockOnSound = false;
-            return;
-        }
-        
-        // Check if the conditions are met for drawing the target line
-        const isTargeting = this.role !== AI_ROLE.HAULER && 
-                           (this.currentState === AI_STATE.APPROACHING ||
-                            this.currentState === AI_STATE.ATTACK_PASS ||
-                            this.role === AI_ROLE.ALIEN);
-                            
-        if (!isTargeting) {
-            this.hasPlayedLockOnSound = false;
-            return;
-        }
-        
-        // Sound logic (only execute when targeting the player)
-        if (this.target instanceof Player) {
-            if (!this.hasPlayedLockOnSound && typeof soundManager !== 'undefined' && soundManager.playSound) {
-                soundManager.playSound('targetlock');
-                this.hasPlayedLockOnSound = true;
+        const conditionsMetForLine = this.isTargetValid(this.target) &&
+                                     this.role !== AI_ROLE.HAULER &&
+                                     (this.currentState === AI_STATE.APPROACHING ||
+                                      this.currentState === AI_STATE.ATTACK_PASS ||
+                                      this.role === AI_ROLE.ALIEN);
+
+        if (conditionsMetForLine) {
+            
+        // --- Sound Logic: Play only when target is Player and sound hasn't been played for this lock ---
+        if (this.target instanceof Player) { // Check if the current target is the player
+            if (!this.hasPlayedLockOnSound) {
+                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                    soundManager.playSound('targetlock'); // Ensure 'targetlock' (or 'targetLock') sound is loaded
+                }
+                this.hasPlayedLockOnSound = true; // Mark sound as played for this player lock-on period
             }
         } else {
+            // If target is not the player (or no target), reset the sound flag.
+            // This allows the sound to play again if the player is re-acquired.
             this.hasPlayedLockOnSound = false;
         }
 
-        // Draw the targeting line with improved error handling
-        const strokeColor = this.p5StrokeColor;
-        
-        push();
-        strokeWeight(1);
-        
-        // Simplified color selection with fallbacks
-        if (strokeColor?.setAlpha) {
+            // Always draw the line if conditions are met
+            let lineCol = this.p5StrokeColor;
             try {
-                strokeColor.setAlpha(100);
-                stroke(strokeColor);
-            } catch {
-                // Use stored color values as backup
-                if (this.strokeColorValue) {
+                if (lineCol?.setAlpha) {
+                    lineCol.setAlpha(100);
+                    stroke(lineCol);
+                } else { // Fallback if not a p5.Color or setAlpha fails
                     stroke(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2], 100);
-                } else {
-                    stroke(255, 0, 0, 100); // Ultimate fallback
                 }
+            } catch (e) { // Further fallback
+                stroke(255, 0, 0, 100);
             }
+            strokeWeight(1);
+            line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
         } else {
-            // Use stored color values as primary fallback
-            if (this.strokeColorValue) {
-                stroke(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2], 100);
-            } else {
-                stroke(255, 0, 0, 100); // Ultimate fallback
-            }
+            // If conditions are NOT met, reset the sound flag so it can play next time
+            this.hasPlayedLockOnSound = false;
         }
-        
-        // Draw the line - this is always valid at this point since we checked isTargetValid
-        line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-        pop();
     }
 
     // ------------------
@@ -3619,14 +2821,12 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * Calculates parameters, creates the Cargo object, and calls system.addCargo().
      * @param {'jettison' | 'destruction'} context - The reason for spawning cargo.
      * @returns {boolean} True if cargo was spawned successfully, false otherwise.
-     * @private
      */
     _spawnCargo(context) {
         // 1. Get System and check for addCargo method
         const system = this.getSystem();
         if (!system || typeof system.addCargo !== 'function') {
             console.warn(`${this.shipTypeName} can't ${context} cargo - system or system.addCargo method missing`);
-           
             return false; // Good check
         }
 
@@ -3868,19 +3068,6 @@ _processDestruction(attacker) {
             [100, 150, 255] // Blueish-white core
         );
 
-        // If this is a bodyguard, remove it from player's active bodyguards
-        if (this.role === AI_ROLE.GUARD && this.principal instanceof Player) {
-            // Find the bodyguard in activeBodyguards array that matches this ship
-            const activeGuards = this.principal.activeBodyguards;
-            const guardIndex = activeGuards.findIndex(guard => guard.id === this.guardId);
-            
-            if (guardIndex !== -1) {
-                // Remove the bodyguard from the active list directly
-                this.principal.activeBodyguards.splice(guardIndex, 1);
-                console.log(`Bodyguard ${this.guardId} removed from player's active list`);
-            }
-        }
-
         // Drop cargo
         this.dropCargo();
 
@@ -3949,27 +3136,6 @@ _checkRandomCargoDrop() {
 }
 
     /**
-     * Destroys the enemy, setting the destroyed flag to true
-     * This allows the star system to remove it from the enemies array
-     */
-    destroy() {
-        if (this.destroyed) return; // Already destroyed
-        
-        console.log(`${this.role} ${this.shipTypeName} destroy() called`);
-        this.destroyed = true;
-        this.hull = 0;
-        
-        // Clear all state flags
-        this.inCombat = false;
-        this.haulerCombatTimer = undefined;
-        this.forcedCombatTimer = 0;
-        this.target = null;
-        
-        // Don't create an explosion - this is for enemies that leave the system
-        // The _processDestruction method handles explosions for enemies that are destroyed by damage
-    }
-    
-    /**
      * Checks if ship has been destroyed
      * @return {boolean} Whether ship is destroyed
      */
@@ -4027,9 +3193,6 @@ _checkRandomCargoDrop() {
         // Log state changes with informative context
         //console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
-        // Add previous state to the stateData for context in state transitions
-        stateData.previousState = oldState;
-        
         // Execute exit actions for the old state
         this.onStateExit(oldState, stateData);
         
@@ -4074,34 +3237,6 @@ _checkRandomCargoDrop() {
                 console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}).`);
             break;
                 
-            case AI_STATE.GUARDING:
-                // Reset targeting when returning to guard state
-                if (this.principal) {
-                    const currentTime = millis();
-                    const combatStates = [AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING];
-                    const wasPreviouslyInCombat = combatStates.includes(stateData.previousState);
-                    const timeInEngagement = this.lastEngagementTime ? currentTime - this.lastEngagementTime : Infinity;
-                    
-                    // Reset engagement if:
-                    // 1. We've been engaged for longer than our persistence duration, OR
-                    // 2. We're coming from a non-combat state, OR
-                    // 3. Our previous engagement target is no longer valid
-                    if (timeInEngagement > this.engagementDuration || 
-                        !wasPreviouslyInCombat ||
-                        !this.isTargetValid(this.currentEngagementTarget)) {
-                        
-                        // Clear engagement tracking
-                        this.currentEngagementTarget = null;
-                        this.lastEngagementTime = 0;
-                    }
-                }
-                
-                // Apply initial braking when entering guarding state
-                if (this.vel) {
-                    this.vel.mult(0.8);
-                }
-            break;
-                
             case AI_STATE.NEAR_STATION:
                 // Reset timer on entry
                 this.nearStationTimer = this.stationPauseDuration;
@@ -4132,114 +3267,53 @@ _checkRandomCargoDrop() {
         }
     }
 
-    /**
-     * Calculate the attack pass target position with optimized vector operations
-     * @return {p5.Vector} The calculated attack pass target position
-     */
+    // Add this new method to calculate the attack path once
     calculateAttackPassTarget() {
-        // Don't create new vectors for positions - access components directly
-        const enemyPosX = this.pos.x;
-        const enemyPosY = this.pos.y;
-        
-        // Basic validity check for target
-        if (!this.target?.pos) {
-            // Return a position slightly ahead of current position if no target
-            return createVector(
-                enemyPosX + Math.cos(this.angle) * (this.size * 5),
-                enemyPosY + Math.sin(this.angle) * (this.size * 5)
-            );
-        }
-        
-        const targetPosX = this.target.pos.x;
-        const targetPosY = this.target.pos.y;
-        
-        // Get target velocity components with safe fallbacks
-        const targetVelX = this.target.vel ? this.target.vel.x : 0;
-        const targetVelY = this.target.vel ? this.target.vel.y : 0;
-        
-        // Use consistent random values for this entire attack pass
-        const strafeMultFactor = random(0.7, 1.3);
-        const aheadDistFactor = random(0.8, 1.2);
-        
-        // Calculate prediction frames using cached time scale
-        const timeScale = this._getTimeScale();
-        const strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * timeScale;
-        
-        // Calculate predicted target position directly with components
-        const predictedTargetPosX = targetPosX + (targetVelX * strafePredictionFrames);
-        const predictedTargetPosY = targetPosY + (targetVelY * strafePredictionFrames);
-        
-        // Direction vector from enemy to predicted target position
-        let vecToTargetX = predictedTargetPosX - enemyPosX;
-        let vecToTargetY = predictedTargetPosY - enemyPosY;
-        
-        // Check if the direction vector is too small (near-zero)
-        const vecToTargetMagSq = vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY;
-        if (vecToTargetMagSq < 0.1) {
-            // Try using actual position instead
-            vecToTargetX = targetPosX - enemyPosX;
-            vecToTargetY = targetPosY - enemyPosY;
-            
-            const altVecMagSq = vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY;
-            if (altVecMagSq < 0.1) {
-                // If still too small, use a random direction
-                const randAngle = random(TWO_PI);
-                vecToTargetX = Math.cos(randAngle);
-                vecToTargetY = Math.sin(randAngle);
+        // Similar logic to what's in getMovementTargetForState but happens ONCE
+        let enemyPos = this.pos.copy();
+        let targetActualPos = this.target.pos.copy();
+        let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
+
+        // Use consistent values for this entire attack pass
+        const strafeMultFactor = random(0.7, 1.3); // Calculate ONCE
+        const aheadDistFactor = random(0.8, 1.2);  // Calculate ONCE
+
+        // Predict target's future position for calculating the strafe point
+        let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        let predictedTargetPos = p5.Vector.add(targetActualPos, targetVel.mult(strafePredictionFrames));
+
+        // Direction from enemy to predicted target position
+        let vecToPredictedTarget = p5.Vector.sub(predictedTargetPos, enemyPos);
+        if (vecToPredictedTarget.magSq() < 0.1) {
+            vecToPredictedTarget = p5.Vector.sub(targetActualPos, enemyPos);
+            if (vecToPredictedTarget.magSq() < 0.1) {
+                vecToPredictedTarget = p5.Vector.random2D();
             }
         }
-        
-        // Normalize the direction vector
-        const vecToTargetMag = Math.sqrt(vecToTargetX * vecToTargetX + vecToTargetY * vecToTargetY);
-        const passDirectionX = vecToTargetX / vecToTargetMag;
-        const passDirectionY = vecToTargetY / vecToTargetMag;
-        
-        // Calculate strafe offset (perpendicular to direction)
+        let passDirectionNormalized = vecToPredictedTarget.copy().normalize();
+
+        // Calculate side strafe point
         const strafeOffsetValue = this.size * (ATTACK_PASS_STRAFE_OFFSET_MULT * strafeMultFactor) * this.strafeDirection;
-        
-        // Calculate perpendicular vector (-y, x) for strafe without creating new vector
-        const perpX = -passDirectionY * strafeOffsetValue;
-        const perpY = passDirectionX * strafeOffsetValue;
-        
-        // Calculate strafe point
-        const sideStrafePointX = predictedTargetPosX + perpX;
-        const sideStrafePointY = predictedTargetPosY + perpY;
-        
-        // Add jitter to strafe point
+        let perpendicularVec = createVector(-passDirectionNormalized.y, passDirectionNormalized.x).mult(strafeOffsetValue);
+        let sideStrafePoint = p5.Vector.add(predictedTargetPos, perpendicularVec);
+
+        // Add a single jitter value that remains consistent for this pass
         const jitterMagnitude = this.size * random(0.3, 0.8);
-        const jitterAngle = random(TWO_PI);
-        const jitterX = Math.cos(jitterAngle) * jitterMagnitude;
-        const jitterY = Math.sin(jitterAngle) * jitterMagnitude;
-        
-        const finalStrafeX = sideStrafePointX + jitterX;
-        const finalStrafeY = sideStrafePointY + jitterY;
-        
-        // Calculate vector to strafe point
-        const vecToStrafeX = finalStrafeX - enemyPosX;
-        const vecToStrafeY = finalStrafeY - enemyPosY;
-        const vecToStrafeMagSq = vecToStrafeX * vecToStrafeX + vecToStrafeY * vecToStrafeY;
-        
-        // Calculate final target based on strafe vector
-        const aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * aheadDistFactor);
-        
-        let finalTargetX, finalTargetY;
-        
-        if (vecToStrafeMagSq > 0.001) {
-            // Normalize vector to strafe point and extend by ahead distance
-            const vecToStrafeMag = Math.sqrt(vecToStrafeMagSq);
-            const normVecToStrafeX = vecToStrafeX / vecToStrafeMag;
-            const normVecToStrafeY = vecToStrafeY / vecToStrafeMag;
-            
-            finalTargetX = finalStrafeX + (normVecToStrafeX * aheadDistanceForPass);
-            finalTargetY = finalStrafeY + (normVecToStrafeY * aheadDistanceForPass);
+        let jitterVector = p5.Vector.random2D().mult(jitterMagnitude);
+        sideStrafePoint.add(jitterVector);
+
+        // Calculate the final aim point
+        let vectorToSideStrafePoint = p5.Vector.sub(sideStrafePoint, enemyPos);
+        let aheadDistanceForPass = this.size * (ATTACK_PASS_AHEAD_DIST_MULT * aheadDistFactor);
+
+        let finalTarget;
+        if (vectorToSideStrafePoint.magSq() > 0.001) {
+            finalTarget = p5.Vector.add(sideStrafePoint, vectorToSideStrafePoint.normalize().mult(aheadDistanceForPass));
         } else {
-            // Use pass direction if strafe vector is too small
-            finalTargetX = finalStrafeX + (passDirectionX * aheadDistanceForPass);
-            finalTargetY = finalStrafeY + (passDirectionY * aheadDistanceForPass);
+            finalTarget = p5.Vector.add(sideStrafePoint, passDirectionNormalized.mult(aheadDistanceForPass));
         }
-        
-        // Only create one new vector at the end
-        return createVector(finalTargetX, finalTargetY);
+
+        return finalTarget;
     }
 
     /**

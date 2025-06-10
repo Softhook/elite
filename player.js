@@ -46,7 +46,7 @@ class Player {
         // --- Current State ---
         this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
         this.currentSystem = null; this.fireCooldown = 0;
-        this.currentWeapon = WEAPON_UPGRADES.find(w => w.name === "Tangle Projector") || WEAPON_UPGRADES[0]; // Default to Tangle Projector for testing
+        this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
@@ -56,11 +56,6 @@ class Player {
         // Add police status
         this.isPolice = false;
         this.hasBeenPolice = false;
-
-        // Add faction status properties
-        this.playerFaction = null; // Current faction: null, "IMPERIAL", "SEPARATIST", "MILITARY"
-        this.hasJoinedFaction = false; // Whether player has ever joined a faction
-        this.factionShip = null; // Ship received when joining faction
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -85,14 +80,9 @@ class Player {
         this.dragMultiplier = 1.0;   // Default - normal drag
         this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         this.tangleEffectTime = 0;   // Visual effect timestamp
-        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
-        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
 
         // Track enemy kills for Elite rating
         this.kills = 0;
-
-        // Initialize wanted status
-        this.isWanted = false;
 
         // --- Kiting & Speed Burst setup ---
         this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
@@ -102,14 +92,6 @@ class Player {
         this.isSpeedBursting     = false;
         this.speedBurstEnd       = 0; // Keep one
         this.isCoastingFromBurst = false; // Add this new flag
-        
-        // Secret base navigation feature
-        this.showSecretBaseNavigation = false; // Feature flag for drawing path to secret base
-        this._cachedNavigation = null; // Cache for navigation calculations
-        
-        // Bodyguards for protection
-        this.activeBodyguards = []; // Tracks hired bodyguards - destroyed ones are automatically removed
-        this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -181,47 +163,6 @@ class Player {
         item.quantity -= quantity;
         if (item.quantity === 0) this.cargo.splice(idx, 1);
         return true;
-    }
-
-    /** 
-     * Adds cargo to the player's inventory 
-     * @param {string} commodityName - Name of the commodity to add
-     * @param {number} quantity - Quantity to add
-     * @param {boolean} allowPartial - Whether to allow partial additions when cargo space is limited
-     * @returns {Object} Object with success, added, and reason properties
-     */
-    addCargo(commodityName, quantity, allowPartial = false) {
-        if (!commodityName || quantity <= 0) {
-            return { success: false, added: 0, reason: 'INVALID_INPUT' };
-        }
-
-        const currentCargoAmount = this.getCargoAmount();
-        const availableSpace = this.cargoCapacity - currentCargoAmount;
-        
-        if (availableSpace <= 0) {
-            return { success: false, added: 0, reason: 'CARGO_FULL' };
-        }
-
-        // Determine how much we can actually add
-        let amountToAdd = quantity;
-        if (amountToAdd > availableSpace) {
-            if (allowPartial) {
-                amountToAdd = availableSpace;
-            } else {
-                return { success: false, added: 0, reason: 'INSUFFICIENT_SPACE' };
-            }
-        }
-
-        // Find existing item or create new one
-        const existingItem = this.cargo.find(item => item.name === commodityName);
-        if (existingItem) {
-            existingItem.quantity += amountToAdd;
-        } else {
-            this.cargo.push({ name: commodityName, quantity: amountToAdd });
-        }
-
-        console.log(`Added ${amountToAdd}t ${commodityName} to cargo. Total cargo: ${this.getCargoAmount()}/${this.cargoCapacity}`);
-        return { success: true, added: amountToAdd, reason: amountToAdd < quantity ? 'PARTIAL_ADD' : 'FULL_ADD' };
     }
 
     /** Abandon the active mission and strip its cargo */
@@ -460,32 +401,24 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     }
 
     /**
-     * Applies energy tangle effect to impair player movement and rotation
-     * @param {number} tangleDuration - How long the tangle effect lasts in seconds
+     * Applies energy tangle effect to impair player movement
+     * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
-     * @param {number} rotationBlockMultiplier - How much rotation speed is reduced
      */
-applyDragEffect(tangleDuration = 5.0, multiplier = 10.0, rotationBlockMultiplier = 0.1) {
+applyDragEffect(duration = 5.0, multiplier = 10.0) {
     // Use higher value if already affected
     this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
     
     // ENHANCED: Extend duration for consecutive hits
-    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, tangleDuration) + 
-                          (this.dragEffectTimer > 0 ? tangleDuration * 0.5 : 0);
-    
-    // Apply rotation blocking effect
-    this.rotationBlockMultiplier = Math.min(this.rotationBlockMultiplier || 1.0, rotationBlockMultiplier);
-    this.rotationBlockTimer = Math.max(this.rotationBlockTimer || 0, tangleDuration) +
-                              (this.rotationBlockTimer > 0 ? tangleDuration * 0.5 : 0);
-    
-
+    this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
+                          (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
     
     // Visual effect timestamp
     this.tangleEffectTime = millis();
     
     // Player feedback
     if (typeof uiManager !== 'undefined') {
-        uiManager.addMessage("Ship caught in energy tangle! Engines and rotation affected!", "#30FFB4");
+        uiManager.addMessage("Ship caught in energy tangle! Engines affected!", "#30FFB4");
     }
     
     // Play sound effect if available
@@ -538,12 +471,10 @@ handleInput() {
   
     // 1) Rotation
     if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
-      const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
-      this.angle -= effectiveRotationSpeed;
+      this.angle -= this.rotationSpeed;
     }
     if (keyIsDown(RIGHT_ARROW) || keyIsDown(69)) {    // E 
-      const effectiveRotationSpeed = this.rotationSpeed * this.rotationBlockMultiplier;
-      this.angle += effectiveRotationSpeed;
+        this.angle += this.rotationSpeed;
     }
   
     // 2) Sideways kiting (strafe)
@@ -725,9 +656,12 @@ handleInput() {
         let effectiveTarget = target || this.target; // Use passed target, fallback to player's locked target
 
         if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
-            // Allow firing missiles without a lock; they will fly straight.
-            // If a target is locked (effectiveTarget is valid), the missile will home.
-            // No explicit check needed here to prevent firing.
+            if (!effectiveTarget || effectiveTarget.destroyed || (effectiveTarget.hull !== undefined && effectiveTarget.hull <=0)) {
+                if (typeof uiManager !== 'undefined' && this === player) { // only show message for player
+                    uiManager.addMessage("No target locked for missile.", [255,100,100]);
+                }
+                return false; // Don't fire missile without a valid target
+            }
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
             // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (this.pos.x - width/2);
@@ -754,18 +688,6 @@ handleInput() {
                 this.dragEffectTimer = 0;
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage("Engines restored to normal operation.", "#30FFB4");
-                }
-            }
-        }
-        
-        // Update rotation blocking timer
-        if (this.rotationBlockTimer > 0) {
-            this.rotationBlockTimer -= deltaTime / 1000; // Convert to seconds
-            if (this.rotationBlockTimer <= 0) {
-                this.rotationBlockMultiplier = 1.0;
-                this.rotationBlockTimer = 0;
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage("Rotation systems restored to normal operation.", "#30FFB4");
                 }
             }
         }
@@ -874,36 +796,6 @@ handleInput() {
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
-
-        // --- Secret Station Discovery ---
-        // Only check for discoveries when we have secret stations and only every 10 frames to improve performance
-        if (this.currentSystem && this.currentSystem.secretStations && 
-            this.currentSystem.secretStations.length > 0 && frameCount % 10 === 0) {
-            for (const station of this.currentSystem.secretStations) {
-                if (!station.discovered) {
-                    // Use faster distance check (squared distance comparison avoids costly sqrt operations)
-                    const dx = this.pos.x - station.pos.x;
-                    const dy = this.pos.y - station.pos.y;
-                    const distSquared = dx*dx + dy*dy;
-                    
-                    // Discovery distance is proportional to station size (squared for comparison)
-                    const discoveryDistance = station.size * 3;
-                    const discoveryDistSquared = discoveryDistance * discoveryDistance;
-                    
-                    if (distSquared < discoveryDistSquared) {
-                        station.discovered = true;
-                        uiManager.addMessage(`Secret Base Discovered: ${station.name}!`, [0, 255, 255]);
-                        console.log(`Player discovered secret station: ${station.name}`);
-                    }
-                }
-            }
-        }
-        
-        // Synchronize wanted status with current system
-        if (this.currentSystem) {
-            this.isWanted = this.currentSystem.isPlayerWanted();
-        }
-        // --- End Secret Station Discovery ---
     }
 
     /** Draws the player ship using its specific draw function. */
@@ -926,75 +818,6 @@ handleInput() {
         this.thrustManager.draw();
         
         if (isNaN(this.angle)) { return; } // Safety check
-        
-        // Draw line to secret base if feature is active (early exit if not active)
-        if (this.showSecretBaseNavigation && this.currentSystem && this.currentSystem.secretStations && 
-            this.currentSystem.secretStations.length > 0) {
-            
-            // Cache closest station data to avoid recalculating every frame
-            if (!this._cachedNavigation || frameCount % 30 === 0) {
-                // Only recalculate every 30 frames or if cache is empty
-                let closestStation = this.currentSystem.secretStations[0];
-                let closestDist = Infinity;
-                
-                for (const station of this.currentSystem.secretStations) {
-                    // Use faster squared distance calculation
-                    const dx = this.pos.x - station.pos.x;
-                    const dy = this.pos.y - station.pos.y;
-                    const distSquared = dx*dx + dy*dy;
-                    
-                    if (distSquared < closestDist) {
-                        closestDist = distSquared;
-                        closestStation = station;
-                    }
-                }
-                
-                // Now take the sqrt only once for the closest station
-                closestDist = Math.sqrt(closestDist);
-                
-                // Cache the results
-                this._cachedNavigation = {
-                    station: closestStation,
-                    distance: closestDist,
-                    lastUpdated: frameCount
-                };
-            }
-            
-            const closestStation = this._cachedNavigation.station;
-            const closestDist = this._cachedNavigation.distance;
-            
-            // Draw line with dash effect
-            push();
-            stroke(0, 255, 255, 150); // Cyan color with transparency
-            strokeWeight(2);
-            
-            // Calculate dash pattern based on distance
-            const dashLength = map(closestDist, 0, 5000, 5, 20);
-            drawingContext.setLineDash([dashLength, dashLength * 1.5]);
-            
-            // Draw the line
-            line(this.pos.x, this.pos.y, closestStation.pos.x, closestStation.pos.y);
-            
-            // Draw distance text
-            const midX = (this.pos.x + closestStation.pos.x) / 2;
-            const midY = (this.pos.y + closestStation.pos.y) / 2;
-            fill(0, 255, 255);
-            textAlign(CENTER, CENTER);
-            textSize(14);
-            
-            // Show discovery status in distance text
-            const statusText = closestStation.discovered ? 
-                `Secret Base: ${Math.floor(closestDist)} units` : 
-                `Locate Secret Base: ${Math.floor(closestDist)} units`;
-            text(statusText, midX, midY - 15);
-            
-            // Reset line dash
-            drawingContext.setLineDash([]);
-            pop();
-        } else if (this._cachedNavigation) {
-            // Clear cache when not in use to free memory
-            this._cachedNavigation = null;
-        }
         
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; 
         const drawFunc = shipDef?.drawFunction;
@@ -1105,13 +928,7 @@ handleInput() {
     }
 
     /** Applies damage to the player's hull. */
-    takeDamage(amount, attacker = null) {
-        // Record attacker for bodyguard response
-        if (attacker) {
-            this.lastAttacker = attacker;
-            this.lastAttackTime = millis();
-        }
-        
+    takeDamage(amount) {
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
         
         let shieldHit = false;
@@ -1237,164 +1054,54 @@ handleInput() {
     /** Calculates total cargo quantity. */
     getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
 
-    /** Returns the current number of active bodyguards. */
-    getActiveGuardsCount() { return this.activeBodyguards.length; }
-
-    /**
-     * Hires a bodyguard if the player has enough credits and space.
-     * @param {string} shipType - The ship type to hire (e.g., "Viper", "GladiusFighter")
-     * @param {number} cost - The cost in credits to hire the bodyguard
-     * @returns {boolean} True if successfully hired, false otherwise
+    /** 
+     * Adds cargo to player inventory, respecting capacity limits.
+     * @param {string} commodityName - Type of cargo to add
+     * @param {number} quantity - Amount to add
+     * @param {boolean} [allowPartial=false] - Whether to add partial amount if full amount won't fit
+     * @returns {object} {success: boolean, added: number} - Success status and amount actually added
      */
-    hireBodyguard(shipType, cost) {
-        // Validate inputs
-        if (!shipType || cost <= 0) {
-            console.warn("Invalid shipType or cost for hiring bodyguard");
-            return false;
-        }
-
-        // Check if player has enough credits
-        if (this.credits < cost) {
-            return false;
-        }
-
-        // Check if player has reached bodyguard limit
-        if (this.activeBodyguards.length >= this.bodyguardLimit) {
-            return false;
-        }
-
-        // Spend the credits
-        if (!this.spendCredits(cost)) {
-            return false;
-        }
-
-        // Create unique ID for the bodyguard
-        const guardId = Date.now() + "_" + Math.floor(Math.random() * 1000);
-
-        // Add bodyguard to active list
-        const bodyguard = {
-            shipType: shipType,
-            cost: cost,
-            hireTime: millis(),
-            id: guardId
-        };
-
-        this.activeBodyguards.push(bodyguard);
-        
-        console.log(`Hired ${shipType} bodyguard for ${cost} credits. ID: ${guardId}`);
-        return true;
-    }
-
-    /**
-     * Dismisses all active bodyguards by removing them from both the system and tracking
-     */
-    dismissBodyguards() {
-        if (this.activeBodyguards.length === 0) {
-            console.log("No bodyguards to dismiss");
-            return;
-        }
-
-        // Find and remove the actual guard ships from the system by ID
-        if (this.currentSystem && this.currentSystem.enemies) {
-            this.activeBodyguards.forEach(bodyguardData => {
-                // Find the corresponding enemy in the system
-                const guardInSystem = this.currentSystem.enemies.find(enemy => 
-                    enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.guardId === bodyguardData.id
-                );
-                
-                if (guardInSystem) {
-                    guardInSystem.destroyed = true;
-                    console.log(`Marked bodyguard ${bodyguardData.id} for removal from system`);
-                }
-            });
-        }
-
-        const count = this.activeBodyguards.length;
-        this.activeBodyguards = [];
-        console.log(`Dismissed ${count} bodyguard${count > 1 ? 's' : ''}`);
-    }
-
-    /**
-     * Remove a specific bodyguard from tracking by ID
-     * @param {string} bodyguardId - The ID of the bodyguard to remove
-     * @return {boolean} True if the bodyguard was removed, false otherwise
-     */
-    removeBodyguardById(bodyguardId) {
-        const activeIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardId);
-        if (activeIndex !== -1) {
-            this.activeBodyguards.splice(activeIndex, 1);
-            console.log(`Removed bodyguard ${bodyguardId} from active tracking`);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Get information about damaged bodyguards for repair interface
-     * @return {Object} Information about damaged bodyguards and repair costs
-     */
-    getDamagedBodyguardsInfo() {
-        const damagedGuards = [];
-        let totalRepairCost = 0;
-        
-        // Check each active bodyguard in the system
-        if (this.currentSystem && this.currentSystem.enemies) {
-            this.currentSystem.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.hull < enemy.maxHull &&
-                    !enemy.destroyed) {
-                    
-                    // Calculate repair cost - much cheaper than player ship repairs
-                    const missingHull = enemy.maxHull - enemy.hull;
-                    const repairCost = Math.floor(missingHull * 3); // 3 credits per hull point
-                    
-                    damagedGuards.push({
-                        enemy: enemy,
-                        missingHull: missingHull,
-                        repairCost: repairCost,
-                        guardId: enemy.guardId
-                    });
-                    
-                    totalRepairCost += repairCost;
-                }
-            });
+    addCargo(commodityName, quantity, allowPartial = false) { 
+        // Validate input
+        if (!commodityName || quantity <= 0) {
+            return { success: false, added: 0 };
         }
         
-        return {
-            count: damagedGuards.length,
-            totalCost: totalRepairCost,
-            damagedGuards: damagedGuards
-        };
-    }
-
-    /**
-     * Repair all damaged bodyguards
-     * @param {number} cost - Total repair cost
-     * @return {boolean} Whether repair was successful
-     */
-    repairBodyguards(cost) {
-        if (!this.spendCredits(cost)) {
-            return false;
+        // Calculate available space
+        const currentAmount = this.getCargoAmount();
+        const spaceAvailable = this.cargoCapacity - currentAmount;
+        
+        // Nothing fits
+        if (spaceAvailable <= 0) {
+            return { success: false, added: 0 };
         }
         
-        if (this.currentSystem && this.currentSystem.enemies) {
-            this.currentSystem.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.hull < enemy.maxHull &&
-                    !enemy.destroyed) {
-                    
-                    // Restore full hull
-                    enemy.hull = enemy.maxHull;
-                    console.log(`Repaired bodyguard ${enemy.guardId} to full hull`);
-                }
-            });
+        // Determine how much we can add
+        let amountToAdd = quantity;
+        
+        // If it doesn't all fit and we allow partial collection
+        if (quantity > spaceAvailable && allowPartial) {
+            amountToAdd = spaceAvailable;
+        } 
+        // If it doesn't all fit and we don't allow partial collection
+        else if (quantity > spaceAvailable) {
+            return { success: false, added: 0 };
         }
         
-        return true;
+        // MODIFIED: Find existing item by type OR name
+        const existingItem = this.cargo.find(item => 
+          item?.name === commodityName || item?.type === commodityName
+        );
+        
+        if (existingItem) {
+          // Update existing
+          existingItem.quantity += amountToAdd;
+        } else {
+          // Add new - standardize on using name property
+          this.cargo.push({ name: commodityName, quantity: amountToAdd });
+        }
+        
+        return { success: true, added: amountToAdd };
     }
 
     /**
@@ -1456,16 +1163,6 @@ handleInput() {
             console.log("SAVING DATA: No active mission.");
         }
         // ---
-        
-        // Save bodyguard data
-        const bodyguardsData = this.activeBodyguards.map(bodyguard => {
-            return {
-                shipType: bodyguard.shipType,
-                cost: bodyguard.cost,
-                hireTime: bodyguard.hireTime,
-                id: bodyguard.id
-            };
-        });
 
         // Save all weapons as an array with their full definitions
         const weaponsData = this.weapons.map(weapon => {
@@ -1488,19 +1185,14 @@ handleInput() {
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
             isPolice: this.isPolice,
-            playerFaction: this.playerFaction, // Save faction alliance
-            hasJoinedFaction: this.hasJoinedFaction,
             shield: this.shield,
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
             kills: this.kills,
-            showSecretBaseNavigation: this.showSecretBaseNavigation, // Save secret base navigation state
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
-            weapons: weaponsData,
-            // Save bodyguard data for persistence
-            bodyguards: bodyguardsData
+            weapons: weaponsData
             // -----------------------------------------
         };
     }
@@ -1528,29 +1220,12 @@ handleInput() {
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
         this.isPolice = data.isPolice || false;
-        this.playerFaction = data.playerFaction || null; // Load faction alliance
-        this.hasJoinedFaction = data.hasJoinedFaction || false;
-        
-        // Load secret base navigation state
-        this.showSecretBaseNavigation = data.showSecretBaseNavigation || false;
 
         this.shield = data.shield !== undefined ? data.shield : this.maxShield;
         this.maxShield = data.maxShield || this.maxShield;
         this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
 
         this.kills = data.kills || 0;
-        
-        // Load bodyguard data
-        this.activeBodyguards = [];
-        if (Array.isArray(data.bodyguards)) {
-            this.activeBodyguards = data.bodyguards.map(bodyguardData => ({
-                shipType: bodyguardData.shipType,
-                cost: bodyguardData.cost,
-                hireTime: bodyguardData.hireTime || millis(),
-                id: bodyguardData.id || (Date.now() + "_" + Math.floor(Math.random() * 1000))
-            }));
-            console.log(`Loaded ${this.activeBodyguards.length} bodyguards from save data`);
-        }
 
         // Restore player weapons from saved data
         if (Array.isArray(data.weapons)) {
@@ -1616,43 +1291,35 @@ handleInput() {
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
 
-        // Utility: Check if an object is a valid enemy target
-    isValidEnemyTarget(enemy) {
-        return enemy && typeof enemy === 'object' && !enemy.destroyed && enemy.pos && typeof enemy.pos.x === 'number' && typeof enemy.pos.y === 'number' && typeof enemy.size === 'number' && typeof enemy.shipTypeName === 'string' && typeof enemy.hull !== 'undefined';
-    }
-
-    handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
-        if (mouseButton === LEFT) { // Or whatever button you use for targeting
-            if (this.currentSystem && this.currentSystem.enemies) {
-                const worldMx = mouseX + (this.pos.x - width / 2);
-                const worldMy = mouseY + (this.pos.y - height / 2);
-
-                for (let enemy of this.currentSystem.enemies) {
-                    if (this.isValidEnemyTarget(enemy)) {
-                        let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
-                        if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
-                            this.target = enemy;
-                            if (typeof uiManager !== 'undefined') {
-                                uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
+        // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
+        handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
+            if (mouseButton === LEFT) { // Or whatever button you use for targeting
+                if (this.currentSystem && this.currentSystem.enemies) {
+                    const worldMx = mouseX + (this.pos.x - width / 2);
+                    const worldMy = mouseY + (this.pos.y - height / 2);
+    
+                    for (let enemy of this.currentSystem.enemies) {
+                        if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
+                            let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
+                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                                this.target = enemy;
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
+                                }
+                                return; // Target found and set
                             }
-                            // Sync bodyguard targets with new player target
-                            this.syncBodyguardTargets();
-                            return; // Target found and set
                         }
                     }
-                }
-                // If no enemy was clicked, clear target
-                if (this.target) {
-                    if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                    // If no enemy was clicked, clear target
+                    if (this.target) {
+                         if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                        }
                     }
+                    this.target = null;
                 }
-                this.target = null;
-                // Sync bodyguard targets when player clears target
-                this.syncBodyguardTargets();
             }
         }
-    }
 
     setWeaponByName(name) {
         const found = WEAPON_UPGRADES.find(w => w.name === name);
@@ -1813,61 +1480,6 @@ handleInput() {
 
 
     /**
-     * Synchronizes all bodyguards to target the same enemy as the player
-     */
-    syncBodyguardTargets() {
-        if (!this.currentSystem || !this.currentSystem.enemies) return;
-        
-        // Find all bodyguards in the current system
-        const bodyguards = this.currentSystem.enemies.filter(enemy => 
-            enemy.role === AI_ROLE.GUARD && 
-            enemy.principal === this &&
-            !enemy.destroyed
-        );
-        
-        if (bodyguards.length === 0) return;
-        
-        // If player has a target, direct all bodyguards to target it
-        if (this.target && this.isValidEnemyTarget(this.target)) {
-            for (const bodyguard of bodyguards) {
-                // Only change target if it's different from current
-                if (bodyguard.target !== this.target) {
-                    bodyguard.target = this.target;
-                    bodyguard.lastAttacker = null; // Clear any previous attacker to prioritize player's target
-                    
-                    // Force targeting update to re-evaluate the new target
-                    if (bodyguard.updateTargeting) {
-                        bodyguard.updateTargeting(this.currentSystem);
-                    }
-                    
-                    // Force bodyguard into combat state if not already
-                    if (bodyguard.currentState === AI_STATE.GUARDING || 
-                        bodyguard.currentState === AI_STATE.IDLE ||
-                        bodyguard.currentState === AI_STATE.PATROLLING) {
-                        bodyguard.changeState(AI_STATE.APPROACHING);
-                    }
-                }
-            }
-        } else {
-            // If player has no target, allow bodyguards to return to defensive behavior
-            for (const bodyguard of bodyguards) {
-                // Only clear target if they were targeting player's previous target
-                // Let them keep targeting attackers if they have any
-                if (!bodyguard.lastAttacker) {
-                    bodyguard.target = null;
-                    // Return to guarding state if not in combat
-                    if (bodyguard.currentState === AI_STATE.APPROACHING ||
-                        bodyguard.currentState === AI_STATE.ATTACK_PASS ||
-                        bodyguard.currentState === AI_STATE.REPOSITIONING ||
-                        bodyguard.currentState === AI_STATE.SNIPING) {
-                        bodyguard.changeState(AI_STATE.GUARDING);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Installs a weapon into a specific weapon slot
      * @param {Object} weapon - The weapon definition to install
      * @param {number} slotIndex - The slot index to install into
@@ -1921,7 +1533,7 @@ handleInput() {
         
         if (index >= 0 && index < this.weapons.length && this.weapons[index]) {
             this.weaponIndex = index;
-            this.currentWeapon = this.weapons[this.weaponIndex];
+            this.currentWeapon = this.weapons[index];
             this.fireRate = this.currentWeapon.fireRate || 0.5;
             return true;
         } else if (this.weapons.length > 0) {
@@ -1981,257 +1593,4 @@ handleInput() {
         }
     }
 
-    /**
-     * Joins a faction and receives faction ship
-     * @param {string} faction - The faction to join: "IMPERIAL", "SEPARATIST", "MILITARY"
-     * @return {boolean} Whether joining was successful
-     */
-    joinFaction(faction) {
-        if (!faction || !["IMPERIAL", "SEPARATIST", "MILITARY"].includes(faction)) {
-            console.warn(`Invalid faction: ${faction}`);
-            return false;
-        }
-
-        // Set faction status
-        this.playerFaction = faction;
-        this.hasJoinedFaction = true;
-
-        // Get faction-specific ship
-        let factionShips = [];
-        switch (faction) {
-            case "IMPERIAL":
-                factionShips = IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : ["ImperialGuardian"];
-                break;
-            case "SEPARATIST": 
-                factionShips = SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : ["SeparatistLiberator"];
-                break;
-            case "MILITARY":
-                factionShips = MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : ["Viper"];
-                break;
-        }
-
-        // Select a ship from the faction
-        const factionShip = factionShips[Math.floor(Math.random() * factionShips.length)];
-        this.factionShip = factionShip;
-
-        // Apply the faction ship
-        this.applyShipDefinition(factionShip);
-
-        // Clear wanted status as a bonus
-        if (this.currentSystem) {
-            this.currentSystem.playerWanted = false;
-            this.currentSystem.policeAlertSent = false;
-        }
-
-        console.log(`Player joined ${faction} faction and received ${factionShip} ship`);
-        return true;
-    }
-
-    /**
-     * Removes faction status when player becomes wanted or betrays faction
-     */
-    removeFactionStatus() {
-        if (this.playerFaction) {
-            const oldFaction = this.playerFaction;
-            this.playerFaction = null;
-            
-            // Show notification to player
-            if (typeof uiManager !== "undefined") {
-                uiManager.addMessage(`${oldFaction} faction status revoked due to criminal activity!`, [255, 0, 0]);
-            }
-            
-            console.log(`Player's ${oldFaction} faction status revoked`);
-        }
-    }
-
-    /**
-     * Checks if player can join a specific faction
-     * @param {string} faction - The faction to check
-     * @return {boolean} Whether player can join the faction
-     */
-    canJoinFaction(faction) {
-        // Can't join if already in a faction
-        if (this.playerFaction) return false;
-        
-        // Can't join if wanted (criminal record)
-        if (this.isWantedInCurrentSystem()) return false;
-        
-        // Could add more requirements here (reputation, missions completed, etc.)
-        return true;
-    }
-
-    /**
-     * Spawns all active bodyguards in the current system
-     * @param {Object} system - The star system to spawn bodyguards in
-     */
-    spawnBodyguards(system) {
-        if (!system || this.activeBodyguards.length === 0) {
-            return;
-        }
-
-        // Check which bodyguards already exist in the system
-        const existingGuardIds = new Set();
-        if (system.enemies) {
-            system.enemies.forEach(enemy => {
-                if (enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.guardId && 
-                    !enemy.destroyed) {
-                    existingGuardIds.add(enemy.guardId);
-                }
-            });
-        }
-
-        // Only spawn bodyguards that don't already exist
-        const bodyguardsToSpawn = this.activeBodyguards.filter(guardData => 
-            !existingGuardIds.has(guardData.id)
-        );
-
-        if (bodyguardsToSpawn.length === 0) {
-            console.log(`All ${this.activeBodyguards.length} bodyguards already exist in ${system.name}`);
-            return;
-        }
-
-        console.log(`Spawning ${bodyguardsToSpawn.length} new bodyguards in ${system.name} (${existingGuardIds.size} already exist)`);
-
-        bodyguardsToSpawn.forEach((bodyguardData, index) => {
-            try {
-                // Spawn bodyguard near the player
-                const spawnAngle = (TWO_PI * index) / bodyguardsToSpawn.length; // Spread around player
-                const spawnDistance = this.size + 100; // Spawn distance from player
-                const spawnX = this.pos.x + cos(spawnAngle) * spawnDistance;
-                const spawnY = this.pos.y + sin(spawnAngle) * spawnDistance;
-
-                // Create the bodyguard enemy
-                const bodyguard = new Enemy(spawnX, spawnY, this, bodyguardData.shipType, AI_ROLE.GUARD);
-                
-                // Set up the bodyguard
-                bodyguard.calculateRadianProperties();
-                bodyguard.initializeColors();
-                bodyguard.principal = this; // Set player as the principal to protect
-                bodyguard.guardId = bodyguardData.id; // Set the ID for tracking
-                
-                // Set formation offset based on total active bodyguards (not just spawning ones)
-                const totalActiveIndex = this.activeBodyguards.findIndex(guard => guard.id === bodyguardData.id);
-                const offsetDistance = 80;
-                const offsetAngle = (TWO_PI * totalActiveIndex) / this.activeBodyguards.length;
-                bodyguard.guardFormationOffset = {
-                    x: cos(offsetAngle) * offsetDistance,
-                    y: sin(offsetAngle) * offsetDistance
-                };
-
-                // Initialize in guarding state
-                bodyguard.changeState(AI_STATE.GUARDING, { principal: this });
-
-                // Add to system
-                system.addEnemy(bodyguard);
-                
-                console.log(`Spawned ${bodyguardData.shipType} bodyguard (ID: ${bodyguardData.id})`);
-            } catch (error) {
-                console.error(`Failed to spawn bodyguard ${bodyguardData.shipType}:`, error);
-            }
-        });
-    }
-
-    /**
-     * Updates the player's bodyguards, removing any that are destroyed and respawning if necessary
-     */
-    updateBodyguards() {
-        if (!this.currentSystem) return;
-
-        // Check for destroyed bodyguards in the system and remove them from tracking
-        if (this.currentSystem.enemies) {
-            // Find destroyed bodyguards and remove them from activeBodyguards
-            this.activeBodyguards = this.activeBodyguards.filter(bodyguardData => {
-                const guardInSystem = this.currentSystem.enemies.find(enemy => 
-                    enemy.role === AI_ROLE.GUARD && 
-                    enemy.principal === this && 
-                    enemy.guardId === bodyguardData.id
-                );
-                
-                // Remove from tracking if the guard doesn't exist in system or is destroyed
-                if (!guardInSystem || guardInSystem.destroyed) {
-                    console.log(`Removing destroyed/missing bodyguard: ${bodyguardData.id}`);
-                    return false;
-                }
-                return true;
-            });
-        }
-
-        // Note: Removed auto-respawn logic to prevent unwanted spawning
-        // Players must manually hire new bodyguards through the station interface
-        
-        // Inform bodyguards of the player's current state (position, velocity, etc.)
-        for (const bodyguard of this.activeBodyguards) {
-            if (bodyguard.update) {
-                bodyguard.update();
-            }
-        }
-        
-        // Sync bodyguard targets with player's target
-        this.syncBodyguardTargets();
-    }
-
-    /**
-     * Gets information about damaged bodyguards and their repair costs
-     * @returns {Object} Object with count and totalCost properties
-     */
-    getDamagedBodyguardsInfo() {
-        if (!this.currentSystem) {
-            return { count: 0, totalCost: 0 };
-        }
-
-        let damagedCount = 0;
-        let totalRepairCost = 0;
-
-        // Find all bodyguards in the current system that are damaged
-        this.currentSystem.enemies.forEach(enemy => {
-            if (enemy.principal === this && enemy.guardId && enemy.hull < enemy.maxHull) {
-                damagedCount++;
-                // Calculate repair cost based on hull damage (similar to player repair)
-                const hullDamage = enemy.maxHull - enemy.hull;
-                const repairCost = Math.ceil(hullDamage * 10); // 10 credits per hull point
-                totalRepairCost += repairCost;
-            }
-        });
-
-        return {
-            count: damagedCount,
-            totalCost: totalRepairCost
-        };
-    }
-
-    /**
-     * Repairs all damaged bodyguards if the player has enough credits
-     * @param {number} cost - The total cost to repair all bodyguards
-     * @returns {boolean} True if repair was successful, false otherwise
-     */
-    repairBodyguards(cost) {
-        if (!this.currentSystem) {
-            return false;
-        }
-
-        // Check if player has enough credits
-        if (this.credits < cost) {
-            return false;
-        }
-
-        // Spend the credits
-        if (!this.spendCredits(cost)) {
-            return false;
-        }
-
-        let repairedCount = 0;
-
-        // Repair all damaged bodyguards
-        this.currentSystem.enemies.forEach(enemy => {
-            if (enemy.principal === this && enemy.guardId && enemy.hull < enemy.maxHull) {
-                enemy.hull = enemy.maxHull; // Fully repair the bodyguard
-                repairedCount++;
-            }
-        });
-
-        console.log(`Repaired ${repairedCount} bodyguard${repairedCount > 1 ? 's' : ''} for ${cost} credits`);
-        return true;
-    }
-}// End of Player Class
+} // End of Player Class

@@ -290,6 +290,21 @@ const WEAPON_UPGRADES = [
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
         projectileSize: 7,   // Larger projectile
         desc: "Advanced immobilization system that can stop even large ships."
+    },
+
+    // -----------------------------
+    // Defensive Systems
+    // -----------------------------
+    {
+        name: "Barrier Field",
+        type: "barrier",
+        damageReduction: 0.5, // 50% damage reduction
+        duration: 5.0,        // 5 seconds
+        energyCost: 75,       // Energy cost to activate
+        fireRate: 15.0,       // Cooldown in seconds
+        color: [100, 100, 255], // Light blue for visual effect
+        price: 7500,
+        desc: "Generates a temporary barrier that reduces incoming damage."
     }
 
 ];
