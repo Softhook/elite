@@ -478,7 +478,7 @@ const SHIP_DEFINITIONS = {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
         baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
-        armament: ["Force Blaster","Guardian Missile"],
+        armament: ["Force Blaster","Guardian Missile","Barrier Field"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
         drawFunction: drawAnaconda, 
         vertexLayers: [
@@ -522,7 +522,7 @@ const SHIP_DEFINITIONS = {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
         baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
-        armament: ["Force Blaster", "Disruptor"],
+        armament: ["Force Blaster", "Disruptor","Barrier Field"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
         drawFunction: drawBioFrigate,
         
@@ -554,7 +554,7 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle"], // Balanced heavy firepower
+        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle","Barrier Field"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, 
         vertexLayers: [
@@ -577,7 +577,7 @@ const SHIP_DEFINITIONS = {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
-        armament: ["Multi-Cannon", "Twin Pulse", "Barrier Field"], // Versatile loadout with defense
+        armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout with defense
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
 
@@ -622,7 +622,7 @@ const SHIP_DEFINITIONS = {
         name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile","Heavy Tangle"],
+        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile","Heavy Tangle","Barrier Field"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawDestroyer,         vertexLayers: [
             {
@@ -656,7 +656,7 @@ const SHIP_DEFINITIONS = {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle"], // Military arsenal
+        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle","Barrier Field"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
         
@@ -694,7 +694,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle","Barrier Field"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -780,7 +780,7 @@ const SHIP_DEFINITIONS = {
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle"], // Military loadout
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle","Barrier Field"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [
@@ -966,7 +966,7 @@ const SHIP_DEFINITIONS = {
         name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
-        armament: ["Mini-Turret", "Force Blaster"], // Defensive
+        armament: ["Mini-Turret", "Force Blaster","Barrier Field"], // Defensive
         costCategory: "Medium-High", description: "Extremely wide cargo ship, resembling a manta ray.",
         drawFunction: drawMantaHauler, 
         vertexLayers: [
@@ -1078,7 +1078,7 @@ const SHIP_DEFINITIONS = {
         name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
-        armament: ["Heavy Cannon", "V Punch", "Mini-Turret","Kalibr Missile","Heavy Tangle"], // Versatile heavy combat
+        armament: ["Heavy Cannon", "V Punch", "Mini-Turret","Kalibr Missile","Heavy Tangle","Barrier Field"], // Versatile heavy combat
         costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
         drawFunction: drawPython,         
         vertexLayers: [
@@ -1135,7 +1135,7 @@ const SHIP_DEFINITIONS = {
         name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
         baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
         baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
-        armament: ["Mini-Turret", "Force Blaster"], // Defensive passenger ship
+        armament: ["Mini-Turret", "Force Blaster","Barrier Field"], // Defensive passenger ship
         costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
         drawFunction: drawStarlinerCruiser, 
         vertexLayers: [
@@ -1553,7 +1553,7 @@ const SHIP_DEFINITIONS = {
         name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
         baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
-        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile"],
+        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile","Barrier Field"],
         costCategory: "Very High", description: "A heavily fortified Separatist ship, slow but incredibly tough.",
         drawFunction: drawSeparatistBulwark,
         vertexData: [ {x:1,y:0.7}, {x:0.7,y:1}, {x:-0.7,y:1}, {x:-1,y:0.7}, {x:-1,y:-0.7}, {x:-0.7,y:-1}, {x:0.7,y:-1}, {x:1,y:-0.7} ],
@@ -1601,7 +1601,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
         baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
-        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle"],
+        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster","Heavy Tangle","Barrier Field"],
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         drawFunction: drawImperialPaladin,
         vertexLayers: [
@@ -1632,7 +1632,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
         baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
         baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
-        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser","Heavy Tangle"],
+        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser","Heavy Tangle","Barrier Field"],
         costCategory: "High", description: "A heavily armed Imperial vessel used for enforcing blockades and punitive actions.",
         drawFunction: drawImperialJusticar,
         vertexLayers: [

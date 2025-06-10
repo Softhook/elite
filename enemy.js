@@ -2472,7 +2472,32 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     }
 
     fireWeapon(targetToPass = null) {
-        if (!this.currentWeapon || this.fireCooldown > 0 || !this.currentSystem) return;
+        if (!this.currentWeapon || !this.currentSystem) return;
+
+        // Barrier Activation: Check cooldown first, similar to player
+        if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
+            if (this.barrierCooldown <= 0) {
+                this.isBarrierActive = true;
+                this.barrierDamageReduction = this.currentWeapon.damageReduction;
+                this.barrierDurationTimer = this.currentWeapon.duration;
+                this.barrierColor = this.currentWeapon.color || [100, 100, 255]; // Default color
+                this.barrierCooldown = this.currentWeapon.fireRate; // Set cooldown for the barrier
+
+                // Log barrier activation, similar to player's UI message
+                console.log(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
+                
+                // Sound effect (optional, for consistency if sounds are added later)
+                // if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp'); }
+
+                // Immediately switch weapon for next shot
+                this.cycleWeapon();
+                return; // Barrier activated, no projectile fired
+            } else {
+                // Log barrier on cooldown
+                console.log(`${this.shipTypeName} barrier on cooldown. Remaining: ${this.barrierCooldown.toFixed(1)}s`);
+                return; // Barrier on cooldown
+            }
+        }
     
         // Default firing angle (ship's current heading)
         let fireAngle = this.angle;
@@ -2501,23 +2526,10 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         }
     
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
-        this.fireCooldown = this.fireRate;
+        this.fireCooldown = this.fireRate; // General weapon fire cooldown
 
-        if (this.currentWeapon.type === 'barrier') {
-            // Activate barrier like player logic
-            this.isBarrierActive = true;
-            this.barrierDamageReduction = this.currentWeapon.damageReduction;
-            this.barrierDurationTimer = this.currentWeapon.duration;
-            this.barrierCooldown = this.currentWeapon.fireRate;
-            this.barrierColor = this.currentWeapon.color || [100, 100, 255];
-            
-            // Log barrier activation for debugging
-            console.log(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% damage reduction`);
-            
-            // Immediately switch weapon for next shot
-            this.cycleWeapon();
-            return;
-        }
+        // The barrier-specific logic is now at the top of the function.
+        // The old block for barrier activation after WeaponSystem.fire is removed.
     }
 
     /** Cycles to the next available weapon */
@@ -2770,27 +2782,28 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
 
         // --- Draw Barrier Effect (Separate transformation) ---
         if (!this.destroyed && this.isBarrierActive) {
-            push(); // Isolate barrier drawing
-            translate(this.pos.x, this.pos.y); // Translate to ship center
+            push();
+            translate(this.pos.x, this.pos.y);
+            noFill();
+            // Pulsating effect for the barrier (mirroring player.js)
+            const barrierPulse = (sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierBaseRadius = this.size * 1.7; // Consistent base size with player
+            const barrierRadius = barrierBaseRadius + barrierPulse * this.size * 0.2; // Pulsating outer radius
 
-            const barrierPercent = this.barrierDurationTimer / (this.currentWeapon?.duration || 10);
-            const barrierAlpha = map(barrierPercent, 0, 1, 60, 120);
+            // Alpha fades as duration runs out
+            const barrierAlpha = map(this.barrierDurationTimer, 0, this.currentWeapon?.duration || 5, 50, 150);
             
-            // Main barrier circle - larger than shield
-            noFill(); 
-            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], barrierAlpha); 
-            strokeWeight(2);
-            const barrierRadius = this.size * 1.8; // Larger than shield
-            ellipse(0, 0, barrierRadius, barrierRadius);
+            const activeBarrierColor = this.barrierColor || [100, 100, 255];
 
-            // Secondary pulsing ring for visual effect
-            const pulsePhase = (millis() * 0.005) % (2 * PI);
-            const pulseAlpha = barrierAlpha * 0.6 * (0.5 + 0.5 * sin(pulsePhase));
-            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], pulseAlpha);
-            strokeWeight(1);
-            ellipse(0, 0, barrierRadius * 1.1, barrierRadius * 1.1);
+            strokeWeight(2 + barrierPulse * 1.5); // Thicker and pulsating stroke
+            stroke(activeBarrierColor[0], activeBarrierColor[1], activeBarrierColor[2], barrierAlpha);
+            ellipse(0, 0, barrierRadius * 2, barrierRadius * 2); // Diameter
 
-            pop(); // End barrier drawing
+            // Optional: Add a secondary, fainter pulsating ring (mirroring player.js)
+            strokeWeight(1 + barrierPulse * 1);
+            stroke(activeBarrierColor[0], activeBarrierColor[1], activeBarrierColor[2], barrierAlpha * 0.5);
+            ellipse(0, 0, barrierRadius * 2 * 1.15, barrierRadius * 2 * 1.15); // Slightly larger diameter for second ring
+            pop();
         }
         // --- End Barrier Effect ---
 
