@@ -834,7 +834,17 @@ evaluateTargetScore(target, system) {
     selectOptimalWeapon(distanceToTarget, target) {
         // If we only have one weapon, just use it
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
-        
+
+        // Prioritize barrier if health or shield are low
+        const barrierWeapon = this.weapons.find(w => w.type === 'barrier');
+        if (barrierWeapon && this.barrierCooldown <= 0) {
+            const hullPct = this.hull / this.maxHull;
+            const shieldPct = this.maxShield > 0 ? this.shield / this.maxShield : 1;
+            if (hullPct < 0.3 || shieldPct < 0.3) {
+                return barrierWeapon;
+            }
+        }
+
         // Score each weapon based on situation
         let bestScore = -1;
         let bestWeapon = this.currentWeapon;
@@ -2244,7 +2254,7 @@ _determinePostFleeState() {
                 const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
                 
                 // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
-                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
+                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) {// Small threshold to allow minor drift
                     if (isAlignedForSnipeThrust) {
                         effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
                         canThrust = true;
@@ -2466,6 +2476,17 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
     
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
         this.fireCooldown = this.fireRate;
+
+        if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
+            // Activate barrier like player logic
+            this.isBarrierActive = true;
+            this.barrierDamageReduction = this.currentWeapon.damageReduction;
+            this.barrierDurationTimer = this.currentWeapon.duration;
+            this.barrierCooldown = this.currentWeapon.fireRate;
+            // Immediately switch weapon for next shot
+            this.cycleWeapon();
+            return;
+        }
     }
 
     /** Cycles to the next available weapon */
@@ -2821,6 +2842,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
      * Calculates parameters, creates the Cargo object, and calls system.addCargo().
      * @param {'jettison' | 'destruction'} context - The reason for spawning cargo.
      * @returns {boolean} True if cargo was spawned successfully, false otherwise.
+     * @private
      */
     _spawnCargo(context) {
         // 1. Get System and check for addCargo method
@@ -3271,12 +3293,13 @@ _checkRandomCargoDrop() {
     calculateAttackPassTarget() {
         // Similar logic to what's in getMovementTargetForState but happens ONCE
         let enemyPos = this.pos.copy();
+       
         let targetActualPos = this.target.pos.copy();
         let targetVel = this.target.vel ? this.target.vel.copy() : createVector(0,0);
 
         // Use consistent values for this entire attack pass
         const strafeMultFactor = random(0.7, 1.3); // Calculate ONCE
-        const aheadDistFactor = random(0.8, 1.2);  // Calculate ONCE
+        const aheadDistFactor = random(0.8, 1.2);   // Calculate ONCE
 
         // Predict target's future position for calculating the strafe point
         let strafePredictionFrames = this.predictionTime * ATTACK_PASS_STRAFE_PREDICTION_FACTOR * (deltaTime ? (60 / (1000/deltaTime)) : 60);
