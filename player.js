@@ -1322,43 +1322,59 @@ handleInput() {
 
         // Restore player weapons from saved data
         if (Array.isArray(data.weapons)) {
-            // Clear existing weapons array
-            this.weapons = [];
+            this.weapons = []; // Clear existing weapons array
             
-            // Restore weapons from saved data
-            data.weapons.forEach(weaponData => {
-                if (weaponData) {
-                    // Required properties check
-                    const requiredProps = ['name', 'type', 'damage', 'fireRate'];
-                    const hasRequiredProps = requiredProps.every(prop => weaponData[prop] !== undefined);
-                    
-                    if (!hasRequiredProps) {
-                        console.warn(`Weapon data missing required properties: ${JSON.stringify(weaponData)}`);
-                        this.weapons.push(null);
-                        return;
+            data.weapons.forEach(savedWeaponData => {
+                if (savedWeaponData && typeof savedWeaponData.name === 'string' && typeof savedWeaponData.type === 'string') {
+                    // Adjusted check for console warning to be more lenient for certain types
+                    const checkPropsForWarning = ['name', 'type', 'fireRate'];
+                    // Barrier and Force weapons don't typically have a 'damage' property in the same way projectile/beam weapons do.
+                    // Other types might also have specific property sets. This check is primarily for the console warning.
+                    if (savedWeaponData.type !== 'barrier' && savedWeaponData.type !== 'force') {
+                        checkPropsForWarning.push('damage');
+                    }
+                    const hasAllCheckedProps = checkPropsForWarning.every(prop => savedWeaponData[prop] !== undefined);
+
+                    if (!hasAllCheckedProps) {
+                        console.warn(`Saved weapon data for '${savedWeaponData.name}' (type: ${savedWeaponData.type}) might be incomplete in the save file (some non-critical properties undefined, which is okay if loaded from WEAPON_UPGRADES): ${JSON.stringify(savedWeaponData)}`);
                     }
                     
-                    // Try to find matching weapon definition for consistency
-                    const matchedWeapon = WEAPON_UPGRADES.find(w => w.name === weaponData.name);
-                    if (matchedWeapon) {
-                        // Create a deep copy to avoid modifying base definition
-                        this.weapons.push({...matchedWeapon});
+                    const matchedWeaponDefinition = WEAPON_UPGRADES.find(w => w.name === savedWeaponData.name);
+                    
+                    if (matchedWeaponDefinition) {
+                        // Create a deep clone of the weapon definition from WEAPON_UPGRADES
+                        this.weapons.push(JSON.parse(JSON.stringify(matchedWeaponDefinition)));
                     } else {
-                        // If not found in definitions, still create a copy
-                        this.weapons.push({...weaponData});
+                        console.warn(`Weapon definition for '${savedWeaponData.name}' not found in WEAPON_UPGRADES. This weapon cannot be loaded.`);
+                        this.weapons.push(null); // Add null to keep weapon slot integrity
                     }
                 } else {
-                    // Add null placeholder for empty slots
-                    this.weapons.push(null);
+                    // savedWeaponData is null, undefined, or lacks basic properties. Treat as an empty/invalid slot.
+                    if (savedWeaponData) { // Log if it's not null but still invalid
+                        console.warn(`Invalid or incomplete weapon data in save file: ${JSON.stringify(savedWeaponData)}. Treating as empty slot.`);
+                    }
+                    this.weapons.push(null); 
                 }
             });
             
             // Restore weapon index and current weapon
             this.weaponIndex = data.weaponIndex || 0;
-            this.setCurrentWeapon(this.weaponIndex); // Use centralized method
+
+            // Validate weaponIndex and ensure it points to a non-null weapon if possible
+            if (this.weaponIndex < 0 || this.weaponIndex >= this.weapons.length || !this.weapons[this.weaponIndex]) {
+                const firstValidWeaponIndex = this.weapons.findIndex(w => w !== null);
+                if (firstValidWeaponIndex !== -1) {
+                    console.log(`Saved weaponIndex ${data.weaponIndex} is invalid or points to a null weapon. Setting to first available weapon: ${firstValidWeaponIndex}`);
+                    this.weaponIndex = firstValidWeaponIndex;
+                } else {
+                    console.warn(`No valid weapons loaded. Setting weaponIndex to 0, but no weapon will be active.`);
+                    this.weaponIndex = 0; // Fallback, though no weapon might be usable
+                }
+            }
+            this.setCurrentWeapon(this.weaponIndex);
         } else {
-            // If no saved weapons, initialize from ship definition
-            console.log("No weapon data found, loading defaults from ship definition");
+            // If no saved weapons array, initialize from ship definition
+            console.log("No weapon data array found in save data, loading default weapons from ship definition.");
             this.loadWeaponsFromShipDefinition(this.shipTypeName);
         }
 
@@ -1394,13 +1410,12 @@ handleInput() {
                     for (let enemy of this.currentSystem.enemies) {
                         if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
                             let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
-                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                            if (d < enemy.size / 2 + 10) // Give a little buffer for clicking
                                 this.target = enemy;
                                 if (typeof uiManager !== 'undefined') {
                                     uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
                                 }
                                 return; // Target found and set
-                            }
                         }
                     }
                     // If no enemy was clicked, clear target
