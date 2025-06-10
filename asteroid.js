@@ -3,9 +3,30 @@
 class Asteroid {
     constructor(x, y, size) {
         this.pos = createVector(x, y);
-        this.size = size || random(40, 90);
-        this.maxHealth = floor(this.size * 10);
+
+        // Vary asteroid sizes: normal, large, very large
+        let r = random(1);
+        if (r < 0.05) { // 5% chance for very large
+            this.size = size || random(200, 350);
+        } else if (r < 0.20) { // 15% chance for large
+            this.size = size || random(100, 199);
+        } else { // 80% chance for normal
+            this.size = size || random(30, 99);
+        }
+
+        this.maxHealth = floor(this.size * 2); // Health scales with size
         this.health = this.maxHealth;
+
+        // Mineral richness properties
+        this.isRich = random(1) < 0.2; // 20% chance of being a rich asteroid
+        this.mineralMultiplier = 1;
+        this.seamColor = null;
+
+        if (this.isRich) {
+            // Gold: color(218, 165, 32, 180), MediumSeaGreen: color(60, 179, 113, 180)
+            this.seamColor = random(1) < 0.5 ? color(218, 165, 32, 180) : color(60, 179, 113, 180);
+            this.mineralMultiplier = floor(random(2, 5)); // Drops 2x to 4x minerals
+        }
 
         this.vel = p5.Vector.random2D().mult(random(0.1, 0.6));
         this.angle = random(0, TWO_PI);
@@ -65,6 +86,24 @@ class Asteroid {
             vertex(v.x, v.y);
         }
         endShape(CLOSE);
+
+        // Draw mineral seams if the asteroid is rich
+        if (this.isRich && this.seamColor) {
+            push();
+            stroke(this.seamColor);
+            strokeWeight(max(1.5, this.size / 30)); // Seam thickness, ensuring visibility
+            noFill(); // Seams are lines
+
+            // Draw seams along some edges (e.g., every 2nd or 3rd edge)
+            for (let i = 0; i < this.vertices.length; i++) {
+                if (i % 3 === 0) { // Adjust frequency as needed for visual subtlety
+                    const v1 = this.vertices[i];
+                    const v2 = this.vertices[(i + 1) % this.vertices.length];
+                    line(v1.x, v1.y, v2.x, v2.y);
+                }
+            }
+            pop();
+        }
         
         pop();
 
@@ -99,6 +138,10 @@ class Asteroid {
     /** @returns {boolean} True if the asteroid is destroyed. */
     isDestroyed() {
         return this.destroyed;
+    }
+
+    getMineralMultiplier() {
+        return this.mineralMultiplier;
     }
 
     /**

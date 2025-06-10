@@ -201,7 +201,7 @@ class SaveSelectionScreen {
         if (isSelected) {
             // Selected slot - glowing border
             stroke(100, 200, 255, 150);
-            strokeWeight(3);
+            strokeWeight(1);
             fill(20, 40, 80, 100);
         } else {
             // Unselected slot
@@ -245,21 +245,39 @@ class SaveSelectionScreen {
             const playerData = data.playerData;
             const galaxyData = data.galaxyData;
             
-            const lineSpacing = 20; // Reverted to 18, or adjust as needed for two columns
+            const lineSpacing = 20; // Reverted to 18, or adjust as needed for three columns
             const col1X = x + 20 + hoverOffset;
-            const col2X = x + w / 2 + hoverOffset; // Start second column halfway across the slot
+            const col2X = x + w / 3 + hoverOffset; // First third for column 1
+            const col3X = x + (w * 2/3) + hoverOffset; // Last third for column 3
             let line1Y = y + 35; // Initial Y for the first line in col1
             let line2Y = y + 35; // Initial Y for the first line in col2
+            let line3Y = y + 35; // Initial Y for the first line in col3
 
             if (playerData) {
-                // Column 1
+                noStroke();
+                // Column 1 - Basic info
                 text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, col1X, line1Y);
                 line1Y += lineSpacing;
                 
                 text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, col1X, line1Y);
                 // line1Y += lineSpacing; // Increment if more items in col1
 
-                // Column 2
+                // Column 2 - Alliance and Status
+                text(`Alliance: ${playerData.playerFaction || 'None'}`, col2X, line2Y);
+                line2Y += lineSpacing;
+
+                // Wanted status with color coding
+                push();
+                const isWanted = playerData.isWanted || false;
+                let wantedText = isWanted ? "Wanted" : "Clean";
+                let wantedColor = isWanted ? color(255, 100, 0) : color(0, 255, 0); // Orange for wanted, green for clean
+                
+                fill(isSelected ? wantedColor : color(red(wantedColor) * 0.7, green(wantedColor) * 0.7, blue(wantedColor) * 0.7));
+                text(`Status: ${wantedText}`, col2X, line2Y);
+                pop();
+                // line2Y += lineSpacing; // Increment if more items in col2
+
+                // Column 3 - Location and Rank
                 let systemName = "Unknown System";
                 if (galaxyData && galaxyData.systems && data.currentSystemIndex !== undefined) {
                     const currentSystem = galaxyData.systems[data.currentSystemIndex];
@@ -267,11 +285,11 @@ class SaveSelectionScreen {
                         systemName = currentSystem.name;
                     }
                 }
-                text(`System: ${systemName}`, col2X, line2Y);
-                line2Y += lineSpacing;
+                text(`System: ${systemName}`, col3X, line3Y);
+                line3Y += lineSpacing;
 
-                text(`Rank: ${playerData.rank || 'Harmless'}`, col2X, line2Y);
-                // line2Y += lineSpacing; // Increment if more items in col2
+                text(`Rank: ${playerData.rank || 'Harmless'}`, col3X, line3Y);
+                // line3Y += lineSpacing; // Increment if more items in col3
             }
             
             this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', 

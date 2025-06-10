@@ -91,6 +91,9 @@ class Player {
         // Track enemy kills for Elite rating
         this.kills = 0;
 
+        // Initialize wanted status
+        this.isWanted = false;
+
         // --- Kiting & Speed Burst setup ---
         this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
         this.speedBurstCooldown  = 10000;
@@ -895,6 +898,11 @@ handleInput() {
                 }
             }
         }
+        
+        // Synchronize wanted status with current system
+        if (this.currentSystem) {
+            this.isWanted = this.currentSystem.isPlayerWanted();
+        }
         // --- End Secret Station Discovery ---
     }
 
@@ -1480,6 +1488,8 @@ handleInput() {
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
             isPolice: this.isPolice,
+            playerFaction: this.playerFaction, // Save faction alliance
+            hasJoinedFaction: this.hasJoinedFaction,
             shield: this.shield,
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
@@ -1518,6 +1528,8 @@ handleInput() {
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
         this.isPolice = data.isPolice || false;
+        this.playerFaction = data.playerFaction || null; // Load faction alliance
+        this.hasJoinedFaction = data.hasJoinedFaction || false;
         
         // Load secret base navigation state
         this.showSecretBaseNavigation = data.showSecretBaseNavigation || false;

@@ -885,10 +885,15 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
                 if (asteroid.isDestroyed()) {
                     // --- Spawn Mineral Cargo on Asteroid Destruction ---
-                    if (random() < 0.75) { // 75% chance to drop minerals
+                    if (random() < 0.85) { // 85% chance to drop minerals
                         const mineralType = "Minerals";
-                        let quantity = floor(map(asteroid.size, 30, 90, 1, 5)); // Quantity based on size
-                        quantity = max(1, quantity); // Ensure at least 1 unit
+                        // Base quantity maps from new size range (30-350) to a base drop (1-15)
+                        let baseQuantity = floor(map(asteroid.size, 30, 350, 1, 15)); 
+                        baseQuantity = max(1, baseQuantity);
+
+                        // Apply the mineral multiplier from the asteroid
+                        let quantity = baseQuantity * asteroid.getMineralMultiplier();
+                        quantity = max(1, floor(quantity)); // Ensure at least 1 and integer
 
                         // Create cargo slightly offset to avoid instant pickup or overlap if multiple drop
                         const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
@@ -896,7 +901,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
                         const cargoDrop = new Cargo(asteroid.pos.x + offsetX, asteroid.pos.y + offsetY, mineralType, quantity);
                         this.addCargo(cargoDrop); // Use the existing addCargo method
-                        console.log(`Asteroid destroyed, dropped ${quantity}t of ${mineralType}`);
+                        
+                        let logMessage = `Asteroid (size ${floor(asteroid.size)}) destroyed, dropped ${quantity}t of ${mineralType}.`;
+                        if (asteroid.isRich) {
+                            logMessage += ` (Rich asteroid x${asteroid.getMineralMultiplier()} bonus!)`;
+                        }
+                        console.log(logMessage);
                     }
                     // --- End Mineral Cargo Spawn ---
 
