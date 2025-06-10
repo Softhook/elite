@@ -577,7 +577,7 @@ const SHIP_DEFINITIONS = {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
-        armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout
+        armament: ["Multi-Cannon", "Twin Pulse", "Barrier Field"], // Versatile loadout with defense
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
 

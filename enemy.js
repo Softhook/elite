@@ -318,6 +318,15 @@ class Enemy {
         this.forcedCombatTimer = 0; // Initialize forced combat timer
         // --- End Combat AI Flags ---
 
+        // --- Barrier System Properties ---
+        this.isBarrierActive = false;
+        this.barrierDamageReduction = 0;
+        this.barrierDurationTimer = 0;
+        this.barrierCooldown = 0;
+        this.barrierRadius = 0;
+        this.barrierColor = [100, 100, 255]; // Default blue
+        // ---
+
         this.hasPlayedLockOnSound = false; // Add this new flag
         this.shieldPlusHullAtStateEntry = null; // For tracking combined health drop during certain states
     }
@@ -382,6 +391,23 @@ class Enemy {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+        }
+
+        // Update barrier cooldown and duration
+        if (this.barrierCooldown > 0) {
+            this.barrierCooldown -= deltaTime / 1000;
+        }
+        
+        // Update barrier duration timer
+        if (this.isBarrierActive && this.barrierDurationTimer > 0) {
+            this.barrierDurationTimer -= deltaTime / 1000;
+            if (this.barrierDurationTimer <= 0) {
+                this.isBarrierActive = false;
+                this.barrierDamageReduction = 0;
+                this.barrierDurationTimer = 0;
+                // Log barrier deactivation for debugging
+                console.log(`${this.shipTypeName} barrier deactivated`);
+            }
         }
 
             // Update drag effect timer
@@ -2463,7 +2489,7 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         }
         
         // Rest of existing code remains unchanged
-        if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
+        if (this.currentWeapon.type === 'missile') {
             if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
                 return; // Don't fire missile without a valid target
             }
@@ -2477,12 +2503,17 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
         this.fireCooldown = this.fireRate;
 
-        if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
+        if (this.currentWeapon.type === 'barrier') {
             // Activate barrier like player logic
             this.isBarrierActive = true;
             this.barrierDamageReduction = this.currentWeapon.damageReduction;
             this.barrierDurationTimer = this.currentWeapon.duration;
             this.barrierCooldown = this.currentWeapon.fireRate;
+            this.barrierColor = this.currentWeapon.color || [100, 100, 255];
+            
+            // Log barrier activation for debugging
+            console.log(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% damage reduction`);
+            
             // Immediately switch weapon for next shot
             this.cycleWeapon();
             return;
@@ -2736,6 +2767,32 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             pop(); // End shield drawing
         }
         // --- End Shield Effect ---
+
+        // --- Draw Barrier Effect (Separate transformation) ---
+        if (!this.destroyed && this.isBarrierActive) {
+            push(); // Isolate barrier drawing
+            translate(this.pos.x, this.pos.y); // Translate to ship center
+
+            const barrierPercent = this.barrierDurationTimer / (this.currentWeapon?.duration || 10);
+            const barrierAlpha = map(barrierPercent, 0, 1, 60, 120);
+            
+            // Main barrier circle - larger than shield
+            noFill(); 
+            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], barrierAlpha); 
+            strokeWeight(2);
+            const barrierRadius = this.size * 1.8; // Larger than shield
+            ellipse(0, 0, barrierRadius, barrierRadius);
+
+            // Secondary pulsing ring for visual effect
+            const pulsePhase = (millis() * 0.005) % (2 * PI);
+            const pulseAlpha = barrierAlpha * 0.6 * (0.5 + 0.5 * sin(pulsePhase));
+            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], pulseAlpha);
+            strokeWeight(1);
+            ellipse(0, 0, barrierRadius * 1.1, barrierRadius * 1.1);
+
+            pop(); // End barrier drawing
+        }
+        // --- End Barrier Effect ---
 
         // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
         // These use absolute coordinates or manage their own transformations
@@ -3036,6 +3093,13 @@ _handleAttackerReference(attacker, amount) {
 _applyDamageDistribution(amount) {
     let damageDealt = 0;
     let shieldHit = false;
+
+    // Apply barrier damage reduction if active
+    if (this.isBarrierActive && this.barrierDamageReduction > 0) {
+        const originalAmount = amount;
+        amount *= (1 - this.barrierDamageReduction);
+        console.log(`${this.shipTypeName} barrier reduced damage from ${originalAmount.toFixed(1)} to ${amount.toFixed(1)}`);
+    }
 
     // Skip shield check entirely if shields are disabled
     if (this.shield > 0 && !this.shieldsDisabled) {
