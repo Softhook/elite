@@ -298,8 +298,8 @@ const WEAPON_UPGRADES = [
     {
         name: "Barrier Field",
         type: "barrier",
-        damageReduction: 0.5, // 50% damage reduction
-        duration: 5.0,        // 5 seconds
+        damageReduction: 1, // 50% damage reduction
+        duration: 50.0,        // 5 seconds
         energyCost: 75,       // Energy cost to activate
         fireRate: 15.0,       // Cooldown in seconds
         color: [100, 100, 255], // Light blue for visual effect

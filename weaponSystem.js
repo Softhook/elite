@@ -9,7 +9,8 @@ const WEAPON_TYPE = {
     STRAIGHT: 'straight',
     SPREAD: 'spread',
     MISSILE: 'missile',
-    TANGLE: 'tangle'
+    TANGLE: 'tangle',
+    BARRIER: 'barrier' // Added Barrier type
 };
 
 class WeaponSystem {
@@ -154,6 +155,11 @@ static fireForce(owner, system) {
                 break;
             case WEAPON_TYPE.TANGLE: // Add this case
                 this.fireTangle(owner, system, angle);
+                break;
+            case WEAPON_TYPE.BARRIER: // Added Barrier case
+                // Activation logic is handled within the Player/Enemy class fireWeapon method
+                // No direct action needed in WeaponSystem.fire for barrier activation itself.
+                // console.log(`${owner.constructor.name} activated barrier.`);
                 break;       
             default:
                 // Default to single projectile

@@ -46,7 +46,7 @@ class Player {
         // --- Current State ---
         this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
         this.currentSystem = null; this.fireCooldown = 0;
-        this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
+        this.currentWeapon = WEAPON_UPGRADES.find(w => w.name === "Tangle Projector") || WEAPON_UPGRADES[0]; // Default to Tangle Projector for testing
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; 
         this.isReverseThrusting = false; // Add this line
@@ -56,6 +56,11 @@ class Player {
         // Add police status
         this.isPolice = false;
         this.hasBeenPolice = false;
+
+        // Add faction status properties
+        this.playerFaction = null; // Current faction: null, "IMPERIAL", "SEPARATIST", "MILITARY"
+        this.hasJoinedFaction = false; // Whether player has ever joined a faction
+        this.factionShip = null; // Ship received when joining faction
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -80,9 +85,14 @@ class Player {
         this.dragMultiplier = 1.0;   // Default - normal drag
         this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         this.tangleEffectTime = 0;   // Visual effect timestamp
+        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
+        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
 
         // Track enemy kills for Elite rating
         this.kills = 0;
+
+        // Initialize wanted status
+        this.isWanted = false;
 
         // --- Kiting & Speed Burst setup ---
         this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
@@ -92,6 +102,20 @@ class Player {
         this.isSpeedBursting     = false;
         this.speedBurstEnd       = 0; // Keep one
         this.isCoastingFromBurst = false; // Add this new flag
+        
+        // Secret base navigation feature
+        this.showSecretBaseNavigation = false; // Feature flag for drawing path to secret base
+        this._cachedNavigation = null; // Cache for navigation calculations
+        
+        // Bodyguards for protection
+        this.activeBodyguards = []; // Tracks hired bodyguards - destroyed ones are automatically removed
+        this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
+
+        // Barrier properties
+        this.isBarrierActive = false;
+        this.barrierDurationTimer = 0;
+        this.barrierDamageReduction = 0;
+        this.barrierColor = [100, 100, 255]; // Default color, will be overridden by weapon
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -652,16 +676,36 @@ handleInput() {
 
         if (!this.currentWeapon || !this.currentSystem) return false;
 
+        // Barrier Activation
+        if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
+            if (this.fireCooldown <= 0) { // Check cooldown for barrier itself
+                this.isBarrierActive = true;
+                this.barrierDamageReduction = this.currentWeapon.damageReduction;
+                this.barrierDurationTimer = this.currentWeapon.duration;
+                this.barrierColor = this.currentWeapon.color;
+                this.fireCooldown = this.currentWeapon.fireRate; // Set cooldown for the barrier
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Barrier Activated!", this.barrierColor, 2000);
+                }
+                if (typeof soundManager !== 'undefined') {
+                    soundManager.playSound('shieldUp'); // Placeholder sound
+                }
+                return true; // Barrier activated, no projectile fired
+            } else {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Barrier recharging...", [200,200,0], 1000);
+                }
+                return false; // Barrier on cooldown
+            }
+        }
+
         let fireAngle = this.angle;
         let effectiveTarget = target || this.target; // Use passed target, fallback to player's locked target
 
         if (this.currentWeapon.type === WEAPON_TYPE.MISSILE) {
-            if (!effectiveTarget || effectiveTarget.destroyed || (effectiveTarget.hull !== undefined && effectiveTarget.hull <=0)) {
-                if (typeof uiManager !== 'undefined' && this === player) { // only show message for player
-                    uiManager.addMessage("No target locked for missile.", [255,100,100]);
-                }
-                return false; // Don't fire missile without a valid target
-            }
+            // Allow firing missiles without a lock; they will fly straight.
+            // If a target is locked (effectiveTarget is valid), the missile will home.
+            // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
             // Convert screen mouse position to world coordinates
             const worldMx = mouseX + (this.pos.x - width/2);
@@ -678,7 +722,20 @@ handleInput() {
 
     /** Updates player position, physics, and state. */
     update() {
-
+        // Barrier duration update
+        if (this.isBarrierActive) {
+            this.barrierDurationTimer -= deltaTime / 1000;
+            if (this.barrierDurationTimer <= 0) {
+                this.isBarrierActive = false;
+                this.barrierDurationTimer = 0;
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Barrier Deactivated", this.barrierColor, 1500);
+                }
+                if (typeof soundManager !== 'undefined') {
+                    soundManager.playSound('shieldDown'); // Placeholder sound
+                }
+            }
+        }
 
         // Update tangle effect timer
         if (this.dragEffectTimer > 0) {
@@ -885,6 +942,27 @@ handleInput() {
             pop();
         }
 
+        // Draw Barrier Field Effect
+        if (this.isBarrierActive) {
+            push();
+            translate(this.pos.x, this.pos.y);
+            noFill();
+            // Pulsating effect for the barrier
+            const barrierPulse = (sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierRadius = this.size * (1.7 + barrierPulse * 0.2); // Slightly larger and pulsating
+            const barrierAlpha = map(this.barrierDurationTimer, 0, this.currentWeapon?.duration || 5, 50, 150);
+            
+            strokeWeight(2 + barrierPulse * 1.5); // Thicker and pulsating stroke
+            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], barrierAlpha);
+            ellipse(0, 0, barrierRadius * 2, barrierRadius * 2);
+
+            // Optional: Add a secondary, fainter pulsating ring
+            strokeWeight(1 + barrierPulse * 1);
+            stroke(this.barrierColor[0], this.barrierColor[1], this.barrierColor[2], barrierAlpha * 0.5);
+            ellipse(0, 0, barrierRadius * 2.3, barrierRadius * 2.3);
+            pop();
+        }
+
         // Draw force wave effect
         if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
             const timeSinceForce = millis() - this.lastForceWave.time;
@@ -928,10 +1006,25 @@ handleInput() {
     }
 
     /** Applies damage to the player's hull. */
-    takeDamage(amount) {
+    takeDamage(amount, attacker = null) {
+        // Record attacker for bodyguard response
+        if (attacker) {
+            this.lastAttacker = attacker;
+            this.lastAttackTime = millis();
+        }
+        
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
         
         let shieldHit = false;
+        let actualDamage = amount;
+
+        // Apply barrier damage reduction if active
+        if (this.isBarrierActive && this.barrierDamageReduction > 0) {
+            actualDamage *= (1 - this.barrierDamageReduction);
+            if (actualDamage < 0) actualDamage = 0;
+            // Optionally, add a UI message or sound for barrier absorbing damage
+            // uiManager.addMessage(`Barrier absorbed ${((amount - actualDamage) / amount * 100).toFixed(0)}% damage!`, this.barrierColor, 800);
+        }
         
         // If we have shields, damage them first
         if (this.shield > 0) {
@@ -940,14 +1033,14 @@ handleInput() {
             this.lastShieldHitTime = millis(); // Set the recharge delay timer
             shieldHit = true; // IMPORTANT: If shield > 0, it's ALWAYS a shield hit
             
-            if (amount <= this.shield) {
+            if (actualDamage <= this.shield) {
                 // Shield absorbs all damage
-                this.shield -= amount;
-                //uiManager.addMessage(`Shield damage: ${amount.toFixed(1)}`);
-                return { damage: amount, shieldHit: true };
+                this.shield -= actualDamage;
+                //uiManager.addMessage(`Shield damage: ${actualDamage.toFixed(1)}`);
+                return { damage: actualDamage, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
-                const remainingDamage = amount - this.shield;
+                const remainingDamage = actualDamage - this.shield;
                 this.shield = 0;
                 this.hull -= remainingDamage;
                 
@@ -959,8 +1052,8 @@ handleInput() {
             }
         } else {
             // No shields, damage hull directly
-            this.hull -= amount;
-            //uiManager.addMessage(`Hull damage: ${amount.toFixed(1)}`);
+            this.hull -= actualDamage;
+            //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`);
             shieldHit = false;
         }
         
