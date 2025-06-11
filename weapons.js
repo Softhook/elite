@@ -308,7 +308,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Shield Dome",
         type: "barrier",
-        damageReduction: 0.7, // 70% damage reduction
+        damageReduction: 0.6, // 60% damage reduction
         duration: 15.0,        // 10 seconds
         fireRate: 20.0,       // Cooldown in seconds
         color: [154, 205, 50], // Green visual effect
@@ -318,12 +318,12 @@ const WEAPON_UPGRADES = [
     {
         name: "Halo",
         type: "barrier",
-        damageReduction: 1, // 100% damage reduction
+        damageReduction: 0.8, // 80% damage reduction
         duration: 15.0,        // 10 seconds
         fireRate: 20.0,       // Cooldown in seconds
         color: [255, 215, 0], // Gold for visual effect
         price: 10000,
-        desc: "Temporary barrier that blocks all incoming damage."
+        desc: "Temporary barrier that blocks incoming damage."
     }
 
 ];
