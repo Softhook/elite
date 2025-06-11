@@ -1407,35 +1407,41 @@ handleInput() {
                     const worldMx = mouseX + (this.pos.x - width / 2);
                     const worldMy = mouseY + (this.pos.y - height / 2);
     
+                    let clickedEnemy = null;
                     for (let enemy of this.currentSystem.enemies) {
                         if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
                             let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
-                            if (d < enemy.size / 2 + 10) // Give a little buffer for clicking
-                                this.target = enemy;
-                                if (typeof uiManager !== 'undefined') {
-                                    uiManager.addMessage(`Target locked: ${enemy.shipTypeName}`, [0,255,0]);
-                                }
-                                return; // Target found and set
+                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                                clickedEnemy = enemy;
+                                break; 
+                            }
                         }
                     }
-                    // If no enemy was clicked, clear target
-                    if (this.target) {
-                         if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+
+                    if (clickedEnemy) { // An enemy was clicked
+                        if (this.target === clickedEnemy) { // Clicked the already targeted enemy
+                            this.target = null; // Deselect
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                            }
+                        } else { // Clicked a new enemy (or current target was null)
+                            this.target = clickedEnemy;
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`Target locked: ${clickedEnemy.shipTypeName}`, [0,255,0]);
+                            }
                         }
+                    } else { // No enemy was clicked (clicked on background)
+                        if (this.target !== null) { // If there was a target, clear it
+                            this.target = null;
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                            }
+                        }
+                        // If no enemy clicked and no prior target, do nothing.
                     }
-                    this.target = null;
                 }
             }
         }
-
-    setWeaponByName(name) {
-        const found = WEAPON_UPGRADES.find(w => w.name === name);
-        if (found) {
-            this.currentWeapon = found;
-            this.fireRate = found.fireRate;
-        }
-    }
 
           /**
      * Toggles autopilot to the requested target
@@ -1641,7 +1647,7 @@ handleInput() {
         
         if (index >= 0 && index < this.weapons.length && this.weapons[index]) {
             this.weaponIndex = index;
-            this.currentWeapon = this.weapons[index];
+            this.currentWeapon = this.weapons[this.weaponIndex];
             this.fireRate = this.currentWeapon.fireRate || 0.5;
             return true;
         } else if (this.weapons.length > 0) {
@@ -1694,7 +1700,7 @@ handleInput() {
             
             // Show notification to player
             if (typeof uiManager !== "undefined") {
-                uiManager.addMessage("Police status revoked due to criminal activity!", [255, 0, 0]);
+                uiManager.addMessage("Police status revoked due to criminal activity!", [255, 0,  0]);
             }
             
             console.log("Player's police status revoked, marked as former officer");
