@@ -291,16 +291,16 @@ class Planet {
         const pg = createGraphics(bufferSize, bufferSize);
         const bufferCenter = pg.width / 2;
         const r = this.size / 2;
-        
+
         // Clear the buffer
         pg.clear();
-        
+
         // Set fine noise detail for more detailed structures
         pg.noiseDetail(5, 0.35);
-        
+
         // Choose a civilization pattern type (0-3) based on featureRand
         const patternType = Math.floor((this.featureRand * 122.27) % 4);
-        
+
         // Set colors based on civilization type to add variety
         let primaryColor, secondaryColor;
         switch (patternType) {
@@ -321,23 +321,55 @@ class Planet {
                 secondaryColor = color(180, 245, 190, 150);
                 break;
         }
-        
+
         this.cityLightsColor = primaryColor; // Update the main color
-        
+
+
+        // --- PLANET-WIDE FAINT NOISE TEXTURE ---
+        // This covers the whole planet with faint city sprawl
+        const faintBandHeight = max(2, Math.ceil(3 * (random(10) )));
+        for (let y = -r; y < r; y += faintBandHeight) {
+            const bandR = sqrt(max(0, r * r - y * y));
+            if (bandR <= 0) continue;
+            for (let x = -bandR; x < bandR; x += faintBandHeight) {
+                const worldX = bufferCenter + x;
+                const worldY = bufferCenter + y;
+                const angle = atan2(y, x);
+                const distFromCenter = dist(0, 0, x, y);
+                // Use the same noise logic as city lights, but no hub influence
+                const baseNoiseX = distFromCenter * this.noiseScale * 0.2 + this.featureRand * 3.1;
+                const baseNoiseY = angle * 2 + this.featureRand * 7.4;
+                const detailNoiseX = x * this.noiseScale * 0.01 + this.featureRand * 1.3;
+                const detailNoiseY = y * this.noiseScale * 0.07 + this.featureRand * 7.2;
+                const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
+                const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
+                const combinedNoise = (baseNoise * 0.6) + (detailNoise * 0.4);
+                // Lower density threshold and increase alpha for visibility
+                const densityThreshold = 0.2;
+                if (combinedNoise > densityThreshold) {
+                    // Fainter, but more visible dots
+                    pg.noStroke();
+                    pg.fill(red(primaryColor), green(primaryColor), blue(primaryColor), 36);
+                    pg.ellipse(worldX, worldY, faintBandHeight * 0.5, faintBandHeight * 0.5);
+                }
+            }
+        }
+        // --- END PLANET-WIDE FAINT NOISE TEXTURE ---
+
         // Smaller resolution for detailed structures
         const bandHeight = max(2, Math.ceil(3 * (80 / this.size)));
-        
+
         // Generate civilization hubs - define core city centers
         const cityHubs = [];
         const numHubs = floor(r / 80) + floor(random(2, 5));
-        
+
         for (let i = 0; i < numHubs; i++) {
             // Distribute hubs across planet's surface with clustering tendencies
             let hubAngle = (i / numHubs) * TWO_PI + random(-0.3, 0.3);
             // Vary the distance from center but avoid edges
             let hubDist = random(r * 0.3, r * 0.85);
             let hubSize = random(r * 0.1, r * 0.25);
-            
+
             cityHubs.push({
                 x: cos(hubAngle) * hubDist,
                 y: sin(hubAngle) * hubDist,
