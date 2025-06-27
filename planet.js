@@ -34,7 +34,7 @@ class Planet {
         this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
 
         // --- Inhabited Planet Properties ---
-        this.isInhabited = random() < 0.3; // 30% chance of being inhabited
+        this.isInhabited = random() < 1; // 30% chance of being inhabited
         this.cityLightsColor = color(255, 240, 180, 200); // Default warm yellow/amber lights (may be changed based on pattern type)
         this.cityLightsDensity = random(0.3, 0.8); // Controls how dense the city lights appear
         this.cityLightsBuffer = null; // Buffer will be created when needed
@@ -557,40 +557,29 @@ class Planet {
             // Draw the city lights aligned with the planet's current rotation
             drawingContext.save();
             
-            // First, create a gradient transition from day to night side
-            // This helps blend city lights into the day side subtly
-            const transitionSize = this.size * 0.55;
-            const fullShadowSize = this.size * 0.5;
-            
-            // Create a clipping path for the city lights area, adjusted for rotation
-            // Since we're already rotated, we need to account for that in the shadow position
-            // Calculate shadow position in current rotated coordinate system
+            // Calculate rotated shadow position based on current planet rotation
+            // This ensures the shadow rotation matches the planet's current rotation
             const rotatedShadowX = this.shadowOffset.x * cos(-this.currentRotation) - this.shadowOffset.y * sin(-this.currentRotation);
             const rotatedShadowY = this.shadowOffset.x * sin(-this.currentRotation) + this.shadowOffset.y * cos(-this.currentRotation);
             
-            // Create a clipping path for the city lights area
+            // First, clip to the planet's circular area
             drawingContext.beginPath();
-            drawingContext.arc(rotatedShadowX, rotatedShadowY, transitionSize, 0, TWO_PI);
+            drawingContext.arc(0, 0, this.size/2, 0, TWO_PI);
             drawingContext.clip();
-            
-            // Draw the city lights (already properly rotated with the planet)
+
+            // Then clip to the shadow area (night side), matching the shadow ellipse
+            // The shadow is drawn with ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
+            // So use the same center and radius here
+            const shadowRadius = this.size * 1.05 / 2;
+            drawingContext.beginPath();
+            drawingContext.arc(rotatedShadowX, rotatedShadowY, shadowRadius, 0, TWO_PI);
+            drawingContext.clip();
+
+            // Now draw the city lights (already properly rotated with the planet)
             const bufferSize = this.cityLightsBuffer.width;
             image(this.cityLightsBuffer, -bufferSize/2, -bufferSize/2);
-            
-            // Apply gradient on top for smooth transition to day side
-            drawingContext.globalCompositeOperation = 'destination-out';
-            const transitionGradient = drawingContext.createRadialGradient(
-                rotatedShadowX, rotatedShadowY, fullShadowSize,
-                rotatedShadowX, rotatedShadowY, transitionSize
-            );
-            transitionGradient.addColorStop(0, 'rgba(0,0,0,0)'); // No fadeout in shadow
-            transitionGradient.addColorStop(1, 'rgba(0,0,0,1)'); // Fully transparent in light
-            
-            drawingContext.fillStyle = transitionGradient;
-            drawingContext.fillRect(-bufferSize, -bufferSize, bufferSize * 2, bufferSize * 2);
-            
-            // Reset global composition operation and restore context
-            drawingContext.globalCompositeOperation = 'source-over';
+
+            // Restore the drawing context
             drawingContext.restore();
         }
         
