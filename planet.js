@@ -33,6 +33,13 @@ class Planet {
         this.hasAtmosphere = random() < 0.4; // Less frequent
         this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
 
+        // --- Inhabited Planet Properties ---
+        this.isInhabited = random() < 0.3; // 30% chance of being inhabited
+        this.cityLightsColor = color(255, 240, 180, 200); // Default warm yellow/amber lights (may be changed based on pattern type)
+        this.cityLightsDensity = random(0.3, 0.8); // Controls how dense the city lights appear
+        this.cityLightsBuffer = null; // Buffer will be created when needed
+        // ---
+        
         // --- Rings Restored ---
         this.hasRings = random() < 0.25;
         if (this.hasRings) {
@@ -89,7 +96,14 @@ class Planet {
         // Size calculations for buffers
         const bufferSize = Math.ceil(this.size * 1.2);
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
-        const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * 1.4) : 0;
+        
+        // For inhabited planets with atmosphere, we need a larger buffer to contain the city glow
+        let atmBufferSizeFactor = 1.0 + (5 * 0.04);
+        if (this.isInhabited) {
+            // Ensure atmosphere buffer is big enough to contain the city glow (which is r * 2.1)
+            atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 2.1);
+        }
+        const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * atmBufferSizeFactor * 1.2) : 0;
         
         // Create main planet buffer
         this.planetBuffer = createGraphics(bufferSize, bufferSize);
@@ -103,8 +117,15 @@ class Planet {
         
         // Create atmosphere buffer if needed
         if (this.hasAtmosphere) {
+            // Make sure atmosphere buffer is large enough for the outermost layer
+            // and properly centered on the planet
             this.atmosphereBuffer = createGraphics(atmBufferSize, atmBufferSize);
             this.renderAtmosphere();
+        }
+        
+        // Create city lights buffer for inhabited planets
+        if (this.isInhabited && !this.isSun) {
+            this.renderCityLights();
         }
         
         this.buffersCreated = true;
@@ -129,6 +150,11 @@ class Planet {
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             this.atmosphereBuffer.remove();
             this.atmosphereBuffer = null;
+        }
+        
+        if (this.isInhabited && this.cityLightsBuffer) {
+            this.cityLightsBuffer.remove();
+            this.cityLightsBuffer = null;
         }
         
         this.buffersCreated = false;
@@ -233,11 +259,252 @@ class Planet {
             const atmSizeFactor = 1.0 + i * 0.04;
             const atmAlpha = alpha(this.atmosphereColor) * (1.0 - i * 0.15);
             
+            // Calculate diameter for this atmosphere layer
+            const layerDiameter = this.size * atmSizeFactor;
+            
+            // Draw the atmosphere layer perfectly centered in the buffer
             pg.fill(red(this.atmosphereColor), green(this.atmosphereColor), blue(this.atmosphereColor), atmAlpha);
-            pg.ellipse(bufferCenter, bufferCenter, this.size * atmSizeFactor, this.size * atmSizeFactor);
+            pg.ellipse(bufferCenter, bufferCenter, layerDiameter, layerDiameter);
+            
+            // Debug outline
+            // pg.stroke(255);
+            // pg.noFill();
+            // pg.ellipse(bufferCenter, bufferCenter, layerDiameter, layerDiameter);
         }
+        
+        // Debug: Draw center point and buffer edge markers
+        // pg.fill(255, 0, 0);
+        // pg.ellipse(bufferCenter, bufferCenter, 4, 4);
+        // pg.stroke(255, 255, 0);
+        // pg.noFill();
+        // pg.rect(0, 0, pg.width-1, pg.height-1);
     }
 
+    /**
+     * Renders the city lights for inhabited planets with geometric patterns and structures
+     */
+    renderCityLights() {
+        if (!this.isInhabited || this.isSun) return;
+        
+        // Make city lights buffer same size as planet buffer to avoid mismatches
+        const bufferSize = Math.ceil(this.size * 1.2); // Same as planetBuffer size
+        const pg = createGraphics(bufferSize, bufferSize);
+        const bufferCenter = pg.width / 2;
+        const r = this.size / 2;
+        
+        // Clear the buffer
+        pg.clear();
+        
+        // Set fine noise detail for more detailed structures
+        pg.noiseDetail(5, 0.35);
+        
+        // Choose a civilization pattern type (0-3) based on featureRand
+        const patternType = Math.floor((this.featureRand * 122.27) % 4);
+        
+        // Set colors based on civilization type to add variety
+        let primaryColor, secondaryColor;
+        switch (patternType) {
+            case 0: // Warm/amber - standard
+                primaryColor = color(255, 240, 180, 180);
+                secondaryColor = color(255, 220, 140, 160);
+                break;
+            case 1: // Cooler/blueish - advanced tech
+                primaryColor = color(220, 240, 255, 170);
+                secondaryColor = color(180, 200, 255, 150);
+                break;
+            case 2: // Warm/reddish - older civilization
+                primaryColor = color(255, 220, 160, 180);
+                secondaryColor = color(255, 200, 130, 160);
+                break;
+            case 3: // Greenish tint - alien/unique
+                primaryColor = color(220, 255, 220, 170);
+                secondaryColor = color(180, 245, 190, 150);
+                break;
+        }
+        
+        this.cityLightsColor = primaryColor; // Update the main color
+        
+        // Smaller resolution for detailed structures
+        const bandHeight = max(2, Math.ceil(3 * (80 / this.size)));
+        
+        // Generate civilization hubs - define core city centers
+        const cityHubs = [];
+        const numHubs = floor(r / 80) + floor(random(2, 5));
+        
+        for (let i = 0; i < numHubs; i++) {
+            // Distribute hubs across planet's surface with clustering tendencies
+            let hubAngle = (i / numHubs) * TWO_PI + random(-0.3, 0.3);
+            // Vary the distance from center but avoid edges
+            let hubDist = random(r * 0.3, r * 0.85);
+            let hubSize = random(r * 0.1, r * 0.25);
+            
+            cityHubs.push({
+                x: cos(hubAngle) * hubDist,
+                y: sin(hubAngle) * hubDist,
+                size: hubSize,
+                density: random(0.6, 1.0)
+            });
+        }
+        
+        // Draw the base grid/cells of the civilization - cover the planet surface
+        for (let y = -r; y < r; y += bandHeight) {
+            const bandR = sqrt(max(0, r * r - y * y));
+            if (bandR <= 0) continue;
+            
+            for (let x = -bandR; x < bandR; x += bandHeight) {
+                const worldX = bufferCenter + x;
+                const worldY = bufferCenter + y;
+                const angle = atan2(y, x);
+                const distFromCenter = dist(0, 0, x, y);
+                
+                // Use multiple noise layers for more varied patterns
+                const baseNoiseX = distFromCenter * this.noiseScale * 0.5 + this.featureRand * 3.1;
+                const baseNoiseY = angle * 2 + this.featureRand * 2.4;
+                const detailNoiseX = x * this.noiseScale * 0.07 + this.featureRand * 1.3;
+                const detailNoiseY = y * this.noiseScale * 0.07 + this.featureRand * 7.2;
+                
+                // Blend different noise patterns to create more organic distribution
+                const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
+                const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
+                const combinedNoise = (baseNoise * 0.6) + (detailNoise * 0.4);
+                
+                // Influence from city hubs (proximity increases light density)
+                let hubInfluence = 0;
+                for (const hub of cityHubs) {
+                    const hubDist = dist(x, y, hub.x, hub.y);
+                    if (hubDist < hub.size) {
+                        // Stronger influence closer to hub center with falloff
+                        hubInfluence += map(hubDist, 0, hub.size, hub.density, 0);
+                    }
+                }
+                hubInfluence = constrain(hubInfluence, 0, 0.8);
+                
+                // Light density threshold boosted by hub proximity
+                const densityThreshold = 1 - ((this.cityLightsDensity * 0.5) + hubInfluence);
+                
+                // Generate various city light elements based on the noise values
+                if (combinedNoise > densityThreshold) {
+                    // Brightness varies with noise and hub influence
+                    const brightness = map(combinedNoise + hubInfluence, densityThreshold, 1.5, 70, 200);
+                    const isNearHub = hubInfluence > 0.2;
+                    
+                    // Structure type based on noise and pattern type
+                    const structureType = (combinedNoise * 10 + baseNoise * 5) % 1;
+                    
+                    // Draw different structural elements based on pattern and noise
+                    if (structureType < 0.25) {
+                        // Small point lights (buildings)
+                        pg.noStroke();
+                        pg.fill(red(primaryColor), green(primaryColor), blue(primaryColor), brightness * 0.8);
+                        const dotSize = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
+                        pg.ellipse(worldX, worldY, dotSize, dotSize);
+                    } 
+                    else if (structureType < 0.5) {
+                        // Short line segments (roads/connections)
+                        const lineAngle = (angle + (baseNoise * PI)) % TWO_PI;
+                        pg.stroke(red(secondaryColor), green(secondaryColor), blue(secondaryColor), brightness * 0.9);
+                        pg.strokeWeight(bandHeight * 0.4);
+                        const lineLength = isNearHub ? bandHeight * 2 : bandHeight * 1.2;
+                        pg.line(
+                            worldX - cos(lineAngle) * lineLength/2, 
+                            worldY - sin(lineAngle) * lineLength/2,
+                            worldX + cos(lineAngle) * lineLength/2, 
+                            worldY + sin(lineAngle) * lineLength/2
+                        );
+                    } 
+                    else if (structureType < 0.7) {
+                        // Urban blocks/squares
+                        pg.noStroke();
+                        pg.fill(red(primaryColor), green(primaryColor), blue(primaryColor), brightness * 0.7);
+                        const blockSize = isNearHub ? bandHeight * 1.2 : bandHeight * 0.8;
+                        pg.rect(worldX - blockSize/2, worldY - blockSize/2, blockSize, blockSize);
+                        
+                        // Add interior detail to blocks
+                        if (isNearHub && random() > 0.5) {
+                            pg.fill(red(secondaryColor), green(secondaryColor), blue(secondaryColor), brightness * 0.9);
+                            pg.rect(worldX - blockSize*0.3, worldY - blockSize*0.3, blockSize*0.6, blockSize*0.6);
+                        }
+                    } 
+                    else {
+                        // Scattered points (suburbs/outskirts)
+                        pg.noStroke();
+                        for (let i = 0; i < 3; i++) {
+                            const offsetX = random(-bandHeight, bandHeight);
+                            const offsetY = random(-bandHeight, bandHeight);
+                            const scatterBrightness = brightness * map(dist(0, 0, offsetX, offsetY), 0, bandHeight*1.4, 1, 0.4);
+                            pg.fill(red(primaryColor), green(primaryColor), blue(primaryColor), scatterBrightness);
+                            pg.ellipse(worldX + offsetX, worldY + offsetY, bandHeight * 0.3, bandHeight * 0.3);
+                        }
+                    }
+                    
+                    // Add hub-specific detailed structures
+                    if (isNearHub && hubInfluence > 0.5 && random() > 0.8) {
+                        // Major city centers - add geometric patterns
+                        const patternSize = bandHeight * random(2, 4);
+                        if (patternType === 0 || patternType === 2) {
+                            // Concentric circles for warm/traditional civilizations
+                            pg.noFill();
+                            pg.stroke(red(secondaryColor), green(secondaryColor), blue(secondaryColor), brightness * 0.8);
+                            pg.strokeWeight(bandHeight * 0.3);
+                            pg.ellipse(worldX, worldY, patternSize * 0.7, patternSize * 0.7);
+                            pg.strokeWeight(bandHeight * 0.2);
+                            pg.ellipse(worldX, worldY, patternSize, patternSize);
+                        } else {
+                            // Grid/angular patterns for cooler/advanced civilizations
+                            pg.stroke(red(secondaryColor), green(secondaryColor), blue(secondaryColor), brightness * 0.8);
+                            pg.strokeWeight(bandHeight * 0.3);
+                            pg.line(worldX - patternSize/2, worldY - patternSize/2, worldX + patternSize/2, worldY + patternSize/2);
+                            pg.line(worldX + patternSize/2, worldY - patternSize/2, worldX - patternSize/2, worldY + patternSize/2);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Draw connecting transport/highway lines between hubs
+        pg.noFill();
+        for (let i = 0; i < cityHubs.length; i++) {
+            for (let j = i + 1; j < cityHubs.length; j++) {
+                const hub1 = cityHubs[i];
+                const hub2 = cityHubs[j];
+                const hubDist = dist(hub1.x, hub1.y, hub2.x, hub2.y);
+                
+                // Only connect reasonably close hubs
+                if (hubDist < r * 0.7) {
+                    const alpha = map(hubDist, 0, r * 0.7, 150, 70);
+                    pg.stroke(red(secondaryColor), green(secondaryColor), blue(secondaryColor), alpha);
+                    pg.strokeWeight(bandHeight * 0.6);
+                    
+                    // Draw slightly curved connections with subtle variations
+                    const midX = (hub1.x + hub2.x)/2;
+                    const midY = (hub1.y + hub2.y)/2;
+                    const perpX = -(hub2.y - hub1.y) * 0.2;
+                    const perpY = (hub2.x - hub1.x) * 0.2;
+                    const ctrlX = midX + perpX * ((this.featureRand * 7.3) % 1 - 0.5);
+                    const ctrlY = midY + perpY * ((this.featureRand * 9.1) % 1 - 0.5);
+                    
+                    pg.beginShape();
+                    pg.vertex(bufferCenter + hub1.x, bufferCenter + hub1.y);
+                    pg.quadraticVertex(
+                        bufferCenter + ctrlX, 
+                        bufferCenter + ctrlY, 
+                        bufferCenter + hub2.x, 
+                        bufferCenter + hub2.y
+                    );
+                    pg.endShape();
+                }
+            }
+        }
+        
+        // No global glow - removing this fixes the offset glow issue
+        
+        // Reset noise detail
+        pg.noiseDetail(4, 0.5);
+        
+        // Store the city lights buffer
+        this.cityLightsBuffer = pg;
+    }
+    
     /**
      * Updates planet rotation over time
      */
@@ -263,11 +530,14 @@ class Planet {
         }
         
         push();
+        // Translate to planet's position in world space
         translate(this.pos.x, this.pos.y);
         
-        // Draw atmosphere if present (behind planet)
+        // Draw atmosphere if present (behind planet) - atmosphere is stationary and doesn't rotate
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             const atmSize = this.atmosphereBuffer.width;
+            
+            // Center atmosphere precisely on the planet's center (0,0 in local coordinates)
             image(this.atmosphereBuffer, -atmSize/2, -atmSize/2);
         }
         
@@ -282,14 +552,88 @@ class Planet {
             image(this.planetBuffer, -bufferSize/2, -bufferSize/2);
         }
         
+        // Draw city lights before resetting rotation so they rotate with the planet
+        if (!this.isSun && this.isInhabited && this.cityLightsBuffer && this.shadowOffset) {
+            // Draw the city lights aligned with the planet's current rotation
+            drawingContext.save();
+            
+            // First, create a gradient transition from day to night side
+            // This helps blend city lights into the day side subtly
+            const transitionSize = this.size * 0.55;
+            const fullShadowSize = this.size * 0.5;
+            
+            // Create a clipping path for the city lights area, adjusted for rotation
+            // Since we're already rotated, we need to account for that in the shadow position
+            // Calculate shadow position in current rotated coordinate system
+            const rotatedShadowX = this.shadowOffset.x * cos(-this.currentRotation) - this.shadowOffset.y * sin(-this.currentRotation);
+            const rotatedShadowY = this.shadowOffset.x * sin(-this.currentRotation) + this.shadowOffset.y * cos(-this.currentRotation);
+            
+            // Create a clipping path for the city lights area
+            drawingContext.beginPath();
+            drawingContext.arc(rotatedShadowX, rotatedShadowY, transitionSize, 0, TWO_PI);
+            drawingContext.clip();
+            
+            // Draw the city lights (already properly rotated with the planet)
+            const bufferSize = this.cityLightsBuffer.width;
+            image(this.cityLightsBuffer, -bufferSize/2, -bufferSize/2);
+            
+            // Apply gradient on top for smooth transition to day side
+            drawingContext.globalCompositeOperation = 'destination-out';
+            const transitionGradient = drawingContext.createRadialGradient(
+                rotatedShadowX, rotatedShadowY, fullShadowSize,
+                rotatedShadowX, rotatedShadowY, transitionSize
+            );
+            transitionGradient.addColorStop(0, 'rgba(0,0,0,0)'); // No fadeout in shadow
+            transitionGradient.addColorStop(1, 'rgba(0,0,0,1)'); // Fully transparent in light
+            
+            drawingContext.fillStyle = transitionGradient;
+            drawingContext.fillRect(-bufferSize, -bufferSize, bufferSize * 2, bufferSize * 2);
+            
+            // Reset global composition operation and restore context
+            drawingContext.globalCompositeOperation = 'source-over';
+            drawingContext.restore();
+        }
+        
         // Reset rotation to draw stationary shadow on top
         rotate(-this.currentRotation);
         
-        // Draw stationary shadow on top of the planet
+        // Draw stationary shadow on top of the planet (semi-transparent to let city lights show through)
         if (!this.isSun && this.shadowOffset) {
             noStroke();
-            fill(0, 0, 0, 55);
-            ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
+            
+            // Create a gradient shadow effect
+            const shadowSize = this.size * 0.525;
+            const outerShadowSize = this.size * 0.55;
+            
+            // Shadow gradient is more complex for inhabited planets
+            if (this.isInhabited) {
+                // Base semi-transparent shadow layer
+                fill(0, 0, 0, 30);
+                ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
+                
+                // Save context before custom gradient
+                drawingContext.save();
+                
+                // Create shadow gradient
+                const shadowGradient = drawingContext.createRadialGradient(
+                    this.shadowOffset.x, this.shadowOffset.y, shadowSize * 0.5,
+                    this.shadowOffset.x, this.shadowOffset.y, shadowSize
+                );
+                shadowGradient.addColorStop(0, 'rgba(0,0,0,0.35)');
+                shadowGradient.addColorStop(1, 'rgba(0,0,0,0)');
+                
+                drawingContext.fillStyle = shadowGradient;
+                drawingContext.beginPath();
+                drawingContext.arc(this.shadowOffset.x, this.shadowOffset.y, shadowSize, 0, TWO_PI);
+                drawingContext.fill();
+                
+                // Restore context after gradient
+                drawingContext.restore();
+            } else {
+                // Simpler shadow for uninhabited planets
+                fill(0, 0, 0, 55);
+                ellipse(this.shadowOffset.x, this.shadowOffset.y, this.size * 1.05, this.size * 1.05);
+            }
         }
         
         pop();
@@ -328,6 +672,9 @@ class Planet {
             0, 0,                     // Source position
             bufferW, topHeight        // Source size
         );
+        
+        // City lights are drawn separately after rotation is reset in the main draw method
+        // This method only handles the planet textures and rings
     }
 
     toJSON() {
@@ -351,7 +698,10 @@ class Planet {
             ringColor1: this.ringColor1 ? this.ringColor1.toString() : null,
             ringColor2: this.ringColor2 ? this.ringColor2.toString() : null,
             rotationSpeed: this.rotationSpeed,
-            currentRotation: this.currentRotation
+            currentRotation: this.currentRotation,
+            isInhabited: this.isInhabited,
+            cityLightsColor: this.cityLightsColor ? this.cityLightsColor.toString() : null,
+            cityLightsDensity: this.cityLightsDensity
         };
     }
 
@@ -376,6 +726,9 @@ class Planet {
         p.ringColor2 = data.ringColor2 && typeof color === "function" ? color(data.ringColor2) : null;
         p.rotationSpeed = data.rotationSpeed;
         p.currentRotation = data.currentRotation;
+        p.isInhabited = data.isInhabited;
+        p.cityLightsColor = data.cityLightsColor && typeof color === "function" ? color(data.cityLightsColor) : null;
+        p.cityLightsDensity = data.cityLightsDensity;
         return p;
     }
 } // End of Planet Class
