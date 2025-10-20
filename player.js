@@ -853,6 +853,9 @@ handleInput() {
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
+
+        // Sync bodyguard status from their enemy references
+        this.syncBodyguardStatus();
     }
 
     /** Draws the player ship using its specific draw function. */
@@ -1705,6 +1708,239 @@ handleInput() {
             
             console.log("Player's police status revoked, marked as former officer");
         }
+    }
+
+    // ======================================
+    // Bodyguard Management Methods
+    // ======================================
+
+    /**
+     * Helper method to check if a bodyguard has been spawned
+     * @param {Object} guard - The bodyguard object to check
+     * @returns {boolean} True if the bodyguard has been spawned
+     * @private
+     */
+    _isBodyguardSpawned(guard) {
+        return guard.hull !== null && guard.maxHull !== null;
+    }
+
+    /**
+     * Returns count of active (alive) bodyguards
+     * @returns {number} Number of active bodyguards
+     */
+    getActiveGuardsCount() {
+        if (!this.activeBodyguards) {
+            return 0;
+        }
+        // Filter out destroyed bodyguards
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+        return this.activeBodyguards.length;
+    }
+
+    /**
+     * Returns information about damaged bodyguards
+     * @returns {{count: number, totalCost: number}} Info about damaged bodyguards
+     */
+    getDamagedBodyguardsInfo() {
+        if (!this.activeBodyguards) {
+            return { count: 0, totalCost: 0 };
+        }
+
+        // Filter out destroyed bodyguards first
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+
+        // Find damaged bodyguards (only those that have been spawned and have hull values)
+        const damagedGuards = this.activeBodyguards.filter(guard => 
+            this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull
+        );
+        
+        // Calculate total repair cost (7 credits per hull point, same as player repairs)
+        let totalCost = 0;
+        damagedGuards.forEach(guard => {
+            const missing = guard.maxHull - guard.hull;
+            totalCost += Math.floor(missing * 7);
+        });
+
+        return {
+            count: damagedGuards.length,
+            totalCost: totalCost
+        };
+    }
+
+    /**
+     * Hires a bodyguard of the specified ship type
+     * @param {string} shipType - The ship type to hire (e.g., "GladiusFighter")
+     * @param {number} cost - The cost to hire the bodyguard
+     * @returns {boolean} True if hired successfully, false otherwise
+     */
+    hireBodyguard(shipType, cost) {
+        // Check if player has space for more bodyguards
+        if (this.getActiveGuardsCount() >= this.bodyguardLimit) {
+            console.log("Cannot hire bodyguard: limit reached");
+            return false;
+        }
+
+        // Check if player has enough credits
+        if (this.credits < cost) {
+            console.log("Cannot hire bodyguard: not enough credits");
+            return false;
+        }
+
+        // Deduct credits
+        this.credits -= cost;
+
+        // Store bodyguard information (will be spawned when entering a system)
+        this.activeBodyguards.push({
+            shipType: shipType,
+            hull: null, // Will be set when spawned
+            maxHull: null, // Will be set when spawned
+            destroyed: false,
+            enemyRef: null // Reference to the actual Enemy object when spawned
+        });
+
+        console.log(`Hired ${shipType} bodyguard for ${cost} credits. Total bodyguards: ${this.activeBodyguards.length}`);
+        return true;
+    }
+
+    /**
+     * Dismisses all active bodyguards
+     */
+    dismissBodyguards() {
+        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
+            console.log("No bodyguards to dismiss");
+            return;
+        }
+
+        // Remove bodyguards from the current system if they're spawned
+        if (this.currentSystem) {
+            this.activeBodyguards.forEach(guard => {
+                if (guard.enemyRef && !guard.enemyRef.destroyed) {
+                    guard.enemyRef.destroyed = true;
+                }
+            });
+        }
+
+        // Clear the bodyguards array
+        const count = this.activeBodyguards.length;
+        this.activeBodyguards = [];
+        console.log(`Dismissed ${count} bodyguard(s)`);
+    }
+
+    /**
+     * Spawns bodyguards in the current system
+     * @param {StarSystem} system - The star system to spawn bodyguards in
+     */
+    spawnBodyguards(system) {
+        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
+            return;
+        }
+
+        // Clean up any destroyed bodyguards from the list
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+
+        // Spawn each bodyguard near the player
+        this.activeBodyguards.forEach((guard, index) => {
+            // Skip if already spawned in this system
+            if (guard.enemyRef && !guard.enemyRef.destroyed) {
+                return;
+            }
+
+            // Calculate spawn position near player
+            const angle = (TWO_PI / this.activeBodyguards.length) * index;
+            const distance = 150 + (index * 50); // Spread them out
+            const spawnX = this.pos.x + cos(angle) * distance;
+            const spawnY = this.pos.y + sin(angle) * distance;
+
+            // Create the bodyguard enemy
+            const bodyguardEnemy = new Enemy(spawnX, spawnY, this, guard.shipType, AI_ROLE.GUARD);
+            bodyguardEnemy.principal = this; // Set player as the principal to protect
+            bodyguardEnemy.changeState(AI_STATE.GUARDING);
+
+            // Restore hull if this bodyguard had previous damage
+            if (guard.hull !== null && guard.maxHull !== null) {
+                bodyguardEnemy.maxHull = guard.maxHull;
+                bodyguardEnemy.hull = guard.hull;
+            } else {
+                // First time spawning, record max hull
+                guard.maxHull = bodyguardEnemy.maxHull;
+                guard.hull = bodyguardEnemy.hull;
+            }
+
+            // Store reference
+            guard.enemyRef = bodyguardEnemy;
+
+            // Add to system enemies
+            system.enemies.push(bodyguardEnemy);
+
+            console.log(`Spawned bodyguard ${guard.shipType} at ${spawnX.toFixed(0)}, ${spawnY.toFixed(0)}`);
+        });
+    }
+
+    /**
+     * Syncs bodyguard hull status from their enemy references
+     * Should be called periodically to keep bodyguard data up to date
+     */
+    syncBodyguardStatus() {
+        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
+            return;
+        }
+
+        this.activeBodyguards.forEach(guard => {
+            if (guard.enemyRef) {
+                // Sync hull from enemy
+                guard.hull = guard.enemyRef.hull;
+                guard.maxHull = guard.enemyRef.maxHull;
+                
+                // Sync destroyed status
+                if (guard.enemyRef.destroyed) {
+                    guard.destroyed = true;
+                }
+            }
+        });
+
+        // Clean up destroyed bodyguards
+        const beforeCount = this.activeBodyguards.length;
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+        const afterCount = this.activeBodyguards.length;
+        
+        if (beforeCount > afterCount) {
+            console.log(`Lost ${beforeCount - afterCount} bodyguard(s) in combat`);
+        }
+    }
+
+    /**
+     * Repairs all damaged bodyguards
+     * @param {number} cost - The total cost to repair all damaged bodyguards
+     * @returns {boolean} True if repairs were successful, false otherwise
+     */
+    repairBodyguards(cost) {
+        // Check if player has enough credits
+        if (this.credits < cost) {
+            console.log("Cannot repair bodyguards: not enough credits");
+            return false;
+        }
+
+        // Filter out destroyed bodyguards
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+
+        // Repair all damaged bodyguards (only those that have been spawned)
+        let repairedCount = 0;
+        this.activeBodyguards.forEach(guard => {
+            if (this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull) {
+                guard.hull = guard.maxHull;
+                // Also repair the actual enemy if it's spawned
+                if (guard.enemyRef && !guard.enemyRef.destroyed) {
+                    guard.enemyRef.hull = guard.enemyRef.maxHull;
+                }
+                repairedCount++;
+            }
+        });
+
+        // Deduct credits
+        this.credits -= cost;
+
+        console.log(`Repaired ${repairedCount} bodyguard(s) for ${cost} credits`);
+        return true;
     }
 
 } // End of Player Class
