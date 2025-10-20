@@ -118,6 +118,9 @@ class StarSystem {
         this.planets = [];
         this.asteroids = [];
         this.enemies = [];
+        
+        // Cache diagonal distance for spawn calculations
+        this._cachedDiagonalDist = null;
         this.projectiles = [];
         this.beams = [];
         this.forceWaves = []; // Make sure this is initialized
@@ -736,7 +739,11 @@ try {
 
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
-        let spawnDist = sqrt(sq(width/2) + sq(height/2)) + random(150, 400);
+        // Cache diagonal distance calculation
+        if (!this._cachedDiagonalDist) {
+            this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
+        }
+        let spawnDist = this._cachedDiagonalDist + random(150, 400);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {
@@ -831,7 +838,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
     trySpawnAsteroid() {
         if (!this.player?.pos || this.asteroids.length >= this.maxTotalAsteroids) return;
         try {
-            let angle = random(TWO_PI); let spawnDist = sqrt(sq(width/2)+sq(height/2))+random(200,500);
+            let angle = random(TWO_PI);
+            // Cache diagonal distance calculation
+            if (!this._cachedDiagonalDist) {
+                this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
+            }
+            let spawnDist = this._cachedDiagonalDist + random(200,500);
             let spawnX = this.player.pos.x + cos(angle)*spawnDist; let spawnY = this.player.pos.y + sin(angle)*spawnDist;
             let size = random(40, 90); // Use larger default size
             // Call the main addAsteroid method to respect maxTotalAsteroids and centralize creation
