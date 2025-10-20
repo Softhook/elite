@@ -1037,9 +1037,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         // Apply damage and mark as processed
                         entity.takeDamage(dmg, wave.owner);
                         wave.processed[entity.id || entity] = true;
-
-                        // Add this temporary debug line:
-                        console.log(`Force wave hit ${entity.constructor.name} for ${dmg} damage (${entity.hull}/${entity.maxHull} hull)`);
                         
                         // Apply knockback force
                         if (entity.vel) {
@@ -1051,9 +1048,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                             
                             // Apply force without modifying the direction vector first
                             entity.vel.add(p5.Vector.mult(knockbackDir, forceMagnitude));
-                            
-                            // Debug output to verify knockback
-                            console.log(`Applied knockback with magnitude ${forceMagnitude} to ${entity.constructor.name}`);
                         }
                     }
                 }
@@ -1287,7 +1281,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     let collisionDamage = Math.floor(
                         (this.player.vel.mag() + enemy.vel.mag())
                     );
-                    console.log(`Ship collision! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, enemy);
                     enemy.takeDamage(collisionDamage, this.player);
                     
@@ -1326,7 +1319,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
                     let collisionDamage = Math.floor(this.player.vel.mag());
-                    console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, asteroid);
                     asteroid.takeDamage(20, this.player); // Fixed damage to asteroid
                     
