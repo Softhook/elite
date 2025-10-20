@@ -952,15 +952,22 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // Improved cargo update and collection logic - place in StarSystem.update() method
             // Update cargo items and handle collection
             if (this.cargo && this.cargo.length > 0) {
-                // FIRST: Remove any already collected or expired cargo
-                this.cargo = this.cargo.filter(cargo => !cargo.collected && !cargo.isExpired());
-                
-                // THEN: Update remaining cargo
-                for (let i = 0; i < this.cargo.length; i++) {
-                    this.cargo[i].update();
+                // Use reverse iteration to avoid creating new arrays with filter
+                // This removes collected/expired cargo more efficiently
+                for (let i = this.cargo.length - 1; i >= 0; i--) {
+                    const cargo = this.cargo[i];
+                    
+                    // Remove if collected or expired
+                    if (cargo.collected || cargo.isExpired()) {
+                        this.cargo.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // Update remaining cargo
+                    cargo.update();
                 }
                 
-                // FINALLY: Check for player collection on valid cargo
+                // Check for player collection on valid cargo
                 this.handleCargoCollection();
             }
 
@@ -981,9 +988,15 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     wave.entitiesToProcess = [];
                     
                     // Add all relevant entities that might be affected
+                    // Avoid spread operator to reduce memory allocations
                     if (wave.owner === this.player) {
                         // Player's wave affects enemies and asteroids
-                        wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
+                        for (let e = 0; e < this.enemies.length; e++) {
+                            wave.entitiesToProcess.push(this.enemies[e]);
+                        }
+                        for (let a = 0; a < this.asteroids.length; a++) {
+                            wave.entitiesToProcess.push(this.asteroids[a]);
+                        }
                     } else {
                         // Enemy's wave affects player only
                         if (this.player) wave.entitiesToProcess.push(this.player);
@@ -995,7 +1008,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 // Process entities in batches to prevent frame rate drops
-                const batchSize = 20; // Process 5 entities per frame
+                const batchSize = 20; // Process 20 entities per frame
                 const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
                 const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
                 
@@ -1024,9 +1037,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         // Apply damage and mark as processed
                         entity.takeDamage(dmg, wave.owner);
                         wave.processed[entity.id || entity] = true;
-
-                        // Add this temporary debug line:
-                        console.log(`Force wave hit ${entity.constructor.name} for ${dmg} damage (${entity.hull}/${entity.maxHull} hull)`);
                         
                         // Apply knockback force
                         if (entity.vel) {
@@ -1038,9 +1048,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                             
                             // Apply force without modifying the direction vector first
                             entity.vel.add(p5.Vector.mult(knockbackDir, forceMagnitude));
-                            
-                            // Debug output to verify knockback
-                            console.log(`Applied knockback with magnitude ${forceMagnitude} to ${entity.constructor.name}`);
                         }
                     }
                 }
@@ -1072,18 +1079,23 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
-            // Update nebulae
-            for (let nebula of this.nebulae) {
-                nebula.update();
-                
-                // Apply effects to player
-                if (this.player) {
-                    nebula.applyEffects(this.player);
-                }
-                
-                // Apply effects to enemies
-                for (let enemy of this.enemies) {
-                    nebula.applyEffects(enemy);
+            // Update nebulae - optimize by avoiding nested loops when possible
+            if (this.nebulae && this.nebulae.length > 0) {
+                for (let i = 0; i < this.nebulae.length; i++) {
+                    const nebula = this.nebulae[i];
+                    nebula.update();
+                    
+                    // Apply effects to player
+                    if (this.player) {
+                        nebula.applyEffects(this.player);
+                    }
+                    
+                    // Apply effects to enemies - only if there are enemies
+                    if (this.enemies.length > 0) {
+                        for (let j = 0; j < this.enemies.length; j++) {
+                            nebula.applyEffects(this.enemies[j]);
+                        }
+                    }
                 }
             }
 
@@ -1098,15 +1110,18 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     continue; // Skip the rest of this iteration
                 }
                 
-                // Only apply effects and draw if the storm is still active
+                // Only apply effects if the storm is still active
                 if (this.player) {
                     storm.applyEffects(this.player);
                 }
                 
-                for (let enemy of this.enemies) {
-                    storm.applyEffects(enemy);
+                // Apply effects to enemies - only if there are enemies
+                if (this.enemies.length > 0) {
+                    for (let j = 0; j < this.enemies.length; j++) {
+                        storm.applyEffects(this.enemies[j]);
+                    }
                 }
-            }
+                }
 
             // Move storm spawning OUTSIDE the loop with a small probability
             if (random() < 0.0002 && this.cosmicStorms.length < 1) { // Limit to 1 storms max
@@ -1241,8 +1256,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
             
-            // Player vs Enemies
-            for (let enemy of this.enemies) {
+            // Player vs Enemies - with early distance check
+            for (let i = 0; i < this.enemies.length; i++) {
+                const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
                 
                 // Skip collision detection for player's bodyguards
@@ -1250,12 +1266,20 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     continue; // This prevents collisions between player and their bodyguards
                 }
                 
+                // Quick distance check before expensive collision detection
+                const dx = this.player.pos.x - enemy.pos.x;
+                const dy = this.player.pos.y - enemy.pos.y;
+                const maxDist = this.player.size + enemy.size;
+                const maxDistSq = maxDist * maxDist;
+                
+                // Skip if too far apart
+                if (dx * dx + dy * dy > maxDistSq) continue;
+                
                 if (this.player.checkCollision(enemy)) {
                     // Handle ship-to-ship collision
                     let collisionDamage = Math.floor(
                         (this.player.vel.mag() + enemy.vel.mag())
                     );
-                    console.log(`Ship collision! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, enemy);
                     enemy.takeDamage(collisionDamage, this.player);
                     
@@ -1277,13 +1301,23 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
             
-            // Player vs Asteroids collision
-            for (let asteroid of this.asteroids) {
+            // Player vs Asteroids collision - with early distance check
+            for (let i = 0; i < this.asteroids.length; i++) {
+                const asteroid = this.asteroids[i];
                 if (asteroid.isDestroyed()) continue;
+                
+                // Quick distance check before expensive collision detection
+                const dx = this.player.pos.x - asteroid.pos.x;
+                const dy = this.player.pos.y - asteroid.pos.y;
+                const maxDist = this.player.size + asteroid.size;
+                const maxDistSq = maxDist * maxDist;
+                
+                // Skip if too far apart
+                if (dx * dx + dy * dy > maxDistSq) continue;
+                
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
                     let collisionDamage = Math.floor(this.player.vel.mag());
-                    console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, asteroid);
                     asteroid.takeDamage(20, this.player); // Fixed damage to asteroid
                     
@@ -1305,20 +1339,38 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
             
-            // Enemy vs Asteroid collisions (optional)
-            for (let enemy of this.enemies) {
-                if (enemy.isDestroyed()) continue;
-                for (let asteroid of this.asteroids) {
-                    if (asteroid.isDestroyed()) continue;
-                    if (enemy.checkCollision(asteroid)) {
-                        // Handle enemy-asteroid collision
-                        enemy.takeDamage(10);
-                        asteroid.takeDamage(10);
+            // Enemy vs Asteroid collisions (optional) - with optimization to reduce checks
+            // Only check if there are both enemies and asteroids
+            if (this.enemies.length > 0 && this.asteroids.length > 0) {
+                for (let i = 0; i < this.enemies.length; i++) {
+                    const enemy = this.enemies[i];
+                    if (enemy.isDestroyed()) continue;
+                    
+                    // Simple spatial optimization: only check nearby asteroids
+                    // Most asteroids will be far away from this enemy
+                    for (let j = 0; j < this.asteroids.length; j++) {
+                        const asteroid = this.asteroids[j];
+                        if (asteroid.isDestroyed()) continue;
                         
-                        // Apply physics push
-                        let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
-                        enemy.vel.sub(pushVector);
-                        asteroid.vel.add(pushVector.mult(0.5));
+                        // Quick distance check before expensive collision detection
+                        const dx = enemy.pos.x - asteroid.pos.x;
+                        const dy = enemy.pos.y - asteroid.pos.y;
+                        const maxDist = enemy.size + asteroid.size;
+                        const maxDistSq = maxDist * maxDist;
+                        
+                        // Skip if too far apart (avoids sqrt calculation)
+                        if (dx * dx + dy * dy > maxDistSq) continue;
+                        
+                        if (enemy.checkCollision(asteroid)) {
+                            // Handle enemy-asteroid collision
+                            enemy.takeDamage(10);
+                            asteroid.takeDamage(10);
+                            
+                            // Apply physics push
+                            let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
+                            enemy.vel.sub(pushVector);
+                            asteroid.vel.add(pushVector.mult(0.5));
+                        }
                     }
                 }
             }
