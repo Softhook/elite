@@ -1,5 +1,8 @@
 // ****** player.js ******
 
+// Repair cost per hull point for ships and bodyguards
+const REPAIR_COST_PER_HULL = 10;
+
 class Player {
     /**
      * Creates a Player instance. Stores speeds/rates
@@ -1720,7 +1723,7 @@ handleInput() {
                 if (bodyguard && !bodyguard.destroyed && bodyguard.hull < bodyguard.maxHull) {
                     count++;
                     const missingHull = bodyguard.maxHull - bodyguard.hull;
-                    totalCost += Math.floor(missingHull * 10); // 10 credits per hull point
+                    totalCost += Math.floor(missingHull * REPAIR_COST_PER_HULL);
                 }
             }
         }
@@ -1734,6 +1737,13 @@ handleInput() {
      * @returns {boolean} True if repair was successful, false otherwise
      */
     repairBodyguards(cost) {
+        // Validate that the cost matches actual repair cost
+        const actualInfo = this.getDamagedBodyguardsInfo();
+        if (cost !== actualInfo.totalCost) {
+            console.warn(`repairBodyguards: Cost mismatch. Expected ${actualInfo.totalCost}, got ${cost}`);
+            return false;
+        }
+        
         if (!this.spendCredits(cost)) {
             return false;
         }
