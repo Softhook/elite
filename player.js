@@ -856,6 +856,22 @@ handleInput() {
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
+
+        // Clean up destroyed bodyguards from the active array
+        if (Array.isArray(this.activeBodyguards)) {
+            const initialCount = this.activeBodyguards.length;
+            this.activeBodyguards = this.activeBodyguards.filter(guard => {
+                if (!guard) return false;
+                // Keep hired guards (not yet spawned)
+                if (guard.hired === true) return true;
+                // Keep spawned guards that are not destroyed
+                return !guard.destroyed;
+            });
+            const removedCount = initialCount - this.activeBodyguards.length;
+            if (removedCount > 0) {
+                console.log(`Removed ${removedCount} destroyed bodyguard(s) from player's active list`);
+            }
+        }
     }
 
     /** Draws the player ship using its specific draw function. */
