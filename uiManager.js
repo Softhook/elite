@@ -421,7 +421,7 @@ class UIManager {
             
             // Move to next position
             xPos += slotW + 5;
-        });
+        }
         
         // NEW: Draw active mission on the RIGHT side of the weapon bar
         if (player.activeMission?.title) {
@@ -858,7 +858,7 @@ if (isIllegalInSystem || isMissionCargo) {
         action: 'sellAll', commodity: comm.name 
     });
 }
-        });
+        }
 
         // Back button
         let backW = 100;
@@ -1196,7 +1196,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     text("Wanted", sysData.x, sysData.y + nodeR + 65);
                 }
             }
-        });
+        }
         // --- End Draw System Nodes ---
 
 
