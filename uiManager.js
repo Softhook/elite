@@ -31,6 +31,8 @@ class UIManager {
         this.missionListButtonAreas = [];
         this.missionDetailButtonAreas = {};
         this.policeButtonAreas = [];
+        this.protectionServicesButtons = [];
+        this.factionRecruitmentButtonAreas = [];
         this.inactiveMissionIds = new Set();
         this.marketBackButtonArea = {};
     }
