@@ -857,8 +857,12 @@ handleInput() {
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
 
-        // Clean up destroyed bodyguards from the active array
-        if (Array.isArray(this.activeBodyguards)) {
+        // Clean up destroyed bodyguards from the active array (run periodically, not every frame)
+        if (!this.bodyguardCleanupTimer) this.bodyguardCleanupTimer = 0;
+        this.bodyguardCleanupTimer += deltaTime / 1000;
+        
+        if (this.bodyguardCleanupTimer >= 2.0 && Array.isArray(this.activeBodyguards)) { // Every 2 seconds
+            this.bodyguardCleanupTimer = 0;
             const initialCount = this.activeBodyguards.length;
             this.activeBodyguards = this.activeBodyguards.filter(guard => {
                 if (!guard) return false;
@@ -867,8 +871,9 @@ handleInput() {
                 // Keep spawned guards that are not destroyed
                 return !guard.destroyed;
             });
-            const removedCount = initialCount - this.activeBodyguards.length;
-            if (removedCount > 0) {
+            // Only log if guards were actually removed
+            if (initialCount > this.activeBodyguards.length) {
+                const removedCount = initialCount - this.activeBodyguards.length;
                 console.log(`Removed ${removedCount} destroyed bodyguard(s) from player's active list`);
             }
         }
