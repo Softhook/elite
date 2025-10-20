@@ -78,6 +78,9 @@ class UIManager {
         this.battleIndicatorDuration = 1200;
         this.battleIndicatorLineLength = 25;
         this.battleIndicatorEdgeBuffer = 10;
+        // Pre-calculated screen values (updated in drawBattleIndicators)
+        this._cachedScreenCenterX = 0;
+        this._cachedScreenCenterY = 0;
     }
 
     /** Sets standardized panel geometry for all station menus */

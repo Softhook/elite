@@ -148,6 +148,9 @@ class StarSystem {
         // Add explicit player property initialization
         this.player = null;
 
+        // Pre-allocate screenBounds to avoid creating object every frame
+        this.screenBounds = { left: 0, right: 0, top: 0, bottom: 0 };
+
         // Add a system-specific player wanted status
         this.playerWanted = false;
         
@@ -872,15 +875,13 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         if (!this.player || !this.player.pos) return;
         try {
             // Calculate screen bounds for visibility checks (used by asteroids and planets)
-            // Store as instance variable to reuse in draw() method
+            // Reuse pre-allocated screenBounds object to avoid object creation
             const tx = width / 2 - this.player.pos.x;
             const ty = height / 2 - this.player.pos.y;
-            this.screenBounds = {
-                left: -tx - 100,
-                right: -tx + width + 100,
-                top: -ty - 100,
-                bottom: -ty + height + 100
-            };
+            this.screenBounds.left = -tx - 100;
+            this.screenBounds.right = -tx + width + 100;
+            this.screenBounds.top = -ty - 100;
+            this.screenBounds.bottom = -ty + height + 100;
 
             // Update Enemies
             for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -1016,7 +1017,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 // Process entities in batches to prevent frame rate drops
-                const batchSize = 20; // Process 5 entities per frame
+                const batchSize = 50; // Process up to 50 entities per frame for better throughput
                 const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
                 const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
                 
@@ -1075,21 +1076,22 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
-            // Update explosions
+            // Update explosions with optimized removal
             for (let i = this.explosions.length - 1; i >= 0; i--) {
-                this.explosions[i].update();
-                if (this.explosions[i].isDone()) {
+                const exp = this.explosions[i];
+                exp.update();
+                if (exp.isDone()) {
                     // Return to pool if WeaponSystem is available
-                    if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.releaseExplosion === 'function') {
-                        WeaponSystem.releaseExplosion(this.explosions[i]);
+                    if (typeof WeaponSystem !== 'undefined' && WeaponSystem.releaseExplosion) {
+                        WeaponSystem.releaseExplosion(exp);
                     }
                     
-                    // Use fast removal technique - swap with last element then pop
+                    // Fast removal - swap with last element then pop
                     const lastIndex = this.explosions.length - 1;
                     if (i !== lastIndex) {
                         this.explosions[i] = this.explosions[lastIndex]; 
                     }
-                    this.explosions.pop(); // Much faster than splice for large arrays
+                    this.explosions.pop();
                 }
             }
 
@@ -1263,8 +1265,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
             
-            // Player vs Enemies
-            for (let i = 0, len = this.enemies.length; i < len; i++) {
+            // Player vs Enemies - cache lengths for better performance
+            const enemyCount = this.enemies.length;
+            for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
                 
@@ -1274,66 +1277,85 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 if (this.player.checkCollision(enemy)) {
+                    // Pre-calculate velocities to avoid multiple property access
+                    const playerVelMag = this.player.vel.mag();
+                    const enemyVelMag = enemy.vel.mag();
+                    
                     // Handle ship-to-ship collision
-                    let collisionDamage = Math.floor(
-                        (this.player.vel.mag() + enemy.vel.mag())
-                    );
+                    const collisionDamage = Math.floor(playerVelMag + enemyVelMag);
                     console.log(`Ship collision! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, enemy);
                     enemy.takeDamage(collisionDamage, this.player);
                     
                     // Apply physics push based on relative mass/size
-                    const playerMass = this.player.size * this.player.size;
-                    const enemyMass = enemy.size * enemy.size;
+                    const playerSize = this.player.size;
+                    const enemySize = enemy.size;
+                    const playerMass = playerSize * playerSize;
+                    const enemyMass = enemySize * enemySize;
                     const totalMass = playerMass + enemyMass;
 
                     // Calculate impulse - smaller ships get pushed more
                     const playerImpulseFactor = 3 * (enemyMass / totalMass);
                     const enemyImpulseFactor = 3 * (playerMass / totalMass);
 
-                    // Create normalized collision vector
-                    let pushVector = p5.Vector.sub(enemy.pos, this.player.pos).normalize();
+                    // Create normalized collision vector (reuse if possible)
+                    const dx = enemy.pos.x - this.player.pos.x;
+                    const dy = enemy.pos.y - this.player.pos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const normalizedX = dx / dist;
+                    const normalizedY = dy / dist;
 
-                    // Apply appropriate impulse to each ship
-                    this.player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
-                    enemy.vel.add(pushVector.copy().mult(enemyImpulseFactor));
+                    // Apply appropriate impulse to each ship without creating new vectors
+                    this.player.vel.x -= normalizedX * playerImpulseFactor;
+                    this.player.vel.y -= normalizedY * playerImpulseFactor;
+                    enemy.vel.x += normalizedX * enemyImpulseFactor;
+                    enemy.vel.y += normalizedY * enemyImpulseFactor;
                 }
             }
             
-            // Player vs Asteroids collision
-            for (let i = 0, len = this.asteroids.length; i < len; i++) {
+            // Player vs Asteroids collision - cache lengths
+            const asteroidCount = this.asteroids.length;
+            for (let i = 0; i < asteroidCount; i++) {
                 const asteroid = this.asteroids[i];
                 if (asteroid.isDestroyed()) continue;
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
-                    let collisionDamage = Math.floor(this.player.vel.mag());
+                    const collisionDamage = Math.floor(this.player.vel.mag());
                     console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, asteroid);
                     asteroid.takeDamage(20, this.player); // Fixed damage to asteroid
                     
                     // Apply physics push based on relative mass/size
-                    const playerMass = this.player.size * this.player.size;
-                    const asteroidMass = asteroid.size * asteroid.size;
+                    const playerSize = this.player.size;
+                    const asteroidSize = asteroid.size;
+                    const playerMass = playerSize * playerSize;
+                    const asteroidMass = asteroidSize * asteroidSize;
                     const totalMass = playerMass + asteroidMass;
 
                     // Calculate impulse factors
                     const playerImpulseFactor = 2 * (asteroidMass / totalMass);
                     const asteroidImpulseFactor = 2 * (playerMass / totalMass);
 
-                    // Create normalized collision vector
-                    let pushVector = p5.Vector.sub(asteroid.pos, this.player.pos).normalize();
+                    // Create normalized collision vector without extra allocations
+                    const dx = asteroid.pos.x - this.player.pos.x;
+                    const dy = asteroid.pos.y - this.player.pos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const normalizedX = dx / dist;
+                    const normalizedY = dy / dist;
 
-                    // Apply impulses
-                    this.player.vel.sub(pushVector.copy().mult(playerImpulseFactor));
-                    asteroid.vel.add(pushVector.copy().mult(asteroidImpulseFactor));
+                    // Apply impulses directly
+                    this.player.vel.x -= normalizedX * playerImpulseFactor;
+                    this.player.vel.y -= normalizedY * playerImpulseFactor;
+                    asteroid.vel.x += normalizedX * asteroidImpulseFactor;
+                    asteroid.vel.y += normalizedY * asteroidImpulseFactor;
                 }
             }
             
-            // Enemy vs Asteroid collisions (optional)
-            for (let i = 0, elen = this.enemies.length; i < elen; i++) {
+            // Enemy vs Asteroid collisions - optimized with cached lengths
+            for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
-                for (let j = 0, alen = this.asteroids.length; j < alen; j++) {
+                for (let j = 0; j < asteroidCount; j++) {
                     const asteroid = this.asteroids[j];
                     if (asteroid.isDestroyed()) continue;
                     if (enemy.checkCollision(asteroid)) {
@@ -1341,10 +1363,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         enemy.takeDamage(10);
                         asteroid.takeDamage(10);
                         
-                        // Apply physics push
-                        let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
-                        enemy.vel.sub(pushVector);
-                        asteroid.vel.add(pushVector.mult(0.5));
+                        // Apply physics push without creating vectors
+                        const dx = asteroid.pos.x - enemy.pos.x;
+                        const dy = asteroid.pos.y - enemy.pos.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const normalizedX = (dx / dist) * 2;
+                        const normalizedY = (dy / dist) * 2;
+                        
+                        enemy.vel.x -= normalizedX;
+                        enemy.vel.y -= normalizedY;
+                        asteroid.vel.x += normalizedX * 0.5;
+                        asteroid.vel.y += normalizedY * 0.5;
                     }
                 }
             }

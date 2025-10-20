@@ -722,9 +722,13 @@ handleInput() {
 
     /** Updates player position, physics, and state. */
     update() {
+        // Cache time values to avoid redundant calculations
+        const deltaSeconds = deltaTime / 1000;
+        const currentTime = millis();
+        
         // Barrier duration update
         if (this.isBarrierActive) {
-            this.barrierDurationTimer -= deltaTime / 1000;
+            this.barrierDurationTimer -= deltaSeconds;
             if (this.barrierDurationTimer <= 0) {
                 this.isBarrierActive = false;
                 this.barrierDurationTimer = 0;
@@ -739,7 +743,7 @@ handleInput() {
 
         // Update tangle effect timer
         if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
+            this.dragEffectTimer -= deltaSeconds;
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
@@ -752,7 +756,7 @@ handleInput() {
 
         // --- Speed Burst Thrust & State Management ---
         if (this.isSpeedBursting) {
-            if (millis() < this.speedBurstEnd) {
+            if (currentTime < this.speedBurstEnd) {
                 // Actively bursting: sustain with normal thrust application
                 this.thrust();
             } else {
@@ -835,9 +839,9 @@ handleInput() {
             this.vel.set(0,0); // Safety net for NaN velocity
         }
 
-        // Update cooldown timer
+        // Update cooldown timer using cached deltaSeconds
         if (this.fireCooldown > 0) {
-            this.fireCooldown -= deltaTime / 1000;
+            this.fireCooldown -= deltaSeconds;
         }
 
         // Either handle autopilot OR normal input, never both
@@ -846,7 +850,7 @@ handleInput() {
         }
 
         // Regenerate shields only after recharge delay has passed
-        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
+        const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
         if (this.shield < this.maxShield && timeSinceShieldHit > this.shieldRechargeDelay) {
             // Scale by deltaTime for consistent recharge rate
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1; // Normalize to ~60fps

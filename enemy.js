@@ -372,21 +372,25 @@ class Enemy {
         // Always update system reference when update is called
         this.currentSystem = system;
         
+        // Cache time values to avoid redundant calculations
+        const deltaSeconds = deltaTime / 1000;
+        const currentTime = millis();
+        
         // Update weapon cooldown
-        this.fireCooldown -= deltaTime / 1000;
+        this.fireCooldown -= deltaSeconds;
         
         // Cargo collection cooldown
         if (this.cargoCollectionCooldown > 0) {
-            this.cargoCollectionCooldown -= deltaTime / 1000;
+            this.cargoCollectionCooldown -= deltaSeconds;
         }
 
         // Process hauler attack cooldown
         if (this.attackCooldown > 0) {
-            this.attackCooldown -= deltaTime / 1000;
+            this.attackCooldown -= deltaSeconds;
         }
 
         // Regenerate shields only after recharge delay has passed
-        const timeSinceShieldHit = millis() - this.lastShieldHitTime;
+        const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
         if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
@@ -395,12 +399,12 @@ class Enemy {
 
         // Update barrier cooldown and duration
         if (this.barrierCooldown > 0) {
-            this.barrierCooldown -= deltaTime / 1000;
+            this.barrierCooldown -= deltaSeconds;
         }
         
         // Update barrier duration timer
         if (this.isBarrierActive && this.barrierDurationTimer > 0) {
-            this.barrierDurationTimer -= deltaTime / 1000;
+            this.barrierDurationTimer -= deltaSeconds;
             if (this.barrierDurationTimer <= 0) {
                 this.isBarrierActive = false;
                 this.barrierDamageReduction = 0;
@@ -412,7 +416,7 @@ class Enemy {
 
             // Update drag effect timer
         if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= deltaTime / 1000; // Convert to seconds
+            this.dragEffectTimer -= deltaSeconds;
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
