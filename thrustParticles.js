@@ -150,10 +150,9 @@ class ThrustManager {
     }
     
     draw() {
-        // Draw all active particles
-        const activeParticles = Array.from(this.particlePool.active);
-        for (let i = 0, len = activeParticles.length; i < len; i++) {
-            activeParticles[i].draw();
+        // Draw all active particles - iterate directly over Set
+        for (const particle of this.particlePool.active) {
+            particle.draw();
         }
     }
     

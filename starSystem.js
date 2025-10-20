@@ -196,6 +196,18 @@ class StarSystem {
     }
 
     /**
+     * Gets cached diagonal distance for spawn calculations
+     * @return {number} Cached diagonal distance from screen center
+     * @private
+     */
+    _getDiagonalDistance() {
+        if (!this._cachedDiagonalDist) {
+            this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
+        }
+        return this._cachedDiagonalDist;
+    }
+
+    /**
      * Checks if player is wanted in this system
      * @return {boolean} Whether player is wanted here
      */
@@ -739,11 +751,7 @@ try {
 
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
-        // Cache diagonal distance calculation
-        if (!this._cachedDiagonalDist) {
-            this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
-        }
-        let spawnDist = this._cachedDiagonalDist + random(150, 400);
+        let spawnDist = this._getDiagonalDistance() + random(150, 400);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {
@@ -839,12 +847,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         if (!this.player?.pos || this.asteroids.length >= this.maxTotalAsteroids) return;
         try {
             let angle = random(TWO_PI);
-            // Cache diagonal distance calculation
-            if (!this._cachedDiagonalDist) {
-                this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
-            }
-            let spawnDist = this._cachedDiagonalDist + random(200,500);
-            let spawnX = this.player.pos.x + cos(angle)*spawnDist; let spawnY = this.player.pos.y + sin(angle)*spawnDist;
+            let spawnDist = this._getDiagonalDistance() + random(200,500);
+            let spawnX = this.player.pos.x + cos(angle) * spawnDist;
+            let spawnY = this.player.pos.y + sin(angle) * spawnDist;
             let size = random(40, 90); // Use larger default size
             // Call the main addAsteroid method to respect maxTotalAsteroids and centralize creation
             this.addAsteroid(spawnX, spawnY, size);
