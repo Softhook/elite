@@ -2041,6 +2041,14 @@ _determinePostFleeState() {
 
         // --- Check if we've reached the cargo for collection ---
         if (distanceToCargo < collectionRadius) {
+            // Double-check cargo hasn't been collected already (race condition protection)
+            if (this.cargoTarget.collected) {
+                console.warn(`${this.shipTypeName} tried to collect already-collected cargo`);
+                this.cargoTarget = null;
+                this.cargoCollectionCooldown = 0.5;
+                return false;
+            }
+            
             // Collection logic
             this.cargoTarget.collected = true; // Mark world cargo as collected
 

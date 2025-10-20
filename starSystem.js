@@ -913,8 +913,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         let baseQuantity = floor(map(asteroid.size, 30, 350, 1, 15)); 
                         baseQuantity = max(1, baseQuantity);
 
-                        // Apply the mineral multiplier from the asteroid
-                        let quantity = baseQuantity * asteroid.getMineralMultiplier();
+                        // Apply the mineral multiplier from the asteroid (with safety check)
+                        const mineralMultiplier = (asteroid.getMineralMultiplier && typeof asteroid.getMineralMultiplier === 'function') 
+                            ? asteroid.getMineralMultiplier() 
+                            : 1.0;
+                        let quantity = baseQuantity * mineralMultiplier;
                         quantity = max(1, floor(quantity)); // Ensure at least 1 and integer
 
                         // Create cargo slightly offset to avoid instant pickup or overlap if multiple drop
@@ -974,12 +977,19 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // Improved cargo update and collection logic - place in StarSystem.update() method
             // Update cargo items and handle collection
             if (this.cargo && this.cargo.length > 0) {
-                // FIRST: Remove any already collected or expired cargo
-                this.cargo = this.cargo.filter(cargo => !cargo.collected && !cargo.isExpired());
+                // FIRST: Remove any already collected, expired, or invalid cargo
+                this.cargo = this.cargo.filter(cargo => {
+                    if (!cargo || !cargo.pos) return false; // Remove invalid cargo objects
+                    if (cargo.collected) return false;
+                    if (cargo.isExpired && cargo.isExpired()) return false;
+                    return true;
+                });
                 
                 // THEN: Update remaining cargo
                 for (let i = 0; i < this.cargo.length; i++) {
-                    this.cargo[i].update();
+                    if (this.cargo[i] && typeof this.cargo[i].update === 'function') {
+                        this.cargo[i].update();
+                    }
                 }
                 
                 // FINALLY: Check for player collection on valid cargo
@@ -1269,7 +1279,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             const enemyCount = this.enemies.length;
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
-                if (enemy.isDestroyed()) continue;
+                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
                 
                 // Skip collision detection for player's bodyguards
                 if (enemy.role === AI_ROLE.GUARD && enemy.principal === this.player) {
@@ -1317,7 +1327,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             const asteroidCount = this.asteroids.length;
             for (let i = 0; i < asteroidCount; i++) {
                 const asteroid = this.asteroids[i];
-                if (asteroid.isDestroyed()) continue;
+                if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
                     const collisionDamage = Math.floor(this.player.vel.mag());
@@ -1354,10 +1364,10 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // Enemy vs Asteroid collisions - optimized with cached lengths
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
-                if (enemy.isDestroyed()) continue;
+                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
                 for (let j = 0; j < asteroidCount; j++) {
                     const asteroid = this.asteroids[j];
-                    if (asteroid.isDestroyed()) continue;
+                    if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                     if (enemy.checkCollision(asteroid)) {
                         // Handle enemy-asteroid collision
                         enemy.takeDamage(10);
@@ -1392,6 +1402,12 @@ checkProjectileCollisions() {
     // Process projectiles using optimized collision detection
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
         const proj = this.projectiles[i];
+        if (!proj || !proj.pos) {
+            console.warn(`Invalid projectile at index ${i}, removing`);
+            this.removeProjectile(i);
+            continue;
+        }
+        
         const projPos = proj.pos;
         const projSize = proj.size || 3;
         let hit = false;
@@ -1538,19 +1554,24 @@ checkProjectileCollisions() {
      * Handles player collecting cargo in the system
      */
     handleCargoCollection() {
-        if (!this.player || !this.player.pos || !this.cargo || this.cargo.length === 0) return; // Added checks for player.pos and cargo array
+        if (!this.player || !this.player.pos || !this.cargo || this.cargo.length === 0) return;
 
         for (let i = this.cargo.length - 1; i >= 0; i--) {
             const cargoItem = this.cargo[i];
 
-            // Skip if already collected, somehow invalid, or expired
-            if (!cargoItem || cargoItem.collected || cargoItem.isExpired()) {
-                 // If expired but not collected, remove it here
-                 if (cargoItem && !cargoItem.collected && cargoItem.isExpired()) {
-                     console.log(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
-                     this.cargo.splice(i, 1);
-                 }
-                 continue;
+            // Skip if invalid, already collected, or expired
+            if (!cargoItem || !cargoItem.pos || !cargoItem.type) {
+                console.warn(`Invalid cargo item at index ${i}, removing`);
+                this.cargo.splice(i, 1);
+                continue;
+            }
+            
+            if (cargoItem.collected) continue;
+            
+            if (cargoItem.isExpired && cargoItem.isExpired()) {
+                console.log(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
+                this.cargo.splice(i, 1);
+                continue;
             }
 
             // --- Add Detailed Logging ---

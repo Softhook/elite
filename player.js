@@ -458,15 +458,23 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
             this.loadWeaponsFromShipDefinition(this.shipTypeName);
         }
         
-        if (index >= 0 && index < this.weapons.length) {
-            this.weaponIndex = index;
-            this.currentWeapon = this.weapons[this.weaponIndex];
-            this.fireRate = this.currentWeapon.fireRate || 0.5;
-            // Reset cooldown on weapon switch (optional)
-            this.fireCooldown = 0;
-            return true;
+        if (index < 0 || index >= this.weapons.length) {
+            console.warn(`switchToWeapon: index ${index} out of bounds (length: ${this.weapons.length})`);
+            return false;
         }
-        return false;
+        
+        const weapon = this.weapons[index];
+        if (!weapon) {
+            console.warn(`switchToWeapon: no weapon at index ${index}`);
+            return false;
+        }
+        
+        this.weaponIndex = index;
+        this.currentWeapon = weapon;
+        this.fireRate = weapon.fireRate || 0.5;
+        // Reset cooldown on weapon switch (optional)
+        this.fireCooldown = 0;
+        return true;
     }
 
     calculateRadianProperties() {
@@ -1239,7 +1247,15 @@ handleInput() {
     // --- Save/Load Functionality ---
     /** Save data for persistence */
     getSaveData() {
-        let normalizedAngle = (this.angle % TWO_PI + TWO_PI) % TWO_PI; if (isNaN(normalizedAngle)) normalizedAngle = 0;
+        // Normalize angle safely to prevent NaN or Infinity in save data
+        let normalizedAngle = this.angle;
+        if (isNaN(normalizedAngle) || !isFinite(normalizedAngle)) {
+            console.warn("Player angle is NaN or Infinity during save, resetting to 0");
+            normalizedAngle = 0;
+            this.angle = 0; // Fix the corrupt state
+        } else {
+            normalizedAngle = ((this.angle % TWO_PI) + TWO_PI) % TWO_PI;
+        }
 
         // --- Log Active Mission Status BEFORE Saving ---
         let missionDataToSave = null;
