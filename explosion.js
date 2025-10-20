@@ -219,7 +219,8 @@ class Explosion {
         }
         
         // Draw particles
-        for (const p of this.particles) {
+        for (let i = 0, len = this.particles.length; i < len; i++) {
+            const p = this.particles[i];
             fill(p.color[0], p.color[1], p.color[2], p.opacity);
             ellipse(p.pos.x, p.pos.y, p.size, p.size);
         }
@@ -228,7 +229,8 @@ class Explosion {
         blendMode(BLEND);
         
         // Draw debris
-        for (const d of this.debris) {
+        for (let i = 0, len = this.debris.length; i < len; i++) {
+            const d = this.debris[i];
             push();
             translate(d.pos.x, d.pos.y);
             rotate(d.rotation % TWO_PI); // Normalize rotation angle
@@ -237,7 +239,8 @@ class Explosion {
             strokeWeight(1);
             
             beginShape();
-            for (const v of d.vertices) {
+            for (let j = 0, vlen = d.vertices.length; j < vlen; j++) {
+                const v = d.vertices[j];
                 vertex(v.x, v.y);
             }
             endShape(CLOSE);

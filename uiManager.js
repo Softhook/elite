@@ -170,7 +170,8 @@ class UIManager {
             bottom: player.pos.y + screenCenterY
         };
 
-        for (const indicator of this.battleIndicators) {
+        for (let i = 0, len = this.battleIndicators.length; i < len; i++) {
+            const indicator = this.battleIndicators[i];
             // Check if the indicator's world position is off-screen
             const isOffScreen = (
                 indicator.x < viewRect.left ||
@@ -383,9 +384,11 @@ class UIManager {
         textSize(20);
         let xPos = 10;
         
-        player.weapons.forEach((weapon, index) => {
+        const weaponIdx = player.weaponIndex;
+        for (let index = 0, len = player.weapons.length; index < len; index++) {
+            const weapon = player.weapons[index];
             // Calculate width for this weapon slot
-            const isSelected = (index === player.weaponIndex);
+            const isSelected = (index === weaponIdx);
             const slotPadding = 10;
             const slotText = `${index+1}: ${weapon.name}`;
             const textW = textWidth(slotText);
@@ -502,13 +505,14 @@ class UIManager {
             factionOption,
             { text: "Undock", action: "UNDOCK" }
         ];
-        menuOpts.forEach((opt, i) => {
+        for (let i = 0, len = menuOpts.length; i < len; i++) {
+            const opt = menuOpts[i];
             let btnY=btnSY+i*btnSp;
             let area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50,50,90], [150,150,200]);
             if(opt.state) area.state=opt.state;
             if(opt.action) area.action=opt.action;
             this.stationMenuButtonAreas.push(area);
-        });
+        }
         pop();
     } // --- End drawStationMainMenu ---
 
@@ -665,8 +669,10 @@ class UIManager {
         const maxDeviation = 0.5; // Max price deviation (e.g., 50%) for full bar height
 
         // Draw commodity rows
-        (commodities || []).forEach((comm, i) => {
-            if (!comm) return;
+        const commoditiesLen = commodities ? commodities.length : 0;
+        for (let i = 0; i < commoditiesLen; i++) {
+            const comm = commodities[i];
+            if (!comm) continue;
             let yP = sY+i*rowH;
             let tY = yP+rowH/2;
 
@@ -1090,8 +1096,9 @@ if (isIllegalInSystem || isMissionCargo) {
 
         // --- Draw System Nodes ---
         const nodeR = 15; // Radius for clickable area and drawing
-        systems.forEach((sysData, i) => {
-            if (!sysData) return;
+        for (let i = 0, len = systems.length; i < len; i++) {
+            const sysData = systems[i];
+            if (!sysData) continue;
 
             let isCurrent = (i === currentIdx);
             let isSelected = (i === this.selectedSystemIndex);
@@ -1413,8 +1420,10 @@ if (isIllegalInSystem || isMissionCargo) {
             // --- Map and Draw Planets ---
             fill(150, 100, 50); // Brownish for planets
             noStroke();
-            (system.planets || []).forEach(planet => {
-                if (!planet?.pos) return;
+            const planets = system.planets || [];
+            for (let i = 0, len = planets.length; i < len; i++) {
+                const planet = planets[i];
+                if (!planet?.pos) continue;
                 let objX = planet.pos.x;
                 let objY = planet.pos.y;
                 let relX = objX - player.pos.x;
@@ -1425,14 +1434,16 @@ if (isIllegalInSystem || isMissionCargo) {
                 if (isFullyWithinBounds(mapX, mapY, iconRadius, iconRadius)) {
                     ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2);
                 }
-            });
+            }
             // ---
 
             // --- Map and Draw Enemies ---
             fill(255, 0, 0); // Red for enemies
             noStroke();
-            (system.enemies || []).forEach(enemy => {
-                if (!enemy?.pos || enemy.isDestroyed()) return;
+            const enemies = system.enemies || [];
+            for (let i = 0, len = enemies.length; i < len; i++) {
+                const enemy = enemies[i];
+                if (!enemy?.pos || enemy.isDestroyed()) continue;
                 let objX = enemy.pos.x;
                 let objY = enemy.pos.y;
                 let relX = objX - player.pos.x;
@@ -1447,7 +1458,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8);
                     pop();
                 }
-            });
+            }
             // ---
 
             // --- Map and Draw Jump Zone ---

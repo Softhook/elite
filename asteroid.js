@@ -82,7 +82,8 @@ class Asteroid {
 
         // Draw an irregular shape using pre-generated vertices
         beginShape();
-        for (const v of this.vertices) {
+        for (let i = 0, len = this.vertices.length; i < len; i++) {
+            const v = this.vertices[i];
             vertex(v.x, v.y);
         }
         endShape(CLOSE);

@@ -150,7 +150,8 @@ class EventManager {
             return;
         }
 
-        for (const event of this.events) {
+        for (let i = 0, len = this.events.length; i < len; i++) {
+            const event = this.events[i];
             if (event.isWarningActive) {
                 if (frameCount >= event.eventTriggerFrame) {
                     this.executeConfiguredEvent(event.type);

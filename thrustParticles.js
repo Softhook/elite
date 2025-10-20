@@ -137,7 +137,8 @@ class ThrustManager {
         // Use a temporary array since we'll be modifying while iterating
         const activeParticles = Array.from(this.particlePool.active);
         
-        for (const particle of activeParticles) {
+        for (let i = 0, len = activeParticles.length; i < len; i++) {
+            const particle = activeParticles[i];
             particle.update();
             
             // Return dead particles to the pool
@@ -149,7 +150,7 @@ class ThrustManager {
     }
     
     draw() {
-        // Draw all active particles
+        // Draw all active particles - iterate directly over Set
         for (const particle of this.particlePool.active) {
             particle.draw();
         }
