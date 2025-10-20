@@ -1715,6 +1715,16 @@ handleInput() {
     // ======================================
 
     /**
+     * Helper method to check if a bodyguard has been spawned
+     * @param {Object} guard - The bodyguard object to check
+     * @returns {boolean} True if the bodyguard has been spawned
+     * @private
+     */
+    _isBodyguardSpawned(guard) {
+        return guard.hull !== null && guard.maxHull !== null;
+    }
+
+    /**
      * Returns count of active (alive) bodyguards
      * @returns {number} Number of active bodyguards
      */
@@ -1741,7 +1751,7 @@ handleInput() {
 
         // Find damaged bodyguards (only those that have been spawned and have hull values)
         const damagedGuards = this.activeBodyguards.filter(guard => 
-            guard.hull !== null && guard.maxHull !== null && guard.hull < guard.maxHull
+            this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull
         );
         
         // Calculate total repair cost (7 credits per hull point, same as player repairs)
@@ -1916,7 +1926,7 @@ handleInput() {
         // Repair all damaged bodyguards (only those that have been spawned)
         let repairedCount = 0;
         this.activeBodyguards.forEach(guard => {
-            if (guard.hull !== null && guard.maxHull !== null && guard.hull < guard.maxHull) {
+            if (this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull) {
                 guard.hull = guard.maxHull;
                 // Also repair the actual enemy if it's spawned
                 if (guard.enemyRef && !guard.enemyRef.destroyed) {
