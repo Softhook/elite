@@ -74,10 +74,14 @@ class CosmicStorm {
         }
         this.pos.add(this.velocity);
         this.velocity.rotate(random(-0.1, 0.1));
-        for (let particle of this.particles) {
+        const posX = this.pos.x;
+        const posY = this.pos.y;
+        for (let i = 0, len = this.particles.length; i < len; i++) {
+            const particle = this.particles[i];
             particle.angle += particle.rotationSpeed;
-            particle.pos.x = this.pos.x + cos(particle.angle) * (particle.distFromCenter * particle.spiralFactor);
-            particle.pos.y = this.pos.y + sin(particle.angle) * (particle.distFromCenter * particle.spiralFactor);
+            const distSpiral = particle.distFromCenter * particle.spiralFactor;
+            particle.pos.x = posX + cos(particle.angle) * distSpiral;
+            particle.pos.y = posY + sin(particle.angle) * distSpiral;
             if (random() < 0.01) {
                 particle.spiralFactor = constrain(
                     particle.spiralFactor + random(-0.05, 0.05),
@@ -184,30 +188,35 @@ class CosmicStorm {
     }
 
     drawParticles() {
-        for (let particle of this.particles) {
-            noStroke();
-            fill(
-                this.color[0],
-                this.color[1],
-                this.color[2],
-                particle.opacity * this.intensity
-            );
+        const color0 = this.color[0];
+        const color1 = this.color[1];
+        const color2 = this.color[2];
+        const intensity = this.intensity;
+        noStroke();
+        for (let i = 0, len = this.particles.length; i < len; i++) {
+            const particle = this.particles[i];
+            fill(color0, color1, color2, particle.opacity * intensity);
             ellipse(particle.pos.x, particle.pos.y, particle.size);
         }
     }
 
     drawLightning() {
         if (this.lightningBolts.length === 0) return;
-        for (let bolt of this.lightningBolts) {
+        const color0 = this.color[0];
+        const color1 = this.color[1];
+        const color2 = this.color[2];
+        for (let i = 0, len = this.lightningBolts.length; i < len; i++) {
+            const bolt = this.lightningBolts[i];
+            const boltLen = bolt.length - 1;
             stroke(255, 255, 255, 200);
             strokeWeight(3);
-            for (let i = 0; i < bolt.length - 1; i++) {
-                line(bolt[i].x, bolt[i].y, bolt[i+1].x, bolt[i+1].y);
+            for (let j = 0; j < boltLen; j++) {
+                line(bolt[j].x, bolt[j].y, bolt[j+1].x, bolt[j+1].y);
             }
-            stroke(this.color[0], this.color[1], this.color[2], 100);
+            stroke(color0, color1, color2, 100);
             strokeWeight(6);
-            for (let i = 0; i < bolt.length - 1; i++) {
-                line(bolt[i].x, bolt[i].y, bolt[i+1].x, bolt[i+1].y);
+            for (let j = 0; j < boltLen; j++) {
+                line(bolt[j].x, bolt[j].y, bolt[j+1].x, bolt[j+1].y);
             }
         }
     }

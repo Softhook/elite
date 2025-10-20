@@ -57,17 +57,26 @@ class Nebula {
     
     update() {
         // Update nebula particles
-        for (let particle of this.particles) {
+        const posX = this.pos.x;
+        const posY = this.pos.y;
+        const maxDist = this.radius * 0.9;
+        for (let i = 0, len = this.particles.length; i < len; i++) {
+            const particle = this.particles[i];
             // Move particles slowly
             particle.pos.add(particle.velocity);
             
             // Keep particles within nebula bounds
-            const distFromCenter = p5.Vector.dist(this.pos, particle.pos);
-            if (distFromCenter > this.radius * 0.9) {
+            const dx = particle.pos.x - posX;
+            const dy = particle.pos.y - posY;
+            const distFromCenterSq = dx * dx + dy * dy;
+            const maxDistSq = maxDist * maxDist;
+            if (distFromCenterSq > maxDistSq) {
                 // Push back toward center
-                const toCenter = p5.Vector.sub(this.pos, particle.pos);
-                toCenter.normalize().mult(0.5);
-                particle.velocity.add(toCenter);
+                const distFromCenter = Math.sqrt(distFromCenterSq);
+                const toCenterX = (posX - particle.pos.x) / distFromCenter * 0.5;
+                const toCenterY = (posY - particle.pos.y) / distFromCenter * 0.5;
+                particle.velocity.x += toCenterX;
+                particle.velocity.y += toCenterY;
             }
             
             // Slowly rotate particles
