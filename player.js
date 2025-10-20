@@ -1739,8 +1739,10 @@ handleInput() {
         // Filter out destroyed bodyguards first
         this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
 
-        // Find damaged bodyguards
-        const damagedGuards = this.activeBodyguards.filter(guard => guard.hull < guard.maxHull);
+        // Find damaged bodyguards (only those that have been spawned and have hull values)
+        const damagedGuards = this.activeBodyguards.filter(guard => 
+            guard.hull !== null && guard.maxHull !== null && guard.hull < guard.maxHull
+        );
         
         // Calculate total repair cost (7 credits per hull point, same as player repairs)
         let totalCost = 0;
@@ -1911,10 +1913,10 @@ handleInput() {
         // Filter out destroyed bodyguards
         this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
 
-        // Repair all damaged bodyguards
+        // Repair all damaged bodyguards (only those that have been spawned)
         let repairedCount = 0;
         this.activeBodyguards.forEach(guard => {
-            if (guard.hull < guard.maxHull) {
+            if (guard.hull !== null && guard.maxHull !== null && guard.hull < guard.maxHull) {
                 guard.hull = guard.maxHull;
                 // Also repair the actual enemy if it's spawned
                 if (guard.enemyRef && !guard.enemyRef.destroyed) {
