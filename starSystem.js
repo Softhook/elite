@@ -499,9 +499,13 @@ try {
 
         // Only draw if player is relatively close
         const maxDrawDist = this.jumpZoneRadius * JUMP_ZONE_DRAW_RANGE_FACTOR;
-        const distToPlayer = dist(playerPos.x, playerPos.y, this.jumpZoneCenter.x, this.jumpZoneCenter.y);
+        const maxDrawDistSq = maxDrawDist * maxDrawDist;
+        const dx = playerPos.x - this.jumpZoneCenter.x;
+        const dy = playerPos.y - this.jumpZoneCenter.y;
+        const distToPlayerSq = dx * dx + dy * dy;
 
-        if (distToPlayer < maxDrawDist) {
+        if (distToPlayerSq < maxDrawDistSq) {
+            const distToPlayer = Math.sqrt(distToPlayerSq);
             push();
             // Style for the jump zone marker
             noFill();
@@ -1073,7 +1077,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
 
             // Update nebulae
-            for (let nebula of this.nebulae) {
+            for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
+                const nebula = this.nebulae[i];
                 nebula.update();
                 
                 // Apply effects to player
@@ -1082,8 +1087,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 // Apply effects to enemies
-                for (let enemy of this.enemies) {
-                    nebula.applyEffects(enemy);
+                for (let j = 0, elen = this.enemies.length; j < elen; j++) {
+                    nebula.applyEffects(this.enemies[j]);
                 }
             }
 
@@ -1242,7 +1247,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
             
             // Player vs Enemies
-            for (let enemy of this.enemies) {
+            for (let i = 0, len = this.enemies.length; i < len; i++) {
+                const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
                 
                 // Skip collision detection for player's bodyguards
@@ -1278,7 +1284,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
             
             // Player vs Asteroids collision
-            for (let asteroid of this.asteroids) {
+            for (let i = 0, len = this.asteroids.length; i < len; i++) {
+                const asteroid = this.asteroids[i];
                 if (asteroid.isDestroyed()) continue;
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
@@ -1306,9 +1313,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
             
             // Enemy vs Asteroid collisions (optional)
-            for (let enemy of this.enemies) {
+            for (let i = 0, elen = this.enemies.length; i < elen; i++) {
+                const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
-                for (let asteroid of this.asteroids) {
+                for (let j = 0, alen = this.asteroids.length; j < alen; j++) {
+                    const asteroid = this.asteroids[j];
                     if (asteroid.isDestroyed()) continue;
                     if (enemy.checkCollision(asteroid)) {
                         // Handle enemy-asteroid collision
@@ -1499,7 +1508,9 @@ checkProjectileCollisions() {
             }
 
             // --- Add Detailed Logging ---
-            const distance = dist(this.player.pos.x, this.player.pos.y, cargoItem.pos.x, cargoItem.pos.y);
+            const dx = this.player.pos.x - cargoItem.pos.x;
+            const dy = this.player.pos.y - cargoItem.pos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
             const collisionThreshold = (this.player.size / 2 + cargoItem.size * 2);
             const isColliding = cargoItem.checkCollision(this.player); // Use the cargo's collision check
 

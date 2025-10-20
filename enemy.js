@@ -582,13 +582,18 @@ updateTargeting(system) {
     
     // Evaluate other enemies (no debug)
     const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN); // <<< MODIFIED
-    if (canTargetOtherEnemies && system.enemies) {
-        for (const otherEnemy of system.enemies) {
-            if (otherEnemy === this || otherEnemy === bestTarget || !this.isTargetValid(otherEnemy)) {
+    if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
+        const isAlien = this.role === AI_ROLE.ALIEN;
+        for (let i = 0, len = system.enemies.length; i < len; i++) {
+            const otherEnemy = system.enemies[i];
+            if (otherEnemy === this || otherEnemy === bestTarget) {
                 continue;
             }
             // For Aliens, ensure they don't target other Aliens
-            if (this.role === AI_ROLE.ALIEN && otherEnemy.role === AI_ROLE.ALIEN) {
+            if (isAlien && otherEnemy.role === AI_ROLE.ALIEN) {
+                continue;
+            }
+            if (!this.isTargetValid(otherEnemy)) {
                 continue;
             }
             const enemyScore = this.evaluateTargetScore(otherEnemy, system);
@@ -600,8 +605,9 @@ updateTargeting(system) {
     }
 
     // Evaluate cargo (no debug)
-    if (this.role === AI_ROLE.PIRATE && system.cargo) {
-        for (const cargoItem of system.cargo) {
+    if (this.role === AI_ROLE.PIRATE && system.cargo && system.cargo.length > 0) {
+        for (let i = 0, len = system.cargo.length; i < len; i++) {
+            const cargoItem = system.cargo[i];
             if (!cargoItem.collected && cargoItem !== bestTarget) {
                 const cargoScore = this.evaluateTargetScore(cargoItem, system);
                 if (cargoScore > bestScore) {
