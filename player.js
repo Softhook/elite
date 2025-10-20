@@ -856,27 +856,6 @@ handleInput() {
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
-
-        // Clean up destroyed bodyguards from the active array (run periodically, not every frame)
-        if (!this.bodyguardCleanupTimer) this.bodyguardCleanupTimer = 0;
-        this.bodyguardCleanupTimer += deltaTime / 1000;
-        
-        if (this.bodyguardCleanupTimer >= 2.0 && Array.isArray(this.activeBodyguards)) { // Every 2 seconds
-            this.bodyguardCleanupTimer = 0;
-            const initialCount = this.activeBodyguards.length;
-            this.activeBodyguards = this.activeBodyguards.filter(guard => {
-                if (!guard) return false;
-                // Keep hired guards (not yet spawned)
-                if (guard.hired === true) return true;
-                // Keep spawned guards that are not destroyed
-                return !guard.destroyed;
-            });
-            // Only log if guards were actually removed
-            if (initialCount > this.activeBodyguards.length) {
-                const removedCount = initialCount - this.activeBodyguards.length;
-                console.log(`Removed ${removedCount} destroyed bodyguard(s) from player's active list`);
-            }
-        }
     }
 
     /** Draws the player ship using its specific draw function. */
@@ -1309,13 +1288,7 @@ handleInput() {
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
-            weapons: weaponsData,
-            // --- Save bodyguards (only the hired ones, not spawned enemies) ---
-            activeBodyguards: Array.isArray(this.activeBodyguards) 
-                ? this.activeBodyguards
-                    .filter(guard => guard && guard.hired === true)
-                    .map(guard => ({ shipType: guard.shipType, hired: true }))
-                : []
+            weapons: weaponsData
             // -----------------------------------------
         };
     }
@@ -1424,17 +1397,6 @@ handleInput() {
              }
         } else {
              console.log("   No active mission found in save data.");
-        }
-        // ----------------------------------
-
-        // --- Load active bodyguards ---
-        if (Array.isArray(data.activeBodyguards)) {
-            this.activeBodyguards = data.activeBodyguards
-                .filter(guard => guard && guard.hired === true)
-                .map(guard => ({ shipType: guard.shipType, hired: true }));
-            console.log(`Loaded ${this.activeBodyguards.length} bodyguards from save data.`);
-        } else {
-            this.activeBodyguards = [];
         }
         // ----------------------------------
 
@@ -1795,130 +1757,6 @@ handleInput() {
         }
         
         return true;
-    }
-
-    /**
-     * Gets the count of active (non-destroyed) bodyguards
-     * @returns {number} Number of active bodyguards
-     */
-    getActiveGuardsCount() {
-        if (!Array.isArray(this.activeBodyguards)) {
-            return 0;
-        }
-        // Count bodyguards that are either hired (not yet spawned) or spawned and not destroyed
-        return this.activeBodyguards.filter(guard => {
-            if (!guard) return false;
-            // If it's a hired guard (not spawned yet), count it
-            if (guard.hired === true) return true;
-            // If it's a spawned enemy object, count only if not destroyed
-            return !guard.destroyed;
-        }).length;
-    }
-
-    /**
-     * Hires a bodyguard of the specified ship type
-     * @param {string} shipType - The ship type to hire (e.g., "Viper", "GladiusFighter")
-     * @param {number} cost - The cost to hire the bodyguard
-     * @returns {boolean} True if hiring was successful, false otherwise
-     */
-    hireBodyguard(shipType, cost) {
-        // Check if player can afford
-        if (this.credits < cost) {
-            console.warn(`hireBodyguard: Insufficient credits. Need ${cost}, have ${this.credits}`);
-            return false;
-        }
-        
-        // Check if player has space for more bodyguards
-        const activeCount = this.getActiveGuardsCount();
-        if (activeCount >= this.bodyguardLimit) {
-            console.warn(`hireBodyguard: Already at bodyguard limit (${this.bodyguardLimit})`);
-            return false;
-        }
-        
-        // Deduct credits
-        if (!this.spendCredits(cost)) {
-            return false;
-        }
-        
-        // Store bodyguard info to be spawned when entering a system
-        // We store it as a simple object with the ship type
-        this.activeBodyguards.push({ shipType: shipType, hired: true });
-        
-        console.log(`Hired ${shipType} bodyguard for ${cost} credits. Active guards: ${this.getActiveGuardsCount()}/${this.bodyguardLimit}`);
-        return true;
-    }
-
-    /**
-     * Dismisses all bodyguards
-     */
-    dismissBodyguards() {
-        if (!Array.isArray(this.activeBodyguards)) {
-            this.activeBodyguards = [];
-            return;
-        }
-        
-        // Remove all bodyguards from current system if they exist
-        if (this.currentSystem && this.currentSystem.enemies) {
-            for (const guard of this.activeBodyguards) {
-                if (guard && guard.destroyed === false) {
-                    // Mark the guard as destroyed so it gets removed from the system
-                    guard.destroyed = true;
-                }
-            }
-        }
-        
-        // Clear the array
-        this.activeBodyguards = [];
-        console.log("All bodyguards dismissed.");
-    }
-
-    /**
-     * Spawns bodyguards in the given star system
-     * @param {StarSystem} system - The star system to spawn bodyguards in
-     */
-    spawnBodyguards(system) {
-        if (!system || !Array.isArray(this.activeBodyguards)) {
-            return;
-        }
-        
-        // Filter to get only hired bodyguards (not already spawned enemy objects)
-        const hiredGuards = this.activeBodyguards.filter(guard => guard && guard.hired === true);
-        
-        if (hiredGuards.length === 0) {
-            return;
-        }
-        
-        console.log(`Spawning ${hiredGuards.length} bodyguards in ${system.name}`);
-        
-        // Clear the array and rebuild it with actual enemy objects
-        this.activeBodyguards = [];
-        
-        // Spawn each bodyguard near the player
-        for (let i = 0; i < hiredGuards.length; i++) {
-            const guardInfo = hiredGuards[i];
-            const shipType = guardInfo.shipType || "Viper"; // Default to Viper if no type specified
-            
-            // Position bodyguards in a formation around the player
-            const offsetAngle = (TWO_PI / hiredGuards.length) * i;
-            const spawnDist = this.size + 60; // Spawn a bit away from player
-            const guardX = this.pos.x + cos(offsetAngle) * spawnDist;
-            const guardY = this.pos.y + sin(offsetAngle) * spawnDist;
-            
-            // Create the guard NPC
-            const guardNPC = new Enemy(guardX, guardY, this, shipType, AI_ROLE.GUARD);
-            guardNPC.calculateRadianProperties();
-            guardNPC.initializeColors();
-            guardNPC.principal = this; // Player is the principal
-            guardNPC.changeState(AI_STATE.GUARDING, { principal: this });
-            
-            // Add to system
-            system.addEnemy(guardNPC);
-            
-            // Add to player's active bodyguards array (now as enemy object)
-            this.activeBodyguards.push(guardNPC);
-            
-            console.log(`Spawned ${guardNPC.shipTypeName} bodyguard for player`);
-        }
     }
 
 } // End of Player Class
