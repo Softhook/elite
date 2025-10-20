@@ -1,8 +1,5 @@
 // ****** player.js ******
 
-// Repair cost per hull point for ships and bodyguards
-const REPAIR_COST_PER_HULL = 10;
-
 class Player {
     /**
      * Creates a Player instance. Stores speeds/rates
@@ -1708,55 +1705,6 @@ handleInput() {
             
             console.log("Player's police status revoked, marked as former officer");
         }
-    }
-
-    /**
-     * Gets information about damaged bodyguards for repair UI
-     * @returns {Object} Object with count and totalCost properties
-     */
-    getDamagedBodyguardsInfo() {
-        let count = 0;
-        let totalCost = 0;
-        
-        if (Array.isArray(this.activeBodyguards)) {
-            for (const bodyguard of this.activeBodyguards) {
-                if (bodyguard && !bodyguard.destroyed && bodyguard.hull < bodyguard.maxHull) {
-                    count++;
-                    const missingHull = bodyguard.maxHull - bodyguard.hull;
-                    totalCost += Math.floor(missingHull * REPAIR_COST_PER_HULL);
-                }
-            }
-        }
-        
-        return { count, totalCost };
-    }
-
-    /**
-     * Repairs all damaged bodyguards
-     * @param {number} cost - The cost to deduct from player credits
-     * @returns {boolean} True if repair was successful, false otherwise
-     */
-    repairBodyguards(cost) {
-        // Validate that the cost matches actual repair cost
-        const actualInfo = this.getDamagedBodyguardsInfo();
-        if (cost !== actualInfo.totalCost) {
-            console.warn(`repairBodyguards: Cost mismatch. Expected ${actualInfo.totalCost}, got ${cost}`);
-            return false;
-        }
-        
-        if (!this.spendCredits(cost)) {
-            return false;
-        }
-        
-        if (Array.isArray(this.activeBodyguards)) {
-            for (const bodyguard of this.activeBodyguards) {
-                if (bodyguard && !bodyguard.destroyed && bodyguard.hull < bodyguard.maxHull) {
-                    bodyguard.hull = bodyguard.maxHull;
-                }
-            }
-        }
-        
-        return true;
     }
 
 } // End of Player Class
