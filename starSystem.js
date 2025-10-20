@@ -1263,14 +1263,24 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
             
-            // Player vs Enemies
-            for (let enemy of this.enemies) {
+            // Player vs Enemies - with early distance check
+            for (let i = 0; i < this.enemies.length; i++) {
+                const enemy = this.enemies[i];
                 if (enemy.isDestroyed()) continue;
                 
                 // Skip collision detection for player's bodyguards
                 if (enemy.role === AI_ROLE.GUARD && enemy.principal === this.player) {
                     continue; // This prevents collisions between player and their bodyguards
                 }
+                
+                // Quick distance check before expensive collision detection
+                const dx = this.player.pos.x - enemy.pos.x;
+                const dy = this.player.pos.y - enemy.pos.y;
+                const maxDist = this.player.size + enemy.size;
+                const maxDistSq = maxDist * maxDist;
+                
+                // Skip if too far apart
+                if (dx * dx + dy * dy > maxDistSq) continue;
                 
                 if (this.player.checkCollision(enemy)) {
                     // Handle ship-to-ship collision
@@ -1299,9 +1309,20 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
             
-            // Player vs Asteroids collision
-            for (let asteroid of this.asteroids) {
+            // Player vs Asteroids collision - with early distance check
+            for (let i = 0; i < this.asteroids.length; i++) {
+                const asteroid = this.asteroids[i];
                 if (asteroid.isDestroyed()) continue;
+                
+                // Quick distance check before expensive collision detection
+                const dx = this.player.pos.x - asteroid.pos.x;
+                const dy = this.player.pos.y - asteroid.pos.y;
+                const maxDist = this.player.size + asteroid.size;
+                const maxDistSq = maxDist * maxDist;
+                
+                // Skip if too far apart
+                if (dx * dx + dy * dy > maxDistSq) continue;
+                
                 if (this.player.checkCollision(asteroid)) {
                     // Handle player-asteroid collision
                     let collisionDamage = Math.floor(this.player.vel.mag());
@@ -1327,20 +1348,38 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
             
-            // Enemy vs Asteroid collisions (optional)
-            for (let enemy of this.enemies) {
-                if (enemy.isDestroyed()) continue;
-                for (let asteroid of this.asteroids) {
-                    if (asteroid.isDestroyed()) continue;
-                    if (enemy.checkCollision(asteroid)) {
-                        // Handle enemy-asteroid collision
-                        enemy.takeDamage(10);
-                        asteroid.takeDamage(10);
+            // Enemy vs Asteroid collisions (optional) - with optimization to reduce checks
+            // Only check if there are both enemies and asteroids
+            if (this.enemies.length > 0 && this.asteroids.length > 0) {
+                for (let i = 0; i < this.enemies.length; i++) {
+                    const enemy = this.enemies[i];
+                    if (enemy.isDestroyed()) continue;
+                    
+                    // Simple spatial optimization: only check nearby asteroids
+                    // Most asteroids will be far away from this enemy
+                    for (let j = 0; j < this.asteroids.length; j++) {
+                        const asteroid = this.asteroids[j];
+                        if (asteroid.isDestroyed()) continue;
                         
-                        // Apply physics push
-                        let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
-                        enemy.vel.sub(pushVector);
-                        asteroid.vel.add(pushVector.mult(0.5));
+                        // Quick distance check before expensive collision detection
+                        const dx = enemy.pos.x - asteroid.pos.x;
+                        const dy = enemy.pos.y - asteroid.pos.y;
+                        const maxDist = enemy.size + asteroid.size;
+                        const maxDistSq = maxDist * maxDist;
+                        
+                        // Skip if too far apart (avoids sqrt calculation)
+                        if (dx * dx + dy * dy > maxDistSq) continue;
+                        
+                        if (enemy.checkCollision(asteroid)) {
+                            // Handle enemy-asteroid collision
+                            enemy.takeDamage(10);
+                            asteroid.takeDamage(10);
+                            
+                            // Apply physics push
+                            let pushVector = p5.Vector.sub(asteroid.pos, enemy.pos).normalize().mult(2);
+                            enemy.vel.sub(pushVector);
+                            asteroid.vel.add(pushVector.mult(0.5));
+                        }
                     }
                 }
             }
