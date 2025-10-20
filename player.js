@@ -1711,6 +1711,128 @@ handleInput() {
     }
 
     // ======================================
+    // Faction Management Methods
+    // ======================================
+
+    /**
+     * Checks if the player can join a specific faction
+     * @param {string} factionName - The faction to check ("IMPERIAL", "SEPARATIST", "MILITARY")
+     * @returns {boolean} True if the player can join the faction
+     */
+    canJoinFaction(factionName) {
+        // Can't join if already in a faction
+        if (this.playerFaction) {
+            return false;
+        }
+        
+        // Can't join if wanted (should be checked by UI, but double-check here)
+        if (this.currentSystem && this.currentSystem.isPlayerWanted && this.currentSystem.isPlayerWanted()) {
+            return false;
+        }
+        
+        // Valid faction names
+        const validFactions = ["IMPERIAL", "SEPARATIST", "MILITARY"];
+        return validFactions.includes(factionName);
+    }
+
+    /**
+     * Gets the cheapest ship for a given faction
+     * @param {string} factionName - The faction to get a ship for
+     * @returns {string|null} The ship type name or null if no ships found
+     * @private
+     */
+    _getCheapestFactionShip(factionName) {
+        // Define faction-specific ships with their prices
+        const factionShips = {
+            "IMPERIAL": [
+                { name: "ImperialCourier", price: 50000 },
+                { name: "ImperialEagleMkII", price: 58000 },
+                { name: "ImperialLancer", price: 62000 }
+            ],
+            "SEPARATIST": [
+                { name: "SeparatistPartisan", price: 28000 },
+                { name: "SeparatistLiberator", price: 52000 },
+                { name: "SeparatistOutlander", price: 70000 }
+            ],
+            "MILITARY": [
+                { name: "Vulture", price: 40000 },
+                { name: "Viper", price: 60000 },
+                { name: "FederalAssaultShip", price: 90000 }
+            ]
+        };
+
+        const ships = factionShips[factionName];
+        if (!ships || ships.length === 0) {
+            return null;
+        }
+
+        // Sort by price and return the cheapest
+        ships.sort((a, b) => a.price - b.price);
+        return ships[0].name;
+    }
+
+    /**
+     * Joins a faction and receives a faction ship
+     * @param {string} factionName - The faction to join ("IMPERIAL", "SEPARATIST", "MILITARY")
+     * @returns {boolean} True if successfully joined, false otherwise
+     */
+    joinFaction(factionName) {
+        // Validate if can join
+        if (!this.canJoinFaction(factionName)) {
+            console.log(`Cannot join faction: ${factionName}`);
+            return false;
+        }
+
+        // Get the cheapest ship for this faction
+        const shipType = this._getCheapestFactionShip(factionName);
+        if (!shipType) {
+            console.error(`No ships available for faction: ${factionName}`);
+            return false;
+        }
+
+        // Verify the ship exists in SHIP_DEFINITIONS
+        if (typeof SHIP_DEFINITIONS === 'undefined' || !SHIP_DEFINITIONS[shipType]) {
+            console.error(`Ship definition not found for: ${shipType}`);
+            return false;
+        }
+
+        // Save current cargo before switching ships
+        const savedCargo = [...this.cargo];
+
+        // Switch to the faction ship
+        this.changeShip(shipType);
+
+        // Restore cargo (up to new capacity)
+        this.cargo = savedCargo.slice(0, this.cargoCapacity);
+
+        // Set faction status
+        this.playerFaction = factionName;
+        this.hasJoinedFaction = true;
+        this.factionShip = shipType;
+
+        console.log(`Player joined ${factionName} faction and received ${shipType}`);
+        return true;
+    }
+
+    /**
+     * Leaves the current faction
+     * @returns {boolean} True if successfully left faction, false otherwise
+     */
+    leaveFaction() {
+        if (!this.playerFaction) {
+            console.log("Not currently in any faction");
+            return false;
+        }
+
+        const oldFaction = this.playerFaction;
+        this.playerFaction = null;
+        this.factionShip = null;
+
+        console.log(`Player left ${oldFaction} faction`);
+        return true;
+    }
+
+    // ======================================
     // Bodyguard Management Methods
     // ======================================
 
