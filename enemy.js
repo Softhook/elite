@@ -278,11 +278,6 @@ class Enemy {
         this.cargoTarget = null;
         this.cargoDetectionRange = 500; // How far ships can see cargo
         this.cargoCollectionCooldown = 0;
-        
-        // Targeting optimization - throttle target updates to reduce CPU load
-        this.targetingUpdateInterval = 0.15 + Math.random() * 0.1; // 150-250ms, randomized to spread load
-        this.lastTargetingUpdate = -this.targetingUpdateInterval; // Force first update
-        this.needsTargetingUpdate = true;
         this.previousState = null; // For returning to original state after collecting
 
         // Add thrust vector initialization
@@ -534,16 +529,6 @@ class Enemy {
  * @return {boolean} Whether a valid target was found
  */
 updateTargeting(system) {
-    // Throttle targeting updates to reduce CPU load - skip if not enough time has passed
-    const currentTime = millis() / 1000; // Convert to seconds
-    if (currentTime - this.lastTargetingUpdate < this.targetingUpdateInterval && !this.needsTargetingUpdate) {
-        // Just validate current target without searching for new ones
-        return this.isTargetValid(this.target);
-    }
-    
-    // Mark that we've updated and reset forced update flag
-    this.lastTargetingUpdate = currentTime;
-    this.needsTargetingUpdate = false;
 
 
     // --- BOUNTY HUNTER: Always target player ---
@@ -3106,8 +3091,7 @@ _handleAttackerReference(attacker, amount) {
                 //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
             }
             
-            // Force immediate targeting update when attacked
-            this.needsTargetingUpdate = true;
+            // Update targeting immediately for all attackers
             const targetResult = this.updateTargeting(system);
         }
     }
