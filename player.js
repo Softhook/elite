@@ -1800,7 +1800,7 @@ handleInput() {
         const savedCargo = [...this.cargo];
 
         // Switch to the faction ship
-        this.changeShip(shipType);
+        this.applyShipDefinition(shipType);
 
         // Restore cargo (up to new capacity)
         this.cargo = savedCargo.slice(0, this.cargoCapacity);
