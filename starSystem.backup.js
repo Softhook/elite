@@ -874,79 +874,78 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         return asteroid;
 }
 
-    /** 
-     * Updates all system entities.
-     * OPTIMIZED: Uses fast array removal and reduces object allocations.
-     */
+    /** Updates all system entities. */
     update() {
         if (!this.player || !this.player.pos) return;
         try {
-            // Calculate screen bounds for visibility checks - reuse pre-allocated object
+            // Calculate screen bounds for visibility checks (used by asteroids and planets)
+            // Reuse pre-allocated screenBounds object to avoid object creation
             const tx = width / 2 - this.player.pos.x;
             const ty = height / 2 - this.player.pos.y;
-            const bounds = this.screenBounds;
-            bounds.left = -tx - 100;
-            bounds.right = -tx + width + 100;
-            bounds.top = -ty - 100;
-            bounds.bottom = -ty + height + 100;
+            this.screenBounds.left = -tx - 100;
+            this.screenBounds.right = -tx + width + 100;
+            this.screenBounds.top = -ty - 100;
+            this.screenBounds.bottom = -ty + height + 100;
 
-            // Update Enemies - OPTIMIZED with fast removal
+            // Update Enemies
             for (let i = this.enemies.length - 1; i >= 0; i--) {
-                const enemy = this.enemies[i];
-                if (!enemy) {
-                    this._fastRemove(this.enemies, i);
-                    continue;
+                const enemy = this.enemies[i]; if (!enemy) { this.enemies.splice(i, 1); continue; }
+                try{ enemy.update(this); } catch(e){ console.error("Err updating Enemy:",e,enemy); }
+                
+                if (enemy.isDestroyed()) {
+                    this.enemies.splice(i, 1); continue;
                 }
-                
-                try { enemy.update(this); } catch(e) { console.error("Err updating Enemy:",e); }
-                
-                if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
-                    this._fastRemove(this.enemies, i);
+
+                if (this.shouldDespawnEntity(enemy, 1.1)) {
+                    this.enemies.splice(i, 1);
+                    continue;
                 }
             }
 
-            // Update Asteroids - OPTIMIZED with fast removal
+            // --- Update Asteroids & Handle Destruction/Despawn ---
             for (let i = this.asteroids.length - 1; i >= 0; i--) {
-                const asteroid = this.asteroids[i];
-                if (!asteroid) {
-                    this._fastRemove(this.asteroids, i);
-                    continue;
-                }
+                const asteroid = this.asteroids[i]; if (!asteroid) { this.asteroids.splice(i, 1); continue; }
                 
-                try { asteroid.update(); } catch(e) { console.error("Err updating Asteroid:",e); }
+                // Update all asteroids regardless of visibility
+                try{ asteroid.update(); } catch(e){ console.error("Err updating Asteroid:",e,asteroid); }
 
                 if (asteroid.isDestroyed()) {
-                    // Spawn Mineral Cargo on Asteroid Destruction
-                    if (random() < 0.85) {
-                        const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
-                        const mineralMultiplier = (asteroid.getMineralMultiplier && 
-                                                  typeof asteroid.getMineralMultiplier === 'function') 
+                    // --- Spawn Mineral Cargo on Asteroid Destruction ---
+                    if (random() < 0.85) { // 85% chance to drop minerals
+                        const mineralType = "Minerals";
+                        // Base quantity maps from new size range (30-350) to a base drop (1-15)
+                        let baseQuantity = floor(map(asteroid.size, 30, 350, 1, 15)); 
+                        baseQuantity = max(1, baseQuantity);
+
+                        // Apply the mineral multiplier from the asteroid (with safety check)
+                        const mineralMultiplier = (asteroid.getMineralMultiplier && typeof asteroid.getMineralMultiplier === 'function') 
                             ? asteroid.getMineralMultiplier() 
                             : 1.0;
-                        const quantity = max(1, floor(baseQuantity * mineralMultiplier));
+                        let quantity = baseQuantity * mineralMultiplier;
+                        quantity = max(1, floor(quantity)); // Ensure at least 1 and integer
 
+                        // Create cargo slightly offset to avoid instant pickup or overlap if multiple drop
                         const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
                         const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
 
-                        const cargoDrop = new Cargo(
-                            asteroid.pos.x + offsetX, 
-                            asteroid.pos.y + offsetY, 
-                            "Minerals", 
-                            quantity
-                        );
-                        this.addCargo(cargoDrop);
+                        const cargoDrop = new Cargo(asteroid.pos.x + offsetX, asteroid.pos.y + offsetY, mineralType, quantity);
+                        this.addCargo(cargoDrop); // Use the existing addCargo method
                         
-                        if (STAR_SYSTEM_DEBUG) {
-                            console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
+                        let logMessage = `Asteroid (size ${floor(asteroid.size)}) destroyed, dropped ${quantity}t of ${mineralType}.`;
+                        if (asteroid.isRich) {
+                            logMessage += ` (Rich asteroid x${asteroid.getMineralMultiplier()} bonus!)`;
                         }
+                        if (STAR_SYSTEM_DEBUG) console.log(logMessage);
                     }
+                    // --- End Mineral Cargo Spawn ---
 
-                    this._fastRemove(this.asteroids, i);
-                    continue;
+                    this.asteroids.splice(i, 1); 
+                    continue; 
                 }
 
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
-                    this._fastRemove(this.asteroids, i);
+                    this.asteroids.splice(i, 1);
+                    continue;
                 }
             }
 
@@ -979,13 +978,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
             // --- End Projectile Loop ---
 
-            // Update cargo - OPTIMIZED with fast removal
+            // Improved cargo update and collection logic - place in StarSystem.update() method
+            // Update cargo items and handle collection
             if (this.cargo && this.cargo.length > 0) {
-                // Clean up invalid/expired cargo
+                // In-place cleanup to avoid per-frame array reallocation
                 for (let i = this.cargo.length - 1; i >= 0; i--) {
                     const cargo = this.cargo[i];
                     if (!cargo || !cargo.pos || cargo.collected || (cargo.isExpired && cargo.isExpired())) {
-                        this._fastRemove(this.cargo, i);
+                        // Fast remove: swap with last then pop
+                        const lastIdx = this.cargo.length - 1;
+                        if (i !== lastIdx) this.cargo[i] = this.cargo[lastIdx];
+                        this.cargo.pop();
                     }
                 }
                 // Update remaining cargo
@@ -993,7 +996,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const c = this.cargo[i];
                     if (c && typeof c.update === 'function') c.update();
                 }
-                // Check for player collection
+                // Check for player collection on valid cargo
                 this.handleCargoCollection();
             }
 
@@ -1079,19 +1082,26 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 
                 // Remove wave if it reaches max size and all entities processed
                 if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
-                    this._fastRemove(this.forceWaves, i);
+                    this.forceWaves.splice(i, 1);
                 }
             }
 
-            // Update explosions - OPTIMIZED with pooling and fast removal
+            // Update explosions with optimized removal
             for (let i = this.explosions.length - 1; i >= 0; i--) {
                 const exp = this.explosions[i];
                 exp.update();
                 if (exp.isDone()) {
+                    // Return to pool if WeaponSystem is available
                     if (typeof WeaponSystem !== 'undefined' && WeaponSystem.releaseExplosion) {
                         WeaponSystem.releaseExplosion(exp);
                     }
-                    this._fastRemove(this.explosions, i);
+                    
+                    // Fast removal - swap with last element then pop
+                    const lastIndex = this.explosions.length - 1;
+                    if (i !== lastIndex) {
+                        this.explosions[i] = this.explosions[lastIndex]; 
+                    }
+                    this.explosions.pop();
                 }
             }
 
@@ -1118,7 +1128,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 
                 // Remove the storm if it has dissipated
                 if (!keepStorm) {
-                    this._fastRemove(this.cosmicStorms, i);
+                    this.cosmicStorms.splice(i, 1);
                     continue; // Skip the rest of this iteration
                 }
                 
@@ -1175,7 +1185,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             let beam = this.beams[i];
             beam.update && beam.update();
             if (beam.lifespan !== undefined && beam.lifespan <= 0) {
-                this._fastRemove(this.beams, i);
+                this.beams.splice(i, 1);
             }
         }
     }
@@ -1191,7 +1201,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             let wave = this.forceWaves[i];
             wave.update && wave.update();
             if (wave.lifespan !== undefined && wave.lifespan <= 0) {
-                this._fastRemove(this.forceWaves, i);
+                this.forceWaves.splice(i, 1);
             }
         }
     }
@@ -1384,15 +1394,10 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         }
     } // End checkCollisions
 
-/** 
- * Specifically handles projectile collisions with targets.
- * OPTIMIZED: Uses squared distance checks and reusable vectors.
- */
+/** Specifically handles projectile collisions with targets. */
 checkProjectileCollisions() {
-    // Lazy init of reusable vector to avoid object creation in the loop
+    // Pre-allocate reusable distance vectors to avoid object creation in the loop
     if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
-    
-    const distCheckVector = this._distCheckVector;
     
     // Process projectiles using optimized collision detection
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -1406,6 +1411,10 @@ checkProjectileCollisions() {
         const projPos = proj.pos;
         const projSize = proj.size || 3;
         let hit = false;
+        
+        // Fast collision pre-check using distance squared (no sqrt calculation)
+        // Only do full collision check if object is potentially within range
+        const distCheckVector = this._distCheckVector;
         
         // Check against asteroids using broadphase filtering
         for (let j = this.asteroids.length - 1; j >= 0; j--) {
@@ -1561,7 +1570,7 @@ checkProjectileCollisions() {
             // Skip if invalid, already collected, or expired
             if (!cargoItem || !cargoItem.pos || !cargoItem.type) {
                 console.warn(`Invalid cargo item at index ${i}, removing`);
-                this._fastRemove(this.cargo, i);
+                this.cargo.splice(i, 1);
                 continue;
             }
             
@@ -1569,7 +1578,7 @@ checkProjectileCollisions() {
             
             if (cargoItem.isExpired && cargoItem.isExpired()) {
                 console.log(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
-                this._fastRemove(this.cargo, i);
+                this.cargo.splice(i, 1);
                 continue;
             }
 
@@ -1609,7 +1618,7 @@ checkProjectileCollisions() {
                         // Only mark as fully collected if the entire quantity was added
                         cargoItem.collected = true;
                         // Since it's fully collected, we can remove it immediately
-                        this._fastRemove(this.cargo, i);
+                        this.cargo.splice(i, 1);
                         //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
                     }
                 } else {
@@ -2385,36 +2394,20 @@ checkProjectileCollisions() {
         
         return distToPlayerSq > despawnDistanceSq;
     }
-    
     /**
-     * Fast array element removal - swap with last element then pop.
-     * Much faster than splice() for large arrays (O(1) vs O(n)).
-     * @param {Array} array - The array to remove from
-     * @param {number} index - The index to remove
-     * @private
-     */
-    _fastRemove(array, index) {
-        const lastIndex = array.length - 1;
-        if (index !== lastIndex) {
-            array[index] = array[lastIndex];
-        }
-        array.pop();
+ * Adds an enemy to the system with proper references
+ * @param {Enemy} enemy - The enemy to add
+ * @returns {boolean} Whether enemy was successfully added
+ */
+addEnemy(enemy) {
+    if (enemy) {
+        // Set bidirectional reference
+        enemy.currentSystem = this;
+        window.currentSystem = this;
+        this.enemies.push(enemy);
+        return true;
     }
-    
-    /**
-     * Adds an enemy to the system with proper references
-     * @param {Enemy} enemy - The enemy to add
-     * @returns {boolean} Whether enemy was successfully added
-     */
-    addEnemy(enemy) {
-        if (enemy) {
-            // Set bidirectional reference
-            enemy.currentSystem = this;
-            window.currentSystem = this;
-            this.enemies.push(enemy);
-            return true;
-        }
-        return false;
-    }
+    return false;
+}
 
 } // End of StarSystem class
