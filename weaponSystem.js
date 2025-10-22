@@ -58,13 +58,17 @@ static fireForce(owner, system) {
     
     console.log(`Force weapon fired by ${owner.constructor.name}`); // Debug output
     
+    // Cache owner position in local variables for faster access
+    const ownerX = owner.pos.x;
+    const ownerY = owner.pos.y;
+    
     // Initialize static force wave position vector if not exists
     if (!this._forceWavePos) {
         this._forceWavePos = createVector(0, 0);
     }
     
     // Reuse vector instead of creating a new one
-    this._forceWavePos.set(owner.pos.x, owner.pos.y);
+    this._forceWavePos.set(ownerX, ownerY);
     
     // Get owner's current weapon for properties
     const weapon = owner.currentWeapon;
@@ -73,14 +77,16 @@ static fireForce(owner, system) {
     const maxRadius = weapon?.maxRadius || 1000; // INCREASED from 750 to 1000
     
     // Pre-populate enemies to process - THIS IS THE KEY FIX
-    let entitiesToProcess = [];
+    let entitiesToProcess;
     if (owner === system.player) {
-        // Player attacking enemies
-        entitiesToProcess = [...system.enemies, ...system.asteroids];
+        // Player attacking enemies - use concat to avoid spread operator overhead
+        entitiesToProcess = system.enemies.concat(system.asteroids);
         console.log(`Found ${entitiesToProcess.length} potential targets for force wave`);
     } else if (system.player) {
         // Enemy attacking player
         entitiesToProcess = [system.player];
+    } else {
+        entitiesToProcess = [];
     }
     
     // Create force wave in the system (reuse objects to minimize allocation)
@@ -103,21 +109,22 @@ static fireForce(owner, system) {
     console.log(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
     
     // Store reference for drawing effects (reusing owner's lastForceWave if possible)
+    const currentTime = millis();
     if (!owner.lastForceWave) {
         owner.lastForceWave = {
-            pos: createVector(this._forceWavePos.x, this._forceWavePos.y),
-            time: millis(),
+            pos: createVector(ownerX, ownerY),
+            time: currentTime,
             color: color
         };
     } else {
-        owner.lastForceWave.pos.set(this._forceWavePos.x, this._forceWavePos.y);
-        owner.lastForceWave.time = millis();
+        owner.lastForceWave.pos.set(ownerX, ownerY);
+        owner.lastForceWave.time = currentTime;
         owner.lastForceWave.color = color;
     }
 
     // Play force blast sound
     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('force', owner.pos.x, owner.pos.y, player.pos);
+        soundManager.playWorldSound('force', ownerX, ownerY, player.pos);
     }
 }
 
@@ -292,39 +299,41 @@ static fireForce(owner, system) {
     static fireStraight(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system || !owner.currentWeapon) return;
  
-        // Initialize perpendicular direction vector if not exists
-        if (!this._perpDir) {
-            this._perpDir = createVector(0, 0);
-        }
-        
         // Offset projectiles perpendicular to angle
         const spacing = 12; // pixels between projectiles
-        const mid = (count - 1) / 2;
+        const mid = (count - 1) * 0.5; // Use multiplication instead of division
         const perpAngle = angle + HALF_PI;
         
-        // Set the vector direction without creating a new one
-        this._perpDir.set(cos(perpAngle), sin(perpAngle));
+        // Calculate perpendicular direction directly (faster than creating/setting vector)
+        const perpDirX = cos(perpAngle);
+        const perpDirY = sin(perpAngle);
         
         const weapon = owner.currentWeapon;
         const speed = weapon.speed || 8; // Use defined speed with fallback
+        const damage = weapon.damage;
+        const color = weapon.color;
+        
+        // Cache owner position for faster access
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
         
         for (let i = 0; i < count; i++) {
-            let offset = (i - mid) * spacing;
+            const offset = (i - mid) * spacing;
             // Calculate the position with minimal vector allocations
-            let x = owner.pos.x + this._perpDir.x * offset;
-            let y = owner.pos.y + this._perpDir.y * offset;
+            const x = ownerX + perpDirX * offset;
+            const y = ownerY + perpDirY * offset;
             
             // FIXED: Create projectile at the correct offset position
             let proj;
             if (this.projectilePool) {
                 proj = this.projectilePool.get(
                     x, y, angle, owner,
-                    speed, weapon.damage, weapon.color
+                    speed, damage, color
                 );
             } else {
                 proj = new Projectile(
                     x, y, angle, owner,
-                    speed, weapon.damage, weapon.color
+                    speed, damage, color
                 );
             }
             
@@ -335,7 +344,7 @@ static fireForce(owner, system) {
         
         // Play sound once for all projectiles
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
+            soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
         }
     }
 
@@ -447,26 +456,31 @@ static fireForce(owner, system) {
 
         const evaluateTarget = (target, radius) => {
             if (!target || !target.pos) return;
-            if (typeof target.isDestroyed === 'function' && target.isDestroyed()) return;
             if (radius <= 0) return;
+            if (typeof target.isDestroyed === 'function' && target.isDestroyed()) return;
 
             const relX = target.pos.x - startX;
             const relY = target.pos.y - startY;
             const projLength = relX * dirX + relY * dirY;
 
-            if (projLength <= 0 || projLength > minDist || projLength > beamLength) return;
+            if (projLength <= 0 || projLength > minDist) return;
 
             const radialSq = relX * relX + relY * relY - projLength * projLength;
-            if (radialSq <= radius * radius) {
+            const radiusSq = radius * radius;
+            
+            if (radialSq <= radiusSq) {
                 minDist = projLength;
                 hitTarget = target;
                 hitPoint.set(startX + dirX * projLength, startY + dirY * projLength);
             }
         };
 
-        if (owner instanceof Player && system?.enemies?.length) {
+        const isPlayer = owner instanceof Player;
+        const isEnemy = owner instanceof Enemy;
+        
+        if (isPlayer && system?.enemies?.length) {
             const enemies = system.enemies;
-            for (let i = 0; i < enemies.length; i++) {
+            for (let i = 0, len = enemies.length; i < len; i++) {
                 const enemy = enemies[i];
                 if (enemy === owner) continue;
                 evaluateTarget(enemy, (enemy?.size || 0) * 0.5);
@@ -475,21 +489,21 @@ static fireForce(owner, system) {
 
         if (system?.asteroids?.length) {
             const asteroids = system.asteroids;
-            for (let i = 0; i < asteroids.length; i++) {
+            for (let i = 0, len = asteroids.length; i < len; i++) {
                 const asteroid = asteroids[i];
                 const radius = asteroid?.maxRadius !== undefined ? asteroid.maxRadius : (asteroid?.size || 0) * 0.5;
                 evaluateTarget(asteroid, radius);
             }
         }
 
-        if (owner instanceof Enemy) {
+        if (isEnemy) {
             if (system?.player) {
                 evaluateTarget(system.player, (system.player.size || 0) * 0.5);
             }
 
             if (system?.enemies?.length) {
                 const enemies = system.enemies;
-                for (let i = 0; i < enemies.length; i++) {
+                for (let i = 0, len = enemies.length; i < len; i++) {
                     const enemy = enemies[i];
                     if (enemy === owner) continue;
                     evaluateTarget(enemy, (enemy?.size || 0) * 0.5);
@@ -515,17 +529,27 @@ static fireForce(owner, system) {
         if (!owner || !system) return null;
         
         // Find nearest enemy if player is firing
-        if (owner instanceof Player && system.enemies?.length > 0) {
-            let nearestEnemy = null;
-            let closestDist = Infinity;
+        if (owner instanceof Player) {
+            const enemies = system.enemies;
+            if (!enemies || enemies.length === 0) return null;
             
-            for (const enemy of system.enemies) {
+            let nearestEnemy = null;
+            let closestDistSq = Infinity;
+            const ownerX = owner.pos.x;
+            const ownerY = owner.pos.y;
+            
+            // Use squared distance to avoid sqrt
+            for (let i = 0, len = enemies.length; i < len; i++) {
+                const enemy = enemies[i];
                 if (!enemy?.pos) continue;
                 
-                const dist = p5.Vector.dist(owner.pos, enemy.pos);
-                if (dist < closestDist) {
+                const dx = enemy.pos.x - ownerX;
+                const dy = enemy.pos.y - ownerY;
+                const distSq = dx * dx + dy * dy;
+                
+                if (distSq < closestDistSq) {
                     nearestEnemy = enemy;
-                    closestDist = dist;
+                    closestDistSq = distSq;
                 }
             }
             
@@ -610,10 +634,10 @@ static fireTangle(owner, system, angle) {
             return;
         }
         
-        // Calculate angle to target
+        // Calculate angle to target - use atan2 directly (Math. is faster than p5)
         const dx = target.pos.x - owner.pos.x;
         const dy = target.pos.y - owner.pos.y;
-        const angleToTarget = Math.atan2(dy, dx);
+        const angleToTarget = atan2(dy, dx);
         
         // Fire the projectile at the calculated angle
         this.fireProjectile(owner, system, angleToTarget);
