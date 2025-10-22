@@ -65,13 +65,8 @@ static fireForce(owner, system) {
     const ownerX = owner.pos.x;
     const ownerY = owner.pos.y;
     
-    // Initialize static force wave position vector if not exists
-    if (!this._forceWavePos) {
-        this._forceWavePos = createVector(0, 0);
-    }
-    
-    // Reuse vector instead of creating a new one
-    this._forceWavePos.set(ownerX, ownerY);
+    // Each force wave needs its own position vector (can't share reference!)
+    const wavePos = createVector(ownerX, ownerY);
     
     // Get owner's current weapon for properties
     const weapon = owner.currentWeapon;
@@ -95,7 +90,7 @@ static fireForce(owner, system) {
     
     // Create force wave in the system (reuse objects to minimize allocation)
     system.forceWaves.push({
-        pos: this._forceWavePos,
+        pos: wavePos,
         owner: owner,
         startTime: currentTime,
         radius: 50,
@@ -211,7 +206,7 @@ static fireForce(owner, system) {
         if (this.projectilePool) {
             proj = this.projectilePool.get(
                 ownerX, ownerY, angle, owner,
-                speed, weapon.damage, weapon.color
+                speed, weapon.damage, weapon.color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
         
@@ -220,10 +215,8 @@ static fireForce(owner, system) {
                 ownerX, ownerY, angle, owner,
                 speed, weapon.damage, weapon.color
             );
+            proj.system = system;
         }
-            
-        // Add reference to system for proper cleanup
-        proj.system = system;
         system.addProjectile(proj);
         
         // Play laser sound using playWorldSound
@@ -251,21 +244,20 @@ static fireForce(owner, system) {
         const turnRate = weapon.turnRate || 0.05; // Missile's turn rate
 
         if (this.projectilePool) {
-            // Pass all necessary parameters including target, lifespan, turnRate, and missileSpeed
+            // Pass all necessary parameters including target, lifespan, turnRate, missileSpeed, and system
             proj = this.projectilePool.get(
                 ownerX, ownerY, angle, owner,
-                speed, damage, color, weaponType, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+                speed, damage, color, weaponType, target, lifespan, turnRate, speed, 5.0, 10.0, 0.1, system
             );
         }
 
         if (!proj) {
             proj = new Projectile(
                 ownerX, ownerY, angle, owner,
-                speed, damage, color, weaponType, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+                speed, damage, color, weaponType, target, lifespan, turnRate, speed
             );
+            proj.system = system;
         }
-
-        proj.system = system;
         system.addProjectile(proj);
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
@@ -337,17 +329,15 @@ static fireForce(owner, system) {
             if (this.projectilePool) {
                 proj = this.projectilePool.get(
                     x, y, angle, owner,
-                    speed, damage, color
+                    speed, damage, color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
                 );
             } else {
                 proj = new Projectile(
                     x, y, angle, owner,
                     speed, damage, color
                 );
+                proj.system = system;
             }
-            
-            // Add reference to system for proper cleanup
-            proj.system = system;
             system.addProjectile(proj);
         }
         
@@ -607,7 +597,7 @@ static fireTangle(owner, system, angle) {
             speed, weapon.damage, weapon.color, 
             "tangle", null, 60, 0, 0, 
             tangleDuration, dragMultiplier,
-            rotationBlockMultiplier
+            rotationBlockMultiplier, system
         );
     } else {
         proj = new Projectile(
@@ -617,13 +607,11 @@ static fireTangle(owner, system, angle) {
             tangleDuration, dragMultiplier,
             rotationBlockMultiplier
         );
+        proj.system = system;
     }
     
     // Make projectile bigger
     proj.size = weapon.projectileSize || 7;
-    
-    // Add reference to system for proper cleanup
-    proj.system = system;
     system.addProjectile(proj);
     
     // Play tangle sound

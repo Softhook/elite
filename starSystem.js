@@ -1440,7 +1440,7 @@ checkProjectileCollisions() {
                 );
                 
                 // Apply Tangle effect if it's a tangle projectile
-                if (proj.type === "tangle" && typeof this.player.applyDragEffect === 'function') {
+                if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
                     this.player.applyDragEffect(
                         proj.tangleDuration || 5.0, 
                         proj.dragMultiplier || 10.0,
@@ -1454,7 +1454,7 @@ checkProjectileCollisions() {
                 }
                 
                 // Create explosion effect for missile hits
-                if (proj.type === "missile") {
+                if (proj._isMissile) {
                     const explosionColor = Array.isArray(proj.color) ? proj.color : 
                         (proj.color && proj.color.levels) ? [proj.color.levels[0], proj.color.levels[1], proj.color.levels[2]] :
                         [255, 150, 0];
@@ -1487,7 +1487,7 @@ checkProjectileCollisions() {
                     );
                     
                     // Apply Tangle effect if it's a tangle projectile
-                    if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
+                    if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                         enemy.applyDragEffect(
                             proj.tangleDuration || 5.0, 
                             proj.dragMultiplier || 10.0,
@@ -1523,7 +1523,7 @@ checkProjectileCollisions() {
                     );
                     
                     // Apply Tangle effect if it's a tangle projectile
-                    if (proj.type === "tangle" && typeof enemy.applyDragEffect === 'function') {
+                    if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                         enemy.applyDragEffect(
                             (proj.tangleDuration || 5.0), 
                             (proj.dragMultiplier || 10.0),

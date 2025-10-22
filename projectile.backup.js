@@ -54,7 +54,7 @@ class Projectile {
     reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
      type = "projectile", target = null, lifespan = 90, turnRate = 0, 
      missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
-     rotationBlockMultiplier = 0.1, system = null) {
+     rotationBlockMultiplier = 0.1) {
         // Validate position inputs (early return on invalid)
         if (isNaN(x) || isNaN(y)) {
             console.warn(`Invalid projectile position: x=${x}, y=${y}`);
@@ -69,7 +69,6 @@ class Projectile {
         // Set basic properties
         this.pos.set(x, y);
         this.owner = owner;
-        this.system = system; // Set system reference for isOffScreen() and cleanup
         this.target = target;
         this.turnRate = turnRate;
         this.missileSpeed = missileSpeed || speed;
@@ -135,7 +134,6 @@ class Projectile {
         }
         
         // Update cached type checks AFTER type is finalized
-        // Note: External code should use these cached flags instead of comparing this.type
         this._isMissile = (this.type === "missile");
         this._isTangle = (this.type === "tangle");
         
@@ -205,28 +203,18 @@ class Projectile {
             strokeWeight(1.5);
             noFill();
         
-            // Draw tethers/tendrils (optimized - reduced random calls)
+            // Draw tethers/tendrils (optimized calculations)
             const frameOffset = frameCount * 0.1;
             const piOver4 = PI / 4;
-            // Cache random jitter values (only 4 instead of 64 per frame)
-            const jitter1 = random(-1, 1);
-            const jitter2 = random(-1, 1);
-            const jitter3 = random(-1, 1);
-            const jitter4 = random(-1, 1);
-            
             for (let i = 0; i < 8; i++) {
                 const angle = (frameOffset + i * piOver4) % TWO_PI;
                 beginShape();
                 for (let j = 0; j < 4; j++) {
                     const t = j / 3;
                     const radius = this.size * (0.5 + t * 1.3);
-                    const jitterScale = this.size * t * 0.3;
-                    // Reuse cached jitter values rotated by tendril
-                    const jitterOffset = (i % 4);
-                    const jitterX = (jitterOffset === 0 ? jitter1 : jitterOffset === 1 ? jitter2 : jitterOffset === 2 ? jitter3 : jitter4);
-                    const jitterY = (jitterOffset === 1 ? jitter1 : jitterOffset === 2 ? jitter2 : jitterOffset === 3 ? jitter3 : jitter4);
-                    const x = cos(angle + j * 0.2) * radius + jitterX * jitterScale;
-                    const y = sin(angle + j * 0.2) * radius + jitterY * jitterScale;
+                    const jitter = this.size * t * 0.3;
+                    const x = cos(angle + j * 0.2) * radius + random(-jitter, jitter);
+                    const y = sin(angle + j * 0.2) * radius + random(-jitter, jitter);
                     vertex(x, y);
                 }
                 endShape();
@@ -257,9 +245,6 @@ class Projectile {
     }
     
     isOffScreen() {
-        // Safety check for uninitialized dimensions
-        if (!width || !height) return false;
-        
         // Avoid vector allocation in fallback case
         const playerPos = this.system?.player?.pos;
         const playerX = playerPos ? playerPos.x : 0;
