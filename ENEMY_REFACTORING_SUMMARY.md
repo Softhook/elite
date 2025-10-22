@@ -1,7 +1,7 @@
 # Enemy Class Refactoring Summary
 
 ## Overview
-Completed incremental refactoring of the Enemy class as requested: "take this one stage at a time" since "it is complicated."
+Completed incremental refactoring of the Enemy class in 6 stages as requested: "take this one stage at a time" since "it is complicated."
 
 ## Results
 
@@ -11,20 +11,23 @@ Completed incremental refactoring of the Enemy class as requested: "take this on
 - **Lines:** 3,481
 - **Structure:** Monolithic class with all logic embedded
 
-### After Refactoring (4 Stages)
-- **Main file:** `enemy.js` - 107KB (2,407 lines)
+### After Refactoring (6 Stages)
+- **Main file:** `enemy.js` - 81KB (1,814 lines)
 - **Constants:** `enemyConstants.js` - 5KB (108 lines)
 - **Utilities:** `enemyUtils.js` - 7KB (192 lines)
 - **Targeting:** `enemyTargeting.js` - 17KB (355 lines)
 - **State Machine:** `enemyStateMachine.js` - 28KB (613 lines)
-- **Total:** 164KB (3,675 lines) - *slightly larger due to additional class wrappers*
+- **Movement:** `enemyMovement.js` - 12KB (266 lines)
+- **Combat:** `enemyCombat.js` - 16KB (373 lines)
+- **Total:** 166KB (3,721 lines) - *slightly larger due to additional class wrappers*
 
 ### Improvements
-- **31% reduction** in main enemy.js file size (158KB → 107KB)
+- **48% reduction** in main enemy.js file size (158KB → 81KB)
 - **Better organization** - related code grouped logically
 - **Single responsibility** - each module has a clear purpose
 - **Easier maintenance** - smaller, focused files
 - **No functionality changes** - pure refactoring
+- **Security validated** - CodeQL analysis passed with 0 alerts
 
 ## Stage Details
 
@@ -111,6 +114,70 @@ Extracted comprehensive AI state machine:
 
 **Impact:** Reduced enemy.js from 131KB → 107KB (24KB reduction)
 
+### Stage 5: Movement & Physics (12KB)
+**File:** `enemyMovement.js`
+
+Extracted movement and physics methods:
+- **performRotationAndThrust()** - Rotation and thrust logic
+  - State-specific thrust multipliers
+  - Collision avoidance during attack passes
+  - Braking zones for approach state
+  - Fleeing thrust adjustments
+  - Sniping position maintenance
+  
+- **getMovementTargetForState()** - Target position calculation
+  - Predicts target positions for approach
+  - Manages attack pass trajectories
+  - Handles patrol and repositioning targets
+  - Sniping standoff distance management
+  
+- **updatePhysics()** - Centralized physics updates
+  - Tangle weapon effects with safety bounds
+  - Station proximity braking
+  - Velocity limits and validation
+  - Thrust particle updates
+
+**Impact:** Reduced enemy.js from 107KB → 96KB (11KB reduction)
+
+### Stage 6: Combat & Weapons (16KB)
+**File:** `enemyCombat.js`
+
+Extracted combat and weapon methods:
+- **selectOptimalWeapon()** - Advanced weapon selection
+  - Range-based scoring (long, medium, short, very close)
+  - Force weapon logic for close combat
+  - Tangle weapon effectiveness vs. target speed
+  - Beam, missile, turret, and spread weapon logic
+  - Target-specific considerations
+  
+- **selectBestWeapon()** - Weapon switching
+  - Finds optimal weapon index
+  - Updates fire rate and cooldowns
+  - Logging for debugging
+  
+- **isWeaponReady()** - Cooldown checking
+- **canFireAtTarget()** - Angle-based firing validation
+- **performFiring()** - Main firing orchestration
+  - Weapon range adjustments by type
+  - Debug logging for player targeting
+  - Cooldown management
+  
+- **fire()** - Projectile creation
+  - Hauler combat state validation
+  - Spawn position calculation
+  
+- **fireWeapon()** - Weapon system integration
+  - Barrier activation logic
+  - Stationary target handling
+  - Missile validation
+  - EMP nebula checks
+  
+- **cycleWeapon()** - Weapon cycling
+- **isArmed()** - Weapon availability check
+- **isInCombatState()** - Combat state verification
+
+**Impact:** Reduced enemy.js from 96KB → 81KB (15KB reduction)
+
 ## Architecture Pattern
 
 All extracted modules use a consistent mixin pattern:
@@ -145,6 +212,8 @@ This pattern:
 <script src="enemyUtils.js"></script>         <!-- Then utilities -->
 <script src="enemyTargeting.js"></script>     <!-- Then targeting -->
 <script src="enemyStateMachine.js"></script>  <!-- Then state machine -->
+<script src="enemyMovement.js"></script>      <!-- Then movement/physics -->
+<script src="enemyCombat.js"></script>        <!-- Then combat/weapons -->
 <script src="enemy.js"></script>              <!-- Main class last -->
 ```
 
@@ -159,29 +228,17 @@ if (typeof applyEnemyTargetingMethods === 'function') {
 if (typeof applyEnemyStateMachineMethods === 'function') {
     applyEnemyStateMachineMethods();
 }
+if (typeof applyEnemyMovementMethods === 'function') {
+    applyEnemyMovementMethods();
+}
+if (typeof applyEnemyCombatMethods === 'function') {
+    applyEnemyCombatMethods();
+}
 ```
 
 ## Future Refactoring Opportunities
 
 The enemy.js file still contains several logical groups that could be extracted:
-
-### Potential Stage 5: Movement & Physics (~10KB)
-- performRotationAndThrust()
-- getMovementTargetForState()
-- updatePhysics()
-- calculateAttackPassTarget()
-
-### Potential Stage 6: Combat & Weapons (~15KB)
-- selectOptimalWeapon()
-- selectBestWeapon()
-- performFiring()
-- fireWeapon()
-- fire()
-- cycleWeapon()
-- isWeaponReady()
-- canFireAtTarget()
-- isArmed()
-- isInCombatState()
 
 ### Potential Stage 7: AI Behaviors (~20KB)
 - updateCombatAI()
@@ -220,12 +277,13 @@ Each stage was validated with:
 4. ✅ Method comparison against backup
 5. ✅ Browser loading verification
 6. ✅ No functionality changes (pure refactoring)
+7. ✅ **CodeQL security analysis** - 0 vulnerabilities found
 
-**Stage 4 Specific Validation:**
-- All 14 state machine methods verified in enemyStateMachine.js
-- All methods successfully applied to Enemy.prototype
-- Total of 65 methods accounted for across all files
-- 493 lines removed from enemy.js, 613 lines added to enemyStateMachine.js
+**All 6 Stages Validation:**
+- All modules successfully applied to Enemy.prototype
+- Script loading order verified in index.htm
+- Zero syntax errors in any module
+- Total of 65+ methods properly distributed across modules
 
 ## Recommendations for Continuing
 
@@ -241,9 +299,10 @@ If further refactoring is desired:
 
 This refactoring successfully demonstrated:
 - ✅ Incremental, safe approach to complex refactoring
-- ✅ Measurable improvement (31% reduction after Stage 4)
+- ✅ Measurable improvement (48% reduction after Stage 6)
 - ✅ Better code organization
 - ✅ No breaking changes
 - ✅ Foundation for future improvements
+- ✅ Security validated with zero vulnerabilities
 
-The Enemy class is now significantly more maintainable while retaining all original functionality. The main enemy.js file has been reduced from 158KB to 107KB across 4 stages of refactoring.
+The Enemy class is now significantly more maintainable while retaining all original functionality. The main enemy.js file has been reduced from 158KB to 81KB (3,481 → 1,814 lines) across 6 stages of refactoring.
