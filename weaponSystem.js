@@ -376,6 +376,10 @@ static fireForce(owner, system) {
         
         // Perform hit detection
         const hit = this.performBeamHitDetection(owner, system, this._beamStart, this._beamDir, beamLength);
+
+        if (hit && hit.point) {
+            this._beamEnd.set(hit.point.x, hit.point.y);
+        }
         
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
@@ -430,7 +434,15 @@ static fireForce(owner, system) {
             this._toTarget = createVector(0, 0);
             this._closestPoint = createVector(0, 0);
             this._hitPoint = createVector(0, 0);
+            this._defaultBeamEnd = createVector(0, 0);
+        } else if (!this._defaultBeamEnd) {
+            this._defaultBeamEnd = createVector(0, 0);
         }
+
+        this._defaultBeamEnd.set(
+            beamStart.x + beamDir.x * beamLength,
+            beamStart.y + beamDir.y * beamLength
+        );
         
         // Check enemies if owner is Player
         if (owner instanceof Player && system?.enemies) {
@@ -487,7 +499,33 @@ static fireForce(owner, system) {
             }
         }
 
-            // NEW: Check other enemies if owner is Enemy (for enemy-to-enemy combat)
+        // Check asteroids for any beam owner so beams stop on space debris
+        if (system?.asteroids?.length) {
+            for (let asteroid of system.asteroids) {
+                if (!asteroid?.pos || (typeof asteroid.isDestroyed === 'function' && asteroid.isDestroyed())) continue;
+
+                this._toTarget.set(asteroid.pos.x - beamStart.x, asteroid.pos.y - beamStart.y);
+                let projLength = this._toTarget.dot(beamDir);
+
+                if (projLength > 0 && projLength < beamLength) {
+                    this._closestPoint.set(
+                        beamStart.x + beamDir.x * projLength,
+                        beamStart.y + beamDir.y * projLength
+                    );
+
+                    const asteroidRadius = asteroid.maxRadius || asteroid.size / 2 || 0;
+                    let distToBeam = dist(asteroid.pos.x, asteroid.pos.y,
+                                          this._closestPoint.x, this._closestPoint.y);
+
+                    if (distToBeam < asteroidRadius && projLength < minDist) {
+                        minDist = projLength;
+                        hitTarget = asteroid;
+                        this._hitPoint.set(this._closestPoint.x, this._closestPoint.y);
+                    }
+                }
+            }
+        }
+        // NEW: Check other enemies if owner is Enemy (for enemy-to-enemy combat)
         if (owner instanceof Enemy && system?.enemies) {
             for (let enemy of system.enemies) {
                 // Skip if not valid or is the same ship firing
@@ -519,7 +557,7 @@ static fireForce(owner, system) {
         
         return {
             target: hitTarget,
-            point: hitTarget ? this._hitPoint : beamStart
+            point: hitTarget ? this._hitPoint : this._defaultBeamEnd
         };
     }
     
