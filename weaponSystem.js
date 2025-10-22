@@ -14,6 +14,9 @@ const WEAPON_TYPE = {
 };
 
 class WeaponSystem {
+    // Static regex for parsing weapon count from type string
+    static _countRegex = /(\d+)$/;
+    
     // Initialize projectile pool safely
     static init(initialPoolSize = 100) {
         try {
@@ -141,11 +144,11 @@ static fireForce(owner, system) {
         
         // Extract count from type name if present (e.g., "spread3" -> 3)
         let count = 1;
-        const countMatch = /(\d+)$/.exec(type);
+        const countMatch = this._countRegex.exec(type);
         if (countMatch) {
-            count = parseInt(countMatch[1]);
+            count = parseInt(countMatch[1], 10);
             // Remove count from type to get base type
-            type = type.replace(/\d+$/, '');
+            type = type.substring(0, countMatch.index);
         }
         
         // Handle different weapon types
@@ -243,6 +246,7 @@ static fireForce(owner, system) {
         const speed = weapon.speed || 4; // Missile's own travel speed
         const damage = weapon.damage;
         const color = weapon.color;
+        const weaponType = weapon.type;
         const lifespan = weapon.lifespan || 180; // Missile's lifespan
         const turnRate = weapon.turnRate || 0.05; // Missile's turn rate
 
@@ -250,14 +254,14 @@ static fireForce(owner, system) {
             // Pass all necessary parameters including target, lifespan, turnRate, and missileSpeed
             proj = this.projectilePool.get(
                 ownerX, ownerY, angle, owner,
-                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+                speed, damage, color, weaponType, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
             );
         }
 
         if (!proj) {
             proj = new Projectile(
                 ownerX, ownerY, angle, owner,
-                speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
+                speed, damage, color, weaponType, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
             );
         }
 
@@ -284,12 +288,13 @@ static fireForce(owner, system) {
         // Calculate appropriate spread based on count
         const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
         const spread = spreadMap[count] || 0.3;
-        
-        const start = -spread * 0.5; // Multiply instead of divide
+        const halfSpread = spread * 0.5;
         const step = count > 1 ? spread / (count - 1) : 0;
         
+        // Pre-calculate angles for better performance
         for (let i = 0; i < count; i++) {
-            this.fireProjectile(owner, system, angle + start + i * step);
+            const projectileAngle = angle - halfSpread + i * step;
+            this.fireProjectile(owner, system, projectileAngle);
         }
     }
 
@@ -437,7 +442,7 @@ static fireForce(owner, system) {
 
         // Play sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('beam', owner.pos.x, owner.pos.y, player.pos);
+            soundManager.playWorldSound('beam', ownerX, ownerY, player.pos);
         }
     }
     
@@ -491,7 +496,8 @@ static fireForce(owner, system) {
             for (let i = 0, len = enemies.length; i < len; i++) {
                 const enemy = enemies[i];
                 if (enemy === owner) continue;
-                evaluateTarget(enemy, (enemy?.size || 0) * 0.5);
+                const radius = enemy.size ? enemy.size * 0.5 : 0;
+                evaluateTarget(enemy, radius);
             }
         }
 
@@ -499,14 +505,15 @@ static fireForce(owner, system) {
             const asteroids = system.asteroids;
             for (let i = 0, len = asteroids.length; i < len; i++) {
                 const asteroid = asteroids[i];
-                const radius = asteroid?.maxRadius !== undefined ? asteroid.maxRadius : (asteroid?.size || 0) * 0.5;
+                const radius = asteroid.maxRadius !== undefined ? asteroid.maxRadius : (asteroid.size ? asteroid.size * 0.5 : 0);
                 evaluateTarget(asteroid, radius);
             }
         }
 
         if (isEnemy) {
             if (system?.player) {
-                evaluateTarget(system.player, (system.player.size || 0) * 0.5);
+                const playerRadius = system.player.size ? system.player.size * 0.5 : 0;
+                evaluateTarget(system.player, playerRadius);
             }
 
             if (system?.enemies?.length) {
@@ -514,7 +521,8 @@ static fireForce(owner, system) {
                 for (let i = 0, len = enemies.length; i < len; i++) {
                     const enemy = enemies[i];
                     if (enemy === owner) continue;
-                    evaluateTarget(enemy, (enemy?.size || 0) * 0.5);
+                    const radius = enemy.size ? enemy.size * 0.5 : 0;
+                    evaluateTarget(enemy, radius);
                 }
             }
         }

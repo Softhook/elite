@@ -1472,6 +1472,14 @@ checkProjectileCollisions() {
                     }
                 }
                 
+                // Create explosion effect for missile hits
+                if (proj.type === "missile") {
+                    const explosionColor = Array.isArray(proj.color) ? proj.color : 
+                        (proj.color && proj.color.levels) ? [proj.color.levels[0], proj.color.levels[1], proj.color.levels[2]] :
+                        [255, 150, 0];
+                    this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
+                }
+                
                 this.removeProjectile(i);
                 continue;
             }
