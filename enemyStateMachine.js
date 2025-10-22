@@ -91,8 +91,8 @@ class EnemyStateMachine {
         }
 
         const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
-        const minSnipeRange = this.visualFiringRange * SNIPING_MIN_RANGE_EXIT_FACTOR;
-        const maxSnipeRange = this.visualFiringRange * SNIPING_MAX_RANGE_EXIT_FACTOR;
+        const minSnipeRange = this.visualFiringRange * SNIPING_EXIT_MIN_FACTOR; // Use exit threshold
+        const maxSnipeRange = this.visualFiringRange * SNIPING_EXIT_MAX_FACTOR; // Use exit threshold
 
         // Use entry distance for first frame to prevent immediate exits from target switching
         const effectiveDistance = (this.snipingEntryDistance !== undefined && this.snipingEntryDistance > 0) 
@@ -104,15 +104,20 @@ class EnemyStateMachine {
             this.snipingEntryDistance = undefined;
         }
 
-        // Transition conditions
-        if (effectiveDistance < minSnipeRange) {
+        // Round distances to avoid floating-point precision issues
+        const roundedEffectiveDist = Math.floor(effectiveDistance);
+        const roundedMinSnipeRange = Math.floor(minSnipeRange);
+        const roundedMaxSnipeRange = Math.ceil(maxSnipeRange);
+
+        // Transition conditions (using hysteresis thresholds)
+        if (roundedEffectiveDist < roundedMinSnipeRange) {
             // Target is too close, decide to ATTACK_PASS or REPOSITION
             // For now, let's transition to ATTACK_PASS to be aggressive
-            console.log(`${this.shipTypeName} (SNIPING): Target too close (${effectiveDistance.toFixed(0)} < ${minSnipeRange.toFixed(0)}), switching to ATTACK_PASS.`);
+            console.log(`${this.shipTypeName} (SNIPING): Target too close (${roundedEffectiveDist} < ${roundedMinSnipeRange}), switching to ATTACK_PASS.`);
             this.changeState(AI_STATE.ATTACK_PASS);
-        } else if (effectiveDistance > maxSnipeRange) {
+        } else if (roundedEffectiveDist > roundedMaxSnipeRange) {
             // Target is too far, need to APPROACH
-            console.log(`${this.shipTypeName} (SNIPING): Target too far (${effectiveDistance.toFixed(0)} > ${maxSnipeRange.toFixed(0)}), switching to APPROACHING.`);
+            console.log(`${this.shipTypeName} (SNIPING): Target too far (${roundedEffectiveDist} > ${roundedMaxSnipeRange}), switching to APPROACHING.`);
             this.changeState(AI_STATE.APPROACHING);
         } 
         // NEW: Add random chance to reposition or start an attack run
@@ -149,14 +154,17 @@ class EnemyStateMachine {
         }
 
         // Condition to enter SNIPING state:
-        // Target is within a good sniping range (e.g., 70% to 95% of visualFiringRange)
+        // Target is within a good sniping range (using entry thresholds)
         // AND not yet close enough for a standard attack pass.
+        const minEntryRange = this.visualFiringRange * SNIPING_ENTRY_MIN_FACTOR;
+        const maxEntryRange = this.visualFiringRange * SNIPING_ENTRY_MAX_FACTOR;
+        
         const canSnipe = this.visualFiringRange > 0 && // Must have a firing range
-                         distanceToTarget < this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR * 1.1 && // Within 110% of ideal snipe range
-                         distanceToTarget > this.engageDistance * 1.1; // Further than typical engage distance for attack pass
+                         distanceToTarget < maxEntryRange && // Within entry max threshold
+                         distanceToTarget > minEntryRange; // Above entry min threshold
 
         if (canSnipe && this.hasGoodSnipingWeapon()) { // Add a check for suitable weapons
-            console.log(`${this.shipTypeName} (APPROACHING): Target in snipe range (${distanceToTarget.toFixed(0)}), switching to SNIPING.`);
+            console.log(`${this.shipTypeName} (APPROACHING): Target in snipe range (${Math.floor(distanceToTarget)}), switching to SNIPING.`);
             this.changeState(AI_STATE.SNIPING);
         } else if (distanceToTarget < this.engageDistance) {
             this.changeState(AI_STATE.ATTACK_PASS);
@@ -217,14 +225,17 @@ class EnemyStateMachine {
             ? this.distanceTo(this.repositionTarget)
             : Infinity;
 
-        // Condition to enter SNIPING state after repositioning:
+        // Condition to enter SNIPING state after repositioning (using entry thresholds):
+        const minEntryRange = this.visualFiringRange * SNIPING_ENTRY_MIN_FACTOR;
+        const maxEntryRange = this.visualFiringRange * SNIPING_ENTRY_MAX_FACTOR;
+        
         const canSnipeAfterReposition = this.visualFiringRange > 0 &&
-                                       distanceToTarget < this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR * 1.05 && // Within 105% of ideal
-                                       distanceToTarget > this.engageDistance * 1.2; // Further than engage for attack pass
+                                       distanceToTarget < maxEntryRange && // Within entry max threshold
+                                       distanceToTarget > minEntryRange; // Above entry min threshold
 
         if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) { // Reached repo point or target moved far
             if (canSnipeAfterReposition && this.hasGoodSnipingWeapon()) {
-                console.log(`${this.shipTypeName} (REPOSITIONING): Repositioned to snipe range (${distanceToTarget.toFixed(0)}), switching to SNIPING.`);
+                console.log(`${this.shipTypeName} (REPOSITIONING): Repositioned to snipe range (${Math.floor(distanceToTarget)}), switching to SNIPING.`);
                 this.changeState(AI_STATE.SNIPING);
             } else {
                 this.changeState(AI_STATE.APPROACHING);

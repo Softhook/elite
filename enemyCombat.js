@@ -197,6 +197,18 @@ class EnemyCombat {
         // Only debug firing decisions against player
         const targetingPlayer = this.target instanceof Player;
         
+        // Check if Hauler is in a valid combat state to fire
+        const isHaulerInValidCombatState = this.role !== AI_ROLE.HAULER || 
+            (this.currentState === AI_STATE.APPROACHING || 
+             this.currentState === AI_STATE.ATTACK_PASS || 
+             this.currentState === AI_STATE.REPOSITIONING ||
+             this.currentState === AI_STATE.SNIPING);
+        
+        // Don't proceed with firing logic if Hauler is not in valid combat state
+        if (!isHaulerInValidCombatState) {
+            return;
+        }
+        
         // Select best weapon (no debug)
         this.selectBestWeapon(distanceToTarget);
         

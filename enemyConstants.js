@@ -100,8 +100,15 @@ const APPROACH_CLOSE_THRUST_REDUCTION = 0.05; // Thrust multiplier when very clo
 // -------------------------
 
 const SNIPING_IDEAL_RANGE_FACTOR = 0.9;         // Try to stay at 90% of visualFiringRange
-const SNIPING_MIN_RANGE_EXIT_FACTOR = 0.4;    // If target closer than 50% of visualFiringRange, exit SNIPING
-const SNIPING_MAX_RANGE_EXIT_FACTOR = 1.2;    // If target further than 110% of visualFiringRange, exit SNIPING
+
+// Hysteresis: Entry thresholds (from APPROACHING)
+const SNIPING_ENTRY_MIN_FACTOR = 0.5;          // Enter SNIPING when target is at least 50% of visualFiringRange
+const SNIPING_ENTRY_MAX_FACTOR = 1.05;         // Enter SNIPING when target is within 105% of visualFiringRange
+
+// Hysteresis: Exit thresholds (wider than entry to prevent thrashing)
+const SNIPING_EXIT_MIN_FACTOR = 0.35;          // Exit SNIPING only when target is closer than 35% (tighter than entry 50%)
+const SNIPING_EXIT_MAX_FACTOR = 1.25;          // Exit SNIPING only when target is further than 125% (wider than entry 105%)
+
 const SNIPING_BRAKE_FACTOR = 0.85;            // How quickly to slow down when trying to stay still
 const SNIPING_POSITION_ADJUST_THRUST = 0.2;   // Gentle thrust for minor position adjustments
 const SNIPING_STANDOFF_TOLERANCE_FACTOR = 0.1; // Allow 10% deviation from ideal range before adjusting
