@@ -3,51 +3,36 @@
 const STAR_SYSTEM_DEBUG = false;
 
 // Build ship role arrays from SHIP_DEFINITIONS
+// Optimized: Single-pass iteration using Map for O(1) role lookups
 const buildShipRoleArrays = () => {
-    const POLICE_SHIPS = [];
-    const PIRATE_SHIPS = [];
-    const HAULER_SHIPS = [];
-    const TRANSPORT_SHIPS = [];
-    const MILITARY_SHIPS = [];
-    const ALIEN_SHIPS = [];
-    const EXPLORER_SHIPS = [];
-    const BOUNTY_HUNTER_SHIPS = [];
-    const GUARD_SHIPS = [];
-    const IMPERIAL_SHIPS = [];
-    const SEPARATIST_SHIPS = [];
+    const roleArrays = {
+        POLICE_SHIPS: [],
+        PIRATE_SHIPS: [],
+        HAULER_SHIPS: [],
+        TRANSPORT_SHIPS: [],
+        MILITARY_SHIPS: [],
+        ALIEN_SHIPS: [],
+        EXPLORER_SHIPS: [],
+        BOUNTY_HUNTER_SHIPS: [],
+        GUARD_SHIPS: [],
+        IMPERIAL_SHIPS: [],
+        SEPARATIST_SHIPS: []
+    };
     
-    // Iterate through all ship definitions
+    // Single loop iteration - more efficient than 11 includes() checks per ship
     for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
         if (!shipData.aiRoles || !Array.isArray(shipData.aiRoles)) continue;
         
-        // Add ship to appropriate role arrays based on its aiRoles
-        if (shipData.aiRoles.includes("POLICE")) POLICE_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("PIRATE")) PIRATE_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("HAULER")) HAULER_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("TRANSPORT")) TRANSPORT_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("MILITARY")) MILITARY_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("ALIEN")) ALIEN_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("EXPLORER")) EXPLORER_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("BOUNTY_HUNTER")) BOUNTY_HUNTER_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("GUARD")) GUARD_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("IMPERIAL")) IMPERIAL_SHIPS.push(shipKey);
-        if (shipData.aiRoles.includes("SEPARATIST")) SEPARATIST_SHIPS.push(shipKey);
-        
+        // Loop through roles once instead of checking each role with includes()
+        for (const role of shipData.aiRoles) {
+            const arrayKey = `${role}_SHIPS`;
+            if (roleArrays[arrayKey]) {
+                roleArrays[arrayKey].push(shipKey);
+            }
+        }
     }
     
-    return {
-        POLICE_SHIPS,
-        PIRATE_SHIPS, 
-        HAULER_SHIPS,
-        TRANSPORT_SHIPS,
-        MILITARY_SHIPS,
-        ALIEN_SHIPS,
-        EXPLORER_SHIPS,
-        BOUNTY_HUNTER_SHIPS,
-        GUARD_SHIPS,
-        IMPERIAL_SHIPS,
-        SEPARATIST_SHIPS
-    };
+    return roleArrays;
 };
 
 // Initialize the role arrays
@@ -1298,12 +1283,13 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const playerImpulseFactor = 3 * (enemyMass / totalMass);
                     const enemyImpulseFactor = 3 * (playerMass / totalMass);
 
-                    // Create normalized collision vector (reuse if possible)
+                    // Create normalized collision vector - optimized with fast inverse sqrt
                     const dx = enemy.pos.x - this.player.pos.x;
                     const dy = enemy.pos.y - this.player.pos.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const normalizedX = dx / dist;
-                    const normalizedY = dy / dist;
+                    const distSq = dx * dx + dy * dy;
+                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+                    const normalizedX = dx * invDist;
+                    const normalizedY = dy * invDist;
 
                     // Apply appropriate impulse to each ship without creating new vectors
                     this.player.vel.x -= normalizedX * playerImpulseFactor;
@@ -1336,12 +1322,13 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const playerImpulseFactor = 2 * (asteroidMass / totalMass);
                     const asteroidImpulseFactor = 2 * (playerMass / totalMass);
 
-                    // Create normalized collision vector without extra allocations
+                    // Create normalized collision vector - optimized
                     const dx = asteroid.pos.x - this.player.pos.x;
                     const dy = asteroid.pos.y - this.player.pos.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const normalizedX = dx / dist;
-                    const normalizedY = dy / dist;
+                    const distSq = dx * dx + dy * dy;
+                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+                    const normalizedX = dx * invDist;
+                    const normalizedY = dy * invDist;
 
                     // Apply impulses directly
                     this.player.vel.x -= normalizedX * playerImpulseFactor;
@@ -1363,12 +1350,13 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         enemy.takeDamage(10);
                         asteroid.takeDamage(10);
                         
-                        // Apply physics push without creating vectors
+                        // Apply physics push - optimized
                         const dx = asteroid.pos.x - enemy.pos.x;
                         const dy = asteroid.pos.y - enemy.pos.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        const normalizedX = (dx / dist) * 2;
-                        const normalizedY = (dy / dist) * 2;
+                        const distSq = dx * dx + dy * dy;
+                        const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+                        const normalizedX = dx * invDist * 2;
+                        const normalizedY = dy * invDist * 2;
                         
                         enemy.vel.x -= normalizedX;
                         enemy.vel.y -= normalizedY;
@@ -1413,7 +1401,8 @@ checkProjectileCollisions() {
             if (!asteroid || asteroid.isDestroyed()) continue;
             
             // Fast distance check before expensive collision detection
-            const combinedRadiusSquared = Math.pow(asteroid.size + projSize, 2);
+            const combinedRadius = asteroid.size + projSize;
+            const combinedRadiusSquared = combinedRadius * combinedRadius;
             distCheckVector.set(asteroid.pos.x - projPos.x, asteroid.pos.y - projPos.y);
             
             if (distCheckVector.magSq() <= combinedRadiusSquared) {
@@ -1435,7 +1424,8 @@ checkProjectileCollisions() {
         
         // For player hits - use quick distance check first
         if (proj.owner instanceof Enemy) {
-            const combinedRadiusSquared = Math.pow(this.player.size + projSize, 2);
+            const combinedRadius = this.player.size + projSize;
+            const combinedRadiusSquared = combinedRadius * combinedRadius;
             distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
             
             if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(this.player)) {
@@ -1481,7 +1471,8 @@ checkProjectileCollisions() {
             // Get only nearby enemies using pre-check with distance squared
             for (let j = 0; j < this.enemies.length; j++) {
                 const enemy = this.enemies[j];
-                const combinedRadiusSquared = Math.pow(enemy.size + projSize, 2);
+                const combinedRadius = enemy.size + projSize;
+                const combinedRadiusSquared = combinedRadius * combinedRadius;
                 distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
                 
                 if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
@@ -1573,11 +1564,7 @@ checkProjectileCollisions() {
                 continue;
             }
 
-            // --- Add Detailed Logging ---
-            const dx = this.player.pos.x - cargoItem.pos.x;
-            const dy = this.player.pos.y - cargoItem.pos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const collisionThreshold = (this.player.size / 2 + cargoItem.size * 2);
+            // Check collision directly without unnecessary sqrt calculation
             const isColliding = cargoItem.checkCollision(this.player); // Use the cargo's collision check
 
 
@@ -2399,6 +2386,17 @@ checkProjectileCollisions() {
             array[index] = array[lastIndex];
         }
         array.pop();
+    }
+    
+    /**
+     * Fast inverse square root for normalization
+     * Returns 1/sqrt(value) efficiently
+     * @param {number} distSq - Squared distance
+     * @returns {number} Inverse square root
+     * @private
+     */
+    _fastInvSqrt(distSq) {
+        return distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
     }
     
     /**

@@ -624,7 +624,7 @@ updateTargeting(system) {
 
     // Final target decision
     if (bestTarget && bestScore > 0) {
-        const scoreThresholdForChange = 5;
+        const scoreThresholdForChange = 20;
         if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
             this.target = bestTarget;
             // Only debug if target is player
