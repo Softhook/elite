@@ -75,6 +75,7 @@ static fireForce(owner, system) {
     const damage = weapon?.damage || 20;
     const color = weapon?.color || [255, 0, 0];
     const maxRadius = weapon?.maxRadius || 1000; // INCREASED from 750 to 1000
+    const currentTime = millis();
     
     // Pre-populate enemies to process - THIS IS THE KEY FIX
     let entitiesToProcess;
@@ -93,7 +94,7 @@ static fireForce(owner, system) {
     system.forceWaves.push({
         pos: this._forceWavePos,
         owner: owner,
-        startTime: millis(),
+        startTime: currentTime,
         radius: 50,
         maxRadius: maxRadius,
         growRate: 20, // INCREASED from 15 to 20
@@ -109,7 +110,6 @@ static fireForce(owner, system) {
     console.log(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
     
     // Store reference for drawing effects (reusing owner's lastForceWave if possible)
-    const currentTime = millis();
     if (!owner.lastForceWave) {
         owner.lastForceWave = {
             pos: createVector(ownerX, ownerY),
@@ -200,19 +200,21 @@ static fireForce(owner, system) {
         
         const weapon = owner.currentWeapon;
         const speed = weapon.speed || 8; // Use defined speed with fallback
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
         let proj;
         
         // Use the speed variable instead of hardcoded 8
         if (this.projectilePool) {
             proj = this.projectilePool.get(
-                owner.pos.x, owner.pos.y, angle, owner,
+                ownerX, ownerY, angle, owner,
                 speed, weapon.damage, weapon.color
             );
         }
         
         if (!proj) {
             proj = new Projectile(
-                owner.pos.x, owner.pos.y, angle, owner,
+                ownerX, ownerY, angle, owner,
                 speed, weapon.damage, weapon.color
             );
         }
@@ -223,7 +225,7 @@ static fireForce(owner, system) {
         
         // Play laser sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
+            soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
         }
     }
 
@@ -233,6 +235,8 @@ static fireForce(owner, system) {
             return;
         }
         const weapon = owner.currentWeapon;
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
         let proj;
 
         // Get missile-specific properties from the weapon definition
@@ -245,14 +249,14 @@ static fireForce(owner, system) {
         if (this.projectilePool) {
             // Pass all necessary parameters including target, lifespan, turnRate, and missileSpeed
             proj = this.projectilePool.get(
-                owner.pos.x, owner.pos.y, angle, owner,
+                ownerX, ownerY, angle, owner,
                 speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
             );
         }
 
         if (!proj) {
             proj = new Projectile(
-                owner.pos.x, owner.pos.y, angle, owner,
+                ownerX, ownerY, angle, owner,
                 speed, damage, color, weapon.type, target, lifespan, turnRate, speed // last 'speed' is missileSpeed
             );
         }
@@ -262,7 +266,7 @@ static fireForce(owner, system) {
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
-            soundManager.playWorldSound('missileLaunch', owner.pos.x, owner.pos.y, player.pos);
+            soundManager.playWorldSound('missileLaunch', ownerX, ownerY, player.pos);
         }
     }
 
@@ -281,7 +285,7 @@ static fireForce(owner, system) {
         const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
         const spread = spreadMap[count] || 0.3;
         
-        const start = -spread / 2;
+        const start = -spread * 0.5; // Multiply instead of divide
         const step = count > 1 ? spread / (count - 1) : 0;
         
         for (let i = 0; i < count; i++) {
@@ -367,18 +371,22 @@ static fireForce(owner, system) {
             return;
         }
         
-        // Get beam properties
+        // Get beam properties and cache position
         const beamLength = 1200;
-        start.set(owner.pos.x, owner.pos.y);
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
+        start.set(ownerX, ownerY);
         
         // Handle player aiming at mouse cursor
         if (owner instanceof Player) {
-            // Convert screen mouse position to world coordinates
-            const worldMx = mouseX + (owner.pos.x - width/2);
-            const worldMy = mouseY + (owner.pos.y - height/2);
+            // Convert screen mouse position to world coordinates - cache calculations
+            const halfWidth = width * 0.5;
+            const halfHeight = height * 0.5;
+            const worldMx = mouseX + ownerX - halfWidth;
+            const worldMy = mouseY + ownerY - halfHeight;
             
             // Calculate angle to mouse cursor
-            angle = atan2(worldMy - owner.pos.y, worldMx - owner.pos.x);
+            angle = atan2(worldMy - ownerY, worldMx - ownerX);
         }
         
         // Calculate beam direction and endpoint
@@ -575,6 +583,8 @@ static fireTangle(owner, system, angle) {
     if (!owner?.currentWeapon) return;
     
     const weapon = owner.currentWeapon;
+    const ownerX = owner.pos.x;
+    const ownerY = owner.pos.y;
     const speed = weapon.speed || 6; // Slower than regular projectiles
     const tangleDuration = weapon.tangleDuration || 5.0;
     const dragMultiplier = weapon.dragMultiplier || 10.0;
@@ -585,7 +595,7 @@ static fireTangle(owner, system, angle) {
     // Create projectile with tangle properties using unified duration
     if (this.projectilePool) {
         proj = this.projectilePool.get(
-            owner.pos.x, owner.pos.y, angle, owner,
+            ownerX, ownerY, angle, owner,
             speed, weapon.damage, weapon.color, 
             "tangle", null, 60, 0, 0, 
             tangleDuration, dragMultiplier,
@@ -593,7 +603,7 @@ static fireTangle(owner, system, angle) {
         );
     } else {
         proj = new Projectile(
-            owner.pos.x, owner.pos.y, angle, owner,
+            ownerX, ownerY, angle, owner,
             speed, weapon.damage, weapon.color, 
             "tangle", null, 60, 0, 0,
             tangleDuration, dragMultiplier,
@@ -610,7 +620,7 @@ static fireTangle(owner, system, angle) {
     
     // Play tangle sound
     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('laser', owner.pos.x, owner.pos.y, player.pos);
+        soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
     }
 }
 
@@ -666,15 +676,11 @@ static fireTangle(owner, system, angle) {
         
         // Only create explosion if there were NO shields before the hit
         if (!targetHasShield && system.addExplosion) {
-            // Convert color to safe format
-            let explosionColor;
-            if (Array.isArray(color)) {
-                explosionColor = color;
-            } else if (color && color.levels) {
-                explosionColor = [color.levels[0], color.levels[1], color.levels[2]];
-            } else {
-                explosionColor = [255, 0, 0];
-            }
+            // Convert color to safe format - cache isArray check
+            const isColorArray = Array.isArray(color);
+            const explosionColor = isColorArray ? color :
+                (color && color.levels) ? [color.levels[0], color.levels[1], color.levels[2]] :
+                [255, 0, 0];
             
             system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
         }
