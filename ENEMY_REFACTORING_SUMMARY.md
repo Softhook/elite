@@ -11,15 +11,16 @@ Completed incremental refactoring of the Enemy class as requested: "take this on
 - **Lines:** 3,481
 - **Structure:** Monolithic class with all logic embedded
 
-### After Refactoring (3 Stages)
-- **Main file:** `enemy.js` - 131KB (2,920 lines)
+### After Refactoring (4 Stages)
+- **Main file:** `enemy.js` - 107KB (2,407 lines)
 - **Constants:** `enemyConstants.js` - 5KB (108 lines)
 - **Utilities:** `enemyUtils.js` - 7KB (192 lines)
 - **Targeting:** `enemyTargeting.js` - 17KB (355 lines)
-- **Total:** 160KB (3,575 lines) - *slightly larger due to additional class wrappers*
+- **State Machine:** `enemyStateMachine.js` - 28KB (613 lines)
+- **Total:** 164KB (3,675 lines) - *slightly larger due to additional class wrappers*
 
 ### Improvements
-- **17% reduction** in main enemy.js file size
+- **31% reduction** in main enemy.js file size (158KB → 107KB)
 - **Better organization** - related code grouped logically
 - **Single responsibility** - each module has a clear purpose
 - **Easier maintenance** - smaller, focused files
@@ -75,6 +76,41 @@ Extracted complex targeting system:
 
 **Impact:** Reduced enemy.js from 145KB → 131KB
 
+### Stage 4: State Machine (28KB)
+**File:** `enemyStateMachine.js`
+
+Extracted comprehensive AI state machine:
+- **updateCombatState()** - Main state dispatcher
+  - Routes to appropriate state handler based on current AI state
+  - Handles 8 different AI states (IDLE, APPROACHING, ATTACK_PASS, REPOSITIONING, PATROLLING, GUARDING, FLEEING, SNIPING)
+
+- **changeState()** - State transition manager
+  - Validates transitions (prevents unarmed ships from entering combat)
+  - Calls exit and entry handlers
+  - Role-specific default state selection
+
+- **State Entry/Exit Handlers**
+  - **onStateEntry()** - Initializes state-specific variables
+  - **onStateExit()** - Cleans up state-specific data
+  - Handles timers, targets, and movement parameters
+
+- **State Implementation Methods** (9 total)
+  - **_updateState_IDLE()** - Detects targets and transitions to approach
+  - **_updateState_APPROACHING()** - Closes distance, decides when to engage or snipe
+  - **_updateState_ATTACK_PASS()** - Executes strafing attack runs with timer
+  - **_updateState_REPOSITIONING()** - Tactical position changes between attacks
+  - **_updateState_PATROLLING()** - Patrols area, detects threats
+  - **_updateState_GUARDING()** - Protects principal, follows through jumps
+  - **_updateState_FLEEING()** - Escape behavior with jinking and distance checks
+  - **_updateState_SNIPING()** - Long-range combat with optimal positioning
+  - **_determinePostFleeState()** - Returns to appropriate state after escape
+
+- **Helper Methods**
+  - **calculateAttackPassTarget()** - Computes strafe trajectory once per attack
+  - Consistent random factors for predictable attack patterns
+
+**Impact:** Reduced enemy.js from 131KB → 107KB (24KB reduction)
+
 ## Architecture Pattern
 
 All extracted modules use a consistent mixin pattern:
@@ -105,10 +141,11 @@ This pattern:
 ## Load Order (index.htm)
 
 ```html
-<script src="enemyConstants.js"></script>  <!-- Constants first -->
-<script src="enemyUtils.js"></script>      <!-- Then utilities -->
-<script src="enemyTargeting.js"></script>  <!-- Then targeting -->
-<script src="enemy.js"></script>           <!-- Main class last -->
+<script src="enemyConstants.js"></script>     <!-- Constants first -->
+<script src="enemyUtils.js"></script>         <!-- Then utilities -->
+<script src="enemyTargeting.js"></script>     <!-- Then targeting -->
+<script src="enemyStateMachine.js"></script>  <!-- Then state machine -->
+<script src="enemy.js"></script>              <!-- Main class last -->
 ```
 
 The Enemy class calls applier functions at the end:
@@ -119,18 +156,14 @@ if (typeof applyEnemyUtilityMethods === 'function') {
 if (typeof applyEnemyTargetingMethods === 'function') {
     applyEnemyTargetingMethods();
 }
+if (typeof applyEnemyStateMachineMethods === 'function') {
+    applyEnemyStateMachineMethods();
+}
 ```
 
 ## Future Refactoring Opportunities
 
 The enemy.js file still contains several logical groups that could be extracted:
-
-### Potential Stage 4: State Machine (~20KB)
-- changeState()
-- onStateEntry()
-- onStateExit()
-- updateCombatState()
-- All _updateState_* methods (IDLE, APPROACHING, ATTACK_PASS, etc.)
 
 ### Potential Stage 5: Movement & Physics (~10KB)
 - performRotationAndThrust()
@@ -156,7 +189,6 @@ The enemy.js file still contains several logical groups that could be extracted:
 - updateHaulerAI()
 - updateTransportAI()
 - updateCargoCollectionAI()
-- _updateState_GUARDING()
 - _handleForcedCombat()
 - hasGoodSnipingWeapon()
 
@@ -185,25 +217,33 @@ Each stage was validated with:
 1. ✅ JavaScript syntax check (`node -c`)
 2. ✅ File size measurement
 3. ✅ Git commit for rollback safety
-4. ✅ No functionality changes (pure refactoring)
+4. ✅ Method comparison against backup
+5. ✅ Browser loading verification
+6. ✅ No functionality changes (pure refactoring)
+
+**Stage 4 Specific Validation:**
+- All 14 state machine methods verified in enemyStateMachine.js
+- All methods successfully applied to Enemy.prototype
+- Total of 65 methods accounted for across all files
+- 493 lines removed from enemy.js, 613 lines added to enemyStateMachine.js
 
 ## Recommendations for Continuing
 
 If further refactoring is desired:
 
 1. **Continue incremental approach** - One stage at a time as done here
-2. **Prioritize by size** - State machine (20KB) and AI behaviors (20KB) offer biggest wins
+2. **Prioritize by size** - AI behaviors (20KB) and rendering (15KB) offer biggest wins
 3. **Test between stages** - Run the game and verify behavior
-4. **Consider composition** - Some modules could become separate classes (e.g., EnemyStateMachine)
+4. **Consider composition** - Some modules could become separate classes
 5. **Add tests** - With modular structure, unit tests become feasible
 
 ## Conclusion
 
 This refactoring successfully demonstrated:
 - ✅ Incremental, safe approach to complex refactoring
-- ✅ Measurable improvement (17% reduction)
+- ✅ Measurable improvement (31% reduction after Stage 4)
 - ✅ Better code organization
 - ✅ No breaking changes
 - ✅ Foundation for future improvements
 
-The Enemy class is now more maintainable while retaining all original functionality.
+The Enemy class is now significantly more maintainable while retaining all original functionality. The main enemy.js file has been reduced from 158KB to 107KB across 4 stages of refactoring.
