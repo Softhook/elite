@@ -245,7 +245,8 @@ class EnemyCombat {
         if (this.role === AI_ROLE.HAULER && 
             !(this.currentState === AI_STATE.APPROACHING || 
               this.currentState === AI_STATE.ATTACK_PASS || 
-              this.currentState === AI_STATE.REPOSITIONING)) {
+              this.currentState === AI_STATE.REPOSITIONING ||
+              this.currentState === AI_STATE.SNIPING)) {
             return; // Only block firing when not in combat states
         }
         

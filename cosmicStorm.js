@@ -318,7 +318,11 @@ class CosmicStorm {
             case 'radiation':
                 if (random() < 0.03 * effectStrength) {
                     const damage = random(1, 3) * effectStrength;
-                    entity.takeDamage(damage);
+                    // Try to provide a system reference for consistent targeting behavior
+                    const activeSystem = (window.gameStateManager && gameStateManager.activeSystem) ? gameStateManager.activeSystem : null;
+                    if (typeof entity.takeDamage === 'function') {
+                        entity.takeDamage(damage, null, activeSystem);
+                    }
                     this.effectCount++;
                     if (this.debug) {
                         console.log(`Radiation damage: ${damage.toFixed(1)} to ${entityId}`);

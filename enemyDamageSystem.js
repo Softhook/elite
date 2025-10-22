@@ -14,8 +14,12 @@ class EnemyDamageSystem {
      * @param {Object} attacker - Entity that caused the damage
      * @return {Object} Object containing damage dealt and shield hit status
      */
-    takeDamage(amount, attacker = null) {
-        this._handleAttackerReference(attacker, amount);
+    takeDamage(amount, attacker = null, system = null) {
+        // Allow callers to provide the current system explicitly (defensive against timing issues
+        // where this.currentSystem may not yet be populated). Pass the resolved system to the
+        // attacker handling helper so targeting updates will work immediately.
+        const resolvedSystem = system || this.getSystem();
+        this._handleAttackerReference(attacker, amount, resolvedSystem);
 
         // Skip damage processing if already destroyed or no damage
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
@@ -38,22 +42,34 @@ class EnemyDamageSystem {
      * @param {Object} attacker
      * @param {number} amount - Damage amount for logging purposes
      */
-    _handleAttackerReference(attacker, amount) {
+    _handleAttackerReference(attacker, amount, system = null) {
         if (attacker) {
             // Record attacker regardless of type
             this.lastAttacker = attacker;
             this.lastAttackTime = millis();
             
+            // Debug log for tracking
+            console.log(`%c🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`, 'color:orange; font-weight:bold');
+            
+            // Don't retarget if in SNIPING state (target lock)
+            if (this.currentState === AI_STATE.SNIPING) {
+                console.log(`%c   → SNIPING: Target locked, not retargeting`, 'color:purple');
+                return;
+            }
+            
             // Always update targeting for any attacker
-            const system = this.getSystem();
-            if (system) {
-                // Special debug for player attacks if needed
+            const resolvedSystem = system || this.getSystem();
+            if (resolvedSystem) {
+                // Special debug for player attacks
                 if (attacker instanceof Player) {
-                    //console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red');
+                    console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red; font-weight:bold');
                 }
                 
                 // Update targeting immediately for all attackers
-                const targetResult = this.updateTargeting(system);
+                const targetResult = this.updateTargeting(resolvedSystem);
+                console.log(`%c   → Targeting result: ${targetResult}, target is now: ${this.target ? (this.target.constructor.name) : 'null'}`, 'color:cyan');
+            } else {
+                console.warn(`%c   ⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`, 'color:red; font-weight:bold');
             }
         }
     }

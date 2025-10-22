@@ -94,15 +94,25 @@ class EnemyStateMachine {
         const minSnipeRange = this.visualFiringRange * SNIPING_MIN_RANGE_EXIT_FACTOR;
         const maxSnipeRange = this.visualFiringRange * SNIPING_MAX_RANGE_EXIT_FACTOR;
 
+        // Use entry distance for first frame to prevent immediate exits from target switching
+        const effectiveDistance = (this.snipingEntryDistance !== undefined && this.snipingEntryDistance > 0) 
+            ? this.snipingEntryDistance 
+            : distanceToTarget;
+        
+        // Clear entry distance after first use
+        if (this.snipingEntryDistance !== undefined) {
+            this.snipingEntryDistance = undefined;
+        }
+
         // Transition conditions
-        if (distanceToTarget < minSnipeRange) {
+        if (effectiveDistance < minSnipeRange) {
             // Target is too close, decide to ATTACK_PASS or REPOSITION
             // For now, let's transition to ATTACK_PASS to be aggressive
-            console.log(`${this.shipTypeName} (SNIPING): Target too close (${distanceToTarget.toFixed(0)} < ${minSnipeRange.toFixed(0)}), switching to ATTACK_PASS.`);
+            console.log(`${this.shipTypeName} (SNIPING): Target too close (${effectiveDistance.toFixed(0)} < ${minSnipeRange.toFixed(0)}), switching to ATTACK_PASS.`);
             this.changeState(AI_STATE.ATTACK_PASS);
-        } else if (distanceToTarget > maxSnipeRange) {
+        } else if (effectiveDistance > maxSnipeRange) {
             // Target is too far, need to APPROACH
-            console.log(`${this.shipTypeName} (SNIPING): Target too far (${distanceToTarget.toFixed(0)} > ${maxSnipeRange.toFixed(0)}), switching to APPROACHING.`);
+            console.log(`${this.shipTypeName} (SNIPING): Target too far (${effectiveDistance.toFixed(0)} > ${maxSnipeRange.toFixed(0)}), switching to APPROACHING.`);
             this.changeState(AI_STATE.APPROACHING);
         } 
         // NEW: Add random chance to reposition or start an attack run
@@ -219,6 +229,7 @@ class EnemyStateMachine {
             } else {
                 this.changeState(AI_STATE.APPROACHING);
             }
+            return; // Don't continue processing this state after transitioning
         }
     }
 
@@ -281,8 +292,8 @@ class EnemyStateMachine {
 
         // Check if principal is under attack
         if (this.principal.lastAttacker && this.isTargetValid(this.principal.lastAttacker)) {
-            // Engage the attacker
-            if (this.target !== this.principal.lastAttacker) {
+            // Engage the attacker (but don't target ourselves!)
+            if (this.target !== this.principal.lastAttacker && this.principal.lastAttacker !== this) {
                 console.log(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${this.principal.lastAttacker.shipTypeName || 'attacker'}.`);
                 this.target = this.principal.lastAttacker;
                 this.changeState(AI_STATE.APPROACHING);
@@ -472,7 +483,8 @@ class EnemyStateMachine {
             case AI_STATE.SNIPING: // <<< EXISTING CASE
                 this.vel.mult(0.5); // Attempt to slow down upon entering sniping mode
                 this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store combined shield + hull
-                console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}).`);
+                this.snipingEntryDistance = this.target ? this.distanceTo(this.target) : 0; // Store entry distance
+                console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}, Entry Dist: ${this.snipingEntryDistance.toFixed(0)}).`);
             break;
                 
             case AI_STATE.NEAR_STATION:
@@ -591,6 +603,7 @@ class EnemyStateMachine {
             case AI_STATE.SNIPING: // <<< EXISTING CASE
                 console.log(`${this.shipTypeName} exiting SNIPING state.`);
                 this.shieldPlusHullAtStateEntry = null; // Clear stored combined health
+                this.snipingEntryDistance = undefined; // Clear entry distance
                 break;
         }
     }

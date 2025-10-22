@@ -222,6 +222,7 @@ class EnemyAIBehaviors {
             this.currentState !== AI_STATE.APPROACHING && // Don't interrupt combat
             this.currentState !== AI_STATE.ATTACK_PASS &&
             this.currentState !== AI_STATE.REPOSITIONING &&
+            this.currentState !== AI_STATE.SNIPING && // Don't interrupt sniping
             (!this.attackCooldown || this.attackCooldown <= 0)) {
 
             const attackerDistance = this.distanceTo(this.lastAttacker);
@@ -247,6 +248,7 @@ class EnemyAIBehaviors {
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
                     this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
+                    this.attackCooldown = 3.0; // Prevent re-triggering this check for 3 seconds
                     //if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
                     
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
@@ -267,6 +269,7 @@ class EnemyAIBehaviors {
                     this.lastAttacker = null; // Forget attacker
                     this.target = null; // Clear target
                     this.inCombat = false; // Clear combat flag
+                    this.attackCooldown = 5.0; // Prevent immediate re-engagement
                     
                     // Return to previous state or default
                     this.changeState(this.previousHaulerState || AI_STATE.PATROLLING);
@@ -279,11 +282,16 @@ class EnemyAIBehaviors {
                 }
             }
 
-            // Force reinstate combat state if needed
+            // Force reinstate combat state if needed (but don't spam if in hauler-specific states)
             if (this.currentState !== AI_STATE.APPROACHING && 
                 this.currentState !== AI_STATE.ATTACK_PASS &&
                 this.currentState !== AI_STATE.REPOSITIONING &&
-                this.currentState !== AI_STATE.FLEEING) {
+                this.currentState !== AI_STATE.FLEEING &&
+                this.currentState !== AI_STATE.SNIPING &&
+                this.currentState !== AI_STATE.PATROLLING &&
+                this.currentState !== AI_STATE.NEAR_STATION &&
+                this.currentState !== AI_STATE.TRANSPORTING &&
+                this.currentState !== AI_STATE.COLLECTING_CARGO) {
                 console.log(`Forcing hauler ${this.shipTypeName} back to APPROACHING state`);
                 this.changeState(AI_STATE.APPROACHING);
             }
@@ -306,7 +314,8 @@ class EnemyAIBehaviors {
         if (this.currentState === AI_STATE.FLEEING ||
             this.currentState === AI_STATE.APPROACHING ||
             this.currentState === AI_STATE.ATTACK_PASS ||
-            this.currentState === AI_STATE.REPOSITIONING)
+            this.currentState === AI_STATE.REPOSITIONING ||
+            this.currentState === AI_STATE.SNIPING)  // Add sniping to combat states
         {
             // Set the inCombat flag if needed
             this.inCombat = true;

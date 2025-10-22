@@ -247,7 +247,11 @@ class Nebula {
             case 'radiation':
                 // Slowly damage hull
                 if (random() < 0.05) {
-                    entity.takeDamage(1); // Periodic small damage
+                    // Provide active system reference if available for correct targeting updates
+                    const activeSystem = (window.gameStateManager && gameStateManager.activeSystem) ? gameStateManager.activeSystem : null;
+                    if (typeof entity.takeDamage === 'function') {
+                        entity.takeDamage(1, null, activeSystem);
+                    }
                     if (this.debug && millis() - this.lastEffectTime > 1000) {
                         console.log(`Radiation damage applied to ${entityId}`);
                         this.lastEffectTime = millis();

@@ -1043,8 +1043,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         const minDamage = Math.max(40, Math.floor(wave.damage * 0.5));
                         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
 
-                        // Apply damage and mark as processed
-                        entity.takeDamage(dmg, wave.owner);
+                        // Apply damage and mark as processed (pass system for immediate targeting updates)
+                        entity.takeDamage(dmg, wave.owner, this);
                         wave.processed[entity.id || entity] = true;
                         
                         // Apply knockback force without allocating vectors
@@ -1270,7 +1270,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const collisionDamage = Math.floor(playerVelMag + enemyVelMag);
                     if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, enemy);
-                    enemy.takeDamage(collisionDamage, this.player);
+                    enemy.takeDamage(collisionDamage, this.player, this);
                     
                     // Apply physics push based on relative mass/size
                     const playerSize = this.player.size;
@@ -1309,7 +1309,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const collisionDamage = Math.floor(this.player.vel.mag());
                     if (STAR_SYSTEM_DEBUG) console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, asteroid);
-                    asteroid.takeDamage(20, this.player); // Fixed damage to asteroid
+                    asteroid.takeDamage(20, this.player, this); // Fixed damage to asteroid, pass system
                     
                     // Apply physics push based on relative mass/size
                     const playerSize = this.player.size;

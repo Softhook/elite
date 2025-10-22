@@ -28,6 +28,18 @@ class EnemyTargeting {
         }
         // --- END BOUNTY HUNTER ---
 
+        // --- SNIPING: Lock onto current target, don't retarget ---
+        if (this.currentState === AI_STATE.SNIPING) {
+            if (this.isTargetValid(this.target)) {
+                return true; // Keep current target locked during sniping
+            } else {
+                // Target became invalid, exit sniping state
+                this.changeState(AI_STATE.APPROACHING);
+                return false;
+            }
+        }
+        // --- END SNIPING ---
+
         let bestScore = TARGET_SCORE_INVALID;
         let bestTarget = null;
         let currentTargetScore = TARGET_SCORE_INVALID;
@@ -54,8 +66,6 @@ class EnemyTargeting {
         const playerRef = system.player || this.target;
         if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
             const playerScore = this.evaluateTargetScore(playerRef, system);
-            // Log all player evaluations
-            //console.log(`%c🎯 PLAYER EVAL: ${this.shipTypeName} evaluating player: score=${playerScore}`, 'color:blue');
             if (playerScore > bestScore) {
                 bestScore = playerScore;
                 bestTarget = playerRef;
@@ -210,14 +220,12 @@ class EnemyTargeting {
                 case AI_ROLE.PIRATE:
                     if (isPlayer) {
                         _interesting = true;
-                        //console.log(`%c🔍 PIRATE TARGETING PLAYER: ${enemy.shipTypeName} base score: +20, score now ${_score}`, 'color:green');
                         
                         // Add cargo bonus
                         const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
                         if (cargoAmount > 5) {
                             const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                             _score += cargoBonus;
-                            //console.log(`%c🔍 PIRATE TARGETING PLAYER: Cargo bonus +${cargoBonus}, score now ${_score}`, 'color:green');
                         }
                     } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                         _score += TARGET_SCORE_PIRATE_PREY_HAULER;
