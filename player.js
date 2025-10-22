@@ -861,8 +861,8 @@ handleInput() {
             this.updateAutopilot();
         }
 
-        // Regenerate shields only after recharge delay has passed
-        if (this.shield < this.maxShield && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
+        // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
+        if (this.shield < this.maxShield && !this.shieldsDisabled && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
             // Pre-calculate recharge amount (scale by deltaTime for consistent rate)
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * (deltaTime * 0.00096); // 0.016 / 16.67
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);

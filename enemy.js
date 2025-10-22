@@ -327,6 +327,12 @@ class Enemy {
         this.barrierColor = [100, 100, 255]; // Default blue
         // ---
 
+        // --- Nebula Effect Properties ---
+        this.weaponsDisabled = false; // Set by EMP nebula
+        this.shieldsDisabled = false; // Set by Ion nebula
+        this.inNebula = false; // General nebula presence flag
+        // ---
+
         this.hasPlayedLockOnSound = false; // Add this new flag
         this.shieldPlusHullAtStateEntry = null; // For tracking combined health drop during certain states
     }
@@ -389,9 +395,9 @@ class Enemy {
             this.attackCooldown -= deltaSeconds;
         }
 
-        // Regenerate shields only after recharge delay has passed
+        // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
         const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
-        if (this.shield < this.maxShield && !this.destroyed && timeSinceShieldHit > this.shieldRechargeDelay) {
+        if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
@@ -2538,8 +2544,9 @@ performFiring(system, targetExists, distanceToTarget, shootingAngle) {
             }
         }
         
-        // Check: EMP nebula check
-        if (this.currentSystem?.isInEMPNebula && this.currentSystem.isInEMPNebula(this.pos)) {
+        // Check if weapons are disabled by EMP nebula
+        if (this.weaponsDisabled) {
+            // Silently fail - no console spam for enemies
             return;
         }
     
