@@ -22,11 +22,6 @@ class Player {
         this.vel = createVector(0, 0);
         this.angle = 0; // Current facing angle (RADIANS, 0 = right)
         this.drag = 0.985;
-        
-        // Cache frequently used constants
-        this._TWO_PI = TWO_PI;
-        this._HALF_PI = HALF_PI;
-        this._PI = PI;
 
         // --- Store Base Stats from Definition ---
         this.size = shipDef.size;
@@ -392,23 +387,15 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     loadWeaponsFromShipDefinition(shipTypeName) {
         const shipDef = SHIP_DEFINITIONS[shipTypeName];
         
-        // Initialize weapons array with pre-allocated size
+        // Initialize weapons array
         this.weapons = [];
         
-        if (shipDef?.armament?.length) {
-            // Pre-allocate array size for better performance
-            const armament = shipDef.armament;
-            const armamentLength = armament.length;
-            this.weapons.length = armamentLength;
-            
+        if (shipDef && shipDef.armament && shipDef.armament.length) {
             // Load each weapon from ship's armament
-            for (let i = 0; i < armamentLength; i++) {
-                const weaponDef = WEAPON_UPGRADES.find(w => w.name === armament[i]);
+            for (const weaponName of shipDef.armament) {
+                const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
                 if (weaponDef) {
-                    // Shallow clone is sufficient for most cases
-                    this.weapons[i] = {...weaponDef};
-                } else {
-                    this.weapons[i] = null; // Keep array structure
+                    this.weapons.push({...weaponDef}); // Clone weapon definition
                 }
             }
         }
@@ -550,13 +537,11 @@ handleInput() {
       }
     }
   
-    // 5) Cooldowns & angle wrap (optimized)
+    // 5) Cooldowns & angle wrap
     if (this.fireCooldown > 0) {
-      this.fireCooldown -= deltaTime * 0.001;
+      this.fireCooldown -= deltaTime / 1000;
     }
-    // Normalize angle using cached TWO_PI
-    const twoPi = this._TWO_PI || TWO_PI;
-    this.angle = ((this.angle % twoPi) + twoPi) % twoPi;
+    this.angle = (this.angle % TWO_PI + TWO_PI) % TWO_PI;
   }
   
   /** Attempt a one-off forward speed burst if off cooldown */
@@ -568,9 +553,10 @@ handleInput() {
       this.speedBurstEnd   = now + 1000;  // 1000ms burst window
       this.lastBurstTime   = now;
   
-      // Big impulse (optimized - avoid vector allocation)
-      const burstForce = this.thrustForce * this.speedBurstMultiplier;
-      this.vel.add(cos(this.angle) * burstForce, sin(this.angle) * burstForce);
+      // Big impulse (will now exceed normal cap)
+      const burstImpulseForce = this.thrustForce * this.speedBurstMultiplier;
+      const burst = p5.Vector.fromAngle(this.angle).mult(burstImpulseForce);
+      this.vel.add(burst);
   
       uiManager?.addMessage("Speed Burst!", 'lightblue');
     }
@@ -578,19 +564,21 @@ handleInput() {
 
     /** Apply a left‐strafe (kite) thrust */
     kiteLeft() {
-        const angle = this.angle - (this._HALF_PI || HALF_PI);
-        const force = this.thrustForce;
-        this.vel.add(cos(angle) * force, sin(angle) * force);
+        const force = p5.Vector.fromAngle(this.angle - HALF_PI).mult(this.thrustForce);
+        this.vel.add(force);
         // draw particles
-        this.thrustManager?.createThrust(this.pos, angle, this.size);
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle - HALF_PI, this.size);
+        }
     }
 
     /** Apply a right‐strafe (kite) thrust */
     kiteRight() {
-        const angle = this.angle + (this._HALF_PI || HALF_PI);
-        const force = this.thrustForce;
-        this.vel.add(cos(angle) * force, sin(angle) * force);
-        this.thrustManager?.createThrust(this.pos, angle, this.size);
+        const force = p5.Vector.fromAngle(this.angle + HALF_PI).mult(this.thrustForce);
+        this.vel.add(force);
+        if (this.thrustManager) {
+            this.thrustManager.createThrust(this.pos, this.angle + HALF_PI, this.size);
+        }
     }
 
 
@@ -599,41 +587,49 @@ handleInput() {
      * Uses opposite direction from current facing angle.
      */
     reverseThrust() {
+        
         if (isNaN(this.angle)) {
+
             return;
         }
         
-        // Calculate force in opposite direction (angle + PI) - optimized without vector allocation
-        const reverseAngle = this.angle + (this._PI || PI);
-        const reducedForce = this.thrustForce * 0.6;
-        this.vel.add(cos(reverseAngle) * reducedForce, sin(reverseAngle) * reducedForce);
+        // Calculate force in opposite direction (angle + PI)
+        let reverseAngle = this.angle + PI;
+        let force = p5.Vector.fromAngle(reverseAngle);
+        
+        // Apply reduced force (60% of forward thrust)
+        force.mult(this.thrustForce * 0.6);
+        this.vel.add(force);
         
         // Create thrust particles at ship's front sides for reverse thrusters
         if (this.thrustManager) {
-            // Pre-calculate common values
-            const piOver4 = PI * 0.25;
-            const offset = this.size * 0.7;
-            const offsetSide = this.size * 0.4;
-            const thrustSize = this.size * 0.9;
+            // Move thrusters further out to the sides and forward
+            const offset = this.size * 0.7; // Position more in front of the ship
             
             // Left thruster: 45 degrees from center
-            const leftThrusterAngle = this.angle - piOver4;
-            const leftPosX = this.pos.x + cos(this.angle) * offset + cos(leftThrusterAngle) * offsetSide;
-            const leftPosY = this.pos.y + sin(this.angle) * offset + sin(leftThrusterAngle) * offsetSide;
+            const leftThrusterAngle = this.angle - PI/4;
+            const leftThrusterPos = p5.Vector.fromAngle(this.angle).mult(offset)
+                .add(p5.Vector.fromAngle(leftThrusterAngle).mult(this.size * 0.4));
             
             // Right thruster: 45 degrees from center
-            const rightThrusterAngle = this.angle + piOver4;
-            const rightPosX = this.pos.x + cos(this.angle) * offset + cos(rightThrusterAngle) * offsetSide;
-            const rightPosY = this.pos.y + sin(this.angle) * offset + sin(rightThrusterAngle) * offsetSide;
+            const rightThrusterAngle = this.angle + PI/4;
+            const rightThrusterPos = p5.Vector.fromAngle(this.angle).mult(offset)
+                .add(p5.Vector.fromAngle(rightThrusterAngle).mult(this.size * 0.4));
             
-            // Create thrust using cached position object to avoid allocations
-            if (!this._tempThrustPos) this._tempThrustPos = createVector(0, 0);
+            // CRITICAL FIX: Match the parameter signature of the standard createThrust() call
+            // Left thruster - use standard parameter structure
+            this.thrustManager.createThrust(
+                p5.Vector.add(this.pos, leftThrusterPos),
+                leftThrusterAngle,
+                this.size * 0.9  // Just pass position, angle and size
+            );
             
-            this._tempThrustPos.set(leftPosX, leftPosY);
-            this.thrustManager.createThrust(this._tempThrustPos, leftThrusterAngle, thrustSize);
-            
-            this._tempThrustPos.set(rightPosX, rightPosY);
-            this.thrustManager.createThrust(this._tempThrustPos, rightThrusterAngle, thrustSize);
+            // Right thruster - use standard parameter structure 
+            this.thrustManager.createThrust(
+                p5.Vector.add(this.pos, rightThrusterPos),
+                rightThrusterAngle,
+                this.size * 0.9
+            );
             
             // FALLBACK: Direct visual rendering if thrustManager isn't showing particles
             // This will ensure there's always a visual indicator even if the thrust particles fail
@@ -642,12 +638,14 @@ handleInput() {
             noStroke();
             
             // Left thruster triangle
-            translate(leftPosX, leftPosY);
+            const leftPos = p5.Vector.add(this.pos, leftThrusterPos);
+            translate(leftPos.x, leftPos.y);
             rotate(leftThrusterAngle);
             triangle(0, 0, -10, -5, -10, 5);
             
             // Right thruster triangle
-            translate(rightPosX - leftPosX, rightPosY - leftPosY); // Relative translation
+            const rightPos = p5.Vector.add(this.pos, rightThrusterPos);
+            translate(rightPos.x - leftPos.x, rightPos.y - leftPos.y); // Relative translation
             rotate(rightThrusterAngle - leftThrusterAngle); // Relative rotation
             triangle(0, 0, -10, -5, -10, 5);
             
@@ -658,28 +656,18 @@ handleInput() {
     /** Applies forward thrust force based on current facing angle (radians). */
     thrust() {
         if (isNaN(this.angle)) { this.angle = 0; } // Safety check
-        const force = this.thrustForce;
-        this.vel.add(cos(this.angle) * force, sin(this.angle) * force);
+        let force = p5.Vector.fromAngle(this.angle); force.mult(this.thrustForce); this.vel.add(force);
     }
 
     /** Fires a projectile towards the mouse cursor (world coordinates). */
     fire() {
         if (!this.currentSystem || isNaN(this.angle)) { return; } // Safety checks
-        
-        // Cache calculations
-        const halfWidth = width * 0.5;
-        const halfHeight = height * 0.5;
-        const tx = halfWidth - this.pos.x;
-        const ty = halfHeight - this.pos.y;
-        const worldMx = mouseX - tx;
-        const worldMy = mouseY - ty;
-        const shootingAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
-        
-        // Reuse vector for spawn offset calculation
-        const spawnOffset = this._tempVector || (this._tempVector = createVector(0, 0));
-        spawnOffset.set(cos(this.angle), sin(this.angle)).mult(this.size * 0.7);
-        
-        const proj = new Projectile(this.pos.x + spawnOffset.x, this.pos.y + spawnOffset.y, shootingAngle, this);
+        let tx = width / 2 - this.pos.x; let ty = height / 2 - this.pos.y;
+        let worldMx = mouseX - tx; let worldMy = mouseY - ty;
+        let shootingAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
+        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
+        let spawnPos = p5.Vector.add(this.pos, spawnOffset);
+        let proj = new Projectile(spawnPos.x, spawnPos.y, shootingAngle, this); // Pass `this` (the player object)
         this.currentSystem.addProjectile(proj);
     }
 
@@ -743,7 +731,7 @@ handleInput() {
     /** Updates player position, physics, and state. */
     update() {
         // Cache time values to avoid redundant calculations
-        const deltaSeconds = deltaTime * 0.001; // Pre-calculate milliseconds to seconds
+        const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
         
         // Barrier duration update
@@ -800,16 +788,24 @@ handleInput() {
                 // First apply normal drag
                 this.vel.mult(this.drag);
                 
-                // Then apply powerful velocity reduction with safety checks (cached calculation)
-                const tangledSpeedFactor = Math.min(1 / Math.max(this.dragMultiplier, 0.001), 1.0);
-                this.vel.mult(tangledSpeedFactor);
+                // Then apply powerful velocity reduction with safety checks
+                const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
+                const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
                 
-                // Reduce visual effect frequency for performance
-                const fc = frameCount;
-                if (fc % 5 === 0) {
-                    this.vel.rotate(random(-0.1, 0.1));
-                } else if (fc % 6 === 0) {
-                    this.vel.add(random(-0.03, 0.03), random(-0.03, 0.03));
+                // Apply tangle effect if values are valid
+                if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
+                    this.vel.mult(tangledSpeedFactor);
+                    
+                    // Add slight directional randomness to simulate being caught in energy net
+                    if (frameCount % 5 === 0) {
+                        this.vel.rotate(random(-0.1, 0.1));
+                    }
+                    
+                    // Add subtle jitter to visualize energy field disruption
+                    if (frameCount % 6 === 0) {
+                        const jitterAmount = 0.03;
+                        this.vel.add(random(-jitterAmount, jitterAmount), random(-jitterAmount, jitterAmount));
+                    }
                 }
             } else {
                 // Normal drag (typically ~0.985)
@@ -819,16 +815,15 @@ handleInput() {
 
         // 2) Speed cap
         let currentCap;
-        if (this.isSpeedBursting || this.isCoastingFromBurst) {
-            // Cache burst cap calculation
-            if (!this._cachedBurstCap || this._cachedBurstCap !== this.baseMaxSpeed * this.speedBurstMultiplier) {
-                this._cachedBurstCap = this.baseMaxSpeed * this.speedBurstMultiplier;
-                this._cachedCoastThreshold = (this.baseMaxSpeed * 1.01) ** 2; // Pre-square for magSq comparison
-            }
-            currentCap = this._cachedBurstCap;
-            
-            // End coasting if speed has decayed (only check when coasting)
-            if (this.isCoastingFromBurst && this.vel.magSq() < this._cachedCoastThreshold) {
+        if (this.isSpeedBursting) {
+            // Actively bursting (thrust being applied), high cap
+            currentCap = this.baseMaxSpeed * this.speedBurstMultiplier;
+        } else if (this.isCoastingFromBurst) {
+            // Coasting after burst: maintain the high cap, let drag reduce speed.
+            currentCap = this.baseMaxSpeed * this.speedBurstMultiplier;
+            // End coasting if speed has decayed close to or below normal max speed.
+            // Using 1.01 (101%) as a threshold to ensure a smooth transition to the normal cap.
+            if (this.vel.magSq() < sq(this.baseMaxSpeed * 1.01)) {
                 this.isCoastingFromBurst = false;
             }
         } else {
@@ -845,15 +840,16 @@ handleInput() {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
 
-        // Position update (optimized NaN check)
-        if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
-            this.vel.set(0, 0); // Safety net for NaN velocity
+        // Position update
+        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
+            this.pos.add(this.vel);
+        } else {
+            this.vel.set(0,0); // Safety net for NaN velocity
         }
-        this.pos.add(this.vel);
 
         // Update cooldown timer using cached deltaSeconds
         if (this.fireCooldown > 0) {
-            this.fireCooldown = Math.max(0, this.fireCooldown - deltaSeconds);
+            this.fireCooldown -= deltaSeconds;
         }
 
         // Either handle autopilot OR normal input, never both
@@ -862,9 +858,11 @@ handleInput() {
         }
 
         // Regenerate shields only after recharge delay has passed
-        if (this.shield < this.maxShield && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
-            // Pre-calculate recharge amount (scale by deltaTime for consistent rate)
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * (deltaTime * 0.00096); // 0.016 / 16.67
+        const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
+        if (this.shield < this.maxShield && timeSinceShieldHit > this.shieldRechargeDelay) {
+            // Scale by deltaTime for consistent recharge rate
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1; // Normalize to ~60fps
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016; // Per-frame rate
             this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
         }
 
@@ -876,12 +874,11 @@ handleInput() {
     draw() {
         // Don't draw ship if exploding
         if (this.exploding) {
-            // Show final flash during first 300ms (cache millis call)
-            const timeElapsed = millis() - this.explosionStartTime;
-            if (timeElapsed < 300) {
+            // Show final flash during first 300ms
+            if (millis() - this.explosionStartTime < 300) {
                 push();
                 translate(this.pos.x, this.pos.y);
-                fill(255, 255, 255, map(timeElapsed, 0, 300, 255, 0));
+                fill(255, 255, 255, map(millis() - this.explosionStartTime, 0, 300, 255, 0));
                 noStroke();
                 ellipse(0, 0, this.size * 1.5);
                 pop();
@@ -894,12 +891,8 @@ handleInput() {
         
         if (isNaN(this.angle)) { return; } // Safety check
         
-        // Cache ship definition lookup
-        if (!this._cachedShipDef || this._cachedShipTypeName !== this.shipTypeName) {
-            this._cachedShipDef = SHIP_DEFINITIONS[this.shipTypeName];
-            this._cachedShipTypeName = this.shipTypeName;
-        }
-        const drawFunc = this._cachedShipDef?.drawFunction;
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName]; 
+        const drawFunc = shipDef?.drawFunction;
         
         if (typeof drawFunc !== 'function') { return; }
         
@@ -1227,17 +1220,17 @@ handleInput() {
     checkCollision(target) {
         // Basic safety check for target validity
         if (!target?.pos || target.size === undefined || typeof target.size !== 'number') {
+            // console.warn("Player checkCollision: Invalid target provided.", target); // Optional log
             return false;
         }
         
-        // Calculate distance squared between centers (inline for performance)
-        const dx = this.pos.x - target.pos.x;
-        const dy = this.pos.y - target.pos.y;
-        const dSq = dx * dx + dy * dy;
+        // Calculate distance squared between centers
+        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
         
-        // Calculate sum of radii squared (using size as diameter, optimized)
-        const sumRadii = (this.size + target.size) * 0.5;
-        const sumRadiiSq = sumRadii * sumRadii;
+        // Calculate sum of radii squared (using size as diameter)
+        let targetRadius = target.size / 2;
+        let myRadius = this.size / 2;
+        let sumRadiiSq = sq(targetRadius + myRadius);
         
         // Collision occurs if distance squared is less than sum of radii squared
         return dSq < sumRadiiSq;
@@ -1878,19 +1871,12 @@ handleInput() {
      * @returns {number} Number of active bodyguards
      */
     getActiveGuardsCount() {
-        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
+        if (!this.activeBodyguards) {
             return 0;
         }
-        // Clean up in single pass - avoid creating new array if no destroyed guards
-        let count = 0;
-        for (let i = this.activeBodyguards.length - 1; i >= 0; i--) {
-            if (this.activeBodyguards[i].destroyed) {
-                this.activeBodyguards.splice(i, 1);
-            } else {
-                count++;
-            }
-        }
-        return count;
+        // Filter out destroyed bodyguards
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+        return this.activeBodyguards.length;
     }
 
     /**
@@ -1898,26 +1884,27 @@ handleInput() {
      * @returns {{count: number, totalCost: number}} Info about damaged bodyguards
      */
     getDamagedBodyguardsInfo() {
-        if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
+        if (!this.activeBodyguards) {
             return { count: 0, totalCost: 0 };
         }
 
-        // Single pass: filter destroyed and count damaged guards
-        let damagedCount = 0;
+        // Filter out destroyed bodyguards first
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+
+        // Find damaged bodyguards (only those that have been spawned and have hull values)
+        const damagedGuards = this.activeBodyguards.filter(guard => 
+            this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull
+        );
+        
+        // Calculate total repair cost (7 credits per hull point, same as player repairs)
         let totalCost = 0;
-        
-        for (let i = this.activeBodyguards.length - 1; i >= 0; i--) {
-            const guard = this.activeBodyguards[i];
-            if (guard.destroyed) {
-                this.activeBodyguards.splice(i, 1);
-            } else if (this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull) {
-                damagedCount++;
-                totalCost += Math.floor((guard.maxHull - guard.hull) * 7);
-            }
-        }
-        
+        damagedGuards.forEach(guard => {
+            const missing = guard.maxHull - guard.hull;
+            totalCost += Math.floor(missing * 7);
+        });
+
         return {
-            count: damagedCount,
+            count: damagedGuards.length,
             totalCost: totalCost
         };
     }
@@ -2040,12 +2027,7 @@ handleInput() {
             return;
         }
 
-        let lostCount = 0;
-        const guards = this.activeBodyguards;
-        
-        // Sync and filter in single pass for better performance
-        for (let i = guards.length - 1; i >= 0; i--) {
-            const guard = guards[i];
+        this.activeBodyguards.forEach(guard => {
             if (guard.enemyRef) {
                 // Sync hull from enemy
                 guard.hull = guard.enemyRef.hull;
@@ -2054,17 +2036,17 @@ handleInput() {
                 // Sync destroyed status
                 if (guard.enemyRef.destroyed) {
                     guard.destroyed = true;
-                    guards.splice(i, 1);
-                    lostCount++;
                 }
-            } else if (guard.destroyed) {
-                guards.splice(i, 1);
-                lostCount++;
             }
-        }
+        });
+
+        // Clean up destroyed bodyguards
+        const beforeCount = this.activeBodyguards.length;
+        this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
+        const afterCount = this.activeBodyguards.length;
         
-        if (lostCount > 0) {
-            console.log(`Lost ${lostCount} bodyguard(s) in combat`);
+        if (beforeCount > afterCount) {
+            console.log(`Lost ${beforeCount - afterCount} bodyguard(s) in combat`);
         }
     }
 
