@@ -1566,6 +1566,17 @@ if (isIllegalInSystem || isMissionCargo) {
     
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
+        // Only access galaxy/system in states where it's expected to exist
+        const statesExpectingSystem = [
+            "IN_FLIGHT","DOCKED","VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD",
+            "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
+            "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
+            "GALAXY_MAP","JUMPING"
+        ];
+        if (!statesExpectingSystem.includes(currentState)) {
+            return false;
+        }
+
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
 
         // --- DOCKED State (Main Station Menu) ---

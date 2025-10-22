@@ -24,6 +24,8 @@ class Galaxy {
         this.systems = []; // Initialize systems as an empty array
         this.currentSystemIndex = 0;
         this.hyperdriveRange = 7; // Default hyperdrive range in light years
+        this._initialized = false; // Mark when systems are generated/loaded
+        this._warnedEmptyOnce = false; // Prevent log spam before initialization
         // Add other galaxy-wide properties here (e.g., faction data, global events)
     }
 
@@ -168,6 +170,7 @@ class Galaxy {
         }
 
         console.log("<<< Galaxy.initGalaxySystems() finished procedural generation.");
+        this._initialized = true;
     }
 
     /**
@@ -254,21 +257,24 @@ class Galaxy {
      * @returns {StarSystem|null} The current StarSystem object or null.
      */
     getCurrentSystem() {
-        // Check if systems array exists and has been initialized
-        if (!this.systems || !Array.isArray(this.systems)) {
-            console.warn(`getCurrentSystem: Systems array not initialized yet.`);
+        // If galaxy hasn't been initialized or has no systems yet, fail quietly
+        if (!this.systems || !Array.isArray(this.systems) || this.systems.length === 0) {
+            if (!this._warnedEmptyOnce) {
+                console.warn(`getCurrentSystem: Galaxy not initialized or systems empty yet.`);
+                this._warnedEmptyOnce = true;
+            }
             return null;
         }
-        
-        // Check index bounds
+
+        // Check index bounds (downgrade to warn, return null)
         if (this.currentSystemIndex < 0 || this.currentSystemIndex >= this.systems.length) {
-            console.error(`getCurrentSystem: currentSystemIndex (${this.currentSystemIndex}) is out of bounds for systems array (length ${this.systems.length}).`);
+            console.warn(`getCurrentSystem: currentSystemIndex (${this.currentSystemIndex}) is out of bounds for systems array (length ${this.systems.length}).`);
             return null;
         }
         const system = this.systems[this.currentSystemIndex];
         // Check if the system object itself is valid
         if (!system) {
-             console.error(`getCurrentSystem: System object at index ${this.currentSystemIndex} is null or undefined.`);
+             console.warn(`getCurrentSystem: System object at index ${this.currentSystemIndex} is null or undefined.`);
              return null;
         }
         return system;
@@ -476,6 +482,7 @@ class Galaxy {
         });
 
         this.currentSystemIndex = data.currentSystemIndex ?? 0;
+        this._initialized = this.systems.length > 0;
 
         // Debug: Log the loaded systems
         console.log("Loaded systems after fromJSON:", this.systems);
