@@ -291,7 +291,7 @@ class EnemyStateMachine {
         if (!principalValid) {
             console.log(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
             this.principal = null;
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
@@ -318,7 +318,7 @@ class EnemyStateMachine {
             } else {
                 console.log(`${this.shipTypeName} (Guard): Principal left but no jump zone data. Standing down.`);
                 this.principal = null;
-                this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                this.changeState(this._getDefaultStateForRole());
             }
             return;
         }
@@ -518,7 +518,7 @@ class EnemyStateMachine {
                 newState = AI_STATE.FLEEING;
             } else {
                 // Others go to their default non-combat state
-                newState = this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE;
+                newState = this._getDefaultStateForRole();
             }
         }
         
