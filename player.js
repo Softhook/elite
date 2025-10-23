@@ -67,6 +67,11 @@ class Player {
         this.hasJoinedFaction = false; // Whether player has ever joined a faction
         this.factionShip = null; // Ship received when joining faction
 
+        // Nebula effect properties
+        this.shieldsDisabled = false;
+        this.weaponsDisabled = false;
+        this.inNebula = false;
+
         // Initialize weapons array based on ship definition
         this.weapons = [];
         this.weaponIndex = 0;
