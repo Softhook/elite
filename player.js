@@ -1995,9 +1995,20 @@ handleInput() {
 
         // Spawn each bodyguard near the player
         this.activeBodyguards.forEach((guard, index) => {
-            // Skip if already spawned in this system
-            if (guard.enemyRef && !guard.enemyRef.destroyed) {
-                return;
+            // Check if guard has an existing enemyRef
+            if (guard.enemyRef) {
+                // If the guard's enemyRef is in a different system or marked for respawn, clean it up
+                if (guard.enemyRef.currentSystem !== system || guard.enemyRef.destroyed) {
+                    // Mark old reference as destroyed to clean it from old system
+                    if (!guard.enemyRef.destroyed) {
+                        guard.enemyRef.destroyed = true;
+                    }
+                    // Clear the reference so we can spawn a new one
+                    guard.enemyRef = null;
+                } else {
+                    // Guard is already spawned in the current system and alive, skip
+                    return;
+                }
             }
 
             // Calculate spawn position near player
