@@ -267,76 +267,134 @@ class EnemyStateMachine {
      * @private
      */
     _updateState_GUARDING() {
-        // Check if principal is missing, destroyed, or has left the system
-        if (!this.principal || !this.isTargetValid(this.principal) || (this.principal.currentSystem !== this.currentSystem) || (this.principal.currentState === AI_STATE.LEAVING_SYSTEM)) {
-            const system = this.getSystem();
-            
-            // Principal has left the system (jumped or destroyed) or is leaving
-            if (this.principal && system?.jumpZoneCenter) {
-                console.log(`${this.shipTypeName} (Guard): Principal ${this.principal.shipTypeName} is leaving the system. Following...`);
-                
-                // Follow principal through jump
-                const distToJumpZone = this.distanceTo({pos: system.jumpZoneCenter, size: 0});
-                if (distToJumpZone < system.jumpZoneRadius * 1.2) {
-                    // Already in/near jump zone - jump immediately
-                    console.log(`${this.shipTypeName} (Guard): In jump zone. Leaving to follow principal.`);
-                    this.changeState(AI_STATE.LEAVING_SYSTEM);
-                } else {
-                    // Move towards jump zone
-                    console.log(`${this.shipTypeName} (Guard): Moving to jump zone to follow principal.`);
-                    this.changeState(AI_STATE.LEAVING_SYSTEM);
-                }
-                return;
-            }
-            
-            // Principal was destroyed or invalid
+        const principal = this.principal;
+        const system = this.getSystem();
+
+        // Validate principal reference and ensure we can track them
+        const principalValid = principal && this.isTargetValid(principal) && principal.pos;
+        if (!principalValid) {
             console.log(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
             this.principal = null;
             this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
             return;
         }
 
-        // Principal is valid - guard them
-        const distToPrincipal = this.distanceTo(this.principal);
-        const guardDistance = (this.principal.size || 10) * 3; // Stay within 3x principal's size
+        // Follow principal if they are leaving or have already jumped
+        const principalSystem = principal.currentSystem;
+        const principalLeaving = principal.currentState === AI_STATE.LEAVING_SYSTEM;
+        const principalOutsideSystem = principalSystem && principalSystem !== this.currentSystem;
+        if (principalLeaving || principalOutsideSystem) {
+            if (system?.jumpZoneCenter) {
+                console.log(`${this.shipTypeName} (Guard): Principal ${principal.shipTypeName} is leaving the system. Following...`);
+                this.setLeavingSystemTarget(system);
+                this.changeState(AI_STATE.LEAVING_SYSTEM);
 
-        // Check if principal is under attack
-        if (this.principal.lastAttacker && this.isTargetValid(this.principal.lastAttacker)) {
-            // Engage the attacker (but don't target ourselves!)
-            if (this.target !== this.principal.lastAttacker && this.principal.lastAttacker !== this) {
-                console.log(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${this.principal.lastAttacker.shipTypeName || 'attacker'}.`);
-                this.target = this.principal.lastAttacker;
+                if (system.jumpZoneCenter) {
+                    this.tempVector.set(
+                        system.jumpZoneCenter.x - this.pos.x,
+                        system.jumpZoneCenter.y - this.pos.y
+                    );
+                    if (this.tempVector.magSq() > 0.0001) {
+                        this.tempVector.normalize().mult(this.maxSpeed * 0.7);
+                        this.vel.add(this.tempVector);
+                    }
+                }
+            } else {
+                console.log(`${this.shipTypeName} (Guard): Principal left but no jump zone data. Standing down.`);
+                this.principal = null;
+                this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            }
+            return;
+        }
+
+        // Maintain guard reaction cooldown so we don't spam engagements
+        if (this.guardReactionTime > 0) {
+            this.guardReactionTime -= deltaTime / 1000;
+            if (this.guardReactionTime < 0) {
+                this.guardReactionTime = 0;
+            }
+        }
+
+        const guardDistance = (principal.size || 10) * 3;
+        const principalAttacker = principal.lastAttacker;
+        const timeSincePrincipalAttack = principal.lastAttackTime ? millis() - principal.lastAttackTime : Infinity;
+
+        if (this.guardReactionTime <= 0 &&
+            principalAttacker &&
+            principalAttacker !== this &&
+            this.isTargetValid(principalAttacker) &&
+            timeSincePrincipalAttack < 5000) {
+
+            const distToAttacker = this.distanceTo(principalAttacker);
+            if (distToAttacker < this.guardEngageRange) {
+                console.log(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${principalAttacker.shipTypeName || 'attacker'}.`);
+                this.target = principalAttacker;
                 this.changeState(AI_STATE.APPROACHING);
+                this.guardReactionTime = 5.0;
                 return;
             }
         }
 
-        // Check if we have a valid target (threat to principal)
+        // If we have a lingering target, decide whether to keep pursuing it
         if (this.target && this.isTargetValid(this.target)) {
-            const distToThreat = this.distanceTo(this.target);
-            
-            // If threat is close to principal, engage
-            const threatToPrincipalDist = p5.Vector.dist(this.target.pos, this.principal.pos);
+            const threatToPrincipalDist = (this.target.pos && principal.pos)
+                ? p5.Vector.dist(this.target.pos, principal.pos)
+                : Infinity;
+
             if (threatToPrincipalDist < guardDistance * 2) {
                 this.changeState(AI_STATE.APPROACHING);
                 return;
             }
-            
-            // If threat is far from principal, clear target and resume guarding
+
             if (threatToPrincipalDist > guardDistance * 4) {
                 this.target = null;
             }
+        } else {
+            this.target = null;
         }
 
-        // No immediate threat - maintain guard position
-        if (distToPrincipal > guardDistance) {
-            // Too far from principal - move closer
-            // Movement handled by getMovementTargetForState
-        } else if (distToPrincipal < guardDistance * 0.5) {
-            // Too close - back off slightly
-            // Movement handled by getMovementTargetForState
+        // Maintain escort formation around principal when no immediate threat
+        if (!principal.pos) {
+            return;
         }
-        // Otherwise, maintain current distance (orbit/escort)
+
+        const formationOffset = this.guardFormationOffset || createVector(-70, 0);
+        const principalAngle = principal.angle || 0;
+        const cosP = cos(principalAngle);
+        const sinP = sin(principalAngle);
+
+        const worldOffsetX = cosP * formationOffset.x - sinP * formationOffset.y;
+        const worldOffsetY = sinP * formationOffset.x + cosP * formationOffset.y;
+
+        const desiredX = principal.pos.x + worldOffsetX;
+        const desiredY = principal.pos.y + worldOffsetY;
+        const distToPrincipal = dist(this.pos.x, this.pos.y, principal.pos.x, principal.pos.y);
+        const distToFormation = dist(this.pos.x, this.pos.y, desiredX, desiredY);
+
+        if (!this._guardFormationTarget) {
+            this._guardFormationTarget = createVector(desiredX, desiredY);
+        } else {
+            this._guardFormationTarget.set(desiredX, desiredY);
+        }
+
+        if (distToPrincipal > this.guardLeashDistance || distToFormation > (this.size || 1) * 0.5) {
+            this.performRotationAndThrust(this._guardFormationTarget);
+        } else {
+            if (principal.vel) {
+                this.tempVector.set(principal.vel.x - this.vel.x, principal.vel.y - this.vel.y);
+                const velDiffMagSq = this.tempVector.magSq();
+                this.tempVector.mult(0.25);
+                this.vel.add(this.tempVector);
+
+                if (velDiffMagSq < 0.1) {
+                    this.vel.mult(0.99);
+                }
+            } else {
+                this.vel.mult(0.985);
+            }
+
+            this.rotateTowards(principalAngle);
+        }
     }
 
     /**
