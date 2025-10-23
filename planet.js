@@ -111,7 +111,7 @@ class Planet {
             // Ensure atmosphere buffer is big enough to contain the city glow (which is r * 2.1)
             atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 2.1);
         }
-        const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * atmBufferSizeFactor * 1.2) : 0;
+        const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * atmBufferSizeFactor) : 0;
         
         // Create main planet buffer
         this.planetBuffer = createGraphics(bufferSize, bufferSize);
