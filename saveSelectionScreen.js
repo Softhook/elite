@@ -410,10 +410,10 @@ class SaveSelectionScreen {
         fill(isSelected ? color(180, 255, 180) : color(120, 180, 120));
         textSize(18);
         text("START NEW ROOKIE PILOT", x + w/2 + hoverOffset, y + h/2 - 5); // Adjusted for two lines
-        
+
         textSize(12);
         fill(isSelected ? color(150, 200, 150) : color(100, 140, 100));
-        text("Sidewinder, 100 Credits, Fresh Start", x + w/2 + hoverOffset, y + h/2 + 15); // Second line
+        text("Sidewinder, 1000 Credits, Fresh Start", x + w/2 + hoverOffset, y + h/2 + 15); // Second line (updated to 1000 credits)
 
         pop();
     }
@@ -609,7 +609,7 @@ class SaveSelectionScreen {
 
         // Reset player for rookie game
         if (player) {
-            player.credits = 100; // Rookie credits
+            player.credits = 1000; // Rookie credits (updated from 100 to 1000)
             player.hull = player.maxHull; 
             player.shield = player.maxShield; 
             player.cargo = [];
