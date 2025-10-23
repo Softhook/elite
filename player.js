@@ -1313,6 +1313,10 @@ handleInput() {
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
             isWanted: this.isWanted,
             isPolice: this.isPolice,
+            hasBeenPolice: this.hasBeenPolice,
+            playerFaction: this.playerFaction,
+            hasJoinedFaction: this.hasJoinedFaction,
+            factionShip: this.factionShip,
             shield: this.shield,
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
@@ -1348,6 +1352,10 @@ handleInput() {
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
         this.isPolice = data.isPolice || false;
+        this.hasBeenPolice = data.hasBeenPolice || false;
+        this.playerFaction = data.playerFaction || null;
+        this.hasJoinedFaction = data.hasJoinedFaction || false;
+        this.factionShip = data.factionShip || null;
 
         this.shield = data.shield !== undefined ? data.shield : this.maxShield;
         this.maxShield = data.maxShield || this.maxShield;
