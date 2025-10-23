@@ -425,11 +425,38 @@ class EnemyAIBehaviors {
                 // Exit if:
                 // 1. Arrived at the jump zone target (dE < 150)
                 if (dE < 150) {
-                    this.inCombat = false; // Add this line
-                    this.haulerCombatTimer = undefined; // Add this line
-                    this.destroyed = true;
-                    // This log confirms the condition was met
-                    console.log(`${this.role} ${this.shipTypeName} left the system.`);
+                    if (this.role === AI_ROLE.GUARD && this.principal) {
+                        // Guards follow their principal to the new system
+                        const targetSystem = this.principal.currentSystem;
+                        if (targetSystem && targetSystem !== this.currentSystem) {
+                            // Remove from current system
+                            const index = this.currentSystem.enemies.indexOf(this);
+                            if (index !== -1) {
+                                this.currentSystem.enemies.splice(index, 1);
+                            }
+                            // Add to target system
+                            this.currentSystem = targetSystem;
+                            targetSystem.addEnemy(this);
+                            // Set position to jump zone in new system
+                            if (targetSystem.jumpZoneCenter) {
+                                this.pos.set(targetSystem.jumpZoneCenter.x, targetSystem.jumpZoneCenter.y);
+                                this.vel.set(0, 0);
+                            }
+                            // Resume guarding
+                            this.changeState(AI_STATE.GUARDING);
+                            console.log(`${this.shipTypeName} (Guard) followed principal to ${targetSystem.name}`);
+                        } else {
+                            // Can't follow, destroy
+                            this.destroyed = true;
+                            console.log(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
+                        }
+                    } else {
+                        // Normal hauler/transport leaving
+                        this.inCombat = false;
+                        this.haulerCombatTimer = undefined;
+                        this.destroyed = true;
+                        console.log(`${this.role} ${this.shipTypeName} left the system.`);
+                    }
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case

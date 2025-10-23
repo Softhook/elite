@@ -268,19 +268,18 @@ class EnemyStateMachine {
      */
     _updateState_GUARDING() {
         // Check if principal is missing, destroyed, or has left the system
-        if (!this.principal || !this.isTargetValid(this.principal)) {
+        if (!this.principal || !this.isTargetValid(this.principal) || (this.principal.currentSystem !== this.currentSystem) || (this.principal.currentState === AI_STATE.LEAVING_SYSTEM)) {
             const system = this.getSystem();
             
-            // Principal Jumped: Check if principal was at jump zone when it disappeared
-            if (this.principal && this.principal.destroyed && system?.jumpZoneCenter) {
-                // Principal is gone - determine if it jumped or was destroyed
-                console.log(`${this.shipTypeName} (Guard): Principal ${this.principal.shipTypeName} has left the system. Following...`);
+            // Principal has left the system (jumped or destroyed) or is leaving
+            if (this.principal && system?.jumpZoneCenter) {
+                console.log(`${this.shipTypeName} (Guard): Principal ${this.principal.shipTypeName} is leaving the system. Following...`);
                 
                 // Follow principal through jump
                 const distToJumpZone = this.distanceTo({pos: system.jumpZoneCenter, size: 0});
                 if (distToJumpZone < system.jumpZoneRadius * 1.2) {
                     // Already in/near jump zone - jump immediately
-                    console.log(`${this.shipTypeName} (Guard): In jump zone. Jumping to follow principal.`);
+                    console.log(`${this.shipTypeName} (Guard): In jump zone. Leaving to follow principal.`);
                     this.changeState(AI_STATE.LEAVING_SYSTEM);
                 } else {
                     // Move towards jump zone
