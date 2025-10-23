@@ -38,6 +38,25 @@ class SaveSelectionScreen {
         this.resize = this.resize.bind(this);
     }
     
+    /**
+     * Computes Elite rank from kill count
+     * This mirrors the logic in Player.getEliteRating()
+     * @param {number} kills - Number of kills
+     * @returns {string} The Elite rating
+     */
+    getRankFromKills(kills) {
+        if (!kills || kills < 0) return "Harmless";
+        if (kills >= 6400) return "Elite";
+        if (kills >= 2560) return "Deadly";
+        if (kills >= 512) return "Dangerous";
+        if (kills >= 128) return "Competent";
+        if (kills >= 64) return "Above Average";
+        if (kills >= 32) return "Average";
+        if (kills >= 16) return "Poor";
+        if (kills >= 8) return "Mostly Harmless";
+        return "Harmless";
+    }
+    
     initBackgroundStars() {
         // Create simple background stars for atmosphere
         this.bgStars = [];
@@ -288,7 +307,8 @@ class SaveSelectionScreen {
                 text(`System: ${systemName}`, col3X, line3Y);
                 line3Y += lineSpacing;
 
-                text(`Rank: ${playerData.rank || 'Harmless'}`, col3X, line3Y);
+                const pilotRank = this.getRankFromKills(playerData.kills);
+                text(`Rank: ${pilotRank}`, col3X, line3Y);
                 // line3Y += lineSpacing; // Increment if more items in col3
             }
             
