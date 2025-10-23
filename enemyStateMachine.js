@@ -54,6 +54,22 @@ class EnemyStateMachine {
         }
         // Otherwise, remains IDLE.
     }
+    
+    /**
+     * Helper to determine default state when losing target
+     * Guards return to GUARDING, Police to PATROLLING, others to IDLE
+     * @return {number} AI_STATE constant for default state
+     * @private
+     */
+    _getDefaultStateForRole() {
+        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+            return AI_STATE.GUARDING;
+        } else if (this.role === AI_ROLE.POLICE) {
+            return AI_STATE.PATROLLING;
+        } else {
+            return AI_STATE.IDLE;
+        }
+    }
 
     /**
      * Handles SNIPING state logic
@@ -64,7 +80,7 @@ class EnemyStateMachine {
      */
     _updateState_SNIPING(targetExists, distanceToTarget) {
         if (!targetExists) {
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
@@ -149,7 +165,7 @@ class EnemyStateMachine {
      */
     _updateState_APPROACHING(targetExists, distanceToTarget) {
         if (!targetExists) {
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
@@ -180,7 +196,7 @@ class EnemyStateMachine {
      */
     _updateState_ATTACK_PASS(targetExists) {
         if (!targetExists) {
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
         this.passTimer -= deltaTime / 1000;
@@ -203,7 +219,7 @@ class EnemyStateMachine {
                 }
             } else {
                 // If target is no longer valid, go to appropriate default state
-                this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                this.changeState(this._getDefaultStateForRole());
             }
         }
     }
@@ -217,7 +233,7 @@ class EnemyStateMachine {
      */
     _updateState_REPOSITIONING(targetExists, distanceToTarget) {
         if (!targetExists) {
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
@@ -275,7 +291,7 @@ class EnemyStateMachine {
         if (!principalValid) {
             console.log(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
             this.principal = null;
-            this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
@@ -302,7 +318,7 @@ class EnemyStateMachine {
             } else {
                 console.log(`${this.shipTypeName} (Guard): Principal left but no jump zone data. Standing down.`);
                 this.principal = null;
-                this.changeState(this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE);
+                this.changeState(this._getDefaultStateForRole());
             }
             return;
         }
@@ -463,9 +479,15 @@ class EnemyStateMachine {
      */
     _determinePostFleeState() {
         let state = AI_STATE.IDLE;
-        if (this.role === AI_ROLE.POLICE) state = AI_STATE.PATROLLING;
-        else if (this.role === AI_ROLE.HAULER) state = this.previousHaulerState || AI_STATE.PATROLLING;
-        else if (this.role === AI_ROLE.TRANSPORT) state = this.previousTransportState || AI_STATE.TRANSPORTING;
+        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+            state = AI_STATE.GUARDING;
+        } else if (this.role === AI_ROLE.POLICE) {
+            state = AI_STATE.PATROLLING;
+        } else if (this.role === AI_ROLE.HAULER) {
+            state = this.previousHaulerState || AI_STATE.PATROLLING;
+        } else if (this.role === AI_ROLE.TRANSPORT) {
+            state = this.previousTransportState || AI_STATE.TRANSPORTING;
+        }
         // never return into a combat pass
         if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING].includes(state)) {
             state = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER)
@@ -496,7 +518,7 @@ class EnemyStateMachine {
                 newState = AI_STATE.FLEEING;
             } else {
                 // Others go to their default non-combat state
-                newState = this.role === AI_ROLE.POLICE ? AI_STATE.PATROLLING : AI_STATE.IDLE;
+                newState = this._getDefaultStateForRole();
             }
         }
         
