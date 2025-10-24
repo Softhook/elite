@@ -527,7 +527,12 @@ class EnemyStateMachine {
         
         const oldState = this.currentState;
         this.currentState = newState;
-        
+
+        // Make the previous state available to entry/exit handlers
+        if (stateData) {
+            stateData.oldState = oldState;
+        }
+
         // Log state changes with informative context
         //console.log(`${this.role} ${this.shipTypeName} state: ${AI_STATE_NAME[oldState]} -> ${AI_STATE_NAME[newState]}`);
         
@@ -588,12 +593,16 @@ class EnemyStateMachine {
                 this.nearStationTimer = null; // Clear station timer
                 break;
                 
-            case AI_STATE.COLLECTING_CARGO:
-                // Store previous state to return to later
-                if (this.currentState !== AI_STATE.COLLECTING_CARGO) {
-                    this.previousState = oldState;
+            case AI_STATE.COLLECTING_CARGO: {
+                // Remember where we came from so we can resume after collecting
+                const priorState = (stateData && stateData.previousState !== undefined)
+                    ? stateData.previousState
+                    : stateData?.oldState;
+                if (priorState !== undefined) {
+                    this.previousState = priorState;
                 }
                 break;
+            }
             case AI_STATE.GUARDING:
                     if (stateData.principal && this.isTargetValid(stateData.principal)) {
                         this.principal = stateData.principal;
