@@ -340,6 +340,8 @@ class Enemy {
                 this.isBarrierActive = false;
                 this.barrierDamageReduction = 0;
                 this.barrierDurationTimer = 0;
+                // Audio cue for barrier deactivation (parity with player)
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown'); }
                 // Log barrier deactivation for debugging
                 console.log(`${this.shipTypeName} barrier deactivated`);
             }

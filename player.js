@@ -713,7 +713,7 @@ handleInput() {
                     uiManager.addMessage("Barrier Activated!", this.barrierColor, 2000);
                 }
                 if (typeof soundManager !== 'undefined') {
-                    soundManager.playSound('shieldUp'); // Placeholder sound
+                    soundManager.playSound('barrierUp');
                 }
                 return true; // Barrier activated, no projectile fired
             } else {
@@ -761,7 +761,7 @@ handleInput() {
                     uiManager.addMessage("Barrier Deactivated", this.barrierColor, 1500);
                 }
                 if (typeof soundManager !== 'undefined') {
-                    soundManager.playSound('shieldDown'); // Placeholder sound
+                    soundManager.playSound('barrierDown');
                 }
             }
         }

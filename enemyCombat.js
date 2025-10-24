@@ -285,8 +285,8 @@ class EnemyCombat {
                 // Log barrier activation, similar to player's UI message
                         AI_LOG(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
                 
-                // Sound effect (optional, for consistency if sounds are added later)
-                // if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp'); }
+                // Sound effect for barrier activation (parity with player)
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp'); }
 
                 // Immediately switch weapon for next shot
                 this.cycleWeapon();
