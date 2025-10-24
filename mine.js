@@ -109,18 +109,15 @@ class Mine {
         const blastRadiusSq = this.blastRadius * this.blastRadius;
         const isPlayerMine = this.owner instanceof Player;
 
-        // Damage enemies if player's mine
-        if (isPlayerMine && system.enemies) {
+        // Damage enemies for any mine, but skip the owner to prevent self-damage
+        if (system.enemies) {
             for (let enemy of system.enemies) {
-                if (!enemy || enemy.destroyed) continue;
-                
+                if (!enemy || enemy.destroyed || enemy === this.owner) continue;
                 const distSq = distSqVec(this.pos, enemy.pos);
                 if (distSq < blastRadiusSq) {
-                    // Damage falls off with distance
                     const dist = Math.sqrt(distSq);
                     const falloff = 1 - (dist / this.blastRadius);
                     const effectiveDamage = this.damage * Math.max(0.3, falloff);
-                    
                     if (typeof enemy.takeDamage === 'function') {
                         enemy.takeDamage(effectiveDamage, this.owner, system);
                     }
@@ -128,14 +125,13 @@ class Mine {
             }
         }
 
-        // Damage player if enemy's mine
+        // Damage player only for non-player mines (keep player safe from their own mines)
         if (!isPlayerMine && system.player && !system.player.destroyed) {
             const distSq = distSqVec(this.pos, system.player.pos);
             if (distSq < blastRadiusSq) {
                 const dist = Math.sqrt(distSq);
                 const falloff = 1 - (dist / this.blastRadius);
                 const effectiveDamage = this.damage * Math.max(0.3, falloff);
-                
                 if (typeof system.player.takeDamage === 'function') {
                     system.player.takeDamage(effectiveDamage, this.owner, system);
                 }

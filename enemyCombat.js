@@ -99,23 +99,35 @@ class EnemyCombat {
             }
 
             // --- MINE WEAPON LOGIC ---
-            // Mines are good when being chased (target behind us)
+            // Mines are good when being chased, fleeing, or very close
             if (baseType === WEAPON_TYPE.MINE && target) {
-                // Calculate if target is behind us
-                const angleToTarget = atan2(
-                    target.pos.y - this.pos.y,
-                    target.pos.x - this.pos.x
-                );
-                const angleDiff = this.getAngleDifference(angleToTarget);
-                const isBehind = Math.abs(angleDiff) > (Math.PI * 0.5); // More than 90 degrees
-                
-                // Mines are good when:
-                // 1. Target is behind us (being chased)
-                // 2. Target is close enough to potentially hit
-                if (isBehind && distanceToTarget < effectiveRange * 1.5) {
-                    score += 4; // Good score for dropping mines when being chased
-                } else {
-                    score -= 5; // Don't drop mines if target is in front or too far
+                // Compute relative angle
+                const angleToTarget = atan2(target.pos.y - this.pos.y, target.pos.x - this.pos.x);
+                const angleDiffToTarget = this.getAngleDifference(angleToTarget);
+                const isBehind = Math.abs(angleDiffToTarget) > (Math.PI * 0.5); // > 90° behind
+
+                // Weapon-specific radii if available
+                const triggerR = weapon.triggerRadius || 80;
+                const closeMineRange = triggerR * 1.75; // very close bonus window
+
+                // Fleeing/low health context
+                const lowHealth = (this.hull / this.maxHull) < 0.4;
+                const isFleeing = this.currentState === AI_STATE.FLEEING || this.currentState === AI_STATE.REPOSITIONING;
+
+                // Baseline desire to use mines when chased and reasonably close
+                if (isBehind && distanceToTarget < effectiveRange * 1.6) {
+                    score += 6; // stronger than before
+                    if (isFleeing || lowHealth) score += 3; // drop more when escaping or hurt
+                }
+
+                // If target is very close, dropping a mine can still work even if not fully behind
+                if (distanceToTarget < closeMineRange) {
+                    score += 3; // proximity bonus
+                }
+
+                // Mild penalty when far and not behind
+                if (!isBehind && distanceToTarget > effectiveRange * 0.6) {
+                    score -= 4;
                 }
             }
 
@@ -232,6 +244,10 @@ class EnemyCombat {
         const baseType = weaponType ? getBaseWeaponType(weaponType) : null;
         const isTurretWeapon = baseType === WEAPON_TYPE.TURRET;
         const angleDiff = this.getAngleDifference(targetAngle);
+
+        // Mines: dropping doesn't require aiming toward the target
+        // Always allow mine deployment when other gating checks pass (range, cooldown, etc.)
+        if (baseType === WEAPON_TYPE.MINE) return true;
 
         if (this.currentState === AI_STATE.IDLE) return false;
 

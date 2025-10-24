@@ -1259,6 +1259,20 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 if (mine.shouldExplode(this.player)) {
                     mine.explode(this);
                     this._fastRemove(this.mines, i);
+                    continue;
+                }
+            }
+
+            // Also allow enemy mines to be triggered by other enemies (friendly-fire capable)
+            if (!(mine.owner instanceof Player) && this.enemies && this.enemies.length) {
+                for (let j = 0; j < this.enemies.length; j++) {
+                    const e = this.enemies[j];
+                    if (!e || e === mine.owner) continue; // Skip invalid or the owner
+                    if (mine.shouldExplode(e)) {
+                        mine.explode(this);
+                        this._fastRemove(this.mines, i);
+                        break;
+                    }
                 }
             }
         }
