@@ -176,11 +176,29 @@ class EnemyCombat {
      * @return {boolean} Whether firing angle is acceptable
      */
     canFireAtTarget(targetAngle) {
-        const isTurretWeapon = this.currentWeapon && this.currentWeapon.type === 'turret';
+        const weaponType = this.currentWeapon && this.currentWeapon.type;
+        const isTurretWeapon = weaponType === 'turret';
         const angleDiff = this.getAngleDifference(targetAngle);
-        
-        return this.currentState !== AI_STATE.IDLE && 
-               (isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD); // Use constant
+
+        if (this.currentState === AI_STATE.IDLE) return false;
+
+        // Allow more permissive firing while REPOSITIONING so enemies can shoot while moving
+        if (this.currentState === AI_STATE.REPOSITIONING) {
+            if (weaponType === 'missile') {
+                // Missiles can be fired in any facing during repositioning
+                return true;
+            }
+            if (isTurretWeapon) return true; // Turrets already unconstrained
+
+            // Beams/spread get wider arc; straight projectiles slightly wider
+            const isBeam = weaponType && weaponType.includes('beam');
+            const isSpread = weaponType && weaponType.startsWith('spread');
+            const widened = (isBeam || isSpread) ? WIDE_ANGLE_RAD * 2.0 : WIDE_ANGLE_RAD * 1.35;
+            return Math.abs(angleDiff) < Math.min(widened, PI);
+        }
+
+        // Default rule
+        return isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD; // Use constant
     }
 
     /** 
