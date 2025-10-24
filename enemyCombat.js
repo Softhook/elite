@@ -20,7 +20,7 @@ class EnemyCombat {
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
 
         // Prioritize barrier if health or shield are low
-        const barrierWeapon = this.weapons.find(w => w.type === 'barrier');
+        const barrierWeapon = this.weapons.find(w => w.type === WEAPON_TYPE.BARRIER);
         if (barrierWeapon && this.barrierCooldown <= 0) {
             const hullPct = this.hull / this.maxHull;
             const shieldPct = this.maxShield > 0 ? this.shield / this.maxShield : 1;
@@ -40,21 +40,37 @@ class EnemyCombat {
         
         for (const weapon of this.weapons) {
             let score = 0;
-            
-            // Range considerations
-            const isLongRange = distanceToTarget > this.visualFiringRange * MEDIUM_RANGE_MULT;
-            const isMediumRange = distanceToTarget > this.visualFiringRange * CLOSE_RANGE_MULT && distanceToTarget <= this.visualFiringRange * MEDIUM_RANGE_MULT;
-            const isShortRange = distanceToTarget <= this.visualFiringRange * CLOSE_RANGE_MULT;
-            const isVeryCloseRange = distanceToTarget <= this.visualFiringRange * 0.2; // Very close = 20% of firing range
+
+            // Determine base type family (handles straightN/spreadN)
+            const type = weapon.type || '';
+            const baseType = type.startsWith(WEAPON_TYPE.STRAIGHT)
+                ? WEAPON_TYPE.STRAIGHT
+                : (type.startsWith(WEAPON_TYPE.SPREAD)
+                    ? WEAPON_TYPE.SPREAD
+                    : type);
+
+            // Range considerations (per-weapon effective range)
+            let rangeMult = 1.0;
+            switch (baseType) {
+                case WEAPON_TYPE.BEAM: rangeMult = 1.2; break;
+                case WEAPON_TYPE.MISSILE: rangeMult = 1.8; break;
+                case WEAPON_TYPE.TURRET: rangeMult = 0.8; break;
+                default: rangeMult = 1.0; break;
+            }
+            const effectiveRange = this.firingRange * rangeMult;
+            const isLongRange = distanceToTarget > effectiveRange * MEDIUM_RANGE_MULT;
+            const isMediumRange = distanceToTarget > effectiveRange * CLOSE_RANGE_MULT && distanceToTarget <= effectiveRange * MEDIUM_RANGE_MULT;
+            const isShortRange = distanceToTarget <= effectiveRange * CLOSE_RANGE_MULT;
+            const isVeryCloseRange = distanceToTarget <= effectiveRange * 0.2; // Very close = 20% of firing range
             
             // --- FORCE WEAPON LOGIC ---
             // Force weapons are highly effective at very close range
-            if (weapon.type.includes('force') && isVeryCloseRange) {
+            if (baseType === WEAPON_TYPE.FORCE && isVeryCloseRange) {
                 score += 5; // Highest priority at very close rangee
             }
 
             // --- TANGLE WEAPON LOGIC ---
-            if (weapon.type.includes('tangle') && target) {
+            if (baseType === WEAPON_TYPE.TANGLE && target) {
                 // Only consider tangle weapons if target is NOT already entangled
                 if (!targetAlreadyEntangled) {
                     // Extra effective against very fast targets
@@ -72,40 +88,40 @@ class EnemyCombat {
             }
 
             // Score based on weapon type and range
-            if (weapon.type.includes('beam') && isLongRange) {
+            if (baseType === WEAPON_TYPE.BEAM && isLongRange) {
                 score += 3; // Beams are good at long range
-            } else if (weapon.type.includes('beam') && isMediumRange) {
+            } else if (baseType === WEAPON_TYPE.BEAM && isMediumRange) {
                 score += 2;
-            } else if (weapon.type.includes('beam') && isShortRange) {
+            } else if (baseType === WEAPON_TYPE.BEAM && isShortRange) {
                 score += 1;
             }
             
-            if (weapon.type.startsWith('spread') && isShortRange) {
+            if (baseType === WEAPON_TYPE.SPREAD && isShortRange) {
                 score += 3; // now catches spread2/3/4/5
-            } else if (weapon.type.startsWith('straight') && isMediumRange) {
+            } else if (baseType === WEAPON_TYPE.STRAIGHT && isMediumRange) {
                 score += 2; // now catches straight2/3/4…
-            } else if (weapon.type.startsWith('straight') && isLongRange) {
+            } else if (baseType === WEAPON_TYPE.STRAIGHT && isLongRange) {
                 score += 1;
             }
             
-            if (weapon.type === 'missile' && (isMediumRange || isLongRange)) {
+            if (baseType === WEAPON_TYPE.MISSILE && (isMediumRange || isLongRange)) {
                 score += 3; // Missiles are best at medium to long range
-            } else if (weapon.type === 'missile' && isShortRange) {
+            } else if (baseType === WEAPON_TYPE.MISSILE && isShortRange) {
                 score += 1;
             }
             
-            if (weapon.type === 'turret') {
+            if (baseType === WEAPON_TYPE.TURRET) {
                 score += 2; // Turrets are flexible at any range
             }
             
             // Target-specific considerations
             if (target) {
                 // Against fast targets, prefer wide-angle weapons like spread
-                if (target.maxSpeed > 5 && weapon.type.startsWith('spread')) {
+                if (target.maxSpeed > 5 && baseType === WEAPON_TYPE.SPREAD) {
                     score += 3;
                 }    
                 // Against slow targets, prefer missile weapons
-                if (target.maxSpeed < 5 && weapon.type === 'missile') {
+                if (target.maxSpeed < 5 && baseType === WEAPON_TYPE.MISSILE) {
                     score += 2;
                 }
                 // Against large targets, prefer high damage weapons
@@ -177,22 +193,23 @@ class EnemyCombat {
      */
     canFireAtTarget(targetAngle) {
         const weaponType = this.currentWeapon && this.currentWeapon.type;
-        const isTurretWeapon = weaponType === 'turret';
+        const baseType = weaponType ? (weaponType.startsWith(WEAPON_TYPE.STRAIGHT) ? WEAPON_TYPE.STRAIGHT : (weaponType.startsWith(WEAPON_TYPE.SPREAD) ? WEAPON_TYPE.SPREAD : weaponType)) : null;
+        const isTurretWeapon = baseType === WEAPON_TYPE.TURRET;
         const angleDiff = this.getAngleDifference(targetAngle);
 
         if (this.currentState === AI_STATE.IDLE) return false;
 
         // Allow more permissive firing while REPOSITIONING so enemies can shoot while moving
         if (this.currentState === AI_STATE.REPOSITIONING) {
-            if (weaponType === 'missile') {
+            if (baseType === WEAPON_TYPE.MISSILE) {
                 // Missiles can be fired in any facing during repositioning
                 return true;
             }
             if (isTurretWeapon) return true; // Turrets already unconstrained
 
             // Beams/spread get wider arc; straight projectiles slightly wider
-            const isBeam = weaponType && weaponType.includes('beam');
-            const isSpread = weaponType && weaponType.startsWith('spread');
+            const isBeam = baseType === WEAPON_TYPE.BEAM;
+            const isSpread = baseType === WEAPON_TYPE.SPREAD;
             const widened = (isBeam || isSpread) ? WIDE_ANGLE_RAD * 2.0 : WIDE_ANGLE_RAD * 1.35;
             return Math.abs(angleDiff) < Math.min(widened, PI);
         }
@@ -233,10 +250,16 @@ class EnemyCombat {
         // Adjust firing range based on weapon type
         let effectiveFiringRange = this.firingRange;
         if (this.currentWeapon) {
-            switch (this.currentWeapon.type) {
-                case 'beam': effectiveFiringRange *= 1.2; break;
-                case 'missile': effectiveFiringRange *= 1.8; break;
-                case 'turret': effectiveFiringRange *= 0.8; break;
+            const type = this.currentWeapon.type || '';
+            const baseType = type.startsWith(WEAPON_TYPE.STRAIGHT)
+                ? WEAPON_TYPE.STRAIGHT
+                : (type.startsWith(WEAPON_TYPE.SPREAD)
+                    ? WEAPON_TYPE.SPREAD
+                    : type);
+            switch (baseType) {
+                case WEAPON_TYPE.BEAM: effectiveFiringRange *= 1.2; break;
+                case WEAPON_TYPE.MISSILE: effectiveFiringRange *= 1.8; break;
+                case WEAPON_TYPE.TURRET: effectiveFiringRange *= 0.8; break;
             }
         }
         this.visualFiringRange = effectiveFiringRange;
@@ -244,24 +267,19 @@ class EnemyCombat {
         // Enhanced firing logic
         if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
             if (this.canFireAtTarget(shootingAngle)) {
-                if (!this.currentSystem) this.currentSystem = system;
-                
-                        // Player-specific targeting debug
-                        if (targetingPlayer) {
-                            AI_LOG(`🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
-                                'color:red; font-weight:bold');
+                // Player-specific targeting debug
+                if (targetingPlayer) {
+                    AI_LOG(`🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
+                        'color:red; font-weight:bold');
                 }
-                
                 // Weapon-specific behavior
                 if (this.currentWeapon) {
                     // Standard firing for all weapon types (including missile, beam, and turret)
-                    this.fireWeapon(this.target);
+                    this.fireWeapon(shootingAngle, this.target);
                 } else {
                     // Fallback if no weapon defined
-                    this.fireWeapon();
+                    this.fireWeapon(shootingAngle);
                 }
-                
-                this.fireCooldown = this.fireRate;
             } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
                 // Debug when IDLE pirates spot player
                         AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
@@ -280,15 +298,13 @@ class EnemyCombat {
             return; // Only block firing when not in combat states
         }
         
-        if (!system || typeof system.addProjectile !== 'function') { return; }
+        if (!system) { return; }
         if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
-        let spawnOffset = p5.Vector.fromAngle(this.angle).mult(this.size * 0.7);
-        let spawnPos = p5.Vector.add(this.pos, spawnOffset);
-        let proj = new Projectile(spawnPos.x, spawnPos.y, fireAngleRadians, 'ENEMY', 5, 5);
-        system.addProjectile(proj);
+        const type = this.currentWeapon?.type || WEAPON_TYPE.PROJECTILE;
+        WeaponSystem.fire(this, system, fireAngleRadians, type, this.target);
     }
 
-    fireWeapon(targetToPass = null) {
+    fireWeapon(preferredAngle = null, targetToPass = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
 
         // Barrier Activation: Check cooldown first, similar to player
@@ -310,19 +326,17 @@ class EnemyCombat {
                 this.cycleWeapon();
                 return; // Barrier activated, no projectile fired
             } else {
-                // Log barrier on cooldown
-                        AI_LOG(`${this.shipTypeName} barrier on cooldown. Remaining: ${this.barrierCooldown.toFixed(1)}s`);
+                // Barrier on cooldown - skip without logging to avoid spam
                 return; // Barrier on cooldown
             }
         }
     
         // Default firing angle (ship's current heading)
-        let fireAngle = this.angle;
+        let fireAngle = (preferredAngle !== null && isFinite(preferredAngle)) ? preferredAngle : this.angle;
     
         // Check if target is stationary or very slow-moving
-        if (targetToPass && targetToPass.vel && 
+        if (preferredAngle === null && targetToPass && targetToPass.vel && 
             targetToPass.vel.magSq() < 0.25) { // threshold for "almost stationary"
-            
             // Aim directly at the target's current position instead of predicted position
             fireAngle = atan2(
                 targetToPass.pos.y - this.pos.y,
@@ -331,7 +345,7 @@ class EnemyCombat {
         }
         
         // Rest of existing code remains unchanged
-        if (this.currentWeapon.type === 'missile') {
+        if ((this.currentWeapon.type || '') === WEAPON_TYPE.MISSILE) {
             if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
                 return; // Don't fire missile without a valid target
             }
@@ -376,7 +390,8 @@ class EnemyCombat {
     isInCombatState() {
         return this.currentState === AI_STATE.APPROACHING || 
                this.currentState === AI_STATE.ATTACK_PASS || 
-               this.currentState === AI_STATE.REPOSITIONING;
+               this.currentState === AI_STATE.REPOSITIONING ||
+               this.currentState === AI_STATE.SNIPING;
     }
 }
 
