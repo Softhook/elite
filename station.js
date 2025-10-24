@@ -510,23 +510,26 @@ class Station {
      */
     _drawMilitaryLights() {
         noStroke();
+        const step = TWO_PI / 32;
+        const s = this.size;
+        const r = -s * 0.475;
+        const lt = this.lightTimer;
         for (let i = 0; i < 32; i++) {
             push();
-            rotate(i * TWO_PI / 32);
+            rotate(i * step);
             
-            // Military uses more red and white lights
+            // Military uses yellow lights
             if (i % 8 === 0) {
-                fill(255, 50, 50, 120 + sin(this.lightTimer*2 + i) * 100); // Bright red
+                fill(255, 255, 0, 120 + sin(lt * 2 + i) * 100); // Bright yellow
+                ellipse(0, r, 3.5, 3.5);
             } else if (i % 4 === 0) {
-                fill(255, 255, 255, 120 + sin(this.lightTimer*2.5 + i) * 100); // White
+                fill(255, 255, 100, 120 + sin(lt * 2.5 + i) * 100); // Light yellow
+                ellipse(0, r, 3.5, 3.5);
             } else if (i % 2 === 0) {
-                fill(100, 100, 200, 80 + sin(this.lightTimer*3 + i*0.5) * 80); // Blue
+                fill(200, 200, 0, 80 + sin(lt * 3 + i * 0.5) * 80); // Dark yellow
+                ellipse(0, r, 3.5, 3.5);
             }
             
-            // Only draw if the fill is defined
-            if (fill) {
-                ellipse(0, -this.size * 0.475, 2.5, 2.5);
-            }
             pop();
         }
     }
@@ -758,24 +761,28 @@ class Station {
      */
     _drawAlienLights() {
         noStroke();
+        const baseStep = TWO_PI / 30;
+        const s = this.size;
+        const r = -s * 0.49;
+        const lt = this.lightTimer;
         for (let i = 0; i < 30; i++) {
             push();
-            rotate(i * TWO_PI / 30 + sin(i * 0.2) * 0.1);
+            rotate(i * baseStep + sin(i * 0.2) * 0.1);
             
             // Alien uses teal, purple and green lights
+            // Pulsating light size
+            const sz = 2 + sin(lt * 3 + i) * 1;
             if (i % 5 === 0) {
-                fill(0, 255, 200, 80 + sin(this.lightTimer*2.5 + i) * 120); // Teal
+                fill(0, 255, 200, 80 + sin(lt * 2.5 + i) * 120); // Teal
+                ellipse(0, r, sz, sz);
             } else if (i % 3 === 0) {
-                fill(180, 100, 255, 80 + sin(this.lightTimer*3 + i*0.7) * 120); // Purple
+                fill(180, 100, 255, 80 + sin(lt * 3 + i * 0.7) * 120); // Purple
+                ellipse(0, r, sz, sz);
             } else if (i % 2 === 0) {
-                fill(100, 255, 150, 80 + sin(this.lightTimer*1.5 + i*0.4) * 120); // Green
+                fill(100, 255, 150, 80 + sin(lt * 1.5 + i * 0.4) * 120); // Green
+                ellipse(0, r, sz, sz);
             }
             
-            // Pulsating light size
-            if (fill) {
-                let size = 2 + sin(this.lightTimer * 3 + i) * 1;
-                ellipse(0, -this.size * 0.49, size, size);
-            }
             pop();
         }
     }
