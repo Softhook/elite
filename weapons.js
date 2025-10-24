@@ -15,7 +15,7 @@ const WEAPON_UPGRADES = [
         
         name: "Sniper Rail",
         type: "projectile",
-        damage: 25,
+        damage: 35,
         color: [200, 200, 255], // Pale blue
         fireRate: 0.7,
         price: 3200,
@@ -24,7 +24,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Cannon",
         type: "projectile",
-        damage: 40,
+        damage: 60,
         color: [180, 80, 80], // Brownish
         fireRate: 1.0,
         price: 5000,
@@ -121,7 +121,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Multi-Cannon",
         type: "spread3",
-        damage: 13,
+        damage: 10,
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
         price: 1800,
@@ -130,7 +130,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Burst Blaster",
         type: "spread3",
-        damage: 8,
+        damage: 6,
         color: [255, 100, 100], // Pinkish
         fireRate: 0.18,
         price: 2000,
@@ -143,7 +143,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Wide Scatter",
         type: "spread4",
-        damage: 9,
+        damage: 6,
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
         price: 2100,
@@ -156,7 +156,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Quad Cone",
         type: "spread5",
-        damage: 9,
+        damage: 6,
         color: [255, 0, 0], // Red
         fireRate: 0.3,
         price: 6100,
@@ -196,7 +196,7 @@ const WEAPON_UPGRADES = [
         fireRate: 2, 
         price: 10000,
         maxRadius: 300,
-        desc: "Super damage, area effect."
+        desc: "Area effect."
     },
     {
         name: "Jedi Force",
@@ -268,9 +268,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Tangle Projector",
         type: "tangle",
-        damage: 4,           // Very low direct damage
+        damage: 5,           // low direct damage
         color: [20, 200, 100], // Green
-        fireRate: 0.6,       // Good firing rate
+        fireRate: 0.5,       // Good firing rate (slightly faster)
         price: 6800,
         tangleDuration: 8.0, // Seconds target is affected by tangle
         dragMultiplier: 2.0, // Strong drag effect
@@ -281,10 +281,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Tangle",
         type: "tangle",
-        damage: 6,           // Low direct damage
+        damage: 10,           //Direct damage
         color: [30, 240, 120], // Brighter green
         fireRate: 1.0,       // Slower firing rate
-        price: 12500,
+        price: 11000,
         tangleDuration: 15.0, // Longer tangle effect
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
