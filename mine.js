@@ -31,25 +31,6 @@ class Mine {
         this.system = null; // Reference to current star system
     }
 
-    /**
-     * Reset mine for object pooling
-     */
-    reset(x, y, owner, damage, blastRadius, triggerRadius, color, health, system) {
-        this.pos.set(x, y);
-        this.owner = owner;
-        this.damage = damage;
-        this.blastRadius = blastRadius;
-        this.triggerRadius = triggerRadius;
-        this.color = color;
-        this.maxHealth = health;
-        this.health = health;
-        this.armed = false;
-        this.armingTimer = this.armingTime;
-        this.destroyed = false;
-        this.blinkTimer = 0;
-        this.system = system;
-        return this;
-    }
 
     /**
      * Update mine state
