@@ -478,7 +478,7 @@ const SHIP_DEFINITIONS = {
         name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
         baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
-        armament: ["Force Blaster","Guardian Missile","Barrier Field"],
+        armament: ["Force Blaster","Guardian Missile","Barrier Field","Advanced Mine"],
         costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
         drawFunction: drawAnaconda, 
         vertexLayers: [
@@ -694,7 +694,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle","Barrier Field"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle","Barrier Field","Heavy Mine"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -780,7 +780,7 @@ const SHIP_DEFINITIONS = {
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle","Barrier Field"], // Military loadout
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle","Barrier Field","Advanced Mine"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [

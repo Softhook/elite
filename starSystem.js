@@ -111,6 +111,7 @@ class StarSystem {
         // Cache diagonal distance for spawn calculations
         this._cachedDiagonalDist = null;
         this.projectiles = [];
+        this.mines = []; // Proximity mines array
         this.beams = [];
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
@@ -538,7 +539,7 @@ try {
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
         this.discover();
-        this.enemies = []; this.projectiles = []; this.asteroids = [];
+        this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         
         // CRITICAL FIX: Associate the player with this system
@@ -984,7 +985,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
             // Update Beams
             this.updateBeams && this.updateBeams();
-
+            
+            // Update Mines
+            this.updateMines && this.updateMines();
 
 
             // Update and process force waves with batch processing
@@ -1216,6 +1219,59 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         }
     }
 
+    updateMines() {
+        const dt = deltaTime / 1000; // Convert to seconds
+        
+        for (let i = this.mines.length - 1; i >= 0; i--) {
+            const mine = this.mines[i];
+            
+            // Update mine
+            mine.update(dt);
+            
+            // Check if mine is destroyed
+            if (mine.destroyed) {
+                this._fastRemove(this.mines, i);
+                continue;
+            }
+            
+            // Check if mine is too far from player (cleanup)
+            if (this.player && mine.isOffScreen(this.player.pos, this.despawnRadius)) {
+                this._fastRemove(this.mines, i);
+                continue;
+            }
+            
+            // Skip if mine is not armed yet
+            if (!mine.armed) continue;
+            
+            // Check proximity to enemies (if player's mine)
+            if (mine.owner instanceof Player && this.enemies) {
+                for (const enemy of this.enemies) {
+                    if (mine.shouldExplode(enemy)) {
+                        mine.explode(this);
+                        this._fastRemove(this.mines, i);
+                        break;
+                    }
+                }
+            }
+            
+            // Check proximity to player (if enemy's mine)
+            if (!(mine.owner instanceof Player) && this.player) {
+                if (mine.shouldExplode(this.player)) {
+                    mine.explode(this);
+                    this._fastRemove(this.mines, i);
+                }
+            }
+        }
+    }
+
+    drawMines() {
+        for (const mine of this.mines) {
+            if (!mine.destroyed) {
+                mine.draw();
+            }
+        }
+    }
+
     /** Adds an explosion to the system's list. */
     addExplosion(x, y, size, color) {
         // Use object pooling if WeaponSystem is available
@@ -1416,6 +1472,36 @@ checkProjectileCollisions() {
                     hit = true;
                     break;
                 }
+            }
+        }
+        
+        // If already hit something, skip the rest of the checks
+        if (hit) continue;
+        
+        // Check against mines
+        for (let j = this.mines.length - 1; j >= 0; j--) {
+            const mine = this.mines[j];
+            if (!mine || mine.destroyed) continue;
+            
+            // Mines don't get hit by their owner's projectiles
+            if (proj.owner === mine.owner) continue;
+            
+            // Fast distance check
+            const combinedRadius = mine.size + projSize;
+            const combinedRadiusSquared = combinedRadius * combinedRadius;
+            distCheckVector.set(mine.pos.x - projPos.x, mine.pos.y - projPos.y);
+            
+            if (distCheckVector.magSq() <= combinedRadiusSquared) {
+                // Mine takes damage and projectile is destroyed
+                mine.takeDamage(proj.damage || 10, proj.owner, this);
+                this.removeProjectile(i);
+                
+                // Small explosion visual for hitting mine
+                const explosionColor = [200, 100, 0];
+                this.addExplosion(projPos.x, projPos.y, 5, explosionColor);
+                
+                hit = true;
+                break;
             }
         }
         
@@ -1643,6 +1729,14 @@ checkProjectileCollisions() {
 
     /** Adds a beam to the system's list. */
     addBeam(beam) { if (beam) this.beams.push(beam); }
+
+    /** Adds a mine to the system's list. */
+    addMine(mine) { 
+        if (mine) {
+            mine.system = this;
+            this.mines.push(mine);
+        }
+    }
 
     /** Adds a force wave to the system's list. */
     addForceWave(wave) { if (wave) this.forceWaves.push(wave); }
@@ -2136,6 +2230,11 @@ checkProjectileCollisions() {
         // Special effects culling
         if (this.beams && this.beams.length > 0) {
             this.drawBeamsWithCulling(screenBounds);
+        }
+        
+        // Draw mines
+        if (this.mines && this.mines.length > 0) {
+            this.drawMines();
         }
 
         if (this.forceWaves && this.forceWaves.length > 0) {

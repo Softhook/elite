@@ -10,7 +10,8 @@ const WEAPON_TYPE = {
     SPREAD: 'spread',
     MISSILE: 'missile',
     TANGLE: 'tangle',
-    BARRIER: 'barrier' // Added Barrier type
+    BARRIER: 'barrier', // Added Barrier type
+    MINE: 'mine' // Added Mine type
 };
 
 class WeaponSystem {
@@ -180,7 +181,10 @@ static fireForce(owner, system) {
                 // Activation logic is handled within the Player/Enemy class fireWeapon method
                 // No direct action needed in WeaponSystem.fire for barrier activation itself.
                 // console.log(`${owner.constructor.name} activated barrier.`);
-                break;       
+                break;
+            case WEAPON_TYPE.MINE: // Added Mine case
+                this.fireMine(owner, system);
+                break;
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
@@ -619,6 +623,46 @@ static fireTangle(owner, system, angle) {
         soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
     }
 }
+
+    /**
+     * Fire/drop a proximity mine
+     * @param {Object} owner - Entity dropping the mine
+     * @param {Object} system - Current star system
+     */
+    static fireMine(owner, system) {
+        if (!owner?.currentWeapon || !system) return;
+        
+        const weapon = owner.currentWeapon;
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
+        
+        // Get mine properties from weapon definition
+        const damage = weapon.damage || 80;
+        const blastRadius = weapon.blastRadius || 150;
+        const triggerRadius = weapon.triggerRadius || 80;
+        const color = weapon.color || [255, 100, 0];
+        const health = weapon.mineHealth || 30;
+        
+        // Create mine slightly behind the ship
+        const dropOffset = owner.size ? owner.size * 1.5 : 20;
+        const dropAngle = owner.angle + Math.PI; // Behind the ship
+        const dropX = ownerX + Math.cos(dropAngle) * dropOffset;
+        const dropY = ownerY + Math.sin(dropAngle) * dropOffset;
+        
+        // Create the mine
+        const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
+        mine.system = system;
+        
+        // Add mine to system
+        if (system.addMine) {
+            system.addMine(mine);
+        }
+        
+        // Play mine drop sound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos);
+        }
+    }
 
     /** 
      * Fire a turret weapon that auto-aims at the nearest target

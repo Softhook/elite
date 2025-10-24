@@ -98,6 +98,27 @@ class EnemyCombat {
                 }
             }
 
+            // --- MINE WEAPON LOGIC ---
+            // Mines are good when being chased (target behind us)
+            if (baseType === WEAPON_TYPE.MINE && target) {
+                // Calculate if target is behind us
+                const angleToTarget = atan2(
+                    target.pos.y - this.pos.y,
+                    target.pos.x - this.pos.x
+                );
+                const angleDiff = this.getAngleDifference(angleToTarget);
+                const isBehind = Math.abs(angleDiff) > (Math.PI * 0.5); // More than 90 degrees
+                
+                // Mines are good when:
+                // 1. Target is behind us (being chased)
+                // 2. Target is close enough to potentially hit
+                if (isBehind && distanceToTarget < effectiveRange * 1.5) {
+                    score += 4; // Good score for dropping mines when being chased
+                } else {
+                    score -= 5; // Don't drop mines if target is in front or too far
+                }
+            }
+
             // Score based on weapon type and range
             if (baseType === WEAPON_TYPE.BEAM && isLongRange) {
                 score += 3; // Beams are good at long range
@@ -395,6 +416,16 @@ class EnemyCombat {
                 targetToPass.pos.y - this.pos.y,
                 targetToPass.pos.x - this.pos.x
             );
+        }
+        
+        // Handle mine weapon - drop and switch to another weapon
+        if ((this.currentWeapon.type || '') === WEAPON_TYPE.MINE) {
+            WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+            this.fireCooldown = this.fireRate; // General weapon fire cooldown
+            
+            // Immediately switch to a different weapon after dropping mine
+            this.cycleWeapon();
+            return;
         }
         
         // Rest of existing code remains unchanged
