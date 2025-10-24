@@ -56,14 +56,33 @@ class EnemyAIBehaviors {
      * @returns {boolean} True if a sniping weapon is equipped.
      */
     hasGoodSnipingWeapon() {
-        if (!this.currentWeapon) return false;
-        // Define what constitutes a "good sniping weapon"
-        // Example: Beams, non-spread projectiles, or missiles.
-        const weaponType = this.currentWeapon.type;
-        return weaponType === WEAPON_TYPE.BEAM ||
-               weaponType === WEAPON_TYPE.MISSILE ||
-               (weaponType.startsWith(WEAPON_TYPE.PROJECTILE_STRAIGHT)) || // e.g. PROJECTILE_STRAIGHT, PROJECTILE_STRAIGHT_FAST
-               weaponType === WEAPON_TYPE.TURRET; // Turrets can be good if accurate
+        const weapon = this.currentWeapon;
+        if (!weapon) return false;
+
+        const weaponType = weapon.type;
+        if (!weaponType) return false;
+
+        // Normalise complex weapon type strings (e.g. "straight3") to their base family when possible
+        const baseType = (typeof getBaseWeaponType === 'function')
+            ? getBaseWeaponType(weaponType)
+            : weaponType;
+
+        if (baseType === WEAPON_TYPE.BEAM ||
+            baseType === WEAPON_TYPE.MISSILE ||
+            baseType === WEAPON_TYPE.TURRET ||
+            baseType === WEAPON_TYPE.PROJECTILE ||
+            baseType === WEAPON_TYPE.STRAIGHT) {
+            return true;
+        }
+
+        // Fallback: handle any straight/projectile variants if the helper above is unavailable
+        if (typeof weaponType === 'string') {
+            if (weaponType.startsWith(WEAPON_TYPE.STRAIGHT) || weaponType.startsWith(WEAPON_TYPE.PROJECTILE)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
