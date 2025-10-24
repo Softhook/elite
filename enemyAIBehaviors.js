@@ -744,13 +744,8 @@ class EnemyAIBehaviors {
             // Collection logic
             this.cargoTarget.collected = true; // Mark world cargo as collected
 
-            // Remove from system array (important!)
-            const cargoIndex = system.cargo.indexOf(this.cargoTarget);
-            if (cargoIndex !== -1) {
-                system.cargo.splice(cargoIndex, 1);
-            } else {
-                 console.warn(`${this.shipTypeName} collected cargo, but it wasn't found in system array?`);
-            }
+            // Do NOT directly splice StarSystem arrays from outside.
+            // StarSystem.update() will remove collected cargo during its cleanup pass.
 
             CARGO_LOG(`${this.shipTypeName} collected cargo ${this.cargoTarget.type}`);
             this.cargoTarget = null; // Clear local target reference
