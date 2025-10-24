@@ -25,7 +25,7 @@ class EnemyAIBehaviors {
         // Check if forced combat should be initiated (Hauler role, recently attacked)
         if (this.lastAttacker && this.role === AI_ROLE.HAULER && this.forcedCombatTimer <= 0) {
             this.forcedCombatTimer = 5.0; // 5 seconds of forced combat
-            console.log(`${this.shipTypeName} entering FORCED COMBAT MODE after attack`);
+            HAULER_LOG(`${this.shipTypeName} entering FORCED COMBAT MODE after attack`);
         }
 
         // Update and check the timer
@@ -264,7 +264,7 @@ class EnemyAIBehaviors {
             if (this.haulerCombatTimer !== undefined) {
                 this.haulerCombatTimer -= deltaTime / 1000;
                 if (this.haulerCombatTimer <= 0) {
-                    console.log(`Hauler ${this.shipTypeName} disengaging from combat.`);
+                    HAULER_LOG(`Hauler ${this.shipTypeName} disengaging from combat.`);
                     this.haulerCombatTimer = undefined; // Clear timer
                     this.lastAttacker = null; // Forget attacker
                     this.target = null; // Clear target

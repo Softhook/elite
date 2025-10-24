@@ -784,7 +784,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
 
             this.addEnemy(guardNPC);
-            console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
+            HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
         }
     }
     else if (newEnemy.size <= 100 && slotsLeft > 0 && random() < 0.6) {
@@ -807,7 +807,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
 
         this.addEnemy(guardNPC);
-        console.log(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
+        HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
     }
 }
 // --- END: GUARD SPAWN LOGIC ---
