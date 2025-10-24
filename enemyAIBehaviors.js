@@ -386,13 +386,13 @@ class EnemyAIBehaviors {
 
                 if (this.nearStationTimer === undefined || this.nearStationTimer === null) {
                     this.nearStationTimer = this.stationPauseDuration; // Init timer if needed
-                    console.log(`Hauler ${this.shipTypeName} starting pause near station for ${this.nearStationTimer.toFixed(1)}s`);
+                    HAULER_LOG(`Hauler ${this.shipTypeName} starting pause near station for ${this.nearStationTimer.toFixed(1)}s`);
                 }
 
                 this.nearStationTimer -= deltaTime / 1000;
 
                 if (this.nearStationTimer <= 0) {
-                    console.log(`Hauler ${this.shipTypeName} finished pause, preparing to leave.`);
+                    HAULER_LOG(`Hauler ${this.shipTypeName} finished pause, preparing to leave.`);
                     this.changeState(AI_STATE.LEAVING_SYSTEM);
                     // Movement target will be set by onStateEntry(LEAVING_SYSTEM) next frame
                 }
@@ -444,18 +444,18 @@ class EnemyAIBehaviors {
                             }
                             // Resume guarding
                             this.changeState(AI_STATE.GUARDING);
-                            console.log(`${this.shipTypeName} (Guard) followed principal to ${targetSystem.name}`);
+                            HAULER_LOG(`${this.shipTypeName} (Guard) followed principal to ${targetSystem.name}`);
                         } else {
                             // Can't follow, destroy
                             this.destroyed = true;
-                            console.log(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
+                            HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
                         }
                     } else {
                         // Normal hauler/transport leaving
                         this.inCombat = false;
                         this.haulerCombatTimer = undefined;
                         this.destroyed = true;
-                        console.log(`${this.role} ${this.shipTypeName} left the system.`);
+                        HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
                     }
                     shouldMove = false;
                 }
@@ -463,7 +463,7 @@ class EnemyAIBehaviors {
 
             default:
                 this.target = null;
-                console.log(`Hauler ${this.shipTypeName} in unexpected state ${this.currentState}. Resetting.`);
+                HAULER_LOG(`Hauler ${this.shipTypeName} in unexpected state ${this.currentState}. Resetting.`);
                 if(system?.station?.pos) {
                     this.patrolTargetPos = system.station.pos.copy();
                     this.changeState(AI_STATE.PATROLLING);
@@ -645,7 +645,7 @@ class EnemyAIBehaviors {
                  console.warn(`${this.shipTypeName} collected cargo, but it wasn't found in system array?`);
             }
 
-            console.log(`${this.shipTypeName} collected cargo ${this.cargoTarget.type}`);
+            CARGO_LOG(`${this.shipTypeName} collected cargo ${this.cargoTarget.type}`);
             this.cargoTarget = null; // Clear local target reference
             // Set cooldown before looking for more cargo
             this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;

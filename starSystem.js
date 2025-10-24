@@ -1653,7 +1653,7 @@ checkProjectileCollisions() {
         
         if (cargo) {
             this.cargo.push(cargo);
-            console.log(`Cargo added to system ${this.name}: ${cargo.type} x${cargo.quantity}`);
+            CARGO_LOG(`Cargo added to system ${this.name}: ${cargo.type} x${cargo.quantity}`);
             return true;
         }
         return false;

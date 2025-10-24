@@ -61,7 +61,7 @@ class EnemyCargo {
             // Calculates random outward velocity - reasonable for explosion
             velocity = p5.Vector.random2D().mult(random(0.8, 2.0));
             message = `${this.shipTypeName} dropped ${quantity} units of ${cargoType}`;
-            console.log(`${this.shipTypeName} destroyed - dropping cargo: ${quantity} x ${cargoType}`); // Good specific log
+            CARGO_LOG(`${this.shipTypeName} destroyed - dropping cargo: ${quantity} x ${cargoType}`);
 
         } else {
             console.error(`_spawnCargo called with invalid context: ${context}`);

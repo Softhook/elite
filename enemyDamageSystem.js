@@ -53,7 +53,18 @@ class EnemyDamageSystem {
             
             // Don't retarget if in SNIPING state (target lock)
             if (this.currentState === AI_STATE.SNIPING) {
-                TARGETING_LOG(`   → SNIPING: Target locked, not retargeting`);
+                TARGETING_LOGF(() => {
+                    const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'none';
+                    const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
+                    let distToAttacker = null;
+                    try {
+                        if (this.pos && attacker?.pos) {
+                            distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
+                        }
+                    } catch (e) { /* p5 dist might be unavailable briefly; ignore */ }
+                    return `   → SNIPING: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] holding lock on ${nameOf(this.target)}; ignoring attacker ${attackerName}` +
+                           (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+                });
                 return;
             }
             
@@ -66,8 +77,23 @@ class EnemyDamageSystem {
                 }
                 
                 // Update targeting immediately for all attackers
+                const prevTarget = this.target;
                 const targetResult = this.updateTargeting(resolvedSystem);
-                TARGETING_LOG(`   → Targeting result: ${targetResult}, target is now: ${this.target ? (this.target.constructor.name) : 'null'}`);
+                const newTarget = this.target;
+                const changed = prevTarget !== newTarget;
+                TARGETING_LOGF(() => {
+                    const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'null';
+                    const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
+                    let distToAttacker = null;
+                    try {
+                        if (this.pos && attacker?.pos) {
+                            distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
+                        }
+                    } catch (e) { /* ignore */ }
+                    const validNow = this.isTargetValid?.(newTarget);
+                    return `   → Targeting: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] ${changed ? 'switched' : 'kept'} target: ${nameOf(prevTarget)} -> ${nameOf(newTarget)} (valid=${validNow ? 'yes' : 'no'}, result=${!!targetResult}) after hit by ${attackerName}` +
+                           (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+                });
 
                 // Immediate combat reaction for aggressive roles when idle
                 // Do not override if fleeing or sniping (already engaged)

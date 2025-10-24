@@ -192,7 +192,7 @@ class EventManager {
             const dynamicPart = message.substring(message.indexOf(":") + 2); // Example to get gang name
             consoleMsg = event.warningConfig.consoleLogGenerator(dynamicPart);
         }
-        console.log(`${consoleMsg} Event will trigger in ${event.warningDurationFrames} frames.`);
+        EVENT_LOG(`${consoleMsg} Event will trigger in ${event.warningDurationFrames} frames.`);
     }
 
     executeConfiguredEvent(eventType) {
@@ -311,7 +311,7 @@ class EventManager {
         const baseSpawnX = this.player.pos.x + cos(clusterAngleWithPlayer) * clusterSpawnRadiusFromPlayer;
         const baseSpawnY = this.player.pos.y + sin(clusterAngleWithPlayer) * clusterSpawnRadiusFromPlayer;
 
-        console.log(`EventManager: Spawning ${event.type}: ${numToSpawn} asteroids near (${baseSpawnX.toFixed(0)}, ${baseSpawnY.toFixed(0)})`);
+        EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} asteroids near (${baseSpawnX.toFixed(0)}, ${baseSpawnY.toFixed(0)})`);
 
         for (let i = 0; i < numToSpawn; i++) {
             const offsetX = random(-config.clusterSpreadRadius, config.clusterSpreadRadius);
@@ -327,7 +327,7 @@ class EventManager {
 
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, rankFactor);
         if (numToSpawn <= 0) {
-            console.log(`EventManager: Calculated 0 enemies to spawn for ${event.type}. Skipping.`);
+            EVENT_LOG(`EventManager: Calculated 0 enemies to spawn for ${event.type}. Skipping.`);
             return;
         }
 
@@ -340,7 +340,7 @@ class EventManager {
         const baseSpawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
         const baseSpawnAngle = random(TWO_PI);
 
-        console.log(`EventManager: Spawning ${event.type}: ${numToSpawn} ${shipTypeToSpawn}(s) near the player. Player rank factor: ${rankFactor.toFixed(2)}`);
+        EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} ${shipTypeToSpawn}(s) near the player. Player rank factor: ${rankFactor.toFixed(2)}`);
 
         for (let i = 0; i < numToSpawn; i++) {
             let currentSpawnAngle = baseSpawnAngle;

@@ -18,7 +18,10 @@
     DEBUG_UI: false,           // UI/menu/inventory logs
     DEBUG_PARTICLES: false,    // Particle counts/perf-ish logs
     DEBUG_SAVELOAD: false,     // Save/load persistence flow
-    DEBUG_WEAPONS: false       // Weapon selection/mode switches
+    DEBUG_WEAPONS: false,      // Weapon selection/mode switches
+    DEBUG_EVENTS: false,       // EventManager warnings/spawns
+    DEBUG_HAULER: false,       // Hauler/transport state logs
+    DEBUG_CARGO: false         // Cargo spawn/collect/detect
   };
 
   // Load persisted flags if any
@@ -42,6 +45,9 @@
   global.DEBUG_PARTICLES = !!flags.DEBUG_PARTICLES;
   global.DEBUG_SAVELOAD = !!flags.DEBUG_SAVELOAD;
   global.DEBUG_WEAPONS = !!flags.DEBUG_WEAPONS;
+  global.DEBUG_EVENTS = !!flags.DEBUG_EVENTS;
+  global.DEBUG_HAULER = !!flags.DEBUG_HAULER;
+  global.DEBUG_CARGO = !!flags.DEBUG_CARGO;
 
   // Helpers (idempotent: don't overwrite if already defined)
   if (typeof global.AI_LOG !== 'function') {
@@ -118,6 +124,26 @@
     global.WEAPON_LOGF = function (builder) { if (global.DEBUG_WEAPONS && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
   }
 
+  // New helpers: EventManager, Hauler, Cargo
+  if (typeof global.EVENT_LOG !== 'function') {
+    global.EVENT_LOG = function (...args) { if (global.DEBUG_EVENTS) console.log(...args); };
+  }
+  if (typeof global.EVENT_LOGF !== 'function') {
+    global.EVENT_LOGF = function (builder) { if (global.DEBUG_EVENTS && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
+  }
+  if (typeof global.HAULER_LOG !== 'function') {
+    global.HAULER_LOG = function (...args) { if (global.DEBUG_HAULER) console.log(...args); };
+  }
+  if (typeof global.HAULER_LOGF !== 'function') {
+    global.HAULER_LOGF = function (builder) { if (global.DEBUG_HAULER && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
+  }
+  if (typeof global.CARGO_LOG !== 'function') {
+    global.CARGO_LOG = function (...args) { if (global.DEBUG_CARGO) console.log(...args); };
+  }
+  if (typeof global.CARGO_LOGF !== 'function') {
+    global.CARGO_LOGF = function (builder) { if (global.DEBUG_CARGO && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
+  }
+
   // Convenience controller API
   global.Debug = global.Debug || {};
   const api = global.Debug;
@@ -135,7 +161,10 @@
       DEBUG_UI: global.DEBUG_UI,
       DEBUG_PARTICLES: global.DEBUG_PARTICLES,
       DEBUG_SAVELOAD: global.DEBUG_SAVELOAD,
-      DEBUG_WEAPONS: global.DEBUG_WEAPONS
+      DEBUG_WEAPONS: global.DEBUG_WEAPONS,
+      DEBUG_EVENTS: global.DEBUG_EVENTS,
+      DEBUG_HAULER: global.DEBUG_HAULER,
+      DEBUG_CARGO: global.DEBUG_CARGO
     };
   };
 

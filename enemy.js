@@ -365,7 +365,7 @@ class Enemy {
             if (cargoTarget) {
                 this.cargoTarget = cargoTarget;
                 this.changeState(AI_STATE.COLLECTING_CARGO);
-                console.log(`${this.shipTypeName} detected cargo - moving to collect`);
+                CARGO_LOG(`${this.shipTypeName} detected cargo - moving to collect`);
             }
         }
 
@@ -380,7 +380,7 @@ class Enemy {
                 this.previousState = this.currentState;
                 this.cargoTarget = cargoTarget;
                 this.changeState(AI_STATE.COLLECTING_CARGO);
-                console.log(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
+                CARGO_LOG(`Transport ${this.shipTypeName} spotted cargo - deviating from route`);
             }
         }
 
