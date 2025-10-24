@@ -347,6 +347,11 @@ class Enemy {
             }
         }
 
+        // Proactively attempt barrier activation even without a valid target (defensive behavior)
+        if (typeof this.activateBarrierIfNeeded === 'function') {
+            this.activateBarrierIfNeeded();
+        }
+
             // Update drag effect timer
         if (this.dragEffectTimer > 0) {
             this.dragEffectTimer -= deltaSeconds;

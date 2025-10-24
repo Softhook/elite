@@ -7,6 +7,15 @@
  * for the Enemy class. These methods are applied to the Enemy prototype
  * via the applyEnemyCombatMethods() function.
  */
+// Helper to normalize weapon type families (e.g., "straight3" -> "straight")
+function getBaseWeaponType(type) {
+    if (!type) return null;
+    if (typeof type !== 'string') return type;
+    if (type.startsWith(WEAPON_TYPE.STRAIGHT)) return WEAPON_TYPE.STRAIGHT;
+    if (type.startsWith(WEAPON_TYPE.SPREAD)) return WEAPON_TYPE.SPREAD;
+    return type;
+}
+
 class EnemyCombat {
     /**
      * Calculate optimal weapon for current combat situation
@@ -32,6 +41,7 @@ class EnemyCombat {
         // Score each weapon based on situation
         let bestScore = -1;
         let bestWeapon = this.currentWeapon;
+        let currentWeaponScore = -1;
 
         // Check if target is already entangled
         const targetAlreadyEntangled = target && 
@@ -43,11 +53,7 @@ class EnemyCombat {
 
             // Determine base type family (handles straightN/spreadN)
             const type = weapon.type || '';
-            const baseType = type.startsWith(WEAPON_TYPE.STRAIGHT)
-                ? WEAPON_TYPE.STRAIGHT
-                : (type.startsWith(WEAPON_TYPE.SPREAD)
-                    ? WEAPON_TYPE.SPREAD
-                    : type);
+            const baseType = getBaseWeaponType(type);
 
             // Range considerations (per-weapon effective range)
             let rangeMult = 1.0;
@@ -65,8 +71,12 @@ class EnemyCombat {
             
             // --- FORCE WEAPON LOGIC ---
             // Force weapons are highly effective at very close range
-            if (baseType === WEAPON_TYPE.FORCE && isVeryCloseRange) {
-                score += 5; // Highest priority at very close rangee
+            if (baseType === WEAPON_TYPE.FORCE) {
+                if (isVeryCloseRange) {
+                    score += 5; // Highest priority at very close range
+                } else if (!isShortRange) {
+                    score -= 1; // Mild penalty outside close range
+                }
             }
 
             // --- TANGLE WEAPON LOGIC ---
@@ -80,6 +90,7 @@ class EnemyCombat {
                     // Good for fast targets
                     else if (target.maxSpeed > 5) {
                         score += 3;
+                        if (isMediumRange) score += 1; // small bump at medium range vs fast targets
                     } 
                 } else {
                     // Target is already entangled - significant penalty
@@ -132,14 +143,18 @@ class EnemyCombat {
             }
             
             // If this weapon scores better, select it
+            if (weapon === this.currentWeapon) {
+                currentWeaponScore = score;
+            }
             if (score > bestScore) {
                 bestScore = score;
                 bestWeapon = weapon;
             }
         }
         
-        // Only change weapons if the selected one is different and better by at least 2 points
-        if (bestWeapon !== this.currentWeapon && bestScore > 0) {
+        // Only change weapons if the selected one is different and better by a threshold
+        const improvement = (bestWeapon !== this.currentWeapon) ? (bestScore - (currentWeaponScore >= 0 ? currentWeaponScore : 0)) : 0;
+        if (bestWeapon !== this.currentWeapon && improvement >= 0) {
             return bestWeapon;
         }
         
@@ -193,7 +208,7 @@ class EnemyCombat {
      */
     canFireAtTarget(targetAngle) {
         const weaponType = this.currentWeapon && this.currentWeapon.type;
-        const baseType = weaponType ? (weaponType.startsWith(WEAPON_TYPE.STRAIGHT) ? WEAPON_TYPE.STRAIGHT : (weaponType.startsWith(WEAPON_TYPE.SPREAD) ? WEAPON_TYPE.SPREAD : weaponType)) : null;
+        const baseType = weaponType ? getBaseWeaponType(weaponType) : null;
         const isTurretWeapon = baseType === WEAPON_TYPE.TURRET;
         const angleDiff = this.getAngleDifference(targetAngle);
 
@@ -226,7 +241,8 @@ class EnemyCombat {
      * @param {number} shootingAngle - Angle to target in radians
      */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
-
+        // Proactively activate barrier if needed regardless of target status
+        this.activateBarrierIfNeeded();
         if (!targetExists) return;
         
         // Only debug firing decisions against player
@@ -251,11 +267,7 @@ class EnemyCombat {
         let effectiveFiringRange = this.firingRange;
         if (this.currentWeapon) {
             const type = this.currentWeapon.type || '';
-            const baseType = type.startsWith(WEAPON_TYPE.STRAIGHT)
-                ? WEAPON_TYPE.STRAIGHT
-                : (type.startsWith(WEAPON_TYPE.SPREAD)
-                    ? WEAPON_TYPE.SPREAD
-                    : type);
+            const baseType = getBaseWeaponType(type);
             switch (baseType) {
                 case WEAPON_TYPE.BEAM: effectiveFiringRange *= 1.2; break;
                 case WEAPON_TYPE.MISSILE: effectiveFiringRange *= 1.8; break;
@@ -304,6 +316,36 @@ class EnemyCombat {
         WeaponSystem.fire(this, system, fireAngleRadians, type, this.target);
     }
 
+    /**
+     * Try to activate barrier proactively, independent of having a firing target.
+     * Returns true if barrier was activated this call.
+     */
+    activateBarrierIfNeeded() {
+        if (!this.weapons || !this.weapons.length) return false;
+        if (this.barrierCooldown > 0) return false;
+
+        // Find barrier definition among equipped weapons
+        const barrierWeapon = this.weapons.find(w => w.type === WEAPON_TYPE.BARRIER);
+        if (!barrierWeapon) return false;
+
+        const hullPct = this.maxHull > 0 ? (this.hull / this.maxHull) : 0;
+        const shieldPct = this.maxShield > 0 ? (this.shield / this.maxShield) : 1;
+        const shouldActivate = (hullPct < 0.3 || shieldPct < 0.3);
+        if (!shouldActivate) return false;
+
+        // Activate barrier using weapon's properties without switching currentWeapon
+        this.isBarrierActive = true;
+        this.barrierDamageReduction = barrierWeapon.damageReduction;
+        this.barrierDurationTimer = barrierWeapon.duration;
+        this.barrierColor = barrierWeapon.color || [100, 100, 255];
+        this.barrierCooldown = barrierWeapon.fireRate;
+
+        // Feedback
+        AI_LOG?.(`${this.shipTypeName} activated barrier (auto): ${this.barrierDurationTimer}s, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR`);
+        if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp'); }
+        return true;
+    }
+
     fireWeapon(preferredAngle = null, targetToPass = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
 
@@ -327,6 +369,8 @@ class EnemyCombat {
                 return; // Barrier activated, no projectile fired
             } else {
                 // Barrier on cooldown - skip without logging to avoid spam
+                // Auto-cycle to avoid a no-op if barrier is selected but cooling down
+                this.cycleWeapon();
                 return; // Barrier on cooldown
             }
         }
