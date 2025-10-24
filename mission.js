@@ -61,10 +61,10 @@ class Mission {
 
     /** Sets the mission status to 'Active'. Called by Player.acceptMission. */
     activate() {
-        console.log(`      >>> Mission.activate() called for: ${this.title}`); // Log entry
+        MISSION_LOG(`      >>> Mission.activate() called for: ${this.title}`); // Log entry
         if (this.status === 'Available') { // Only activate if it was available
              this.status = 'Active';
-             console.log(`      <<< Mission status set to: ${this.status}`); // Log exit
+             MISSION_LOG(`      <<< Mission status set to: ${this.status}`); // Log exit
         } else {
              console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
         }
@@ -77,9 +77,9 @@ class Mission {
     complete(player) {
         // Note: Player.completeMission should ideally check if conditions are met before calling this.
         // This method primarily handles the reward and status change.
-        console.log(`   Mission.complete() called for: ${this.title}`);
+        MISSION_LOG(`   Mission.complete() called for: ${this.title}`);
         if (player && typeof player.addCredits === 'function') {
-            console.log(`      -> Granting reward: ${this.rewardCredits} Credits`);
+            MISSION_LOG(`      -> Granting reward: ${this.rewardCredits} Credits`);
             player.addCredits(this.rewardCredits);
             this.status = 'Completed'; // Mark as completed
             // TODO: Add reputation changes or other effects later
@@ -90,7 +90,7 @@ class Mission {
 
     /** Marks the mission as failed. Called potentially by Player.abandonMission or time limits. */
     fail() {
-        console.log(`Mission Failed: ${this.title}`);
+        MISSION_LOG(`Mission Failed: ${this.title}`);
         this.status = 'Failed';
          // TODO: Add penalties (credits, rep) or consequences later
     }

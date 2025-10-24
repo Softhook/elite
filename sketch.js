@@ -33,11 +33,11 @@ function setup() {
     // Default text alignment and size
     textAlign(CENTER, CENTER);
     textSize(14);
-    console.log("Setting up Elite MVP..."); // Log startup
+    UI_LOG("Setting up Elite MVP..."); // Log startup
 
     // Initialize object pools after p5.js is ready
     if (typeof WeaponSystem !== 'undefined' && typeof ObjectPool !== 'undefined') {
-        console.log("Initializing weapon system pool in p5.js setup()");
+        UI_LOG("Initializing weapon system pool in p5.js setup()");
         WeaponSystem.init(100);
     }
 
@@ -71,7 +71,7 @@ function setup() {
     }
 
     // --- Don't auto-load game data - let save selection screen handle it ---
-    console.log("Game initialization complete. Waiting for user save selection...");
+    UI_LOG("Game initialization complete. Waiting for user save selection...");
     loadGameWasSuccessful = false; // We'll handle loading in the save selection screen
 
     // --- Don't initialize Galaxy Systems automatically ---
@@ -85,7 +85,7 @@ function setup() {
     if (gameStateManager && gameStateManager.currentState === "LOADING") {
          gameStateManager.setState("TITLE_SCREEN"); // Changed to start on title screen
     } else if (gameStateManager) {
-         console.log(`Setup complete, game state already set to: ${gameStateManager.currentState}.`);
+         UI_LOG(`Setup complete, game state already set to: ${gameStateManager.currentState}.`);
     } else {
          console.error("Cannot set initial state - gameStateManager missing!");
          // Draw error as setup failed
@@ -93,7 +93,7 @@ function setup() {
          noLoop(); return;
     }
 
-    console.log("--- Setup Complete ---"); // Keep this final confirmation log
+    UI_LOG("--- Setup Complete ---"); // Keep this final confirmation log
 
 } // --- End setup() ---
 
@@ -217,7 +217,7 @@ function keyPressed() {
             // Defensive: only attempt switch if the player actually has that slot
             if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
                 if (player.switchToWeapon(weaponIndex)) {
-                    console.log(`Switched to weapon: ${player.currentWeapon.name}`);
+                    WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
                 }
             }
             return false;
@@ -276,13 +276,13 @@ function keyPressed() {
                 const isCurrentlyWanted = currentSystem.playerWanted || false;
                 currentSystem.playerWanted = !isCurrentlyWanted;
                 currentSystem.policeAlertSent = !isCurrentlyWanted;
-                console.log(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
+                GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
                 if (!isCurrentlyWanted) {
                     uiManager.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
-                    console.log(`ALERT: Police alert issued in ${currentSystem.name}!`);
+                    GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
                 } else {
                     uiManager.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
-                    console.log(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
+                    GS_LOG(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
                 }
                 return false;
             }
@@ -321,10 +321,10 @@ function keyPressed() {
  */
 function handleAutopilotKey(autopilotKey) {
     if (autopilotKey === 'h') {
-        console.log("H key detected - toggling station autopilot");
+        UI_LOG("H key detected - toggling station autopilot");
         player.toggleAutopilot('station');
     } else if (autopilotKey === 'j') {
-        console.log("J key detected - toggling jump zone autopilot");
+        UI_LOG("J key detected - toggling jump zone autopilot");
         player.toggleAutopilot('jumpzone');
     }
 }
@@ -445,7 +445,7 @@ function saveGame() {
             localStorage.setItem(saveKey, saveDataString);
             localStorage.setItem(LAST_ACTIVE_SLOT_KEY, window.activeSaveSlotIndex.toString()); // Store as last active slot
 
-            console.log(`Game saved to slot ${window.activeSaveSlotIndex + 1} (Key: ${saveKey})`);
+            SAVE_LOG(`Game saved to slot ${window.activeSaveSlotIndex + 1} (Key: ${saveKey})`);
             
             // Refresh save previews in SaveSelectionScreen
             // Check if saveSelectionScreen instance exists and has the method
@@ -568,7 +568,7 @@ function loadGame(slotIndex) {
                 
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
                 localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
-                console.log(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
+                SAVE_LOG(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
                 return true;
             } catch (e) {
                 console.error(`Error loading game from slot ${slotIndex + 1} (Key: ${loadKey}):`, e);
@@ -576,7 +576,7 @@ function loadGame(slotIndex) {
                 return false;
             }
         } else {
-            console.log(`No saved game found in slot ${slotIndex + 1} (Key: ${loadKey})`);
+            SAVE_LOG(`No saved game found in slot ${slotIndex + 1} (Key: ${loadKey})`);
             return false;
         }
     } else {

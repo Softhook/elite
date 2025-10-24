@@ -181,7 +181,7 @@ function monitorThrustReuse() {
   console.group("🚀 Thrust Particle Pool Stats");
   
   const playerStats = player?.thrustManager?.getPoolStats();
-  console.log(`Player: ${playerStats?.reused || 0} reused / ${playerStats?.created || 0} created`);
+    PARTICLE_LOG(`Player: ${playerStats?.reused || 0} reused / ${playerStats?.created || 0} created`);
   
   const enemies = player?.currentSystem?.enemies || [];
   let totalActive = 0;
@@ -199,8 +199,8 @@ function monitorThrustReuse() {
     }
   });
   
-  console.log(`Enemies (${enemies.length}): ${totalReused} reused / ${totalCreated} created`);
-  console.log(`Active particles: ${totalActive}`);
+    PARTICLE_LOG(`Enemies (${enemies.length}): ${totalReused} reused / ${totalCreated} created`);
+    PARTICLE_LOG(`Active particles: ${totalActive}`);
   
   console.groupEnd();
 }

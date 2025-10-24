@@ -102,7 +102,7 @@ this.showingInventory = false;
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
         const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"]; // Add other station states here later
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
-            console.log("Undocking! Applying position offset.");
+            GS_LOG("Undocking! Applying position offset.");
             if (player) {
                 const offsetMultiplier = 10; const offsetDistance = player.size * offsetMultiplier;
                 let undockOffset = createVector(0, -offsetDistance); // Simple 'up' offset
@@ -119,7 +119,7 @@ this.showingInventory = false;
         }
         // Snap position ONLY when docking occurs FROM IN_FLIGHT
         else if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
-             console.log("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
+             GS_LOG("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
              if (player && galaxy?.getCurrentSystem()?.station?.pos) { // Safe access
                  player.pos = galaxy?.getCurrentSystem()?.station?.pos?.copy() || player.pos; player.vel.mult(0);
              } else { console.error("Could not snap player to station - required objects missing."); }
@@ -292,7 +292,7 @@ this.showingInventory = false;
                     // Transition to fade-in after holding for the specified duration
                     if (this.jumpWhiteHoldTimer >= this.jumpWhiteHoldTime) {
                         this.jumpFadeState = "FADE_IN";
-                        console.log("Jump transition: WHITE_HOLD → FADE_IN");
+                        GS_LOG("Jump transition: WHITE_HOLD → FADE_IN");
                     }
                 }
                 // Handle the FADE_IN state - gradually decrease opacity back to normal
@@ -305,7 +305,7 @@ this.showingInventory = false;
                         this.jumpFadeOpacity = 0;
                         this.jumpFadeState = "NONE";
                         this.setState("IN_FLIGHT");
-                        console.log("Jump transition complete: FADE_IN → IN_FLIGHT");
+                        GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
                     }
                 }
 
@@ -647,7 +647,7 @@ this.showingInventory = false;
      * @param {number} targetIndex - The index of the target system in the galaxy.
      */
     startJump(targetIndex) {
-        console.log(`[startJump] Attempting jump to system index: ${targetIndex}`);
+        GS_LOG(`[startJump] Attempting jump to system index: ${targetIndex}`);
         const currentSystem = galaxy?.getCurrentSystem();
         const targetSystem = galaxy.getSystemByIndex(targetIndex);
 
@@ -659,7 +659,7 @@ this.showingInventory = false;
 
         // --- Jump Zone Restriction Check ---
         if (!isInZone) {
-            console.log("[startJump] Jump aborted: Player not in Jump Zone.");
+            GS_LOG("[startJump] Jump aborted: Player not in Jump Zone.");
             // Use uiManager and soundManager if they are accessible here
             // Assuming they are global or passed to GameStateManager
             if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
@@ -681,7 +681,7 @@ this.showingInventory = false;
         }
 
         if (targetIndex === galaxy.currentSystemIndex) {
-            console.log("[startJump] Cannot jump to the current system.");
+            GS_LOG("[startJump] Cannot jump to the current system.");
             if (typeof uiManager !== 'undefined') uiManager.addMessage("Cannot jump to the current system.", color(255, 200, 0));
             return;
         }
@@ -689,13 +689,13 @@ this.showingInventory = false;
 
         // --- Connection Check ---
         if (!currentSystem || !currentSystem.connectedSystemIndices.includes(targetIndex)) {
-             console.log(`[startJump] Jump failed: No connection from ${currentSystem?.name} to system index ${targetIndex}.`);
+             GS_LOG(`[startJump] Jump failed: No connection from ${currentSystem?.name} to system index ${targetIndex}.`);
              if (typeof uiManager !== 'undefined') uiManager.addMessage("Cannot jump: No direct route to that system.", color(255, 100, 100));
              return;
         }
         // --- End Connection Check ---
 
-        console.log(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
+        GS_LOG(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
         this.jumpTargetSystemIndex = targetIndex;
         this.jumpChargeTimer = 0; // Reset timer
         this.isJumpCharging = true; // Set the flag
@@ -707,10 +707,10 @@ this.showingInventory = false;
     fetchStationMissions(player) {
          const currentSystem = galaxy?.getCurrentSystem();
          if (currentSystem?.station && galaxy && player && typeof MissionGenerator?.generateMissions === 'function') {
-              console.log("[GameStateManager] Fetching missions for", currentSystem?.name, currentSystem?.station?.name);
+              MISSION_LOG("[GameStateManager] Fetching missions for", currentSystem?.name, currentSystem?.station?.name);
               try {
                   this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentSystem.station, galaxy, player);
-                  console.log("[GameStateManager] Missions fetched:", this.currentStationMissions);
+                  MISSION_LOG("[GameStateManager] Missions fetched:", this.currentStationMissions);
                   this.selectedMissionIndex = -1; return true;
               } catch(e) { console.error("Error during MissionGenerator.generateMissions:", e); this.currentStationMissions = []; return false; }
          }

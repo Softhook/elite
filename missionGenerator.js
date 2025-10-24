@@ -54,8 +54,8 @@ class MissionGenerator {
             return [];
         }
 
-        console.log("[MissionGenerator] Called with:", currentSystem, currentStation, player);
-        console.log("[MissionGenerator] Generating missions for", currentSystem?.name, currentStation?.name, player?.shipTypeName);
+        MISSION_LOG("[MissionGenerator] Called with:", currentSystem, currentStation, player);
+        MISSION_LOG("[MissionGenerator] Generating missions for", currentSystem?.name, currentStation?.name, player?.shipTypeName);
 
         const maxMissions = floor(random(5, 10)); // Slightly more variance maybe?
         const systemSecurity = currentSystem.securityLevel || 'Medium';
@@ -67,7 +67,7 @@ class MissionGenerator {
         if (!currentSystem.economyType) currentSystem.economyType = systemEconomy;
         if (!currentSystem.techLevel) currentSystem.techLevel = systemTechLevel;
 
-        console.log(`Generating Missions for ${currentStation.name} (${currentSystem.name}), Sec: ${systemSecurity}, Econ: ${systemEconomy}, Tech: ${systemTechLevel}`);
+        MISSION_LOG(`Generating Missions for ${currentStation.name} (${currentSystem.name}), Sec: ${systemSecurity}, Econ: ${systemEconomy}, Tech: ${systemTechLevel}`);
 
         // --- Base Probabilities ---
         // These will be modified based on security/economy
@@ -210,7 +210,7 @@ class MissionGenerator {
                 } else {
                     // Fallback / 'Other' category if roll exceeds defined types
                     // For now, maybe generate another legal delivery as fallback?
-                    console.log(`Mission Gen: Rolled into 'Other' category (${missionTypeRoll.toFixed(3)}), generating fallback Legal Delivery.`);
+                    MISSION_LOG(`Mission Gen: Rolled into 'Other' category (${missionTypeRoll.toFixed(3)}), generating fallback Legal Delivery.`);
                     mission = this.createLegalDelivery(currentSystem, currentStation, galaxy, player);
                     if (!mission) { // If even fallback fails, try a bounty
                          mission = this.createBountyMission(currentSystem, currentStation, galaxy, player);
@@ -231,9 +231,9 @@ class MissionGenerator {
             }
         } // End mission generation loop
 
-        console.log("[MissionGenerator] Missions generated:", availableMissions);
+        MISSION_LOG("[MissionGenerator] Missions generated:", availableMissions);
 
-        console.log(`Generated ${availableMissions.length} missions (Sec: ${systemSecurity}, Econ: ${systemEconomy}).`);
+        MISSION_LOG(`Generated ${availableMissions.length} missions (Sec: ${systemSecurity}, Econ: ${systemEconomy}).`);
         return availableMissions;
     } // --- End generateMissions ---
 

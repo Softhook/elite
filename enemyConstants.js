@@ -114,20 +114,6 @@ const SNIPING_POSITION_ADJUST_THRUST = 0.2;   // Gentle thrust for minor positio
 const SNIPING_STANDOFF_TOLERANCE_FACTOR = 0.1; // Allow 10% deviation from ideal range before adjusting
 const SNIPING_HULL_DROP_EXIT_PERCENT = 0.15;  // Exit sniping if hull drops by 15% of maxHull since entering state
 
-// -------------------------
-// --- Debug Flags & Helpers ---
-// -------------------------
-
-// Toggle these to enable scoped logging without code edits elsewhere
-const DEBUG_AI = true;         // AI flow/state logs
-const DEBUG_TARGETING = false;  // Target selection/scoring logs
-const DEBUG_DAMAGE = false;     // Damage/hit processing logs
-const DEBUG_ENV = false;        // Environment/nebula effect logs
-const DEBUG_GS = false;         // Game state transitions and high-level flow
-
-// Lightweight helpers to avoid sprinkling conditionals everywhere
-function AI_LOG(...args) { if (DEBUG_AI) console.log(...args); }
-function TARGETING_LOG(...args) { if (DEBUG_TARGETING) console.log(...args); }
-function DAMAGE_LOG(...args) { if (DEBUG_DAMAGE) console.log(...args); }
-function ENV_LOG(...args) { if (DEBUG_ENV) console.log(...args); }
-function GS_LOG(...args) { if (DEBUG_GS) console.log(...args); }
+// Debug flags/helpers moved to debug.js (loaded early).
+// If needed, you can still check or toggle via the global Debug API:
+//   Debug.get(), Debug.set({ DEBUG_AI: true }), Debug.enable('DEBUG_TARGETING')

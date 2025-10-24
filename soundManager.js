@@ -5,7 +5,7 @@
  */
 class SoundManager {
     constructor() {
-        console.log("SoundManager constructor called.");
+        AUDIO_LOG("SoundManager constructor called.");
         this.sounds = {}; // Stores { definition, audioNormal }
         this.soundDefinitions = {
             // --- Sound Definitions ---
@@ -383,7 +383,7 @@ class SoundManager {
             return;
         }
 
-        console.log("Initializing SoundManager sounds (Single audio per sound)...");
+        AUDIO_LOG("Initializing SoundManager sounds (Single audio per sound)...");
         let generatedCount = 0;
 
         for (const name in this.soundDefinitions) {
@@ -400,7 +400,7 @@ class SoundManager {
                 this.sounds[name] = { audio: null, definition: def };
             }
         }
-        console.log(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
+        AUDIO_LOG(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
     }
 
     
@@ -414,7 +414,7 @@ class SoundManager {
      * @returns {object|null} The generated audio object (HTMLAudioElement or custom) or null if failed.
      */
     _generateSingleSound(name, originalDefinition, targetVolume, versionLabel) {
-        console.log(`   Generating '${name}' (${versionLabel}, Vol: ${targetVolume.toFixed(2)})...`);
+        AUDIO_LOG(`   Generating '${name}' (${versionLabel}, Vol: ${targetVolume.toFixed(2)})...`);
         let generatedAudio = null;
 
         try {
@@ -471,7 +471,7 @@ class SoundManager {
             // Validate: Must have a .play() method
             if (generatedAudio && typeof generatedAudio.play === 'function') {
                 const type = typeof generatedAudio.volume !== 'undefined' ? "Standard HTMLAudioElement" : "Custom sfxr object";
-                console.log(`      -> '${name}' (${versionLabel}) seems valid (${type}).`);
+                AUDIO_LOG(`      -> '${name}' (${versionLabel}) seems valid (${type}).`);
                 return generatedAudio;
             } else {
                 console.error(`   Failed to create a playable ${versionLabel} Audio object for '${name}'. Object received:`, generatedAudio);

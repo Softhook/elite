@@ -1741,7 +1741,7 @@ handleInput() {
      */
     addKill() {
         this.kills++;
-        console.log(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
+        PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
     }
 
     /**
