@@ -293,6 +293,46 @@ const WEAPON_UPGRADES = [
     },
 
     // -----------------------------
+    // Proximity Mines
+    // -----------------------------
+    {
+        name: "Basic Mine",
+        type: "mine",
+        damage: 60,
+        blastRadius: 120,
+        triggerRadius: 70,
+        mineHealth: 25,
+        color: [255, 100, 0], // Orange
+        fireRate: 3.0,
+        price: 4500,
+        desc: "Proximity mine that explodes when enemies approach. Can be destroyed by weapons."
+    },
+    {
+        name: "Advanced Mine",
+        type: "mine",
+        damage: 100,
+        blastRadius: 180,
+        triggerRadius: 90,
+        mineHealth: 40,
+        color: [255, 50, 0], // Red-orange
+        fireRate: 4.0,
+        price: 8000,
+        desc: "Powerful mine with larger blast radius and more health."
+    },
+    {
+        name: "Heavy Mine",
+        type: "mine",
+        damage: 150,
+        blastRadius: 250,
+        triggerRadius: 110,
+        mineHealth: 60,
+        color: [200, 0, 0], // Dark red
+        fireRate: 5.0,
+        price: 12000,
+        desc: "Devastating mine with massive blast radius. Very durable."
+    },
+
+    // -----------------------------
     // Defensive Systems
     // -----------------------------
     {
