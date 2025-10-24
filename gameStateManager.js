@@ -76,7 +76,7 @@ this.showingInventory = false;
         this.previousState = this.currentState;
         if (this.currentState === newState) return; // No change needed
 
-        console.log(`Changing state from ${this.previousState} to ${newState}`);
+        GS_LOG(`Changing state from ${this.previousState} to ${newState}`);
         this.currentState = newState; // Update the current state
 
         // --- Handle Logic Specific to State Transitions ---

@@ -120,7 +120,7 @@ class EnemyUtils {
         if (system?.jumpZoneCenter) {
             // --- Target the Jump Zone ---
             this.patrolTargetPos = system.jumpZoneCenter.copy();
-            console.log(`Hauler ${this.shipTypeName} targeting Jump Zone at ${this.patrolTargetPos.x.toFixed(0)}, ${this.patrolTargetPos.y.toFixed(0)}`);
+            AI_LOG(`Hauler ${this.shipTypeName} targeting Jump Zone at ${this.patrolTargetPos.x.toFixed(0)}, ${this.patrolTargetPos.y.toFixed(0)}`);
         } else {
             // --- Fallback: Target random point at edge ---
             console.warn(`Hauler ${this.shipTypeName}: Jump Zone not found in system ${system?.name}. Using fallback edge target.`);

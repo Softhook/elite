@@ -32,12 +32,13 @@ class Enemy {
             actualShipTypeName = "Krait"; // Use the KEY of the fallback
             shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Get the default definition using the correct key
             // Safety check for the default definition itself
-            if (!shipDef) {
-                 console.error("FATAL: Default ship definition 'Krait' is missing from SHIP_DEFINITIONS! Cannot create enemy properly.");
-                 // Make enemy unusable if Krait is also missing
-                 this.hull = 0; this.destroyed = true; shipTypeName="ErrorShip"; role="Error"; // Prevent further errors
-                 shipDef = { name: "ErrorShip", size: 10, baseMaxSpeed: 0, baseThrust: 0, baseTurnRateDegrees: 0, baseHull: 1, cargoCapacity: 0 }; // Minimal dummy values
-            }
+              if (!shipDef) {
+                  console.error("FATAL: Default ship definition 'Krait' is missing from SHIP_DEFINITIONS! Cannot create enemy properly.");
+                  // Make enemy unusable if Krait is also missing
+                  this.hull = 0; this.destroyed = true; shipTypeName="ErrorShip"; role="Error"; // Prevent further errors
+                  // Minimal dummy values with expected property names
+                  shipDef = { name: "ErrorShip", size: 10, baseMaxSpeed: 0, baseThrust: 0, baseTurnRate: 0, baseHull: 1, baseShield: 0, shieldRecharge: 0, cargoCapacity: 0 };
+              }
         }
         // --- End Lookup ---
 
@@ -50,7 +51,6 @@ class Enemy {
         this.forcedCombatTimer = 0;
 
         // After setting role in the constructor
-        this.role = role;
         if (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN) {
             // Pirates and Aliens are automatically wanted
             this.isWanted = true;
@@ -96,7 +96,6 @@ class Enemy {
                 // Guards might inherit target from principal or player initially
                 this.target = playerRef; // Default, can be overridden
                 break;
-        break;
         }
 
         this.strafeDirection = 0; // Will be -1 for left, 1 for right, 0 for none. Set in ATTACK_PASS entry.
@@ -165,7 +164,6 @@ class Enemy {
         }
         
         // --- Role-Specific Initial State ---
-        this.role = role;
         if (this.role === AI_ROLE.TRANSPORT) {
             // For transport shuttles, use lower speed and a fixed route behavior.
             this.currentState = AI_STATE.TRANSPORTING;
@@ -220,7 +218,7 @@ class Enemy {
         this.shieldHitTime = 0;
 
         // Shield recharge delay
-        this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
+        this.shieldRechargeDelay = 3000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
 
         // --- Guard-specific properties ---
@@ -236,7 +234,8 @@ class Enemy {
         this.hasLoggedDamageActivation = false;
         this.hasLoggedPlayerTargeting = false;
         this.targetSwitchCooldown = 0;
-        this.forcedCombatTimer = 0; // Initialize forced combat timer
+            this.dragMultiplier = 1.0;   // Default - normal drag
+            this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         // --- End Combat AI Flags ---
 
         // --- Barrier System Properties ---
@@ -314,6 +313,11 @@ class Enemy {
         // Process hauler attack cooldown
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaSeconds;
+        }
+        
+        // Process target switch cooldown
+        if (this.targetSwitchCooldown > 0) {
+            this.targetSwitchCooldown -= deltaSeconds;
         }
 
         // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)

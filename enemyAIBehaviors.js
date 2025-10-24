@@ -242,7 +242,7 @@ class EnemyAIBehaviors {
                     this.attackCooldown = 15.0; // Cooldown before being provoked again
                     return; // Skip normal logic
                 } else { // Retaliate if hull is okay
-                    console.log(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
+                    AI_LOG(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.APPROACHING);
                     this.haulerCombatTimer = 10.0; // Timer to return to hauling
@@ -292,7 +292,7 @@ class EnemyAIBehaviors {
                 this.currentState !== AI_STATE.NEAR_STATION &&
                 this.currentState !== AI_STATE.TRANSPORTING &&
                 this.currentState !== AI_STATE.COLLECTING_CARGO) {
-                console.log(`Forcing hauler ${this.shipTypeName} back to APPROACHING state`);
+                AI_LOG(`Forcing hauler ${this.shipTypeName} back to APPROACHING state`);
                 this.changeState(AI_STATE.APPROACHING);
             }
 
@@ -365,14 +365,14 @@ class EnemyAIBehaviors {
                 if (dS < this.stationProximityThreshold) {
                     // If we are close AND our intended target was the station, transition
                     if (isTargetingStation) {
-                         console.log(`Hauler ${this.shipTypeName} arriving near station (Dist: ${dS.toFixed(1)}).`);
+                         AI_LOG(`Hauler ${this.shipTypeName} arriving near station (Dist: ${dS.toFixed(1)}).`);
                          this.changeState(AI_STATE.NEAR_STATION);
                          shouldMove = false; // Stop moving this frame, let NEAR_STATION handle braking/waiting
                     } else {
                          // Reached a non-station patrol point.
                          // For now, just treat it like arriving at the station for simplicity.
                          // Could add logic here later to pick a new patrol point or head towards station.
-                         console.log(`Hauler ${this.shipTypeName} arriving near patrol point (Dist: ${dS.toFixed(1)}). Treating as station arrival.`);
+                         AI_LOG(`Hauler ${this.shipTypeName} arriving near patrol point (Dist: ${dS.toFixed(1)}). Treating as station arrival.`);
                          this.changeState(AI_STATE.NEAR_STATION);
                          shouldMove = false;
                     }
@@ -536,7 +536,7 @@ class EnemyAIBehaviors {
              this.routePoints = pts;
              this.currentRouteIndex = 1; // Start moving towards the second point
              this.waitTimer = 0;
-             console.log(`Transporter ${this.shipTypeName} route set.`);
+             AI_LOG(`Transporter ${this.shipTypeName} route set.`);
         }
 
 

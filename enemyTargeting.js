@@ -33,8 +33,9 @@ class EnemyTargeting {
             if (this.isTargetValid(this.target)) {
                 return true; // Keep current target locked during sniping
             } else {
-                // Target became invalid, exit sniping state
-                this.changeState(AI_STATE.APPROACHING);
+                // Target became invalid, exit sniping state to appropriate default
+                this.target = null;
+                this.changeState(this._getDefaultStateForRole());
                 return false;
             }
         }
@@ -112,15 +113,25 @@ class EnemyTargeting {
 
         // Final target decision
         if (bestTarget && bestScore > 0) {
-            const scoreThresholdForChange = 20;
-            if (bestTarget !== this.target || bestScore > currentTargetScore + scoreThresholdForChange) {
-                this.target = bestTarget;
-                // Only debug if target is player
-                if (bestTarget instanceof Player) {
-                    //console.log(`%c🎯 PLAYER TARGETED: ${this.shipTypeName} targeting player with score ${bestScore.toFixed(1)}`, 'color:red; background-color: black; font-weight:bold;');
+            const scoreThresholdForChange = 25;
+            
+            if (bestTarget !== this.target) {
+                // Switching to a different target
+                // Allow immediate switch if we have no target, otherwise require cooldown + score threshold
+                if (this.target === null) {
+                    // No current target, immediate acquisition allowed
+                    this.target = bestTarget;
+                    this.targetSwitchCooldown = 2.0; // Set cooldown for future switches
+                    return true;
+                } else if (this.targetSwitchCooldown <= 0 && bestScore > currentTargetScore + scoreThresholdForChange) {
+                    // Have a target, cooldown expired, and new target is significantly better
+                    this.target = bestTarget;
+                    this.targetSwitchCooldown = 2.0;
+                    return true;
                 }
-                return true;
+                // Else: cooldown active or score not good enough - keep current target
             }
+            // Either keeping same target or couldn't switch yet
             return this.target !== null;
         } else {
             if (this.target instanceof Player) {

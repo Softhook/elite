@@ -195,7 +195,9 @@ class Nebula {
             // If entity was previously affected but is now out of range
             if (entity && this.affectedEntities.has(entityId)) {
                 this.affectedEntities.delete(entityId);
-                console.log(`Entity ${entityId} left ${this.type} nebula`);
+                if (this.debug || (typeof DEBUG_ENV !== 'undefined' && DEBUG_ENV)) {
+                    console.log(`Entity ${entityId} left ${this.type} nebula`);
+                }
                 
                 // Reset affected status
                 if (this.type === 'ion') {
@@ -219,7 +221,9 @@ class Nebula {
         // Log first entry to nebula
         if (!this.affectedEntities.has(entityId)) {
             this.affectedEntities.add(entityId);
-            console.log(`Entity ${entityId} entered ${this.type} nebula`);
+            if (this.debug || (typeof DEBUG_ENV !== 'undefined' && DEBUG_ENV)) {
+                console.log(`Entity ${entityId} entered ${this.type} nebula`);
+            }
             
             // Show UI message if it's the player
             if (entity instanceof Player) {

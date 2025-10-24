@@ -36,6 +36,13 @@ class EnemyStateMachine {
             case AI_STATE.SNIPING: // <<< NEW CASE
                 this._updateState_SNIPING(targetExists, distanceToTarget);
                 break;
+            case AI_STATE.GUARDING:
+                this._updateState_GUARDING();
+                break;
+            default:
+                // States like TRANSPORTING, COLLECTING_CARGO, NEAR_STATION, LEAVING_SYSTEM
+                // are handled by their respective role AI methods, not the combat state machine
+                break;
         }
     }
 
@@ -92,7 +99,7 @@ class EnemyStateMachine {
                 const currentCombinedHealth = this.shield + this.hull;
 
                 if (currentCombinedHealth < this.shieldPlusHullAtStateEntry - combinedHealthDropThreshold) {
-                    console.log(`${this.shipTypeName} (SNIPING): Took significant damage. Switching to ATTACK_PASS.`);
+                    AI_LOG(`${this.shipTypeName} (SNIPING): Took significant damage. Switching to ATTACK_PASS.`);
                     this.changeState(AI_STATE.ATTACK_PASS);
                     return; // Exit early after state change
                 }
@@ -106,7 +113,6 @@ class EnemyStateMachine {
             return;
         }
 
-        const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
         const minSnipeRange = this.visualFiringRange * SNIPING_EXIT_MIN_FACTOR; // Use exit threshold
         const maxSnipeRange = this.visualFiringRange * SNIPING_EXIT_MAX_FACTOR; // Use exit threshold
 
@@ -128,28 +134,33 @@ class EnemyStateMachine {
         // Transition conditions (using hysteresis thresholds)
         if (roundedEffectiveDist < roundedMinSnipeRange) {
             // Target is too close, decide to ATTACK_PASS or REPOSITION
-            // For now, let's transition to ATTACK_PASS to be aggressive
-            console.log(`${this.shipTypeName} (SNIPING): Target too close (${roundedEffectiveDist} < ${roundedMinSnipeRange}), switching to ATTACK_PASS.`);
             this.changeState(AI_STATE.ATTACK_PASS);
         } else if (roundedEffectiveDist > roundedMaxSnipeRange) {
             // Target is too far, need to APPROACH
-            console.log(`${this.shipTypeName} (SNIPING): Target too far (${roundedEffectiveDist} > ${roundedMaxSnipeRange}), switching to APPROACHING.`);
             this.changeState(AI_STATE.APPROACHING);
-        } 
-        // NEW: Add random chance to reposition or start an attack run
-        else if (frameCount % 60 === 0 && random() < 0.05) { // Check every ~1 second with 5% chance
-            // Decide between repositioning (30%) or attack run (70%)
-            if (random() < 0.3) {
-                console.log(`${this.shipTypeName} (SNIPING): Randomly repositioning for a better angle.`);
-                let stateData = {};
-                let v = p5.Vector.sub(this.pos, this.target.pos);
-                v.rotate(random(-PI/2, PI/2)); // Shift angle randomly
-                v.setMag(this.repositionDistance * random(0.8, 1.2)); // Vary distance slightly
-                stateData.repositionTarget = p5.Vector.add(this.pos, v);
-                this.changeState(AI_STATE.REPOSITIONING, stateData);
-            } else {
-                console.log(`${this.shipTypeName} (SNIPING): Initiating surprise attack run.`);
-                this.changeState(AI_STATE.ATTACK_PASS);
+        } else {
+            // NEW: Add random chance to reposition or start an attack run using per-ship timer
+            if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
+                this._snipingDecisionTimer = random(0.8, 1.6);
+            }
+            const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+            this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - deltaSeconds);
+
+            if (this._snipingDecisionTimer <= 0) {
+                this._snipingDecisionTimer = random(0.8, 1.6);
+                
+                if (random() < 0.05) {
+                    if (random() < 0.3) {
+                        let stateData = {};
+                        let v = p5.Vector.sub(this.pos, this.target.pos);
+                        v.rotate(random(-PI/2, PI/2)); // Shift angle randomly
+                        v.setMag(this.repositionDistance * random(0.8, 1.2)); // Vary distance slightly
+                        stateData.repositionTarget = p5.Vector.add(this.pos, v);
+                        this.changeState(AI_STATE.REPOSITIONING, stateData);
+                    } else {
+                        this.changeState(AI_STATE.ATTACK_PASS);
+                    }
+                }
             }
         }
         // Otherwise, stay in SNIPING state. Movement and firing are handled by
@@ -179,8 +190,7 @@ class EnemyStateMachine {
                          distanceToTarget < maxEntryRange && // Within entry max threshold
                          distanceToTarget > minEntryRange; // Above entry min threshold
 
-        if (canSnipe && this.hasGoodSnipingWeapon()) { // Add a check for suitable weapons
-            console.log(`${this.shipTypeName} (APPROACHING): Target in snipe range (${Math.floor(distanceToTarget)}), switching to SNIPING.`);
+        if (canSnipe && this.hasGoodSnipingWeapon && this.hasGoodSnipingWeapon()) { // Add a check for suitable weapons
             this.changeState(AI_STATE.SNIPING);
         } else if (distanceToTarget < this.engageDistance) {
             this.changeState(AI_STATE.ATTACK_PASS);
@@ -199,7 +209,8 @@ class EnemyStateMachine {
             this.changeState(this._getDefaultStateForRole());
             return;
         }
-        this.passTimer -= deltaTime / 1000;
+        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        this.passTimer = Math.max(0, this.passTimer - deltaSeconds);
         if (this.passTimer <= 0) {
             // After attack pass completion, make a tactical decision
             if (this.isTargetValid(this.target)) {
@@ -210,11 +221,11 @@ class EnemyStateMachine {
                     let v = p5.Vector.sub(this.pos, this.target.pos);
                     v.setMag(this.repositionDistance * 1.5);
                     stateData.repositionTarget = p5.Vector.add(this.pos, v);
-                    console.log(`${this.shipTypeName}: Attack pass complete, repositioning`);
+                    AI_LOG(`${this.shipTypeName}: Attack pass complete, repositioning`);
                     this.changeState(AI_STATE.REPOSITIONING, stateData);
                 } else {
                     // Go directly back to approaching state for another attack run
-                    console.log(`${this.shipTypeName}: Attack pass complete, resuming approach`);
+                    AI_LOG(`${this.shipTypeName}: Attack pass complete, resuming approach`);
                     this.changeState(AI_STATE.APPROACHING);
                 }
             } else {
@@ -250,8 +261,7 @@ class EnemyStateMachine {
                                        distanceToTarget > minEntryRange; // Above entry min threshold
 
         if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) { // Reached repo point or target moved far
-            if (canSnipeAfterReposition && this.hasGoodSnipingWeapon()) {
-                console.log(`${this.shipTypeName} (REPOSITIONING): Repositioned to snipe range (${Math.floor(distanceToTarget)}), switching to SNIPING.`);
+            if (canSnipeAfterReposition && this.hasGoodSnipingWeapon && this.hasGoodSnipingWeapon()) {
                 this.changeState(AI_STATE.SNIPING);
             } else {
                 this.changeState(AI_STATE.APPROACHING);
@@ -270,9 +280,10 @@ class EnemyStateMachine {
     _updateState_PATROLLING(targetExists, distanceToTarget) {
         if (targetExists && distanceToTarget < this.detectionRange) {
             this.changeState(AI_STATE.APPROACHING);
+            return;
         }
         // If patrolling and a principal is assigned, switch to GUARDING
-        if (this.principal && this.isTargetValid(this.principal)) {
+        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
             this.changeState(AI_STATE.GUARDING);
         }
     }
@@ -289,7 +300,7 @@ class EnemyStateMachine {
         // Validate principal reference and ensure we can track them
         const principalValid = principal && this.isTargetValid(principal) && principal.pos;
         if (!principalValid) {
-            console.log(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
+            AI_LOG(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
             this.principal = null;
             this.changeState(this._getDefaultStateForRole());
             return;
@@ -301,7 +312,7 @@ class EnemyStateMachine {
         const principalOutsideSystem = principalSystem && principalSystem !== this.currentSystem;
         if (principalLeaving || principalOutsideSystem) {
             if (system?.jumpZoneCenter) {
-                console.log(`${this.shipTypeName} (Guard): Principal ${principal.shipTypeName} is leaving the system. Following...`);
+                AI_LOG(`${this.shipTypeName} (Guard): Principal ${principal.shipTypeName} is leaving the system. Following...`);
                 this.setLeavingSystemTarget(system);
                 this.changeState(AI_STATE.LEAVING_SYSTEM);
 
@@ -316,7 +327,7 @@ class EnemyStateMachine {
                     }
                 }
             } else {
-                console.log(`${this.shipTypeName} (Guard): Principal left but no jump zone data. Standing down.`);
+                AI_LOG(`${this.shipTypeName} (Guard): Principal left but no jump zone data. Standing down.`);
                 this.principal = null;
                 this.changeState(this._getDefaultStateForRole());
             }
@@ -325,10 +336,8 @@ class EnemyStateMachine {
 
         // Maintain guard reaction cooldown so we don't spam engagements
         if (this.guardReactionTime > 0) {
-            this.guardReactionTime -= deltaTime / 1000;
-            if (this.guardReactionTime < 0) {
-                this.guardReactionTime = 0;
-            }
+            const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+            this.guardReactionTime = Math.max(0, this.guardReactionTime - deltaSeconds);
         }
 
         const guardDistance = (principal.size || 10) * 3;
@@ -343,7 +352,7 @@ class EnemyStateMachine {
 
             const distToAttacker = this.distanceTo(principalAttacker);
             if (distToAttacker < this.guardEngageRange) {
-                console.log(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${principalAttacker.shipTypeName || 'attacker'}.`);
+                AI_LOG(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${principalAttacker.shipTypeName || 'attacker'}.`);
                 this.target = principalAttacker;
                 this.changeState(AI_STATE.APPROACHING);
                 this.guardReactionTime = 5.0;
@@ -431,12 +440,13 @@ class EnemyStateMachine {
         if (!this.isTargetValid(this.target)) {
             this.lastAttacker = null;
             this.fleeStartTime = null;
+            this.target = null;
             const returnState = this._determinePostFleeState();
             this.changeState(returnState);
             return;
         }
 
-        // 3) Movement: thrust away from attacker
+        // 3) Movement: thrust away from attacker (target guaranteed valid here)
         //    Compute escape point
         this.tempVector
             .set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y)
@@ -462,8 +472,9 @@ class EnemyStateMachine {
         const escapeDist = this.detectionRange *
             ((this.role === AI_ROLE.TRANSPORT) ? FLEE_ESCAPE_DIST_MULT+0.5 : FLEE_ESCAPE_DIST_MULT);
         if (timeInFlee > this.fleeMinDuration && this.distanceTo(this.target) > escapeDist) {
-            console.log(`${this.shipTypeName} escaped successfully.`);
+            AI_LOG(`${this.shipTypeName} escaped successfully.`);
             this.lastAttacker = null;
+            this.target = null;
             this.fleeStartTime = null;
             this.attackCooldown = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT)
                 ? 30.0 : 20.0;
@@ -488,11 +499,16 @@ class EnemyStateMachine {
         } else if (this.role === AI_ROLE.TRANSPORT) {
             state = this.previousTransportState || AI_STATE.TRANSPORTING;
         }
-        // never return into a combat pass
-        if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING].includes(state)) {
-            state = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER)
-                ? AI_STATE.PATROLLING
-                : AI_STATE.TRANSPORTING;
+        // never return into a combat state
+        if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING].includes(state)) {
+            if (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER) {
+                state = AI_STATE.PATROLLING;
+            } else if (this.role === AI_ROLE.TRANSPORT) {
+                state = AI_STATE.TRANSPORTING;
+            } else {
+                // Pirates, Aliens, Bounty Hunters return to IDLE
+                state = AI_STATE.IDLE;
+            }
         }
         return state;
     }
@@ -508,16 +524,22 @@ class EnemyStateMachine {
         if (!this.isArmed() && 
             (newState === AI_STATE.APPROACHING || 
              newState === AI_STATE.ATTACK_PASS || 
-             newState === AI_STATE.REPOSITIONING)) {
+             newState === AI_STATE.REPOSITIONING ||
+             newState === AI_STATE.SNIPING)) {
             
-            console.log(`${this.role} ${this.shipTypeName} cannot enter combat state - unarmed`);
+            if (this._unarmedCombatLogState !== newState) {
+                AI_LOG(`${this.role} ${this.shipTypeName} cannot enter combat state - unarmed`);
+                this._unarmedCombatLogState = newState;
+            }
             
             // Choose appropriate non-combat state based on role
-            if (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) {
-                // Haulers and transports flee when attacked
+            if ((this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT) && 
+                this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                // Haulers and transports flee only if they have a valid attacker
+                this.target = this.lastAttacker;
                 newState = AI_STATE.FLEEING;
             } else {
-                // Others go to their default non-combat state
+                // Others go to their default non-combat state, or haulers without attackers
                 newState = this._getDefaultStateForRole();
             }
         }
@@ -579,7 +601,9 @@ class EnemyStateMachine {
                 this.vel.mult(0.5); // Attempt to slow down upon entering sniping mode
                 this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store combined shield + hull
                 this.snipingEntryDistance = this.target ? this.distanceTo(this.target) : 0; // Store entry distance
-                console.log(`${this.shipTypeName} entering SNIPING state (Combined Health: ${this.shieldPlusHullAtStateEntry.toFixed(0)}, Entry Dist: ${this.snipingEntryDistance.toFixed(0)}).`);
+                this._snipingDecisionTimer = Number.isFinite(this.snipingEntryDistance)
+                    ? random(0.8, 1.6)
+                    : random(0.4, 0.8);
             break;
                 
             case AI_STATE.NEAR_STATION:
@@ -606,7 +630,7 @@ class EnemyStateMachine {
             case AI_STATE.GUARDING:
                     if (stateData.principal && this.isTargetValid(stateData.principal)) {
                         this.principal = stateData.principal;
-                        console.log(`${this.shipTypeName} entering GUARDING state, protecting ${this.principal.shipTypeName || 'entity'}`);
+                        AI_LOG(`${this.shipTypeName} entering GUARDING state, protecting ${this.principal.shipTypeName || 'entity'}`);
                     } else if (!this.principal) {
                         console.warn(`${this.shipTypeName} entering GUARDING state without a valid principal. Will likely revert.`);
                     }
@@ -678,6 +702,10 @@ class EnemyStateMachine {
      */
     onStateExit(state, stateData = {}) {
         switch(state) {
+            case AI_STATE.ATTACK_PASS:
+                this.attackPassTargetPos = null;
+                break;
+                
             case AI_STATE.REPOSITIONING:
                 this.repositionTarget = null;
                 break;
@@ -700,9 +728,9 @@ class EnemyStateMachine {
             case AI_STATE.LEAVING_SYSTEM:
                 break;
             case AI_STATE.SNIPING: // <<< EXISTING CASE
-                console.log(`${this.shipTypeName} exiting SNIPING state.`);
                 this.shieldPlusHullAtStateEntry = null; // Clear stored combined health
                 this.snipingEntryDistance = undefined; // Clear entry distance
+                this._snipingDecisionTimer = null;
                 break;
         }
     }

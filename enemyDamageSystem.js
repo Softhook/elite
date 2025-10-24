@@ -49,11 +49,11 @@ class EnemyDamageSystem {
             this.lastAttackTime = millis();
             
             // Debug log for tracking
-            console.log(`%c🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`, 'color:orange; font-weight:bold');
+            DAMAGE_LOG(`🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`);
             
             // Don't retarget if in SNIPING state (target lock)
             if (this.currentState === AI_STATE.SNIPING) {
-                console.log(`%c   → SNIPING: Target locked, not retargeting`, 'color:purple');
+                TARGETING_LOG(`   → SNIPING: Target locked, not retargeting`);
                 return;
             }
             
@@ -62,14 +62,22 @@ class EnemyDamageSystem {
             if (resolvedSystem) {
                 // Special debug for player attacks
                 if (attacker instanceof Player) {
-                    console.log(`%c🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`, 'color:red; font-weight:bold');
+                    DAMAGE_LOG(`🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`);
                 }
                 
                 // Update targeting immediately for all attackers
                 const targetResult = this.updateTargeting(resolvedSystem);
-                console.log(`%c   → Targeting result: ${targetResult}, target is now: ${this.target ? (this.target.constructor.name) : 'null'}`, 'color:cyan');
+                TARGETING_LOG(`   → Targeting result: ${targetResult}, target is now: ${this.target ? (this.target.constructor.name) : 'null'}`);
+
+                // Immediate combat reaction for aggressive roles when idle
+                // Do not override if fleeing or sniping (already engaged)
+                const aggressiveRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
+                const passiveState = (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION || this.currentState === AI_STATE.COLLECTING_CARGO);
+                if (aggressiveRole && passiveState && this.isTargetValid(this.target) && this.isArmed() && this.currentState !== AI_STATE.FLEEING && this.currentState !== AI_STATE.SNIPING) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
             } else {
-                console.warn(`%c   ⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`, 'color:red; font-weight:bold');
+                if (DEBUG_DAMAGE || DEBUG_TARGETING) console.warn(`⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`);
             }
         }
     }
@@ -88,7 +96,7 @@ class EnemyDamageSystem {
         if (this.isBarrierActive && this.barrierDamageReduction > 0) {
             const originalAmount = amount;
             amount *= (1 - this.barrierDamageReduction);
-            console.log(`${this.shipTypeName} barrier reduced damage from ${originalAmount.toFixed(1)} to ${amount.toFixed(1)}`);
+            DAMAGE_LOG(`${this.shipTypeName} barrier reduced damage from ${originalAmount.toFixed(1)} to ${amount.toFixed(1)}`);
         }
 
         // Skip shield check entirely if shields are disabled
@@ -162,9 +170,9 @@ class EnemyDamageSystem {
     _handlePlayerKillConsequences(attacker, system) {
 
 
-        console.log(`BEFORE: Player kills = ${system.player.kills}`);
+        AI_LOG(`BEFORE: Player kills = ${system.player.kills}`);
         system.player.addKill();
-        console.log(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
+        AI_LOG(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
         
 
         // Update mission progress
@@ -172,9 +180,9 @@ class EnemyDamageSystem {
             if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
                 this.role === AI_ROLE.PIRATE) {
                 attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                console.log(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                AI_LOG(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
                 if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    console.log("Bounty mission target count met! Completing mission...");
+                    AI_LOG("Bounty mission target count met! Completing mission...");
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
                }
             }
@@ -191,12 +199,12 @@ class EnemyDamageSystem {
 
                 const wantedLevel = (this.role === AI_ROLE.POLICE) ? 3 : 1;
                 system.setPlayerWanted(true, wantedLevel);
-                console.log(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);
+                AI_LOG(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);
                 uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
             } else {
                 // Fallback if setPlayerWanted doesn't exist
                 attacker.isWanted = true;
-                console.log(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
+                AI_LOG(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
             }
         }
     }

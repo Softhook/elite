@@ -155,7 +155,7 @@ class EnemyCombat {
                 // Log weapon change for debugging
                 if (this.lastWeaponSwitch === undefined || 
                     millis() - this.lastWeaponSwitch > 2000) {
-                    console.log(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
+                    AI_LOG(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
                     this.lastWeaponSwitch = millis();
                 }
             }
@@ -228,10 +228,10 @@ class EnemyCombat {
             if (this.canFireAtTarget(shootingAngle)) {
                 if (!this.currentSystem) this.currentSystem = system;
                 
-                // Player-specific targeting debug
-                if (targetingPlayer) {
-                    console.log(`%c🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
-                        'color:red; font-weight:bold');
+                        // Player-specific targeting debug
+                        if (targetingPlayer) {
+                            AI_LOG(`🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
+                                'color:red; font-weight:bold');
                 }
                 
                 // Weapon-specific behavior
@@ -246,7 +246,7 @@ class EnemyCombat {
                 this.fireCooldown = this.fireRate;
             } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
                 // Debug when IDLE pirates spot player
-                console.log(`%c🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
+                        AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
             }
         }
     }
@@ -283,7 +283,7 @@ class EnemyCombat {
                 this.barrierCooldown = this.currentWeapon.fireRate; // Set cooldown for the barrier
 
                 // Log barrier activation, similar to player's UI message
-                console.log(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
+                        AI_LOG(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
                 
                 // Sound effect (optional, for consistency if sounds are added later)
                 // if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp'); }
@@ -293,7 +293,7 @@ class EnemyCombat {
                 return; // Barrier activated, no projectile fired
             } else {
                 // Log barrier on cooldown
-                console.log(`${this.shipTypeName} barrier on cooldown. Remaining: ${this.barrierCooldown.toFixed(1)}s`);
+                        AI_LOG(`${this.shipTypeName} barrier on cooldown. Remaining: ${this.barrierCooldown.toFixed(1)}s`);
                 return; // Barrier on cooldown
             }
         }
