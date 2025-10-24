@@ -1,6 +1,13 @@
 // ****** mine.js ******
 // Proximity mine weapon class
 
+// Local helper: squared distance between two p5.Vector-like objects
+function distSqVec(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return dx * dx + dy * dy;
+}
+
 class Mine {
     /**
      * Create a proximity mine
@@ -63,7 +70,7 @@ class Mine {
         if (target === this.owner) return false;
 
         // Check distance
-        const distSq = p5.Vector.distSq(this.pos, target.pos);
+        const distSq = distSqVec(this.pos, target.pos);
         const triggerDistSq = this.triggerRadius * this.triggerRadius;
         
         return distSq < triggerDistSq;
@@ -107,7 +114,7 @@ class Mine {
             for (let enemy of system.enemies) {
                 if (!enemy || enemy.destroyed) continue;
                 
-                const distSq = p5.Vector.distSq(this.pos, enemy.pos);
+                const distSq = distSqVec(this.pos, enemy.pos);
                 if (distSq < blastRadiusSq) {
                     // Damage falls off with distance
                     const dist = Math.sqrt(distSq);
@@ -123,7 +130,7 @@ class Mine {
 
         // Damage player if enemy's mine
         if (!isPlayerMine && system.player && !system.player.destroyed) {
-            const distSq = p5.Vector.distSq(this.pos, system.player.pos);
+            const distSq = distSqVec(this.pos, system.player.pos);
             if (distSq < blastRadiusSq) {
                 const dist = Math.sqrt(distSq);
                 const falloff = 1 - (dist / this.blastRadius);
@@ -140,7 +147,7 @@ class Mine {
             for (let asteroid of system.asteroids) {
                 if (!asteroid) continue;
                 
-                const distSq = p5.Vector.distSq(this.pos, asteroid.pos);
+                const distSq = distSqVec(this.pos, asteroid.pos);
                 if (distSq < blastRadiusSq) {
                     const dist = Math.sqrt(distSq);
                     const falloff = 1 - (dist / this.blastRadius);
@@ -257,7 +264,7 @@ class Mine {
      */
     isOffScreen(playerPos, despawnRadius) {
         if (!playerPos) return false;
-        const distSq = p5.Vector.distSq(this.pos, playerPos);
+        const distSq = distSqVec(this.pos, playerPos);
         return distSq > despawnRadius * despawnRadius;
     }
 }

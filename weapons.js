@@ -298,7 +298,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Basic Mine",
         type: "mine",
-        damage: 60,
+        damage: 100,
         blastRadius: 120,
         triggerRadius: 70,
         mineHealth: 25,
@@ -310,7 +310,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Advanced Mine",
         type: "mine",
-        damage: 100,
+        damage: 150,
         blastRadius: 180,
         triggerRadius: 90,
         mineHealth: 40,
@@ -322,9 +322,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Mine",
         type: "mine",
-        damage: 150,
+        damage: 300,
         blastRadius: 250,
-        triggerRadius: 110,
+        triggerRadius: 150,
         mineHealth: 60,
         color: [200, 0, 0], // Dark red
         fireRate: 5.0,
