@@ -352,14 +352,8 @@ class Enemy {
             this.activateBarrierIfNeeded();
         }
 
-            // Update drag effect timer
-        if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= deltaSeconds;
-            if (this.dragEffectTimer <= 0) {
-                this.dragMultiplier = 1.0;
-                this.dragEffectTimer = 0;
-            }
-        }
+        // Drag effect timer is handled centrally in updatePhysics();
+        // avoid decrementing here to prevent double counting.
 
         // For pirates: Look for cargo first if not already collecting
         if (this.role === AI_ROLE.PIRATE && 

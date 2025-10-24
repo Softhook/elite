@@ -98,10 +98,17 @@ class EnemyUtils {
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
     thrustForward(multiplier = 1.0, createParticles = true) {
+        // Skip negligible thrust and particle work
+        if (!(multiplier > 0.01)) { return; }
+
         // Apply thrust in the direction we're facing
-        const thrustVector = p5.Vector.fromAngle(this.angle);
-        thrustVector.mult(this.thrustForce * multiplier);
-        this.vel.add(thrustVector);
+        if (!this.thrustVector) {
+            // Fallback if constructor didn't create it for some reason
+            this.thrustVector = createVector(0, 0);
+        }
+        this.thrustVector.set(cos(this.angle), sin(this.angle));
+        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(this.thrustVector);
         
         this.isThrusting = true;
         

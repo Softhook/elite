@@ -459,7 +459,8 @@ class EnemyStateMachine {
         const fleeThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
             ? FLEE_THRUST_MULT_TRANSPORT
             : FLEE_THRUST_MULT_DEFAULT;
-        this.thrustForward(fleeThrustMultiplier);
+        // Note: performRotationAndThrust already applies thrust for FLEEING when aligned,
+        // using the correct flee multiplier. Avoid double thrust here.
 
         //    Occasional random jiggle
         if (frameCount % 30 === 0) {

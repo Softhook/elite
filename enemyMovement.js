@@ -17,9 +17,13 @@ class EnemyMovement {
         let angleDifference = PI; // Default to max difference
         
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
-            let desiredDir = p5.Vector.sub(desiredMovementTargetPos, this.pos);
-            if (desiredDir.magSq() > 0.001) { // Avoid normalizing a zero vector
-                let desiredAngle = desiredDir.heading(); // Radians
+            // Reuse tempVector to avoid allocations
+            this.tempVector.set(
+                desiredMovementTargetPos.x - this.pos.x,
+                desiredMovementTargetPos.y - this.pos.y
+            );
+            if (this.tempVector.magSq() > 0.001) { // Avoid normalizing a zero vector
+                let desiredAngle = this.tempVector.heading(); // Radians
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
@@ -43,8 +47,9 @@ class EnemyMovement {
                     let distToActualTarget = this.distanceTo(this.target);
                     let criticalCollisionRange = (this.size + (this.target.size || this.size)) * ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR;
                     if (distToActualTarget < criticalCollisionRange) {
-                        let vecToActualTarget = p5.Vector.sub(this.target.pos, this.pos);
-                        let angleToActualTargetCurrent = vecToActualTarget.heading();
+                        // Reuse tempVector for angle calculation
+                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
+                        let angleToActualTargetCurrent = this.tempVector.heading();
                         let diffAngleToActualTarget = this.normalizeAngle(angleToActualTargetCurrent - this.angle);
                         if (abs(diffAngleToActualTarget) < this.angleTolerance * 1.5 && abs(angleDifference) > this.angleTolerance * 0.5) {
                             effectiveThrustMultiplier = ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION;
@@ -87,7 +92,7 @@ class EnemyMovement {
                 const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
                 
                 // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
-                if (desiredMovementTargetPos && this.pos.dist(desiredMovementTargetPos) > this.size * 0.05) {// Small threshold to allow minor drift
+                if (desiredMovementTargetPos && p5.Vector.dist(this.pos, desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
                     if (isAlignedForSnipeThrust) {
                         effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
                         canThrust = true;
@@ -96,7 +101,7 @@ class EnemyMovement {
                     }
                 } else { 
                     // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
-                    this.vel.mult(SNIPING_BRAKE_FACTOR); 
+                    this.vel.mult(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99)); 
                     canThrust = false; // No active thrust, just braking
                 }
             } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
@@ -158,12 +163,14 @@ class EnemyMovement {
 
                     if (distanceToTarget > idealSnipeRange + rangeTolerance) {
                         // Too far, move slightly closer to target
-                        let vecToTarget = p5.Vector.sub(this.target.pos, this.pos);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecToTarget.setMag(distanceToTarget - idealSnipeRange));
+                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
+                        this.tempVector.setMag(distanceToTarget - idealSnipeRange);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, this.tempVector);
                     } else if (distanceToTarget < idealSnipeRange - rangeTolerance) {
                         // Too close, move slightly away from target
-                        let vecFromTarget = p5.Vector.sub(this.pos, this.target.pos);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, vecFromTarget.setMag(idealSnipeRange - distanceToTarget));
+                        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                        this.tempVector.setMag(idealSnipeRange - distanceToTarget);
+                        desiredMovementTargetPos = p5.Vector.add(this.pos, this.tempVector);
                     } else {
                         // Within tolerance, try to stay put
                         desiredMovementTargetPos = this.pos.copy();
@@ -262,5 +269,7 @@ function applyEnemyMovementMethods() {
         Enemy.prototype[methodName] = EnemyMovement.prototype[methodName];
     });
 
-    console.log(`Applied ${methodNames.length} movement methods to Enemy prototype:`, methodNames.join(', '));
+    if (typeof DEBUG_AI !== 'undefined' && DEBUG_AI) {
+        console.log(`Applied ${methodNames.length} movement methods to Enemy prototype:`, methodNames.join(', '));
+    }
 }
