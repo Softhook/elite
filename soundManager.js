@@ -403,6 +403,8 @@ class SoundManager {
         console.log(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
     }
 
+    
+
     /**
      * Internal helper to generate a single audio object.
      * @param {string} name - Sound name (for logging).
@@ -419,13 +421,51 @@ class SoundManager {
             if (originalDefinition.preset && typeof originalDefinition.preset === 'string') {
                 // Preset-based: generate, then set volume on the data before creating audio object
                 const soundData = sfxr.generate(originalDefinition.preset);
-                soundData.sound_vol = targetVolume; // Apply target volume
-                generatedAudio = sfxr.toAudio(soundData);
+                // deep-clone the generated params so we don't pass a live Params instance
+                const soundDataCopy = JSON.parse(JSON.stringify(soundData));
+                soundDataCopy.sound_vol = targetVolume; // Apply target volume
+
+                // Sanitize wave_type if the preset produced an unexpected value
+                if (typeof soundDataCopy.wave_type === 'undefined' || isNaN(parseInt(soundDataCopy.wave_type))) {
+                    // Fall back to originalDefinition.wave_type or SAWTOOTH (1)
+                    const fallback = (typeof originalDefinition.wave_type !== 'undefined') ? originalDefinition.wave_type : 1;
+                    console.warn(`SoundManager: sanitizing generated preset wave_type for '${name}' (using fallback ${fallback})`);
+                    soundDataCopy.wave_type = fallback;
+                }
+
+                // Ensure numeric and clamp to valid range 0..3
+                soundDataCopy.wave_type = Math.max(0, Math.min(3, parseInt(soundDataCopy.wave_type) || 1));
+
+                try {
+                    generatedAudio = sfxr.toAudio(soundDataCopy);
+                } catch (err) {
+                    // If sfxr complains about bad wave type, coerce to a safe default and retry once
+                    if (String(err).indexOf('Bad wave type') !== -1) {
+                        soundDataCopy.wave_type = 1; // SAWTOOTH
+                        try { generatedAudio = sfxr.toAudio(soundDataCopy); } catch (e2) { throw e2; }
+                    } else throw err;
+                }
             } else {
                 // Custom params: create a copy of definition and set volume before creating audio object
-                let definitionCopy = { ...originalDefinition };
+                // deep-clone to avoid mutation of the original definition object
+                let definitionCopy = JSON.parse(JSON.stringify(originalDefinition || {}));
                 definitionCopy.sound_vol = targetVolume; // Apply target volume
-                generatedAudio = sfxr.toAudio(definitionCopy);
+
+                // Coerce wave_type into a valid numeric form (0..3)
+                if (typeof definitionCopy.wave_type === 'undefined' || isNaN(parseInt(definitionCopy.wave_type))) {
+                    console.warn(`SoundManager: sanitizing custom definition wave_type for '${name}' (defaulting to 1)`);
+                    definitionCopy.wave_type = 1;
+                }
+                definitionCopy.wave_type = Math.max(0, Math.min(3, parseInt(definitionCopy.wave_type) || 1));
+
+                try {
+                    generatedAudio = sfxr.toAudio(definitionCopy);
+                } catch (err) {
+                    if (String(err).indexOf('Bad wave type') !== -1) {
+                        definitionCopy.wave_type = 1;
+                        try { generatedAudio = sfxr.toAudio(definitionCopy); } catch (e2) { throw e2; }
+                    } else throw err;
+                }
             }
 
             // Validate: Must have a .play() method
