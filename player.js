@@ -1325,6 +1325,14 @@ handleInput() {
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
             weapons: weaponsData
+            ,
+            // Persist hired bodyguards (only store serializable fields)
+            activeBodyguards: (this.activeBodyguards || []).map(g => ({
+                shipType: g.shipType,
+                hull: (typeof g.hull === 'number') ? g.hull : null,
+                maxHull: (typeof g.maxHull === 'number') ? g.maxHull : null,
+                destroyed: !!g.destroyed
+            }))
             // -----------------------------------------
         };
     }
@@ -1439,6 +1447,25 @@ handleInput() {
              console.log("   No active mission found in save data.");
         }
         // ----------------------------------
+
+        // --- Restore active bodyguards list (do NOT auto-spawn enemies here) ---
+        this.activeBodyguards = [];
+        if (Array.isArray(data.activeBodyguards) && data.activeBodyguards.length > 0) {
+            data.activeBodyguards.forEach(sb => {
+                if (!sb || typeof sb.shipType !== 'string') return;
+                this.activeBodyguards.push({
+                    shipType: sb.shipType,
+                    hull: (typeof sb.hull === 'number') ? sb.hull : null,
+                    maxHull: (typeof sb.maxHull === 'number') ? sb.maxHull : null,
+                    destroyed: !!sb.destroyed,
+                    enemyRef: null
+                });
+            });
+            console.log(`Restored ${this.activeBodyguards.length} hired bodyguard(s) from save data.`);
+        } else {
+            // Ensure property exists for runtime code
+            this.activeBodyguards = this.activeBodyguards || [];
+        }
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
