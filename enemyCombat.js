@@ -244,6 +244,11 @@ class EnemyCombat {
         // Proactively activate barrier if needed regardless of target status
         this.activateBarrierIfNeeded();
         if (!targetExists) return;
+
+        // Safety: never fire at Cargo objects (should be collected instead)
+        if (this.target && this.target.constructor && this.target.constructor.name === 'Cargo') {
+            return;
+        }
         
         // Only debug firing decisions against player
         const targetingPlayer = this.target instanceof Player;
@@ -390,7 +395,11 @@ class EnemyCombat {
         
         // Rest of existing code remains unchanged
         if ((this.currentWeapon.type || '') === WEAPON_TYPE.MISSILE) {
-            if (!targetToPass || targetToPass.destroyed || (targetToPass.hull !== undefined && targetToPass.hull <=0)) {
+            // Block missiles against invalid or non-hostile targets like cargo
+            if (!targetToPass ||
+                targetToPass.destroyed ||
+                (targetToPass.hull !== undefined && targetToPass.hull <=0) ||
+                (targetToPass.constructor && targetToPass.constructor.name === 'Cargo')) {
                 return; // Don't fire missile without a valid target
             }
         }
@@ -401,6 +410,11 @@ class EnemyCombat {
             return;
         }
     
+        // Extra safety: prevent firing at cargo with any weapon type
+        if (targetToPass && targetToPass.constructor && targetToPass.constructor.name === 'Cargo') {
+            return;
+        }
+
         WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
         this.fireCooldown = this.fireRate; // General weapon fire cooldown
 

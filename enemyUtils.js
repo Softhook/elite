@@ -59,6 +59,10 @@ class EnemyUtils {
      * @return {boolean} Whether target is valid
      */
     isTargetValid(target) {
+        // Never allow cargo to be a combat target
+        if (target && target.constructor && target.constructor.name === 'Cargo') {
+            return false;
+        }
         return target && target.pos && 
                ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) && 
                (target.destroyed === undefined || !target.destroyed);

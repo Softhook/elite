@@ -97,19 +97,9 @@ class EnemyTargeting {
             }
         }
 
-        // Evaluate cargo (no debug)
-        if (this.role === AI_ROLE.PIRATE && system.cargo && system.cargo.length > 0) {
-            for (let i = 0, len = system.cargo.length; i < len; i++) {
-                const cargoItem = system.cargo[i];
-                if (!cargoItem.collected && cargoItem !== bestTarget) {
-                    const cargoScore = this.evaluateTargetScore(cargoItem, system);
-                    if (cargoScore > bestScore) {
-                        bestScore = cargoScore;
-                        bestTarget = cargoItem;
-                    }
-                }
-            }
-        }
+        // NOTE: Do NOT evaluate cargo here. Pirates use dedicated cargo collection logic
+        // in update() via detectCargo() and the COLLECTING_CARGO state. Including cargo
+        // in combat targeting leads to unwanted behavior (shooting cargo). Intentionally omitted.
 
         // Final target decision
         if (bestTarget && bestScore > 0) {
@@ -241,9 +231,9 @@ class EnemyTargeting {
                     } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                         _score += TARGET_SCORE_PIRATE_PREY_HAULER;
                         _interesting = true;
-                    } else if (target.constructor?.name === 'Cargo') {
-                        _score += TARGET_SCORE_PIRATE_CARGO_BASE;
-                        _interesting = true;
+                    } else if (target && target.constructor?.name === 'Cargo') {
+                        // Never treat Cargo as a hostile combat target; handled by cargo AI
+                        return TARGET_SCORE_INVALID;
                     }
                     break;
                     
