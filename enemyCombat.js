@@ -284,10 +284,14 @@ class EnemyCombat {
         // Enhanced firing logic
         if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
             if (this.canFireAtTarget(shootingAngle)) {
-                // Player-specific targeting debug
+                // Player-specific targeting debug (throttled to reduce spam)
                 if (targetingPlayer) {
-                    AI_LOG(`🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`, 
-                        'color:red; font-weight:bold');
+                    // Only log first shot or after 2 second cooldown
+                    const now = millis();
+                    if (!this._lastPlayerFireLog || (now - this._lastPlayerFireLog) > 2000) {
+                        AI_LOG(`🔫 FIRING AT PLAYER: ${this.shipTypeName} firing ${this.currentWeapon?.name || 'weapon'} at player`);
+                        this._lastPlayerFireLog = now;
+                    }
                 }
                 // Weapon-specific behavior
                 if (this.currentWeapon) {
@@ -299,7 +303,7 @@ class EnemyCombat {
                 }
             } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
                 // Debug when IDLE pirates spot player
-                        AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`, 'color:blue');
+                        AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`);
             }
         }
     }

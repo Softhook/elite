@@ -93,7 +93,7 @@ const ATTACK_PASS_SPEED_BOOST_MULT = 1.1;         // Speed multiplier during att
 const ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR = 0.8; // Factor of combined sizes for emergency collision check
 const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.3; // Thrust multiplier during emergency avoidance
 const APPROACH_BRAKING_DISTANCE_FACTOR = 1.2; // Multiplier of combined (enemy+target) sizes to start braking in APPROACH
-const APPROACH_CLOSE_THRUST_REDUCTION = 0.05; // Thrust multiplier when very close in APPROACH state (almost zero)
+const APPROACH_CLOSE_THRUST_REDUCTION = 0.25; // Thrust multiplier when very close in APPROACH state
 
 // -------------------------
 // --- Sniping Tuning Constants ---

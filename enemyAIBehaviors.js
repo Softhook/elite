@@ -51,6 +51,91 @@ class EnemyAIBehaviors {
         return isInForcedCombat;
     }
 
+    /** Clear range stall tracking values. */
+    _resetRangeStall() {
+        this._rangeStallTimer = 0;
+        this._lastRangeSample = null;
+        this._rangeStallState = null;
+        this._rangeStallTriggerTime = undefined; // Reset trigger time for next stall
+    }
+
+    /**
+     * Detect prolonged lack of range change and force an aggressive state to break stalemates.
+     * @param {number} distanceToTarget - Current distance to the active target.
+     */
+    _handleRangeStall(distanceToTarget) {
+        if (!Number.isFinite(distanceToTarget)) {
+            this._resetRangeStall();
+            return;
+        }
+
+        // Only track stalls in combat approach states, not SNIPING (intentional standoff)
+        const relevantState = this.currentState === AI_STATE.APPROACHING ||
+                               this.currentState === AI_STATE.REPOSITIONING;
+
+        if (!relevantState) {
+            this._resetRangeStall();
+            return;
+        }
+
+        // Only detect stalls when ships are close enough for it to matter
+        // (within effective firing range + some margin)
+        const maxStallRange = this.visualFiringRange * 1.5;
+        if (distanceToTarget > maxStallRange) {
+            this._resetRangeStall();
+            return;
+        }
+
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        if (dtSeconds <= 0) {
+            return;
+        }
+
+        // Check cooldown - don't detect stalls immediately after forcing a state change
+        if (this._rangeStallCooldown > 0) {
+            this._rangeStallCooldown -= dtSeconds;
+            return;
+        }
+
+        if (this._lastRangeSample === null || this._rangeStallState !== this.currentState) {
+            this._lastRangeSample = distanceToTarget;
+            this._rangeStallTimer = 0;
+            this._rangeStallState = this.currentState;
+            return;
+        }
+
+        const rangeDelta = Math.abs(distanceToTarget - this._lastRangeSample);
+        const stallThreshold = Math.max(this.size * 0.15, 10);
+
+        if (rangeDelta < stallThreshold) {
+            this._rangeStallTimer += dtSeconds;
+        } else {
+            this._rangeStallTimer = 0;
+        }
+
+        this._lastRangeSample = distanceToTarget;
+
+        // Randomize trigger time to desync multiple ships
+        if (this._rangeStallTriggerTime === undefined) {
+            this._rangeStallTriggerTime = 2.0 + random(0, 1.0); // 2-3 seconds
+        }
+
+        if (this._rangeStallTimer >= this._rangeStallTriggerTime) {
+            const newState = (this.currentState === AI_STATE.REPOSITIONING) 
+                ? AI_STATE.APPROACHING 
+                : AI_STATE.ATTACK_PASS;
+            const targetName = this.target?.shipTypeName || (this.target === system?.player ? 'Player' : 'Unknown');
+            
+            AI_LOG(`⚠️ RANGE STALL: ${this.shipTypeName} vs ${targetName} - stalled for ${this._rangeStallTimer.toFixed(1)}s at range ${distanceToTarget.toFixed(0)} -> forcing ${AI_STATE_NAME[newState]}`);
+            
+            this.changeState(newState);
+            this._resetRangeStall();
+            
+            // Add cooldown to prevent immediate re-triggering
+            this._rangeStallCooldown = 5.0; // 5 second cooldown after forcing state change
+        }
+    }
+
     /**
     * Helper to check if the current ship has weapons suitable for sniping.
      * @returns {boolean} True if a sniping weapon is equipped.
@@ -105,6 +190,9 @@ class EnemyAIBehaviors {
                 this.target.pos.y - this.pos.y,
                 this.target.pos.x - this.pos.x
             );
+            this._handleRangeStall(distanceToTarget);
+        } else {
+            this._resetRangeStall();
         }
     
         // 4. Run state‐transition logic.

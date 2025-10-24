@@ -199,6 +199,12 @@ class Enemy {
         this.cargoCollectionCooldown = 0;
         this.previousState = null; // For returning to original state after collecting
 
+        // Track range stalemates so we can force aggressive maneuvers when fights stall
+        this._rangeStallTimer = 0;
+        this._lastRangeSample = null;
+        this._rangeStallState = null;
+        this._rangeStallCooldown = 0;
+
         // Add thrust vector initialization
         this.thrustVector = createVector(0, 0);
         this.tempVector = createVector(0, 0);
