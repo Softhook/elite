@@ -13,6 +13,9 @@ class EnemyRendering {
         if (this.destroyed || isNaN(this.angle)) return;
 
 
+        // Cache current time (avoid multiple millis() calls per frame)
+        const now = millis();
+
         if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
         if (!this.p5FillColor || !this.p5StrokeColor) { return; }
 
@@ -87,9 +90,7 @@ class EnemyRendering {
                 }
             } // targetLabel remains "None" if this.target is null and no state-based label applied
 
-            // UPDATED: Add system name to label
-            const system = this.getSystem();
-
+            // UPDATED: Add system name to label (unused system reference removed for perf)
             
             //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
             let label = `${shipDef?.name}  Target: ${targetLabel}`;
@@ -214,8 +215,9 @@ class EnemyRendering {
             ellipse(0, 0, this.size * 1.3, this.size * 1.3);
 
             // Shield hit visual effect
-            if (millis() - this.shieldHitTime < 300) {
-                const hitOpacity = map(millis() - this.shieldHitTime, 0, 300, 200, 0);
+            const sinceShieldHit = now - this.shieldHitTime;
+            if (sinceShieldHit < 300) {
+                const hitOpacity = map(sinceShieldHit, 0, 300, 200, 0);
                 stroke(150, 220, 255, hitOpacity); strokeWeight(3);
                 ellipse(0, 0, this.size * 1.4, this.size * 1.4);
             }
@@ -234,7 +236,8 @@ class EnemyRendering {
             const barrierRadius = barrierBaseRadius + barrierPulse * this.size * 0.2; // Pulsating outer radius
 
             // Alpha fades as duration runs out
-            const barrierAlpha = map(this.barrierDurationTimer, 0, this.currentWeapon?.duration || 5, 50, 150);
+            const barrierDuration = this.currentWeapon?.duration || 5;
+            const barrierAlpha = map(this.barrierDurationTimer, 0, barrierDuration, 50, 150);
             
             const activeBarrierColor = this.barrierColor || [100, 100, 255];
 
@@ -260,8 +263,8 @@ class EnemyRendering {
         //}
 
         // Force wave effect
-        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
-            const timeSinceForce = millis() - this.lastForceWave.time;
+        if (this.lastForceWave && now - this.lastForceWave.time < 300) {
+            const timeSinceForce = now - this.lastForceWave.time;
             const alpha = map(timeSinceForce, 0, 300, 200, 0);
             push();
             translate(this.pos.x, this.pos.y); // Use absolute position
@@ -273,7 +276,7 @@ class EnemyRendering {
         }
 
         // Beam effect
-        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
+        if (this.lastBeam && now - this.lastBeam.time < 150) {
             push();
             stroke(this.lastBeam.color); strokeWeight(3);
             line(this.lastBeam.start.x, this.lastBeam.start.y, this.lastBeam.end.x, this.lastBeam.end.y);
@@ -327,19 +330,23 @@ class EnemyRendering {
         }
 
             // Always draw the line if conditions are met
-            let lineCol = this.p5StrokeColor;
+            // Avoid mutating shared p5 color instance; use raw RGBA values
             try {
-                if (lineCol?.setAlpha) {
-                    lineCol.setAlpha(100);
-                    stroke(lineCol);
-                } else { // Fallback if not a p5.Color or setAlpha fails
-                    stroke(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2], 100);
+                const sc = this.strokeColorValue;
+                push();
+                if (Array.isArray(sc) && sc.length >= 3) {
+                    stroke(sc[0], sc[1], sc[2], 100);
+                } else {
+                    stroke(255, 0, 0, 100);
                 }
-            } catch (e) { // Further fallback
-                stroke(255, 0, 0, 100);
+                strokeWeight(1);
+                line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
+                pop();
+            } catch (e) {
+                // Defensive fallback
+                push(); stroke(255, 0, 0, 100); strokeWeight(1);
+                line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
             }
-            strokeWeight(1);
-            line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
         } else {
             // If conditions are NOT met, reset the sound flag so it can play next time
             this.hasPlayedLockOnSound = false;
