@@ -700,7 +700,7 @@ this.showingInventory = false;
         this.jumpChargeTimer = 0; // Reset timer
         this.isJumpCharging = true; // Set the flag
         this.setState("JUMPING");
-        if (typeof soundManager !== 'undefined') soundManager.playSound('jump_charge'); // Start charging sound
+        if (typeof soundManager !== 'undefined') soundManager.playSound('jump'); // Start charging sound (use existing 'jump' definition)
     }
 
     /** Fetches missions for the current station and stores them for display. */

@@ -210,12 +210,15 @@ function keyPressed() {
     }
     if (!gameStateManager) return;
     // Weapon switching 1-9
-    if (gameStateManager.currentState === "IN_FLIGHT" && player) {
+        if (gameStateManager.currentState === "IN_FLIGHT" && player) {
         const numKey = parseInt(key);
         if (!isNaN(numKey) && numKey >= 1 && numKey <= 9) {
             const weaponIndex = numKey - 1;
-            if (player.switchToWeapon(weaponIndex)) {
-                console.log(`Switched to weapon: ${player.currentWeapon.name}`);
+            // Defensive: only attempt switch if the player actually has that slot
+            if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
+                if (player.switchToWeapon(weaponIndex)) {
+                    console.log(`Switched to weapon: ${player.currentWeapon.name}`);
+                }
             }
             return false;
         }
