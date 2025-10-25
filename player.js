@@ -181,6 +181,10 @@ class Player {
         if (this.activeMission.status === 'Active') {
             console.log(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
             saveGame();
+            // Play mission accept sound
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                soundManager.playSound('missionAccept');
+            }
             return true; // Success
         } else {
             // This case should ideally not be reached if activate() works
@@ -352,6 +356,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         //alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
         console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
         uiManager.addMessage(`Mission Complete: ${completedTitle} | Reward: ${reward}cr`);
+
+        // Play mission complete sound
+        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            soundManager.playSound('missionComplete');
+        }
 
         saveGame(); // Save progress
         return true; // Success

@@ -56,18 +56,270 @@ class SoundManager {
                 "p_arp_speed": 0,
                 "p_duty": 0.15588532580675873,
                 "p_duty_ramp": 0.06911956820054713,
-                "p_repeat_speed": 0,
-                "p_pha_offset": 0,
-                "p_pha_ramp": 0,
-                "p_lpf_freq": 1,
-                "p_lpf_ramp": 0,
-                "p_lpf_resonance": 0,
-                "p_hpf_freq": 0.07481981019431778,
-                "p_hpf_ramp": 0,
-                "sound_vol": 0.25,
-                "sample_rate": 44100,
-                "sample_size": 8
-              },
+                                "p_repeat_speed": 0,
+                                "p_pha_offset": 0,
+                                "p_pha_ramp": 0,
+                                "p_lpf_freq": 1,
+                                "p_lpf_ramp": 0,
+                                "p_lpf_resonance": 0,
+                                "p_hpf_freq": 0.07481981019431778,
+                                "p_hpf_ramp": 0,
+                                "sound_vol": 0.25,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+
+                            // --- New UI/Game Event Sounds ---
+                            // Soft ascending chime for successful docking
+                            dockSuccess: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0.01,
+                                "p_env_sustain": 0.25,
+                                "p_env_punch": 0.2,
+                                "p_env_decay": 0.35,
+                                "p_base_freq": 0.35,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.18,
+                                "p_freq_dramp": 0,
+                                "p_vib_strength": 0.03,
+                                "p_vib_speed": 0.5,
+                                "p_arp_mod": 0.25,
+                                "p_arp_speed": 0.5,
+                                "p_duty": 0.6,
+                                "p_duty_ramp": 0,
+                                "p_repeat_speed": 0,
+                                "p_pha_offset": 0,
+                                "p_pha_ramp": 0,
+                                "p_lpf_freq": 1,
+                                "p_lpf_ramp": 0,
+                                "p_lpf_resonance": 0.1,
+                                "p_hpf_freq": 0.02,
+                                "p_hpf_ramp": 0,
+                                "sound_vol": 0.28,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            // Subtle thrusty whoosh for undocking
+                            undock: {
+                                "oldParams": true,
+                                "wave_type": 0,
+                                "p_env_attack": 0.02,
+                                "p_env_sustain": 0.18,
+                                "p_env_punch": 0.15,
+                                "p_env_decay": 0.32,
+                                "p_base_freq": 0.22,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.22,
+                                "p_freq_dramp": 0,
+                                "p_vib_strength": 0.05,
+                                "p_vib_speed": 0.45,
+                                "p_arp_mod": 0,
+                                "p_arp_speed": 0,
+                                "p_duty": 0.5,
+                                "p_duty_ramp": 0,
+                                "p_repeat_speed": 0,
+                                "p_pha_offset": 0.05,
+                                "p_pha_ramp": -0.02,
+                                "p_lpf_freq": 0.9,
+                                "p_lpf_ramp": 0,
+                                "p_lpf_resonance": 0.2,
+                                "p_hpf_freq": 0.02,
+                                "p_hpf_ramp": 0,
+                                "sound_vol": 0.22,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            // Generic UI screen transition swoosh
+                            uiTransition: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0.0,
+                                "p_env_sustain": 0.08,
+                                "p_env_punch": 0.25,
+                                "p_env_decay": 0.22,
+                                "p_base_freq": 0.45,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": -0.15,
+                                "p_freq_dramp": 0,
+                                "p_vib_strength": 0,
+                                "p_vib_speed": 0,
+                                "p_arp_mod": 0.12,
+                                "p_arp_speed": 0.5,
+                                "p_duty": 0.4,
+                                "p_duty_ramp": 0,
+                                "p_repeat_speed": 0,
+                                "p_pha_offset": 0,
+                                "p_pha_ramp": 0,
+                                "p_lpf_freq": 1,
+                                "p_lpf_ramp": 0,
+                                "p_lpf_resonance": 0,
+                                "p_hpf_freq": 0.02,
+                                "p_hpf_ramp": 0,
+                                "sound_vol": 0.22,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            // Map open/close are subtle variants
+                            mapOpen: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0.0,
+                                "p_env_sustain": 0.06,
+                                "p_env_punch": 0.2,
+                                "p_env_decay": 0.18,
+                                "p_base_freq": 0.42,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.12,
+                                "p_arp_mod": 0.18,
+                                "p_arp_speed": 0.45,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.02,
+                                "sound_vol": 0.2,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            mapClose: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0.0,
+                                "p_env_sustain": 0.06,
+                                "p_env_punch": 0.2,
+                                "p_env_decay": 0.18,
+                                "p_base_freq": 0.42,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": -0.18,
+                                "p_arp_mod": -0.18,
+                                "p_arp_speed": 0.45,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.02,
+                                "sound_vol": 0.2,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+
+                            // Market transactions
+                            buyConfirm: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0,
+                                "p_env_sustain": 0.12,
+                                "p_env_punch": 0.4,
+                                "p_env_decay": 0.25,
+                                "p_base_freq": 0.55,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.18,
+                                "p_arp_mod": 0.22,
+                                "p_arp_speed": 0.5,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.02,
+                                "sound_vol": 0.28,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            sellConfirm: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0,
+                                "p_env_sustain": 0.1,
+                                "p_env_punch": 0.3,
+                                "p_env_decay": 0.22,
+                                "p_base_freq": 0.45,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": -0.12,
+                                "p_arp_mod": -0.18,
+                                "p_arp_speed": 0.45,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.02,
+                                "sound_vol": 0.26,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+
+                            // Missions
+                            missionAccept: {
+                                "oldParams": true,
+                                "wave_type": 1,
+                                "p_env_attack": 0.02,
+                                "p_env_sustain": 0.22,
+                                "p_env_punch": 0.25,
+                                "p_env_decay": 0.3,
+                                "p_base_freq": 0.38,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.22,
+                                "p_arp_mod": 0.3,
+                                "p_arp_speed": 0.55,
+                                "p_duty": 0.6,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.02,
+                                "sound_vol": 0.28,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            missionComplete: {
+                                "oldParams": true,
+                                "wave_type": 0,
+                                "p_env_attack": 0.02,
+                                "p_env_sustain": 0.3,
+                                "p_env_punch": 0.35,
+                                "p_env_decay": 0.45,
+                                "p_base_freq": 0.3,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": 0.25,
+                                "p_arp_mod": 0.35,
+                                "p_arp_speed": 0.5,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 1,
+                                "p_hpf_freq": 0.01,
+                                "sound_vol": 0.3,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+
+                            // Weapon-specific new sounds
+                            turretFire: {
+                                "oldParams": true,
+                                "wave_type": 0,
+                                "p_env_attack": 0.0,
+                                "p_env_sustain": 0.08,
+                                "p_env_punch": 0.6,
+                                "p_env_decay": 0.2,
+                                "p_base_freq": 0.22,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": -0.02,
+                                "p_vib_strength": 0.0,
+                                "p_vib_speed": 0.0,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 0.8,
+                                "p_lpf_resonance": 0.2,
+                                "p_hpf_freq": 0.05,
+                                "sound_vol": 0.28,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                            },
+                            tangleCast: {
+                                "oldParams": true,
+                                "wave_type": 2,
+                                "p_env_attack": 0.01,
+                                "p_env_sustain": 0.18,
+                                "p_env_punch": 0.25,
+                                "p_env_decay": 0.3,
+                                "p_base_freq": 0.32,
+                                "p_freq_limit": 0,
+                                "p_freq_ramp": -0.25,
+                                "p_vib_strength": 0.08,
+                                "p_vib_speed": 0.6,
+                                "p_duty": 0.5,
+                                "p_lpf_freq": 0.9,
+                                "p_hpf_freq": 0.04,
+                                "sound_vol": 0.25,
+                                "sample_rate": 44100,
+                                "sample_size": 8
+                                                        },
               beam: {
                 "oldParams": true,
                 "wave_type": 1,
@@ -721,8 +973,26 @@ class SoundManager {
         let usedWebAudio = false;
         try {
             if (typeof sfxr !== 'undefined' && typeof SoundEffect !== 'undefined') {
-                // Use SoundEffect to get the normalized buffer
-                const sfx = new SoundEffect(soundEntry.definition);
+                // Prepare a sanitized copy for SoundEffect (ensure wave_type is valid 0-3)
+                const defCopy = JSON.parse(JSON.stringify(soundEntry.definition || {}));
+                let wt = parseInt(defCopy.wave_type);
+                // Only coerce if actually invalid (NaN or out of range 0-3)
+                if (isNaN(wt) || wt < 0 || wt > 3) wt = 1;
+                defCopy.wave_type = wt;
+
+                let sfx = null;
+                try {
+                    sfx = new SoundEffect(defCopy);
+                } catch (err1) {
+                    // Retry once with a known-safe wave type
+                    if (String(err1).indexOf('Bad wave type') !== -1) {
+                        defCopy.wave_type = 1; // SAWTOOTH
+                        sfx = new SoundEffect(defCopy);
+                    } else {
+                        throw err1;
+                    }
+                }
+
                 const normalized = sfx.getRawBuffer().normalized;
                 // Get or create a single AudioContext
                 let actx = null;
@@ -732,7 +1002,7 @@ class SoundManager {
                     }
                     actx = window._eliteAudioContext;
                 }
-                if (actx) {
+                if (actx && normalized && normalized.length) {
                     if (actx.state === 'suspended') actx.resume();
                     const sampleRate = soundEntry.definition.sample_rate || 44100;
                     const audioBuffer = actx.createBuffer(1, normalized.length, sampleRate);
@@ -748,7 +1018,10 @@ class SoundManager {
                 }
             }
         } catch (e) {
-            console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
+            // Quietly fall back for known wave type issues; otherwise log once
+            if (String(e).indexOf('Bad wave type') === -1) {
+                console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
+            }
         }
         // UI indicator (always call, only once)
         if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
@@ -834,4 +1107,9 @@ class SoundManager {
         const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
         this.playWorldSound(soundName, sourceX, sourceY, listenerPos);
     }
+}
+
+// Ensure global availability across classic script tags
+if (typeof window !== 'undefined') {
+    window.SoundManager = window.SoundManager || SoundManager;
 }

@@ -179,6 +179,11 @@ class Market {
         // Save  Game
         saveGame();
         
+        // Play sell confirm sound
+        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            soundManager.playSound('sellConfirm');
+        }
+        
         return true;
     }
 
@@ -259,6 +264,10 @@ class Market {
             // Consider saving game state after a successful trade
             if (typeof saveGame === 'function') { // Check if saveGame exists globally
                 saveGame();
+            }
+            // Play buy confirm sound
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                soundManager.playSound('buyConfirm');
             }
             return true; // Indicate successful purchase
         } else {

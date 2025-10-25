@@ -223,9 +223,16 @@ static fireForce(owner, system) {
         }
         system.addProjectile(proj);
         
-        // Play laser sound using playWorldSound
+        // Play weapon-specific sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
+            let soundName = 'laser';
+            const wType = weapon?.type;
+            if (wType === WEAPON_TYPE.TURRET) {
+                soundName = 'turretFire';
+            } else if (wType === WEAPON_TYPE.PROJECTILE || wType === WEAPON_TYPE.SPREAD || wType === WEAPON_TYPE.STRAIGHT) {
+                soundName = 'laser';
+            }
+            soundManager.playWorldSound(soundName, ownerX, ownerY, player.pos);
         }
     }
 
@@ -620,7 +627,7 @@ static fireTangle(owner, system, angle) {
     
     // Play tangle sound
     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
+        soundManager.playWorldSound('tangleCast', ownerX, ownerY, player.pos);
     }
 }
 

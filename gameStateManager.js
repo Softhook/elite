@@ -81,6 +81,27 @@ this.showingInventory = false;
 
         // --- Handle Logic Specific to State Transitions ---
 
+        // Play transition-specific sounds
+        try {
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+                if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
+                    soundManager.playSound('dockSuccess');
+                } else if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
+                    soundManager.playSound('undock');
+                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT"].includes(newState)) {
+                    soundManager.playSound('uiTransition');
+                } else if (newState === "GALAXY_MAP" && this.previousState !== "GALAXY_MAP") {
+                    soundManager.playSound('mapOpen');
+                } else if (this.previousState === "GALAXY_MAP" && newState !== "GALAXY_MAP") {
+                    soundManager.playSound('mapClose');
+                } else if (newState === "DOCKED" && stationStates.includes(this.previousState)) {
+                    // Back from sub-menu to docked
+                    soundManager.playSound('uiTransition');
+                }
+            }
+        } catch (e) { /* ignore audio errors */ }
+
         // Refresh save game preview when entering save selection screen
         if (newState === "SAVE_SELECTION") {
             if (saveSelectionScreen && typeof saveSelectionScreen.loadSavedGamePreview === 'function') {
