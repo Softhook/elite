@@ -230,6 +230,9 @@ class Enemy {
         this.shieldRechargeDelay = 3000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
 
+        // Track shield transitions for audio cues
+        this._shieldWasZero = (this.shield <= 0);
+
         // --- Guard-specific properties ---
         this.principal = null; // The entity this guard is protecting
         this.guardFormationOffset = createVector(-70, 0); // Desired position relative to principal (x: behind/ahead, y: left/right)
@@ -340,7 +343,16 @@ class Enemy {
         if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
-            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+            const prevShield = this.shield;
+            const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
+            if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
+                // World-positioned cue for enemies
+                if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                    soundManager.playWorldSound('shieldUp', this.pos.x, this.pos.y, player.pos);
+                }
+                this._shieldWasZero = false;
+            }
+            this.shield = newShield;
         }
 
         // Update barrier cooldown and duration

@@ -141,6 +141,15 @@ class EnemyDamageSystem {
                 const hullDamage = amount - this.shield;
                 this.shield = 0;
                 this.hull -= hullDamage;
+                // Shield down audio cue (world-positioned)
+                try {
+                    if (!this._shieldWasZero) {
+                        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                            soundManager.playWorldSound('shieldDown', this.pos.x, this.pos.y, player.pos);
+                        }
+                    }
+                    this._shieldWasZero = true;
+                } catch (e) { /* ignore */ }
                 damageDealt += hullDamage; // Total damage dealt (shield + hull)
             }
         } else {

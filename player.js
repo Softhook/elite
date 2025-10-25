@@ -94,6 +94,9 @@ class Player {
         this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
         this.lastShieldHitTime = 0; // Track when shield was last hit
 
+        // Track shield-down/up transitions for audio cues
+        this._shieldWasZero = (this.shield <= 0);
+
         // Add tangle weapon effect properties
         this.dragMultiplier = 1.0;   // Default - normal drag
         this.dragEffectTimer = 0;    // Countdown timer for tangle effect
@@ -882,7 +885,14 @@ handleInput() {
         if (this.shield < this.maxShield && !this.shieldsDisabled && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
             // Pre-calculate recharge amount (scale by deltaTime for consistent rate)
             const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * (deltaTime * 0.00096); // 0.016 / 16.67
-            this.shield = Math.min(this.maxShield, this.shield + rechargeAmount);
+            const prevShield = this.shield;
+            const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
+            // Play shield-up cue when recovering from 0
+            if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp'); }
+                this._shieldWasZero = false;
+            }
+            this.shield = newShield;
         }
 
         // Sync bodyguard status from their enemy references
@@ -1066,6 +1076,7 @@ handleInput() {
         }
         
         // If we have shields, damage them first
+        const prevShield = this.shield;
         if (this.shield > 0) {
             // Record time of shield hit for visual effect AND recharge delay
             this.shieldHitTime = millis();
@@ -1094,6 +1105,11 @@ handleInput() {
             this.hull -= actualDamage;
             //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`);
             shieldHit = false;
+        }
+        // Shield down cue on transition >0 -> 0
+        if (prevShield > 0 && this.shield === 0) {
+            if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown'); }
+            this._shieldWasZero = true;
         }
         
         // Check for destruction

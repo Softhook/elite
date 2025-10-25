@@ -754,6 +754,20 @@ static fireTangle(owner, system, angle) {
             target.lastShieldHitTime = millis();
         }
         
+        // Play a lightweight hit sound when shields absorb damage (throttled)
+        if (targetHasShield) {
+            try {
+                const now = millis ? millis() : Date.now();
+                const last = target._lastShieldHitSoundTime || 0;
+                if (now - last > 150) { // throttle to avoid spam on beams/rapid fire
+                    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                        soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos);
+                    }
+                    target._lastShieldHitSoundTime = now;
+                }
+            } catch (e) { /* non-fatal */ }
+        }
+
         // Only create explosion if there were NO shields before the hit
         if (!targetHasShield && system.addExplosion) {
             // Convert color to safe format - cache isArray check
