@@ -1368,7 +1368,18 @@ handleInput() {
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0,0);
         let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; }
         this.hull = data.hull !== undefined ? constrain(data.hull, 0, this.maxHull) : this.maxHull;
-        this.credits = data.credits !== undefined ? Math.floor(data.credits) : 1000; // Ensure loaded credits are integer
+        
+        // Defensive credit loading with repair detection
+        if (typeof data.credits === 'number' && isFinite(data.credits) && data.credits >= 0) {
+            this.credits = Math.floor(data.credits);
+        } else {
+            console.warn('Credits data invalid or missing, resetting to 1000');
+            this.credits = 1000;
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage('Save data repaired: Credits reset to 1000', [255, 200, 0]);
+            }
+        }
+        
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
         this.isWanted = data.isWanted || false;
         this.isPolice = data.isPolice || false;
@@ -1383,38 +1394,28 @@ handleInput() {
 
         this.kills = data.kills || 0;
 
-        // Restore player weapons from saved data
-        if (Array.isArray(data.weapons)) {
+        // Restore player weapons from saved data with defensive repair
+        let weaponsRepaired = false;
+        if (Array.isArray(data.weapons) && data.weapons.length > 0) {
             this.weapons = []; // Clear existing weapons array
             
             data.weapons.forEach(savedWeaponData => {
                 if (savedWeaponData && typeof savedWeaponData.name === 'string' && typeof savedWeaponData.type === 'string') {
-                    // Adjusted check for console warning to be more lenient for certain types
-                    const checkPropsForWarning = ['name', 'type', 'fireRate'];
-                    // Barrier and Force weapons don't typically have a 'damage' property in the same way projectile/beam weapons do.
-                    // Other types might also have specific property sets. This check is primarily for the console warning.
-                    if (savedWeaponData.type !== 'barrier' && savedWeaponData.type !== 'force') {
-                        checkPropsForWarning.push('damage');
-                    }
-                    const hasAllCheckedProps = checkPropsForWarning.every(prop => savedWeaponData[prop] !== undefined);
-
-                    if (!hasAllCheckedProps) {
-                        console.warn(`Saved weapon data for '${savedWeaponData.name}' (type: ${savedWeaponData.type}) might be incomplete in the save file (some non-critical properties undefined, which is okay if loaded from WEAPON_UPGRADES): ${JSON.stringify(savedWeaponData)}`);
-                    }
-                    
                     const matchedWeaponDefinition = WEAPON_UPGRADES.find(w => w.name === savedWeaponData.name);
                     
                     if (matchedWeaponDefinition) {
                         // Create a deep clone of the weapon definition from WEAPON_UPGRADES
                         this.weapons.push(JSON.parse(JSON.stringify(matchedWeaponDefinition)));
                     } else {
-                        console.warn(`Weapon definition for '${savedWeaponData.name}' not found in WEAPON_UPGRADES. This weapon cannot be loaded.`);
+                        console.warn(`Weapon definition for '${savedWeaponData.name}' not found in WEAPON_UPGRADES. Using null slot.`);
                         this.weapons.push(null); // Add null to keep weapon slot integrity
+                        weaponsRepaired = true;
                     }
                 } else {
                     // savedWeaponData is null, undefined, or lacks basic properties. Treat as an empty/invalid slot.
                     if (savedWeaponData) { // Log if it's not null but still invalid
                         console.warn(`Invalid or incomplete weapon data in save file: ${JSON.stringify(savedWeaponData)}. Treating as empty slot.`);
+                        weaponsRepaired = true;
                     }
                     this.weapons.push(null); 
                 }
@@ -1429,16 +1430,24 @@ handleInput() {
                 if (firstValidWeaponIndex !== -1) {
                     console.log(`Saved weaponIndex ${data.weaponIndex} is invalid or points to a null weapon. Setting to first available weapon: ${firstValidWeaponIndex}`);
                     this.weaponIndex = firstValidWeaponIndex;
+                    weaponsRepaired = true;
                 } else {
-                    console.warn(`No valid weapons loaded. Setting weaponIndex to 0, but no weapon will be active.`);
-                    this.weaponIndex = 0; // Fallback, though no weapon might be usable
+                    console.warn(`No valid weapons loaded from save. Falling back to ship defaults.`);
+                    this.loadWeaponsFromShipDefinition(this.shipTypeName);
+                    weaponsRepaired = true;
                 }
             }
             this.setCurrentWeapon(this.weaponIndex);
         } else {
             // If no saved weapons array, initialize from ship definition
-            console.log("No weapon data array found in save data, loading default weapons from ship definition.");
+            console.warn("No weapon data array found in save data, loading default weapons from ship definition.");
             this.loadWeaponsFromShipDefinition(this.shipTypeName);
+            weaponsRepaired = true;
+        }
+        
+        // Notify player if weapons were repaired
+        if (weaponsRepaired && typeof uiManager !== 'undefined') {
+            uiManager.addMessage('Save data repaired: Weapons reloaded', [255, 200, 0]);
         }
 
         // --- Load active mission ---

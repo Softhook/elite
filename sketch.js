@@ -429,38 +429,116 @@ function mouseWheel(event) {
 
 
 // --- Save/Load Functionality ---
-function saveGame() {
+// --- Save system hardening helpers ---
+let __saveDebounceTimer = null;
+
+function __validatePayload(payload) {
     try {
-        if (typeof(Storage) !== "undefined") {
-            const currentSlotIndex = window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0;
-            const saveKey = SAVE_KEY_PREFIX + currentSlotIndex;
+        if (!payload) return { ok: false, reason: 'missing payload' };
+        // Minimal schema checks
+        if (!payload.galaxyData) return { ok: false, reason: 'missing galaxyData' };
+        if (payload.currentSystemIndex === undefined || payload.currentSystemIndex === null) return { ok: false, reason: 'missing currentSystemIndex' };
+        if (!payload.playerData) return { ok: false, reason: 'missing playerData' };
+        // Credits must be a finite number
+        const cr = payload.playerData.credits;
+        if (typeof cr !== 'number' || !isFinite(cr)) return { ok: false, reason: 'invalid credits' };
+        // Weapons array can be empty but should be defined if saved
+        if (payload.playerData.weapons !== undefined && !Array.isArray(payload.playerData.weapons)) return { ok: false, reason: 'invalid weapons array' };
+        return { ok: true };
+    } catch (e) {
+        return { ok: false, reason: 'exception during validation: ' + e?.message };
+    }
+}
 
-            const saveData = {
-                playerData: player.getSaveData(),
-                galaxyData: galaxy.getSaveData(),
-                currentSystemIndex: galaxy.currentSystemIndex
-                // currentView: { ...uiManager.currentView } // Consider what to save from currentView
-            };
-            const saveDataString = JSON.stringify(saveData);
-            localStorage.setItem(saveKey, saveDataString);
-            localStorage.setItem(LAST_ACTIVE_SLOT_KEY, window.activeSaveSlotIndex.toString()); // Store as last active slot
+function __buildSaveData() {
+    // Build and soft-coerce critical fields to avoid aborting saves on transient state
+    const playerData = player.getSaveData();
+    // Normalize credits
+    if (!(typeof playerData.credits === 'number' && isFinite(playerData.credits) && playerData.credits >= 0)) {
+        playerData.credits = 1000;
+    } else {
+        playerData.credits = Math.floor(playerData.credits);
+    }
+    return {
+        playerData,
+        galaxyData: galaxy.getSaveData(),
+        currentSystemIndex: galaxy.currentSystemIndex,
+        savedAt: Date.now(),
+        version: 2
+    };
+}
 
-            SAVE_LOG(`Game saved to slot ${window.activeSaveSlotIndex + 1} (Key: ${saveKey})`);
-            
-            // Refresh save previews in SaveSelectionScreen
-            // Check if saveSelectionScreen instance exists and has the method
-            if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.loadAllSavePreviews === 'function') {
-                saveSelectionScreen.loadAllSavePreviews(); 
-            } else if (window.saveScreen && typeof window.saveScreen.loadAllSavePreviews === 'function') {
-                 // Fallback for older potential global reference, though direct reference is better
-                window.saveScreen.loadAllSavePreviews();
-            }
+function __atomicStoreToSlot(slotIndex) {
+    const saveKey = SAVE_KEY_PREFIX + slotIndex;
+    const backupKey = saveKey + '_bak';
 
-        } else {
-            console.warn("localStorage is not supported. Game cannot be saved.");
+    const saveData = __buildSaveData();
+    
+    // Validate before saving
+    const validation = __validatePayload(saveData);
+    if (!validation.ok) {
+        console.error('Save validation failed:', validation.reason);
+        return false;
+    }
+
+    const dataString = JSON.stringify(saveData);
+
+    // Backup the current save if it exists
+    try {
+        const previous = localStorage.getItem(saveKey);
+        if (previous) {
+            localStorage.setItem(backupKey, previous);
         }
     } catch (e) {
-        console.error("Error saving game:", e);
+        console.warn('Failed to create backup for save key', saveKey, e);
+    }
+
+    // Write the new save
+    try {
+        localStorage.setItem(saveKey, dataString);
+        return true;
+    } catch (e) {
+        console.error('Failed to write save:', e);
+        return false;
+    }
+}
+
+function saveGame() {
+    try {
+        if (typeof(Storage) === "undefined") {
+            console.warn("localStorage is not supported. Game cannot be saved.");
+            return;
+        }
+
+        // Clear any pending save and schedule a new one
+        if (__saveDebounceTimer) {
+            clearTimeout(__saveDebounceTimer);
+        }
+        
+        __saveDebounceTimer = setTimeout(() => {
+            __saveDebounceTimer = null;
+            
+            const currentSlotIndex = (window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0);
+            const ok = __atomicStoreToSlot(currentSlotIndex);
+            
+            if (!ok) {
+                console.error('Save aborted: validation failed. Your last known-good backup was preserved.');
+                return;
+            }
+            
+            localStorage.setItem(LAST_ACTIVE_SLOT_KEY, String(currentSlotIndex));
+            SAVE_LOG(`Game saved to slot ${currentSlotIndex + 1} (Key: ${SAVE_KEY_PREFIX + currentSlotIndex})`);
+            
+            // Refresh previews after a successful write
+            if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.loadAllSavePreviews === 'function') {
+                saveSelectionScreen.loadAllSavePreviews();
+            } else if (window.saveScreen && typeof window.saveScreen.loadAllSavePreviews === 'function') {
+                window.saveScreen.loadAllSavePreviews();
+            }
+        }, 300); // Small debounce to batch rapid saves
+        
+    } catch (e) {
+        console.error("Error scheduling save:", e);
     }
 }
 
@@ -472,11 +550,48 @@ function loadGame(slotIndex) {
         }
         const loadKey = SAVE_KEY_PREFIX + slotIndex; // Define loadKey here
 
-        const savedDataString = localStorage.getItem(loadKey);
-
-        if (savedDataString) {
+        const tryLoadFromKey = (key) => {
+            const str = localStorage.getItem(key);
+            if (!str) return { ok: false, reason: 'no data' };
             try {
-                const savedData = JSON.parse(savedDataString);
+                const obj = JSON.parse(str);
+                // Validate schema
+                const schema = __validatePayload(obj);
+                if (!schema.ok) {
+                    return { ok: false, reason: schema.reason };
+                }
+                return { ok: true, data: obj };
+            } catch (e) {
+                return { ok: false, reason: e?.message || 'parse error' };
+            }
+        };
+
+        const savedDataString = localStorage.getItem(loadKey);
+        const backupDataString = localStorage.getItem(loadKey + '_bak');
+
+        if (savedDataString || backupDataString) {
+            try {
+                let savedData = null;
+                // Prefer validated main; if invalid, try backup
+                const primary = tryLoadFromKey(loadKey);
+                if (!primary.ok) {
+                    console.warn(`Primary save validation failed (${primary.reason}). Attempting backup...`);
+                    const backup = tryLoadFromKey(loadKey + '_bak');
+                    if (!backup.ok) {
+                        console.error(`Backup save also invalid: ${backup.reason}`);
+                        showCriticalError("Corrupt save: Both primary and backup invalid.");
+                        return false;
+                    }
+                    // Promote backup to primary since primary is corrupt or missing
+                    console.log('Promoting backup to primary save slot');
+                    try {
+                        const bakStr = localStorage.getItem(loadKey + '_bak');
+                        if (bakStr) localStorage.setItem(loadKey, bakStr);
+                    } catch (e) { /* ignore */ }
+                    savedData = backup.data;
+                } else {
+                    savedData = primary.data;
+                }
                 
                 // 1. Load Galaxy Data First
                 if (savedData.galaxyData) {
@@ -576,6 +691,7 @@ function loadGame(slotIndex) {
                 return false;
             }
         } else {
+            // Neither primary nor backup keys exist
             SAVE_LOG(`No saved game found in slot ${slotIndex + 1} (Key: ${loadKey})`);
             return false;
         }
@@ -598,4 +714,18 @@ function windowResized() {
     }
     // console.log("Window resized."); // Optional log
     // Note: UI elements using width/height might need repositioning logic here or in their draw methods.
+}
+
+// Attempt to flush any pending debounced save on page unload
+try {
+    window.addEventListener('beforeunload', () => {
+        if (__saveDebounceTimer) {
+            clearTimeout(__saveDebounceTimer);
+            __saveDebounceTimer = null;
+            const currentSlotIndex = (window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0);
+            __atomicStoreToSlot(currentSlotIndex);
+        }
+    });
+} catch (e) {
+    // Ignore environments where addEventListener is not available
 }

@@ -72,26 +72,59 @@ class SaveSelectionScreen {
     }
     
     loadAllSavePreviews() {
+        const validatePreview = (obj) => {
+            if (!obj) return false;
+            if (!obj.playerData || !obj.galaxyData) return false;
+            const cr = obj.playerData.credits;
+            if (typeof cr !== 'number' || !isFinite(cr)) return false;
+            if (obj.currentSystemIndex === undefined || obj.currentSystemIndex === null) return false;
+            return true;
+        };
+
         if (typeof(Storage) !== "undefined") {
             for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
-                const savedDataString = localStorage.getItem(SAVE_KEY_PREFIX + i);
-                if (savedDataString) {
+                const primaryKey = SAVE_KEY_PREFIX + i;
+                const backupKey = primaryKey + '_bak';
+                const primaryStr = localStorage.getItem(primaryKey);
+                const backupStr = localStorage.getItem(backupKey);
+                let data = null;
+                let recovered = false;
+
+                if (primaryStr) {
                     try {
-                        this.savedGamePreviews[i] = JSON.parse(savedDataString);
-                        console.log(`SaveSelectionScreen: Loaded preview for slot ${i} - data found.`);
+                        const parsed = JSON.parse(primaryStr);
+                        if (validatePreview(parsed)) {
+                            data = parsed;
+                        }
                     } catch (e) {
-                        console.error(`SaveSelectionScreen: Error parsing JSON for slot ${i} (Key: ${SAVE_KEY_PREFIX + i}). Treating as empty. Error:`, e);
-                        this.savedGamePreviews[i] = null; // Only this slot is null
-                        // Optional: localStorage.removeItem(SAVE_KEY_PREFIX + i); // to clear out bad data
+                        // fall through to backup
                     }
+                }
+
+                if (!data && backupStr) {
+                    try {
+                        const parsedBak = JSON.parse(backupStr);
+                        if (validatePreview(parsedBak)) {
+                            data = parsedBak;
+                            recovered = true;
+                        }
+                    } catch (e) {
+                        // leave as null
+                    }
+                }
+
+                if (data) {
+                    // Tag the data so draw can render a subtle badge without changing call sites
+                    data.__recovered = recovered;
+                    this.savedGamePreviews[i] = data;
+                    console.log(`SaveSelectionScreen: Loaded preview for slot ${i} (${recovered ? 'from backup' : 'primary'}).`);
                 } else {
                     this.savedGamePreviews[i] = null;
-                    console.log(`SaveSelectionScreen: No saved game found for slot ${i}`);
+                    console.log(`SaveSelectionScreen: No valid saved game found for slot ${i}`);
                 }
             }
         } else {
             console.warn("SaveSelectionScreen: localStorage is not supported. Cannot load save previews.");
-            // If localStorage is not supported at all, all previews will be null.
             this.savedGamePreviews = new Array(NUM_SAVE_SLOTS).fill(null);
         }
     }
@@ -314,6 +347,16 @@ class SaveSelectionScreen {
             
             this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', 
                                   x + w - 70 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
+
+            // Subtle recovered badge when preview came from backup
+            if (data.__recovered) {
+                push();
+                textAlign(RIGHT, TOP);
+                textSize(10);
+                fill(180, 160, 80);
+                text("recovered", x + w - 10 + hoverOffset, y + 8);
+                pop();
+            }
         } else if (title.startsWith("NEW GAME")) {
             // New game description
             textSize(20); // Adjusted for smaller slot
