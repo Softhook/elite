@@ -688,8 +688,7 @@ static fireTangle(owner, system, angle) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos);
         }
     }
-        }
-    }
+    
 
     /** 
      * Fire a turret weapon that auto-aims at the nearest target
