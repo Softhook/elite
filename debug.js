@@ -7,7 +7,7 @@
 
   // Default flags (quiet by default)
   const defaults = {
-    DEBUG_AI: false,           // AI flow/state/combat
+    DEBUG_AI: true,           // AI flow/state/combat
     DEBUG_TARGETING: false,    // Target selection/scoring
     DEBUG_DAMAGE: false,       // Damage/hit/barrier
     DEBUG_ENV: false,          // Environment (nebula etc.)

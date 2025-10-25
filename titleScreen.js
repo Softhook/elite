@@ -535,7 +535,7 @@ class TitleScreen {
             textSize(100 + i);
             textAlign(CENTER, CENTER);
             fill(0, 80 + i*20, 155, 50/i);
-            text("Elite Redux", width/2 + random(-1, 1), this.titleY + random(-1, 1));
+            text("SubSpace Elite", width/2 + random(-1, 1), this.titleY + random(-1, 1));
         }
         
         // Main title
@@ -544,7 +544,7 @@ class TitleScreen {
         fill(0, 180, 255, 240);
         stroke(0, 100, 200, 240);
         strokeWeight(3);
-        text("Elite Redux", width/2, this.titleY);
+        text("SubSpace Elite", width/2, this.titleY);
         
         // Author Credit
         textSize(20);
@@ -588,7 +588,7 @@ class TitleScreen {
         const lineHeight = 30;
         
         // Introduction
-        text("Hide in an Ion Nebula near the station and ambush the Imperial Courier - you know the deal...", textX, textY);
+        text("Mashup between SubSpace and Elite: hide in an Ion Nebula and ambush that Imperial Courier", textX, textY);
         textY += lineHeight * 2;
         
         // Controls section
