@@ -188,7 +188,14 @@ function showCriticalError(msg) {
 function keyPressed() {
     // Toggle inventory with “I”
     if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
+        const opening = !gameStateManager.showingInventory;
         gameStateManager.showingInventory = !gameStateManager.showingInventory;
+        // Audio: use mapOpen/mapClose to mirror other UI overlays
+        try {
+            if (typeof soundManager !== 'undefined') {
+                soundManager.playSound(opening ? 'mapOpen' : 'mapClose');
+            }
+        } catch(e) { /* ignore audio errors */ }
         return false;
     }
     // Instructions screen keyboard input
@@ -370,9 +377,13 @@ function mousePressed() {
         const res = inventoryScreen.handleClick(mouseX, mouseY, player);
         if (res === 'close') {
             gameStateManager.showingInventory = false;
+            // Audio: closing overlay
+            if (typeof soundManager !== 'undefined') soundManager.playSound('mapClose');
             return;
         }
         if (res?.action === 'jettison') {
+            // Audio: click feedback on pressing jettison
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             handleJettisonFromInventory(res.idx);
             return;
         }
@@ -406,6 +417,10 @@ function handleJettisonFromInventory(idx) {
         const cargo = new Cargo(pos.x, pos.y, item.name, 1);
         cargo.vel = dir.mult(1.5);
         player.currentSystem.addCargo(cargo);
+        // Audio: subtle confirmation
+        if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+    } else {
+        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
     }
 }
   
