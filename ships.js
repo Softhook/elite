@@ -554,7 +554,7 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Heavy Cannon", "Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle","Barrier Field"], // Balanced heavy firepower
+        armament: ["Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle","Barrier Field", "Heavy Mine"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, 
         vertexLayers: [
@@ -577,7 +577,7 @@ const SHIP_DEFINITIONS = {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
-        armament: ["Multi-Cannon", "Twin Pulse"], // Versatile loadout with defense
+        armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
         costCategory: "Medium", description: "The legendary jack-of-all-trades.",
         drawFunction: drawCobraMkIII, 
 
@@ -656,7 +656,7 @@ const SHIP_DEFINITIONS = {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle","Barrier Field"], // Military arsenal
+        armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle","Barrier Field", "Heavy Mine"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
         
@@ -849,7 +849,7 @@ const SHIP_DEFINITIONS = {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
         baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
         baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
-        armament: ["Pulse Array", "Beam Laser"], // Elegant, refined
+        armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
         costCategory: "Medium", description: "Fast, sleek Imperial ship with good shields for its size.",
         drawFunction: drawImperialCourier, 
         vertexLayers: [
@@ -1122,7 +1122,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser","Guardian Missile","Barrier Field","Heavy Mine"], // Starter weapon
+        armament: ["Pulse Laser","Guardian Missile"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         drawFunction: drawSidewinder, vertexData: [ { x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 } ],
         fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
@@ -1212,7 +1212,7 @@ const SHIP_DEFINITIONS = {
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
-        armament: ["Multi-Cannon", "Twin Pulse", "Guardian Missile"], // Fast fighter
+        armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"], // Fast fighter
         costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
         drawFunction: drawViper,
         vertexLayers: [
@@ -1233,7 +1233,7 @@ const SHIP_DEFINITIONS = {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
-        armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition"], // Aggressive fighter
+        armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition", "Basic Mine"], // Aggressive fighter
         costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
         drawFunction: drawVulture, 
         vertexLayers: [
@@ -1279,7 +1279,7 @@ const SHIP_DEFINITIONS = {
         name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
-        armament: ["Burst Blaster"], // All-out attack fighter
+        armament: ["Burst Blaster", "Basic Mine"], // All-out attack fighter
         costCategory: "Low", description: "Agile fighter with forward-swept wings.",
         drawFunction: drawHummingbird, 
         

@@ -299,7 +299,7 @@ const WEAPON_UPGRADES = [
         name: "Basic Mine",
         type: "mine",
         damage: 100,
-        blastRadius: 120,
+        blastRadius: 140,
         triggerRadius: 70,
         mineHealth: 25,
         color: [255, 100, 0], // Orange
