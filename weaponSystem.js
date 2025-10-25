@@ -653,6 +653,28 @@ static fireTangle(owner, system, angle) {
         const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
         mine.system = system;
         
+        // Enforce 5-mine limit per owner
+        // Initialize activeMines array if it doesn't exist
+        if (!owner.activeMines) {
+            owner.activeMines = [];
+        }
+        
+        // If owner already has 5 mines, remove the oldest one
+        if (owner.activeMines.length >= 5) {
+            const oldestMine = owner.activeMines.shift(); // Remove first (oldest) mine
+            if (oldestMine && !oldestMine.destroyed && system.mines) {
+                // Mark it as destroyed and remove from system
+                oldestMine.destroyed = true;
+                const mineIndex = system.mines.indexOf(oldestMine);
+                if (mineIndex !== -1) {
+                    system.mines.splice(mineIndex, 1);
+                }
+            }
+        }
+        
+        // Add new mine to owner's tracking array
+        owner.activeMines.push(mine);
+        
         // Add mine to system
         if (system.addMine) {
             system.addMine(mine);

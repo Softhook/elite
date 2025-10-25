@@ -116,6 +116,9 @@ class Enemy {
         this.fireCooldown = random(1.0, 2.5);
         this.weaponIndex = 0; // To track which weapon is currently active if ship has multiple
         
+        // Track active mines deployed by this enemy (max 5)
+        this.activeMines = [];
+        
         // Get weapons from ship definition instead of random assignment
         if (shipDef.armament && shipDef.armament.length > 0) {
             // Store all weapons the ship has

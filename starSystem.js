@@ -1230,13 +1230,13 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             
             // Check if mine is destroyed
             if (mine.destroyed) {
-                this._fastRemove(this.mines, i);
+                this._removeMineFromSystem(mine, i);
                 continue;
             }
             
             // Check if mine is too far from player (cleanup)
             if (this.player && mine.isOffScreen(this.player.pos, this.despawnRadius)) {
-                this._fastRemove(this.mines, i);
+                this._removeMineFromSystem(mine, i);
                 continue;
             }
             
@@ -1248,7 +1248,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 for (const enemy of this.enemies) {
                     if (mine.shouldExplode(enemy)) {
                         mine.explode(this);
-                        this._fastRemove(this.mines, i);
+                        this._removeMineFromSystem(mine, i);
                         break;
                     }
                 }
@@ -1258,7 +1258,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             if (!(mine.owner instanceof Player) && this.player) {
                 if (mine.shouldExplode(this.player)) {
                     mine.explode(this);
-                    this._fastRemove(this.mines, i);
+                    this._removeMineFromSystem(mine, i);
                     continue;
                 }
             }
@@ -1270,10 +1270,28 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     if (!e || e === mine.owner) continue; // Skip invalid or the owner
                     if (mine.shouldExplode(e)) {
                         mine.explode(this);
-                        this._fastRemove(this.mines, i);
+                        this._removeMineFromSystem(mine, i);
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Helper to remove mine from system and clean up owner's activeMines array
+     * @param {Mine} mine - The mine to remove
+     * @param {number} index - Index in this.mines array
+     */
+    _removeMineFromSystem(mine, index) {
+        // Remove from system's mines array
+        this._fastRemove(this.mines, index);
+        
+        // Remove from owner's activeMines tracking array
+        if (mine.owner && mine.owner.activeMines) {
+            const ownerIndex = mine.owner.activeMines.indexOf(mine);
+            if (ownerIndex !== -1) {
+                mine.owner.activeMines.splice(ownerIndex, 1);
             }
         }
     }
