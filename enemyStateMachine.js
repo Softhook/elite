@@ -354,6 +354,8 @@ class EnemyStateMachine {
             if (distToAttacker < this.guardEngageRange) {
                 AI_LOG(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${principalAttacker.shipTypeName || 'attacker'}.`);
                 this.target = principalAttacker;
+                // Maintain a short engagement lock to prevent target/idle flicker
+                this.guardEngagementLock = Math.max(this.guardEngagementLock || 0, 3.0);
                 this.changeState(AI_STATE.APPROACHING);
                 this.guardReactionTime = 5.0;
                 return;

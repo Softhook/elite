@@ -112,11 +112,23 @@ class EnemyTargeting {
                     // No current target, immediate acquisition allowed
                     this.target = bestTarget;
                     this.targetSwitchCooldown = 2.0; // Set cooldown for future switches
+                    
+                    // Special handling for guards: set engagement lock when acquiring principal's attacker
+                    if (this.role === AI_ROLE.GUARD && this.principal && 
+                        bestTarget === this.principal.lastAttacker) {
+                        this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
+                    }
                     return true;
                 } else if (this.targetSwitchCooldown <= 0 && bestScore > currentTargetScore + scoreThresholdForChange) {
                     // Have a target, cooldown expired, and new target is significantly better
                     this.target = bestTarget;
                     this.targetSwitchCooldown = 2.0;
+                    
+                    // Special handling for guards: set engagement lock when acquiring principal's attacker
+                    if (this.role === AI_ROLE.GUARD && this.principal && 
+                        bestTarget === this.principal.lastAttacker) {
+                        this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
+                    }
                     return true;
                 }
                 // Else: cooldown active or score not good enough - keep current target
@@ -158,18 +170,32 @@ class EnemyTargeting {
                     return TARGET_SCORE_INVALID;
                 }
                 
-                // Original code - high priority for principal's attacker
-                if (target === enemy.principal.lastAttacker && 
+                // CRITICAL FIX: Check if we're currently locked onto THIS target
+                // This prevents flickering when principal.lastAttacker changes or becomes invalid
+                const isLockedOn = enemy.guardEngagementLock > 0 && target === enemy.target;
+                if (isLockedOn) {
+                    // Maintain lock with consistent high score regardless of lastAttacker status
+                    // This keeps the guard committed to the threat even if principal's reference changes
+                    return 2500; // Higher than initial engagement to prevent target loss/switching
+                }
+                
+                // High priority for principal's attacker (initial engagement)
+                const isPrincipalAttacker = target === enemy.principal.lastAttacker && 
                     enemy.isTargetValid(target) && 
-                    (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000)) {
+                    (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000);
+                
+                if (isPrincipalAttacker) {
                     //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
                     return 2000; // Very high score to engage principal's attacker
                 }
                 
-                // Original code - only engage in self-defense otherwise
-                if (target !== enemy.lastAttacker) { // If not self-defense
-                    return TARGET_SCORE_INVALID; // Guards don't pick fights otherwise
+                // Self-defense: if this guard was attacked, can engage the attacker
+                if (target === enemy.lastAttacker) {
+                    return 1500; // High score for self-defense, but lower than principal defense
                 }
+                
+                // Otherwise, guards don't pick fights - return invalid
+                return TARGET_SCORE_INVALID;
             }
 
             // FRIENDLY FIRE PREVENTION: Principals never target their own guards

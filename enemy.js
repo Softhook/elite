@@ -236,6 +236,7 @@ class Enemy {
         this.guardLeashDistance = 450;    // Max distance to stray from principal when not engaging
         this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
         this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
+        this.guardEngagementLock = 0;     // Timer to maintain engagement with principal's attacker (prevents flickering)
         // ---
 
         // --- Combat AI Flags ---
@@ -327,6 +328,11 @@ class Enemy {
         // Process target switch cooldown
         if (this.targetSwitchCooldown > 0) {
             this.targetSwitchCooldown -= deltaSeconds;
+        }
+        
+        // Process guard engagement lock timer
+        if (this.guardEngagementLock > 0) {
+            this.guardEngagementLock -= deltaSeconds;
         }
 
         // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
