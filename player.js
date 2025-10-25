@@ -76,6 +76,9 @@ class Player {
         this.weapons = [];
         this.weaponIndex = 0;
 
+        // Track active mines deployed by this player (max 5)
+        this.activeMines = [];
+
         // Initialize thrust manager
         this.thrustManager = new ThrustManager();
 

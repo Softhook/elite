@@ -653,6 +653,31 @@ static fireTangle(owner, system, angle) {
         const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
         mine.system = system;
         
+        // Enforce 5-mine limit per owner
+        // Initialize activeMines array if it doesn't exist
+        if (!owner.activeMines) {
+            owner.activeMines = [];
+        }
+        
+        // If owner already has 5 mines, remove the oldest one
+        if (owner.activeMines.length >= 5) {
+            const oldestMine = owner.activeMines.shift(); // Remove first (oldest) mine from owner's array
+            if (oldestMine && !oldestMine.destroyed) {
+                // Mark as destroyed - the system's updateMines will clean it up
+                oldestMine.destroyed = true;
+                // Also remove from system immediately for efficiency
+                if (system.mines) {
+                    const mineIndex = system.mines.indexOf(oldestMine);
+                    if (mineIndex !== -1) {
+                        system.mines.splice(mineIndex, 1);
+                    }
+                }
+            }
+        }
+        
+        // Add new mine to owner's tracking array
+        owner.activeMines.push(mine);
+        
         // Add mine to system
         if (system.addMine) {
             system.addMine(mine);
@@ -661,6 +686,8 @@ static fireTangle(owner, system, angle) {
         // Play mine drop sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos);
+        }
+    }
         }
     }
 
