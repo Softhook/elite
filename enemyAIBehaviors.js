@@ -349,6 +349,16 @@ class EnemyAIBehaviors {
                     this.attackCooldown = 15.0; // Cooldown before being provoked again
                     return; // Skip normal logic
                 } else { // Retaliate if hull is okay
+                    // Unarmed haulers should not attempt to fight — flee instead
+                    if (!this.isArmed()) {
+                        HAULER_LOG(`Unarmed ${this.shipTypeName} fleeing instead of retaliating.`);
+                        this.target = this.lastAttacker;
+                        this.changeState(AI_STATE.FLEEING);
+                        if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+                        this.attackCooldown = 15.0;
+                        return;
+                    }
+
                     AI_LOG(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.APPROACHING);

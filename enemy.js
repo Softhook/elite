@@ -119,31 +119,33 @@ class Enemy {
         // Track active mines deployed by this enemy (max 5)
         this.activeMines = [];
         
-        // Get weapons from ship definition instead of random assignment
-        if (shipDef.armament && shipDef.armament.length > 0) {
-            // Store all weapons the ship has
-            this.weapons = [];
-            
-            for (let weaponName of shipDef.armament) {
-                // Find the weapon definition
-                if (typeof WEAPON_UPGRADES !== "undefined" && WEAPON_UPGRADES.length > 0) {
-                    const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
-                    if (weaponDef) {
-                        this.weapons.push(weaponDef);
-                    }
-                }
+        // Resolve weapons strictly from ship definition. Do NOT auto-arm unarmed ships.
+        this.weapons = [];
+        this.currentWeapon = null;
+        this.fireRate = 0;
+
+        const intendedArmament = Array.isArray(shipDef.armament) ? shipDef.armament : [];
+        if (intendedArmament.length > 0 && typeof WEAPON_UPGRADES !== 'undefined' && WEAPON_UPGRADES.length > 0) {
+            for (let weaponName of intendedArmament) {
+                const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
+                if (weaponDef) this.weapons.push(weaponDef);
             }
-            
-            // Set the current weapon to the first one
-            if (this.weapons.length > 0) {
-                this.currentWeapon = this.weapons[0];
-                this.fireRate = this.currentWeapon.fireRate;
+        }
+
+        if (this.weapons.length > 0) {
+            this.currentWeapon = this.weapons[0];
+            this.fireRate = this.currentWeapon.fireRate;
+            if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
                 uiManager.addMessage(`Detected ${this.shipTypeName} armed with ${this.currentWeapon.name}`);
-            } else {
-                // Fallback: basic projectile weapon if no matching weapons found
+            }
+        } else {
+            // No weapons resolved. Keep ship unarmed. Certain combat-centric roles may receive a safe fallback.
+            const combatRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER || this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD);
+            if (combatRole && intendedArmament.length > 0) {
+                // Only fallback-arm if the ship was intended to be armed but lookup failed.
                 this.currentWeapon = {
                     name: "Default Laser",
-                    type: "projectile",
+                    type: WEAPON_TYPE.PROJECTILE || 'projectile',
                     damage: 8,
                     color: [255, 0, 0],
                     fireRate: 0.5,
@@ -151,19 +153,16 @@ class Enemy {
                     desc: "Fallback weapon."
                 };
                 this.weapons = [this.currentWeapon];
+                this.fireRate = this.currentWeapon.fireRate;
+                if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
+                    uiManager.addMessage(`Arming ${this.shipTypeName} with fallback weapon due to missing defs`);
+                }
+            } else {
+                // Explicitly unarmed (e.g., SystemShuttle): leave currentWeapon null and weapons empty
+                this.weapons = [];
+                this.currentWeapon = null;
+                this.fireRate = 0;
             }
-        } else {
-            // Fallback: basic projectile weapon if ship has no defined armament
-            this.currentWeapon = {
-                name: "Default Laser",
-                type: "projectile",
-                damage: 8,
-                color: [255, 0, 0],
-                fireRate: 0.5,
-                price: 0,
-                desc: "Fallback weapon."
-            };
-            this.weapons = [this.currentWeapon];
         }
         
         // --- Role-Specific Initial State ---

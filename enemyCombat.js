@@ -25,7 +25,8 @@ class EnemyCombat {
      * @return {Object} The selected weapon definition
      */
     selectOptimalWeapon(distanceToTarget, target) {
-        // If we only have one weapon, just use it
+        // If we only have one weapon (or none), return current state
+        // Note: For unarmed ships, this returns null which is correct
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
 
         // Prioritize barrier if health or shield are low
@@ -304,6 +305,9 @@ class EnemyCombat {
         
         // Select best weapon (no debug)
         this.selectBestWeapon(distanceToTarget);
+        
+        // Safety: unarmed ships should not reach here, but guard anyway
+        if (!this.currentWeapon) return;
         
         // Adjust firing range based on weapon type
         let effectiveFiringRange = this.firingRange;
