@@ -154,6 +154,10 @@ class StarSystem {
 
         // Cooldown to prevent spamming alien spawn sound during batch spawns
         this._lastAlienSpawnSoundTime = 0;
+
+        // Cooldowns to prevent collision bump sound spam
+        this._lastPlayerAsteroidBumpSoundTime = 0;
+        this._lastPlayerShipBumpSoundTime = 0;
     }
 
     /**
@@ -1362,6 +1366,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, enemy);
                     enemy.takeDamage(collisionDamage, this.player, this);
+
+                    // Play a short bump/hit sound with simple cooldown (avoid audio spam)
+                    try {
+                        if (typeof soundManager !== 'undefined') {
+                            const now = (typeof millis === 'function') ? millis() : Date.now();
+                            if (!this._lastPlayerShipBumpSoundTime || (now - this._lastPlayerShipBumpSoundTime) > 250) {
+                                soundManager.playWorldSound('hit', this.player.pos.x, this.player.pos.y, this.player.pos);
+                                this._lastPlayerShipBumpSoundTime = now;
+                            }
+                        }
+                    } catch (e) { /* ignore sound errors */ }
                     
                     // Apply physics push based on relative mass/size
                     const playerSize = this.player.size;
@@ -1401,6 +1416,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     if (STAR_SYSTEM_DEBUG) console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
                     this.player.takeDamage(collisionDamage, asteroid);
                     asteroid.takeDamage(20, this.player, this); // Fixed damage to asteroid, pass system
+
+                    // Play a subtle bump/hit sound with simple cooldown (avoid audio spam)
+                    try {
+                        if (typeof soundManager !== 'undefined') {
+                            const now = (typeof millis === 'function') ? millis() : Date.now();
+                            if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
+                                soundManager.playWorldSound('hit', this.player.pos.x, this.player.pos.y, this.player.pos);
+                                this._lastPlayerAsteroidBumpSoundTime = now;
+                            }
+                        }
+                    } catch (e) { /* ignore sound errors */ }
                     
                     // Apply physics push based on relative mass/size
                     const playerSize = this.player.size;
