@@ -152,6 +152,27 @@ class Galaxy {
         console.log("   Galaxy.initGalaxySystems: Finished initializing static elements.");
 
         // --- Final Setup ---
+        // Ensure the starting system (index 0) is NOT an Alien system
+        if (this.systems.length > 0 && this.systems[0]?.economyType === 'Alien') {
+            console.log("   Starting system is Alien. Finding a non-Alien system to swap economy types...");
+            // Find the first non-Alien system to swap economy types with
+            for (let i = 1; i < this.systems.length; i++) {
+                if (this.systems[i]?.economyType !== 'Alien') {
+                    // Swap economy types instead of entire systems (preserves connections)
+                    const tempEconomy = this.systems[0].economyType;
+                    this.systems[0].setEconomyType(this.systems[i].economyType);
+                    this.systems[i].setEconomyType(tempEconomy);
+                    console.log(`   Swapped economy types: System 0 (${this.systems[0].name}) is now ${this.systems[0].economyType}, System ${i} (${this.systems[i].name}) is now ${this.systems[i].economyType}`);
+                    break;
+                }
+            }
+            // If all systems are alien (highly unlikely), re-assign system 0 to be non-alien
+            if (this.systems[0]?.economyType === 'Alien') {
+                console.warn("   All systems are Alien! Force-setting system 0 to Industrial.");
+                this.systems[0].setEconomyType('Industrial');
+            }
+        }
+
         this.currentSystemIndex = 0;
         if (this.systems.length > 0 && this.systems[this.currentSystemIndex]) {
             let startSystem = this.systems[this.currentSystemIndex];
@@ -160,7 +181,7 @@ class Galaxy {
             // Use the setter method to ensure consistency
             startSystem.setEconomyType(startSystem.economyType);
             
-            console.log(`Galaxy.initGalaxySystems: Starting system set to ${startSystem.name} (Index ${this.currentSystemIndex}) and marked as discovered.`);
+            console.log(`Galaxy.initGalaxySystems: Starting system set to ${startSystem.name} (Index ${this.currentSystemIndex}, Economy: ${startSystem.economyType}) and marked as discovered.`);
         } else {
             console.error("   Galaxy.initGalaxySystems: No valid starting system found after generation!");
         }
