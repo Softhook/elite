@@ -186,6 +186,17 @@ function showCriticalError(msg) {
 // --- Input Handling Functions ---
 
 function keyPressed() {
+    // Handle GAME_OVER state first - any key press resets the game
+    if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
+        if (typeof resetGame === 'function') {
+            resetGame();
+        } else {
+            console.error("resetGame function not found, falling back to reload");
+            window.location.reload();
+        }
+        return false;
+    }
+    
     // Toggle inventory with “I”
     if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
         const opening = !gameStateManager.showingInventory;
@@ -717,6 +728,55 @@ function loadGame(slotIndex) {
 }
 
 // --- End Save/Load ---
+
+/**
+ * Resets the entire game to a fresh state.
+ * This function properly reinitializes all game objects and state.
+ * Preserves fullscreen mode if active.
+ */
+function resetGame() {
+    console.log("Resetting game to initial state...");
+    
+    // Store fullscreen state
+    const wasFullscreen = fullscreen();
+    
+    // Clear any pending saves
+    if (__saveDebounceTimer) {
+        clearTimeout(__saveDebounceTimer);
+        __saveDebounceTimer = null;
+    }
+    
+    // Reset global state
+    loadGameWasSuccessful = false;
+    window.activeSaveSlotIndex = 0;
+    
+    // Create new instances of all core game objects
+    gameStateManager = new GameStateManager();
+    galaxy = new Galaxy();
+    player = new Player();
+    uiManager = new UIManager();
+    titleScreen = new TitleScreen();
+    inventoryScreen = new InventoryScreen();
+    saveSelectionScreen = new SaveSelectionScreen();
+    eventManager = new EventManager();
+    
+    // Reinitialize player ship definition
+    if (typeof player.applyShipDefinition === 'function') {
+        player.applyShipDefinition(player.shipTypeName);
+    }
+    
+    // Restore fullscreen if it was active
+    if (wasFullscreen) {
+        fullscreen(true);
+    }
+    
+    // Set initial state to title screen
+    gameStateManager.setState("TITLE_SCREEN");
+    
+    console.log("Game reset complete. Returning to title screen.");
+}
+
+// --- End Reset ---
 
 
 // --- p5.js windowResized Function ---
