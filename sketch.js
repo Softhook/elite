@@ -188,11 +188,16 @@ function showCriticalError(msg) {
 function keyPressed() {
     // Handle GAME_OVER state first - any key press resets the game
     if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
-        if (typeof resetGame === 'function') {
-            resetGame();
+        // Verify player is actually dead before allowing reset
+        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
+            if (typeof resetGame === 'function') {
+                resetGame();
+            } else {
+                console.error("resetGame function not found, falling back to reload");
+                window.location.reload();
+            }
         } else {
-            console.error("resetGame function not found, falling back to reload");
-            window.location.reload();
+            console.warn("Reset blocked: Player is not actually dead");
         }
         return false;
     }
@@ -354,6 +359,20 @@ function keyReleased() {
 
 
 function mousePressed() {
+    // Handle GAME_OVER click-to-reset
+    if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
+        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
+            if (typeof resetGame === 'function') {
+                resetGame();
+            } else {
+                console.error("resetGame function not found, falling back to reload");
+                window.location.reload();
+            }
+        } else {
+            console.warn("Reset blocked: Player is not actually dead");
+        }
+        return;
+    }
     // Handle title screen clicks
     if (gameStateManager.currentState === "TITLE_SCREEN" || 
         gameStateManager.currentState === "INSTRUCTIONS") {
@@ -531,6 +550,18 @@ function __atomicStoreToSlot(slotIndex) {
 
 function saveGame() {
     try {
+        // Prevent saves during GAME_OVER state
+        if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
+            console.warn("Save blocked: Cannot save during GAME_OVER state");
+            return;
+        }
+        
+        // Prevent saves if player is dead or dying
+        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
+            console.warn("Save blocked: Player is dead or dying");
+            return;
+        }
+        
         if (typeof(Storage) === "undefined") {
             console.warn("localStorage is not supported. Game cannot be saved.");
             return;
@@ -745,6 +776,14 @@ function resetGame() {
         clearTimeout(__saveDebounceTimer);
         __saveDebounceTimer = null;
     }
+    // Note: We no longer clear the active save slot on reset.
+    // Saves are preserved because saving is blocked during GAME_OVER or dying,
+    // and load validation rejects dead/destroyed states.
+    
+    // Stop all sounds
+    if (soundManager && typeof soundManager.stopAllSounds === 'function') {
+        soundManager.stopAllSounds();
+    }
     
     // Reset global state
     loadGameWasSuccessful = false;
@@ -763,6 +802,12 @@ function resetGame() {
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
+    }
+    
+    // Reinitialize weapon system pools
+    if (typeof WeaponSystem !== 'undefined' && typeof ObjectPool !== 'undefined') {
+        console.log("Reinitializing weapon system pool after reset");
+        WeaponSystem.init(100);
     }
     
     // Restore fullscreen if it was active

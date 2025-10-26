@@ -184,8 +184,19 @@ this.showingInventory = false;
 
             case "IN_FLIGHT":
                 if (!player || !currentSystem) { break; } // Need player and system
+                // If player is dying/destroyed: keep the world updating but block player interactions
+                if (player.isDying || player.destroyed) {
+                    try {
+                        // No input when dying, but allow physics/particles to update
+                        player.update();
+                        currentSystem.update(player);
+                    } catch (e) { console.error("ERROR during IN_FLIGHT update (dying):", e); }
+                    break;
+                }
                 try { // Wrap core updates
-                    player.handleInput(); player.update(); currentSystem.update(player); // Update everything
+                    player.handleInput();
+                    player.update();
+                    currentSystem.update(player); // Update everything
                     const station = currentSystem.station; // Check docking
                     if (station && player.canDock(station)) { this.setState("DOCKED"); saveGame(); }
                 } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }

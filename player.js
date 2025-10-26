@@ -133,6 +133,12 @@ class Player {
         this.barrierDamageReduction = 0;
         this.barrierColor = [100, 100, 255]; // Default color, will be overridden by weapon
 
+        // Death state properties
+        this.destroyed = false;
+        this.exploding = false;
+        this.explosionStartTime = 0;
+        this.isDying = false; // Flag to prevent interactions during death animation
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -1056,6 +1062,10 @@ handleInput() {
 
     /** Applies damage to the player's hull. */
     takeDamage(amount, attacker = null) {
+        // Prevent damage during death animation
+        if (this.isDying || this.destroyed) {
+            return { damage: 0, shieldHit: false };
+        }
         // Record attacker for bodyguard response
         if (attacker) {
             this.lastAttacker = attacker;
@@ -1118,6 +1128,7 @@ handleInput() {
             this.destroyed = true;
             this.explosionStartTime = millis(); // Track start time
             this.exploding = true; // Flag to track explosion sequence
+            this.isDying = true; // Flag to prevent interactions during death animation
 
             // Create player explosion (larger, more dramatic)
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
@@ -1151,6 +1162,17 @@ handleInput() {
 
                 // Delay GAME_OVER state change until after the explosion cascade
                 setTimeout(() => {
+                    // Clear any pending debounced saves before entering GAME_OVER
+                    if (typeof __saveDebounceTimer !== 'undefined' && __saveDebounceTimer) {
+                        clearTimeout(__saveDebounceTimer);
+                        __saveDebounceTimer = null;
+                    }
+                    
+                    // Stop all sounds when entering GAME_OVER
+                    if (typeof soundManager !== 'undefined' && typeof soundManager.stopAllSounds === 'function') {
+                        soundManager.stopAllSounds();
+                    }
+                    
                     gameStateManager.setState("GAME_OVER");
                 }, 3000); // Increased delay to match explosion duration
 
@@ -1369,11 +1391,17 @@ handleInput() {
     loadSaveData(data) {
         if (!data) { console.warn("Player.loadSaveData: No data provided."); return; }
 
-            // CRITICAL VALIDATION: Verify player is alive before loading
-    if (data.hull <= 0) {
-        console.warn("Cannot load save data: Player hull is <= 0");
-        return false;
-    }
+        // CRITICAL VALIDATION: Verify player is alive before loading
+        if (data.hull <= 0) {
+            console.warn("Cannot load save data: Player hull is <= 0");
+            return false;
+        }
+        
+        // CRITICAL VALIDATION: Verify player is not marked as destroyed
+        if (data.destroyed === true || data.isDying === true || data.exploding === true) {
+            console.warn("Cannot load save data: Player is marked as destroyed/dying/exploding");
+            return false;
+        }
 
         
         console.log("Player.loadSaveData: Loading data...");

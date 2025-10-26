@@ -1242,6 +1242,48 @@ class SoundManager {
         const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
         this.playWorldSound(soundName, sourceX, sourceY, listenerPos);
     }
+
+    /**
+     * Stops all currently playing sounds.
+     * Used when entering GAME_OVER state or resetting the game.
+     */
+    stopAllSounds() {
+        try {
+            // Stop all HTMLAudioElement sounds
+            for (const name in this.sounds) {
+                const soundEntry = this.sounds[name];
+                if (soundEntry && soundEntry.audio) {
+                    try {
+                        soundEntry.audio.pause();
+                        if (typeof soundEntry.audio.currentTime !== 'undefined') {
+                            soundEntry.audio.currentTime = 0;
+                        }
+                    } catch (e) {
+                        // Ignore errors for individual sounds
+                    }
+                }
+            }
+            
+            // Stop Web Audio API context if available
+            if (typeof getAudioContext === 'function') {
+                const actx = getAudioContext();
+                if (actx && typeof actx.suspend === 'function') {
+                    actx.suspend().then(() => {
+                        // Resume after a moment to allow for new sounds
+                        setTimeout(() => {
+                            if (actx && typeof actx.resume === 'function') {
+                                actx.resume();
+                            }
+                        }, 100);
+                    });
+                }
+            }
+            
+            AUDIO_LOG("All sounds stopped");
+        } catch (e) {
+            console.warn("Error stopping sounds:", e);
+        }
+    }
 }
 
 // Ensure global availability across classic script tags
