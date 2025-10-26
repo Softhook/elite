@@ -1372,7 +1372,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         if (typeof soundManager !== 'undefined') {
                             const now = (typeof millis === 'function') ? millis() : Date.now();
                             if (!this._lastPlayerShipBumpSoundTime || (now - this._lastPlayerShipBumpSoundTime) > 250) {
-                                soundManager.playWorldSound('hit', this.player.pos.x, this.player.pos.y, this.player.pos);
+                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
                                 this._lastPlayerShipBumpSoundTime = now;
                             }
                         }
@@ -1422,7 +1422,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         if (typeof soundManager !== 'undefined') {
                             const now = (typeof millis === 'function') ? millis() : Date.now();
                             if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
-                                soundManager.playWorldSound('hit', this.player.pos.x, this.player.pos.y, this.player.pos);
+                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
                                 this._lastPlayerAsteroidBumpSoundTime = now;
                             }
                         }
