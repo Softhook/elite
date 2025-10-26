@@ -8,6 +8,8 @@ class SoundManager {
         AUDIO_LOG("SoundManager constructor called.");
         this.sounds = {}; // Stores { definition, audio, audioBuffer, normalized }
         this.audioContext = null; // Shared AudioContext instance
+        this.maxInstancesPerSound = 5; // Maximum overlapping instances per sound
+        this.activeInstances = {}; // Track active audio instances per sound
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -38,7 +40,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             laser: {
                 "oldParams": true,
@@ -67,7 +69,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
 
             // --- New UI/Game Event Sounds ---
@@ -99,7 +101,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.22,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // Subtle thrusty whoosh for undocking
             undock: {
@@ -129,7 +131,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.22,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // Generic UI screen transition
             uiTransition: {
@@ -159,7 +161,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // Map open/close are subtle variants
             mapOpen: {
@@ -189,7 +191,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             mapClose: {
                 "oldParams": true,
@@ -218,7 +220,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
 
             // Market transactions
@@ -249,7 +251,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             sellConfirm: {
                 "oldParams": true,
@@ -278,7 +280,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
 
             // Missions
@@ -309,7 +311,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             missionComplete: {
                 "oldParams": true,
@@ -369,7 +371,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             tangleCast: {
                 "oldParams": true,
@@ -398,7 +400,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             beam: {
                 "oldParams": true,
@@ -427,7 +429,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
 
             // Generic explosion alias (used by mines); balanced between small and large
@@ -458,7 +460,7 @@ class SoundManager {
                 "p_hpf_ramp": 0, 
                 "sound_vol": 0.35, 
                 "sample_rate": 44100, 
-                "sample_size": 8 
+                "sample_size": 16 
             },
             pickupCoin: {
                 "oldParams": true,
@@ -487,7 +489,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             hit: {
                 "oldParams": true,
@@ -516,7 +518,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
               },
             explosionSmall: { 
                 "oldParams": true, 
@@ -545,10 +547,10 @@ class SoundManager {
                 "p_hpf_ramp": 0, 
                 "sound_vol": 0.3, 
                 "sample_rate": 44100, 
-                "sample_size": 8 
+                "sample_size": 16 
             },
-            explosionLarge: { "oldParams": true, "wave_type": 3, "p_env_attack": 0, "p_env_sustain": 0.3331, "p_env_punch": 0.2926, "p_env_decay": 0.3540, "p_base_freq": 0.1086, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0.1855, "p_pha_ramp": -0.2955, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0, "p_hpf_ramp": 0, "sound_vol": 0.4, "sample_rate": 44100, "sample_size": 8 },
-            error: { "oldParams": true, "wave_type": 1, "p_env_attack": 0, "p_env_sustain": 0.1579, "p_env_punch": 0, "p_env_decay": 0.1758, "p_base_freq": 0.2731, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0.0093, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0, "p_pha_ramp": 0, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0.1, "p_hpf_ramp": 0, "sound_vol": 0.25, "sample_rate": 44100, "sample_size": 8 },
+            explosionLarge: { "oldParams": true, "wave_type": 3, "p_env_attack": 0, "p_env_sustain": 0.3331, "p_env_punch": 0.2926, "p_env_decay": 0.3540, "p_base_freq": 0.1086, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0.1855, "p_pha_ramp": -0.2955, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0, "p_hpf_ramp": 0, "sound_vol": 0.4, "sample_rate": 44100, "sample_size": 16 },
+            error: { "oldParams": true, "wave_type": 1, "p_env_attack": 0, "p_env_sustain": 0.1579, "p_env_punch": 0, "p_env_decay": 0.1758, "p_base_freq": 0.2731, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0.0093, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0, "p_pha_ramp": 0, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0.1, "p_hpf_ramp": 0, "sound_vol": 0.25, "sample_rate": 44100, "sample_size": 16 },
             click: {
                 "oldParams": true,
                 "wave_type": 1,
@@ -576,7 +578,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             click_off: {
                 "oldParams": true,
@@ -605,7 +607,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             upgrade: {
                 "oldParams": true,
@@ -634,7 +636,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             force: {
                 "oldParams": true,
@@ -663,7 +665,7 @@ class SoundManager {
                 "p_hpf_ramp": -0.03387882807894696,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // Continuous electric/buzz field used by barrier/field effects
             electricField: {
@@ -693,7 +695,7 @@ class SoundManager {
                 "p_hpf_ramp": 0.0,
                 "sound_vol": 0.22,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             thargoid: {
                 "oldParams": true,
@@ -722,7 +724,7 @@ class SoundManager {
                 "p_hpf_ramp": 0.4810852896290552,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8,
+                "sample_size": 16,
                 "ctime": 1746456062710,
                 "mtime": 1746456062710,
                 "preset": "random"
@@ -754,7 +756,7 @@ class SoundManager {
                 "p_hpf_ramp": 0.8957764740065794,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             missileLaunch: {
                 "oldParams": true,
@@ -783,7 +785,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // Barrier toggle sounds (canonical names)
             barrierUp: {
@@ -813,7 +815,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             barrierDown: {
                 "oldParams": true,
@@ -842,7 +844,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             // UI/Shield toggle sounds (added to prevent missing-sound warnings)
             shieldUp: {
@@ -872,7 +874,7 @@ class SoundManager {
                 "p_hpf_ramp": 0,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8
+                "sample_size": 16
             },
             shieldDown: {
                 "oldParams": true,
@@ -930,7 +932,7 @@ class SoundManager {
                 "p_hpf_ramp": -0.6897831495121087,
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
-                "sample_size": 8,
+                "sample_size": 16,
                 "ctime": 1746458443937,
                 "mtime": 1746458443938,
                 "preset": "random"
@@ -962,8 +964,10 @@ class SoundManager {
 
         for (const name in this.soundDefinitions) {
             const def = this.soundDefinitions[name];
+            // Sanitize once up-front so all later uses (pooling, etc.) are safe
+            const sanitizedDef = this._sanitizeDefinition(def, name);
             // Only generate one audio object per sound
-            const audio = this._generateSingleSound(name, def, def.sound_vol, "Normal");
+            const audio = this._generateSingleSound(name, sanitizedDef, sanitizedDef.sound_vol, "Normal");
             
             // Pre-generate and cache Web Audio buffers for better performance
             let normalized = null;
@@ -971,12 +975,11 @@ class SoundManager {
             
             if (this.audioContext && typeof SoundEffect !== 'undefined') {
                 try {
-                    const defCopy = this._sanitizeDefinition(def, name);
-                    const sfx = new SoundEffect(defCopy);
+                    const sfx = new SoundEffect(sanitizedDef);
                     normalized = sfx.getRawBuffer().normalized;
                     
                     if (normalized && normalized.length) {
-                        const sampleRate = def.sample_rate || 44100;
+                        const sampleRate = sanitizedDef.sample_rate || 44100;
                         audioBuffer = this.audioContext.createBuffer(1, normalized.length, sampleRate);
                         audioBuffer.copyToChannel(new Float32Array(normalized), 0);
                     }
@@ -988,13 +991,15 @@ class SoundManager {
             if (audio) {
                 this.sounds[name] = {
                     audio: audio,
-                    definition: def,
+                    definition: sanitizedDef,
                     normalized: normalized,
                     audioBuffer: audioBuffer
                 };
+                this.activeInstances[name] = [];
                 generatedCount++;
             } else {
-                this.sounds[name] = { audio: null, definition: def, normalized: null, audioBuffer: null };
+                this.sounds[name] = { audio: null, definition: sanitizedDef, normalized: null, audioBuffer: null };
+                this.activeInstances[name] = [];
             }
         }
         AUDIO_LOG(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
@@ -1002,18 +1007,26 @@ class SoundManager {
     
 
     /**
-     * Sanitizes a sound definition to ensure valid wave_type.
+     * Sanitizes a sound definition to ensure valid wave_type and required parameters.
      * @param {object} definition - Sound definition to sanitize
      * @param {string} name - Sound name for logging
      * @returns {object} Sanitized definition copy
      */
     _sanitizeDefinition(definition, name) {
         const defCopy = JSON.parse(JSON.stringify(definition || {}));
+        
+        // Ensure wave_type is valid (0=SQUARE, 1=SAWTOOTH, 2=SINE, 3=NOISE)
         let wt = parseInt(defCopy.wave_type);
         if (isNaN(wt) || wt < 0 || wt > 3) {
             wt = 1; // Default to SAWTOOTH
         }
         defCopy.wave_type = wt;
+        
+        // Ensure critical parameters exist with safe defaults
+        if (typeof defCopy.sound_vol === 'undefined') defCopy.sound_vol = 0.25;
+        if (typeof defCopy.sample_rate === 'undefined') defCopy.sample_rate = 44100;
+        if (typeof defCopy.sample_size === 'undefined') defCopy.sample_size = 16;
+        
         return defCopy;
     }
 
@@ -1081,10 +1094,12 @@ class SoundManager {
      * @returns {boolean} True if off-screen, false otherwise.
      */
     _isOffScreen(sourceX, sourceY, listenerPos) {
-        // Assumes listenerPos is valid and p5 globals (width, height) are available
-        if (!listenerPos || typeof width === 'undefined' || typeof height === 'undefined') {
-            // console.warn("_isOffScreen check failed: Missing listenerPos or p5 globals.");
-            return false; // Default to on-screen if check cannot be performed
+        // Validate inputs
+        if (!listenerPos || typeof width === 'undefined' || typeof height === 'undefined' ||
+            typeof sourceX !== 'number' || typeof sourceY !== 'number' ||
+            isNaN(sourceX) || isNaN(sourceY)) {
+            console.warn("_isOffScreen check failed: Invalid parameters", { sourceX, sourceY, listenerPos });
+            return true; // Default to off-screen (muted) if check cannot be performed safely
         }
         const tx = width / 2 - listenerPos.x;
         const ty = height / 2 - listenerPos.y;
@@ -1099,7 +1114,13 @@ class SoundManager {
 
     // Helper: Compute intended volume based on distance and off-screen status
     _computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos) {
-        if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number') return baseVolume;
+        // Validate all inputs
+        if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number' ||
+            isNaN(sourceX) || isNaN(sourceY) || isNaN(baseVolume)) {
+            console.warn("_computeIntendedVolume: Invalid parameters", { baseVolume, sourceX, sourceY });
+            return 0; // Mute if invalid
+        }
+        
         const dx = sourceX - listenerPos.x;
         const dy = sourceY - listenerPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1119,7 +1140,8 @@ class SoundManager {
             volume *= reductionFactor;
         }
         
-        return volume;
+        // Clamp final volume
+        return Math.max(0, Math.min(1, volume));
     }
 
     /**
@@ -1137,22 +1159,51 @@ class SoundManager {
             console.warn(`playWorldSound: Sound entry '${name}' not found (likely failed generation).`);
             return;
         }
+        
+        // Validate coordinates early
+        if (typeof sourceX !== 'number' || typeof sourceY !== 'number' || isNaN(sourceX) || isNaN(sourceY)) {
+            console.warn(`playWorldSound: Invalid coordinates for '${name}'`, { sourceX, sourceY });
+            return;
+        }
+        
         const baseVolume = soundEntry.definition.sound_vol;
         const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
+        
+        // Skip if volume is too low
+        if (intendedVolume < 0.01) return;
 
         // --- Use cached Web Audio buffers for optimal performance ---
         let usedWebAudio = false;
         if (this.audioContext && soundEntry.audioBuffer) {
             try {
+                // Handle all AudioContext states
                 if (this.audioContext.state === 'suspended') {
                     this.audioContext.resume();
+                } else if (this.audioContext.state === 'closed') {
+                    console.warn('AudioContext is closed, cannot play sound');
+                    return;
+                } else if (this.audioContext.state === 'interrupted') {
+                    // iOS-specific state, try to resume
+                    this.audioContext.resume();
                 }
+                
                 const source = this.audioContext.createBufferSource();
                 source.buffer = soundEntry.audioBuffer;
                 const gainNode = this.audioContext.createGain();
                 gainNode.gain.value = intendedVolume;
                 source.connect(gainNode);
                 gainNode.connect(this.audioContext.destination);
+                
+                // Clean up nodes when sound ends
+                source.onended = () => {
+                    try {
+                        gainNode.disconnect();
+                        source.disconnect();
+                    } catch (e) {
+                        // Already disconnected, ignore
+                    }
+                };
+                
                 source.start();
                 usedWebAudio = true;
             } catch (e) {
@@ -1166,19 +1217,74 @@ class SoundManager {
         }
         if (usedWebAudio) return;
 
-        // --- Fallback: HTMLAudioElement or sfxr wrapper ---
-        let audioToPlay = soundEntry.audio;
-        if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-            // Attempt lazy generation once
-            try { audioToPlay = sfxr.toAudio(soundEntry.definition); } catch(_) {}
-            if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-                console.error(`SoundManager: No playable audio for sound '${name}'.`);
+        // --- Fallback: HTMLAudioElement pooling for overlapping sounds ---
+        this._playPooledSound(name, soundEntry, intendedVolume);
+    }
+
+    /**
+     * Play a sound using instance pooling to allow overlapping.
+     * @param {string} name - Sound name
+     * @param {object} soundEntry - Sound entry object
+     * @param {number} volume - Target volume
+     */
+    _playPooledSound(name, soundEntry, volume) {
+        const instances = this.activeInstances[name];
+        
+        // Clean up finished instances
+        for (let i = instances.length - 1; i >= 0; i--) {
+            const inst = instances[i];
+            if (inst.ended || inst.paused || (inst.currentTime && inst.currentTime >= inst.duration)) {
+                instances.splice(i, 1);
+            }
+        }
+        
+        // Find or create an available instance
+        let audioToPlay = null;
+        
+        // Try to reuse a finished instance
+        for (const inst of instances) {
+            if (inst.ended || inst.paused) {
+                audioToPlay = inst;
+                break;
+            }
+        }
+        
+        // Create new instance if under limit
+        if (!audioToPlay && instances.length < this.maxInstancesPerSound) {
+            try {
+                // soundEntry.definition is already sanitized from init, use it directly
+                try {
+                    audioToPlay = sfxr.toAudio(soundEntry.definition);
+                } catch (err) {
+                    // Coerce wave_type on known library complaint and retry once
+                    if (String(err).indexOf('Bad wave type') !== -1) {
+                        const fallbackDef = JSON.parse(JSON.stringify(soundEntry.definition));
+                        fallbackDef.wave_type = 1; // SAWTOOTH fallback
+                        audioToPlay = sfxr.toAudio(fallbackDef);
+                    } else {
+                        throw err;
+                    }
+                }
+                if (audioToPlay && typeof audioToPlay.play === 'function') {
+                    instances.push(audioToPlay);
+                }
+            } catch (e) {
+                console.error(`Failed to create audio instance for '${name}':`, e);
                 return;
             }
-            soundEntry.audio = audioToPlay;
         }
-
-        this._playAnyAudio(audioToPlay, intendedVolume, { resetTime: true });
+        
+        // If still no instance available, use the oldest one
+        if (!audioToPlay && instances.length > 0) {
+            audioToPlay = instances[0];
+        }
+        
+        if (!audioToPlay) {
+            console.error(`SoundManager: No playable audio for sound '${name}'.`);
+            return;
+        }
+        
+        this._playAnyAudio(audioToPlay, volume, { resetTime: true });
     }
 
     /**
@@ -1206,7 +1312,6 @@ class SoundManager {
 
         // HTMLAudioElement path
         const canSetVolume = typeof audioObj.volume !== 'undefined';
-        const previousVolume = canSetVolume ? audioObj.volume : null;
         try {
             if (resetTime && typeof audioObj.currentTime !== 'undefined') {
                 audioObj.currentTime = 0;
@@ -1215,21 +1320,8 @@ class SoundManager {
                 audioObj.volume = Math.max(0, Math.min(1, volume));
             }
             audioObj.play();
-            if (forceSetVolume && canSetVolume && previousVolume !== null) {
-                // Restore volume after sound ends or after 100ms, whichever comes first
-                const restoreVolume = () => {
-                    if (audioObj.volume !== previousVolume) {
-                        audioObj.volume = previousVolume;
-                    }
-                };
-                const timeoutId = setTimeout(restoreVolume, 100);
-                if (typeof audioObj.addEventListener === 'function') {
-                    audioObj.addEventListener('ended', () => {
-                        clearTimeout(timeoutId);
-                        restoreVolume();
-                    }, { once: true });
-                }
-            }
+            // Note: We no longer restore volume since we're using pooled instances
+            // Each instance maintains its own volume for its lifetime
         } catch (e) {
             console.error('SoundManager: Error playing HTML audio:', e);
         }
@@ -1279,7 +1371,22 @@ class SoundManager {
      */
     stopAllSounds() {
         try {
-            // Stop all HTMLAudioElement sounds
+            // Stop all pooled instances
+            for (const name in this.activeInstances) {
+                const instances = this.activeInstances[name];
+                for (const inst of instances) {
+                    try {
+                        inst.pause();
+                        if (typeof inst.currentTime !== 'undefined') {
+                            inst.currentTime = 0;
+                        }
+                    } catch (e) {
+                        // Ignore errors for individual instances
+                    }
+                }
+            }
+            
+            // Stop original audio objects
             for (const name in this.sounds) {
                 const soundEntry = this.sounds[name];
                 if (soundEntry && soundEntry.audio) {
@@ -1294,17 +1401,8 @@ class SoundManager {
                 }
             }
             
-            // Stop Web Audio API context if available (use cached context)
-            if (this.audioContext && typeof this.audioContext.suspend === 'function') {
-                this.audioContext.suspend().then(() => {
-                    // Resume after a moment to allow for new sounds
-                    setTimeout(() => {
-                        if (this.audioContext && typeof this.audioContext.resume === 'function') {
-                            this.audioContext.resume();
-                        }
-                    }, 100);
-                });
-            }
+            // Don't suspend/resume AudioContext - just let it be
+            // Suspending can cause issues with subsequent playback
             
             AUDIO_LOG("All sounds stopped");
         } catch (e) {
