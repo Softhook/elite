@@ -166,9 +166,42 @@ class EnemyMovement {
                 break;
                 
             case AI_STATE.SNIPING:
-                // Pure stationary turret mode - just stay put and rotate to face target
-                // No distance maintenance - let tactical decisions in state machine handle repositioning
-                desiredMovementTargetPos = this.pos.copy(); // Stay at current position
+                // Turret mode with subtle forward drift toward target (no standoff maintenance)
+                if (this.isTargetValid && this.isTargetValid(this.target)) {
+                    // Compute distance using provided argument when possible to avoid recomputing
+                    let safeDistance = (typeof distanceToTarget === 'number' && isFinite(distanceToTarget))
+                        ? distanceToTarget
+                        : this.distanceTo(this.target);
+
+                    // Soft stop near collision range
+                    const targetSize = this.target.size || this.size;
+                    const combinedSize = (this.size + targetSize);
+                    const minApproachDistance = combinedSize * 1.2;
+
+                    if (safeDistance > minApproachDistance) {
+                        // Reuse tempVector to point from self to target, then clamp to a tiny step
+                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
+                        const magSq = this.tempVector.magSq();
+                        if (magSq > 0.0001) {
+                            // Step is small but above thrust threshold check (size * 0.05)
+                            const minStep = this.size * 0.08;
+                            const maxStep = this.size * 0.9;
+                            const distStep = safeDistance * 0.02; // 2% of current distance
+                            const step = constrain(distStep, minStep, maxStep);
+                            this.tempVector.normalize().mult(step);
+
+                            // Use a reusable vector for drift target to avoid per-frame allocations
+                            if (!this._snipingDriftTarget) {
+                                this._snipingDriftTarget = createVector(0, 0);
+                            }
+                            this._snipingDriftTarget.set(this.pos.x + this.tempVector.x, this.pos.y + this.tempVector.y);
+                            desiredMovementTargetPos = this._snipingDriftTarget;
+                            break;
+                        }
+                    }
+                }
+                // Default: stay put and rotate to face target; braking handled in thrust logic
+                desiredMovementTargetPos = this.pos.copy();
                 break;
         }
         
