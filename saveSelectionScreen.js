@@ -609,8 +609,9 @@ class SaveSelectionScreen {
             }
         }
         
-        // Clear any existing save in this specific slot
+        // Clear any existing save in this specific slot (both primary and backup)
         localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex);
+        localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex + '_bak'); // Also remove backup to prevent promotion
         window.activeSaveSlotIndex = slotIndex; // Set active slot for saving
         localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
         
@@ -698,8 +699,9 @@ class SaveSelectionScreen {
             return;
         }
 
-        // Clear the chosen slot in localStorage
+        // Clear the chosen slot in localStorage (both primary and backup)
         localStorage.removeItem(SAVE_KEY_PREFIX + chosenSlotIndex);
+        localStorage.removeItem(SAVE_KEY_PREFIX + chosenSlotIndex + '_bak'); // Also remove backup to prevent promotion
         window.activeSaveSlotIndex = chosenSlotIndex; // Associate this game with the chosen slot
         localStorage.setItem(LAST_ACTIVE_SLOT_KEY, chosenSlotIndex.toString()); // Store as last active slot
 

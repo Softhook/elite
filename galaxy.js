@@ -450,15 +450,10 @@ class Galaxy {
             return;
         }
 
-        // Debug: Check if StarSystem is defined and has fromJSON
-        console.log("StarSystem in loadSaveData:", typeof StarSystem, StarSystem);
+        // Verify StarSystem.fromJSON is available
         if (!StarSystem || typeof StarSystem.fromJSON !== 'function') {
-            console.error("StarSystem.fromJSON is not a function!", StarSystem);
-        }
-
-        // Debug: Log the first system data to be loaded
-        if (data.systems.length > 0) {
-            console.log("First system data to load:", data.systems[0]);
+            console.error("StarSystem.fromJSON is not available! Type:", typeof StarSystem);
+            return;
         }
 
         this.systems = data.systems.map((sysData, idx) => {
