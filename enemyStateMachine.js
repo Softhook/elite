@@ -108,58 +108,34 @@ class EnemyStateMachine {
         // --- END NEW ---
 
         // Flee if damaged
-        if (this.hull < this.maxHull * 0.3) { // Example flee threshold
+        if (this.hull < this.maxHull * 0.3) {
             this.changeState(AI_STATE.FLEEING);
             return;
         }
 
-        const minSnipeRange = this.visualFiringRange * SNIPING_EXIT_MIN_FACTOR; // Use exit threshold
-        const maxSnipeRange = this.visualFiringRange * SNIPING_EXIT_MAX_FACTOR; // Use exit threshold
-
-        // Use entry distance for first frame to prevent immediate exits from target switching
-        const effectiveDistance = (this.snipingEntryDistance !== undefined && this.snipingEntryDistance > 0) 
-            ? this.snipingEntryDistance 
-            : distanceToTarget;
-        
-        // Clear entry distance after first use
-        if (this.snipingEntryDistance !== undefined) {
-            this.snipingEntryDistance = undefined;
+        // Tactical decision timer - periodically consider switching tactics
+        if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
+            this._snipingDecisionTimer = random(2.0, 4.0); // Check every 2-4 seconds
         }
+        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - deltaSeconds);
 
-        // Round distances to avoid floating-point precision issues
-        const roundedEffectiveDist = Math.floor(effectiveDistance);
-        const roundedMinSnipeRange = Math.floor(minSnipeRange);
-        const roundedMaxSnipeRange = Math.ceil(maxSnipeRange);
-
-        // Transition conditions (using hysteresis thresholds)
-        if (roundedEffectiveDist < roundedMinSnipeRange) {
-            // Target is too close, decide to ATTACK_PASS or REPOSITION
-            this.changeState(AI_STATE.ATTACK_PASS);
-        } else if (roundedEffectiveDist > roundedMaxSnipeRange) {
-            // Target is too far, need to APPROACH
-            this.changeState(AI_STATE.APPROACHING);
-        } else {
-            // NEW: Add random chance to reposition or start an attack run using per-ship timer
-            if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
-                this._snipingDecisionTimer = random(0.8, 1.6);
-            }
-            const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-            this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - deltaSeconds);
-
-            if (this._snipingDecisionTimer <= 0) {
-                this._snipingDecisionTimer = random(0.8, 1.6);
-                
-                if (random() < 0.05) {
-                    if (random() < 0.3) {
-                        let stateData = {};
-                        let v = p5.Vector.sub(this.pos, this.target.pos);
-                        v.rotate(random(-PI/2, PI/2)); // Shift angle randomly
-                        v.setMag(this.repositionDistance * random(0.8, 1.2)); // Vary distance slightly
-                        stateData.repositionTarget = p5.Vector.add(this.pos, v);
-                        this.changeState(AI_STATE.REPOSITIONING, stateData);
-                    } else {
-                        this.changeState(AI_STATE.ATTACK_PASS);
-                    }
+        if (this._snipingDecisionTimer <= 0) {
+            this._snipingDecisionTimer = random(2.0, 4.0);
+            
+            // Random chance to switch to more aggressive tactics
+            if (random() < 0.15) { // 15% chance every 2-4 seconds
+                if (random() < 0.4) {
+                    // 40% of the time, reposition to a new angle
+                    let stateData = {};
+                    let v = p5.Vector.sub(this.pos, this.target.pos);
+                    v.rotate(random(-PI/2, PI/2)); // Shift angle randomly
+                    v.setMag(this.repositionDistance * random(0.8, 1.2));
+                    stateData.repositionTarget = p5.Vector.add(this.pos, v);
+                    this.changeState(AI_STATE.REPOSITIONING, stateData);
+                } else {
+                    // 60% of the time, do an attack pass
+                    this.changeState(AI_STATE.ATTACK_PASS);
                 }
             }
         }
@@ -180,20 +156,18 @@ class EnemyStateMachine {
             return;
         }
 
-        // Condition to enter SNIPING state:
-        // Target is within a good sniping range (using entry thresholds)
-        // AND not yet close enough for a standard attack pass.
-        const minEntryRange = this.visualFiringRange * SNIPING_ENTRY_MIN_FACTOR;
-        const maxEntryRange = this.visualFiringRange * SNIPING_ENTRY_MAX_FACTOR;
-        
-        const canSnipe = this.visualFiringRange > 0 && // Must have a firing range
-                         distanceToTarget < maxEntryRange && // Within entry max threshold
-                         distanceToTarget > minEntryRange; // Above entry min threshold
+        // Tactical decision: Snipe (stationary turret) or Attack Pass (dynamic movement)
+        // Choose sniping if we have suitable weapons and a random tactical choice
+        const shouldSnipe = this.hasGoodSnipingWeapon && 
+                           this.hasGoodSnipingWeapon() && 
+                           random() < 0.6; // 60% chance to choose sniping over attack pass
 
-        if (canSnipe && this.hasGoodSnipingWeapon && this.hasGoodSnipingWeapon()) { // Add a check for suitable weapons
-            this.changeState(AI_STATE.SNIPING);
-        } else if (distanceToTarget < this.engageDistance) {
-            this.changeState(AI_STATE.ATTACK_PASS);
+        if (distanceToTarget < this.engageDistance) {
+            if (shouldSnipe) {
+                this.changeState(AI_STATE.SNIPING);
+            } else {
+                this.changeState(AI_STATE.ATTACK_PASS);
+            }
         }
         // Otherwise, continue approaching.
     }
@@ -252,21 +226,19 @@ class EnemyStateMachine {
             ? this.distanceTo(this.repositionTarget)
             : Infinity;
 
-        // Condition to enter SNIPING state after repositioning (using entry thresholds):
-        const minEntryRange = this.visualFiringRange * SNIPING_ENTRY_MIN_FACTOR;
-        const maxEntryRange = this.visualFiringRange * SNIPING_ENTRY_MAX_FACTOR;
-        
-        const canSnipeAfterReposition = this.visualFiringRange > 0 &&
-                                       distanceToTarget < maxEntryRange && // Within entry max threshold
-                                       distanceToTarget > minEntryRange; // Above entry min threshold
-
-        if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) { // Reached repo point or target moved far
-            if (canSnipeAfterReposition && this.hasGoodSnipingWeapon && this.hasGoodSnipingWeapon()) {
+        // Reached repositioning point - choose next tactic
+        if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) {
+            // Tactical choice: snipe or approach for another pass
+            const shouldSnipe = this.hasGoodSnipingWeapon && 
+                               this.hasGoodSnipingWeapon() && 
+                               random() < 0.5; // 50% chance after repositioning
+            
+            if (shouldSnipe) {
                 this.changeState(AI_STATE.SNIPING);
             } else {
                 this.changeState(AI_STATE.APPROACHING);
             }
-            return; // Don't continue processing this state after transitioning
+            return;
         }
     }
 
@@ -600,13 +572,10 @@ class EnemyStateMachine {
                 }
                 break;
 
-            case AI_STATE.SNIPING: // <<< EXISTING CASE
-                this.vel.mult(0.5); // Attempt to slow down upon entering sniping mode
-                this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store combined shield + hull
-                this.snipingEntryDistance = this.target ? this.distanceTo(this.target) : 0; // Store entry distance
-                this._snipingDecisionTimer = Number.isFinite(this.snipingEntryDistance)
-                    ? random(0.8, 1.6)
-                    : random(0.4, 0.8);
+            case AI_STATE.SNIPING:
+                this.vel.mult(0.5); // Slow down upon entering stationary turret mode
+                this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store health for damage checking
+                this._snipingDecisionTimer = random(2.0, 4.0); // Initialize tactical decision timer
             break;
                 
             case AI_STATE.NEAR_STATION:
@@ -730,10 +699,9 @@ class EnemyStateMachine {
 
             case AI_STATE.LEAVING_SYSTEM:
                 break;
-            case AI_STATE.SNIPING: // <<< EXISTING CASE
-                this.shieldPlusHullAtStateEntry = null; // Clear stored combined health
-                this.snipingEntryDistance = undefined; // Clear entry distance
-                this._snipingDecisionTimer = null;
+            case AI_STATE.SNIPING:
+                this.shieldPlusHullAtStateEntry = null; // Clear stored health
+                this._snipingDecisionTimer = null; // Clear tactical timer
                 break;
         }
     }

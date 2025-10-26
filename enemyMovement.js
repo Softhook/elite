@@ -28,6 +28,15 @@ class EnemyMovement {
             }
         }
         
+        // SNIPING turret-mode: if we didn't get a usable movement vector, still rotate to face the target
+        if (angleDifference === PI && this.currentState === AI_STATE.SNIPING && this.isTargetValid && this.isTargetValid(this.target)) {
+            const desiredAngle = atan2(
+                this.target.pos.y - this.pos.y,
+                this.target.pos.x - this.pos.x
+            );
+            angleDifference = this.rotateTowards(desiredAngle);
+        }
+        
         // Default thrust multiplier
         let effectiveThrustMultiplier = 1.0;
         let canThrust = false; // Master flag to decide if thrusting happens
@@ -157,27 +166,9 @@ class EnemyMovement {
                 break;
                 
             case AI_STATE.SNIPING:
-                if (this.isTargetValid(this.target)) {
-                    const idealSnipeRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
-                    const rangeTolerance = idealSnipeRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
-
-                    if (distanceToTarget > idealSnipeRange + rangeTolerance) {
-                        // Too far, move slightly closer to target
-                        this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
-                        this.tempVector.setMag(distanceToTarget - idealSnipeRange);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, this.tempVector);
-                    } else if (distanceToTarget < idealSnipeRange - rangeTolerance) {
-                        // Too close, move slightly away from target
-                        this.tempVector.set(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
-                        this.tempVector.setMag(idealSnipeRange - distanceToTarget);
-                        desiredMovementTargetPos = p5.Vector.add(this.pos, this.tempVector);
-                    } else {
-                        // Within tolerance, try to stay put
-                        desiredMovementTargetPos = this.pos.copy();
-                    }
-                } else {
-                    desiredMovementTargetPos = this.pos.copy(); // No valid target, stay put
-                }
+                // Pure stationary turret mode - just stay put and rotate to face target
+                // No distance maintenance - let tactical decisions in state machine handle repositioning
+                desiredMovementTargetPos = this.pos.copy(); // Stay at current position
                 break;
         }
         
