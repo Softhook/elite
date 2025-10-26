@@ -761,7 +761,7 @@ function resetGame() {
     eventManager = new EventManager();
     
     // Reinitialize player ship definition
-    if (player && typeof player.applyShipDefinition === 'function') {
+    if (typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
     }
     
