@@ -151,6 +151,9 @@ class StarSystem {
         // Initialize new arrays for nebulae, cosmic storms, and asteroid fields
         this.nebulae = [];
         this.cosmicStorms = [];
+
+        // Cooldown to prevent spamming alien spawn sound during batch spawns
+        this._lastAlienSpawnSoundTime = 0;
     }
 
     /**
@@ -731,7 +734,7 @@ try {
                 chosenShipTypeName = "Thargoid";
                 chosenRole = AI_ROLE.ALIEN; 
                 if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
-                if (typeof soundManager !== 'undefined') soundManager.playSound('thargoid');
+                // Sound is played centrally in addEnemy() when an Alien is added
             }
         }
         
@@ -2541,6 +2544,24 @@ checkProjectileCollisions() {
             enemy.currentSystem = this;
             window.currentSystem = this;
             this.enemies.push(enemy);
+            
+            // Centralized Thargoid/Alien spawn cue: plays once when aliens are added
+            try {
+                if (enemy.role === AI_ROLE.ALIEN && typeof soundManager !== 'undefined') {
+                    const now = (typeof millis === 'function') ? millis() : Date.now();
+                    // 1 second cooldown to avoid spam during multi-spawns
+                    if (!this._lastAlienSpawnSoundTime || (now - this._lastAlienSpawnSoundTime) > 1000) {
+                        if (enemy.pos && this.player && this.player.pos && typeof soundManager.playWorldSound === 'function') {
+                            soundManager.playWorldSound('thargoid', enemy.pos.x, enemy.pos.y, this.player.pos);
+                        } else if (typeof soundManager.playSound === 'function') {
+                            soundManager.playSound('thargoid');
+                        }
+                        this._lastAlienSpawnSoundTime = now;
+                    }
+                }
+            } catch (e) {
+                console.warn('Alien spawn sound failed:', e);
+            }
             return true;
         }
         return false;

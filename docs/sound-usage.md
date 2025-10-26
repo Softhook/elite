@@ -93,7 +93,7 @@ Notes
 - player.js:483 — world — Barrier/field ticking effect
 
 ## thargoid
-- starSystem.backup.js:748 — UI — Backup-only special spawn cue
+- starSystem.js:748 — UI — all alien spawn
 
 ## targetlock
 - enemyRendering.js:322 — UI — Target lock-on effect
