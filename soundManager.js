@@ -6,7 +6,8 @@
 class SoundManager {
     constructor() {
         AUDIO_LOG("SoundManager constructor called.");
-        this.sounds = {}; // Stores { definition, audioNormal }
+        this.sounds = {}; // Stores { definition, audio, audioBuffer, normalized }
+        this.audioContext = null; // Shared AudioContext instance
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -943,9 +944,17 @@ class SoundManager {
      * Initializes sounds by generating Audio objects from definitions.
      */
     initSounds() {
-        if (typeof sfxr === 'undefined' || typeof OFFSCREEN_VOLUME_REDUCTION_FACTOR === 'undefined') {
-            console.error("SoundManager Error: sfxr library or OFFSCREEN_VOLUME_REDUCTION_FACTOR not found. Sounds cannot be initialized.");
+        if (typeof sfxr === 'undefined') {
+            console.error("SoundManager Error: sfxr library not found. Sounds cannot be initialized.");
             return;
+        }
+
+        // Initialize shared AudioContext
+        if (typeof window !== 'undefined' && !this.audioContext) {
+            if (!window._eliteAudioContext) {
+                window._eliteAudioContext = window.AudioContext ? new window.AudioContext() : new window.webkitAudioContext();
+            }
+            this.audioContext = window._eliteAudioContext;
         }
 
         AUDIO_LOG("Initializing SoundManager sounds (Single audio per sound)...");
@@ -955,19 +964,58 @@ class SoundManager {
             const def = this.soundDefinitions[name];
             // Only generate one audio object per sound
             const audio = this._generateSingleSound(name, def, def.sound_vol, "Normal");
+            
+            // Pre-generate and cache Web Audio buffers for better performance
+            let normalized = null;
+            let audioBuffer = null;
+            
+            if (this.audioContext && typeof SoundEffect !== 'undefined') {
+                try {
+                    const defCopy = this._sanitizeDefinition(def, name);
+                    const sfx = new SoundEffect(defCopy);
+                    normalized = sfx.getRawBuffer().normalized;
+                    
+                    if (normalized && normalized.length) {
+                        const sampleRate = def.sample_rate || 44100;
+                        audioBuffer = this.audioContext.createBuffer(1, normalized.length, sampleRate);
+                        audioBuffer.copyToChannel(new Float32Array(normalized), 0);
+                    }
+                } catch (e) {
+                    AUDIO_LOG(`Failed to pre-generate buffer for '${name}': ${e.message}`);
+                }
+            }
+            
             if (audio) {
                 this.sounds[name] = {
                     audio: audio,
-                    definition: def
+                    definition: def,
+                    normalized: normalized,
+                    audioBuffer: audioBuffer
                 };
                 generatedCount++;
             } else {
-                this.sounds[name] = { audio: null, definition: def };
+                this.sounds[name] = { audio: null, definition: def, normalized: null, audioBuffer: null };
             }
         }
         AUDIO_LOG(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
     }
     
+
+    /**
+     * Sanitizes a sound definition to ensure valid wave_type.
+     * @param {object} definition - Sound definition to sanitize
+     * @param {string} name - Sound name for logging
+     * @returns {object} Sanitized definition copy
+     */
+    _sanitizeDefinition(definition, name) {
+        const defCopy = JSON.parse(JSON.stringify(definition || {}));
+        let wt = parseInt(defCopy.wave_type);
+        if (isNaN(wt) || wt < 0 || wt > 3) {
+            wt = 1; // Default to SAWTOOTH
+        }
+        defCopy.wave_type = wt;
+        return defCopy;
+    }
 
     /**
      * Internal helper to generate a single audio object.
@@ -982,54 +1030,32 @@ class SoundManager {
         let generatedAudio = null;
 
         try {
+            let definitionCopy;
             if (originalDefinition.preset && typeof originalDefinition.preset === 'string') {
                 // Preset-based: generate, then set volume on the data before creating audio object
                 const soundData = sfxr.generate(originalDefinition.preset);
-                // deep-clone the generated params so we don't pass a live Params instance
-                const soundDataCopy = JSON.parse(JSON.stringify(soundData));
-                soundDataCopy.sound_vol = targetVolume; // Apply target volume
-
+                definitionCopy = JSON.parse(JSON.stringify(soundData));
+                definitionCopy.sound_vol = targetVolume;
                 // Sanitize wave_type if the preset produced an unexpected value
-                if (typeof soundDataCopy.wave_type === 'undefined' || isNaN(parseInt(soundDataCopy.wave_type))) {
-                    // Fall back to originalDefinition.wave_type or SAWTOOTH (1)
-                    const fallback = (typeof originalDefinition.wave_type !== 'undefined') ? originalDefinition.wave_type : 1;
-                    console.warn(`SoundManager: sanitizing generated preset wave_type for '${name}' (using fallback ${fallback})`);
-                    soundDataCopy.wave_type = fallback;
-                }
-
-                // Ensure numeric and clamp to valid range 0..3
-                soundDataCopy.wave_type = Math.max(0, Math.min(3, parseInt(soundDataCopy.wave_type) || 1));
-
-                try {
-                    generatedAudio = sfxr.toAudio(soundDataCopy);
-                } catch (err) {
-                    // If sfxr complains about bad wave type, coerce to a safe default and retry once
-                    if (String(err).indexOf('Bad wave type') !== -1) {
-                        soundDataCopy.wave_type = 1; // SAWTOOTH
-                        try { generatedAudio = sfxr.toAudio(soundDataCopy); } catch (e2) { throw e2; }
-                    } else throw err;
-                }
-            } else {
-                // Custom params: create a copy of definition and set volume before creating audio object
-                // deep-clone to avoid mutation of the original definition object
-                let definitionCopy = JSON.parse(JSON.stringify(originalDefinition || {}));
-                definitionCopy.sound_vol = targetVolume; // Apply target volume
-
-                // Coerce wave_type into a valid numeric form (0..3)
                 if (typeof definitionCopy.wave_type === 'undefined' || isNaN(parseInt(definitionCopy.wave_type))) {
-                    console.warn(`SoundManager: sanitizing custom definition wave_type for '${name}' (defaulting to 1)`);
-                    definitionCopy.wave_type = 1;
+                    const fallback = (typeof originalDefinition.wave_type !== 'undefined') ? originalDefinition.wave_type : 1;
+                    definitionCopy.wave_type = fallback;
                 }
                 definitionCopy.wave_type = Math.max(0, Math.min(3, parseInt(definitionCopy.wave_type) || 1));
+            } else {
+                // Custom params: create a copy of definition and set volume
+                definitionCopy = this._sanitizeDefinition(originalDefinition, name);
+                definitionCopy.sound_vol = targetVolume;
+            }
 
-                try {
+            try {
+                generatedAudio = sfxr.toAudio(definitionCopy);
+            } catch (err) {
+                // If sfxr complains about bad wave type, coerce to a safe default and retry once
+                if (String(err).indexOf('Bad wave type') !== -1) {
+                    definitionCopy.wave_type = 1; // SAWTOOTH
                     generatedAudio = sfxr.toAudio(definitionCopy);
-                } catch (err) {
-                    if (String(err).indexOf('Bad wave type') !== -1) {
-                        definitionCopy.wave_type = 1;
-                        try { generatedAudio = sfxr.toAudio(definitionCopy); } catch (e2) { throw e2; }
-                    } else throw err;
-                }
+                } else throw err;
             }
 
             // Validate: Must have a .play() method
@@ -1071,7 +1097,7 @@ class SoundManager {
                 sourceY < screenTop  || sourceY > screenBottom);
     }
 
-    // Helper: Compute intended volume based on distance
+    // Helper: Compute intended volume based on distance and off-screen status
     _computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos) {
         if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number') return baseVolume;
         const dx = sourceX - listenerPos.x;
@@ -1083,7 +1109,17 @@ class SoundManager {
         }
         let dropoff = 1 - (distance / maxDistance);
         dropoff = Math.max(dropoff, 0.04);
-        return baseVolume * dropoff;
+        let volume = baseVolume * dropoff;
+        
+        // Apply off-screen volume reduction
+        if (this._isOffScreen(sourceX, sourceY, listenerPos)) {
+            const reductionFactor = typeof OFFSCREEN_VOLUME_REDUCTION_FACTOR !== 'undefined' 
+                ? OFFSCREEN_VOLUME_REDUCTION_FACTOR 
+                : 0.1;
+            volume *= reductionFactor;
+        }
+        
+        return volume;
     }
 
     /**
@@ -1104,92 +1140,98 @@ class SoundManager {
         const baseVolume = soundEntry.definition.sound_vol;
         const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
 
-        // --- Procedural gain control for sfxr sounds using Web Audio API ---
+        // --- Use cached Web Audio buffers for optimal performance ---
         let usedWebAudio = false;
-        try {
-            if (typeof sfxr !== 'undefined' && typeof SoundEffect !== 'undefined') {
-                // Prepare a sanitized copy for SoundEffect (ensure wave_type is valid 0-3)
-                const defCopy = JSON.parse(JSON.stringify(soundEntry.definition || {}));
-                let wt = parseInt(defCopy.wave_type);
-                // Only coerce if actually invalid (NaN or out of range 0-3)
-                if (isNaN(wt) || wt < 0 || wt > 3) wt = 1;
-                defCopy.wave_type = wt;
-
-                let sfx = null;
-                try {
-                    sfx = new SoundEffect(defCopy);
-                } catch (err1) {
-                    // Retry once with a known-safe wave type
-                    if (String(err1).indexOf('Bad wave type') !== -1) {
-                        defCopy.wave_type = 1; // SAWTOOTH
-                        sfx = new SoundEffect(defCopy);
-                    } else {
-                        throw err1;
-                    }
+        if (this.audioContext && soundEntry.audioBuffer) {
+            try {
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
                 }
-
-                const normalized = sfx.getRawBuffer().normalized;
-                // Get or create a single AudioContext
-                let actx = null;
-                if (typeof window !== 'undefined') {
-                    if (!window._eliteAudioContext) {
-                        window._eliteAudioContext = window.AudioContext ? new window.AudioContext() : new window.webkitAudioContext();
-                    }
-                    actx = window._eliteAudioContext;
-                }
-                if (actx && normalized && normalized.length) {
-                    if (actx.state === 'suspended') actx.resume();
-                    const sampleRate = soundEntry.definition.sample_rate || 44100;
-                    const audioBuffer = actx.createBuffer(1, normalized.length, sampleRate);
-                    audioBuffer.copyToChannel(new Float32Array(normalized), 0);
-                    const source = actx.createBufferSource();
-                    source.buffer = audioBuffer;
-                    const gainNode = actx.createGain();
-                    gainNode.gain.value = intendedVolume;
-                    source.connect(gainNode);
-                    gainNode.connect(actx.destination);
-                    source.start();
-                    usedWebAudio = true;
-                }
-            }
-        } catch (e) {
-            // Quietly fall back for known wave type issues; otherwise log once
-            if (String(e).indexOf('Bad wave type') === -1) {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = soundEntry.audioBuffer;
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = intendedVolume;
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                source.start();
+                usedWebAudio = true;
+            } catch (e) {
                 console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
             }
         }
+        
         // UI indicator (always call, only once)
         if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
             uiManager.trackCombatSound(sourceX, sourceY, name);
         }
         if (usedWebAudio) return;
 
-        // --- Fallback: HTMLAudioElement (set .volume property) ---
+        // --- Fallback: HTMLAudioElement or sfxr wrapper ---
         let audioToPlay = soundEntry.audio;
         if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-            audioToPlay = sfxr.toAudio(soundEntry.definition);
+            // Attempt lazy generation once
+            try { audioToPlay = sfxr.toAudio(soundEntry.definition); } catch(_) {}
             if (!audioToPlay || typeof audioToPlay.play !== 'function') {
-                console.error(`SoundManager: Could not generate playable audio for sound '${name}'.`);
+                console.error(`SoundManager: No playable audio for sound '${name}'.`);
                 return;
             }
             soundEntry.audio = audioToPlay;
         }
-        let previousVolume = audioToPlay.volume;
+
+        this._playAnyAudio(audioToPlay, intendedVolume, { resetTime: true });
+    }
+
+    /**
+     * Helper to play either an HTMLAudioElement or an sfxr WebAudio wrapper.
+     * - For HTMLAudioElement: optionally sets volume and resets currentTime
+     * - For sfxr wrapper: uses setVolume if available; does not reset time
+     * @param {any} audioObj - The audio to play
+     * @param {number} volume - Target playback volume (0..1)
+     * @param {{resetTime?: boolean, forceSetVolume?: boolean}} opts - Controls behavior
+     */
+    _playAnyAudio(audioObj, volume, opts = {}) {
+        const { resetTime = false, forceSetVolume = true } = opts;
+
+        // sfxr WebAudio wrapper path (has setVolume/play methods, but no .volume property)
+        if (typeof audioObj.setVolume === 'function' && typeof audioObj.play === 'function' && typeof audioObj.volume === 'undefined') {
+            try {
+                if (forceSetVolume) audioObj.setVolume(Math.max(0, Math.min(1, volume)));
+                audioObj.play();
+                return;
+            } catch (e) {
+                console.error('SoundManager: Error playing sfxr audio wrapper:', e);
+                return;
+            }
+        }
+
+        // HTMLAudioElement path
+        const canSetVolume = typeof audioObj.volume !== 'undefined';
+        const previousVolume = canSetVolume ? audioObj.volume : null;
         try {
-            if (typeof audioToPlay.currentTime !== 'undefined') {
-                audioToPlay.currentTime = 0;
+            if (resetTime && typeof audioObj.currentTime !== 'undefined') {
+                audioObj.currentTime = 0;
             }
-            if (typeof audioToPlay.volume !== 'undefined') {
-                audioToPlay.volume = intendedVolume;
+            if (forceSetVolume && canSetVolume) {
+                audioObj.volume = Math.max(0, Math.min(1, volume));
             }
-            audioToPlay.play();
-            if (typeof audioToPlay.volume !== 'undefined') {
-                setTimeout(() => {
-                    audioToPlay.volume = previousVolume;
-                }, 100);
+            audioObj.play();
+            if (forceSetVolume && canSetVolume && previousVolume !== null) {
+                // Restore volume after sound ends or after 100ms, whichever comes first
+                const restoreVolume = () => {
+                    if (audioObj.volume !== previousVolume) {
+                        audioObj.volume = previousVolume;
+                    }
+                };
+                const timeoutId = setTimeout(restoreVolume, 100);
+                if (typeof audioObj.addEventListener === 'function') {
+                    audioObj.addEventListener('ended', () => {
+                        clearTimeout(timeoutId);
+                        restoreVolume();
+                    }, { once: true });
+                }
             }
         } catch (e) {
-            console.error(`SoundManager: Error playing sound '${name}':`, e);
+            console.error('SoundManager: Error playing HTML audio:', e);
         }
     }
 
@@ -1204,26 +1246,14 @@ class SoundManager {
             console.warn(`playSound: Sound '${name}' not found or is not playable.`);
             return;
         }
-        const audioToPlay = soundEntry.audio;
-        let previousVolume = null;
-        let canSetVolume = typeof audioToPlay.volume !== 'undefined';
-        try {
-            if (canSetVolume && volMultiplier !== 1.0) {
-                previousVolume = audioToPlay.volume;
-                audioToPlay.volume = constrain(soundEntry.definition.sound_vol * volMultiplier, 0.0, 1.0);
-            }
-            if (typeof audioToPlay.currentTime !== 'undefined') {
-                audioToPlay.currentTime = 0;
-            }
-            audioToPlay.play();
-            if (canSetVolume && previousVolume !== null) {
-                setTimeout(() => {
-                    audioToPlay.volume = previousVolume;
-                }, 100);
-            }
-        } catch (e) {
-            console.error(`SoundManager: Error playing sound '${name}':`, e);
-        }
+
+        // Maintain previous behavior:
+        // - For UI sounds, only adjust volume when volMultiplier != 1.0
+        const baseVol = soundEntry.definition.sound_vol;
+        const desiredVol = Math.max(0, Math.min(1, baseVol * volMultiplier));
+        const forceSetVolume = (volMultiplier !== 1.0);
+
+        this._playAnyAudio(soundEntry.audio, desiredVol, { resetTime: true, forceSetVolume });
     }
 
     /**
@@ -1264,19 +1294,16 @@ class SoundManager {
                 }
             }
             
-            // Stop Web Audio API context if available
-            if (typeof getAudioContext === 'function') {
-                const actx = getAudioContext();
-                if (actx && typeof actx.suspend === 'function') {
-                    actx.suspend().then(() => {
-                        // Resume after a moment to allow for new sounds
-                        setTimeout(() => {
-                            if (actx && typeof actx.resume === 'function') {
-                                actx.resume();
-                            }
-                        }, 100);
-                    });
-                }
+            // Stop Web Audio API context if available (use cached context)
+            if (this.audioContext && typeof this.audioContext.suspend === 'function') {
+                this.audioContext.suspend().then(() => {
+                    // Resume after a moment to allow for new sounds
+                    setTimeout(() => {
+                        if (this.audioContext && typeof this.audioContext.resume === 'function') {
+                            this.audioContext.resume();
+                        }
+                    }, 100);
+                });
             }
             
             AUDIO_LOG("All sounds stopped");
