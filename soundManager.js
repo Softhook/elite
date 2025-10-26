@@ -10,6 +10,7 @@ class SoundManager {
         this.audioContext = null; // Shared AudioContext instance
         this.maxInstancesPerSound = 5; // Maximum overlapping instances per sound
         this.activeInstances = {}; // Track active audio instances per sound
+        this.activeWebSources = {}; // Track active WebAudio BufferSource nodes per sound for polyphony control
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -987,6 +988,25 @@ class SoundManager {
                 window._eliteAudioContext = window.AudioContext ? new window.AudioContext() : new window.webkitAudioContext();
             }
             this.audioContext = window._eliteAudioContext;
+
+            // Create or reuse a shared dynamics compressor as a gentle safety limiter
+            if (!window._eliteAudioBus) {
+                try {
+                    const compressor = this.audioContext.createDynamicsCompressor();
+                    // Limiter-ish settings (mild): tame peaks when many sounds overlap
+                    compressor.threshold.setValueAtTime(-10, this.audioContext.currentTime);
+                    compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
+                    compressor.ratio.setValueAtTime(8, this.audioContext.currentTime);
+                    compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+                    compressor.release.setValueAtTime(0.12, this.audioContext.currentTime);
+
+                    compressor.connect(this.audioContext.destination);
+                    window._eliteAudioBus = { compressor };
+                } catch (e) {
+                    console.warn('Failed to initialize shared audio bus (compressor):', e);
+                    window._eliteAudioBus = { compressor: null };
+                }
+            }
         }
 
         AUDIO_LOG("Initializing SoundManager sounds (Single audio per sound)...");
@@ -1026,10 +1046,12 @@ class SoundManager {
                     audioBuffer: audioBuffer
                 };
                 this.activeInstances[name] = [];
+                this.activeWebSources[name] = []; // Track Web Audio sources
                 generatedCount++;
             } else {
                 this.sounds[name] = { audio: null, definition: sanitizedDef, normalized: null, audioBuffer: null };
                 this.activeInstances[name] = [];
+                this.activeWebSources[name] = [];
             }
         }
         AUDIO_LOG(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
@@ -1217,18 +1239,50 @@ class SoundManager {
                     this.audioContext.resume();
                 }
                 
+                // Track active Web Audio sources for this sound
+                if (!this.activeWebSources[name]) this.activeWebSources[name] = [];
+                const webList = this.activeWebSources[name];
+                
+                // Clean out finished sources
+                for (let i = webList.length - 1; i >= 0; i--) {
+                    if (webList[i]._ended) webList.splice(i, 1);
+                }
+                
                 const source = this.audioContext.createBufferSource();
                 source.buffer = soundEntry.audioBuffer;
                 const gainNode = this.audioContext.createGain();
-                gainNode.gain.value = intendedVolume;
-                source.connect(gainNode);
-                gainNode.connect(this.audioContext.destination);
                 
-                // Clean up nodes when sound ends
+                // Gentle gain scaling: reduce volume moderately as instances stack
+                const activeCount = webList.length;
+                const scale = 1 / Math.pow(activeCount + 1, 0.6); // Between linear and sqrt - balanced reduction
+                gainNode.gain.value = Math.max(0, Math.min(1, intendedVolume * scale));
+                
+                source.connect(gainNode);
+                
+                // Connect through compressor if available
+                const bus = (typeof window !== 'undefined' && window._eliteAudioBus) ? window._eliteAudioBus : null;
+                if (bus && bus.compressor) {
+                    try { 
+                        gainNode.connect(bus.compressor); 
+                    } catch (_) { 
+                        gainNode.connect(this.audioContext.destination); 
+                    }
+                } else {
+                    gainNode.connect(this.audioContext.destination);
+                }
+                
+                // Track this source and clean up when it ends
+                webList.push(source);
                 source.onended = () => {
                     try {
                         gainNode.disconnect();
                         source.disconnect();
+                        source._ended = true;
+                        // Remove from tracking list
+                        if (this.activeWebSources[name]) {
+                            const idx = this.activeWebSources[name].indexOf(source);
+                            if (idx !== -1) this.activeWebSources[name].splice(idx, 1);
+                        }
                     } catch (e) {
                         // Already disconnected, ignore
                     }
