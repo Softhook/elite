@@ -1320,11 +1320,15 @@ if (isIllegalInSystem || isMissionCargo) {
         textAlign(CENTER, CENTER);
         textFont(font);
         textSize(100);
-        text("GAME OVER", width / 2, height / 2 - 40);
+        text("GAME OVER", width / 2, height / 2 - 80);
 
         fill(255);
         textSize(30);
-        text("Press F5 or reload to restart from last Save", width / 2, height / 2 + 20);
+        text("Click anywhere or press any key to start again", width / 2, height / 2 + 20);
+        
+        fill(180);
+        textSize(20);
+        text("(Your progress has been lost)", width / 2, height / 2 + 60);
 
         pop();
     } // --- End drawGameOverScreen ---
@@ -2089,7 +2093,16 @@ if (isIllegalInSystem || isMissionCargo) {
             return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
         }
         // --- GAME_OVER State ---
-        else if (currentState === "GAME_OVER") { window.location.reload(); return true; }
+        else if (currentState === "GAME_OVER") { 
+            // Call global resetGame function to restart the game
+            if (typeof resetGame === 'function') {
+                resetGame();
+            } else {
+                console.error("resetGame function not found, falling back to reload");
+                window.location.reload();
+            }
+            return true; 
+        }
 
         return false; // Click not handled by any relevant UI state
     } // End handleMouseClicks
