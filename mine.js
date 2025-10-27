@@ -235,20 +235,6 @@ class Mine {
             }
         }
 
-        // Health indicator (small bar below mine)
-        if (this.health < this.maxHealth) {
-            const barWidth = this.size * 2;
-            const barHeight = 2;
-            const healthPct = this.health / this.maxHealth;
-            
-            noStroke();
-            fill(50, 50, 50);
-            rect(-barWidth / 2, this.size + 4, barWidth, barHeight);
-            
-            fill(255, 0, 0);
-            rect(-barWidth / 2, this.size + 4, barWidth * healthPct, barHeight);
-        }
-
         pop();
     }
 
