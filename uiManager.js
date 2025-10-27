@@ -603,7 +603,7 @@ class UIManager {
             fineAmount *= 3;
             fill(255, 200, 100);
             textSize(16);
-            text("Fines trippled for former police officer", pX + pW/2, contentY + 60);
+            text("Fines tripled for former police officer", pX + pW/2, contentY + 60);
         }
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
@@ -689,41 +689,34 @@ class UIManager {
             rect(sX, yP, tW, rowH); // Draw background for the data part of the row
             // --- End Alternating Background ---
 
-    // Check if this is an illegal good in a non-Anarchy system
-    const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
-    
-    // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
-    if (isIllegalInSystem) {
-        fill(120); // Gray color for illegal goods
-    } else {
-        fill(255); // Normal white color
-    }
-    
-    textAlign(LEFT, CENTER);
-    text(comm.name||'?', sX+10, tY, cW-15);
-    
-    // Add "ILLEGAL" indicator for illegal goods
-    if (!comm.isLegal) {
-        if (isIllegalInSystem) {
+            // Check if this is an illegal good in a non-Anarchy system
+            const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
+            
+            // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
+            if (isIllegalInSystem) {
+                fill(120); // Gray color for illegal goods
+            } else {
+                fill(255); // Normal white color
+            }
+            
             textAlign(LEFT, CENTER);
-            fill(255, 0, 0);
-            text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
-        } 
-    }
-    
-    textAlign(RIGHT, CENTER);
-    text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
-    text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
-    text(comm.playerStock??'?', sX+cW*4-10, tY);
-
-            // Commodity name and prices
-            fill(255);
-            textAlign(LEFT,CENTER);
             text(comm.name||'?', sX+10, tY, cW-15);
-            textAlign(RIGHT,CENTER);
-            text(comm.buyPrice??'?', sX+cW*2-10 - indicatorW, tY); // Shift price text left
-            text(comm.sellPrice??'?', sX+cW*3-10 - indicatorW, tY); // Shift price text left
+            
+            // Add "ILLEGAL" indicator for illegal goods
+            if (!comm.isLegal) {
+                if (isIllegalInSystem) {
+                    textAlign(LEFT, CENTER);
+                    fill(255, 0, 0);
+                    text("ILLEGAL", sX+10+textWidth(comm.name||'?')+15, tY);
+                } 
+            }
+            
+            textAlign(RIGHT, CENTER);
+            text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
+            text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
             text(comm.playerStock??'?', sX+cW*4-10, tY);
+
+            // Commodity name and prices (drawn above with legal/illegal styling)
 
             // --- Price Indicators ---
             noStroke();
@@ -1297,7 +1290,7 @@ if (isIllegalInSystem || isMissionCargo) {
                  } else {
                      // If IN jump zone but system is NOT reachable
                      console.log(`    -> System is NOT reachable. Selection ignored.`);
-                     if (typeof uiManager !== 'undefined') uiManager.addMessage("Route unavailable.", color(255, 150, 150));
+                    if (typeof uiManager !== 'undefined') this.addMessage("Route unavailable.", color(255, 150, 150));
                      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                  }
                  return true; // Click was handled
@@ -1562,7 +1555,7 @@ if (isIllegalInSystem || isMissionCargo) {
         this.fpsValues.push(currentFps);
         
         // Keep the samples array at desired length
-        while (this.fpsValues.length > 10) {
+        while (this.fpsValues.length > this.fpsMaxSamples) {
             this.fpsValues.shift(); // Remove oldest sample
         }
         
@@ -1709,10 +1702,10 @@ if (isIllegalInSystem || isMissionCargo) {
                             player.spendCredits(finalPrice);
                             player.applyShipDefinition(area.shipTypeKey);
                             saveGame && saveGame();
-                            uiManager.addMessage("You bought a " + area.shipName + "!");
+                            this.addMessage("You bought a " + area.shipName + "!");
                             if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                         } else {
-                            uiManager.addMessage("Not enough credits!");
+                            this.addMessage("Not enough credits!");
                             if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                         }
                     } else {
@@ -1722,9 +1715,9 @@ if (isIllegalInSystem || isMissionCargo) {
                         saveGame && saveGame();
                         
                         if (finalPrice < 0) {
-                            uiManager.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
+                            this.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
                         } else {
-                            uiManager.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
+                            this.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
                         }
                         if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                     }
@@ -1766,7 +1759,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         const availableSlots = shipDef?.armament?.length || 1;
                         
                         if (this.selectedWeaponSlot >= availableSlots) {
-                            uiManager.addMessage("Your ship doesn't have that weapon slot!", [255, 100, 100]);
+                            this.addMessage("Your ship doesn't have that weapon slot!", [255, 100, 100]);
                             if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                             return true;
                         }
@@ -1782,14 +1775,14 @@ if (isIllegalInSystem || isMissionCargo) {
                             soundManager.playSound('upgrade');
                         }
                         
-                        uiManager.addMessage("You bought the " + area.upgrade.name + "!");
+                        this.addMessage("You bought the " + area.upgrade.name + "!");
                         
                         // Auto-save if possible
                         if (typeof saveGame === 'function') {
                             saveGame();
                         }
                     } else {
-                        uiManager.addMessage("Not enough credits!");
+                        this.addMessage("Not enough credits!");
                         if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     }
                     return true;
@@ -1811,15 +1804,15 @@ if (isIllegalInSystem || isMissionCargo) {
                 let missing = player.maxHull - player.hull;
                 let cost = missing * 10;
                 if (missing <= 0) {
-                    uiManager.addMessage("Your ship is already fully repaired!");
+                    this.addMessage("Your ship is already fully repaired!");
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 } else if (player.credits >= cost) {
                     player.spendCredits(cost);
                     player.hull = player.maxHull;
-                    uiManager.addMessage(`Ship fully repaired for ${cost} credits.`);
+                    this.addMessage(`Ship fully repaired for ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 } else {
-                    uiManager.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
+                    this.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 }
                 return true;
@@ -1830,16 +1823,16 @@ if (isIllegalInSystem || isMissionCargo) {
                 let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
                 let cost = repairAmt * 7;
                 if (missing <= 0) {
-                    uiManager.addMessage("Your ship is already fully repaired!");
+                    this.addMessage("Your ship is already fully repaired!");
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 } else if (player.credits >= cost) {
                     player.spendCredits(cost);
                     player.hull += repairAmt;
                     if (player.hull > player.maxHull) player.hull = player.maxHull;
-                    uiManager.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
+                    this.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 } else {
-                    uiManager.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
+                    this.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 }
                 return true;
@@ -1848,12 +1841,12 @@ if (isIllegalInSystem || isMissionCargo) {
             if (this.isClickInArea(mx, my, this.repairsBodyguardsButtonArea)) {
                 const bodyguardInfo = player.getDamagedBodyguardsInfo();
                 if (bodyguardInfo.count <= 0) {
-                    uiManager.addMessage("No damaged bodyguards to repair.");
+                    this.addMessage("No damaged bodyguards to repair.");
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 } else if (player.credits >= bodyguardInfo.totalCost) {
                     // Use the new repair method
                     if (player.repairBodyguards(bodyguardInfo.totalCost)) {
-                        uiManager.addMessage(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
+                        this.addMessage(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
                         
                         // Play repair sound if available
                         if (typeof soundManager !== 'undefined') {
@@ -1861,7 +1854,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         }
                     }
                 } else {
-                    uiManager.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
+                    this.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 }
                 return true;
@@ -1883,23 +1876,8 @@ if (isIllegalInSystem || isMissionCargo) {
                         return true;
                     } 
                     else if (area.action === 'pay_fine' && player) {
-                        // Pay fine to clear wanted status
-                        const success = player.spendCredits(area.amount);
-                        if (success) {
-                            // Clear wanted status in current system
-                            player.currentSystem.playerWanted = false;
-                            player.currentSystem.policeAlertSent = false;
-                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after payment
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Not enough credits to pay fine.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
+                        // Pay fine to clear wanted status (centralized handler)
+                        this._processFinePayment(player, area.amount);
                         return true;
                     }
                     else if (area.action === 'join_police' && player) {
@@ -1971,149 +1949,17 @@ if (isIllegalInSystem || isMissionCargo) {
 
         // --- VIEWING_IMPERIAL_RECRUITMENT State ---
         else if (currentState === "VIEWING_IMPERIAL_RECRUITMENT") {
-            for (const area of this.factionRecruitmentButtonAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    if (area.action === 'back') {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                    else if (area.action === 'pay_fine' && player) {
-                        // Pay fine to clear wanted status
-                        const success = player.spendCredits(area.amount);
-                        if (success) {
-                            // Clear wanted status in current system
-                            player.currentSystem.playerWanted = false;
-                            player.currentSystem.policeAlertSent = false;
-                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after payment
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Not enough credits to pay fine.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    else if (area.action === 'join_faction' && player) {
-                        // Try to join the Imperial faction
-                        if (player.joinFaction(area.faction)) {
-                            this.addMessage(`Welcome to the Imperial Navy! You have been assigned a ${player.factionShip}.`, 'lightblue');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after joining
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Failed to join Imperial Navy.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
 
         // --- VIEWING_SEPARATIST_RECRUITMENT State ---
         else if (currentState === "VIEWING_SEPARATIST_RECRUITMENT") {
-            for (const area of this.factionRecruitmentButtonAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    if (area.action === 'back') {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                    else if (area.action === 'pay_fine' && player) {
-                        // Pay fine to clear wanted status
-                        const success = player.spendCredits(area.amount);
-                        if (success) {
-                            // Clear wanted status in current system
-                            player.currentSystem.playerWanted = false;
-                            player.currentSystem.policeAlertSent = false;
-                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after payment
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Not enough credits to pay fine.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    else if (area.action === 'join_faction' && player) {
-                        // Try to join the Separatist faction
-                        if (player.joinFaction(area.faction)) {
-                            this.addMessage(`Fight for freedom! You have been assigned a ${player.factionShip}.`, 'orange');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after joining
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Failed to join Separatist Forces.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
 
         // --- VIEWING_MILITARY_RECRUITMENT State ---
         else if (currentState === "VIEWING_MILITARY_RECRUITMENT") {
-            for (const area of this.factionRecruitmentButtonAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    if (area.action === 'back') {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                    else if (area.action === 'pay_fine' && player) {
-                        // Pay fine to clear wanted status
-                        const success = player.spendCredits(area.amount);
-                        if (success) {
-                            // Clear wanted status in current system
-                            player.currentSystem.playerWanted = false;
-                            player.currentSystem.policeAlertSent = false;
-                            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after payment
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Not enough credits to pay fine.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    else if (area.action === 'join_faction' && player) {
-                        // Try to join the Military faction
-                        if (player.joinFaction(area.faction)) {
-                            this.addMessage(`Serve with honor! You have been assigned a ${player.factionShip}.`, 'lightblue');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            
-                            // Save game after joining
-                            if (typeof saveGame === 'function') {
-                                saveGame();
-                            }
-                        } else {
-                            this.addMessage("Failed to join Military Forces.", 'crimson');
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
 
         // --- GALAXY_MAP State ---
@@ -3069,5 +2915,73 @@ if (isIllegalInSystem || isMissionCargo) {
             this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
         );
         pop();
+    }
+    
+    /** Centralized fine payment handling used by Police and Recruitment screens */
+    _processFinePayment(player, amount) {
+        if (!player || !player.currentSystem) return false;
+        const success = player.spendCredits(amount);
+        if (success) {
+            player.currentSystem.playerWanted = false;
+            player.currentSystem.policeAlertSent = false;
+            this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
+            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (typeof saveGame === 'function') saveGame();
+            return true;
+        } else {
+            this.addMessage('Not enough credits to pay fine.', 'crimson');
+            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            return false;
+        }
+    }
+
+    /** Handles recruitment menu button clicks for all factions */
+    _handleRecruitmentClicks(mx, my, player, gameStateManager) {
+        if (!Array.isArray(this.factionRecruitmentButtonAreas)) return false;
+        for (const area of this.factionRecruitmentButtonAreas) {
+            if (!this.isClickInArea(mx, my, area)) continue;
+            if (area.action === 'back') {
+                gameStateManager?.setState('DOCKED');
+                return true;
+            }
+            if (area.action === 'pay_fine' && player) {
+                this._processFinePayment(player, area.amount);
+                return true;
+            }
+            if (area.action === 'join_faction' && player) {
+                const joined = player.joinFaction(area.faction);
+                if (joined) {
+                    // Message variations by faction
+                    const msgByFaction = {
+                        IMPERIAL: {
+                            text: () => `Welcome to the Imperial Navy! You have been assigned a ${player.factionShip}.`,
+                            color: 'lightblue'
+                        },
+                        SEPARATIST: {
+                            text: () => `Fight for freedom! You have been assigned a ${player.factionShip}.`,
+                            color: 'orange'
+                        },
+                        MILITARY: {
+                            text: () => `Serve with honor! You have been assigned a ${player.factionShip}.`,
+                            color: 'lightblue'
+                        }
+                    };
+                    const fx = msgByFaction[area.faction] || { text: () => 'Joined faction.', color: 'lightblue' };
+                    this.addMessage(fx.text(), fx.color);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                } else {
+                    const failTextByFaction = {
+                        IMPERIAL: 'Failed to join Imperial Navy.',
+                        SEPARATIST: 'Failed to join Separatist Forces.',
+                        MILITARY: 'Failed to join Military Forces.'
+                    };
+                    this.addMessage(failTextByFaction[area.faction] || 'Failed to join faction.', 'crimson');
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+                return true;
+            }
+        }
+        return false;
     }
 } // End of UIManager Class
