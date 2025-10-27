@@ -188,6 +188,10 @@ function drawWaspAssault(s, thrusting = false) { // Light Fighter 2
     let r = s / 2; let def = SHIP_DEFINITIONS.WaspAssault;
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
+function drawBatAssault(s, thrusting = false) { // Light Fighter 3
+    let r = s / 2; let def = SHIP_DEFINITIONS.Bat;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
 
 function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.GladiusFighter;
@@ -1264,6 +1268,29 @@ const SHIP_DEFINITIONS = {
                 vertexData: [ { x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 } ],
                 fillColor: [210, 190, 80],
                 strokeColor: [120, 100, 30],
+                strokeW: 1.00
+            }
+        ],
+        fillColor: [210, 190, 80],
+        strokeColor: [120, 100, 30],
+        strokeW: 1.00,
+        typicalCargo: ["Computers"],
+        price: 50000,
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        techLevel: 2 // Utility
+    },
+        "Bat": {
+        name: "Bat Assault", role: "Assault Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster"], // All-out attack fighter
+        costCategory: "Low", description: "Agile fighter with forward-swept wings.",
+        drawFunction: drawBatAssault, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.3537, y: 1.4732 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.5794, y: -1.4143 }, { x: 0.0000, y: -0.3081 } ],
+                fillColor: [118, 150, 244],
+                strokeColor: [212, 255, 0],
                 strokeW: 1.00
             }
         ],
