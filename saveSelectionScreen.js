@@ -38,6 +38,31 @@ class SaveSelectionScreen {
         this.handleClick = this.handleClick.bind(this);
         this.resize = this.resize.bind(this);
     }
+
+    // Formats a timestamp (ms) into a compact date-time string for slot titles
+    formatSavedAt(ts) {
+        if (!ts) return "Unknown date";
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return "Unknown date";
+        // Example: 27 Oct 2025, 14:05
+        const opts = { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        return d.toLocaleString(undefined, opts);
+    }
+
+    // Returns the index of the most recent saved slot (by savedAt), or -1 if none
+    getMostRecentSaveSlotIndex() {
+        let bestIdx = -1;
+        let bestTs = -Infinity;
+        for (let i = 0; i < this.savedGamePreviews.length; i++) {
+            const d = this.savedGamePreviews[i];
+            const t = d?.savedAt;
+            if (typeof t === 'number' && isFinite(t) && t > bestTs) {
+                bestTs = t;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
+    }
     
     /**
      * Computes Elite rank from kill count
@@ -228,7 +253,9 @@ class SaveSelectionScreen {
         for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
             const currentSlotY = startY + i * (slotHeight + spacing);
             const slotData = this.savedGamePreviews[i];
-            const title = slotData ? ` (Slot ${i + 1})` : `NEW GAME (Slot ${i + 1})`;
+            const title = slotData
+                ? `${this.formatSavedAt(slotData.savedAt)}`
+                : `EMPTY SLOT`;
             this.drawSlot(i, title, slotData, width/2 - slotWidth/2, currentSlotY, slotWidth, slotHeight, this.selectedOption === i);
         }
     }
@@ -268,8 +295,9 @@ class SaveSelectionScreen {
         fill(isSelected ? color(150, 200, 255) : color(120, 140, 180));
         text(title, x + 20 + hoverOffset, y + 10); // Adjusted y for title
 
-        // Draw a star next to "CONTINUE" if it's a saved game slot
-        if (data && title.startsWith("CONTINUE")) {
+        // Draw a star next to the title only for the most recently saved slot
+        const isMostRecent = data && (slotIndex === this.getMostRecentSaveSlotIndex());
+        if (isMostRecent) {
             push();
             fill(255, 223, 0); // Gold color for the star
             noStroke();
@@ -370,7 +398,7 @@ class SaveSelectionScreen {
                 text("recovered", x + w - 10 + hoverOffset, y + 8);
                 pop();
             }
-        } else if (title.startsWith("NEW GAME")) {
+        } else {
             // New game description
             textSize(20); // Adjusted for smaller slot
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
