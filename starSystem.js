@@ -934,6 +934,20 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         }
                     }
 
+                    // On destruction, spawn a smaller asteroid in-place to simulate gradual whittling
+                    // Only split if the asteroid was above a minimum size threshold
+                    try {
+                        const minSplitSize = 16; // don't create too tiny fragments
+                        const splitFactor = 0.6; // 60% of the original size
+                        const newSize = floor(asteroid.size * splitFactor);
+                        if (newSize >= minSplitSize) {
+                            // Respect maxTotalAsteroids via addAsteroid()
+                            this.addAsteroid(asteroid.pos.x, asteroid.pos.y, newSize);
+                        }
+                    } catch (e) {
+                        console.error("Error spawning split asteroid:", e);
+                    }
+
                     this._fastRemove(this.asteroids, i);
                     continue;
                 }

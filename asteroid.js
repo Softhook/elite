@@ -14,7 +14,7 @@ class Asteroid {
             this.size = size || random(30, 99);
         }
 
-        this.maxHealth = floor(this.size * 2); // Health scales with size
+        this.maxHealth = floor(this.size * 8); // Health scales with size
         this.health = this.maxHealth;
 
         // Mineral richness properties
