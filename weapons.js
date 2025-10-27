@@ -191,7 +191,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Force Blaster",
         type: "force",
-        damage: 300,
+        damage: 400,
         color: [255, 0, 0], // Red
         fireRate: 2, 
         price: 10000,
@@ -201,7 +201,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Jedi Force",
         type: "force",
-        damage: 300,
+        damage: 500,
         color: [255, 255, 0], // Purple
         fireRate: 2, 
         price: 10000,
@@ -222,7 +222,7 @@ const WEAPON_UPGRADES = [
         speed: 2,              // Missile projectile speed
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
-        desc: "Very slow missile slow reload."
+        desc: "Very slow, slow reload."
     },
     {
         name: "Kalibr Missile",
@@ -235,7 +235,7 @@ const WEAPON_UPGRADES = [
         speed: 10,              // Missile projectile speed
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
-        desc: "Very fast missile slow reload."
+        desc: "Extremely fast, slow reload."
     },
     {
         name: "Guardian Missile",
@@ -248,7 +248,7 @@ const WEAPON_UPGRADES = [
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
-        desc: "Basic missile with moderate payload."
+        desc: "Basic missile with moderate damage."
     },
     {
         name: "Avenger Missile",
@@ -261,10 +261,11 @@ const WEAPON_UPGRADES = [
         speed: 4,               // Slightly slower, heavier
         turnRate: 0.08,         
         lifespan: 300,
-        desc: "Devastating but slow-reloading homing missile."
+        desc: "Devastating but slow-reloading."
     },
+     // -----------------------------
         // Tangle weapons
-     
+      // -----------------------------
     {
         name: "Tangle Projector",
         type: "tangle",
@@ -317,7 +318,7 @@ const WEAPON_UPGRADES = [
         color: [255, 50, 0], // Red-orange
         fireRate: 4.0,
         price: 8000,
-        desc: "Powerful mine with larger blast radius and more health."
+        desc: "Powerful mine with larger blast radius and more damage."
     },
     {
         name: "Heavy Mine",

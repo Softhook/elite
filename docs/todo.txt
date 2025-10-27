@@ -2,6 +2,7 @@
 
 ## Bugs and Issues
 
+sort out the load screen with the three games
 
 
 ## Core Gameplay Enhancements
