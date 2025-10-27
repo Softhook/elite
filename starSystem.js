@@ -2511,10 +2511,35 @@ checkProjectileCollisions() {
         // Store the economy type in the system
         this.economyType = economyType;
         
-        // CRITICAL: Update market's economy type when system's type changes
-        if (this.station && this.station.market) {
-            this.station.market.systemType = economyType;
-            this.station.market.updatePrices();
+        // CRITICAL: Update all stations (main and secret) with the new economy type
+        // This updates appearance, market type, and regenerates commodities
+        if (this.station) {
+            if (typeof this.station.updateEconomyType === 'function') {
+                this.station.updateEconomyType(economyType);
+            } else {
+                // Fallback for older save files
+                this.station.systemType = economyType;
+                if (this.station.market) {
+                    this.station.market.systemType = economyType;
+                    this.station.market.updatePrices();
+                }
+            }
+        }
+        
+        // Update secret stations as well
+        if (this.secretStations && this.secretStations.length > 0) {
+            for (const secretStation of this.secretStations) {
+                if (typeof secretStation.updateEconomyType === 'function') {
+                    secretStation.updateEconomyType(economyType);
+                } else {
+                    // Fallback for older save files
+                    secretStation.systemType = economyType;
+                    if (secretStation.market) {
+                        secretStation.market.systemType = economyType;
+                        secretStation.market.updatePrices();
+                    }
+                }
+            }
         }
     }
 

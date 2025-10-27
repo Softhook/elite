@@ -36,6 +36,10 @@ class Station {
      * @private
      */
     _setStationAppearance() {
+        // Reset size and rotation speed to defaults before applying type-specific settings
+        this.size = 160;
+        this.rotationSpeed = 0.0015;
+        
         switch (this.systemType) {
             case "Military":
                 this.color = color(100, 120, 140); // Military grey-blue
@@ -86,6 +90,25 @@ class Station {
                 this.color = color(180, 180, 200); // Standard silver-grey
                 this.stationType = "standard";
                 break;
+        }
+        
+        // Update docking radius to match new size
+        this.dockingRadius = this.size;
+    }
+
+    /**
+     * Updates the station's economy type and refreshes appearance and market.
+     * Used when the system's economy type changes after creation.
+     * @param {string} newEconomyType - The new economy type to apply
+     */
+    updateEconomyType(newEconomyType) {
+        this.systemType = newEconomyType;
+        this._setStationAppearance();
+        
+        // Update market to match new economy
+        if (this.market) {
+            this.market.systemType = newEconomyType;
+            this.market.updatePrices();
         }
     }
 

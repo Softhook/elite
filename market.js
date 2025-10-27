@@ -22,6 +22,17 @@ class Market {
             return;
         }
 
+        this._initializeCommodities();
+        this.updatePrices();
+        if (MARKET_DEBUG) console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`);
+    }
+
+    /**
+     * Initializes the commodities array with default values.
+     * Used during construction and when converting from Alien to another economy type.
+     * @private
+     */
+    _initializeCommodities() {
         this.commodities = [
             // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock, Legal Status
             // Basic Goods
@@ -39,19 +50,29 @@ class Market {
             { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
             // Luxury Goods
             { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-                    // ILLEGAL GOODS - higher profit margins but only available in Anarchy systems
+            // ILLEGAL GOODS - higher profit margins but only available in Anarchy systems
             { name: 'Narcotics',      baseBuy: 800,  baseSell: 700,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
             { name: 'Weapons',        baseBuy: 1200, baseSell: 1000, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
             { name: 'Slaves',         baseBuy: 1500, baseSell: 1300, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
         ];
-
-        this.updatePrices();
-        if (MARKET_DEBUG) console.log(`Market initialized for system type: ${this.systemType} with ${this.commodities.length} commodities.`);
     }
 
     // Price adjustment based on economy type
     updatePrices() {
-        // Skip if no commodities (for Alien systems)
+        // If changing from Alien to another economy type, initialize commodities
+        if ((!this.commodities || this.commodities.length === 0) && this.systemType !== 'Alien') {
+            if (MARKET_DEBUG) console.log(` -> Initializing commodities for economy type change from Alien to ${this.systemType}`);
+            this._initializeCommodities();
+        }
+        
+        // Clear commodities if changing to Alien
+        if (this.systemType === 'Alien') {
+            this.commodities = [];
+            if (MARKET_DEBUG) console.log(` -> Cleared commodities for Alien economy type`);
+            return;
+        }
+        
+        // Skip if no commodities (shouldn't happen now, but safety check)
         if (!this.commodities || this.commodities.length === 0) return;
         
         if (MARKET_DEBUG) console.log(` -> Updating prices for: ${this.systemType}`);
