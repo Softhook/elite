@@ -23,6 +23,8 @@ let centerDesignButton; // <-- Add this variable
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
+let compareWeaponsButton;
+let weaponComparer = null; // Instance of the weapon comparer
 
 let currentShipKey = null; // Key ("Sidewinder", "CobraMkIII", etc.) or "--- New Blank ---"
 let currentShipDef = null; // The original definition object (if loaded)
@@ -109,6 +111,7 @@ function setup() {
     centerDesignButton = select('#centerDesignButton'); // <-- Get reference
     undoButton = select('#undoButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
+    compareWeaponsButton = select('#compareWeaponsButton');
 
     // --- Populate Ship Dropdown ---
     shipSelector.option('Select a Ship...');
@@ -129,6 +132,7 @@ function setup() {
     if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
+    if (compareWeaponsButton) compareWeaponsButton.mousePressed(toggleWeaponComparer); else console.error("Compare Weapons button not found");
     if (descriptionDiv === null) { console.error("Description Div (#shipDescriptionArea) not found!"); }
 
     // --- Instantiate ShipComparer AFTER SHIP_DEFINITIONS is ready ---
@@ -144,6 +148,21 @@ function setup() {
     } else {
         console.error("SHIP_DEFINITIONS not ready for ShipComparer initialization.");
          if(compareShipsButton?.elt) compareShipsButton.elt.disabled = true;
+    }
+
+    // --- Instantiate WeaponComparer AFTER WEAPON_UPGRADES is ready ---
+    if (typeof WEAPON_UPGRADES !== 'undefined' && Array.isArray(WEAPON_UPGRADES) && WEAPON_UPGRADES.length > 0) {
+        try {
+            weaponComparer = new WeaponComparer(WEAPON_UPGRADES);
+            weaponComparer.init();
+            console.log("WeaponComparer initialized.");
+        } catch (e) {
+            console.error("Failed to initialize WeaponComparer:", e);
+            if (compareWeaponsButton?.elt) compareWeaponsButton.elt.disabled = true;
+        }
+    } else {
+        console.error("WEAPON_UPGRADES not ready for WeaponComparer initialization.");
+        if (compareWeaponsButton?.elt) compareWeaponsButton.elt.disabled = true;
     }
 
     // --- Initialize State ---
@@ -1126,5 +1145,17 @@ function toggleShipComparer() {
         }
     } else {
         console.error("ShipComparer is not initialized.");
+    }
+}
+
+function toggleWeaponComparer() {
+    if (weaponComparer) {
+        if (weaponComparer.graphVisible) {
+            weaponComparer.hide();
+        } else {
+            weaponComparer.show();
+        }
+    } else {
+        console.error("WeaponComparer is not initialized.");
     }
 }
