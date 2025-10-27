@@ -198,7 +198,25 @@ this.showingInventory = false;
                     player.update();
                     currentSystem.update(player); // Update everything
                     const station = currentSystem.station; // Check docking
-                    if (station && player.canDock(station)) { this.setState("DOCKED"); saveGame(); }
+                    if (station && player.canDock(station)) {
+                        this.setState("DOCKED");
+                        // Suppress the immediate auto-save triggered by docking if we just loaded a game
+                        // This prevents the slot's savedAt from updating merely due to load-side docking snap
+                        try {
+                            const suppressWindowMs = 2000; // 2s window after load where auto-dock save is suppressed
+                            const lastLoad = (typeof window !== 'undefined') ? (window.__lastLoadTime || 0) : 0;
+                            const justLoaded = lastLoad && (Date.now() - lastLoad < suppressWindowMs);
+                            if (!justLoaded) {
+                                saveGame();
+                            } else {
+                                // Clear the marker so subsequent intentional saves aren't blocked
+                                if (typeof window !== 'undefined') window.__lastLoadTime = 0;
+                            }
+                        } catch (e) {
+                            // On any error, fall back to saving to preserve progress
+                            try { saveGame(); } catch(_) {}
+                        }
+                    }
                 } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }
                 break;
 

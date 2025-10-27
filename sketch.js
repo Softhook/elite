@@ -740,6 +740,8 @@ function loadGame(slotIndex) {
                 
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
                 localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
+                // Mark the time of a successful load so we can suppress unintended immediate auto-saves
+                try { if (typeof window !== 'undefined') { window.__lastLoadTime = Date.now(); } } catch(_) {}
                 SAVE_LOG(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
                 return true;
             } catch (e) {
