@@ -3,6 +3,7 @@
 ## Bugs and Issues
 
 sort out the load screen with the three games
+  - [27 Oct 2025] Implemented: each save slot now has a right-side "Start New" button to begin a new game in that slot; removed the separate bottom "Start New Rookie Pilot" option.
 
 
 ## Core Gameplay Enhancements
@@ -71,6 +72,9 @@ divide ships into imperial vs. alliance
 - limit the amount of goods aer availbe at certain planets based on their econmy
 
 ## AI
+
+mining Ai for prospectors look for the nearest asteroid and mine, pick up cargo and bring it back to the station.
+There are many of them in mining systems
 
 A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
 

@@ -19,7 +19,8 @@ class SaveSelectionScreen {
             }
         }
 
-        this.totalOptions = NUM_SAVE_SLOTS + 1;
+        // Only the three slots are focusable; per-slot "Start New" is a click target
+        this.totalOptions = NUM_SAVE_SLOTS;
         this.animationOffset = 0;
         this.buttonHoverEffects = [];
         
@@ -204,7 +205,7 @@ class SaveSelectionScreen {
         // Draw title
         this.drawTitle();
         
-        // Draw save slots and rookie option
+        // Draw save slots with per-slot actions
         this.drawOptionsUI();
         
         // Draw instructions
@@ -212,29 +213,24 @@ class SaveSelectionScreen {
     }
 
     drawOptionsUI() {
-        const slotHeight = 90; 
+        const slotHeight = 90;
         const slotWidth = width * 0.7;
         const spacing = 15;
         // Height for the 3 save slots
         const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
-        const rookieOptionHeight = 60; 
-        // Total height for all UI elements (3 slots + 1 rookie option + spacing between groups)
-        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+        // Total height for all UI elements (just the 3 slots)
+        const totalUIHeight = totalSlotsHeight;
 
-        let startY = (height - totalUIHeight) / 2 + 20; 
+        let startY = (height - totalUIHeight) / 2 + 20;
         if (startY < height * 0.25) startY = height * 0.25; // Ensure it's not too high, adjusted margin
 
-        // Draw the 3 save slots
+        // Draw the 3 save slots (each contains its own "Start New" button on the right)
         for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
             const currentSlotY = startY + i * (slotHeight + spacing);
             const slotData = this.savedGamePreviews[i];
-            const title = slotData ? `CONTINUE (Slot ${i + 1})` : `NEW GAME (Slot ${i + 1})`;
+            const title = slotData ? ` (Slot ${i + 1})` : `NEW GAME (Slot ${i + 1})`;
             this.drawSlot(i, title, slotData, width/2 - slotWidth/2, currentSlotY, slotWidth, slotHeight, this.selectedOption === i);
         }
-
-        // Draw the "Start New Rookie Pilot" option
-        const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0) ; // Position after all slots and their spacing
-        this.drawRookieOption(width/2 - slotWidth/2, rookieY, slotWidth, rookieOptionHeight, this.selectedOption === NUM_SAVE_SLOTS);
     }
     
     // drawSlot signature changes: add isSelected parameter
@@ -289,6 +285,11 @@ class SaveSelectionScreen {
             pop();
         }
         
+        // Compute 5-column layout within this slot; the last column hosts the Start New button
+        const columns = this.computeSlotColumns(x + hoverOffset, y, w, h);
+        // Precompute button rect (column 5 / index 4)
+        const btnRect = this.getStartNewButtonRect(x + hoverOffset, y, w, h);
+
         if (data) {
             // Show saved game details
             textSize(20); // Adjusted for smaller slot
@@ -297,25 +298,37 @@ class SaveSelectionScreen {
             const playerData = data.playerData;
             const galaxyData = data.galaxyData;
             
-            const lineSpacing = 20; // Reverted to 18, or adjust as needed for three columns
-            const col1X = x + 20 + hoverOffset;
-            const col2X = x + w / 3 + hoverOffset; // First third for column 1
-            const col3X = x + (w * 2/3) + hoverOffset; // Last third for column 3
-            let line1Y = y + 35; // Initial Y for the first line in col1
-            let line2Y = y + 35; // Initial Y for the first line in col2
-            let line3Y = y + 35; // Initial Y for the first line in col3
+            const lineSpacing = 20;
+            // Column mapping:
+            // col 0: ship silhouette (graphic)
+            // col 1: credits, ship
+            // col 2: alliance, status
+            // col 3: system, rank
+            // col 4: Start New button (already computed)
+            const col1Pad = 8;
+            const col2Pad = 8;
+            const col3Pad = 8;
+            const col1X = columns[1].x + col1Pad;
+            const col1Max = columns[1].w - 2 * col1Pad;
+            const col2X = columns[2].x + col2Pad;
+            const col2Max = columns[2].w - 2 * col2Pad;
+            const col3X = columns[3].x + col3Pad;
+            const col3Max = columns[3].w - 2 * col3Pad;
+            let line1Y = y + 35;
+            let line2Y = y + 35;
+            let line3Y = y + 35;
 
             if (playerData) {
                 noStroke();
                 // Column 1 - Basic info
-                text(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, col1X, line1Y);
+                text(this.truncateText(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, col1Max), col1X, line1Y);
                 line1Y += lineSpacing;
                 
-                text(`Ship: ${playerData.shipTypeName || 'Unknown'}`, col1X, line1Y);
+                text(this.truncateText(`Ship: ${playerData.shipTypeName || 'Unknown'}`, col1Max), col1X, line1Y);
                 // line1Y += lineSpacing; // Increment if more items in col1
 
                 // Column 2 - Alliance and Status
-                text(`Alliance: ${playerData.playerFaction || 'None'}`, col2X, line2Y);
+                text(this.truncateText(`Alliance: ${playerData.playerFaction || 'None'}`, col2Max), col2X, line2Y);
                 line2Y += lineSpacing;
 
                 // Wanted status with color coding
@@ -325,7 +338,7 @@ class SaveSelectionScreen {
                 let wantedColor = isWanted ? color(255, 100, 0) : color(0, 255, 0); // Orange for wanted, green for clean
                 
                 fill(isSelected ? wantedColor : color(red(wantedColor) * 0.7, green(wantedColor) * 0.7, blue(wantedColor) * 0.7));
-                text(`Status: ${wantedText}`, col2X, line2Y);
+                text(this.truncateText(`Status: ${wantedText}`, col2Max), col2X, line2Y);
                 pop();
                 // line2Y += lineSpacing; // Increment if more items in col2
 
@@ -337,16 +350,16 @@ class SaveSelectionScreen {
                         systemName = currentSystem.name;
                     }
                 }
-                text(`System: ${systemName}`, col3X, line3Y);
+                text(this.truncateText(`System: ${systemName}`, col3Max), col3X, line3Y);
                 line3Y += lineSpacing;
 
                 const pilotRank = this.getRankFromKills(playerData.kills);
-                text(`Rank: ${pilotRank}`, col3X, line3Y);
+                text(this.truncateText(`Rank: ${pilotRank}`, col3Max), col3X, line3Y);
                 // line3Y += lineSpacing; // Increment if more items in col3
             }
-            
-            this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', 
-                                  x + w - 70 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
+            // Ship silhouette in column 0 area (left cluster)
+            const shipCenterX = columns[0].x + columns[0].w / 2;
+            this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', shipCenterX, y + h/2, isSelected);
 
             // Subtle recovered badge when preview came from backup
             if (data.__recovered) {
@@ -363,12 +376,83 @@ class SaveSelectionScreen {
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
             let lineY = y + 35;
             const lineSpacing = 20;
-            text("Begin a new adventure.", x + 20 + hoverOffset, lineY);
- 
-            this.drawNewGameIcon(x + w - 50 + hoverOffset, y + h/2, isSelected); // Adjusted x offset
+            // Columned layout (ship/icon in col0, text across col1-col3)
+            const columns = this.computeSlotColumns(x + hoverOffset, y, w, h);
+            const textColX = columns[1].x + 8;
+            const textColMax = columns[1].w - 16; // only one line here, so narrow is fine
+            text(this.truncateText("Begin a new adventure.", textColMax), textColX, lineY);
+
+            // Place the new game icon where the ship would be (col0)
+            const shipCenterX = columns[0].x + columns[0].w / 2;
+            this.drawNewGameIcon(shipCenterX, y + h/2, isSelected);
         }
+
+        // Per-slot "Start New" button on the right side (5th column)
+        const btn = btnRect; // already computed above
+        const isMouseOverBtn = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
+        const hasSave = !!data;
+
+        push();
+        // Button background
+        if (isMouseOverBtn) {
+            stroke(120, 200, 255, 220);
+            strokeWeight(2);
+            fill(30, 60, 90, 180);
+        } else {
+            stroke(80, 120, 160, 160);
+            strokeWeight(1);
+            fill(20, 40, 70, 140);
+        }
+        rect(btn.x, btn.y, btn.w, btn.h, 6);
+        // Button label
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(14);
+        fill(isMouseOverBtn ? color(180, 230, 255) : color(150, 190, 220));
+        const label = hasSave ? "Start New (Overwrite)" : "Start New";
+        text(label, btn.x + btn.w/2, btn.y + btn.h/2);
+        pop();
         
         pop();
+    }
+
+    // Compute the rect for the per-slot Start New button (placed within column 5)
+    getStartNewButtonRect(x, y, w, h) {
+        const cols = this.computeSlotColumns(x, y, w, h);
+        const col = cols[4]; // last column
+        const padding = 10;
+        const btnW = min(180, col.w - padding * 2);
+        const btnH = 32;
+        const btnX = col.x + col.w - padding - btnW; // right-align within column
+        const btnY = y + h/2 - btnH/2;
+        return { x: btnX, y: btnY, w: btnW, h: btnH };
+    }
+
+    // 5-column layout helper for a slot
+    computeSlotColumns(x, y, w, h) {
+        const paddingLeft = 16;
+        const paddingRight = 16;
+        const colGap = 12;
+        const innerWidth = w - paddingLeft - paddingRight - colGap * 4;
+        const colW = max(60, innerWidth / 5);
+        const cols = [];
+        let curX = x + paddingLeft;
+        for (let i = 0; i < 5; i++) {
+            cols.push({ x: curX, y, w: colW, h });
+            curX += colW + colGap;
+        }
+        return cols;
+    }
+
+    // Truncate text to fit maxWidth, adding ellipsis if needed
+    truncateText(str, maxWidth) {
+        if (!str) return '';
+        if (textWidth(str) <= maxWidth) return str;
+        let s = str;
+        while (s.length > 1 && textWidth(s + '…') > maxWidth) {
+            s = s.slice(0, -1);
+        }
+        return s + '…';
     }
     
     drawShipSilhouette(shipType, x, y, isSelected) {
@@ -473,7 +557,7 @@ class SaveSelectionScreen {
         textSize(16);
         fill(120, 140, 180);
         
-        text("↑↓ Select   ENTER Confirm   ESC Back", width/2, height * 0.85);
+        text("↑↓ Select slot   ENTER Continue   Click 'Start New' to overwrite   ESC Back", width/2, height * 0.85);
         
         pop();
     }
@@ -499,53 +583,47 @@ class SaveSelectionScreen {
         const slotHeight = 90;
         const slotWidth = width * 0.7;
         const spacing = 15;
-        const rookieOptionHeight = 60;
         const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
-        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+        const totalUIHeight = totalSlotsHeight;
         let startY = (height - totalUIHeight) / 2 + 20;
         if (startY < height * 0.25) startY = height * 0.25;
         
         const xPos = width/2 - slotWidth/2;
 
-        // Check save slots
+        // Check save slots (including per-slot Start New button)
         for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
             const currentSlotY = startY + i * (slotHeight + spacing);
-            if (mouseX >= xPos && mouseX <= xPos + slotWidth &&
+            const isSelected = this.selectedOption === i;
+            const hoverOffset = isSelected ? sin(this.animationOffset * 2) * 3 : 0;
+            // First check the Start New button region (account for hover offset)
+            const btn = this.getStartNewButtonRect(xPos + hoverOffset, currentSlotY, slotWidth, slotHeight);
+            if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+                this.selectedOption = i; // Focus the slot
+                // Explicitly start a new game in this slot (overwrites if present)
+                this.startNewGame(i);
+                return;
+            }
+            // Otherwise, clicking the slot continues existing game (or starts a new one if empty)
+            if (mouseX >= xPos + hoverOffset && mouseX <= xPos + hoverOffset + slotWidth &&
                 mouseY >= currentSlotY && mouseY <= currentSlotY + slotHeight) {
                 this.selectedOption = i;
                 this.confirmSelection();
                 return;
             }
         }
-
-        // Check rookie pilot option
-        const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0);
-        if (mouseX >= xPos && mouseX <= xPos + slotWidth &&
-            mouseY >= rookieY && mouseY <= rookieY + rookieOptionHeight) {
-            this.selectedOption = NUM_SAVE_SLOTS;
-            this.confirmSelection();
-            return;
-        }
     }
 
     addHoverEffect() {
         const slotHeight = 90;
         const spacing = 15;
-        const rookieOptionHeight = 60;
         const totalSlotsHeight = NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 1 ? (NUM_SAVE_SLOTS - 1) * spacing : 0);
-        const totalUIHeight = totalSlotsHeight + spacing + rookieOptionHeight;
+        const totalUIHeight = totalSlotsHeight;
         let startY = (height - totalUIHeight) / 2 + 20;
         if (startY < height * 0.25) startY = height * 0.25;
 
         let effectY;
-        if (this.selectedOption < NUM_SAVE_SLOTS) {
-            // It's one of the save slots
-            effectY = startY + this.selectedOption * (slotHeight + spacing) + slotHeight / 2;
-        } else {
-            // It's the rookie pilot option
-            const rookieY = startY + NUM_SAVE_SLOTS * slotHeight + (NUM_SAVE_SLOTS > 0 ? NUM_SAVE_SLOTS * spacing : 0);
-            effectY = rookieY + rookieOptionHeight / 2;
-        }
+        // It's one of the save slots
+        effectY = startY + this.selectedOption * (slotHeight + spacing) + slotHeight / 2;
 
         this.buttonHoverEffects.push({
             x: width/2,
@@ -567,10 +645,6 @@ class SaveSelectionScreen {
                 console.log(`Starting new game in slot ${slotIndex}...`);
                 this.startNewGame(slotIndex);
             }
-        } else if (this.selectedOption === NUM_SAVE_SLOTS) {
-            // Start New Rookie Pilot game
-            console.log("Attempting to start new rookie pilot game...");
-            this.startNewRookieGame();
         }
     }
     
