@@ -7,12 +7,9 @@
 ## Core Gameplay Enhancements
 
 
+Add a personal log of all the enmies killed in which system
 
-
-
-A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
-
-Ai actively hiding behind meterorites
+Add a personal locker in the station where the player can deposit their own goods 
 
 rebalance the amount of cargo dropped. Currently too much high-level illegal cargo is being dropped. 
 
@@ -51,8 +48,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 
 police perform scan of any ship within 500 units lookig for illegal goods
 
-jettson all inventory screen
-
 planets have their own screen assocaited where it is possible to explre the planet. find things
 
 mimitary bases on planets
@@ -70,7 +65,6 @@ Spcial events:
 some weapons better against sheilds than hull
 weapon range weapon speed
 
-- Instea dof speratit call them alliance that are at war with imperial.
 divide ships into imperial vs. alliance
 
 
@@ -81,6 +75,11 @@ divide ships into imperial vs. alliance
 - Shield generators/boosters
 - limit the amount of goods aer availbe at certain planets based on their econmy
 
+## AI
+
+A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
+
+Ai actively hiding behind meterorites
 
 ## Editor
 

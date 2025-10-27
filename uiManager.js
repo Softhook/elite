@@ -1468,6 +1468,34 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
+            // --- Map and Draw Locked Target Indicator (Green Dot) ---
+            if (player.target && !player.target.isDestroyed?.() && player.target.pos) {
+                const tgt = player.target;
+                const tRelX = tgt.pos.x - player.pos.x;
+                const tRelY = tgt.pos.y - player.pos.y;
+                let tMapX = mapCenterX + tRelX * this.minimapScale;
+                let tMapY = mapCenterY + tRelY * this.minimapScale;
+
+                const dotRadius = 3; // Small green dot radius
+
+                // If fully within bounds, draw a green dot directly at the position
+                if (isFullyWithinBounds(tMapX, tMapY, dotRadius, dotRadius)) {
+                    fill(0, 255, 0);
+                    noStroke();
+                    ellipse(tMapX, tMapY, dotRadius * 2, dotRadius * 2);
+                } else {
+                    // Clamp to edge so the player always has a directional cue
+                    const inset = dotRadius + 1;
+                    const cX = constrain(tMapX, mapLeft + inset, mapRight - inset);
+                    const cY = constrain(tMapY, mapTop + inset, mapBottom - inset);
+                    fill(0, 220, 0);
+                    noStroke();
+                    // Draw as a small square when clamped to emphasize 'edge'
+                    rect(cX - dotRadius, cY - dotRadius, dotRadius * 2, dotRadius * 2);
+                }
+            }
+            // --- End Locked Target Indicator ---
+
             // --- Map and Draw Jump Zone ---
             if (system.jumpZoneCenter && system.jumpZoneRadius > 0) {
                 let jzX = system.jumpZoneCenter.x;
