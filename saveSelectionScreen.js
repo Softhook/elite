@@ -359,10 +359,13 @@ class SaveSelectionScreen {
                 text(this.truncateText(`Alliance: ${playerData.playerFaction || 'None'}`, col2Max), col2X, line2Y);
                 line2Y += lineSpacing;
 
-                // Wanted status with color coding
+                // Wanted status with color coding (prefer system-level wanted status)
                 push();
-                const isWanted = playerData.isWanted || false;
-                let wantedText = isWanted ? "Wanted" : "Clean";
+                const sysData = (galaxyData && Array.isArray(galaxyData.systems)) ? galaxyData.systems[data.currentSystemIndex] : null;
+                // Prefer system-level wanted; fall back to player flag for backward compatibility
+                const isWanted = (sysData && typeof sysData.playerWanted === 'boolean') ? sysData.playerWanted : (playerData.isWanted || false);
+                const wantedLevel = (sysData && typeof sysData.playerWantedLevel === 'number') ? sysData.playerWantedLevel : 0;
+                let wantedText = isWanted ? (wantedLevel > 0 ? `Wanted (Lv ${wantedLevel})` : "Wanted") : "Clean";
                 let wantedColor = isWanted ? color(255, 100, 0) : color(0, 255, 0); // Orange for wanted, green for clean
                 
                 fill(isSelected ? wantedColor : color(red(wantedColor) * 0.7, green(wantedColor) * 0.7, blue(wantedColor) * 0.7));
