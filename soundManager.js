@@ -1,7 +1,8 @@
 /**
  * Manages sound effects using the sfxr library.
- * Pre-generates 'Normal' and 'Quiet' audio objects for efficient playback,
- * accommodating potential inconsistencies in sfxr's output.
+ * Generates a single audio object per sound and caches a Web Audio buffer
+ * for efficient playback, while sanitizing definitions to handle potential
+ * inconsistencies in sfxr's output.
  */
 class SoundManager {
     constructor() {

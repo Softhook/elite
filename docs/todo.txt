@@ -12,6 +12,8 @@
 
 A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
 
+Ai actively hiding behind meterorites
+
 rebalance the amount of cargo dropped. Currently too much high-level illegal cargo is being dropped. 
 
 Make each ship have an individual name and person owner and actual jobs that are tracked throughout the galaxy 
@@ -65,7 +67,7 @@ Spcial events:
 - News war prerations cost of weapons goes up
 
 
-some weapons better than lasers than hull
+some weapons better against sheilds than hull
 weapon range weapon speed
 
 - Instea dof speratit call them alliance that are at war with imperial.
@@ -132,8 +134,6 @@ divide ships into imperial vs. alliance
 
 ## Future / Advanced Features
 
-- Add planetary landings and surface exploration
-- Implement procedural planet surface generation
 - Create space station construction and ownership
 - Add player fleet management
 - Add multiplayer capabilities
