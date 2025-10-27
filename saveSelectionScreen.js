@@ -356,7 +356,9 @@ class SaveSelectionScreen {
                 // line1Y += lineSpacing; // Increment if more items in col1
 
                 // Column 2 - Alliance and Status
-                text(this.truncateText(`Alliance: ${playerData.playerFaction || 'None'}`, col2Max), col2X, line2Y);
+                // Alliance shows Police if the player is a police officer; otherwise show joined faction or None
+                const allianceText = (playerData.isPolice ? 'POLICE' : (playerData.playerFaction || 'None'));
+                text(this.truncateText(`Alliance: ${allianceText}`, col2Max), col2X, line2Y);
                 line2Y += lineSpacing;
 
                 // Wanted status with color coding (prefer system-level wanted status)
