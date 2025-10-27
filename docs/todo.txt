@@ -31,19 +31,13 @@ Make use of the hidden stations. By creating missions that make use of them and 
 
 In a war situation, change the spawn distribution in the different systems.
 
-Currently enemies slowly back away from the player trying to position themselves for sniping. That's really looks rubbish. 
-
-
 
 Integrate the nrrative class
-
-use tech level for market and missions
 
 - All projectile collisions use simple circle-based detection regardless of ship shape
 Problems:
 Hits register when visually the projectile hasn't touched the ship
 Misses occur when projectiles appear to hit elongated ship parts
-No consideration for ship orientation during collision tests
 Solution: Implement more precise hitbox system using ship vertex data
 
 police perform scan of any ship within 500 units lookig for illegal goods
@@ -88,17 +82,14 @@ Ai actively hiding behind meterorites
 ## Graphics and UI Improvements
 - show sun big on minimap
 - mulitple thurst ports on large ships
-- more weapon sounds
 - warning sound when health is low
 - generate names for all the planets
 - put the messagses in teh corner with 10 lines
 - weapon names clarify
-- better title screen
 - Improve target information
 
 ## Economy and Progression
 
-- Hyperspace fuel for jumping sold at stations - varies a lot in cost
 - Implement more sophisticated economic simulation
 - Add price fluctuations based on supply/demand
 - Implement market events (shortages, surpluses)
