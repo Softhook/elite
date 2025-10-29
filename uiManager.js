@@ -1473,7 +1473,7 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
-            // --- Map and Draw Locked Target Indicator (Green Dot) ---
+            // --- Map and Draw Locked Target Indicator (Reticle) ---
             if (player.target && !player.target.isDestroyed?.() && player.target.pos) {
                 const tgt = player.target;
                 const tRelX = tgt.pos.x - player.pos.x;
@@ -1481,22 +1481,27 @@ if (isIllegalInSystem || isMissionCargo) {
                 let tMapX = mapCenterX + tRelX * this.minimapScale;
                 let tMapY = mapCenterY + tRelY * this.minimapScale;
 
-                const dotRadius = 3; // Small green dot radius
+                const reticleSize = 4; // Size of the reticle arms
 
-                // If fully within bounds, draw a green dot directly at the position
-                if (isFullyWithinBounds(tMapX, tMapY, dotRadius, dotRadius)) {
-                    fill(0, 255, 0);
-                    noStroke();
-                    ellipse(tMapX, tMapY, dotRadius * 2, dotRadius * 2);
+                // If fully within bounds, draw a reticle directly at the position
+                if (isFullyWithinBounds(tMapX, tMapY, reticleSize, reticleSize)) {
+                    stroke(255); // White reticle
+                    strokeWeight(1);
+                    noFill();
+                    // Draw crosshair: horizontal and vertical lines
+                    line(tMapX - reticleSize, tMapY, tMapX + reticleSize, tMapY);
+                    line(tMapX, tMapY - reticleSize, tMapX, tMapY + reticleSize);
                 } else {
                     // Clamp to edge so the player always has a directional cue
-                    const inset = dotRadius + 1;
+                    const inset = reticleSize + 1;
                     const cX = constrain(tMapX, mapLeft + inset, mapRight - inset);
                     const cY = constrain(tMapY, mapTop + inset, mapBottom - inset);
-                    fill(0, 220, 0);
-                    noStroke();
-                    // Draw as a small square when clamped to emphasize 'edge'
-                    rect(cX - dotRadius, cY - dotRadius, dotRadius * 2, dotRadius * 2);
+                    stroke(255); // White reticle
+                    strokeWeight(1);
+                    noFill();
+                    // Draw crosshair at clamped position
+                    line(cX - reticleSize, cY, cX + reticleSize, cY);
+                    line(cX, cY - reticleSize, cX, cY + reticleSize);
                 }
             }
             // --- End Locked Target Indicator ---
