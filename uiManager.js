@@ -20,6 +20,13 @@ class UIManager {
         this._initBattleIndicators();
         // --- Panel Defaults ---
         this.setPanelDefaults();
+        // --- Minimap Color Mapping ---
+        this.roleMinimapColors = {};
+        this.roleMinimapColors[AI_ROLE.POLICE] = [0, 120, 255];    // Blue for police
+        this.roleMinimapColors[AI_ROLE.TRANSPORT] = [255, 140, 0]; // Orange for transporters
+        this.roleMinimapColors[AI_ROLE.HAULER] = [255, 200, 0];    // Yellow for haulers
+        this.roleMinimapColors[AI_ROLE.PIRATE] = [255, 0, 0];      // Red for pirates
+        this.roleMinimapColors[AI_ROLE.ALIEN] = [0, 200, 0];       // Green for aliens
     }
 
     // --- Initialization Helpers ---
@@ -1437,10 +1444,10 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
-            // --- Map and Draw Enemies ---
-            fill(255, 0, 0); // Red for enemies
+            // --- Map and Draw Enemies (color-coded by AI role) ---
             noStroke();
             const enemies = system.enemies || [];
+
             for (let i = 0, len = enemies.length; i < len; i++) {
                 const enemy = enemies[i];
                 if (!enemy?.pos || enemy.isDestroyed()) continue;
@@ -1451,11 +1458,16 @@ if (isIllegalInSystem || isMissionCargo) {
                 let mapX = mapCenterX + relX * this.minimapScale;
                 let mapY = mapCenterY + relY * this.minimapScale;
                 const iconHalfExtent = 3;
+
                 if (isFullyWithinBounds(mapX, mapY, iconHalfExtent, iconHalfExtent)) {
+                    // Determine color by role (fall back to red)
+                    const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
+                    const colArr = this.roleMinimapColors[roleKey] || [255, 0, 0];
                     push();
                     translate(mapX, mapY);
-                    rotate(enemy.angle - PI / 2);
-                    triangle(0, -iconHalfExtent, -iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8, iconHalfExtent*0.8);
+                    rotate((typeof enemy.angle === 'number' ? enemy.angle : 0) - PI / 2);
+                    fill(...colArr);
+                    triangle(0, -iconHalfExtent, -iconHalfExtent * 0.8, iconHalfExtent * 0.8, iconHalfExtent * 0.8, iconHalfExtent * 0.8);
                     pop();
                 }
             }
