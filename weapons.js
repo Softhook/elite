@@ -37,9 +37,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Beam Laser",
         type: "beam",
-        damage: 4,
+        damage: 3,
         color: [0, 200, 255], // Cyan
-        fireRate: 0.1,
+        fireRate: 0.15,
         price: 2500,
         desc: "Continuous beam, high energy use."
     },
@@ -48,14 +48,14 @@ const WEAPON_UPGRADES = [
         type: "beam",
         damage: 2,
         color: [255, 255, 180], // Pale yellow
-        fireRate: 0.05,
+        fireRate: 0.08,
         price: 3500,
         desc: "Low damage, rapid-fire beam."
     },
     {
         name: "Disruptor",
         type: "beam",
-        damage: 6,
+        damage: 5,
         color: [255, 0, 80], // Hot pink
         fireRate: 0.25,
         price: 4200,
