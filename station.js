@@ -19,7 +19,8 @@ class Station {
         this.name = name;
         this.systemType = systemType;
         this.market = new Market(systemType);
-        this.market.systemName = name.replace(" Hub", "");
+        // Use full station name so it matches StationEconomyRegistry stationId
+        this.market.systemName = name;
         this.size = 160;
         this.dockingRadius = this.size;
         this._setStationAppearance();

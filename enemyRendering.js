@@ -90,10 +90,19 @@ class EnemyRendering {
                 }
             } // targetLabel remains "None" if this.target is null and no state-based label applied
 
-            // UPDATED: Add system name to label (unused system reference removed for perf)
-            
-            //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
-            let label = `${shipDef?.name}  Target: ${targetLabel}`;
+            // Include pilot name when available (from PilotRegistry-backed spawns)
+            let pilotLabel = null;
+            if (this.pilotName) {
+                pilotLabel = this.pilotName;
+            } else if (this.pilotId && typeof worldSimulation !== 'undefined' && worldSimulation?.pilotRegistry) {
+                // Fallback lookup by id if name wasn't cached
+                const p = worldSimulation.pilotRegistry.pilots?.find(pp => pp.id === this.pilotId);
+                if (p && p.name) pilotLabel = p.name;
+            }
+
+            let label = pilotLabel
+                ? `${shipDef?.name}  • Pilot: ${pilotLabel}  • Target: ${targetLabel}`
+                : `${shipDef?.name}  • Pilot: Unregistered  • Target: ${targetLabel}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
