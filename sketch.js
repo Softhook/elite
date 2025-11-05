@@ -9,6 +9,7 @@ const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield rec
 
 // --- Global Variables ---
 let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, saveSelectionScreen;
+let worldSimulation; // Living universe simulation manager
 let loadGameWasSuccessful = false;
 window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
 let globalSessionSeed; // Declaration for the session seed
@@ -55,6 +56,7 @@ function setup() {
     // Create managers and the galaxy first
     gameStateManager = new GameStateManager();
     galaxy = new Galaxy(); // Creates Galaxy object (systems array is initially empty)
+    worldSimulation = new WorldSimulation(); // Living universe simulation
     player = new Player();
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
@@ -109,6 +111,15 @@ function draw() {
         titleScreen.update(deltaTime);
     } else if (currentState === "SAVE_SELECTION") {
         saveSelectionScreen.update(deltaTime);
+    }
+
+    // Update world simulation in active game states
+    if (worldSimulation && worldSimulation.isInitialized) {
+        const activeStatesForSimulation = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP", 
+                                          "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD"];
+        if (activeStatesForSimulation.includes(currentState)) {
+            worldSimulation.update(deltaTime);
+        }
     }
 
     // Main game state update and draw
@@ -510,13 +521,21 @@ function __buildSaveData() {
     } else {
         playerData.credits = Math.floor(playerData.credits);
     }
-    return {
+    
+    const saveData = {
         playerData,
         galaxyData: galaxy.getSaveData(),
         currentSystemIndex: galaxy.currentSystemIndex,
         savedAt: Date.now(),
         version: 2
     };
+    
+    // Add world simulation data if available
+    if (worldSimulation && worldSimulation.isInitialized) {
+        saveData.worldSimulation = worldSimulation.getSaveData();
+    }
+    
+    return saveData;
 }
 
 function __atomicStoreToSlot(slotIndex) {
@@ -739,7 +758,17 @@ function loadGame(slotIndex) {
                     });
                 }
                 
-                // 7. Restore current view and other relevant states
+                // 7. Load world simulation data if present
+                if (worldSimulation && savedData.worldSimulation) {
+                    worldSimulation.loadSaveData(savedData.worldSimulation, galaxy);
+                    console.log('World simulation loaded from save');
+                } else if (worldSimulation) {
+                    // Initialize fresh if no save data (backward compatibility)
+                    worldSimulation.initialize(galaxy);
+                    console.log('World simulation initialized (no save data found)');
+                }
+                
+                // 8. Restore current view and other relevant states
                 if (savedData.currentView) {
                     Object.assign(uiManager.currentView, savedData.currentView);
                 }
