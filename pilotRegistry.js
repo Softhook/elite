@@ -86,25 +86,25 @@ class PilotRegistry {
         let shipTypeId;
         switch (role) {
             case 'trader':
-                shipTypeId = random(['Cobra', 'Moray', 'Python']);
+                shipTypeId = random(['CobraMkIII', 'Python', 'Type6Transporter']);
                 break;
             case 'hauler':
-                shipTypeId = random(['Boa', 'Anaconda', 'Python']);
+                shipTypeId = random(['Anaconda', 'Python', 'Type9Heavy']);
                 break;
             case 'miner':
-                shipTypeId = random(['Adder', 'Cobra', 'Moray']);
+                shipTypeId = random(['Adder', 'CobraMkIII', 'ProspectorMiner']);
                 break;
             case 'bounty':
-                shipTypeId = random(['Viper', 'Fer-de-Lance', 'Asp']);
+                shipTypeId = random(['Viper', 'FerDeLance', 'AspExplorer']);
                 break;
             case 'police':
-                shipTypeId = random(['Viper', 'Sidewinder']);
+                shipTypeId = random(['Viper', 'Sidewinder', 'ACAB']);
                 break;
             case 'pirate':
-                shipTypeId = random(['Krait', 'Mamba', 'Fer-de-Lance']);
+                shipTypeId = random(['KraitMKI', 'PirateMarauder', 'FerDeLance']);
                 break;
             default:
-                shipTypeId = 'Cobra';
+                shipTypeId = 'CobraMkIII';
         }
 
         // Get ship stats for capacity
