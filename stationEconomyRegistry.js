@@ -23,12 +23,20 @@ class StationEconomyRegistry {
 
         console.log('StationEconomyRegistry: Initializing station economies...');
 
+        // Reset internal state to avoid duplicate registrations on re-initialization
+        this.economies.clear();
+        this.stationIds.length = 0;
+        this.updateIndex = 0;
+
         galaxyRef.systems.forEach((system, systemIndex) => {
             if (system.station) {
                 const stationId = system.station.name;
-                const economy = this._createEconomyState(stationId, system.economyType, systemIndex);
-                this.economies.set(stationId, economy);
-                this.stationIds.push(stationId);
+                // Idempotent add: skip if already present (defensive)
+                if (!this.economies.has(stationId)) {
+                    const economy = this._createEconomyState(stationId, system.economyType, systemIndex);
+                    this.economies.set(stationId, economy);
+                    this.stationIds.push(stationId);
+                }
             }
         });
 
