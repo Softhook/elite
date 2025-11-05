@@ -50,6 +50,8 @@ class UIManager {
         this.minimapY = 0;
         this.minimapWorldViewRange = 5000;
         this.minimapScale = 1;
+        this.minimapHazardsBuffer = null;
+        this._minimapHazardsBufferSize = 0;
     }
 
     _initShopAreas() {
@@ -1369,11 +1371,7 @@ if (isIllegalInSystem || isMissionCargo) {
         }
         // ---
 
-        // --- Draw Player (Always at Center) ---
-        fill(255); // White
-        noStroke();
-        ellipse(mapCenterX, mapCenterY, 5, 5); // Small circle for player
-        // ---
+        // We'll draw hazards first (in a buffer), then redraw player on top.
 
         // --- Helper function for strict boundary check ---
         const isFullyWithinBounds = (x, y, halfWidth, halfHeight) => {
@@ -1387,8 +1385,99 @@ if (isIllegalInSystem || isMissionCargo) {
         // ---
 
         try { // Wrap drawing of other elements
+            // --- Hazards buffer (Nebulae + Storms) with simple additive overlap ---
+            if (!this.minimapHazardsBuffer || this._minimapHazardsBufferSize !== this.minimapSize) {
+                this.minimapHazardsBuffer = createGraphics(this.minimapSize, this.minimapSize);
+                this._minimapHazardsBufferSize = this.minimapSize;
+            }
+            const hbuf = this.minimapHazardsBuffer;
+            hbuf.clear();
+            
+            // Reset all buffer state completely
+            hbuf.push();
+            hbuf.colorMode(RGB, 255);
+            hbuf.noFill();
+            hbuf.noStroke();
+
+            const bufCenter = this.minimapSize / 2;
+
+            // Helper color pickers to ensure type-specific colors
+            const nebulaStrokeColor = (neb) => {
+                const t = (neb?.type || '').toString().toLowerCase().trim();
+                switch (t) {
+                    case 'ion': return [100, 150, 255];
+                    case 'radiation': return [150, 255, 100];
+                    case 'emp': return [180, 100, 255];
+                    default: return [150, 150, 255];
+                }
+            };
+            const stormStrokeColor = (st) => {
+                const t = (st?.type || '').toString().toLowerCase().trim();
+                switch (t) {
+                    case 'electromagnetic': return [80, 100, 255];
+                    case 'radiation': return [100, 255, 50];
+                    case 'gravitational': return [255, 200, 50];
+                    default: return [100, 150, 255];
+                }
+            };
+
+            // Draw nebulae as simple outline rings
+            if (Array.isArray(system.nebulae) && system.nebulae.length > 0) {
+                for (let i = 0, len = system.nebulae.length; i < len; i++) {
+                    const neb = system.nebulae[i];
+                    if (!neb || !neb.pos || !neb.radius) continue;
+                    const relX = neb.pos.x - player.pos.x;
+                    const relY = neb.pos.y - player.pos.y;
+                    const bx = bufCenter + relX * this.minimapScale;
+                    const by = bufCenter + relY * this.minimapScale;
+                    const br = Math.max(1, neb.radius * this.minimapScale);
+                    const col = nebulaStrokeColor(neb);
+                    
+                    hbuf.push();
+                    hbuf.noFill();
+                    hbuf.stroke(col[0], col[1], col[2], 150);
+                    hbuf.strokeWeight(1);
+                    hbuf.ellipse(bx, by, br * 2, br * 2);
+                    hbuf.pop();
+                }
+            }
+
+            // Draw storms as simple outline rings
+            if (Array.isArray(system.cosmicStorms) && system.cosmicStorms.length > 0) {
+                for (let i = 0, len = system.cosmicStorms.length; i < len; i++) {
+                    const st = system.cosmicStorms[i];
+                    if (!st || !st.pos || !st.radius) continue;
+                    const relX = st.pos.x - player.pos.x;
+                    const relY = st.pos.y - player.pos.y;
+                    const bx = bufCenter + relX * this.minimapScale;
+                    const by = bufCenter + relY * this.minimapScale;
+                    const br = Math.max(1, st.radius * this.minimapScale);
+                    const col = stormStrokeColor(st);
+                    
+                    hbuf.push();
+                    hbuf.noFill();
+                    hbuf.stroke(col[0], col[1], col[2], 180);
+                    hbuf.strokeWeight(1);
+                    hbuf.ellipse(bx, by, br * 2, br * 2);
+                    hbuf.pop();
+                }
+            }
+
+            hbuf.pop();
+
+            // Blit hazards buffer into the minimap area (buffer naturally clips)
+            image(hbuf, this.minimapX, this.minimapY);
+
+            // --- Redraw Player (Always at Center), on top of hazards ---
+            push();
+            fill(255); // White
+            noStroke();
+            ellipse(mapCenterX, mapCenterY, 5, 5);
+            pop();
+            // ---
             // --- Map and Draw Station ---
             if (system.station?.pos) {
+                push();
                 let objX = system.station.pos.x;
                 let objY = system.station.pos.y;
                 let relX = objX - player.pos.x;
@@ -1402,6 +1491,7 @@ if (isIllegalInSystem || isMissionCargo) {
                 let drawY = mapY;
                 let isStationOnScreen = isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize);
 
+                noStroke();
                 if (!isStationOnScreen) {
                     const inset = iconHalfSize + 1;
                     drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
@@ -1409,44 +1499,61 @@ if (isIllegalInSystem || isMissionCargo) {
 
                     if (mapX < mapLeft || mapX > mapRight || mapY < mapTop || mapY > mapBottom) {
                          fill(0, 100, 255); // Clamped color
-                         noStroke();
                          rect(drawX - iconHalfSize, drawY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                     } else {
                          fill(0, 0, 255); // Normal color (near edge but inside)
-                         noStroke();
                          rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                     }
                 } else {
                     fill(0, 0, 255); // Normal color (fully inside)
-                    noStroke();
                     rect(mapX - iconHalfSize, mapY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
                 }
+                pop();
                 // --- End Station Clamping Logic ---
             }
             // ---
 
             // --- Map and Draw Planets ---
-            fill(150, 100, 50); // Brownish for planets
-            noStroke();
             const planets = system.planets || [];
             for (let i = 0, len = planets.length; i < len; i++) {
                 const planet = planets[i];
                 if (!planet?.pos) continue;
-                let objX = planet.pos.x;
-                let objY = planet.pos.y;
-                let relX = objX - player.pos.x;
-                let relY = objY - player.pos.y;
-                let mapX = mapCenterX + relX * this.minimapScale;
-                let mapY = mapCenterY + relY * this.minimapScale;
-                const iconRadius = 12;
-                if (isFullyWithinBounds(mapX, mapY, iconRadius, iconRadius)) {
-                    ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2);
-                }
+                const objX = planet.pos.x;
+                const objY = planet.pos.y;
+                const relX = objX - player.pos.x;
+                const relY = objY - player.pos.y;
+                const mapX = mapCenterX + relX * this.minimapScale;
+                const mapY = mapCenterY + relY * this.minimapScale;
+                const worldRadius = planet.radius || planet.size * 0.5 || 0;
+                const mapRadius = max(1, worldRadius * this.minimapScale);
+
+                // Quick reject if completely outside minimap bounds
+                if (
+                    mapX + mapRadius < mapLeft ||
+                    mapX - mapRadius > mapRight ||
+                    mapY + mapRadius < mapTop ||
+                    mapY - mapRadius > mapBottom
+                ) continue;
+
+                // Clip drawing to minimap rect so large planets don't overhang visually
+                push();
+                const ctx = drawingContext;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+                ctx.clip();
+
+                // Planet marker fill - explicitly set every time
+                noStroke();
+                fill(150, 100, 50);
+                ellipse(mapX, mapY, mapRadius * 2, mapRadius * 2);
+
+                ctx.restore();
+                pop();
             }
             // ---
 
             // --- Map and Draw Enemies (color-coded by AI role) ---
-            noStroke();
             const enemies = system.enemies || [];
 
             for (let i = 0, len = enemies.length; i < len; i++) {
@@ -1465,6 +1572,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
                     const colArr = this.roleMinimapColors[roleKey] || [255, 0, 0];
                     push();
+                    noStroke();
                     translate(mapX, mapY);
                     // Flip orientation so the pointy end faces movement
                     rotate((typeof enemy.angle === 'number' ? enemy.angle : 0) + PI / 2);
@@ -1508,53 +1616,52 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // --- End Locked Target Indicator ---
 
+            // Hazards are now drawn via buffer above; remove per-item drawing
+
             // --- Map and Draw Jump Zone ---
             if (system.jumpZoneCenter && system.jumpZoneRadius > 0) {
-                let jzX = system.jumpZoneCenter.x;
-                let jzY = system.jumpZoneCenter.y;
-                let jzRadius = system.jumpZoneRadius;
+                const jzX = system.jumpZoneCenter.x;
+                const jzY = system.jumpZoneCenter.y;
+                const jzRadius = system.jumpZoneRadius;
 
-                let relX = jzX - player.pos.x;
-                let relY = jzY - player.pos.y;
-                let mapX = mapCenterX + relX * this.minimapScale;
-                let mapY = mapCenterY + relY * this.minimapScale;
-                let mapRadius = max(1, jzRadius * this.minimapScale);
+                const relX = jzX - player.pos.x;
+                const relY = jzY - player.pos.y;
+                const mapX = mapCenterX + relX * this.minimapScale;
+                const mapY = mapCenterY + relY * this.minimapScale;
+                const mapRadius = max(1, jzRadius * this.minimapScale);
 
-                // --- Clamping Logic & Drawing ---
-                const indicatorSize = 4; // Size of the small square/dot when clamped
-                const inset = indicatorSize / 2 + 1; // Inset needed for the small marker
+                const fullyOutside = (
+                    mapX + mapRadius < mapLeft ||
+                    mapX - mapRadius > mapRight ||
+                    mapY + mapRadius < mapTop ||
+                    mapY - mapRadius > mapBottom
+                );
 
-                // Check if the *center* is outside the boundary for the small marker
-                let isClamped = (mapX < mapLeft + inset || mapX > mapRight - inset || mapY < mapTop + inset || mapY > mapBottom - inset);
-
-                push();
-                strokeWeight(1);
-
-                if (isClamped) {
-                    // --- Draw Clamped Marker ---
-                    // Clamp the center position to the inset boundary
-                    let drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
-                    let drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
-
-                    fill(255, 255, 0, 220); // Solid yellow fill for clamped marker
-                    noStroke();
-                    // Draw a small square (like the station)
-                    rectMode(CENTER); // Draw rect from center
-                    rect(drawX, drawY, indicatorSize, indicatorSize);
-                    rectMode(CORNER); // Reset rectMode
-
-                } else {
-                    // --- Draw On-Screen Circle ---
-                    // Check if the full circle is within bounds (optional, for visual consistency)
-                    // let isCircleFullyVisible = isFullyWithinBounds(mapX, mapY, mapRadius, mapRadius);
+                if (!fullyOutside) {
+                    const ctx = drawingContext;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+                    ctx.clip();
 
                     noFill();
                     stroke(255, 255, 0, 200); // Yellow outline
-                    // Draw the circle outline using the original map position and scaled radius
+                    strokeWeight(1);
                     ellipse(mapX, mapY, mapRadius * 2);
+
+                    ctx.restore();
+                } else {
+                    // Draw a clamped indicator at the minimap edge
+                    const indicatorSize = 4;
+                    const inset = indicatorSize / 2 + 1;
+                    const cX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                    const cY = constrain(mapY, mapTop + inset, mapBottom - inset);
+                    noStroke();
+                    fill(255, 255, 0, 220);
+                    rectMode(CENTER);
+                    rect(cX, cY, indicatorSize, indicatorSize);
+                    rectMode(CORNER);
                 }
-                pop();
-                // --- End Clamping & Drawing ---
             }
             // --- End Jump Zone Drawing ---
 

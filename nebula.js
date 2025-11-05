@@ -93,6 +93,11 @@ class Nebula {
         // Use Canvas 2D API for efficient radial gradient
         const ctx = drawingContext;
         
+        // Use 'screen' blending so overlaps get denser without turning solid/muddy
+        ctx.save();
+        const prevOp = ctx.globalCompositeOperation;
+        ctx.globalCompositeOperation = 'screen';
+        
         // Create a radial gradient - using original nebula radius
         const outerRadius = this.radius;
         const gradient = ctx.createRadialGradient(
@@ -106,12 +111,19 @@ class Nebula {
         const b = this.color[2];
         
         // Start with high opacity in center, don't fully fade out at edge
-        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${this.opacity/255})`);
-        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.85/255})`);
-        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.7/255})`);
-        gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.6/255})`);
-        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.5/255})`);
-        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${this.opacity*0.4/255})`);
+        const baseAlpha = this.opacity / 255; // typically ~0.47
+        const a0 = baseAlpha * 0.9;
+        const a1 = baseAlpha * 0.75;
+        const a2 = baseAlpha * 0.6;
+        const a3 = baseAlpha * 0.45;
+        const a4 = baseAlpha * 0.35;
+        const a5 = baseAlpha * 0.25;
+        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a0})`);
+        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${a1})`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${a2})`);
+        gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${a3})`);
+        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${a4})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${a5})`);
         
         // Apply gradient to context
         ctx.fillStyle = gradient;
@@ -121,7 +133,7 @@ class Nebula {
         ctx.arc(this.pos.x, this.pos.y, outerRadius, 0, TWO_PI);
         ctx.fill();
         
-        // Draw particles
+        // Draw particles with additive blending too
         for (let particle of this.particles) {
             push();
             translate(particle.pos.x, particle.pos.y);
@@ -139,6 +151,10 @@ class Nebula {
             
             pop();
         }
+        
+        // Restore compositing
+        ctx.globalCompositeOperation = prevOp;
+        ctx.restore();
 
         // Add debug visualization if enabled
         if (this.debug) {
