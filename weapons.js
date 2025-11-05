@@ -37,7 +37,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Beam Laser",
         type: "beam",
-        damage: 3,
+        damage: 4,
         color: [0, 200, 255], // Cyan
         fireRate: 0.15,
         maxHeat: 1.0,
@@ -50,7 +50,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Scatter Beam",
         type: "beam",
-        damage: 2,
+        damage: 3,
         color: [255, 255, 180], // Pale yellow
         fireRate: 0.08,
         maxHeat: 1.0,
@@ -63,7 +63,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Disruptor",
         type: "beam",
-        damage: 5,
+        damage: 6,
         color: [255, 0, 80], // Hot pink
         fireRate: 0.25,
         maxHeat: 1.1,
