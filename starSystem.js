@@ -127,6 +127,7 @@ class StarSystem {
         this.maxTotalAsteroids = 45;
         this.npcPilotSpawnTimer = 0;  // Timer for NPC pilot spawning
         this.npcPilotSpawnInterval = 8000; // Spawn NPC pilots every 8 seconds
+        this.reservedEnemySlots = 2; // Reserve slots for police and other dynamic spawns
         this.despawnRadius = 5000; // Default, updated in initStaticElements based on screen size
 
         // --- Jump Zone Properties ---
@@ -2637,8 +2638,7 @@ checkProjectileCollisions() {
         }
         
         // Spawn up to a limit of visible NPC pilots (leave room for other spawns)
-        const RESERVED_ENEMY_SLOTS = 2; // Reserve slots for police, etc.
-        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - RESERVED_ENEMY_SLOTS);
+        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - this.reservedEnemySlots);
         let spawned = 0;
         
         for (const pilot of pilotsInSystem) {
@@ -2676,6 +2676,7 @@ checkProjectileCollisions() {
         // Determine spawn position - either near station or in space
         let spawnX, spawnY;
         
+        // Use loose equality to catch both null and undefined
         if (this.station && pilot.pos == null) {
             // Spawn near station if no position set (catches both null and undefined)
             const stationDist = 300 + random(200);
