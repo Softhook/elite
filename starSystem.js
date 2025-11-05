@@ -16,7 +16,8 @@ const buildShipRoleArrays = () => {
         BOUNTY_HUNTER_SHIPS: [],
         GUARD_SHIPS: [],
         IMPERIAL_SHIPS: [],
-        SEPARATIST_SHIPS: []
+        SEPARATIST_SHIPS: [],
+        FIGHTER_SHIPS: []
     };
     
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -47,7 +48,8 @@ const {
     BOUNTY_HUNTER_SHIPS,
     GUARD_SHIPS,
     IMPERIAL_SHIPS,
-    SEPARATIST_SHIPS
+    SEPARATIST_SHIPS,
+    FIGHTER_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -64,6 +66,7 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("GUARD_SHIPS:", GUARD_SHIPS);
     console.log("IMPERIAL_SHIPS:",IMPERIAL_SHIPS);
     console.log("SEPARATIST_SHIPS:", SEPARATIST_SHIPS);
+    console.log("FIGHTER_SHIPS:", FIGHTER_SHIPS);
 }
 
 // --- Jump Zone Constants ---

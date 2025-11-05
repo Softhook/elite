@@ -574,7 +574,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 2.20,
         typicalCargo: ["Weapons", "Metals", "Machinery"],
         price: 30360,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["MILITARY", "FIGHTER"],
         techLevel: 3 // Mid-tier
     },
     "CobraMkIII": {
@@ -653,7 +653,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: [],
         price: 900000,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["MILITARY", "FIGHTER"],
         techLevel: 4 // Advanced
     },
     "FederalAssaultShip": {
@@ -691,7 +691,7 @@ const SHIP_DEFINITIONS = {
 
         typicalCargo: ["Computers","Computers","Computers","Weapons", "Metals", "Adv Components"],
         price: 120000,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["MILITARY", "FIGHTER"],
         techLevel: 4 // Advanced
     },
     "FerDeLance": {
@@ -1230,7 +1230,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
         typicalCargo: ["Computers","Weapons", "Narcotics"],
         price: 60000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD", "FIGHTER"],
         techLevel: 3 // Mid-tier
     },
      "Vulture": {
@@ -1253,7 +1253,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50,
         typicalCargo: ["Computers","Computers","Weapons", "Narcotics", "Slaves"],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD", "FIGHTER"],
         techLevel: 3 // Mid-tier
     },
     "WaspAssault": {
@@ -1276,7 +1276,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 50000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD", "FIGHTER"],
         techLevel: 2 // Utility
     },
         "Bat": {
@@ -1299,7 +1299,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 50000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY","BOUNTY_HUNTER", "GUARD", "FIGHTER"],
         techLevel: 2 // Utility
     },
     "HummingBird": {
@@ -1324,7 +1324,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 40000,
-        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"],
+        aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD", "FIGHTER"],
         techLevel: 2 // Utility
     },
     "HarlequinJester": {
@@ -1519,7 +1519,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:-0.6,y:0.6}, {x:-1,y:0.2}, {x:-1,y:-0.2}, {x:-0.6,y:-0.6} ],
         fillColor: [100, 40, 40], strokeColor: [160, 100, 100], strokeW: 1.2,
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
-        aiRoles: ["SEPARATIST"]
+        aiRoles: ["SEPARATIST", "FIGHTER"]
     },
     "SeparatistDefiant": {
         name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
@@ -1538,7 +1538,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [70, 70, 70], strokeColor: [120, 120, 120], strokeW: 1.8,
         typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
-        aiRoles: ["SEPARATIST"]
+        aiRoles: ["SEPARATIST", "FIGHTER"]
     },
     "SeparatistOutlander": {
         name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
@@ -1562,7 +1562,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0.2}, {x:0.6,y:0.7}, {x:-0.6,y:0.9}, {x:-1,y:0.5}, {x:-1,y:-0.5}, {x:-0.6,y:-0.9}, {x:0.6,y:-0.7}, {x:1,y:-0.2} ], // Imposing, angular
         fillColor: [50, 30, 30], strokeColor: [100, 80, 80], strokeW: 2.2, // Dark Brownish Red
         typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
-        aiRoles: ["SEPARATIST"]
+        aiRoles: ["SEPARATIST", "FIGHTER"]
     },
     "SeparatistPartisan": {
         name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
@@ -1622,7 +1622,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1,y:0}, {x:0.5,y:0.4}, {x:-0.5,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.5,y:-0.7}, {x:0.5,y:-0.4} ],
         fillColor: [220, 220, 240], strokeColor: [100, 120, 200], strokeW: 1.5,
         typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL", "FIGHTER"]
     },
     "ImperialPaladin": {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
@@ -1641,7 +1641,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL", "FIGHTER"]
     },
     "ImperialLancer": {
         name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
@@ -1684,7 +1684,7 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
         typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
+        aiRoles: ["IMPERIAL", "FIGHTER"]
     },
     "ImperialEnvoy": {
         name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,

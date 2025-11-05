@@ -45,6 +45,19 @@ class Enemy {
         // --- Assign CORRECT Properties ---
         this.shipTypeName = actualShipTypeName; // Store the ACTUAL KEY used to find the definition
         this.role = role;
+        
+        // Determine faction based on ship type for FIGHTER role
+        this.faction = null; // null, "MILITARY", "IMPERIAL", or "SEPARATIST"
+        if (this.role === AI_ROLE.FIGHTER) {
+            // Determine faction from ship arrays
+            if (IMPERIAL_SHIPS && IMPERIAL_SHIPS.includes(actualShipTypeName)) {
+                this.faction = "IMPERIAL";
+            } else if (SEPARATIST_SHIPS && SEPARATIST_SHIPS.includes(actualShipTypeName)) {
+                this.faction = "SEPARATIST";
+            } else if (MILITARY_SHIPS && MILITARY_SHIPS.includes(actualShipTypeName)) {
+                this.faction = "MILITARY";
+            }
+        }
         // ---
 
         // Add forced combat timer
@@ -96,6 +109,18 @@ class Enemy {
                 // Guards might inherit target from principal or player initially
                 this.target = playerRef; // Default, can be overridden
                 break;
+            case AI_ROLE.FIGHTER:
+                // Faction-specific colors
+                if (this.faction === "IMPERIAL") {
+                    this.strokeColorValue = [220, 220, 240]; // Imperial light blue
+                } else if (this.faction === "SEPARATIST") {
+                    this.strokeColorValue = [200, 100, 100]; // Separatist red
+                } else if (this.faction === "MILITARY") {
+                    this.strokeColorValue = [100, 150, 200]; // Military blue
+                } else {
+                    this.strokeColorValue = shipDef.strokeColorValue || [200, 200, 200]; // Default from ship def
+                }
+                break;
         }
 
         this.strafeDirection = 0; // Will be -1 for left, 1 for right, 0 for none. Set in ATTACK_PASS entry.
@@ -140,7 +165,7 @@ class Enemy {
             }
         } else {
             // No weapons resolved. Keep ship unarmed. Certain combat-centric roles may receive a safe fallback.
-            const combatRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER || this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD);
+            const combatRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER || this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD || this.role === AI_ROLE.FIGHTER);
             if (combatRole && intendedArmament.length > 0) {
                 // Only fallback-arm if the ship was intended to be armed but lookup failed.
                 this.currentWeapon = {
@@ -188,6 +213,7 @@ class Enemy {
                 case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break;
                 case AI_ROLE.ALIEN: this.currentState = AI_STATE.APPROACHING; break;
                 case AI_ROLE.BOUNTY_HUNTER: this.currentState = AI_STATE.APPROACHING; break;
+                case AI_ROLE.FIGHTER: this.currentState = AI_STATE.IDLE; break; // Fighters start idle, look for targets
                 default: this.currentState = AI_STATE.IDLE;
             }
         }
@@ -464,6 +490,9 @@ class Enemy {
                         break;
                     case AI_ROLE.BOUNTY_HUNTER:
                         this.updateCombatAI(system); // Bounty Hunters use combat AI
+                        break;
+                    case AI_ROLE.FIGHTER:
+                        this.updateCombatAI(system); // Fighters use combat AI
                         break;
                     default: 
                         // Default behavior for unknown roles

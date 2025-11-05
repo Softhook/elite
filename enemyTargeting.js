@@ -74,9 +74,10 @@ class EnemyTargeting {
         }
         
         // Evaluate other enemies (no debug)
-        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN);
+        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.FIGHTER);
         if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
             const isAlien = this.role === AI_ROLE.ALIEN;
+            const isFighter = this.role === AI_ROLE.FIGHTER;
             for (let i = 0, len = system.enemies.length; i < len; i++) {
                 const otherEnemy = system.enemies[i];
                 if (otherEnemy === this || otherEnemy === bestTarget) {
@@ -85,6 +86,10 @@ class EnemyTargeting {
                 // For Aliens, ensure they don't target other Aliens
                 if (isAlien && otherEnemy.role === AI_ROLE.ALIEN) {
                     continue;
+                }
+                // For Fighters, apply faction-based targeting (handled in evaluateTargetScore)
+                if (isFighter) {
+                    // Let evaluateTargetScore handle faction filtering
                 }
                 if (!this.isTargetValid(otherEnemy)) {
                     continue;
@@ -282,6 +287,41 @@ class EnemyTargeting {
                     if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
                         _score += 50; // Base score for any non-alien target
                         _interesting = true;
+                    }
+                    break;
+
+                case AI_ROLE.FIGHTER:
+                    // Faction-based targeting logic
+                    // Military fighters target aliens
+                    if (enemy.faction === "MILITARY") {
+                        if (target.role === AI_ROLE.ALIEN) {
+                            _score += 100; // High priority for aliens
+                            _interesting = true;
+                        }
+                    }
+                    // Separatist fighters target imperial ships
+                    else if (enemy.faction === "SEPARATIST") {
+                        if (target.faction === "IMPERIAL" || target.role === AI_ROLE.POLICE) {
+                            _score += 100; // High priority for imperial targets
+                            _interesting = true;
+                        }
+                        // Also target player if player is hostile
+                        if (isPlayer && isAttacker) {
+                            _score += 50;
+                            _interesting = true;
+                        }
+                    }
+                    // Imperial fighters target separatist ships
+                    else if (enemy.faction === "IMPERIAL") {
+                        if (target.faction === "SEPARATIST") {
+                            _score += 100; // High priority for separatist targets
+                            _interesting = true;
+                        }
+                        // Also target player if player is hostile
+                        if (isPlayer && isAttacker) {
+                            _score += 50;
+                            _interesting = true;
+                        }
                     }
                     break;
 
