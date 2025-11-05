@@ -714,6 +714,12 @@ class SaveSelectionScreen {
                     eventManager.initializeReferences(startingSystem, player, uiManager);
                 }
             }
+            
+            // Initialize world simulation for new game
+            if (worldSimulation) {
+                worldSimulation.initialize(galaxy);
+                console.log('World simulation initialized for new game');
+            }
         }
         
         // Clear any existing save in this specific slot (both primary and backup)
