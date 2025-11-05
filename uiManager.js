@@ -1468,13 +1468,6 @@ if (isIllegalInSystem || isMissionCargo) {
             // Blit hazards buffer into the minimap area (buffer naturally clips)
             image(hbuf, this.minimapX, this.minimapY);
 
-            // --- Redraw Player (Always at Center), on top of hazards ---
-            push();
-            fill(255); // White
-            noStroke();
-            ellipse(mapCenterX, mapCenterY, 5, 5);
-            pop();
-            // ---
             // --- Map and Draw Station ---
             if (system.station?.pos) {
                 push();
@@ -1543,9 +1536,17 @@ if (isIllegalInSystem || isMissionCargo) {
                 ctx.rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
                 ctx.clip();
 
-                // Planet marker fill - explicitly set every time
+                // Planet marker fill - use planet's base color if available
                 noStroke();
-                fill(150, 100, 50);
+                if (planet.baseColor) {
+                    // Extract RGB from p5.Color object and use with reduced saturation for minimap
+                    const r = red(planet.baseColor);
+                    const g = green(planet.baseColor);
+                    const b = blue(planet.baseColor);
+                    fill(r, g, b, 200);
+                } else {
+                    fill(150, 100, 50); // Fallback color
+                }
                 ellipse(mapX, mapY, mapRadius * 2, mapRadius * 2);
 
                 ctx.restore();
@@ -1616,6 +1617,14 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // --- End Locked Target Indicator ---
 
+            // --- Draw Player (Always at Center), on top of all hazards and enemies ---
+            push();
+            fill(255); // White
+            noStroke();
+            ellipse(mapCenterX, mapCenterY, 5, 5);
+            pop();
+            // ---
+
             // Hazards are now drawn via buffer above; remove per-item drawing
 
             // --- Map and Draw Jump Zone ---
@@ -1648,6 +1657,13 @@ if (isIllegalInSystem || isMissionCargo) {
                     stroke(255, 255, 0, 200); // Yellow outline
                     strokeWeight(1);
                     ellipse(mapX, mapY, mapRadius * 2);
+
+                    // Draw crosshair at center
+                    stroke(255, 255, 0, 200);
+                    strokeWeight(1);
+                    const crossSize = 3;
+                    line(mapX - crossSize, mapY, mapX + crossSize, mapY);
+                    line(mapX, mapY - crossSize, mapX, mapY + crossSize);
 
                     ctx.restore();
                 } else {
