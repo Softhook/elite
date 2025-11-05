@@ -25,6 +25,7 @@ class UIManager {
         this.roleMinimapColors[AI_ROLE.POLICE] = [0, 120, 255];    // Blue for police
         this.roleMinimapColors[AI_ROLE.TRANSPORT] = [255, 140, 0]; // Orange for transporters
         this.roleMinimapColors[AI_ROLE.HAULER] = [255, 200, 0];    // Yellow for haulers
+        this.roleMinimapColors[AI_ROLE.GUARD] = this.roleMinimapColors[AI_ROLE.HAULER]; // Guards same as haulers
         this.roleMinimapColors[AI_ROLE.PIRATE] = [255, 0, 0];      // Red for pirates
         this.roleMinimapColors[AI_ROLE.ALIEN] = [0, 200, 0];       // Green for aliens
     }
@@ -1465,7 +1466,8 @@ if (isIllegalInSystem || isMissionCargo) {
                     const colArr = this.roleMinimapColors[roleKey] || [255, 0, 0];
                     push();
                     translate(mapX, mapY);
-                    rotate((typeof enemy.angle === 'number' ? enemy.angle : 0) - PI / 2);
+                    // Flip orientation so the pointy end faces movement
+                    rotate((typeof enemy.angle === 'number' ? enemy.angle : 0) + PI / 2);
                     fill(...colArr);
                     triangle(0, -iconHalfExtent, -iconHalfExtent * 0.8, iconHalfExtent * 0.8, iconHalfExtent * 0.8, iconHalfExtent * 0.8);
                     pop();
