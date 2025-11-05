@@ -1438,7 +1438,7 @@ if (isIllegalInSystem || isMissionCargo) {
                 let relY = objY - player.pos.y;
                 let mapX = mapCenterX + relX * this.minimapScale;
                 let mapY = mapCenterY + relY * this.minimapScale;
-                const iconRadius = 2;
+                const iconRadius = 12;
                 if (isFullyWithinBounds(mapX, mapY, iconRadius, iconRadius)) {
                     ellipse(mapX, mapY, iconRadius * 2, iconRadius * 2);
                 }
