@@ -180,7 +180,7 @@ class Player {
             this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
             console.log(`   <<< Finished this.activeMission.activate() >>>`);
             
-            // If this is a MissionRegistry mission, update the registry
+            // If this is a MissionRegistry mission, update the registry (null = player accepting)
             if (mission._registryMission && typeof worldSimulation !== 'undefined' && worldSimulation?.missionRegistry) {
                 worldSimulation.missionRegistry.acceptMission(mission._registryMission.id, null);
                 console.log(`   Updated MissionRegistry for mission ${mission._registryMission.id}`);

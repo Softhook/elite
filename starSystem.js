@@ -2637,7 +2637,8 @@ checkProjectileCollisions() {
         }
         
         // Spawn up to a limit of visible NPC pilots (leave room for other spawns)
-        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - 2);
+        const RESERVED_ENEMY_SLOTS = 2; // Reserve slots for police, etc.
+        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - RESERVED_ENEMY_SLOTS);
         let spawned = 0;
         
         for (const pilot of pilotsInSystem) {
@@ -2675,8 +2676,8 @@ checkProjectileCollisions() {
         // Determine spawn position - either near station or in space
         let spawnX, spawnY;
         
-        if (this.station && pilot.pos === null) {
-            // Spawn near station if no position set
+        if (this.station && pilot.pos == null) {
+            // Spawn near station if no position set (catches both null and undefined)
             const stationDist = 300 + random(200);
             const stationAngle = random(TWO_PI);
             spawnX = this.station.pos.x + cos(stationAngle) * stationDist;

@@ -141,10 +141,19 @@ class MissionRegistry {
      * @private
      */
     _wrapMissionForUI(rawMission) {
+        // Map mission type to MISSION_TYPE constant
+        let missionType;
+        if (rawMission.type === 'delivery') {
+            missionType = MISSION_TYPE.DELIVERY_LEGAL;
+        } else {
+            // Default to delivery legal for unknown types
+            missionType = MISSION_TYPE.DELIVERY_LEGAL;
+        }
+        
         // Create a Mission-like object that works with existing UI
         const wrapped = {
             id: rawMission.id,
-            type: rawMission.type === 'delivery' ? MISSION_TYPE.DELIVERY_LEGAL : rawMission.type,
+            type: missionType,
             title: this._generateMissionTitle(rawMission),
             description: this._generateMissionDescription(rawMission),
             originStation: rawMission.originStationId,
@@ -185,6 +194,10 @@ class MissionRegistry {
                 if (player && typeof player.addCredits === 'function') {
                     player.addCredits(this.rewardCredits);
                     this.status = 'Completed';
+                    // Update the underlying registry mission
+                    if (this._registryMission && typeof worldSimulation !== 'undefined' && worldSimulation?.missionRegistry) {
+                        worldSimulation.missionRegistry.completeMission(this._registryMission.id);
+                    }
                 }
             }
         };
