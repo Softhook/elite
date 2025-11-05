@@ -497,15 +497,18 @@ class UIManager {
         textFont(font);
         let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
         // Determine faction recruitment option based on system economy type
-        let factionOption;
-        if (system?.economyType === "Imperial") {
-            factionOption = { text: "Imperial Navy Recruitment", state: "VIEWING_IMPERIAL_RECRUITMENT" };
-        } else if (system?.economyType === "Separatist") {
-            factionOption = { text: "Separatist Forces Recruitment", state: "VIEWING_SEPARATIST_RECRUITMENT" };
-        } else if (system?.economyType === "Military") {
-            factionOption = { text: "Military Academy Recruitment", state: "VIEWING_MILITARY_RECRUITMENT" };
-        } else {
-            factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
+        const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
+        let factionOption = null;
+        if (!isAnarchySystem) {
+            if (system?.economyType === "Imperial") {
+                factionOption = { text: "Imperial Navy Recruitment", state: "VIEWING_IMPERIAL_RECRUITMENT" };
+            } else if (system?.economyType === "Separatist") {
+                factionOption = { text: "Separatist Forces Recruitment", state: "VIEWING_SEPARATIST_RECRUITMENT" };
+            } else if (system?.economyType === "Military") {
+                factionOption = { text: "Military Academy Recruitment", state: "VIEWING_MILITARY_RECRUITMENT" };
+            } else {
+                factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
+            }
         }
 
         const menuOpts = [
@@ -514,10 +517,12 @@ class UIManager {
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
-            { text: "Protection Services", state: "VIEWING_PROTECTION" },
-            factionOption,
-            { text: "Undock", action: "UNDOCK" }
+            { text: "Protection Services", state: "VIEWING_PROTECTION" }
         ];
+        if (factionOption) {
+            menuOpts.push(factionOption);
+        }
+        menuOpts.push({ text: "Undock", action: "UNDOCK" });
         for (let i = 0, len = menuOpts.length; i < len; i++) {
             const opt = menuOpts[i];
             let btnY=btnSY+i*btnSp;
@@ -594,6 +599,28 @@ class UIManager {
         this.drawPanelBG([30,30,60,230], [100,100,255]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
+        const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
+
+        if (isAnarchySystem) {
+            const headerHeight = this.drawStationHeader("No Local Authority", station, player, system);
+            textFont(font);
+            fill(220);
+            textSize(22);
+            textAlign(CENTER, TOP);
+            const messageY = pY + headerHeight + 20;
+            text("This anarchy system has no formal police presence.", pX + pW/2, messageY);
+            fill(180, 200, 255);
+            textSize(18);
+            text("Local disputes are settled without official intervention.", pX + pW/2, messageY + 35);
+
+            const backW = 100, backH = 30, backX = pX + pW/2 - backW/2, backY = pY + pH - backH - 15;
+            this.policeButtonAreas.push(
+                this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+            );
+            pop();
+            return;
+        }
+
         const headerHeight = this.drawStationHeader("Police Station", station, player, system);
         fill(255); 
         textSize(20); 

@@ -167,6 +167,17 @@ class StarSystem {
      * @param {number} duration - Optional duration in seconds before expiry
      */
     setPlayerWanted(wanted, level = 1, duration = null) {
+        const isAnarchySystem = typeof this.securityLevel === 'string' && this.securityLevel.toLowerCase() === 'anarchy';
+
+        if (isAnarchySystem && wanted) {
+            // Anarchy systems never mark the player as wanted
+            this.playerWanted = false;
+            this.playerWantedLevel = 0;
+            this.playerWantedExpiry = null;
+            this.policeAlertSent = false;
+            return;
+        }
+
         this.playerWanted = wanted;
 
         if (wanted && this.player && this.player.isPolice) {

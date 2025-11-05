@@ -223,8 +223,15 @@ class EnemyDamageSystem {
             }
         }
 
+        const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
+
         // Set player wanted status if a non-pirate was destroyed
         if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN && this.role !== AI_ROLE.BOUNTY_HUNTER) {
+            if (isAnarchySystem) {
+                AI_LOG(`Wanted status skipped in ${system.name} (Anarchy system).`);
+                return;
+            }
+
             if (system.setPlayerWanted) {
 
                 // If player is police, revoke status first

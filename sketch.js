@@ -297,6 +297,12 @@ function keyPressed() {
             if (player && player.currentSystem) {
                 const currentSystem = player.currentSystem;
                 const isCurrentlyWanted = currentSystem.playerWanted || false;
+                const securityLevel = typeof currentSystem.securityLevel === 'string' ? currentSystem.securityLevel.toLowerCase() : '';
+                if (!isCurrentlyWanted && securityLevel === 'anarchy') {
+                    uiManager?.addMessage(`No legal authority operates in ${currentSystem.name}.`, 'lightblue');
+                    GS_LOG(`Wanted status toggle skipped in ${currentSystem.name}: Anarchy system.`);
+                    return false;
+                }
                 currentSystem.playerWanted = !isCurrentlyWanted;
                 currentSystem.policeAlertSent = !isCurrentlyWanted;
                 GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
