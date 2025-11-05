@@ -160,46 +160,6 @@ class Market {
         if (MARKET_DEBUG) console.log(` <- Prices updated.`);
     }
 
-    /**
-     * Update prices from the dynamic economy system (if available).
-     * This overrides the static price calculations with live supply/demand prices.
-     */
-    updateFromDynamicEconomy() {
-        // Only proceed if world simulation is initialized
-        if (!worldSimulation || !worldSimulation.isInitialized || !this.systemName) {
-            return false;
-        }
-
-        const economy = worldSimulation.getStationEconomy(this.systemName);
-        if (!economy) {
-            return false;
-        }
-
-        // Update prices from dynamic economy
-        let updated = false;
-        this.commodities.forEach(comm => {
-            const dynamicPrice = worldSimulation.getPrice(this.systemName, comm.name);
-            const stock = worldSimulation.getStock(this.systemName, comm.name);
-            
-            if (dynamicPrice > 0) {
-                // Use dynamic price as buy price
-                comm.buyPrice = dynamicPrice;
-                // Sell price is 80% of buy price (player sells to station)
-                comm.sellPrice = Math.floor(dynamicPrice * SELL_RATIO_SAFETY);
-                
-                // Store stock level for potential UI display
-                comm.stationStock = Math.floor(stock);
-                updated = true;
-            }
-        });
-
-        if (MARKET_DEBUG && updated) {
-            console.log(`Market: Updated prices from dynamic economy for ${this.systemName}`);
-        }
-
-        return updated;
-    }
-
     // Handles player attempt to sell commodities
     sell(commodityName, quantity, player) {
         if (MARKET_DEBUG) console.log(`--- Market.sell Attempt: ${commodityName}, Qty: ${quantity} ---`);
@@ -236,11 +196,6 @@ class Market {
         player.addCredits(income);
         player.removeCargo(commodityName, quantity);
         this.updatePlayerCargo(player.cargo);
-
-        // Update dynamic economy if available (player selling increases stock)
-        if (worldSimulation && worldSimulation.isInitialized && this.systemName) {
-            worldSimulation.processTrade(this.systemName, commodityName, -quantity);
-        }
 
         // Save  Game
         saveGame();
@@ -326,12 +281,6 @@ class Market {
             console.log(`Adding ${quantity} ${commodityName} to cargo...`);
             player.addCargo(commodityName, quantity); // Add item(s) to player inventory
             this.updatePlayerCargo(player.cargo); // Update market display immediately
-            
-            // Update dynamic economy if available (player buying decreases stock)
-            if (worldSimulation && worldSimulation.isInitialized && this.systemName) {
-                worldSimulation.processTrade(this.systemName, commodityName, quantity);
-            }
-            
             console.log(`--- Market.buy SUCCESS: Bought ${quantity} ${commodityName} for ${cost} credits. ---`);
             // Consider saving game state after a successful trade
             if (typeof saveGame === 'function') { // Check if saveGame exists globally

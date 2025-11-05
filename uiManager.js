@@ -685,12 +685,6 @@ class UIManager {
     /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
     drawMarketScreen(market, player) {
         if (!market || !player || typeof market.getPrices !== 'function') { /* Draw error */ return; }
-        
-        // Update prices from dynamic economy if available
-        if (typeof market.updateFromDynamicEconomy === 'function') {
-            market.updateFromDynamicEconomy();
-        }
-        
         market.updatePlayerCargo(player.cargo);
         const commodities = market.getPrices();
         this.marketButtonAreas = [];
@@ -714,8 +708,7 @@ class UIManager {
         text("Commodity", sX+cW*0.3, sY);
         text("Buy", sX+cW*1.8, sY);
         text("Sell", sX+cW*2.8, sY);
-        text("Stock", sX+cW*3.5, sY); // Stock level
-        text("Cargo", sX+cW*4.3, sY); // Player cargo
+        text("Cargo Hold", sX+cW*3.8, sY);
 
         // Row setup
         sY += 30;
@@ -772,21 +765,7 @@ class UIManager {
             textAlign(RIGHT, CENTER);
             text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
             text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
-            
-            // Display station stock if available from dynamic economy
-            if (comm.stationStock !== undefined) {
-                const stockColor = comm.stationStock < 50 ? color(255, 150, 150) : 
-                                  comm.stationStock > 150 ? color(150, 255, 150) : color(200);
-                fill(stockColor);
-                text(Math.floor(comm.stationStock), sX+cW*3.5-10, tY);
-            } else {
-                fill(150);
-                text("-", sX+cW*3.5-10, tY);
-            }
-            
-            // Player cargo
-            fill(255);
-            text(comm.playerStock??'?', sX+cW*4.3-10, tY);
+            text(comm.playerStock??'?', sX+cW*4-10, tY);
 
             // Commodity name and prices (drawn above with legal/illegal styling)
 

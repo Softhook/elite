@@ -9,8 +9,6 @@ const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield rec
 
 // --- Global Variables ---
 let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, saveSelectionScreen;
-let worldSimulation; // Living universe simulation manager
-let worldDebugOverlay; // Debug overlay for world simulation
 let loadGameWasSuccessful = false;
 window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
 let globalSessionSeed; // Declaration for the session seed
@@ -57,8 +55,6 @@ function setup() {
     // Create managers and the galaxy first
     gameStateManager = new GameStateManager();
     galaxy = new Galaxy(); // Creates Galaxy object (systems array is initially empty)
-    worldSimulation = new WorldSimulation(); // Living universe simulation
-    worldDebugOverlay = new WorldDebugOverlay(); // Debug overlay
     player = new Player();
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
@@ -115,15 +111,6 @@ function draw() {
         saveSelectionScreen.update(deltaTime);
     }
 
-    // Update world simulation in active game states
-    if (worldSimulation && worldSimulation.isInitialized) {
-        const activeStatesForSimulation = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP", 
-                                          "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD"];
-        if (activeStatesForSimulation.includes(currentState)) {
-            worldSimulation.update(deltaTime);
-        }
-    }
-
     // Main game state update and draw
     if (gameStateManager && player) {
         try {
@@ -177,11 +164,6 @@ function draw() {
     // --- UI Drawing ---
     uiManager.drawFramerate();
     uiManager.drawMessages();
-    
-    // Draw world debug overlay if enabled
-    if (worldDebugOverlay) {
-        worldDebugOverlay.draw();
-    }
 
     // Optional Debug Line (Screen Coords)
     // if (gameStateManager?.currentState === "IN_FLIGHT" && player) {
@@ -266,12 +248,6 @@ function keyPressed() {
     }
     // Single-key actions (map, wanted, autopilot, etc.)
     switch (key.toLowerCase()) {
-        case 'w':
-            // Toggle world debug overlay
-            if (worldDebugOverlay) {
-                worldDebugOverlay.toggle();
-            }
-            return false;
         case 'm':
             if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
             else if (gameStateManager.currentState === "GALAXY_MAP") gameStateManager.setState("IN_FLIGHT");
@@ -534,21 +510,13 @@ function __buildSaveData() {
     } else {
         playerData.credits = Math.floor(playerData.credits);
     }
-    
-    const saveData = {
+    return {
         playerData,
         galaxyData: galaxy.getSaveData(),
         currentSystemIndex: galaxy.currentSystemIndex,
         savedAt: Date.now(),
         version: 2
     };
-    
-    // Add world simulation data if available
-    if (worldSimulation && worldSimulation.isInitialized) {
-        saveData.worldSimulation = worldSimulation.getSaveData();
-    }
-    
-    return saveData;
 }
 
 function __atomicStoreToSlot(slotIndex) {
@@ -771,17 +739,7 @@ function loadGame(slotIndex) {
                     });
                 }
                 
-                // 7. Load world simulation data if present
-                if (worldSimulation && savedData.worldSimulation) {
-                    worldSimulation.loadSaveData(savedData.worldSimulation, galaxy);
-                    console.log('World simulation loaded from save');
-                } else if (worldSimulation) {
-                    // Initialize fresh if no save data (backward compatibility)
-                    worldSimulation.initialize(galaxy);
-                    console.log('World simulation initialized (no save data found)');
-                }
-                
-                // 8. Restore current view and other relevant states
+                // 7. Restore current view and other relevant states
                 if (savedData.currentView) {
                     Object.assign(uiManager.currentView, savedData.currentView);
                 }
