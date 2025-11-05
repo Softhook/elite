@@ -87,10 +87,7 @@ class EnemyTargeting {
                 if (isAlien && otherEnemy.role === AI_ROLE.ALIEN) {
                     continue;
                 }
-                // For Fighters, apply faction-based targeting (handled in evaluateTargetScore)
-                if (isFighter) {
-                    // Let evaluateTargetScore handle faction filtering
-                }
+                // For Fighters, faction-based targeting is handled in evaluateTargetScore
                 if (!this.isTargetValid(otherEnemy)) {
                     continue;
                 }
