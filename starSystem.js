@@ -125,6 +125,8 @@ class StarSystem {
         this.asteroidSpawnTimer = 0; 
         this.asteroidSpawnInterval = 3000; 
         this.maxTotalAsteroids = 45;
+        this.npcPilotSpawnTimer = 0;  // Timer for NPC pilot spawning
+        this.npcPilotSpawnInterval = 8000; // Spawn NPC pilots every 8 seconds
         this.despawnRadius = 5000; // Default, updated in initStaticElements based on screen size
 
         // --- Jump Zone Properties ---
@@ -584,6 +586,13 @@ try {
                 }
                 for (let i = 0; i < 8; i++) {
                     try { this.trySpawnAsteroid(); } catch(e) {}
+                }
+                
+                // Spawn NPC pilots from world simulation
+                if (typeof worldSimulation !== 'undefined' && worldSimulation) {
+                    try { this.spawnNPCPilots(worldSimulation); } catch(e) {
+                        console.error('Error spawning NPC pilots:', e);
+                    }
                 }
                 
                 // Use this.player in nested setTimeout too
@@ -1183,6 +1192,15 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
                 this.trySpawnAsteroid(); // CHANGE: Don't pass player
                 this.asteroidSpawnTimer = 0; 
+            }
+            
+            // Periodically spawn NPC pilots from world simulation
+            this.npcPilotSpawnTimer += deltaTime;
+            if (this.npcPilotSpawnTimer >= this.npcPilotSpawnInterval) {
+                if (typeof worldSimulation !== 'undefined' && worldSimulation) {
+                    try { this.spawnNPCPilots(worldSimulation); } catch(e) {}
+                }
+                this.npcPilotSpawnTimer = 0;
             }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
 
@@ -2596,6 +2614,139 @@ checkProjectileCollisions() {
             array[index] = array[lastIndex];
         }
         array.pop();
+    }
+    
+    /**
+     * Spawns NPC pilots from the world simulation as visible ships in this system.
+     * Called when entering a system or periodically to maintain population.
+     * @param {WorldSimulation} worldSim - Reference to world simulation
+     */
+    spawnNPCPilots(worldSim) {
+        if (!worldSim || !worldSim.isInitialized || !this.player) return;
+        
+        // Get pilots that should be in this system
+        const pilotsInSystem = worldSim.getActivePilotsInSystem(this.systemIndex);
+        if (!pilotsInSystem || pilotsInSystem.length === 0) return;
+        
+        // Track which pilots already have visible ships
+        const existingPilotIds = new Set();
+        for (const enemy of this.enemies) {
+            if (enemy.pilotId) {
+                existingPilotIds.add(enemy.pilotId);
+            }
+        }
+        
+        // Spawn up to a limit of visible NPC pilots (leave room for other spawns)
+        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - 2);
+        let spawned = 0;
+        
+        for (const pilot of pilotsInSystem) {
+            // Skip if pilot already has a visible ship
+            if (existingPilotIds.has(pilot.id)) continue;
+            
+            // Skip docked pilots (they're at the station)
+            if (pilot.dockedStationId) continue;
+            
+            // Spawn limit reached
+            if (spawned >= maxNPCPilots) break;
+            
+            // Create visible ship for this pilot
+            const npcShip = this._createNPCShipFromPilot(pilot);
+            if (npcShip) {
+                this.addEnemy(npcShip);
+                spawned++;
+            }
+        }
+        
+        if (spawned > 0 && STAR_SYSTEM_DEBUG) {
+            console.log(`StarSystem: Spawned ${spawned} NPC pilots in ${this.name}`);
+        }
+    }
+    
+    /**
+     * Creates a visible Enemy ship from a pilot registry entry.
+     * @param {Object} pilot - Pilot data from PilotRegistry
+     * @returns {Enemy|null} Created enemy or null if failed
+     * @private
+     */
+    _createNPCShipFromPilot(pilot) {
+        if (!pilot || !pilot.shipTypeId) return null;
+        
+        // Determine spawn position - either near station or in space
+        let spawnX, spawnY;
+        
+        if (this.station && pilot.pos === null) {
+            // Spawn near station if no position set
+            const stationDist = 300 + random(200);
+            const stationAngle = random(TWO_PI);
+            spawnX = this.station.pos.x + cos(stationAngle) * stationDist;
+            spawnY = this.station.pos.y + sin(stationAngle) * stationDist;
+        } else if (pilot.pos) {
+            // Use saved position if available
+            spawnX = pilot.pos.x;
+            spawnY = pilot.pos.y;
+        } else {
+            // Spawn somewhere in the system
+            const angle = random(TWO_PI);
+            const spawnDist = this._getDiagonalDistance() + random(150, 400);
+            spawnX = this.player.pos.x + cos(angle) * spawnDist;
+            spawnY = this.player.pos.y + sin(angle) * spawnDist;
+        }
+        
+        // Map pilot role to AI role
+        const aiRole = this._mapPilotRoleToAIRole(pilot.role);
+        
+        try {
+            const npcShip = new Enemy(spawnX, spawnY, this.player, pilot.shipTypeId, aiRole);
+            npcShip.calculateRadianProperties();
+            npcShip.initializeColors();
+            
+            // Link to pilot data
+            npcShip.pilotId = pilot.id;
+            npcShip.pilotName = pilot.name;
+            
+            // Set health from pilot data
+            if (pilot.hull !== undefined) {
+                npcShip.hull = pilot.hull;
+            }
+            if (pilot.shields !== undefined && npcShip.maxShield > 0) {
+                npcShip.shield = pilot.shields;
+            }
+            
+            // Set wanted status
+            if (pilot.legalStatus === 'wanted') {
+                npcShip.isWanted = true;
+            }
+            
+            return npcShip;
+        } catch (e) {
+            console.error('Failed to create NPC ship from pilot:', e);
+            return null;
+        }
+    }
+    
+    /**
+     * Maps PilotRegistry role names to AI_ROLE constants.
+     * @param {string} pilotRole - Role from pilot registry
+     * @returns {string} AI_ROLE constant
+     * @private
+     */
+    _mapPilotRoleToAIRole(pilotRole) {
+        switch (pilotRole) {
+            case 'trader':
+            case 'hauler':
+                return AI_ROLE.HAULER;
+            case 'miner':
+                return AI_ROLE.HAULER; // Miners act like haulers
+            case 'bounty':
+                return AI_ROLE.BOUNTY_HUNTER;
+            case 'police':
+                return AI_ROLE.POLICE;
+            case 'pirate':
+                return AI_ROLE.PIRATE;
+            default:
+                return AI_ROLE.HAULER; // Default to hauler for unknown roles
+        }
     }
     
     /**

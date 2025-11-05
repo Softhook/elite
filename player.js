@@ -179,6 +179,12 @@ class Player {
             console.log(`   >>> Calling this.activeMission.activate() <<<`);
             this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
             console.log(`   <<< Finished this.activeMission.activate() >>>`);
+            
+            // If this is a MissionRegistry mission, update the registry
+            if (mission._registryMission && typeof worldSimulation !== 'undefined' && worldSimulation?.missionRegistry) {
+                worldSimulation.missionRegistry.acceptMission(mission._registryMission.id, null);
+                console.log(`   Updated MissionRegistry for mission ${mission._registryMission.id}`);
+            }
         } catch(e) {
             console.error("   !!! ERROR during mission.activate():", e);
             this.activeMission = null; // Clear mission if activation failed critically
@@ -338,7 +344,6 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     if (canComplete) {
         console.log(`   Completing mission: ${this.activeMission.title}`);
 
-
         
         let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
 
@@ -353,6 +358,12 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         console.log(`   Credits after addCredits call: ${this.credits}`);
 
         this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
+
+        // Update MissionRegistry if this is a registry mission
+        if (this.activeMission._registryMission && typeof worldSimulation !== 'undefined' && worldSimulation?.missionRegistry) {
+            worldSimulation.missionRegistry.completeMission(this.activeMission._registryMission.id);
+            console.log(`   Updated MissionRegistry for completed mission ${this.activeMission._registryMission.id}`);
+        }
 
         if (this.activeMission && typeof uiManager !== 'undefined') {
             uiManager.inactiveMissionIds.add(this.activeMission.id);
