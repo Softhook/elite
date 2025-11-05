@@ -75,6 +75,7 @@ class Player {
         // Initialize weapons array based on ship definition
         this.weapons = [];
         this.weaponIndex = 0;
+        this.weaponHeat = {};
 
         // Track active mines deployed by this player (max 5)
         this.activeMines = [];
@@ -526,7 +527,6 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
     handleFireInput() {
         if (this.fireCooldown <= 0) {
             this.fireWeapon();
-            this.fireCooldown = this.fireRate;
         }
     }
 
@@ -761,9 +761,12 @@ handleInput() {
         // For turrets, WeaponSystem.fireTurret handles its own aiming if no target is passed.
         // If a target is passed (effectiveTarget), it will be used.
 
-        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
-        this.fireCooldown = this.fireRate;
-        return true;
+        const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
+        if (fired) {
+            this.fireCooldown = this.fireRate;
+            return true;
+        }
+        return false;
     }
 
     /** Updates player position, physics, and state. */
@@ -771,6 +774,10 @@ handleInput() {
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime * 0.001; // Pre-calculate milliseconds to seconds
         const currentTime = millis();
+
+        if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
+            WeaponSystem.coolWeaponHeat(this, deltaSeconds);
+        }
         
         // Barrier duration update
         if (this.isBarrierActive) {

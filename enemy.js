@@ -115,6 +115,7 @@ class Enemy {
         // --- Weapon Assignment Based on Ship Definition ---
         this.fireCooldown = random(1.0, 2.5);
         this.weaponIndex = 0; // To track which weapon is currently active if ship has multiple
+        this.weaponHeat = {};
         
         // Track active mines deployed by this enemy (max 5)
         this.activeMines = [];
@@ -316,6 +317,10 @@ class Enemy {
         
         // Update weapon cooldown
         this.fireCooldown -= deltaSeconds;
+
+        if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
+            WeaponSystem.coolWeaponHeat(this, deltaSeconds);
+        }
         
         // Cargo collection cooldown
         if (this.cargoCollectionCooldown > 0) {

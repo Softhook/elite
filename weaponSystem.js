@@ -65,6 +65,146 @@ class WeaponSystem {
         }
         return this._beamCache;
     }
+
+    static _getHeatKey(weapon) {
+        if (!weapon) return null;
+        if (typeof weapon.name === 'string' && weapon.name.length > 0) {
+            return weapon.name;
+        }
+        if (weapon.type) {
+            return weapon.type;
+        }
+        return null;
+    }
+
+    static _getHeatState(owner, weapon, create = true) {
+        if (!owner || !weapon) return null;
+        const key = this._getHeatKey(weapon);
+        if (!key) return null;
+
+        if (!owner.weaponHeat) {
+            if (!create) return null;
+            owner.weaponHeat = {};
+        }
+
+        let state = owner.weaponHeat[key];
+        const maxHeat = weapon.maxHeat ?? 1.0;
+        const heatPerShot = weapon.heatPerShot ?? 0.15;
+        const heatDissipation = weapon.heatDissipation ?? 0.3;
+        const recoveryRaw = weapon.heatRecoveryFactor ?? 0.25;
+        const recovery = Math.min(Math.max(recoveryRaw, 0.05), 0.95);
+
+        if (!state) {
+            if (!create) return null;
+            state = {
+                key,
+                heat: 0,
+                overheated: false,
+                maxHeat,
+                heatPerShot,
+                heatDissipation,
+                heatRecoveryFactor: recovery,
+                overheatMessageShown: false,
+                readyMessageShown: true
+            };
+            owner.weaponHeat[key] = state;
+        } else if (create) {
+            state.maxHeat = maxHeat;
+            state.heatPerShot = heatPerShot;
+            state.heatDissipation = heatDissipation;
+            state.heatRecoveryFactor = recovery;
+        }
+
+        return state;
+    }
+
+    static _notifyBeamOverheated(owner, state) {
+        if (!state) return;
+        if (owner === player && typeof uiManager !== 'undefined' && !state.overheatMessageShown) {
+            uiManager.addMessage("Beam overheated!", [255, 120, 80], 1200);
+        }
+        state.overheatMessageShown = true;
+        state.readyMessageShown = false;
+    }
+
+    static _notifyBeamReady(owner, state) {
+        if (!state) return;
+        if (owner === player && typeof uiManager !== 'undefined' && !state.readyMessageShown) {
+            uiManager.addMessage("Beam cooled", [120, 255, 180], 900);
+        }
+        state.readyMessageShown = true;
+        state.overheatMessageShown = false;
+    }
+
+    static _canFireBeam(owner, weapon) {
+        const state = this._getHeatState(owner, weapon, true);
+        if (!state) return true;
+
+        if (state.overheated || state.heat >= state.maxHeat - 1e-4) {
+            state.overheated = true;
+            state.heat = Math.min(state.heat, state.maxHeat);
+            this._notifyBeamOverheated(owner, state);
+            return false;
+        }
+        return true;
+    }
+
+    static _applyBeamHeat(owner, weapon) {
+        const state = this._getHeatState(owner, weapon, true);
+        if (!state) return;
+
+        if (state.heatPerShot > 0) {
+            state.heat = Math.min(state.maxHeat, state.heat + state.heatPerShot);
+        }
+
+        if (state.heat >= state.maxHeat - 1e-4) {
+            state.heat = state.maxHeat;
+            state.overheated = true;
+            this._notifyBeamOverheated(owner, state);
+        }
+    }
+
+    static coolWeaponHeat(owner, deltaSeconds) {
+        if (!owner || !owner.weaponHeat) return;
+        if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
+
+        const keys = Object.keys(owner.weaponHeat);
+        if (!keys.length) return;
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            const state = owner.weaponHeat[key];
+            if (!state) continue;
+
+            if (state.heat > 0 && state.heatDissipation > 0) {
+                state.heat = Math.max(0, state.heat - state.heatDissipation * deltaSeconds);
+            }
+
+            if (state.overheated) {
+                const threshold = state.maxHeat * state.heatRecoveryFactor;
+                if (state.heat <= threshold) {
+                    state.overheated = false;
+                    this._notifyBeamReady(owner, state);
+                }
+            }
+
+            if (!state.overheated && state.heat <= 1e-4) {
+                delete owner.weaponHeat[key];
+            }
+        }
+
+    }
+
+    static getHeatRatio(owner, weapon) {
+        const state = this._getHeatState(owner, weapon, false);
+        if (!state || !state.maxHeat) return 0;
+        return Math.min(1, Math.max(0, state.heat / state.maxHeat));
+    }
+
+    static isBeamOverheated(owner, weapon) {
+        const state = this._getHeatState(owner, weapon, false);
+        return !!(state && state.overheated);
+    }
     
 /** 
  * Handles force blast weapon (area effect damage)
@@ -150,7 +290,7 @@ static fireForce(owner, system) {
      * @param {Object} target - Optional target for aimed weapons
      */
     static fire(owner, system, angle, type = WEAPON_TYPE.PROJECTILE, target = null) {
-        if (!owner || !system) return;
+        if (!owner || !system) return false;
         
         // Extract count from type name if present (e.g., "spread3" -> 3)
         let count = 1;
@@ -161,19 +301,30 @@ static fireForce(owner, system) {
             type = type.substring(0, countMatch.index);
         }
 
+        const weapon = owner.currentWeapon;
+
         // Apply aim jitter from EM disruption for angle-driven weapons
         if (type !== WEAPON_TYPE.TURRET && type !== WEAPON_TYPE.MISSILE) {
             angle = this._applyAngleJitter(owner, angle);
         }
+
+        if (type === WEAPON_TYPE.BEAM && weapon?.type === WEAPON_TYPE.BEAM) {
+            if (!this._canFireBeam(owner, weapon)) {
+                return false;
+            }
+        }
         
         // Handle different weapon types
+        let fired = false;
         switch(type) {
             case WEAPON_TYPE.FORCE:
                 this.fireForce(owner, system);
+                fired = true;
                 break;
                 
             case WEAPON_TYPE.BEAM:
                 this.fireBeam(owner, system, angle);
+                fired = true;
                 break;
                 
             case WEAPON_TYPE.TURRET:
@@ -184,14 +335,17 @@ static fireForce(owner, system) {
                 } else {
                     this.fireTurret(owner, system, target || angle);
                 }
+                fired = true;
                 break;
                 
             case WEAPON_TYPE.STRAIGHT:
                 this.fireStraight(owner, system, angle, count);
+                fired = true;
                 break;
                 
             case WEAPON_TYPE.SPREAD:
                 this.fireSpread(owner, system, angle, count);
+                fired = true;
                 break;
             case WEAPON_TYPE.MISSILE:
                 // Disable lock/auto-acquire under disruption
@@ -201,9 +355,11 @@ static fireForce(owner, system) {
                     target = WeaponSystem.findNearestTarget(owner, system);
                 }
                 this.fireMissile(owner, system, angle, target);
+                fired = true;
                 break;
             case WEAPON_TYPE.TANGLE: // Add this case
                 this.fireTangle(owner, system, angle);
+                fired = true;
                 break;
             case WEAPON_TYPE.BARRIER: // Added Barrier case
                 // Activation logic is handled within the Player/Enemy class fireWeapon method
@@ -212,11 +368,14 @@ static fireForce(owner, system) {
                 break;
             case WEAPON_TYPE.MINE: // Added Mine case
                 this.fireMine(owner, system);
+                fired = true;
                 break;
             default:
                 // Default to single projectile
                 this.fireProjectile(owner, system, angle);
+                fired = true;
         }
+        return fired;
     }
 
     /** 
@@ -475,6 +634,10 @@ static fireForce(owner, system) {
         // Play sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
             soundManager.playWorldSound('beam', ownerX, ownerY, player.pos);
+        }
+
+        if (weapon?.type === WEAPON_TYPE.BEAM) {
+            this._applyBeamHeat(owner, weapon);
         }
     }
     

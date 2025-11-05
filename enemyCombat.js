@@ -363,7 +363,10 @@ class EnemyCombat {
         if (!system) { return; }
         if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
         const type = this.currentWeapon?.type || WEAPON_TYPE.PROJECTILE;
-        WeaponSystem.fire(this, system, fireAngleRadians, type, this.target);
+        const fired = WeaponSystem.fire(this, system, fireAngleRadians, type, this.target);
+        if (fired) {
+            this.fireCooldown = this.fireRate;
+        }
     }
 
     /**
@@ -440,9 +443,11 @@ class EnemyCombat {
         
         // Handle mine weapon - drop and switch to another weapon
         if ((this.currentWeapon.type || '') === WEAPON_TYPE.MINE) {
-            WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
-            this.fireCooldown = this.fireRate; // General weapon fire cooldown
-            
+            const firedMine = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+            if (firedMine) {
+                this.fireCooldown = this.fireRate; // General weapon fire cooldown
+            }
+
             // Immediately switch to a different weapon after dropping mine
             this.cycleWeapon();
             return;
@@ -470,8 +475,10 @@ class EnemyCombat {
             return;
         }
 
-        WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
-        this.fireCooldown = this.fireRate; // General weapon fire cooldown
+        const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+        if (fired) {
+            this.fireCooldown = this.fireRate; // General weapon fire cooldown
+        }
 
         // The barrier-specific logic is now at the top of the function.
         // The old block for barrier activation after WeaponSystem.fire is removed.

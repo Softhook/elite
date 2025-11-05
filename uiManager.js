@@ -423,13 +423,27 @@ class UIManager {
             }
             text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
             
-            // Draw cooldown bar for the selected weapon
-            if (isSelected && player.fireCooldown > 0 && player.fireRate > 0) {
-                let c = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
-                fill(255, 50, 50, 200);
-                noStroke();
-                // Place cooldown bar at the bottom of this weapon slot
-                rect(xPos, weaponBarY + weaponBarH - 3, slotW * c, 3);
+            // Draw cooldown or heat bar for the selected weapon
+            if (isSelected) {
+                let indicatorRatio = 0;
+                let indicatorColor = [255, 50, 50, 200];
+
+                if (weapon.type === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {
+                    indicatorRatio = WeaponSystem.getHeatRatio(player, weapon);
+                    if (indicatorRatio > 0) {
+                        indicatorColor = WeaponSystem.isBeamOverheated(player, weapon)
+                            ? [255, 120, 40, 230]
+                            : [255, 200, 80, 200];
+                    }
+                } else if (player.fireCooldown > 0 && player.fireRate > 0) {
+                    indicatorRatio = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
+                }
+
+                if (indicatorRatio > 0) {
+                    fill(indicatorColor[0], indicatorColor[1], indicatorColor[2], indicatorColor[3]);
+                    noStroke();
+                    rect(xPos, weaponBarY + weaponBarH - 3, slotW * indicatorRatio, 3);
+                }
             }
             
             // Move to next position

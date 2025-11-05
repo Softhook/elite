@@ -40,6 +40,10 @@ const WEAPON_UPGRADES = [
         damage: 3,
         color: [0, 200, 255], // Cyan
         fireRate: 0.15,
+        maxHeat: 1.0,
+        heatPerShot: 0.12,
+        heatDissipation: 0.35,
+        heatRecoveryFactor: 0.3,
         price: 2500,
         desc: "Continuous beam, high energy use."
     },
@@ -49,6 +53,10 @@ const WEAPON_UPGRADES = [
         damage: 2,
         color: [255, 255, 180], // Pale yellow
         fireRate: 0.08,
+        maxHeat: 1.0,
+        heatPerShot: 0.08,
+        heatDissipation: 0.42,
+        heatRecoveryFactor: 0.28,
         price: 3500,
         desc: "Low damage, rapid-fire beam."
     },
@@ -58,6 +66,10 @@ const WEAPON_UPGRADES = [
         damage: 5,
         color: [255, 0, 80], // Hot pink
         fireRate: 0.25,
+        maxHeat: 1.1,
+        heatPerShot: 0.18,
+        heatDissipation: 0.32,
+        heatRecoveryFactor: 0.35,
         price: 4200,
         desc: "Short beam, disables enemy shields."
     },
