@@ -427,7 +427,18 @@ class EnemyCombat {
                 return; // Barrier on cooldown
             }
         }
-    
+        let weaponType = (this.currentWeapon.type || '');
+
+        if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {
+            if (WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
+                const switched = this._switchWeaponAfterBeamOverheat();
+                if (!switched) {
+                    return;
+                }
+                weaponType = (this.currentWeapon.type || '');
+            }
+        }
+
         // Default firing angle (ship's current heading)
         let fireAngle = (preferredAngle !== null && isFinite(preferredAngle)) ? preferredAngle : this.angle;
     
@@ -442,7 +453,7 @@ class EnemyCombat {
         }
         
         // Handle mine weapon - drop and switch to another weapon
-        if ((this.currentWeapon.type || '') === WEAPON_TYPE.MINE) {
+        if (weaponType === WEAPON_TYPE.MINE) {
             const firedMine = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
             if (firedMine) {
                 this.fireCooldown = this.fireRate; // General weapon fire cooldown
@@ -454,7 +465,7 @@ class EnemyCombat {
         }
         
         // Rest of existing code remains unchanged
-        if ((this.currentWeapon.type || '') === WEAPON_TYPE.MISSILE) {
+        if (weaponType === WEAPON_TYPE.MISSILE) {
             // Block missiles against invalid or non-hostile targets like cargo
             if (!targetToPass ||
                 targetToPass.destroyed ||
@@ -475,9 +486,12 @@ class EnemyCombat {
             return;
         }
 
-        const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
+        const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, weaponType, targetToPass);
         if (fired) {
             this.fireCooldown = this.fireRate; // General weapon fire cooldown
+        } else if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined' &&
+               WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
+            this._switchWeaponAfterBeamOverheat();
         }
 
         // The barrier-specific logic is now at the top of the function.
@@ -486,13 +500,61 @@ class EnemyCombat {
 
     /** Cycles to the next available weapon */
     cycleWeapon() {
-        if (this.weapons && this.weapons.length > 1) {
+        if (!this.weapons || this.weapons.length <= 1) return;
+        
+        const originalIndex = this.weaponIndex;
+        let attempts = 0;
+        
+        do {
             this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
-            this.currentWeapon = this.weapons[this.weaponIndex];
-            this.fireRate = this.currentWeapon.fireRate;
-            // Reset cooldown when switching weapons (optional)
-            //this.fireCooldown = this.fireRate * 0.5; 
+            const candidate = this.weapons[this.weaponIndex];
+            
+            // Skip overheated beams
+            if (candidate && candidate.type === WEAPON_TYPE.BEAM && 
+                typeof WeaponSystem !== 'undefined' && 
+                WeaponSystem.isBeamOverheated(this, candidate)) {
+                attempts++;
+                continue;
+            }
+            
+            // Found a usable weapon
+            this.currentWeapon = candidate;
+            this.fireRate = candidate.fireRate;
+            return;
+            
+        } while (this.weaponIndex !== originalIndex && attempts < this.weapons.length);
+        
+        // If all weapons are overheated/unavailable, stay on current
+        // (should rarely happen, but prevents infinite loop)
+    }
+
+    _switchWeaponAfterBeamOverheat() {
+        if (!Array.isArray(this.weapons) || this.weapons.length <= 1) {
+            return false;
         }
+
+        const originalIndex = this.weaponIndex;
+        for (let offset = 1; offset < this.weapons.length; offset++) {
+            const candidateIndex = (originalIndex + offset) % this.weapons.length;
+            const candidate = this.weapons[candidateIndex];
+            if (!candidate) {
+                continue;
+            }
+            if (candidate.type === WEAPON_TYPE.BARRIER) {
+                continue;
+            }
+            if (candidate.type === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined' &&
+                WeaponSystem.isBeamOverheated(this, candidate)) {
+                continue;
+            }
+
+            this.weaponIndex = candidateIndex;
+            this.currentWeapon = candidate;
+            this.fireRate = candidate.fireRate;
+            return true;
+        }
+
+        return false;
     }
 
     /**

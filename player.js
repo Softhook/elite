@@ -514,6 +514,16 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
         this.fireRate = weapon.fireRate || 0.5;
         // Reset cooldown on weapon switch (optional)
         this.fireCooldown = 0;
+        
+        // Check if switching to an overheated beam and notify player
+        if (weapon.type === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {
+            if (WeaponSystem.isBeamOverheated(this, weapon)) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Beam still cooling...", [255, 150, 80], 1000);
+                }
+            }
+        }
+        
         return true;
     }
 

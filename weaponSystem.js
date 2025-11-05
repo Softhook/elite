@@ -168,6 +168,9 @@ class WeaponSystem {
         if (!owner || !owner.weaponHeat) return;
         if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
 
+        // Cap deltaSeconds to prevent anomalies from pausing/tab switching
+        const cappedDelta = Math.min(deltaSeconds, 0.5);
+
         const keys = Object.keys(owner.weaponHeat);
         if (!keys.length) return;
 
@@ -177,7 +180,7 @@ class WeaponSystem {
             if (!state) continue;
 
             if (state.heat > 0 && state.heatDissipation > 0) {
-                state.heat = Math.max(0, state.heat - state.heatDissipation * deltaSeconds);
+                state.heat = Math.max(0, state.heat - state.heatDissipation * cappedDelta);
             }
 
             if (state.overheated) {
@@ -188,7 +191,7 @@ class WeaponSystem {
                 }
             }
 
-            if (!state.overheated && state.heat <= 1e-4) {
+            if (!state.overheated && state.heat <= 0) {
                 delete owner.weaponHeat[key];
             }
         }
