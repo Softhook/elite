@@ -15,6 +15,20 @@ const WEAPON_TYPE = {
 };
 
 class WeaponSystem {
+    // Scale angle jitter by disruption level (0..1)
+    static _applyAngleJitter(owner, angle) {
+        const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
+        if (!d) return angle;
+        const maxJitter = 0.55 * d; //
+        const jitter = (Math.random() * 2 - 1) * maxJitter;
+        return angle + jitter;
+    }
+
+    // Whether targeting/locks should be disabled at this disruption level
+    static _isLockDisabled(owner) {
+        const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
+        return d > 0.15; // disable auto-target/locks when notable disruption
+    }
     // Static regex for parsing weapon count from type string
     static _countRegex = /(\d+)$/;
     
@@ -146,6 +160,11 @@ static fireForce(owner, system) {
             // Remove count from type to get base type
             type = type.substring(0, countMatch.index);
         }
+
+        // Apply aim jitter from EM disruption for angle-driven weapons
+        if (type !== WEAPON_TYPE.TURRET && type !== WEAPON_TYPE.MISSILE) {
+            angle = this._applyAngleJitter(owner, angle);
+        }
         
         // Handle different weapon types
         switch(type) {
@@ -158,7 +177,13 @@ static fireForce(owner, system) {
                 break;
                 
             case WEAPON_TYPE.TURRET:
-                this.fireTurret(owner, system, target || angle);
+                // If disrupted, skip auto-targeting and fire forward with jitter
+                if (this._isLockDisabled(owner)) {
+                    const fwd = this._applyAngleJitter(owner, owner.angle || angle || 0);
+                    this.fireProjectile(owner, system, fwd);
+                } else {
+                    this.fireTurret(owner, system, target || angle);
+                }
                 break;
                 
             case WEAPON_TYPE.STRAIGHT:
@@ -169,7 +194,10 @@ static fireForce(owner, system) {
                 this.fireSpread(owner, system, angle, count);
                 break;
             case WEAPON_TYPE.MISSILE:
-                if (!target) {
+                // Disable lock/auto-acquire under disruption
+                if (this._isLockDisabled(owner)) {
+                    target = null;
+                } else if (!target) {
                     target = WeaponSystem.findNearestTarget(owner, system);
                 }
                 this.fireMissile(owner, system, angle, target);
@@ -241,6 +269,8 @@ static fireForce(owner, system) {
             console.warn("fireMissile: Owner has no currentWeapon.");
             return;
         }
+        // Apply jitter to initial heading under disruption
+        angle = this._applyAngleJitter(owner, angle);
         const weapon = owner.currentWeapon;
         const ownerX = owner.pos.x;
         const ownerY = owner.pos.y;
@@ -395,7 +425,8 @@ static fireForce(owner, system) {
             angle = atan2(worldMy - ownerY, worldMx - ownerX);
         }
         
-        // Calculate beam direction and endpoint
+        // Apply aim jitter from disruption, then calculate direction and endpoint
+        angle = this._applyAngleJitter(owner, angle);
         dir.set(cos(angle), sin(angle));
         
         if (isNaN(dir.x) || isNaN(dir.y)) {
@@ -544,6 +575,8 @@ static fireForce(owner, system) {
      */
     static findNearestTarget(owner, system) {
         if (!owner || !system) return null;
+        // Under electromagnetic disruption, disable auto-acquisition
+        if (this._isLockDisabled(owner)) return null;
         
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
