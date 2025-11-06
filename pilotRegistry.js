@@ -222,12 +222,15 @@ class PilotRegistry {
         // Assign role with weighted distribution
         const roleRoll = random();
         let role;
-        if (roleRoll < 0.40) role = 'trader';       // 40% traders
-        else if (roleRoll < 0.60) role = 'hauler';  // 20% haulers
-        else if (roleRoll < 0.70) role = 'miner';   // 10% miners
-        else if (roleRoll < 0.80) role = 'police';  // 10% police
-        else if (roleRoll < 0.90) role = 'smuggler'; // 10% smugglers
-        else role = 'pirate';                        // 10% pirates
+        if (roleRoll < 0.35) role = 'trader';       // 35% traders
+        else if (roleRoll < 0.55) role = 'hauler';  // 20% haulers
+        else if (roleRoll < 0.63) role = 'miner';   // 8% miners
+        else if (roleRoll < 0.73) role = 'police';  // 10% police
+        else if (roleRoll < 0.81) role = 'smuggler'; // 8% smugglers
+        else if (roleRoll < 0.89) role = 'pirate';  // 8% pirates
+        else if (roleRoll < 0.94) role = 'bounty';  // 5% bounty hunters
+        else if (roleRoll < 0.97) role = 'guard';   // 3% guards
+        else role = 'local_transporter';             // 3% local transporters
 
         // Select ship type based on role
         const shipTypeId = this._assignShipForRole({ shipTypeId: null }, role);
@@ -297,6 +300,10 @@ class PilotRegistry {
             case 'local_transporter':
                 if (context && context.commodity) return [context.commodity];
                 return ['Food', 'Machinery'];
+            case 'bounty':
+            case 'guard':
+            case 'police':
+                return null; // No trading focus for combat roles
             default:
                 return null;
         }
@@ -555,6 +562,7 @@ class PilotRegistry {
             local_transporter: { profit: this._scoreLocalTransport(metrics), context: metrics.bestLocalCommodity },
             smuggler: { profit: this._scoreSmuggler(metrics), context: metrics.bestSmugglerOpportunity },
             bounty: { profit: this._scoreBounty(metrics) },
+            guard: { profit: this._scoreGuard(metrics) },
             miner: { profit: this._scoreMiner(metrics) }
         };
     }
@@ -783,6 +791,14 @@ class PilotRegistry {
     _scoreBounty(metrics) {
         const base = 800;
         return base + metrics.piratePressure * 900;
+    }
+
+    _scoreGuard(metrics) {
+        // Guards are hired for protection in dangerous systems
+        const base = 650;
+        const riskBonus = (1 - metrics.securityFactor) * 700;
+        const pirateBonus = metrics.piratePressure * 600;
+        return base + riskBonus + pirateBonus;
     }
 
     _scoreMiner(metrics) {

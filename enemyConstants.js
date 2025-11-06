@@ -14,7 +14,11 @@ const AI_ROLE = {
     TRANSPORT: 'Transport',  // local shuttles
     ALIEN: 'Alien',
     BOUNTY_HUNTER: 'BOUNTY_HUNTER',
-    GUARD: 'Guard'
+    GUARD: 'Guard',
+    MILITARY: 'MILITARY',
+    EXPLORER: 'EXPLORER',
+    IMPERIAL: 'IMPERIAL',
+    SEPARATIST: 'SEPARATIST'
 };
 
 // -------------------------
