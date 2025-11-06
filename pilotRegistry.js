@@ -348,10 +348,16 @@ class PilotRegistry {
             isBountyHunter: false,
             assignedGuardIds: [],
             guardPrincipalId: null,
-            guardAssignmentMs: null
+            guardAssignmentMs: null,
+            pendingTrade: null,
+            nextDepartureMs: null
         };
 
         this._ensureGuardFieldDefaults(pilot);
+        
+        // Give traders/haulers starting cargo
+        this._initializePilotStartingCargo(pilot, shipDef);
+        
         if (role === 'guard') {
             this._maybeAssignGuardPrincipal(pilot, {
                 preferredSystemIndex: systemIndex,
@@ -663,6 +669,82 @@ class PilotRegistry {
                 return null;
         }
     }
+    
+    /**
+     * Initialize starting cargo for a newly created pilot based on their role.
+     * Traders/haulers start with some cargo, others start empty.
+     * @param {Object} pilot - The pilot to initialize
+     * @param {Object} shipDef - Ship definition from SHIP_DEFINITIONS
+     * @private
+     */
+    _initializePilotStartingCargo(pilot, shipDef) {
+        if (!pilot || !shipDef) return;
+        
+        const cargoCap = pilot.cargoCap || 0;
+        if (cargoCap <= 0) return;
+        
+        // Only traders, haulers, miners, and local transporters start with cargo
+        const cargoRoles = ['trader', 'hauler', 'miner', 'local_transporter'];
+        if (!cargoRoles.includes(pilot.role)) return;
+        
+        // Get typical cargo from ship definition
+        const typicalCargo = shipDef.typicalCargo;
+        if (!typicalCargo || !Array.isArray(typicalCargo) || typicalCargo.length === 0) return;
+        
+        // Fill 30-70% of cargo capacity with a random typical commodity
+        const fillPercent = random(0.3, 0.7);
+        const startingAmount = Math.floor(cargoCap * fillPercent);
+        if (startingAmount <= 0) return;
+        
+        const cargoType = random(typicalCargo);
+        pilot.cargo[cargoType] = startingAmount;
+    }
+
+    _getTotalCargoUnits(pilot) {
+        if (!pilot || !pilot.cargo) return 0;
+        let total = 0;
+        for (const quantity of Object.values(pilot.cargo)) {
+            total += Math.max(0, Math.floor(quantity));
+        }
+        return total;
+    }
+
+    _getCargoFreeCapacity(pilot) {
+        const cap = Math.max(0, pilot?.cargoCap || 0);
+        return Math.max(0, cap - this._getTotalCargoUnits(pilot));
+    }
+
+    _addCargoToPilot(pilot, commodity, quantity) {
+        if (!pilot || !commodity) return 0;
+        const amount = Math.max(0, Math.floor(quantity));
+        if (amount <= 0) return 0;
+        const freeSpace = this._getCargoFreeCapacity(pilot);
+        if (freeSpace <= 0) return 0;
+        const added = Math.min(amount, freeSpace);
+        if (!pilot.cargo) pilot.cargo = {};
+        pilot.cargo[commodity] = (pilot.cargo[commodity] || 0) + added;
+        return added;
+    }
+
+    _removeCargoFromPilot(pilot, commodity, quantity) {
+        if (!pilot || !pilot.cargo || !pilot.cargo[commodity]) return 0;
+        const amount = Math.min(Math.max(0, Math.floor(quantity)), pilot.cargo[commodity]);
+        if (amount <= 0) return 0;
+        pilot.cargo[commodity] -= amount;
+        if (pilot.cargo[commodity] <= 0) {
+            delete pilot.cargo[commodity];
+        }
+        return amount;
+    }
+
+    _clearZeroCargo(pilot) {
+        if (!pilot || !pilot.cargo) return;
+        for (const [type, quantity] of Object.entries({ ...pilot.cargo })) {
+            if (!quantity || quantity <= 0) {
+                delete pilot.cargo[type];
+            }
+        }
+    }
 
     /**
      * Choose a suitable ship type for the target role, keeping the current hull if already appropriate.
@@ -701,6 +783,182 @@ class PilotRegistry {
         if (pilot.shipTypeId && SHIP_DEFINITIONS[pilot.shipTypeId]) return pilot.shipTypeId;
         if (SHIP_DEFINITIONS.CobraMkIII) return 'CobraMkIII';
         return null;
+    }
+
+    _sellCargoAtStation(pilot, stationId, stationEconomyRegistry) {
+        if (!pilot || !stationId || !stationEconomyRegistry) return false;
+        if (!pilot.cargo || Object.keys(pilot.cargo).length === 0) return false;
+
+        const economy = stationEconomyRegistry.getEconomy(stationId);
+        if (!economy) return false;
+
+        let soldAny = false;
+        let totalCreditsGained = 0;
+        
+        // Sell all cargo except illegal goods
+        for (const [commodity, qtyRaw] of Object.entries({ ...pilot.cargo })) {
+            const quantity = Math.max(0, Math.floor(qtyRaw));
+            if (quantity <= 0) continue;
+            
+            // Skip illegal goods in non-anarchy systems
+            if (economy.illegal && economy.illegal.has && economy.illegal.has(commodity)) continue;
+
+            const price = stationEconomyRegistry.getPrice(stationId, commodity);
+            if (!price || price <= 0) continue;
+            
+            const success = stationEconomyRegistry.processTrade(stationId, commodity, -quantity);
+            if (!success) continue;
+
+            const creditAmount = price * quantity;
+            pilot.credits = (pilot.credits || 0) + creditAmount;
+            totalCreditsGained += creditAmount;
+            this._removeCargoFromPilot(pilot, commodity, quantity);
+            soldAny = true;
+        }
+
+        if (soldAny) {
+            this._clearZeroCargo(pilot);
+            console.log(`${pilot.name} sold cargo for ${totalCreditsGained.toFixed(0)} credits`);
+        }
+        
+        // Clear pending trade if we arrived at destination
+        if (pilot.pendingTrade && pilot.pendingTrade.destStationId === stationId) {
+            pilot.pendingTrade = null;
+        }
+
+        return soldAny;
+    }
+
+    _findTradeOpportunity(pilot, system, economy, stationEconomyRegistry, galaxyRef) {
+        if (!pilot || !system || !economy || !stationEconomyRegistry || !system.station) return null;
+
+        const connected = this._gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef);
+        if (!connected || connected.length === 0) return null;
+
+        const focusList = Array.isArray(pilot.tradeFocus) && pilot.tradeFocus.length > 0
+            ? pilot.tradeFocus
+            : Object.keys(economy.stock || {});
+
+        const stationId = system.station.name;
+        let best = null;
+
+        for (const commodity of focusList) {
+            // Skip if illegal at current station
+            if (economy.illegal && economy.illegal.has && economy.illegal.has(commodity)) continue;
+            
+            const stockHere = Math.max(0, Math.floor(economy.stock?.[commodity] || 0));
+            if (stockHere <= 0) continue;
+
+            const buyPrice = stationEconomyRegistry.getPrice(stationId, commodity);
+            if (!buyPrice || buyPrice <= 0) continue;
+
+            for (const neighbor of connected) {
+                // Skip if illegal at destination station
+                const destEconomy = stationEconomyRegistry.getEconomy(neighbor.stationId);
+                if (destEconomy?.illegal?.has(commodity)) continue;
+                
+                const sellPrice = stationEconomyRegistry.getPrice(neighbor.stationId, commodity);
+                if (!sellPrice || sellPrice <= 0) continue;
+
+                const perUnitProfit = sellPrice - buyPrice;
+                if (perUnitProfit <= 0) continue;
+
+                if (!best || perUnitProfit > best.perUnitProfit) {
+                    best = {
+                        commodity,
+                        destSystemIndex: neighbor.systemIndex,
+                        destStationId: neighbor.stationId,
+                        buyPrice,
+                        sellPrice,
+                        perUnitProfit,
+                        sourceStock: stockHere
+                    };
+                }
+            }
+        }
+
+        return best;
+    }
+
+    _executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity) {
+        if (!pilot || !system || !economy || !stationEconomyRegistry || !opportunity || !system.station) return false;
+
+        const stationId = system.station.name;
+        const buyPrice = opportunity.buyPrice;
+        if (!buyPrice || buyPrice <= 0) return false;
+
+        const credits = Math.max(0, Math.floor(pilot.credits || 0));
+        const maxAffordable = Math.floor(credits / buyPrice);
+        if (maxAffordable <= 0) return false;
+
+        const freeCapacity = this._getCargoFreeCapacity(pilot);
+        if (freeCapacity <= 0) return false;
+
+        const availableStock = Math.max(0, Math.floor(economy.stock?.[opportunity.commodity] || 0));
+        if (availableStock <= 0) return false;
+
+        const plannedQuantity = Math.min(freeCapacity, maxAffordable, availableStock);
+        if (plannedQuantity <= 0) return false;
+
+        const success = stationEconomyRegistry.processTrade(stationId, opportunity.commodity, plannedQuantity);
+        if (!success) return false;
+
+        pilot.credits -= buyPrice * plannedQuantity;
+        const added = this._addCargoToPilot(pilot, opportunity.commodity, plannedQuantity);
+
+        if (added < plannedQuantity) {
+            const surplus = plannedQuantity - added;
+            if (surplus > 0) {
+                stationEconomyRegistry.processTrade(stationId, opportunity.commodity, -surplus);
+                pilot.credits += buyPrice * surplus;
+            }
+            if (added <= 0) {
+                return false;
+            }
+        }
+        
+        console.log(`${pilot.name} bought ${added} ${opportunity.commodity} for ${(buyPrice * added).toFixed(0)} credits`);
+
+        pilot.pendingTrade = {
+            commodity: opportunity.commodity,
+            quantity: added,
+            destSystemIndex: opportunity.destSystemIndex,
+            destStationId: opportunity.destStationId,
+            buyPrice: opportunity.buyPrice,
+            expectedSellPrice: opportunity.sellPrice
+        };
+
+        pilot.itinerary = [opportunity.destSystemIndex];
+        pilot.nextDepartureMs = Date.now() + Math.floor(random(2000, 6000));
+        return true;
+    }
+
+    _handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef) {
+        if (!pilot || !system || !stationEconomyRegistry || !system.station) return;
+
+        const stationId = system.station.name;
+        const economy = stationEconomyRegistry.getEconomy(stationId);
+        if (!economy) return;
+
+        const sold = this._sellCargoAtStation(pilot, stationId, stationEconomyRegistry);
+        if (sold) {
+            pilot.nextDepartureMs = null;
+        }
+
+        if (pilot.pendingTrade) {
+            return;
+        }
+
+        const freeCapacity = this._getCargoFreeCapacity(pilot);
+        if (freeCapacity <= 0) return;
+
+        const canPurchase = ['trader', 'hauler', 'smuggler', 'local_transporter', 'miner'].includes(pilot.role);
+        if (!canPurchase) return;
+
+        const opportunity = this._findTradeOpportunity(pilot, system, economy, stationEconomyRegistry, galaxyRef);
+        if (!opportunity) return;
+
+        this._executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity);
     }
 
     registerEventPilot(params = {}) {
@@ -771,7 +1029,9 @@ class PilotRegistry {
             isBountyHunter: Boolean(isBountyHunter),
             assignedGuardIds: [],
             guardPrincipalId: null,
-            guardAssignmentMs: null
+            guardAssignmentMs: null,
+            pendingTrade: null,
+            nextDepartureMs: null
         };
 
         this._ensureGuardFieldDefaults(pilot);
@@ -847,7 +1107,7 @@ class PilotRegistry {
         // Basic state machine
         if (pilot.dockedStationId) {
             // Pilot is docked - may trade, plan route, or depart
-            this._updateDockedPilot(pilot, dtSec, galaxyRef);
+            this._updateDockedPilot(pilot, dtSec, galaxyRef, stationEconomyRegistry);
         } else if (pilot.itinerary && pilot.itinerary.length > 0) {
             // Pilot is traveling - simulate movement
             this._updateTravelingPilot(pilot, dtSec, galaxyRef);
@@ -1245,24 +1505,40 @@ class PilotRegistry {
      * @param {number} dtSec - Delta time in seconds
      * @param {Galaxy} galaxyRef - Galaxy reference
      */
-    _updateDockedPilot(pilot, dtSec, galaxyRef) {
-        // For now, just occasionally undock and pick a destination
-        // This is a placeholder for future trading logic
-        if (random() < 0.01) { // 1% chance per update to depart
-            if (pilot.role === 'local_transporter') {
-                // Local transporters undock but stay in the system
-                pilot.dockedStationId = null;
-            } else {
-                // Pick a random connected system
-                const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
-                if (currentSystem && currentSystem.connectedSystemIndices && 
-                    currentSystem.connectedSystemIndices.length > 0) {
-                    const destIndex = random(currentSystem.connectedSystemIndices);
-                    pilot.itinerary = [destIndex];
-                    pilot.dockedStationId = null;
-                    console.log(`Pilot ${pilot.name} departed for system ${destIndex}`);
-                }
-            }
+    _updateDockedPilot(pilot, dtSec, galaxyRef, stationEconomyRegistry) {
+        if (!pilot || !galaxyRef) return;
+
+        const system = galaxyRef.systems?.[pilot.currentSystemIndex];
+        if (!system || !system.station) return;
+
+        if (stationEconomyRegistry) {
+            this._handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef);
+        }
+
+        if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.003) {
+            this._planNextAction(pilot, galaxyRef);
+        }
+
+        if (pilot.role === 'local_transporter' && !pilot.pendingTrade && random() < 0.01) {
+            pilot.dockedStationId = null;
+            pilot.pos = null;
+            pilot.nextDepartureMs = null;
+            return;
+        }
+
+        const now = Date.now();
+        if (pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
+            pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
+        }
+
+        const readyForTradeDeparture = pilot.pendingTrade && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
+        const idleWithRoute = !pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && random() < 0.01;
+
+        if (readyForTradeDeparture || idleWithRoute) {
+            pilot.dockedStationId = null;
+            pilot.pos = null;
+            pilot.nextDepartureMs = null;
+            return;
         }
     }
 
@@ -1283,6 +1559,8 @@ class PilotRegistry {
             const destSystem = galaxyRef.systems[destIndex];
             if (destSystem && destSystem.station) {
                 pilot.dockedStationId = destSystem.station.name;
+                pilot.pos = null;
+                pilot.nextDepartureMs = null;
                 console.log(`Pilot ${pilot.name} arrived and docked at ${destSystem.name}`);
             }
 
@@ -1698,6 +1976,38 @@ class PilotRegistry {
         this._clearBountyForTarget(key);
     }
 
+    updatePilotCargo(pilotId, cargoState) {
+        const pilot = this.getPilotById(pilotId);
+        if (!pilot) return false;
+
+        pilot.cargo = {};
+        if (cargoState && typeof cargoState === 'object') {
+            for (const [type, qty] of Object.entries(cargoState)) {
+                const amount = Math.max(0, Math.floor(qty));
+                if (amount > 0) {
+                    pilot.cargo[type] = amount;
+                }
+            }
+        }
+
+        const cap = Math.max(0, pilot.cargoCap || 0);
+        let total = this._getTotalCargoUnits(pilot);
+        if (total > cap) {
+            for (const [type, quantity] of Object.entries({ ...pilot.cargo })) {
+                if (total <= cap) break;
+                const overflow = Math.min(quantity, total - cap);
+                pilot.cargo[type] -= overflow;
+                total -= overflow;
+                if (pilot.cargo[type] <= 0) {
+                    delete pilot.cargo[type];
+                }
+            }
+        }
+
+        this._clearZeroCargo(pilot);
+        return true;
+    }
+
     /**
      * Notify registry when a pilot dies to clean up guard assignments.
      * @param {number} pilotId - ID of the pilot who died
@@ -1709,6 +2019,8 @@ class PilotRegistry {
         if (!pilot) return;
 
         pilot.alive = false;
+        pilot.pendingTrade = null;
+        pilot.nextDepartureMs = null;
 
         // Clear any bounty on this pilot
         if (pilot.hasActiveBounty) {
@@ -1839,7 +2151,9 @@ class PilotRegistry {
                 isBountyHunter: Boolean(p.isBountyHunter),
                 assignedGuardIds: Array.isArray(p.assignedGuardIds) ? [...p.assignedGuardIds] : [],
                 guardPrincipalId: p.guardPrincipalId ?? null,
-                guardAssignmentMs: p.guardAssignmentMs ?? null
+                guardAssignmentMs: p.guardAssignmentMs ?? null,
+                pendingTrade: null,
+                nextDepartureMs: null
             };
             this._ensureGuardFieldDefaults(pilot);
             return pilot;

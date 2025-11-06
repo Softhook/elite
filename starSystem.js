@@ -879,6 +879,11 @@ try {
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             
+            // Initialize cargo for legacy spawns (not from pilot registry)
+            if (typeof newEnemy.initializeCargoHoldFromPilot === 'function') {
+                this._initializeLegacySpawnCargo(newEnemy);
+            }
+            
             this.addEnemy(newEnemy); // Add the primary NPC
 
 
@@ -2884,6 +2889,15 @@ checkProjectileCollisions() {
                 npcShip.isLocalTransport = true;
             }
 
+            if (typeof npcShip.initializeCargoHoldFromPilot === 'function') {
+                npcShip.initializeCargoHoldFromPilot(pilot.cargo, pilot.cargoCap);
+            } else if (pilot.cargo) {
+                npcShip.cargoHold = { ...pilot.cargo };
+                if (pilot.cargoCap != null) {
+                    npcShip.cargoCapacity = pilot.cargoCap;
+                }
+            }
+
             if (pilot.role === 'bounty' && pilot.isBountyHunter) {
                 npcShip.bountyContractId = pilot.bountyContractId;
                 npcShip.bountyTargetId = pilot.bountyTargetId;
@@ -2914,6 +2928,34 @@ checkProjectileCollisions() {
             console.error('Failed to create NPC ship from pilot:', e);
             return null;
         }
+    }
+    
+    /**
+     * Initialize cargo for legacy-spawned enemies (not from pilot registry).
+     * Gives them starting cargo based on ship definitions and role.
+     * @param {Enemy} enemy - The enemy ship to initialize
+     * @private
+     */
+    _initializeLegacySpawnCargo(enemy) {
+        if (!enemy || !enemy.cargoCapacity || enemy.cargoCapacity <= 0) return;
+        
+        const shipDef = SHIP_DEFINITIONS[enemy.shipTypeName];
+        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) return;
+        
+        // Initialize empty cargo hold
+        enemy.cargoHold = {};
+        
+        // Give traders/haulers starting cargo
+        if (enemy.role === AI_ROLE.HAULER) {
+            // Haulers spawn with 30-70% of capacity filled
+            const fillPercent = random(0.3, 0.7);
+            const targetAmount = Math.floor(enemy.cargoCapacity * fillPercent);
+            const cargoType = random(shipDef.typicalCargo);
+            enemy.cargoHold[cargoType] = targetAmount;
+        }
+        // Pirates spawn empty (they collect cargo)
+        // Police spawn empty (they don't trade)
+        // Others spawn empty by default
     }
     
     /**

@@ -8,6 +8,115 @@
  */
 class EnemyCargo {
 
+    initializeCargoHoldFromPilot(pilotCargo, capacity) {
+        const cap = Number.isFinite(capacity) ? Math.max(0, Math.floor(capacity)) : (this.cargoCapacity || 0);
+        this.cargoCapacity = cap;
+        this.cargoHold = {};
+
+        if (pilotCargo && typeof pilotCargo === 'object') {
+            for (const [type, quantity] of Object.entries(pilotCargo)) {
+                const amount = Math.max(0, Math.floor(quantity));
+                if (amount > 0) {
+                    this.cargoHold[type] = amount;
+                }
+            }
+        }
+
+        this._enforceCargoLimits();
+        this._syncCargoToPilotRegistry();
+    }
+
+    getCargoLoad() {
+        if (!this.cargoHold) return 0;
+        let total = 0;
+        for (const quantity of Object.values(this.cargoHold)) {
+            total += Math.max(0, Math.floor(quantity));
+        }
+        return total;
+    }
+
+    getCargoFreeSpace() {
+        const cap = Math.max(0, this.cargoCapacity || 0);
+        return Math.max(0, cap - this.getCargoLoad());
+    }
+
+    exportCargoState() {
+        const snapshot = {};
+        if (this.cargoHold) {
+            for (const [type, quantity] of Object.entries(this.cargoHold)) {
+                const amount = Math.max(0, Math.floor(quantity));
+                if (amount > 0) {
+                    snapshot[type] = amount;
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    absorbCargo(type, quantity) {
+        if (!type) return 0;
+        const freeSpace = this.getCargoFreeSpace();
+        const amount = Math.min(freeSpace, Math.max(0, Math.floor(quantity)));
+        if (amount <= 0) return 0;
+        if (!this.cargoHold) this.cargoHold = {};
+        this.cargoHold[type] = (this.cargoHold[type] || 0) + amount;
+        this._enforceCargoLimits();
+        this._syncCargoToPilotRegistry();
+        return amount;
+    }
+
+    removeCargo(type, quantity) {
+        if (!this.cargoHold || !this.cargoHold[type]) return 0;
+        const amount = Math.min(Math.max(0, Math.floor(quantity)), this.cargoHold[type]);
+        if (amount <= 0) return 0;
+        this.cargoHold[type] -= amount;
+        if (this.cargoHold[type] <= 0) {
+            delete this.cargoHold[type];
+        }
+        this._enforceCargoLimits();
+        this._syncCargoToPilotRegistry();
+        return amount;
+    }
+
+    _clearCargoHold() {
+        this.cargoHold = {};
+        this._syncCargoToPilotRegistry();
+    }
+
+    _enforceCargoLimits() {
+        const cap = Math.max(0, this.cargoCapacity || 0);
+        if (!this.cargoHold) {
+            this.cargoHold = {};
+            return;
+        }
+        if (cap <= 0) {
+            this.cargoHold = {};
+            return;
+        }
+
+        let total = this.getCargoLoad();
+        if (total <= cap) return;
+
+        for (const [type, quantity] of Object.entries({ ...this.cargoHold })) {
+            if (total <= cap) break;
+            const overflow = Math.min(quantity, total - cap);
+            this.cargoHold[type] -= overflow;
+            total -= overflow;
+            if (this.cargoHold[type] <= 0) {
+                delete this.cargoHold[type];
+            }
+        }
+    }
+
+    _syncCargoToPilotRegistry() {
+        if (this.pilotId == null) return;
+        if (typeof worldSimulation === 'undefined' || !worldSimulation?.pilotRegistry) return;
+
+        const registry = worldSimulation.pilotRegistry;
+        const snapshot = this.exportCargoState();
+        registry.updatePilotCargo(this.pilotId, snapshot);
+    }
+
     /**
      * Internal helper: Handles spawning cargo based on context (jettison or destruction).
      * Calculates parameters, creates the Cargo object, and calls system.addCargo().
@@ -23,23 +132,28 @@ class EnemyCargo {
             return false; // Good check
         }
 
-        // 2. Get Ship Definition and check for cargo types
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) {
-            return false; // Good check - no cargo defined
-        }
-
-        // 3. Initialize variables
-        const cargoType = random(shipDef.typicalCargo); // Selects random type
-        let quantity = 0;
+        // 2. Initialize variables
         let position = createVector(this.pos.x, this.pos.y); // Starts at enemy pos
         let velocity = createVector(0, 0);
         let message = "";
 
-        // 4. Context-Specific Calculations
+        // 3. Context-Specific Calculations
         if (context === 'jettison') {
-            quantity = 1; // Correct for jettison
-            // Calculates offset position - seems reasonable
+            if (!this.cargoHold || Object.keys(this.cargoHold).length === 0) {
+                return false;
+            }
+
+            const availableTypes = Object.entries(this.cargoHold).filter(([_, qty]) => qty > 0);
+            if (availableTypes.length === 0) {
+                return false;
+            }
+
+            const [cargoType] = random(availableTypes);
+            const removed = this.removeCargo(cargoType, 1);
+            if (removed <= 0) {
+                return false;
+            }
+
             const offsetAngle = random(TWO_PI);
             const offsetDist = this.size * 0.6;
             position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
@@ -48,52 +162,74 @@ class EnemyCargo {
                 velocity.add(p5.Vector.mult(this.vel, 0.3));
                 velocity.add(p5.Vector.random2D().mult(random(0.5, 1.5)));
             }
-            message = `${this.shipTypeName} jettisoned ${quantity} unit of ${cargoType}`;
+            message = `${this.shipTypeName} jettisoned 1 unit of ${cargoType}`;
 
+            let cargoObject;
+            try {
+                cargoObject = new Cargo(position.x, position.y, cargoType, 1);
+                cargoObject.vel = velocity;
+                cargoObject.size = 8;
+            } catch (e) {
+                console.error(`Error creating Cargo object in _spawnCargo (jettison) for ${this.shipTypeName}:`, e);
+                return false;
+            }
+
+            if (system.addCargo(cargoObject)) {
+                if (typeof uiManager !== 'undefined' && message) {
+                    uiManager.addMessage(message);
+                }
+                return true;
+            }
+            return false;
         } else if (context === 'destruction') {
-            const cargoCapacity = shipDef.cargoCapacity || 0;
-            if (cargoCapacity <= 0) return false; // Correct check
-            quantity = Math.max(1, Math.floor(cargoCapacity / 3)); // Drops ~1/3 capacity, min 1 - reasonable
-            // Calculates random offset position around destruction point - reasonable
-            const offsetAngle = random(TWO_PI);
-            const offsetDist = random(this.size * 0.2, this.size * 0.7);
-            position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
-            // Calculates random outward velocity - reasonable for explosion
-            velocity = p5.Vector.random2D().mult(random(0.8, 2.0));
-            message = `${this.shipTypeName} dropped ${quantity} units of ${cargoType}`;
-            CARGO_LOG(`${this.shipTypeName} destroyed - dropping cargo: ${quantity} x ${cargoType}`);
+            if (!this.cargoHold || Object.keys(this.cargoHold).length === 0) {
+                CARGO_LOG(`${this.shipTypeName} destroyed but has no cargo to drop (cargoHold empty)`);
+                return false;
+            }
+
+            CARGO_LOG(`${this.shipTypeName} destroyed - attempting to drop cargo:`, this.cargoHold);
+            let droppedAny = false;
+            for (const [cargoType, qtyRaw] of Object.entries(this.cargoHold)) {
+                let remaining = Math.max(0, Math.floor(qtyRaw));
+                while (remaining > 0) {
+                    const dropQty = Math.min(remaining, 50);
+                    remaining -= dropQty;
+
+                    const dropPos = position.copy();
+                    const offsetAngle = random(TWO_PI);
+                    const offsetDist = random(this.size * 0.2, this.size * 0.7);
+                    dropPos.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
+
+                    const dropVelocity = p5.Vector.random2D().mult(random(0.8, 2.0));
+
+                    let cargoObject;
+                    try {
+                        cargoObject = new Cargo(dropPos.x, dropPos.y, cargoType, dropQty);
+                        cargoObject.vel = dropVelocity;
+                        cargoObject.size = 8;
+                    } catch (e) {
+                        console.error(`Error creating Cargo object in _spawnCargo (destruction) for ${this.shipTypeName}:`, e);
+                        continue;
+                    }
+
+                    if (system.addCargo(cargoObject)) {
+                        droppedAny = true;
+                        CARGO_LOG(`${this.shipTypeName} destroyed - dropped ${dropQty} ${cargoType}`);
+                    }
+                }
+            }
+
+            if (droppedAny) {
+                this._clearCargoHold();
+            }
+
+            return droppedAny;
 
         } else {
             console.error(`_spawnCargo called with invalid context: ${context}`);
             return false; // Handles invalid context
         }
-
-        // 5. Check Quantity
-        if (quantity <= 0) return false; // Prevents spawning zero items
-
-        // 6. Create Cargo Object
-        let cargoObject = null;
-        try {
-            cargoObject = new Cargo(position.x, position.y, cargoType, quantity);
-            cargoObject.vel = velocity;
-            cargoObject.size = 8; // Standardizes size
-        } catch (e) {
-            console.error(`Error creating Cargo object in _spawnCargo (${context}) for ${this.shipTypeName}:`, e);
-            return false; // Good error handling
-        }
-
-        // 7. Add Cargo to System using system.addCargo
-        if (system.addCargo(cargoObject)) { // Correctly uses the existing method
-            // Handle UI Message
-            if (typeof uiManager !== 'undefined' && message) {
-                uiManager.addMessage(message); // Displays appropriate message
-            }
-            return true; // Success
-        } else {
-            // system.addCargo should log its own failure, but add a warning here too
-            console.warn(`_spawnCargo: system.addCargo failed for ${cargoType} x${quantity}`);
-            return false; // Failure
-        }
+        return false;
     }
 
     /**

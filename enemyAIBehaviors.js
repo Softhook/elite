@@ -714,6 +714,12 @@ class EnemyAIBehaviors {
             }
         }
 
+        if (typeof this.getCargoFreeSpace === 'function' && this.getCargoFreeSpace() <= 0) {
+            this.cargoTarget = null;
+            this.cargoCollectionCooldown = 1.0;
+            return false;
+        }
+
         // Calculate distance and radii FIRST
         const distanceToCargo = dist(this.pos.x, this.pos.y, this.cargoTarget.pos.x, this.cargoTarget.pos.y);
         const collectionRadius = this.size / 2 + this.cargoTarget.size * 2; // Radius for successful pickup
@@ -743,29 +749,48 @@ class EnemyAIBehaviors {
 
         // --- Check if we've reached the cargo for collection ---
         if (distanceToCargo < collectionRadius) {
-            // Double-check cargo hasn't been collected already (race condition protection)
-            if (this.cargoTarget.collected) {
+            const cargoObj = this.cargoTarget;
+
+            if (cargoObj.collected) {
                 console.warn(`${this.shipTypeName} tried to collect already-collected cargo`);
                 this.cargoTarget = null;
                 this.cargoCollectionCooldown = 0.5;
                 return false;
             }
-            
-            // Collection logic
-            this.cargoTarget.collected = true; // Mark world cargo as collected
 
-            // Do NOT directly splice StarSystem arrays from outside.
-            // StarSystem.update() will remove collected cargo during its cleanup pass.
+            const available = Math.max(0, Math.floor(cargoObj.quantity || 1));
+            const freeSpace = (typeof this.getCargoFreeSpace === 'function') ? this.getCargoFreeSpace() : available;
+            const collectAmount = Math.min(available, freeSpace);
 
-            CARGO_LOG(`${this.shipTypeName} collected cargo ${this.cargoTarget.type}`);
-            this.cargoTarget = null; // Clear local target reference
-            // Set cooldown before looking for more cargo
+            if (collectAmount <= 0) {
+                this.cargoTarget = null;
+                this.cargoCollectionCooldown = 1.0;
+                return false;
+            }
+
+            const absorbed = (typeof this.absorbCargo === 'function')
+                ? this.absorbCargo(cargoObj.type, collectAmount)
+                : collectAmount;
+
+            if (absorbed <= 0) {
+                this.cargoTarget = null;
+                this.cargoCollectionCooldown = 1.0;
+                return false;
+            }
+
+            const leftover = available - absorbed;
+            if (leftover > 0) {
+                cargoObj.quantity = leftover;
+                cargoObj.collected = false;
+                CARGO_LOG(`${this.shipTypeName} collected ${absorbed}/${available} ${cargoObj.type}`);
+            } else {
+                cargoObj.collected = true;
+                CARGO_LOG(`${this.shipTypeName} collected ${absorbed} ${cargoObj.type}`);
+            }
+
+            this.cargoTarget = null;
             this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
-
-            // Apply full stop after collection to prevent overshoot
             this.vel.mult(0.1);
-
-            // Return false to indicate collection state is finished for this frame
             return false;
         }
 

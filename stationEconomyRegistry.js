@@ -312,9 +312,8 @@ class StationEconomyRegistry {
         const economy = this.economies.get(stationId);
         if (!economy) return false;
 
-        // Check if commodity is illegal
+        // Check if commodity is illegal (silent fail - should be prevented upstream)
         if (economy.illegal.has(commodity)) {
-            console.warn(`Trade denied: ${commodity} is illegal at ${stationId}`);
             return false;
         }
 

@@ -173,6 +173,10 @@ class Enemy {
             }
         }
         
+        // --- Cargo Management ---
+        this.cargoHold = {};
+        this.cargoCapacity = Math.max(0, shipDef.cargoCapacity || 0);
+
         // --- Role-Specific Initial State ---
         if (this.role === AI_ROLE.TRANSPORT) {
             // For transport shuttles, use lower speed and a fixed route behavior.
@@ -394,7 +398,12 @@ class Enemy {
         // avoid decrementing here to prevent double counting.
 
         // For pirates: Look for cargo first if not already collecting
+        const cargoFreeSpace = (typeof this.getCargoFreeSpace === 'function')
+            ? this.getCargoFreeSpace()
+            : (this.cargoCapacity > 0 ? this.cargoCapacity : 0);
+
         if (this.role === AI_ROLE.PIRATE && 
+            cargoFreeSpace > 0 &&
             this.currentState !== AI_STATE.COLLECTING_CARGO && 
             this.cargoCollectionCooldown <= 0) {
             
@@ -408,6 +417,7 @@ class Enemy {
 
         // For transporters: Check for cargo like pirates do
         if (this.role === AI_ROLE.TRANSPORT && 
+            cargoFreeSpace > 0 &&
             this.currentState !== AI_STATE.COLLECTING_CARGO && 
             this.cargoCollectionCooldown <= 0) {
             
