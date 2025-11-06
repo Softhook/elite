@@ -25,7 +25,7 @@ class PilotRegistry {
             smuggler: ['CobraMkIII', 'KraitMKI', 'AspExplorer'],
             local_transporter: ['Keelback', 'Type6Transporter', 'CobraMkIII'],
             alien: ['Thargoid', 'GeometricDrone', 'BioFrigate'],
-            guard: ['Viper', 'GladiusFighter'],
+            guard: ['Viper', 'GladiusFighter', 'Vulture', 'WaspAssault'],
             default: ['CobraMkIII']
         };
         
