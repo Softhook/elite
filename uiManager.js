@@ -1046,8 +1046,13 @@ class UIManager {
             // --- End Price Indicators ---
 
 
-            // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
-            let btnStartX = sX + cW * 4.2; // Start position for buttons
+            // --- Buttons (Right-aligned to prevent overlap with cargo column) ---
+            // Calculate button positions from right edge of table
+            const btnSpacing = 5;
+            const btnGap = 10; // Gap between buy and sell button groups
+            const totalBtnWidth = (btnW * 4) + (btnSpacing * 2) + btnGap; // 4 buttons + spacing
+            const btnEndX = sX + tW - 10; // Right edge with margin
+            const btnStartX = btnEndX - totalBtnWidth;
 
  // Buy 1 button
 let buy1X = btnStartX;
@@ -1070,7 +1075,7 @@ if (isIllegalInSystem) {
 }
 
 // Buy All button
-let buyAllX = buy1X + btnW + 5; // Position relative to previous button
+let buyAllX = buy1X + btnW + btnSpacing;
 let buyAllY = buy1Y;
 
 if (isIllegalInSystem) {
@@ -1090,7 +1095,7 @@ if (isIllegalInSystem) {
 }
 
 // Sell 1 button
-let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
+let sell1X = buyAllX + btnW + btnGap;
 let sell1Y = buy1Y;
 
 // Check if this commodity is needed for the active mission
@@ -1116,7 +1121,7 @@ if (isIllegalInSystem || isMissionCargo) {
 }
 
 // Sell All button
-let sellAllX = sell1X + btnW + 5; // Position relative to previous button
+let sellAllX = sell1X + btnW + btnSpacing;
 let sellAllY = buy1Y;
 
 if (isIllegalInSystem || isMissionCargo) {
