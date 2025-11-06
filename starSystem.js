@@ -2747,7 +2747,10 @@ checkProjectileCollisions() {
         const spawnCandidates = [];
         for (const pilot of pilotsInSystem) {
             if (existingPilotIds.has(pilot.id)) continue;
+            // Skip pilots that are still docked at a station
             if (pilot.dockedStationId) continue;
+            // Skip event spawns that already have a position but aren't visible yet
+            // (they'll be spawned elsewhere or are in transition)
             spawnCandidates.push(pilot);
         }
 
@@ -2891,11 +2894,19 @@ checkProjectileCollisions() {
 
             if (typeof npcShip.initializeCargoHoldFromPilot === 'function') {
                 npcShip.initializeCargoHoldFromPilot(pilot.cargo, pilot.cargoCap);
+                try {
+                    const load = npcShip.getCargoLoad ? npcShip.getCargoLoad() : (npcShip.cargoHold ? Object.values(npcShip.cargoHold).reduce((a,b)=>a+Math.max(0,Math.floor(b)),0) : 0);
+                    console.log(`[Spawn] Enemy from pilot id=${pilot.id} ${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cargoLoad=${load}/${npcShip.cargoCapacity}`);
+                } catch(_) {}
             } else if (pilot.cargo) {
                 npcShip.cargoHold = { ...pilot.cargo };
                 if (pilot.cargoCap != null) {
                     npcShip.cargoCapacity = pilot.cargoCap;
                 }
+                try {
+                    const load = npcShip.getCargoLoad ? npcShip.getCargoLoad() : (npcShip.cargoHold ? Object.values(npcShip.cargoHold).reduce((a,b)=>a+Math.max(0,Math.floor(b)),0) : 0);
+                    console.log(`[Spawn] (fallback) Enemy from pilot id=${pilot.id} ${pilot.name} cargoLoad=${load}/${npcShip.cargoCapacity}`);
+                } catch(_) {}
             }
 
             if (pilot.role === 'bounty' && pilot.isBountyHunter) {
@@ -2945,16 +2956,26 @@ checkProjectileCollisions() {
         // Initialize empty cargo hold
         enemy.cargoHold = {};
         
-        // Give traders/haulers starting cargo
-        if (enemy.role === AI_ROLE.HAULER) {
-            // Haulers spawn with 30-70% of capacity filled
-            const fillPercent = random(0.3, 0.7);
-            const targetAmount = Math.floor(enemy.cargoCapacity * fillPercent);
-            const cargoType = random(shipDef.typicalCargo);
-            enemy.cargoHold[cargoType] = targetAmount;
+        // Give all trade-related ships starting cargo (matching pilotRegistry logic)
+        // These are roles that participate in trading: HAULER and TRANSPORT
+        const tradeRoles = [AI_ROLE.HAULER, AI_ROLE.TRANSPORT];
+        
+        if (tradeRoles.includes(enemy.role)) {
+            const ILLEGAL_START_GOODS = new Set(['Narcotics','Weapons','Slaves']);
+            const legalTypical = shipDef.typicalCargo.filter(c => !ILLEGAL_START_GOODS.has(c));
+            if (legalTypical.length > 0) {
+                const fillPercent = random(0.3, 0.7);
+                const targetAmount = Math.floor(enemy.cargoCapacity * fillPercent);
+                const cargoType = random(legalTypical);
+                if (targetAmount > 0) {
+                    enemy.cargoHold[cargoType] = targetAmount;
+                    console.log(`${enemy.shipTypeName} (${enemy.role}) spawned with ${targetAmount} ${cargoType}`);
+                }
+            }
         }
-        // Pirates spawn empty (they collect cargo)
+        // Pirates spawn empty (they collect cargo by piracy)
         // Police spawn empty (they don't trade)
+        // Bounty hunters spawn empty (they don't trade)
         // Others spawn empty by default
     }
     

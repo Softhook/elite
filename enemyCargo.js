@@ -24,6 +24,10 @@ class EnemyCargo {
 
         this._enforceCargoLimits();
         this._syncCargoToPilotRegistry();
+        try {
+            const total = this.getCargoLoad();
+            console.log(`[EnemyCargo] init from pilotId=${this.pilotId ?? 'n/a'} ship=${this.shipTypeName} cap=${this.cargoCapacity} load=${total} cargoKeys=${Object.keys(this.cargoHold).join(',')}`);
+        } catch(_) {}
     }
 
     getCargoLoad() {

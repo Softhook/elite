@@ -688,8 +688,13 @@ class PilotRegistry {
         if (!cargoRoles.includes(pilot.role)) return;
         
         // Get typical cargo from ship definition
-        const typicalCargo = shipDef.typicalCargo;
+        const ILLEGAL_START_GOODS = new Set(['Narcotics','Weapons','Slaves']);
+        let typicalCargo = shipDef.typicalCargo;
         if (!typicalCargo || !Array.isArray(typicalCargo) || typicalCargo.length === 0) return;
+
+        // Filter out illegal goods so ships never start with contraband that would deadlock trading
+        typicalCargo = typicalCargo.filter(c => !ILLEGAL_START_GOODS.has(c));
+        if (typicalCargo.length === 0) return; // Nothing legal to load
         
         // Fill 30-70% of cargo capacity with a random typical commodity
         const fillPercent = random(0.3, 0.7);
@@ -698,6 +703,9 @@ class PilotRegistry {
         
         const cargoType = random(typicalCargo);
         pilot.cargo[cargoType] = startingAmount;
+        if (typeof console !== 'undefined') {
+            console.log(`[PilotRegistry] INIT CARGO pilot=${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cap=${cargoCap} load=${startingAmount} type=${cargoType}`);
+        }
     }
 
     _getTotalCargoUnits(pilot) {
@@ -785,6 +793,79 @@ class PilotRegistry {
         return null;
     }
 
+    /**
+     * Find the best commodities to buy at current station based on profit potential.
+     * Returns list of commodities sorted by potential profit margin.
+     * @param {Object} pilot - Pilot data
+     * @param {Object} system - Current star system
+     * @param {Object} economy - Current station economy
+     * @param {StationEconomyRegistry} stationEconomyRegistry - Economy registry
+     * @param {Galaxy} galaxyRef - Galaxy reference
+     * @returns {Array} Array of {commodity, buyPrice, profitability, destSystemIndex, destStationId, destPrice}
+     * @private
+     */
+    _findBestCommoditiesToBuy(pilot, system, economy, stationEconomyRegistry, galaxyRef) {
+        if (!pilot || !system || !economy || !stationEconomyRegistry || !system.station) return [];
+
+        const connected = this._gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef);
+        if (!connected || connected.length === 0) return [];
+
+        const stationId = system.station.name;
+        const opportunities = [];
+
+        // Check all commodities available at this station
+        for (const commodity in economy.stock) {
+            // Skip if illegal at current station
+            if (economy.illegal && economy.illegal.has && economy.illegal.has(commodity)) continue;
+            
+            const stockHere = Math.max(0, Math.floor(economy.stock?.[commodity] || 0));
+            if (stockHere <= 0) continue;
+
+            const buyPrice = stationEconomyRegistry.getPrice(stationId, commodity);
+            if (!buyPrice || buyPrice <= 0) continue;
+
+            // Find best destination for this commodity
+            let bestDest = null;
+            let bestProfit = 0;
+
+            for (const neighbor of connected) {
+                // Skip if illegal at destination station
+                const destEconomy = stationEconomyRegistry.getEconomy(neighbor.stationId);
+                if (destEconomy?.illegal?.has(commodity)) continue;
+                
+                const sellPrice = stationEconomyRegistry.getPrice(neighbor.stationId, commodity);
+                if (!sellPrice || sellPrice <= 0) continue;
+
+                const perUnitProfit = sellPrice - buyPrice;
+                if (perUnitProfit > bestProfit) {
+                    bestProfit = perUnitProfit;
+                    bestDest = {
+                        systemIndex: neighbor.systemIndex,
+                        stationId: neighbor.stationId,
+                        destPrice: sellPrice
+                    };
+                }
+            }
+
+            // Only include commodities with positive profit potential
+            if (bestDest && bestProfit > 0) {
+                opportunities.push({
+                    commodity,
+                    buyPrice,
+                    profitability: bestProfit,
+                    destSystemIndex: bestDest.systemIndex,
+                    destStationId: bestDest.stationId,
+                    destPrice: bestDest.destPrice,
+                    sourceStock: stockHere
+                });
+            }
+        }
+
+        // Sort by profitability (highest first)
+        opportunities.sort((a, b) => b.profitability - a.profitability);
+        return opportunities;
+    }
+
     _sellCargoAtStation(pilot, stationId, stationEconomyRegistry) {
         if (!pilot || !stationId || !stationEconomyRegistry) return false;
         if (!pilot.cargo || Object.keys(pilot.cargo).length === 0) return false;
@@ -795,17 +876,15 @@ class PilotRegistry {
         let soldAny = false;
         let totalCreditsGained = 0;
         
-        // Sell all cargo except illegal goods
+        // Sell ALL cargo - processTrade already checks for illegal goods
         for (const [commodity, qtyRaw] of Object.entries({ ...pilot.cargo })) {
             const quantity = Math.max(0, Math.floor(qtyRaw));
             if (quantity <= 0) continue;
-            
-            // Skip illegal goods in non-anarchy systems
-            if (economy.illegal && economy.illegal.has && economy.illegal.has(commodity)) continue;
 
             const price = stationEconomyRegistry.getPrice(stationId, commodity);
             if (!price || price <= 0) continue;
             
+            // processTrade returns false for illegal goods at non-anarchy stations
             const success = stationEconomyRegistry.processTrade(stationId, commodity, -quantity);
             if (!success) continue;
 
@@ -819,11 +898,12 @@ class PilotRegistry {
         if (soldAny) {
             this._clearZeroCargo(pilot);
             console.log(`${pilot.name} sold cargo for ${totalCreditsGained.toFixed(0)} credits`);
-        }
-        
-        // Clear pending trade if we arrived at destination
-        if (pilot.pendingTrade && pilot.pendingTrade.destStationId === stationId) {
-            pilot.pendingTrade = null;
+            console.log(`[PilotRegistry] POST-SELL pilot=${pilot.name} cargoEmpty=${Object.keys(pilot.cargo).length===0} credits=${pilot.credits} station=${stationId}`);
+            // Design: selling at ANY station completes the trade; always clear pendingTrade so pilot can re-plan
+            if (pilot.pendingTrade) {
+                console.log(`[PilotRegistry] CLEAR pendingTrade after universal sell pilot=${pilot.name}`);
+                pilot.pendingTrade = null;
+            }
         }
 
         return soldAny;
@@ -832,104 +912,107 @@ class PilotRegistry {
     _findTradeOpportunity(pilot, system, economy, stationEconomyRegistry, galaxyRef) {
         if (!pilot || !system || !economy || !stationEconomyRegistry || !system.station) return null;
 
-        const connected = this._gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef);
-        if (!connected || connected.length === 0) return null;
+        // Get all profitable opportunities sorted by profitability
+        const opportunities = this._findBestCommoditiesToBuy(pilot, system, economy, stationEconomyRegistry, galaxyRef);
+        if (!opportunities || opportunities.length === 0) return null;
 
-        const focusList = Array.isArray(pilot.tradeFocus) && pilot.tradeFocus.length > 0
-            ? pilot.tradeFocus
-            : Object.keys(economy.stock || {});
-
-        const stationId = system.station.name;
-        let best = null;
-
-        for (const commodity of focusList) {
-            // Skip if illegal at current station
-            if (economy.illegal && economy.illegal.has && economy.illegal.has(commodity)) continue;
-            
-            const stockHere = Math.max(0, Math.floor(economy.stock?.[commodity] || 0));
-            if (stockHere <= 0) continue;
-
-            const buyPrice = stationEconomyRegistry.getPrice(stationId, commodity);
-            if (!buyPrice || buyPrice <= 0) continue;
-
-            for (const neighbor of connected) {
-                // Skip if illegal at destination station
-                const destEconomy = stationEconomyRegistry.getEconomy(neighbor.stationId);
-                if (destEconomy?.illegal?.has(commodity)) continue;
-                
-                const sellPrice = stationEconomyRegistry.getPrice(neighbor.stationId, commodity);
-                if (!sellPrice || sellPrice <= 0) continue;
-
-                const perUnitProfit = sellPrice - buyPrice;
-                if (perUnitProfit <= 0) continue;
-
-                if (!best || perUnitProfit > best.perUnitProfit) {
-                    best = {
-                        commodity,
-                        destSystemIndex: neighbor.systemIndex,
-                        destStationId: neighbor.stationId,
-                        buyPrice,
-                        sellPrice,
-                        perUnitProfit,
-                        sourceStock: stockHere
-                    };
-                }
-            }
-        }
-
-        return best;
+        // Return the best opportunity (already sorted by profitability)
+        const best = opportunities[0];
+        return {
+            commodity: best.commodity,
+            destSystemIndex: best.destSystemIndex,
+            destStationId: best.destStationId,
+            buyPrice: best.buyPrice,
+            sellPrice: best.destPrice,
+            perUnitProfit: best.profitability,
+            sourceStock: best.sourceStock
+        };
     }
 
-    _executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity) {
+    _executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity, galaxyRef) {
         if (!pilot || !system || !economy || !stationEconomyRegistry || !opportunity || !system.station) return false;
 
         const stationId = system.station.name;
-        const buyPrice = opportunity.buyPrice;
-        if (!buyPrice || buyPrice <= 0) return false;
+        
+        // Get all profitable opportunities sorted by profitability
+        const allOpportunities = this._findBestCommoditiesToBuy(pilot, system, economy, stationEconomyRegistry, galaxyRef);
+        if (typeof console !== 'undefined') {
+            console.log(`[PilotRegistry] PURCHASE START pilot=${pilot.name} station=${system.station.name} oppCount=${allOpportunities.length} freeCap=${this._getCargoFreeCapacity(pilot)} credits=${pilot.credits}`);
+        }
+        if (!allOpportunities || allOpportunities.length === 0) return false;
 
-        const credits = Math.max(0, Math.floor(pilot.credits || 0));
-        const maxAffordable = Math.floor(credits / buyPrice);
-        if (maxAffordable <= 0) return false;
-
-        const freeCapacity = this._getCargoFreeCapacity(pilot);
+        let freeCapacity = this._getCargoFreeCapacity(pilot);
         if (freeCapacity <= 0) return false;
 
-        const availableStock = Math.max(0, Math.floor(economy.stock?.[opportunity.commodity] || 0));
-        if (availableStock <= 0) return false;
+        const purchasedCommodities = [];
+        let totalSpent = 0;
+        let bestDestination = null;
 
-        const plannedQuantity = Math.min(freeCapacity, maxAffordable, availableStock);
-        if (plannedQuantity <= 0) return false;
+        // Buy as many of the best-priced commodities as we can afford and carry
+        for (const opp of allOpportunities) {
+            if (freeCapacity <= 0) break;
 
-        const success = stationEconomyRegistry.processTrade(stationId, opportunity.commodity, plannedQuantity);
-        if (!success) return false;
+            const buyPrice = opp.buyPrice;
+            if (!buyPrice || buyPrice <= 0) continue;
 
-        pilot.credits -= buyPrice * plannedQuantity;
-        const added = this._addCargoToPilot(pilot, opportunity.commodity, plannedQuantity);
+            const credits = Math.max(0, Math.floor(pilot.credits || 0)) - totalSpent;
+            const maxAffordable = Math.floor(credits / buyPrice);
+            if (maxAffordable <= 0) continue;
 
-        if (added < plannedQuantity) {
-            const surplus = plannedQuantity - added;
-            if (surplus > 0) {
-                stationEconomyRegistry.processTrade(stationId, opportunity.commodity, -surplus);
-                pilot.credits += buyPrice * surplus;
+            const availableStock = Math.max(0, Math.floor(economy.stock?.[opp.commodity] || 0));
+            if (availableStock <= 0) continue;
+
+            const plannedQuantity = Math.min(freeCapacity, maxAffordable, availableStock);
+            if (plannedQuantity <= 0) continue;
+
+            const success = stationEconomyRegistry.processTrade(stationId, opp.commodity, plannedQuantity);
+            if (!success) continue;
+
+            pilot.credits -= buyPrice * plannedQuantity;
+            totalSpent += buyPrice * plannedQuantity;
+            const added = this._addCargoToPilot(pilot, opp.commodity, plannedQuantity);
+
+            if (added < plannedQuantity) {
+                const surplus = plannedQuantity - added;
+                if (surplus > 0) {
+                    stationEconomyRegistry.processTrade(stationId, opp.commodity, -surplus);
+                    pilot.credits += buyPrice * surplus;
+                    totalSpent -= buyPrice * surplus;
+                }
             }
-            if (added <= 0) {
-                return false;
+
+            if (added > 0) {
+                freeCapacity -= added;
+                purchasedCommodities.push({
+                    commodity: opp.commodity,
+                    quantity: added,
+                    buyPrice: buyPrice,
+                    destSystemIndex: opp.destSystemIndex,
+                    destStationId: opp.destStationId,
+                    expectedSellPrice: opp.destPrice,
+                    profitability: opp.profitability
+                });
+                console.log(`${pilot.name} bought ${added} ${opp.commodity} for ${(buyPrice * added).toFixed(0)} credits (profit/unit: ${opp.profitability.toFixed(1)})`);
+                console.log(`[PilotRegistry] PURCHASE ITEM pilot=${pilot.name} commodity=${opp.commodity} qty=${added} remainingCap=${freeCapacity} credits=${pilot.credits}`);
             }
         }
-        
-        console.log(`${pilot.name} bought ${added} ${opportunity.commodity} for ${(buyPrice * added).toFixed(0)} credits`);
+
+        if (purchasedCommodities.length === 0) return false;
+
+        // Find the destination that gives us the best overall profit for our cargo mix
+        // For now, use the destination from the most profitable commodity we bought
+        bestDestination = purchasedCommodities[0]; // Already sorted by profitability
 
         pilot.pendingTrade = {
-            commodity: opportunity.commodity,
-            quantity: added,
-            destSystemIndex: opportunity.destSystemIndex,
-            destStationId: opportunity.destStationId,
-            buyPrice: opportunity.buyPrice,
-            expectedSellPrice: opportunity.sellPrice
+            commodities: purchasedCommodities,
+            destSystemIndex: bestDestination.destSystemIndex,
+            destStationId: bestDestination.destStationId
         };
 
-        pilot.itinerary = [opportunity.destSystemIndex];
+        pilot.itinerary = [bestDestination.destSystemIndex];
         pilot.nextDepartureMs = Date.now() + Math.floor(random(2000, 6000));
+        console.log(`${pilot.name} total purchase: ${totalSpent.toFixed(0)} credits, heading to ${bestDestination.destStationId}`);
+        console.log(`[PilotRegistry] PURCHASE COMPLETE pilot=${pilot.name} cargo=${JSON.stringify(pilot.cargo)} credits=${pilot.credits}`);
         return true;
     }
 
@@ -940,14 +1023,35 @@ class PilotRegistry {
         const economy = stationEconomyRegistry.getEconomy(stationId);
         if (!economy) return;
 
-        const sold = this._sellCargoAtStation(pilot, stationId, stationEconomyRegistry);
-        if (sold) {
-            pilot.nextDepartureMs = null;
+        // If we have a pending trade, only sell if we are at the destination station.
+        // Prevent immediate re-selling of freshly purchased cargo at the origin.
+        if (pilot.pendingTrade) {
+            if (pilot.pendingTrade.destStationId === stationId) {
+                const sold = this._sellCargoAtStation(pilot, stationId, stationEconomyRegistry);
+                if (sold) {
+                    console.log(`[PilotRegistry] DELIVERY complete pilot=${pilot.name} sold cargo at destination ${stationId}`);
+                    pilot.nextDepartureMs = null;
+                    pilot.pendingTrade = null; // Trade fulfilled
+                } else if (this._getTotalCargoUnits(pilot) === 0) {
+                    // Edge case: cargo somehow empty but trade still marked
+                    console.log(`[PilotRegistry] CLEAR pendingTrade (no cargo at dest) pilot=${pilot.name}`);
+                    pilot.pendingTrade = null;
+                    pilot.nextDepartureMs = null;
+                }
+            } else {
+                // At origin with cargo and a pending trade: do NOT sell or repurchase.
+                return; // Wait for departure scheduling.
+            }
+        } else {
+            // No active pending trade: sell any leftover cargo from ad-hoc/previous activity
+            const sold = this._sellCargoAtStation(pilot, stationId, stationEconomyRegistry);
+            if (sold) {
+                pilot.nextDepartureMs = null; // Reset departure to allow new purchase timing
+            }
         }
 
-        if (pilot.pendingTrade) {
-            return;
-        }
+        // If we still have cargo (from a new purchase) skip purchasing again
+        if (this._getTotalCargoUnits(pilot) > 0) return;
 
         const freeCapacity = this._getCargoFreeCapacity(pilot);
         if (freeCapacity <= 0) return;
@@ -955,10 +1059,19 @@ class PilotRegistry {
         const canPurchase = ['trader', 'hauler', 'smuggler', 'local_transporter', 'miner'].includes(pilot.role);
         if (!canPurchase) return;
 
+        // Find the best trade opportunity (will use _findBestCommoditiesToBuy internally)
         const opportunity = this._findTradeOpportunity(pilot, system, economy, stationEconomyRegistry, galaxyRef);
         if (!opportunity) return;
 
-        this._executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity);
+        // Execute purchase - this will now buy multiple commodities at best prices
+        const beforePurchaseLoad = this._getTotalCargoUnits(pilot);
+        const purchased = this._executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity, galaxyRef);
+        if (!purchased) {
+            console.log(`[PilotRegistry] PURCHASE SKIPPED (no opportunities or affordability) pilot=${pilot.name} freeCap=${freeCapacity} credits=${pilot.credits}`);
+        } else {
+            const afterLoad = this._getTotalCargoUnits(pilot);
+            console.log(`[PilotRegistry] PURCHASE RESULT pilot=${pilot.name} load ${beforePurchaseLoad}->${afterLoad}`);
+        }
     }
 
     registerEventPilot(params = {}) {
@@ -1108,6 +1221,11 @@ class PilotRegistry {
         if (pilot.dockedStationId) {
             // Pilot is docked - may trade, plan route, or depart
             this._updateDockedPilot(pilot, dtSec, galaxyRef, stationEconomyRegistry);
+            if (pilot.dockedStationId && pilot.cargo && pilot.cargoCap) {
+                if (typeof console !== 'undefined') {
+                    console.log(`[PilotRegistry] DOCKED STATE pilot=${pilot.name} cargoLoad=${this._getTotalCargoUnits(pilot)}/${pilot.cargoCap} pendingTrade=${pilot.pendingTrade? 'yes':'no'} itineraryLen=${pilot.itinerary.length}`);
+                }
+            }
         } else if (pilot.itinerary && pilot.itinerary.length > 0) {
             // Pilot is traveling - simulate movement
             this._updateTravelingPilot(pilot, dtSec, galaxyRef);
@@ -1529,15 +1647,18 @@ class PilotRegistry {
         const now = Date.now();
         if (pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
             pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
+            console.log(`[PilotRegistry] DEPARTURE SCHEDULED pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
         }
 
         const readyForTradeDeparture = pilot.pendingTrade && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
         const idleWithRoute = !pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && random() < 0.01;
 
         if (readyForTradeDeparture || idleWithRoute) {
+            // Mark pilot as ready to undock - pos will be set when spawned
             pilot.dockedStationId = null;
-            pilot.pos = null;
+            pilot.pos = null; // Will be set by spawn system
             pilot.nextDepartureMs = null;
+            console.log(`[PilotRegistry] UNDOCKING pilot=${pilot.name} routeLen=${pilot.itinerary?.length || 0} pendingTrade=${pilot.pendingTrade? 'yes':'no'}`);
             return;
         }
     }

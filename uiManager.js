@@ -385,14 +385,8 @@ class UIManager {
             shieldInfo = `${currentShield}/${maxShield} (${shieldPercent}%)`;
         }
 
-        let tradeText = null;
-        if (pilotRecord?.tradeFocus) {
-            if (Array.isArray(pilotRecord.tradeFocus)) {
-                tradeText = pilotRecord.tradeFocus.join(', ');
-            } else {
-                tradeText = pilotRecord.tradeFocus;
-            }
-        }
+        // Remove trade focus display; we will show actual cargo instead
+        let tradeText = null; // kept for compatibility but unused
 
         const infoLines = [];
         infoLines.push({ label: 'Ship', value: shipLabel });
@@ -407,7 +401,35 @@ class UIManager {
         if (bountyText) infoLines.push({ label: 'Bounty', value: bountyText, color: [255, 200, 120] });
         if (creditsText) infoLines.push({ label: 'Credits', value: creditsText });
         if (notorietyText) infoLines.push({ label: 'Notoriety', value: notorietyText });
-        if (tradeText) infoLines.push({ label: 'Focus', value: tradeText });
+
+        // --- Cargo Display (Pilot registry vs live ship) ---
+        const registryCargo = (pilotRecord?.cargo && typeof pilotRecord.cargo === 'object') ? pilotRecord.cargo : null;
+        const liveCargo = (target.cargoHold && typeof target.cargoHold === 'object') ? target.cargoHold : null;
+        const cargoSource = (registryCargo && Object.keys(registryCargo).length > 0) ? registryCargo : liveCargo;
+        const capacity = pilotRecord?.cargoCap ?? target.cargoCapacity ?? 0;
+        if (cargoSource) {
+            const cargoEntries = Object.entries(cargoSource).filter(([_, q]) => q > 0);
+            const sorted = cargoEntries.sort((a,b) => b[1]-a[1]);
+            let total = 0; for (const [,q] of sorted) total += q;
+            infoLines.push({ label: 'Cargo', value: `${total} / ${capacity}` });
+            // List each type (limit to 10 to prevent overflow)
+            for (const [ctype, qty] of sorted.slice(0, 10)) {
+                infoLines.push({ label: ctype, value: qty.toLocaleString() });
+            }
+            if (sorted.length > 10) {
+                infoLines.push({ label: 'Cargo (+more)', value: `${sorted.length - 10} hidden` });
+            }
+            // Detect mismatch between registry and live cargo if both exist
+            if (registryCargo && liveCargo && registryCargo !== liveCargo) {
+                const regSig = JSON.stringify(registryCargo);
+                const liveSig = JSON.stringify(liveCargo);
+                if (regSig !== liveSig) {
+                    infoLines.push({ label: 'CargoSync', value: 'Registry ≠ Ship', color: [255,150,120] });
+                }
+            }
+        } else {
+            infoLines.push({ label: 'Cargo', value: `0 / ${capacity}` });
+        }
 
         if (infoLines.length === 0) return;
 
