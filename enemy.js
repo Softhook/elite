@@ -415,6 +415,17 @@ class Enemy {
             }
         }
 
+        // Pirate selling trigger: if cargo is full and station exists
+        if (this.role === AI_ROLE.PIRATE && typeof this.getCargoFreeSpace === 'function') {
+            if (this.getCargoFreeSpace() <= 0 && system?.station && this.currentState !== AI_STATE.SELLING_CARGO) {
+                // Avoid interrupting active combat states
+                if (![AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING, AI_STATE.FLEEING].includes(this.currentState)) {
+                    this.previousState = this.currentState; // Remember prior state
+                    this.changeState(AI_STATE.SELLING_CARGO);
+                }
+            }
+        }
+
         // For transporters: Check for cargo like pirates do
         if (this.role === AI_ROLE.TRANSPORT && 
             cargoFreeSpace > 0 &&
@@ -471,6 +482,8 @@ class Enemy {
                             if (!this.updateCargoCollectionAI(system)) {
                                 this.updateCombatAI(system);
                             }
+                        } else if (this.currentState === AI_STATE.SELLING_CARGO) {
+                            this.updatePirateSellingAI(system);
                         } else {
                             this.updateCombatAI(system);
                         }

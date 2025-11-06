@@ -797,6 +797,102 @@ class EnemyAIBehaviors {
         // If we haven't collected yet, return true to stay in this state
         return true;
     }
+
+    /** Pirate-specific logic for selling cargo when hold is full */
+    updatePirateSellingAI(system) {
+        if (this.role !== AI_ROLE.PIRATE) return;
+        const station = this._getNearestStation(system);
+        if (!station?.pos || typeof this.getCargoFreeSpace !== 'function') {
+            this.changeState(AI_STATE.IDLE);
+            return;
+        }
+
+        // Abort if cargo no longer full
+        if (this.getCargoFreeSpace() > 0) {
+            this.changeState(AI_STATE.IDLE);
+            return;
+        }
+
+        // If recently sold, return to normal behaviour
+        if (this.pirateSellCooldown && this.pirateSellCooldown > 0) {
+            this.pirateSellCooldown -= deltaTime/1000;
+            this.changeState(AI_STATE.IDLE);
+            return;
+        }
+
+        // Combat / flee overrides selling
+        if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING, AI_STATE.FLEEING].includes(this.previousState)) {
+            this.changeState(this.previousState || AI_STATE.IDLE);
+            return;
+        }
+
+        // Move toward station
+        this.target = null; // Do not target while selling
+        const distToStation = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
+        this.performRotationAndThrust(station.pos);
+
+        // Gentle braking near station
+        const brakeRadius = (station.dockingRadius || station.size || 160) + 200;
+        if (distToStation < brakeRadius) {
+            this.vel.mult(0.90);
+        }
+
+        // Attempt sale when inside docking radius
+        const dockingRadius = (station.dockingRadius || station.size || 160) * 1.15;
+        if (distToStation < dockingRadius) {
+            const soldAny = this._sellCargoAtStation(station, system);
+            if (soldAny) {
+                this.pirateSellCooldown = 10.0; // Wait before next selling attempt
+                this.changeState(AI_STATE.IDLE);
+            } else {
+                // Nothing legal to sell here; leave selling state
+                this.changeState(AI_STATE.IDLE);
+            }
+        }
+    }
+
+    /** Internal helper: sells legal cargo to station market; returns true if anything sold */
+    _sellCargoAtStation(station, system) {
+        if (!this.cargoHold || !station?.market?.commodities) return false;
+        let sold = false;
+        const anarchy = (system?.securityLevel || '').toLowerCase() === 'anarchy';
+        for (const [type, qty] of Object.entries(this.cargoHold)) {
+            if (qty <= 0) continue;
+            const comm = station.market.commodities.find(c => c.name === type);
+            if (!comm) continue; // Station doesn't trade this type
+            if (!comm.isLegal && !anarchy) continue; // Cannot sell illegal goods outside Anarchy
+            const removed = this.removeCargo(type, qty);
+            if (removed > 0) {
+                sold = true;
+                // Update dynamic economy if present (NPC sold to station -> station stock increases)
+                if (typeof worldSimulation !== 'undefined' && worldSimulation?.isInitialized && station?.market?.systemName) {
+                    try { worldSimulation.processTrade(station.market.systemName, type, -removed); } catch(_) {}
+                }
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Pirate sold ${removed}t ${type}`);
+                }
+            }
+        }
+        return sold;
+    }
+
+    /** Internal helper: choose nearest station among main + secret stations */
+    _getNearestStation(system) {
+        if (!system) return null;
+        const candidates = [];
+        if (system.station) candidates.push(system.station);
+        if (Array.isArray(system.secretStations)) {
+            for (const s of system.secretStations) { if (s) candidates.push(s); }
+        }
+        if (candidates.length === 0) return null;
+        let best = null, bestD = Infinity;
+        for (const s of candidates) {
+            if (!s?.pos) continue;
+            const d = dist(this.pos.x, this.pos.y, s.pos.x, s.pos.y);
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        return best;
+    }
 }
 
 /**

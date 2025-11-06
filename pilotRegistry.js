@@ -1633,7 +1633,7 @@ class PilotRegistry {
             this._handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef);
         }
 
-        if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.003) {
+        if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.02) {
             this._planNextAction(pilot, galaxyRef);
         }
 
@@ -1650,10 +1650,16 @@ class PilotRegistry {
             console.log(`[PilotRegistry] DEPARTURE SCHEDULED pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
         }
 
-        const readyForTradeDeparture = pilot.pendingTrade && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
-        const idleWithRoute = !pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && random() < 0.01;
+        // Deterministic departure for non-trade itineraries as well
+        if (!pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
+            pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
+            console.log(`[PilotRegistry] DEPARTURE SCHEDULED (idle route) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.itinerary[0]}`);
+        }
 
-        if (readyForTradeDeparture || idleWithRoute) {
+        const readyForTradeDeparture = pilot.pendingTrade && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
+        const readyForIdleDeparture = !pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
+
+        if (readyForTradeDeparture || readyForIdleDeparture) {
             // Mark pilot as ready to undock - pos will be set when spawned
             pilot.dockedStationId = null;
             pilot.pos = null; // Will be set by spawn system
@@ -1707,6 +1713,12 @@ class PilotRegistry {
             currentSystem.connectedSystemIndices.length > 0) {
             const destIndex = random(currentSystem.connectedSystemIndices);
             pilot.itinerary = [destIndex];
+            // Schedule a deterministic undock for non-trade routes
+            const now = Date.now();
+            pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
+            if (typeof console !== 'undefined') {
+                console.log(`[PilotRegistry] DEPARTURE SCHEDULED (planned) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${destIndex}`);
+            }
         }
     }
 

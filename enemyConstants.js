@@ -38,7 +38,8 @@ const AI_STATE = {
     COLLECTING_CARGO: 8,   // New state for cargo collection behavior
     FLEEING: 9,        // New state for damaged ships trying to escape
     GUARDING: 10,
-    SNIPING: 11
+    SNIPING: 11,
+    SELLING_CARGO: 12 // Pirate heading to station to sell legal cargo
 };
 
 // Reverse lookup for AI_STATE values to names
