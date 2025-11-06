@@ -14,6 +14,11 @@ class PilotRegistry {
         this.roleEvaluationIntervalMs = 60_000; // Evaluate role profitability every minute per pilot
         this.roleSwitchThreshold = 1200; // Require sizable upside before switching careers
 
+        // Role profitability scoring constants
+        this.GUARD_BASE_SALARY = 650;
+        this.GUARD_RISK_BONUS_MULT = 700;
+        this.GUARD_PIRATE_BONUS_MULT = 600;
+
         // Preferred ship options per role (used when switching careers)
         this.roleShipOptions = {
             trader: ['CobraMkIII', 'Python', 'Type6Transporter'],
@@ -303,7 +308,8 @@ class PilotRegistry {
             case 'bounty':
             case 'guard':
             case 'police':
-                return null; // No trading focus for combat roles
+                // Combat-focused roles don't engage in trading
+                return null;
             default:
                 return null;
         }
@@ -795,9 +801,9 @@ class PilotRegistry {
 
     _scoreGuard(metrics) {
         // Guards are hired for protection in dangerous systems
-        const base = 650;
-        const riskBonus = (1 - metrics.securityFactor) * 700;
-        const pirateBonus = metrics.piratePressure * 600;
+        const base = this.GUARD_BASE_SALARY;
+        const riskBonus = (1 - metrics.securityFactor) * this.GUARD_RISK_BONUS_MULT;
+        const pirateBonus = metrics.piratePressure * this.GUARD_PIRATE_BONUS_MULT;
         return base + riskBonus + pirateBonus;
     }
 
