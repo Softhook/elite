@@ -893,6 +893,9 @@ class PilotRegistry {
             totalCreditsGained += creditAmount;
             this._removeCargoFromPilot(pilot, commodity, quantity);
             soldAny = true;
+            // Live sync: reflect credits/cargo changes on instantiated entities
+            this._syncPilotCreditsToEntity(pilot);
+            this._syncPilotCargoToEntity(pilot);
         }
 
         if (soldAny) {
@@ -904,6 +907,9 @@ class PilotRegistry {
                 console.log(`[PilotRegistry] CLEAR pendingTrade after universal sell pilot=${pilot.name}`);
                 pilot.pendingTrade = null;
             }
+            // Ensure any on-screen entity reflects final state immediately
+            this._syncPilotCreditsToEntity(pilot);
+            this._syncPilotCargoToEntity(pilot);
         }
 
         return soldAny;
@@ -971,6 +977,8 @@ class PilotRegistry {
             pilot.credits -= buyPrice * plannedQuantity;
             totalSpent += buyPrice * plannedQuantity;
             const added = this._addCargoToPilot(pilot, opp.commodity, plannedQuantity);
+            // Live sync: update credits as we spend
+            this._syncPilotCreditsToEntity(pilot);
 
             if (added < plannedQuantity) {
                 const surplus = plannedQuantity - added;
@@ -978,6 +986,8 @@ class PilotRegistry {
                     stationEconomyRegistry.processTrade(stationId, opp.commodity, -surplus);
                     pilot.credits += buyPrice * surplus;
                     totalSpent -= buyPrice * surplus;
+                    // Live sync: refund reflected
+                    this._syncPilotCreditsToEntity(pilot);
                 }
             }
 
@@ -994,6 +1004,8 @@ class PilotRegistry {
                 });
                 console.log(`${pilot.name} bought ${added} ${opp.commodity} for ${(buyPrice * added).toFixed(0)} credits (profit/unit: ${opp.profitability.toFixed(1)})`);
                 console.log(`[PilotRegistry] PURCHASE ITEM pilot=${pilot.name} commodity=${opp.commodity} qty=${added} remainingCap=${freeCapacity} credits=${pilot.credits}`);
+                // Live sync: cargo increased on-screen
+                this._syncPilotCargoToEntity(pilot);
             }
         }
 
@@ -1013,7 +1025,43 @@ class PilotRegistry {
         pilot.nextDepartureMs = Date.now() + Math.floor(random(2000, 6000));
         console.log(`${pilot.name} total purchase: ${totalSpent.toFixed(0)} credits, heading to ${bestDestination.destStationId}`);
         console.log(`[PilotRegistry] PURCHASE COMPLETE pilot=${pilot.name} cargo=${JSON.stringify(pilot.cargo)} credits=${pilot.credits}`);
+        // Final live sync after purchase completes
+        this._syncPilotCreditsToEntity(pilot);
+        this._syncPilotCargoToEntity(pilot);
         return true;
+    }
+
+    // --- Live entity sync helpers ---
+    _forEachLiveEntityForPilot(pilot, fn) {
+        if (!pilot || pilot.id == null) return;
+        try {
+            if (typeof galaxy === 'undefined' || !galaxy?.systems) return;
+            for (const system of galaxy.systems) {
+                if (!system?.enemies) continue;
+                for (const enemy of system.enemies) {
+                    if (enemy && enemy.pilotId === pilot.id) {
+                        try { fn(enemy, system); } catch (_) {}
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
+    _syncPilotCreditsToEntity(pilot) {
+        this._forEachLiveEntityForPilot(pilot, (enemy) => {
+            enemy.pilotCredits = pilot.credits || 0;
+        });
+    }
+
+    _syncPilotCargoToEntity(pilot) {
+        this._forEachLiveEntityForPilot(pilot, (enemy) => {
+            if (typeof enemy.initializeCargoHoldFromPilot === 'function') {
+                enemy.initializeCargoHoldFromPilot(pilot.cargo, pilot.cargoCap);
+            } else {
+                enemy.cargoHold = { ...(pilot.cargo || {}) };
+                if (pilot.cargoCap != null) enemy.cargoCapacity = pilot.cargoCap;
+            }
+        });
     }
 
     _handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef) {
@@ -1633,6 +1681,15 @@ class PilotRegistry {
             this._handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef);
         }
 
+        // If a trade is pending but we are docked at a non-destination station,
+        // do not loiter here. Schedule an immediate departure so players don't
+        // see ships dock and leave with unchanged cargo.
+        const now = Date.now();
+        if (pilot.pendingTrade && pilot.dockedStationId && pilot.pendingTrade.destStationId !== system.station.name) {
+            // Leave almost immediately (small delay to allow UI state to show)
+            pilot.nextDepartureMs = Math.min(pilot.nextDepartureMs || (now + 250), now + 250);
+        }
+
         if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.02) {
             this._planNextAction(pilot, galaxyRef);
         }
@@ -1644,7 +1701,6 @@ class PilotRegistry {
             return;
         }
 
-        const now = Date.now();
         if (pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
             pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
             console.log(`[PilotRegistry] DEPARTURE SCHEDULED pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
@@ -1664,6 +1720,8 @@ class PilotRegistry {
             pilot.dockedStationId = null;
             pilot.pos = null; // Will be set by spawn system
             pilot.nextDepartureMs = null;
+            // Deterministic travel window so arrivals are reliable/visible
+            pilot.travelArrivalMs = Date.now() + Math.floor(random(5000, 9000));
             console.log(`[PilotRegistry] UNDOCKING pilot=${pilot.name} routeLen=${pilot.itinerary?.length || 0} pendingTrade=${pilot.pendingTrade? 'yes':'no'}`);
             return;
         }
@@ -1676,19 +1734,38 @@ class PilotRegistry {
      * @param {Galaxy} galaxyRef - Galaxy reference
      */
     _updateTravelingPilot(pilot, dtSec, galaxyRef) {
-        // Simple travel: arrive after a fixed time delay
-        // In a real implementation, this would be based on actual distance
-        if (random() < 0.005) { // Small chance to arrive each update
+        // Deterministic arrival based on a pre-set arrival timestamp
+        const now = Date.now();
+        if (pilot.travelArrivalMs == null) {
+            // Fallback: if no arrival time was set (e.g., save/load mid-flight), set one now
+            pilot.travelArrivalMs = now + Math.floor(random(5000, 9000));
+        }
+
+        if (now >= pilot.travelArrivalMs) {
             const destIndex = pilot.itinerary.shift();
             pilot.currentSystemIndex = destIndex;
 
             // Dock at station if available
             const destSystem = galaxyRef.systems[destIndex];
             if (destSystem && destSystem.station) {
-                pilot.dockedStationId = destSystem.station.name;
-                pilot.pos = null;
-                pilot.nextDepartureMs = null;
-                console.log(`Pilot ${pilot.name} arrived and docked at ${destSystem.name}`);
+                // Only dock if we intend to sell cargo here.
+                const sellingHere = (pilot.pendingTrade && pilot.pendingTrade.destSystemIndex === destIndex) ||
+                    (!pilot.pendingTrade && this._getTotalCargoUnits(pilot) > 0);
+                if (sellingHere) {
+                    pilot.dockedStationId = destSystem.station.name;
+                    pilot.pos = null;
+                    pilot.nextDepartureMs = null;
+                    pilot.travelArrivalMs = null;
+                    console.log(`Pilot ${pilot.name} arrived and docked at ${destSystem.name}`);
+                } else {
+                    // Remain in-flight: treat arrival as reaching the jump zone for next leg.
+                    pilot.dockedStationId = null;
+                    pilot.travelArrivalMs = null;
+                    pilot.nextDepartureMs = null;
+                    console.log(`Pilot ${pilot.name} transited to ${destSystem.name} (in-flight, skipping station)`);
+                }
+            } else {
+                pilot.travelArrivalMs = null;
             }
 
             // If no more destinations, we're done traveling

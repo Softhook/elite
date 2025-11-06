@@ -316,7 +316,11 @@ class UIManager {
         const notorietyValue = pilotRecord?.notoriety;
         const notorietyText = (notorietyValue != null && notorietyValue > 0) ? notorietyValue.toLocaleString() : null;
 
-        const creditsValue = pilotRecord?.credits;
+        // Prefer live-synced credits from the entity if present
+        let creditsValue = pilotRecord?.credits;
+        if (target.pilotCredits != null && isFinite(target.pilotCredits)) {
+            creditsValue = target.pilotCredits;
+        }
         const creditsText = (creditsValue != null && isFinite(creditsValue))
             ? `${Math.round(creditsValue).toLocaleString()} cr`
             : null;
@@ -403,9 +407,10 @@ class UIManager {
         if (notorietyText) infoLines.push({ label: 'Notoriety', value: notorietyText });
 
         // --- Cargo Display (Pilot registry vs live ship) ---
-        const registryCargo = (pilotRecord?.cargo && typeof pilotRecord.cargo === 'object') ? pilotRecord.cargo : null;
         const liveCargo = (target.cargoHold && typeof target.cargoHold === 'object') ? target.cargoHold : null;
-        const cargoSource = (registryCargo && Object.keys(registryCargo).length > 0) ? registryCargo : liveCargo;
+        const registryCargo = (pilotRecord?.cargo && typeof pilotRecord.cargo === 'object') ? pilotRecord.cargo : null;
+        // Prefer live cargo if available; fall back to registry snapshot
+        const cargoSource = (liveCargo && Object.keys(liveCargo).length > 0) ? liveCargo : registryCargo;
         const capacity = pilotRecord?.cargoCap ?? target.cargoCapacity ?? 0;
         if (cargoSource) {
             const cargoEntries = Object.entries(cargoSource).filter(([_, q]) => q > 0);
@@ -424,7 +429,7 @@ class UIManager {
                 const regSig = JSON.stringify(registryCargo);
                 const liveSig = JSON.stringify(liveCargo);
                 if (regSig !== liveSig) {
-                    infoLines.push({ label: 'CargoSync', value: 'Registry ≠ Ship', color: [255,150,120] });
+                    infoLines.push({ label: 'CargoSync', value: 'Live', color: [170,220,255] });
                 }
             }
         } else {
