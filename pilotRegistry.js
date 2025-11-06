@@ -43,6 +43,12 @@ class PilotRegistry {
             'Torres', 'Wilson', 'Cooper', 'Morgan', 'Reed', 'Stone', 'Vale', 'West'
         ];
 
+        this.usedNames = new Set();
+        this.availableNamePool = [];
+        this.uniqueSuffixCounter = 1;
+
+        this._refreshNamePool();
+
         // Dynamic bounty tracking state
         this.activeBounties = new Map();
         this.bountyHunterIds = new Set();
@@ -54,10 +60,112 @@ class PilotRegistry {
         this.bountyPayoutMultiplier = 15;
     }
 
+    _normalizeName(name) {
+        if (!name) return '';
+        return String(name).trim().replace(/\s+/g, ' ');
+    }
+
+    _markNameUsed(name) {
+        const normalized = this._normalizeName(name);
+        if (!normalized) return;
+        this.usedNames.add(normalized);
+
+        if (Array.isArray(this.availableNamePool) && this.availableNamePool.length > 0) {
+            const idx = this.availableNamePool.indexOf(normalized);
+            if (idx !== -1) {
+                this.availableNamePool.splice(idx, 1);
+            }
+        }
+    }
+
+    _refreshNamePool() {
+        this.availableNamePool = [];
+
+        for (const first of this.firstNames) {
+            for (const last of this.lastNames) {
+                const candidate = this._normalizeName(`${first} ${last}`);
+                if (!this.usedNames.has(candidate)) {
+                    this.availableNamePool.push(candidate);
+                }
+            }
+        }
+
+        for (let i = this.availableNamePool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const temp = this.availableNamePool[i];
+            this.availableNamePool[i] = this.availableNamePool[j];
+            this.availableNamePool[j] = temp;
+        }
+    }
+
+    _generateFallbackName(baseLabel = 'Callsign') {
+        let attempts = 0;
+        while (attempts < 5000) {
+            const candidate = `${baseLabel} ${this.uniqueSuffixCounter++}`;
+            if (!this.usedNames.has(candidate)) {
+                this._markNameUsed(candidate);
+                return candidate;
+            }
+            attempts++;
+        }
+
+        const fallback = `${baseLabel} ${Date.now()}`;
+        this._markNameUsed(fallback);
+        return fallback;
+    }
+
     _generatePilotName() {
-        const firstName = random(this.firstNames);
-        const lastName = random(this.lastNames);
-        return `${firstName} ${lastName}`;
+        if (!Array.isArray(this.availableNamePool)) {
+            this.availableNamePool = [];
+        }
+
+        if (this.availableNamePool.length === 0) {
+            this._refreshNamePool();
+        }
+
+        if (this.availableNamePool.length > 0) {
+            const candidate = this.availableNamePool.pop();
+            this._markNameUsed(candidate);
+            return candidate;
+        }
+
+        return this._generateFallbackName();
+    }
+
+    _resolveUniqueName(desiredName) {
+        const normalized = this._normalizeName(desiredName);
+        if (!normalized) {
+            return this._generatePilotName();
+        }
+
+        if (!this.usedNames.has(normalized)) {
+            this._markNameUsed(normalized);
+            return normalized;
+        }
+
+        for (let suffix = 2; suffix < 2500; suffix++) {
+            const candidate = `${normalized} #${suffix}`;
+            if (!this.usedNames.has(candidate)) {
+                this._markNameUsed(candidate);
+                return candidate;
+            }
+        }
+
+        return this._generateFallbackName(normalized);
+    }
+
+    _ensurePilotNamesUnique() {
+        this.usedNames = new Set();
+        this.availableNamePool = [];
+
+        for (const pilot of this.pilots) {
+            if (!pilot) continue;
+            const uniqueName = this._resolveUniqueName(pilot.name);
+            pilot.name = uniqueName;
+        }
+
+        this.uniqueSuffixCounter = Math.max(this.usedNames.size + 1, this.uniqueSuffixCounter);
+        this._refreshNamePool();
     }
 
     /**
@@ -87,6 +195,8 @@ class PilotRegistry {
             return;
         }
 
+        this._ensurePilotNamesUnique();
+
         // Create initial pilot population
         for (let i = 0; i < count; i++) {
             const startSystem = random(systemsWithStations);
@@ -106,7 +216,7 @@ class PilotRegistry {
     createPilot(systemIndex, stationId) {
         const id = this.nextPilotId++;
         
-        // Generate name using simple random selection
+        // Generate unique name from pool
         const name = this._generatePilotName();
 
         // Assign role with weighted distribution
@@ -262,7 +372,7 @@ class PilotRegistry {
         const id = this.nextPilotId++;
         const shipDef = SHIP_DEFINITIONS[shipTypeId];
         const now = Date.now();
-        const pilotName = name || this._generatePilotName();
+        const pilotName = name ? this._resolveUniqueName(name) : this._generatePilotName();
 
         const pilot = {
             id,
@@ -1259,6 +1369,8 @@ class PilotRegistry {
                 isBountyHunter: Boolean(p.isBountyHunter)
             };
         });
+
+        this._ensurePilotNamesUnique();
 
         this.nextPilotId = data.nextPilotId || (this.pilots.reduce((maxId, pilot) => Math.max(maxId, pilot.id || 0), 0) + 1);
         this.updateIndex = 0;

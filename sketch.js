@@ -266,7 +266,7 @@ function keyPressed() {
     }
     // Single-key actions (map, wanted, autopilot, etc.)
     switch (key.toLowerCase()) {
-        case 'w':
+        case 'p':
             // Toggle world debug overlay
             if (worldDebugOverlay) {
                 worldDebugOverlay.toggle();

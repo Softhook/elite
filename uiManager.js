@@ -269,6 +269,188 @@ class UIManager {
         pop();
     }
 
+    drawTargetInfoOverlay(player) {
+        const target = player?.target;
+        if (!target) return;
+
+        if (typeof target.isDestroyed === 'function') {
+            if (target.isDestroyed()) return;
+        } else if (target.destroyed) {
+            return;
+        }
+
+        const pilotRegistry = (typeof worldSimulation !== 'undefined') ? worldSimulation?.pilotRegistry : null;
+        const pilotRecord = (target.pilotId != null && pilotRegistry)
+            ? pilotRegistry.getPilotById(target.pilotId)
+            : null;
+
+        const resolveSystemName = (index) => {
+            if (typeof index !== 'number') return null;
+            if (galaxy?.systems && galaxy.systems[index]) {
+                return galaxy.systems[index].name || `System ${index}`;
+            }
+            return `System ${index}`;
+        };
+
+        const toTitleCase = (value) => {
+            if (!value && value !== 0) return 'Unknown';
+            return value
+                .toString()
+                .toLowerCase()
+                .replace(/_/g, ' ')
+                .replace(/\b[a-z]/g, (match) => match.toUpperCase());
+        };
+
+        const pilotName = pilotRecord?.name || target.pilotName || 'Unknown Pilot';
+        const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
+        const shipLabel = shipDef?.name || target.shipTypeName || 'Unknown Vessel';
+        const roleLabel = toTitleCase(pilotRecord?.role || target.role || '');
+
+        const legalStatus = pilotRecord?.legalStatus || (target.isWanted ? 'wanted' : null);
+        const legalLabel = legalStatus ? toTitleCase(legalStatus) : null;
+        const legalColor = legalStatus === 'wanted' ? [255, 120, 120] : [170, 220, 170];
+
+        const killsValue = pilotRecord?.kills ?? target.kills ?? target.killCount;
+        const killsText = killsValue != null ? killsValue.toString() : '0';
+
+        const notorietyValue = pilotRecord?.notoriety;
+        const notorietyText = (notorietyValue != null && notorietyValue > 0) ? notorietyValue.toLocaleString() : null;
+
+        const creditsValue = pilotRecord?.credits;
+        const creditsText = (creditsValue != null && isFinite(creditsValue))
+            ? `${Math.round(creditsValue).toLocaleString()} cr`
+            : null;
+
+        const bountyValue = pilotRecord?.bountyPayout ?? target.bountyValue;
+        const bountyText = (bountyValue != null && isFinite(bountyValue) && bountyValue > 0)
+            ? `${Math.round(bountyValue).toLocaleString()} cr`
+            : null;
+
+        let statusText = 'Active';
+        if (pilotRecord) {
+            if (!pilotRecord.alive) {
+                statusText = 'Reported destroyed';
+            } else if (pilotRecord.dockedStationId) {
+                statusText = `Docked at ${pilotRecord.dockedStationId}`;
+            } else if (Array.isArray(pilotRecord.itinerary) && pilotRecord.itinerary.length > 0) {
+                const nextDest = resolveSystemName(pilotRecord.itinerary[0]);
+                statusText = nextDest ? `Traveling to ${nextDest}` : 'Traveling';
+            } else {
+                const systemName = resolveSystemName(pilotRecord.currentSystemIndex);
+                if (systemName) statusText = `Operating in ${systemName}`;
+            }
+        } else if (target.currentState != null) {
+            const stateLabel = (typeof AI_STATE_NAME !== 'undefined' && AI_STATE_NAME[target.currentState])
+                ? AI_STATE_NAME[target.currentState]
+                : target.currentState;
+            statusText = `State: ${stateLabel}`;
+        }
+
+        let travelText = null;
+        if (Array.isArray(pilotRecord?.itinerary) && pilotRecord.itinerary.length > 0) {
+            const itineraryNames = pilotRecord.itinerary
+                .slice(0, 3)
+                .map((idx) => resolveSystemName(idx))
+                .filter(Boolean);
+            if (itineraryNames.length === 1) {
+                travelText = itineraryNames[0];
+            } else if (itineraryNames.length > 1) {
+                travelText = itineraryNames.join(' -> ');
+                if (pilotRecord.itinerary.length > itineraryNames.length) {
+                    travelText += ' ...';
+                }
+            }
+        }
+
+        const distance = (target.pos && player?.pos)
+            ? dist(player.pos.x, player.pos.y, target.pos.x, target.pos.y)
+            : null;
+        const distanceText = (distance != null && isFinite(distance))
+            ? `${Math.round(distance).toLocaleString()} m`
+            : null;
+
+        let hullInfo = null;
+        if (typeof target.hull === 'number' && typeof target.maxHull === 'number' && target.maxHull > 0) {
+            const currentHull = Math.max(0, Math.round(target.hull));
+            const maxHull = Math.max(0, Math.round(target.maxHull));
+            const hullPercent = Math.max(0, Math.min(100, Math.round((target.hull / target.maxHull) * 100)));
+            hullInfo = `${currentHull}/${maxHull} (${hullPercent}%)`;
+        }
+
+        let shieldInfo = null;
+        if (typeof target.maxShield === 'number' && target.maxShield > 0 && typeof target.shield === 'number') {
+            const currentShield = Math.max(0, Math.round(target.shield));
+            const maxShield = Math.max(0, Math.round(target.maxShield));
+            const shieldPercent = Math.max(0, Math.min(100, Math.round((target.shield / target.maxShield) * 100)));
+            shieldInfo = `${currentShield}/${maxShield} (${shieldPercent}%)`;
+        }
+
+        let tradeText = null;
+        if (pilotRecord?.tradeFocus) {
+            if (Array.isArray(pilotRecord.tradeFocus)) {
+                tradeText = pilotRecord.tradeFocus.join(', ');
+            } else {
+                tradeText = pilotRecord.tradeFocus;
+            }
+        }
+
+        const infoLines = [];
+        infoLines.push({ label: 'Ship', value: shipLabel });
+        if (roleLabel) infoLines.push({ label: 'Role', value: roleLabel });
+        if (statusText) infoLines.push({ label: 'Status', value: statusText });
+        if (travelText) infoLines.push({ label: 'Route', value: travelText });
+        if (distanceText) infoLines.push({ label: 'Distance', value: distanceText });
+        if (hullInfo) infoLines.push({ label: 'Hull', value: hullInfo });
+        if (shieldInfo) infoLines.push({ label: 'Shield', value: shieldInfo });
+        infoLines.push({ label: 'Kills', value: killsText });
+        if (legalLabel) infoLines.push({ label: 'Legal', value: legalLabel, color: legalColor });
+        if (bountyText) infoLines.push({ label: 'Bounty', value: bountyText, color: [255, 200, 120] });
+        if (creditsText) infoLines.push({ label: 'Credits', value: creditsText });
+        if (notorietyText) infoLines.push({ label: 'Notoriety', value: notorietyText });
+        if (tradeText) infoLines.push({ label: 'Focus', value: tradeText });
+
+        if (infoLines.length === 0) return;
+
+        const overlayW = Math.min(360, width * 0.32);
+        const overlayX = width - overlayW - 20;
+        const overlayY = player?.autopilotEnabled ? 115 : 95;
+        const lineHeight = 20;
+        const overlayH = 52 + infoLines.length * lineHeight;
+
+        push();
+        noStroke();
+        fill(12, 36, 68, 220);
+        rect(overlayX, overlayY, overlayW, overlayH, 10);
+
+        stroke(70, 140, 220, 180);
+        noFill();
+        rect(overlayX, overlayY, overlayW, overlayH, 10);
+
+        textFont(font);
+        textAlign(LEFT, TOP);
+        noStroke();
+        fill(255);
+        textSize(20);
+        text(pilotName, overlayX + 14, overlayY + 12);
+
+        textSize(16);
+        let currentY = overlayY + 42;
+        const labelX = overlayX + 14;
+        const valueX = labelX + 110;
+
+        for (const line of infoLines) {
+            fill(160, 200, 255);
+            text(`${line.label}:`, labelX, currentY);
+
+            const drawColor = line.color || [230, 230, 230];
+            fill(drawColor[0], drawColor[1], drawColor[2]);
+            text(`${line.value}`, valueX, currentY);
+            currentY += lineHeight;
+        }
+
+        pop();
+    }
+
 
 
     /** Draws the Heads-Up Display (HUD) during flight */
@@ -377,6 +559,8 @@ class UIManager {
         this.drawWeaponSelector(player);
         
         pop();
+
+        this.drawTargetInfoOverlay(player);
     }
 
     /** Draws the weapon selector UI */
