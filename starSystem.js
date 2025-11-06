@@ -75,6 +75,11 @@ const JUMP_ZONE_MAX_ALPHA = 200;
 const JUMP_ZONE_MIN_ALPHA = 20;
 // ---
 
+const STATION_SPAWN_MIN_DISTANCE = 1200;
+const STATION_SPAWN_RADIUS_MULTIPLIER = 6;
+const STATION_SPAWN_PADDING_MIN = 250;
+const STATION_SPAWN_PADDING_MAX = 900;
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -219,6 +224,92 @@ class StarSystem {
             this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
         }
         return this._cachedDiagonalDist;
+    }
+
+    /** Calculates the minimum radius NPCs should stay away from the main station */
+    _getStationSafetyRadius() {
+        if (!this.station) {
+            return STATION_SPAWN_MIN_DISTANCE;
+        }
+
+        const stationSize = this.station.size || 0;
+        return Math.max(STATION_SPAWN_MIN_DISTANCE, stationSize * STATION_SPAWN_RADIUS_MULTIPLIER);
+    }
+
+    /** Ensures a spawn point respects the safety radius around the main station */
+    _ensureStationBoundary(x, y) {
+        if (!this.station || !this.station.pos) {
+            return { x, y };
+        }
+
+        const stationPos = this.station.pos;
+        const safetyRadius = this._getStationSafetyRadius();
+        const safetyRadiusSq = safetyRadius * safetyRadius;
+        let dx = x - stationPos.x;
+        let dy = y - stationPos.y;
+        let distSq = dx * dx + dy * dy;
+
+        if (distSq >= safetyRadiusSq) {
+            return { x, y };
+        }
+
+        if (distSq < 1) {
+            const angle = random(TWO_PI);
+            const distance = safetyRadius + random(STATION_SPAWN_PADDING_MIN, STATION_SPAWN_PADDING_MAX);
+            return {
+                x: stationPos.x + cos(angle) * distance,
+                y: stationPos.y + sin(angle) * distance
+            };
+        }
+
+        const dist = Math.sqrt(distSq);
+        const targetDist = safetyRadius + random(STATION_SPAWN_PADDING_MIN, STATION_SPAWN_PADDING_MAX);
+        const scale = targetDist / dist;
+
+        return {
+            x: stationPos.x + dx * scale,
+            y: stationPos.y + dy * scale
+        };
+    }
+
+    /** Generates a spawn position outside the station exclusion zone */
+    _getStationBoundarySpawn() {
+        if (!this.station || !this.station.pos) {
+            const angle = random(TWO_PI);
+            const spawnDist = this._getDiagonalDistance() + random(150, 400);
+            const origin = (this.player && this.player.pos) ? this.player.pos : { x: 0, y: 0 };
+            return {
+                x: origin.x + cos(angle) * spawnDist,
+                y: origin.y + sin(angle) * spawnDist
+            };
+        }
+
+        const stationPos = this.station.pos;
+        const baseRadius = this._getStationSafetyRadius();
+        const distance = baseRadius + random(STATION_SPAWN_PADDING_MIN, STATION_SPAWN_PADDING_MAX);
+        const angle = random(TWO_PI);
+
+        return {
+            x: stationPos.x + cos(angle) * distance,
+            y: stationPos.y + sin(angle) * distance
+        };
+    }
+
+    /** Propagates live NPC ship positions into the pilot registry so they stay in sync */
+    _updatePilotRegistryPosition(enemy) {
+        if (!enemy || enemy.pilotId == null || !enemy.pos) {
+            return;
+        }
+
+        if (typeof worldSimulation === 'undefined' || !worldSimulation?.pilotRegistry) {
+            return;
+        }
+
+        worldSimulation.pilotRegistry.updateLivePilotPosition(
+            enemy.pilotId,
+            this.systemIndex,
+            enemy.pos
+        );
     }
 
     /**
@@ -775,10 +866,13 @@ try {
 
 
         // --- Spawn the ship ---
-        let angle = random(TWO_PI);
-        let spawnDist = this._getDiagonalDistance() + random(150, 400);
+        const angle = random(TWO_PI);
+        const spawnDist = this._getDiagonalDistance() + random(150, 400);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
+        const safeSpawn = this._ensureStationBoundary(spawnX, spawnY);
+        spawnX = safeSpawn.x;
+        spawnY = safeSpawn.y;
         try {
             let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
             // newEnemy.currentSystem = this; // addEnemy will set this
@@ -917,6 +1011,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 try { enemy.update(this); } catch(e) { console.error("Err updating Enemy:",e); }
+                this._updatePilotRegistryPosition(enemy);
                 
                 if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
                     this._fastRemove(this.enemies, i);
@@ -2704,21 +2799,25 @@ checkProjectileCollisions() {
         
         // Use loose equality to catch both null and undefined
         if (this.station && pilot.pos == null) {
-            // Spawn near station if no position set (catches both null and undefined)
-            const stationDist = 300 + random(200);
-            const stationAngle = random(TWO_PI);
-            spawnX = this.station.pos.x + cos(stationAngle) * stationDist;
-            spawnY = this.station.pos.y + sin(stationAngle) * stationDist;
+            // Spawn outside the exclusion zone if no persistent position exists
+            const stationSpawn = this._getStationBoundarySpawn();
+            spawnX = stationSpawn.x;
+            spawnY = stationSpawn.y;
         } else if (pilot.pos) {
-            // Use saved position if available
-            spawnX = pilot.pos.x;
-            spawnY = pilot.pos.y;
+            // Use saved position if available, but nudge it out if it's too close to the station
+            const adjusted = this._ensureStationBoundary(pilot.pos.x, pilot.pos.y);
+            spawnX = adjusted.x;
+            spawnY = adjusted.y;
         } else {
             // Spawn somewhere in the system
             const angle = random(TWO_PI);
             const spawnDist = this._getDiagonalDistance() + random(150, 400);
-            spawnX = this.player.pos.x + cos(angle) * spawnDist;
-            spawnY = this.player.pos.y + sin(angle) * spawnDist;
+            const fallback = this.player?.pos || { x: 0, y: 0 };
+            const rawX = fallback.x + cos(angle) * spawnDist;
+            const rawY = fallback.y + sin(angle) * spawnDist;
+            const adjusted = this._ensureStationBoundary(rawX, rawY);
+            spawnX = adjusted.x;
+            spawnY = adjusted.y;
         }
         
         // Map pilot role to AI role
@@ -2761,6 +2860,8 @@ checkProjectileCollisions() {
                 npcShip.isWanted = true;
             }
             
+            this._updatePilotRegistryPosition(npcShip);
+
             return npcShip;
         } catch (e) {
             console.error('Failed to create NPC ship from pilot:', e);
@@ -2818,6 +2919,7 @@ checkProjectileCollisions() {
             enemy.currentSystem = this;
             window.currentSystem = this;
             this.enemies.push(enemy);
+            this._updatePilotRegistryPosition(enemy);
             
             // Centralized Thargoid/Alien spawn cue: plays once when aliens are added
             try {

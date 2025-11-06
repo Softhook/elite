@@ -1192,6 +1192,26 @@ class PilotRegistry {
         this.activeBounties.delete(key);
     }
 
+    updateLivePilotPosition(pilotId, systemIndex, pos) {
+        if (pilotId == null || !pos) return;
+
+        const pilot = this.getPilotById(pilotId);
+        if (!pilot || !pilot.alive) return;
+
+        if (systemIndex != null) {
+            pilot.currentSystemIndex = systemIndex;
+        }
+
+        pilot.dockedStationId = null;
+        if (!pilot.pos) {
+            pilot.pos = { x: pos.x, y: pos.y };
+        } else {
+            pilot.pos.x = pos.x;
+            pilot.pos.y = pos.y;
+        }
+        pilot.lastUpdateMs = Date.now();
+    }
+
     /**
      * Get all pilots in a specific system.
      * @param {number} systemIndex - System index to query
@@ -1289,6 +1309,7 @@ class PilotRegistry {
                 cargoCap: p.cargoCap,
                 credits: p.credits,
                 legalStatus: p.legalStatus,
+                pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
                 riskTolerance: p.riskTolerance,
                 tradeFocus: p.tradeFocus,
                 missionIds: Array.isArray(p.missionIds) ? [...p.missionIds] : [],
@@ -1344,7 +1365,7 @@ class PilotRegistry {
                 shields: p.shields ?? (shipDef ? (shipDef.baseShield || 0) : 0),
                 currentSystemIndex: p.currentSystemIndex ?? 0,
                 dockedStationId: p.dockedStationId ?? null,
-                pos: null,
+                pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
                 itinerary: Array.isArray(p.itinerary) ? [...p.itinerary] : [],
                 cargo: p.cargo ? { ...p.cargo } : {},
                 cargoCap: p.cargoCap ?? (shipDef ? (shipDef.cargoCapacity || 20) : 20),
