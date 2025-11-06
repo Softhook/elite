@@ -2772,24 +2772,35 @@ checkProjectileCollisions() {
             if (!npcShip) continue;
 
             if (anchorEnemy && anchorEnemy.pos && npcShip.pos) {
+                // Position guard in formation around principal
                 const baseAngle = ((pilot.id || 0) * 53) % 360;
                 const angle = baseAngle * (Math.PI / 180);
                 const radius = Math.max(60, (anchorEnemy.size || 60) * 0.8 + (npcShip.size || 40) * 0.4);
-                npcShip.pos.x = anchorEnemy.pos.x + Math.cos(angle) * radius;
-                npcShip.pos.y = anchorEnemy.pos.y + Math.sin(angle) * radius;
+                const newX = anchorEnemy.pos.x + Math.cos(angle) * radius;
+                const newY = anchorEnemy.pos.y + Math.sin(angle) * radius;
+                
+                // Update both the NPC ship and the pilot registry position
+                npcShip.pos.x = newX;
+                npcShip.pos.y = newY;
+                
+                if (worldSim && worldSim.pilotRegistry) {
+                    worldSim.pilotRegistry.updateLivePilotPosition(pilot.id, this.systemIndex, npcShip.pos);
+                }
             }
 
             this.addEnemy(npcShip);
             existingPilotIds.add(pilot.id);
             spawned++;
 
-            if (pilot.role === 'guard' && pilot.guardPrincipalId != null) {
-                const principalEnemy = anchorEnemy || this.enemies.find(enemy => enemy.pilotId === pilot.guardPrincipalId);
-                if (principalEnemy) {
-                    npcShip.principal = principalEnemy;
-                    if (typeof npcShip.changeState === 'function') {
-                        npcShip.changeState(AI_STATE.GUARDING, { principal: principalEnemy });
-                    }
+            if (pilot.role === 'guard' && pilot.guardPrincipalId != null && anchorEnemy) {
+                // Link guard to principal - anchorEnemy already verified to exist
+                npcShip.principal = anchorEnemy;
+                if (typeof npcShip.changeState === 'function') {
+                    npcShip.changeState(AI_STATE.GUARDING, { principal: anchorEnemy });
+                }
+                
+                if (STAR_SYSTEM_DEBUG) {
+                    console.log(`Guard ${npcShip.shipTypeName} (${pilot.name}) assigned to principal ${anchorEnemy.shipTypeName}`);
                 }
             }
         }

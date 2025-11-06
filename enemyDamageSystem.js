@@ -187,6 +187,12 @@ class EnemyDamageSystem {
                     if (typeof system.systemIndex === 'number') {
                         pilotRecord.currentSystemIndex = system.systemIndex;
                     }
+                    
+                    // Notify registry to handle guard cleanup and other death-related logic
+                    if (typeof registry.notifyPilotDeath === 'function') {
+                        registry.notifyPilotDeath(this.pilotId);
+                    }
+                    
                     if (pilotRecord.isBountyHunter && pilotRecord.bountyContractId) {
                         const bountyRef = registry.getBountyById(pilotRecord.bountyContractId);
                         if (bountyRef) {

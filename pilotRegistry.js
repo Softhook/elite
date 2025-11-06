@@ -503,14 +503,15 @@ class PilotRegistry {
         guard.dockedStationId = principal.dockedStationId ?? null;
         guard.itinerary = Array.isArray(principal.itinerary) ? [...principal.itinerary] : [];
 
-        if (!guard.dockedStationId) {
-            if (!guard.pos && principal.pos) {
+        if (!guard.dockedStationId && !guard.pos) {
+            // Only set position if guard doesn't already have one (prevents spawn override)
+            if (principal.pos) {
                 const offset = this._computeEscortOffset(guard, principal);
                 guard.pos = { x: principal.pos.x + offset.x, y: principal.pos.y + offset.y };
-            } else if (!guard.pos && context.preferredPosition) {
+            } else if (context.preferredPosition) {
                 guard.pos = { x: context.preferredPosition.x, y: context.preferredPosition.y };
             }
-        } else {
+        } else if (guard.dockedStationId) {
             guard.pos = null;
         }
     }
@@ -565,12 +566,11 @@ class PilotRegistry {
         guard.dockedStationId = principal.dockedStationId ?? null;
         guard.itinerary = Array.isArray(principal.itinerary) ? [...principal.itinerary] : [];
 
-        if (!guard.dockedStationId) {
-            if (!guard.pos && principal.pos) {
-                const offset = this._computeEscortOffset(guard, principal);
-                guard.pos = { x: principal.pos.x + offset.x, y: principal.pos.y + offset.y };
-            }
-        } else {
+        if (!guard.dockedStationId && !guard.pos && principal.pos) {
+            // Only assign position if guard has none (allows visual ship to set final position)
+            const offset = this._computeEscortOffset(guard, principal);
+            guard.pos = { x: principal.pos.x + offset.x, y: principal.pos.y + offset.y };
+        } else if (guard.dockedStationId) {
             guard.pos = null;
         }
 
@@ -1696,6 +1696,42 @@ class PilotRegistry {
     resolveBountyForTarget(targetType, targetId = null) {
         const key = targetType === 'player' ? 'player' : `pilot:${targetId}`;
         this._clearBountyForTarget(key);
+    }
+
+    /**
+     * Notify registry when a pilot dies to clean up guard assignments.
+     * @param {number} pilotId - ID of the pilot who died
+     */
+    notifyPilotDeath(pilotId) {
+        if (pilotId == null) return;
+
+        const pilot = this.getPilotById(pilotId);
+        if (!pilot) return;
+
+        pilot.alive = false;
+
+        // Clear any bounty on this pilot
+        if (pilot.hasActiveBounty) {
+            this._clearBountyForTarget(`pilot:${pilotId}`);
+        }
+
+        // If this pilot was a guard, clear their assignment
+        if (pilot.role === 'guard' && pilot.guardPrincipalId != null) {
+            this._clearGuardAssignment(pilot);
+        }
+
+        // If this pilot had guards, release them to find new principals
+        if (Array.isArray(pilot.assignedGuardIds) && pilot.assignedGuardIds.length > 0) {
+            for (const guardId of pilot.assignedGuardIds) {
+                const guard = this.getPilotById(guardId);
+                if (guard && guard.role === 'guard') {
+                    guard.guardPrincipalId = null;
+                    guard.guardAssignmentMs = null;
+                    // Guards will attempt reassignment on next update
+                }
+            }
+            pilot.assignedGuardIds = [];
+        }
     }
 
     /**
