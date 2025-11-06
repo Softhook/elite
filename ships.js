@@ -737,7 +737,7 @@ const SHIP_DEFINITIONS = {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
         baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
         baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
-        armament: ["Scatter Beam"], // Alien tech
+        armament: ["Beam Laser"], // Alien tech
         costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
         drawFunction: drawGeometricDrone, vertexData: [ {x:1,y:0}, {x:0.5,y:0.87}, {x:-0.5,y:0.87}, {x:-1,y:0}, {x:-0.5,y:-0.87}, {x:0.5,y:-0.87} ], // Regular Hexagon
         fillColor: [50, 50, 60], strokeColor: [200, 200, 255], strokeW: 1.0, // Dark metallic, light stroke
