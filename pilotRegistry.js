@@ -9,6 +9,25 @@ class PilotRegistry {
         this.pilots = []; // Array of all NPC pilots
         this.nextPilotId = 1;
         this.updateIndex = 0; // Round-robin index for budgeted updates
+
+        // Background role balancing parameters
+        this.roleEvaluationIntervalMs = 60_000; // Evaluate role profitability every minute per pilot
+        this.roleSwitchThreshold = 1200; // Require sizable upside before switching careers
+
+        // Preferred ship options per role (used when switching careers)
+        this.roleShipOptions = {
+            trader: ['CobraMkIII', 'Python', 'Type6Transporter'],
+            hauler: ['Anaconda', 'Python', 'Type9Heavy'],
+            miner: ['Adder', 'CobraMkIII', 'ProspectorMiner'],
+            bounty: ['Viper', 'FerDeLance', 'AspExplorer'],
+            police: ['Viper', 'Sidewinder', 'ACAB'],
+            pirate: ['KraitMKI', 'PirateMarauder', 'FerDeLance'],
+            smuggler: ['CobraMkIII', 'KraitMKI', 'AspExplorer'],
+            local_transporter: ['Keelback', 'Type6Transporter', 'CobraMkIII'],
+            alien: ['Thargoid', 'GeometricDrone', 'BioFrigate'],
+            guard: ['Viper', 'GladiusFighter'],
+            default: ['CobraMkIII']
+        };
         
         // Name generation data (simple for now)
         this.firstNames = [
@@ -25,12 +44,18 @@ class PilotRegistry {
         ];
     }
 
+    _generatePilotName() {
+        const firstName = random(this.firstNames);
+        const lastName = random(this.lastNames);
+        return `${firstName} ${lastName}`;
+    }
+
     /**
      * Initialize the registry with seed pilots at major hubs.
      * @param {Galaxy} galaxyRef - Reference to the galaxy object
      * @param {number} count - Number of pilots to create
      */
-    initializePilots(galaxyRef, count = 50) {
+    initializePilots(galaxyRef, count = 200) {
         if (!galaxyRef || !galaxyRef.systems || galaxyRef.systems.length === 0) {
             console.warn('PilotRegistry: Cannot initialize without valid galaxy');
             return;
@@ -68,9 +93,7 @@ class PilotRegistry {
         const id = this.nextPilotId++;
         
         // Generate name using simple random selection
-        const firstName = random(this.firstNames);
-        const lastName = random(this.lastNames);
-        const name = `${firstName} ${lastName}`;
+        const name = this._generatePilotName();
 
         // Assign role with weighted distribution
         const roleRoll = random();
@@ -83,29 +106,7 @@ class PilotRegistry {
         else role = 'pirate';                        // 10% pirates
 
         // Select ship type based on role
-        let shipTypeId;
-        switch (role) {
-            case 'trader':
-                shipTypeId = random(['CobraMkIII', 'Python', 'Type6Transporter']);
-                break;
-            case 'hauler':
-                shipTypeId = random(['Anaconda', 'Python', 'Type9Heavy']);
-                break;
-            case 'miner':
-                shipTypeId = random(['Adder', 'CobraMkIII', 'ProspectorMiner']);
-                break;
-            case 'bounty':
-                shipTypeId = random(['Viper', 'FerDeLance', 'AspExplorer']);
-                break;
-            case 'police':
-                shipTypeId = random(['Viper', 'Sidewinder', 'ACAB']);
-                break;
-            case 'pirate':
-                shipTypeId = random(['KraitMKI', 'PirateMarauder', 'FerDeLance']);
-                break;
-            default:
-                shipTypeId = 'CobraMkIII';
-        }
+        const shipTypeId = this._assignShipForRole({ shipTypeId: null }, role);
 
         // Get ship stats for capacity
         const shipDef = SHIP_DEFINITIONS[shipTypeId];
@@ -131,7 +132,9 @@ class PilotRegistry {
             tradeFocus: this._selectTradeFocus(role),
             missionIds: [],
             lastUpdateMs: Date.now(),
-            alive: true
+            alive: true,
+            lastRoleEvaluationMs: Date.now() + random(-5000, 5000),
+            lastRoleSwitchMs: Date.now()
         };
     }
 
@@ -140,23 +143,124 @@ class PilotRegistry {
      * @param {string} role - Pilot role
      * @returns {Array<string>|null} Array of commodity names or null
      */
-    _selectTradeFocus(role) {
+    _selectTradeFocus(role, context = null) {
         switch (role) {
             case 'trader':
+                if (context && context.commodity) return [context.commodity];
                 return random([
                     ['Food', 'Textiles'],
                     ['Machinery', 'Computers'],
                     ['Luxury Goods', 'Medicine']
                 ]);
             case 'hauler':
+                if (context && context.commodity) return [context.commodity];
                 return ['Metals', 'Minerals', 'Machinery'];
             case 'miner':
                 return ['Metals', 'Minerals'];
             case 'pirate':
                 return ['Narcotics', 'Weapons', 'Slaves']; // Illegal goods
+            case 'smuggler':
+                if (context && context.commodity) return [context.commodity];
+                return ['Narcotics', 'Weapons'];
+            case 'local_transporter':
+                if (context && context.commodity) return [context.commodity];
+                return ['Food', 'Machinery'];
             default:
                 return null;
         }
+    }
+
+    /**
+     * Choose a suitable ship type for the target role, keeping the current hull if already appropriate.
+     * @param {Object} pilot - Pilot data (only shipTypeId is read)
+     * @param {string} role - Target career role
+     * @returns {string} Ship definition key
+     * @private
+     */
+    _assignShipForRole(pilot, role) {
+        let options = this.roleShipOptions[role] || this.roleShipOptions.default;
+        if (!Array.isArray(options) || options.length === 0) {
+            options = this.roleShipOptions.default;
+        }
+
+        let validOptions = options.filter(id => SHIP_DEFINITIONS[id]);
+        if (validOptions.length === 0) {
+            validOptions = this.roleShipOptions.default.filter(id => SHIP_DEFINITIONS[id]);
+        }
+
+        if (pilot.shipTypeId && SHIP_DEFINITIONS[pilot.shipTypeId] && validOptions.includes(pilot.shipTypeId)) {
+            return pilot.shipTypeId;
+        }
+
+        if (validOptions.length === 0) {
+            if (pilot.shipTypeId && SHIP_DEFINITIONS[pilot.shipTypeId]) {
+                return pilot.shipTypeId;
+            }
+            if (SHIP_DEFINITIONS.CobraMkIII) {
+                return 'CobraMkIII';
+            }
+            return null;
+        }
+
+        const choice = random(validOptions);
+        if (choice) return choice;
+        if (pilot.shipTypeId && SHIP_DEFINITIONS[pilot.shipTypeId]) return pilot.shipTypeId;
+        if (SHIP_DEFINITIONS.CobraMkIII) return 'CobraMkIII';
+        return null;
+    }
+
+    registerEventPilot(params = {}) {
+        const {
+            role = 'pirate',
+            shipTypeId,
+            systemIndex = 0,
+            position = null,
+            legalStatus = null,
+            name = null,
+            riskTolerance = null,
+            tradeContext = null,
+            spawnSource = null
+        } = params || {};
+
+        if (!shipTypeId || !SHIP_DEFINITIONS[shipTypeId]) {
+            console.warn('PilotRegistry: Cannot register event pilot with invalid ship', shipTypeId);
+            return null;
+        }
+
+        const id = this.nextPilotId++;
+        const shipDef = SHIP_DEFINITIONS[shipTypeId];
+        const now = Date.now();
+        const pilotName = name || this._generatePilotName();
+
+        const pilot = {
+            id,
+            name: pilotName,
+            factionId: null,
+            role,
+            shipTypeId,
+            hull: shipDef.baseHull,
+            shields: shipDef.baseShield || 0,
+            currentSystemIndex: systemIndex,
+            dockedStationId: null,
+            pos: position ? { x: position.x, y: position.y } : null,
+            itinerary: [],
+            cargo: {},
+            cargoCap: shipDef.cargoCapacity || 20,
+            credits: random(2000, 45000),
+            legalStatus: legalStatus || (role === 'pirate' ? 'wanted' : 'clean'),
+            riskTolerance: riskTolerance ?? random(0.4, 0.9),
+            tradeFocus: this._selectTradeFocus(role, tradeContext),
+            missionIds: [],
+            lastUpdateMs: now,
+            alive: true,
+            lastRoleEvaluationMs: now,
+            lastRoleSwitchMs: now,
+            isEventSpawn: true,
+            spawnSource
+        };
+
+        this.pilots.push(pilot);
+        return pilot;
     }
 
     /**
@@ -165,7 +269,7 @@ class PilotRegistry {
      * @param {number} dtMs - Delta time in milliseconds
      * @param {Galaxy} galaxyRef - Reference to galaxy for routing
      */
-    updateSome(budget, dtMs, galaxyRef) {
+    updateSome(budget, dtMs, galaxyRef, stationEconomyRegistry) {
         if (this.pilots.length === 0) return;
 
         const dtSec = dtMs / 1000.0;
@@ -174,7 +278,7 @@ class PilotRegistry {
         // Round-robin through pilots
         while (updated < budget && updated < this.pilots.length) {
             const pilot = this.pilots[this.updateIndex];
-            this._updatePilot(pilot, dtSec, galaxyRef);
+            this._updatePilot(pilot, dtSec, galaxyRef, stationEconomyRegistry);
 
             this.updateIndex = (this.updateIndex + 1) % this.pilots.length;
             updated++;
@@ -187,10 +291,20 @@ class PilotRegistry {
      * @param {number} dtSec - Delta time in seconds
      * @param {Galaxy} galaxyRef - Reference to galaxy
      */
-    _updatePilot(pilot, dtSec, galaxyRef) {
+    _updatePilot(pilot, dtSec, galaxyRef, stationEconomyRegistry) {
         if (!pilot.alive) return;
 
+        if (pilot.isEventSpawn) {
+            pilot.lastUpdateMs = Date.now();
+            return;
+        }
+
         pilot.lastUpdateMs = Date.now();
+
+        // Evaluate role profitability while docked to enable dynamic role shifts
+        if (stationEconomyRegistry && pilot.dockedStationId) {
+            this._maybeSwitchRole(pilot, galaxyRef, stationEconomyRegistry);
+        }
 
         // Basic state machine
         if (pilot.dockedStationId) {
@@ -203,6 +317,367 @@ class PilotRegistry {
             // Idle - plan next action
             this._planNextAction(pilot, galaxyRef);
         }
+    }
+
+    /**
+     * Evaluate whether a docked pilot should change role based on current profitability.
+     * @param {Object} pilot - Pilot data
+     * @param {Galaxy} galaxyRef - Galaxy reference for system lookup
+     * @param {StationEconomyRegistry} stationEconomyRegistry - Economy data access
+     * @private
+     */
+    _maybeSwitchRole(pilot, galaxyRef, stationEconomyRegistry) {
+        if (pilot?.isEventSpawn) return;
+
+        const now = Date.now();
+        if (!galaxyRef || !stationEconomyRegistry) return;
+
+        const interval = this.roleEvaluationIntervalMs;
+        if (!interval || interval <= 0) return;
+
+        const lastEval = pilot.lastRoleEvaluationMs || 0;
+        if (now - lastEval < interval) return;
+        pilot.lastRoleEvaluationMs = now;
+
+        const system = galaxyRef.systems?.[pilot.currentSystemIndex];
+        if (!system || !system.station) return;
+
+        const economy = stationEconomyRegistry.getEconomy(system.station.name);
+        if (!economy) return;
+
+        const roleProfits = this._calculateRoleProfits(pilot, system, economy, stationEconomyRegistry, galaxyRef);
+        if (!roleProfits) return;
+
+        const currentResult = roleProfits[pilot.role] || { profit: Number.NEGATIVE_INFINITY };
+        let bestRole = pilot.role;
+        let bestResult = currentResult;
+
+        for (const [role, result] of Object.entries(roleProfits)) {
+            if (!result) continue;
+            const profit = result.profit ?? Number.NEGATIVE_INFINITY;
+            const baseline = bestResult.profit ?? Number.NEGATIVE_INFINITY;
+            if (profit > baseline + this.roleSwitchThreshold) {
+                bestRole = role;
+                bestResult = result;
+            }
+        }
+
+        if (bestRole === pilot.role) return;
+
+        const lastSwitch = pilot.lastRoleSwitchMs || 0;
+        if (now - lastSwitch < interval) return;
+
+        const previousRole = pilot.role;
+        const switched = this._applyPilotRole(pilot, bestRole, bestResult?.context || bestResult);
+        if (switched) {
+            pilot.lastRoleSwitchMs = now;
+            const systemName = system.name || `System ${system.systemIndex}`;
+            console.log(`PilotRegistry: ${pilot.name} switched from ${previousRole} to ${bestRole} in ${systemName}`);
+        }
+    }
+
+    /**
+     * Calculate profitability projections for each role using current economic conditions.
+     * @param {Object} pilot - Pilot data
+     * @param {StarSystem} system - Current system
+     * @param {Object} economy - Station economy state
+     * @param {StationEconomyRegistry} stationEconomyRegistry - Economy registry
+     * @param {Galaxy} galaxyRef - Galaxy reference
+     * @returns {Object|null} Role profitability map
+     * @private
+     */
+    _calculateRoleProfits(pilot, system, economy, stationEconomyRegistry, galaxyRef) {
+        const metrics = this._computeSystemRoleMetrics(pilot, system, economy, stationEconomyRegistry, galaxyRef);
+        if (!metrics) return null;
+
+        return {
+            police: { profit: this._scorePolice(metrics) },
+            pirate: { profit: this._scorePirate(metrics), context: metrics.bestPirateContext },
+            hauler: { profit: this._scoreHauler(metrics), context: metrics.bestHaulerOpportunity },
+            trader: { profit: this._scoreTrader(metrics), context: metrics.bestHaulerOpportunity },
+            local_transporter: { profit: this._scoreLocalTransport(metrics), context: metrics.bestLocalCommodity },
+            smuggler: { profit: this._scoreSmuggler(metrics), context: metrics.bestSmugglerOpportunity },
+            bounty: { profit: this._scoreBounty(metrics) },
+            miner: { profit: this._scoreMiner(metrics) }
+        };
+    }
+
+    /**
+     * Apply new role attributes to a pilot.
+     * @param {Object} pilot - Pilot to modify
+     * @param {string} newRole - Target role
+     * @param {Object|null} roleContext - Contextual data (best commodity/route)
+     * @returns {boolean} True if the role changed
+     * @private
+     */
+    _applyPilotRole(pilot, newRole, roleContext) {
+        if (!pilot || !newRole || pilot.role === newRole) return false;
+
+        const newShipTypeId = this._assignShipForRole(pilot, newRole);
+        const shipChanged = newShipTypeId && newShipTypeId !== pilot.shipTypeId;
+
+        pilot.role = newRole;
+        if (newShipTypeId) {
+            pilot.shipTypeId = newShipTypeId;
+
+            if (shipChanged) {
+                const shipDef = SHIP_DEFINITIONS[newShipTypeId];
+                if (shipDef) {
+                    pilot.hull = shipDef.baseHull;
+                    pilot.shields = shipDef.baseShield || 0;
+                    pilot.cargoCap = shipDef.cargoCapacity || pilot.cargoCap || 20;
+                }
+            } else if (!pilot.cargoCap) {
+                const shipDef = SHIP_DEFINITIONS[newShipTypeId];
+                if (shipDef) {
+                    pilot.cargoCap = shipDef.cargoCapacity || pilot.cargoCap || 20;
+                }
+            }
+        }
+
+        pilot.tradeFocus = this._selectTradeFocus(newRole, roleContext);
+
+        if (newRole === 'pirate' || newRole === 'smuggler') {
+            pilot.legalStatus = 'wanted';
+        } else if (pilot.legalStatus !== 'clean') {
+            pilot.legalStatus = 'clean';
+        }
+
+        // Reset itinerary so the pilot can plan based on the new profession
+        pilot.itinerary = [];
+        return true;
+    }
+
+    /**
+     * Gather per-role metrics for the pilot's current system.
+     * @returns {Object|null} Computed metrics
+     * @private
+     */
+    _computeSystemRoleMetrics(pilot, system, economy, stationEconomyRegistry, galaxyRef) {
+        if (!system || !economy) return null;
+
+        const cargoCap = Math.max(5, pilot.cargoCap || 15);
+        const securityFactor = this._securityLevelToFactor(system.securityLevel);
+        const connectedEconomies = this._gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef);
+
+        const metrics = {
+            cargoCap,
+            securityFactor,
+            connectedEconomies,
+            bestHaulerOpportunity: null,
+            bestSmugglerOpportunity: null,
+            bestLocalCommodity: null,
+            localSurplusScore: 0,
+            illegalDemandScore: 0,
+            haulerOpportunityValue: 0,
+            piratePressure: 0,
+            mineralOutputValue: 0,
+            bestPirateContext: null
+        };
+
+        const commodityKeys = Object.keys(economy.stock || economy.basePrice || {});
+        for (const commodity of commodityKeys) {
+            const priceHere = this._getCommodityPrice(economy, commodity);
+            if (!priceHere) continue;
+
+            const stockHere = economy.stock?.[commodity] ?? 0;
+            const baseDemand = economy.baseDemand?.[commodity] ?? 0;
+
+            const surplusUnits = Math.max(0, stockHere - baseDemand);
+            if (surplusUnits > 0) {
+                const moveableUnits = Math.min(surplusUnits, cargoCap);
+                const surplusValue = moveableUnits * priceHere;
+                if (!metrics.bestLocalCommodity || surplusValue > metrics.bestLocalCommodity.surplusValue) {
+                    metrics.bestLocalCommodity = {
+                        commodity,
+                        surplusUnits: moveableUnits,
+                        availableSurplus: surplusUnits,
+                        unitPrice: priceHere,
+                        surplusValue
+                    };
+                }
+            }
+
+            if (!this._isCommodityIllegal(economy, commodity) && connectedEconomies.length > 0) {
+                for (const neighbor of connectedEconomies) {
+                    const destPrice = this._getCommodityPrice(neighbor.economy, commodity);
+                    if (!destPrice) continue;
+                    const perUnitProfit = destPrice - priceHere;
+                    if (perUnitProfit <= 0) continue;
+
+                    const quantity = Math.min(stockHere, cargoCap);
+                    if (quantity <= 0) continue;
+
+                    const totalProfit = perUnitProfit * quantity;
+                    if (!metrics.bestHaulerOpportunity || totalProfit > metrics.bestHaulerOpportunity.profit) {
+                        metrics.bestHaulerOpportunity = {
+                            commodity,
+                            profit: totalProfit,
+                            perUnit: perUnitProfit,
+                            destSystemIndex: neighbor.systemIndex,
+                            destStationId: neighbor.stationId
+                        };
+                    }
+                }
+            }
+
+            if (this._isCommodityIllegal(economy, commodity) && connectedEconomies.length > 0) {
+                for (const neighbor of connectedEconomies) {
+                    if (this._isCommodityIllegal(neighbor.economy, commodity)) continue;
+
+                    const sourcePrice = this._getCommodityPrice(neighbor.economy, commodity);
+                    const destPrice = priceHere;
+                    if (!sourcePrice) continue;
+
+                    const perUnitProfit = destPrice - sourcePrice;
+                    if (perUnitProfit <= 0) continue;
+
+                    const sourceStock = neighbor.economy.stock?.[commodity] ?? 0;
+                    const quantity = Math.min(sourceStock, cargoCap);
+                    if (quantity <= 0) continue;
+
+                    const totalProfit = perUnitProfit * quantity;
+                    if (!metrics.bestSmugglerOpportunity || totalProfit > metrics.bestSmugglerOpportunity.profit) {
+                        metrics.bestSmugglerOpportunity = {
+                            commodity,
+                            profit: totalProfit,
+                            perUnit: perUnitProfit,
+                            sourceSystemIndex: neighbor.systemIndex,
+                            sourceStationId: neighbor.stationId
+                        };
+                    }
+                }
+            }
+        }
+
+        metrics.localSurplusScore = metrics.bestLocalCommodity
+            ? metrics.bestLocalCommodity.availableSurplus * metrics.bestLocalCommodity.unitPrice
+            : 0;
+        metrics.haulerOpportunityValue = metrics.bestHaulerOpportunity ? metrics.bestHaulerOpportunity.profit : 0;
+        metrics.illegalDemandScore = metrics.bestSmugglerOpportunity ? metrics.bestSmugglerOpportunity.profit : 0;
+
+        const metalsProd = economy.productionRate?.Metals || 0;
+        const mineralsProd = economy.productionRate?.Minerals || 0;
+        const metalPrice = this._getCommodityPrice(economy, 'Metals');
+        const mineralPrice = this._getCommodityPrice(economy, 'Minerals');
+        metrics.mineralOutputValue = (metalsProd * metalPrice + mineralsProd * mineralPrice) * 10;
+
+        metrics.piratePressure = this._clamp(
+            ((metrics.haulerOpportunityValue + metrics.illegalDemandScore) / Math.max(1, cargoCap * 200)) *
+            (1 - securityFactor + 0.3),
+            0,
+            1
+        );
+
+        metrics.bestPirateContext = metrics.haulerOpportunityValue >= metrics.illegalDemandScore
+            ? metrics.bestHaulerOpportunity
+            : metrics.bestSmugglerOpportunity;
+
+        return metrics;
+    }
+
+    _scorePolice(metrics) {
+        const baseSalary = 1200;
+        const riskBonus = (1 - metrics.securityFactor) * 600;
+        const pirateBonus = metrics.piratePressure * 800;
+        return baseSalary + riskBonus + pirateBonus;
+    }
+
+    _scorePirate(metrics) {
+        const lootPotential = (metrics.haulerOpportunityValue * 0.7) + (metrics.illegalDemandScore * 0.5);
+        const riskMultiplier = 1 + (1 - metrics.securityFactor);
+        return lootPotential > 0 ? 500 + lootPotential * riskMultiplier : 0;
+    }
+
+    _scoreHauler(metrics) {
+        if (!metrics.bestHaulerOpportunity) return 0;
+        const safeMultiplier = 0.5 + metrics.securityFactor;
+        return metrics.haulerOpportunityValue * safeMultiplier;
+    }
+
+    _scoreTrader(metrics) {
+        if (!metrics.bestHaulerOpportunity) return 0;
+        return 700 + metrics.haulerOpportunityValue * 0.45;
+    }
+
+    _scoreLocalTransport(metrics) {
+        const best = metrics.bestLocalCommodity;
+        if (!best) return 0;
+
+        const minContractUnits = Math.max(6, metrics.cargoCap * 0.5);
+        if (best.availableSurplus < minContractUnits) {
+            return 180 + best.surplusValue * 0.06;
+        }
+
+        const perUnitReward = Math.min(best.unitPrice * 0.08, 45);
+        const contractUnits = Math.min(best.availableSurplus, metrics.cargoCap);
+        const contractValue = contractUnits * perUnitReward;
+        const lowSecurityBonus = (1 - metrics.securityFactor) * 220;
+
+        return 280 + contractValue + lowSecurityBonus;
+    }
+
+    _scoreSmuggler(metrics) {
+        if (!metrics.bestSmugglerOpportunity) return 0;
+        const riskMultiplier = 1 + (1 - metrics.securityFactor) * 0.7;
+        return 600 + metrics.illegalDemandScore * riskMultiplier;
+    }
+
+    _scoreBounty(metrics) {
+        const base = 800;
+        return base + metrics.piratePressure * 900;
+    }
+
+    _scoreMiner(metrics) {
+        return metrics.mineralOutputValue > 0 ? 500 + metrics.mineralOutputValue * 0.4 : 400;
+    }
+
+    _gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef) {
+        if (!system || !Array.isArray(system.connectedSystemIndices)) return [];
+        const results = [];
+        for (const idx of system.connectedSystemIndices) {
+            const neighbor = galaxyRef.systems?.[idx];
+            if (!neighbor || !neighbor.station) continue;
+            const stationId = neighbor.station.name;
+            const economy = stationEconomyRegistry.getEconomy(stationId);
+            if (!economy) continue;
+            results.push({ systemIndex: idx, stationId, economy });
+        }
+        return results;
+    }
+
+    _getCommodityPrice(economy, commodity) {
+        if (!economy) return 0;
+        if (economy.currentPrices && economy.currentPrices[commodity] != null) {
+            return economy.currentPrices[commodity];
+        }
+        if (economy.basePrice && economy.basePrice[commodity] != null) {
+            return economy.basePrice[commodity];
+        }
+        return 0;
+    }
+
+    _isCommodityIllegal(economy, commodity) {
+        if (!economy || !economy.illegal) return false;
+        const illegal = economy.illegal;
+        if (illegal instanceof Set) return illegal.has(commodity);
+        if (Array.isArray(illegal)) return illegal.includes(commodity);
+        if (typeof illegal === 'object') return Boolean(illegal[commodity]);
+        return false;
+    }
+
+    _securityLevelToFactor(securityLevel) {
+        if (!securityLevel || typeof securityLevel !== 'string') return 0.6;
+        const value = securityLevel.toLowerCase();
+        if (value.includes('anarchy')) return 0.1;
+        if (value.includes('low')) return 0.35;
+        if (value.includes('high')) return 0.85;
+        if (value.includes('military')) return 0.9;
+        return 0.6; // Medium/default
+    }
+
+    _clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
     }
 
     /**
@@ -302,7 +777,11 @@ class PilotRegistry {
                 riskTolerance: p.riskTolerance,
                 tradeFocus: p.tradeFocus,
                 missionIds: p.missionIds,
-                alive: p.alive
+                alive: p.alive,
+                lastRoleEvaluationMs: p.lastRoleEvaluationMs,
+                lastRoleSwitchMs: p.lastRoleSwitchMs,
+                isEventSpawn: p.isEventSpawn || false,
+                spawnSource: p.spawnSource || null
             })),
             nextPilotId: this.nextPilotId
         };
@@ -317,8 +796,14 @@ class PilotRegistry {
         
         this.pilots = data.pilots.map(p => ({
             ...p,
+            cargo: p.cargo || {},
+            missionIds: Array.isArray(p.missionIds) ? p.missionIds : [],
             pos: null, // Reset transient field
-            lastUpdateMs: Date.now()
+            lastUpdateMs: Date.now(),
+            lastRoleEvaluationMs: p.lastRoleEvaluationMs ?? Date.now(),
+            lastRoleSwitchMs: p.lastRoleSwitchMs ?? Date.now(),
+            isEventSpawn: Boolean(p.isEventSpawn),
+            spawnSource: p.spawnSource || null
         }));
         this.nextPilotId = data.nextPilotId || this.pilots.length + 1;
         this.updateIndex = 0;

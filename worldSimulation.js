@@ -44,7 +44,7 @@ class WorldSimulation {
 
         // Initialize registries with galaxy data
         this.stationEconomyRegistry.initializeEconomies(galaxyRef);
-        this.pilotRegistry.initializePilots(galaxyRef, 50);
+        this.pilotRegistry.initializePilots(galaxyRef, 200);
 
         this.lastUpdateMs = Date.now();
         this.isInitialized = true;
@@ -69,7 +69,12 @@ class WorldSimulation {
 
             // Update registries with budgeted updates
             if (this.pilotRegistry) {
-                this.pilotRegistry.updateSome(this.pilotUpdateBudget, updateDt, this.galaxyRef);
+                this.pilotRegistry.updateSome(
+                    this.pilotUpdateBudget,
+                    updateDt,
+                    this.galaxyRef,
+                    this.stationEconomyRegistry
+                );
             }
 
             if (this.stationEconomyRegistry) {

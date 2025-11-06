@@ -386,11 +386,55 @@ class EventManager {
                 newEnemy.initializeColors();
             }
 
+            if (typeof worldSimulation !== 'undefined' && worldSimulation?.pilotRegistry) {
+                const registry = worldSimulation.pilotRegistry;
+                const pilotRole = this._mapAIRoleToPilotRole(config.aiRole);
+                if (pilotRole) {
+                    const eventPilot = registry.registerEventPilot({
+                        role: pilotRole,
+                        shipTypeId: newEnemy.shipTypeName,
+                        systemIndex: this.starSystem?.systemIndex ?? 0,
+                        position: { x: spawnX, y: spawnY },
+                        legalStatus: (config.aiRole === AI_ROLE.PIRATE || config.aiRole === AI_ROLE.ALIEN) ? 'wanted' : null,
+                        spawnSource: event.type
+                    });
+
+                    if (eventPilot) {
+                        newEnemy.pilotId = eventPilot.id;
+                        newEnemy.pilotName = eventPilot.name;
+                        if (eventPilot.legalStatus === 'wanted') {
+                            newEnemy.isWanted = true;
+                        }
+                    }
+                }
+            }
+
             if (typeof config.additionalEnemySetup === 'function') {
                 config.additionalEnemySetup(newEnemy, this.player, this.starSystem);
             }
             
             this.starSystem.addEnemy(newEnemy);
+        }
+    }
+
+    _mapAIRoleToPilotRole(aiRole) {
+        switch (aiRole) {
+            case AI_ROLE.PIRATE:
+                return 'pirate';
+            case AI_ROLE.ALIEN:
+                return 'alien';
+            case AI_ROLE.BOUNTY_HUNTER:
+                return 'bounty';
+            case AI_ROLE.POLICE:
+                return 'police';
+            case AI_ROLE.HAULER:
+                return 'hauler';
+            case AI_ROLE.TRANSPORT:
+                return 'local_transporter';
+            case AI_ROLE.GUARD:
+                return 'guard';
+            default:
+                return null;
         }
     }
 }

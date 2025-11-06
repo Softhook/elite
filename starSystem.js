@@ -658,6 +658,10 @@ try {
 
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
     trySpawnNPC() {
+        if (typeof worldSimulation !== 'undefined' && worldSimulation?.isInitialized) {
+            return;
+        }
+
         if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
 
         let chosenRole, chosenShipTypeName;
@@ -2672,6 +2676,11 @@ checkProjectileCollisions() {
      */
     _createNPCShipFromPilot(pilot) {
         if (!pilot || !pilot.shipTypeId) return null;
+
+        if (!SHIP_DEFINITIONS[pilot.shipTypeId]) {
+            console.warn(`StarSystem: Skipping pilot ${pilot.name || pilot.id} spawn due to unknown ship ${pilot.shipTypeId}`);
+            return null;
+        }
         
         // Determine spawn position - either near station or in space
         let spawnX, spawnY;
@@ -2706,6 +2715,11 @@ checkProjectileCollisions() {
             // Link to pilot data
             npcShip.pilotId = pilot.id;
             npcShip.pilotName = pilot.name;
+            if (pilot.role === 'smuggler') {
+                npcShip.isSmuggler = true;
+            } else if (pilot.role === 'local_transporter') {
+                npcShip.isLocalTransport = true;
+            }
             
             // Set health from pilot data
             if (pilot.hull !== undefined) {
@@ -2746,6 +2760,10 @@ checkProjectileCollisions() {
                 return AI_ROLE.POLICE;
             case 'pirate':
                 return AI_ROLE.PIRATE;
+            case 'smuggler':
+                return AI_ROLE.HAULER;
+            case 'local_transporter':
+                return AI_ROLE.TRANSPORT;
             default:
                 return AI_ROLE.HAULER; // Default to hauler for unknown roles
         }
