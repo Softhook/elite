@@ -2884,6 +2884,8 @@ checkProjectileCollisions() {
                 return AI_ROLE.HAULER; // Miners act like haulers
             case 'bounty':
                 return AI_ROLE.BOUNTY_HUNTER;
+            case 'guard':
+                return AI_ROLE.GUARD;
             case 'police':
                 return AI_ROLE.POLICE;
             case 'pirate':
