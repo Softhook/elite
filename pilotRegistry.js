@@ -18,6 +18,8 @@ class PilotRegistry {
         this.GUARD_BASE_SALARY = 650;
         this.GUARD_RISK_BONUS_MULT = 700;
         this.GUARD_PIRATE_BONUS_MULT = 600;
+        this.maxGuardsPerPrincipal = 2;
+        this.guardPreferredRoleSet = new Set(['trader', 'hauler', 'local_transporter', 'miner', 'smuggler']);
 
         // Preferred ship options per role (used when switching careers)
         // Initialize with sensible static defaults; will be overridden by dynamic mapping below.
@@ -313,7 +315,7 @@ class PilotRegistry {
         const shipDef = SHIP_DEFINITIONS[shipTypeId];
         const cargoCap = shipDef ? (shipDef.cargoCapacity || 20) : 20;
 
-        return {
+        const pilot = {
             id,
             name,
             factionId: null,
@@ -343,8 +345,286 @@ class PilotRegistry {
             bountyTargetId: null,
             bountyTargetType: null,
             bountyPayout: null,
-            isBountyHunter: false
+            isBountyHunter: false,
+            assignedGuardIds: [],
+            guardPrincipalId: null,
+            guardAssignmentMs: null
         };
+
+        this._ensureGuardFieldDefaults(pilot);
+        if (role === 'guard') {
+            this._maybeAssignGuardPrincipal(pilot, {
+                preferredSystemIndex: systemIndex,
+                preferredStationId: stationId
+            });
+        }
+
+        return pilot;
+    }
+
+    _ensureGuardFieldDefaults(pilot) {
+        if (!pilot) return;
+        if (!Array.isArray(pilot.assignedGuardIds)) {
+            pilot.assignedGuardIds = [];
+        }
+        if (pilot.guardPrincipalId != null) {
+            const parsed = Number(pilot.guardPrincipalId);
+            pilot.guardPrincipalId = Number.isFinite(parsed) ? parsed : null;
+        } else {
+            pilot.guardPrincipalId = null;
+        }
+        if (pilot.guardAssignmentMs == null) {
+            pilot.guardAssignmentMs = null;
+        }
+    }
+
+    _maybeAssignGuardPrincipal(pilot, context = {}) {
+        if (!pilot || pilot.role !== 'guard') return;
+
+        let principal = pilot.guardPrincipalId != null ? this.getPilotById(pilot.guardPrincipalId) : null;
+        if (!this._isPrincipalViable(principal, pilot)) {
+            this._clearGuardAssignment(pilot);
+            principal = null;
+        }
+
+        if (!principal) {
+            principal = this._findHighValuePrincipal(pilot, context);
+        }
+
+        if (principal) {
+            this._linkGuardAndPrincipal(pilot, principal, context);
+        }
+    }
+
+    _findHighValuePrincipal(guardPilot, context = {}) {
+        if (!guardPilot) return null;
+
+        const systemIndex = context.preferredSystemIndex != null
+            ? context.preferredSystemIndex
+            : guardPilot.currentSystemIndex;
+
+        if (systemIndex == null) return null;
+
+        let bestCandidate = null;
+        let bestScore = Number.NEGATIVE_INFINITY;
+
+        for (const candidate of this.pilots) {
+            if (!candidate || candidate === guardPilot) continue;
+            if (!candidate.alive) continue;
+            if (candidate.role === 'guard') continue;
+            if (candidate.currentSystemIndex !== systemIndex) continue;
+
+            this._ensureGuardFieldDefaults(candidate);
+
+            const guardCount = candidate.assignedGuardIds.length;
+            if (guardCount >= this.maxGuardsPerPrincipal && !candidate.assignedGuardIds.includes(guardPilot.id)) {
+                continue;
+            }
+
+            const score = this._scorePrincipalCandidate(guardPilot, candidate, context);
+            if (score > bestScore) {
+                bestScore = score;
+                bestCandidate = candidate;
+            }
+        }
+
+        return bestCandidate;
+    }
+
+    _scorePrincipalCandidate(guardPilot, candidate, context = {}) {
+        if (!candidate) return Number.NEGATIVE_INFINITY;
+
+        const shipDef = candidate.shipTypeId ? SHIP_DEFINITIONS[candidate.shipTypeId] : null;
+        const cargoCap = candidate.cargoCap ?? (shipDef ? shipDef.cargoCapacity || 0 : 0);
+        const hullValue = candidate.hull ?? (shipDef ? shipDef.baseHull || 0 : 0);
+        const credits = candidate.credits ?? 0;
+
+        let score = cargoCap * 70 + hullValue * 4 + credits * 0.05;
+
+        if (this.guardPreferredRoleSet.has(candidate.role)) {
+            score += 1500;
+        } else {
+            switch (candidate.role) {
+                case 'bounty':
+                case 'police':
+                    score += 450;
+                    break;
+                case 'pirate':
+                    score -= 1200;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        const guardCount = candidate.assignedGuardIds.length;
+        score -= guardCount * 1800;
+
+        const preferredStation = context.preferredStationId ?? guardPilot?.dockedStationId ?? null;
+        if (preferredStation && candidate.dockedStationId === preferredStation) {
+            score += 2000;
+        } else if (preferredStation && candidate.dockedStationId && candidate.dockedStationId !== preferredStation) {
+            score -= 400;
+        }
+
+        const preferredPosition = context.preferredPosition;
+        if (preferredPosition && candidate.pos) {
+            const dx = candidate.pos.x - preferredPosition.x;
+            const dy = candidate.pos.y - preferredPosition.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            score += Math.max(0, 1200 - dist * 4);
+        }
+
+        if (guardPilot?.pos && candidate.pos) {
+            const dx = candidate.pos.x - guardPilot.pos.x;
+            const dy = candidate.pos.y - guardPilot.pos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            score += Math.max(0, 800 - dist * 3);
+        }
+
+        const notoriety = candidate.notoriety ?? 0;
+        score += notoriety * 10;
+
+        return score;
+    }
+
+    _linkGuardAndPrincipal(guard, principal, context = {}) {
+        if (!guard || !principal) return;
+
+        this._ensureGuardFieldDefaults(principal);
+
+        if (!principal.assignedGuardIds.includes(guard.id)) {
+            principal.assignedGuardIds.push(guard.id);
+        }
+
+        guard.guardPrincipalId = principal.id;
+        guard.guardAssignmentMs = Date.now();
+        guard.currentSystemIndex = principal.currentSystemIndex;
+        guard.dockedStationId = principal.dockedStationId ?? null;
+        guard.itinerary = Array.isArray(principal.itinerary) ? [...principal.itinerary] : [];
+
+        if (!guard.dockedStationId) {
+            if (!guard.pos && principal.pos) {
+                const offset = this._computeEscortOffset(guard, principal);
+                guard.pos = { x: principal.pos.x + offset.x, y: principal.pos.y + offset.y };
+            } else if (!guard.pos && context.preferredPosition) {
+                guard.pos = { x: context.preferredPosition.x, y: context.preferredPosition.y };
+            }
+        } else {
+            guard.pos = null;
+        }
+    }
+
+    _clearGuardAssignment(guard) {
+        if (!guard) return;
+        if (guard.guardPrincipalId != null) {
+            const principal = this.getPilotById(guard.guardPrincipalId);
+            if (principal && Array.isArray(principal.assignedGuardIds)) {
+                const idx = principal.assignedGuardIds.indexOf(guard.id);
+                if (idx !== -1) {
+                    principal.assignedGuardIds.splice(idx, 1);
+                }
+            }
+        }
+        guard.guardPrincipalId = null;
+        guard.guardAssignmentMs = null;
+    }
+
+    _computeEscortOffset(guard, principal) {
+        const guardShip = guard?.shipTypeId ? SHIP_DEFINITIONS[guard.shipTypeId] : null;
+        const principalShip = principal?.shipTypeId ? SHIP_DEFINITIONS[principal.shipTypeId] : null;
+        const principalSize = principalShip ? principalShip.size || 80 : 80;
+        const guardSize = guardShip ? guardShip.size || 40 : 40;
+        const radius = Math.max(60, principalSize * 0.75 + guardSize * 0.35);
+
+        const angleSeed = ((guard.id || 0) * 37 + (principal.id || 0) * 17) % 360;
+        const angleRad = angleSeed * (Math.PI / 180);
+
+        return {
+            x: Math.cos(angleRad) * radius,
+            y: Math.sin(angleRad) * radius
+        };
+    }
+
+    _isPrincipalViable(principal, guard) {
+        if (!principal || !principal.alive) return false;
+        if (principal.role === 'guard') return false;
+        if (!Array.isArray(principal.assignedGuardIds)) {
+            principal.assignedGuardIds = [];
+        }
+        if (guard && principal.assignedGuardIds.length > this.maxGuardsPerPrincipal && !principal.assignedGuardIds.includes(guard.id)) {
+            return false;
+        }
+        return true;
+    }
+
+    _syncGuardWithPrincipal(guard, principal) {
+        if (!guard || !principal) return;
+
+        guard.currentSystemIndex = principal.currentSystemIndex;
+        guard.dockedStationId = principal.dockedStationId ?? null;
+        guard.itinerary = Array.isArray(principal.itinerary) ? [...principal.itinerary] : [];
+
+        if (!guard.dockedStationId) {
+            if (!guard.pos && principal.pos) {
+                const offset = this._computeEscortOffset(guard, principal);
+                guard.pos = { x: principal.pos.x + offset.x, y: principal.pos.y + offset.y };
+            }
+        } else {
+            guard.pos = null;
+        }
+
+        if (!principal.assignedGuardIds.includes(guard.id)) {
+            principal.assignedGuardIds.push(guard.id);
+        }
+
+        guard.lastUpdateMs = Date.now();
+    }
+
+    _updateGuardPilot(pilot, dtSec, galaxyRef) {
+        if (!pilot) return false;
+        if (pilot.isEventSpawn) return false;
+
+        let principal = pilot.guardPrincipalId != null ? this.getPilotById(pilot.guardPrincipalId) : null;
+        if (!this._isPrincipalViable(principal, pilot)) {
+            this._clearGuardAssignment(pilot);
+            this._maybeAssignGuardPrincipal(pilot, {
+                preferredSystemIndex: pilot.currentSystemIndex,
+                preferredStationId: pilot.dockedStationId
+            });
+            principal = pilot.guardPrincipalId != null ? this.getPilotById(pilot.guardPrincipalId) : null;
+        }
+
+        if (!this._isPrincipalViable(principal, pilot)) {
+            return false;
+        }
+
+        this._syncGuardWithPrincipal(pilot, principal);
+        return true;
+    }
+
+    _reconcileGuardAssignments() {
+        const byId = new Map();
+        for (const pilot of this.pilots) {
+            if (!pilot) continue;
+            this._ensureGuardFieldDefaults(pilot);
+            byId.set(pilot.id, pilot);
+        }
+
+        for (const pilot of this.pilots) {
+            if (!pilot) continue;
+            if (pilot.role === 'guard') {
+                const principal = pilot.guardPrincipalId != null ? byId.get(pilot.guardPrincipalId) : null;
+                if (!this._isPrincipalViable(principal, pilot)) {
+                    this._clearGuardAssignment(pilot);
+                    this._maybeAssignGuardPrincipal(pilot);
+                } else if (!principal.assignedGuardIds.includes(pilot.id)) {
+                    principal.assignedGuardIds.push(pilot.id);
+                }
+            } else {
+                pilot.assignedGuardIds = pilot.assignedGuardIds.filter(id => byId.has(id));
+            }
+        }
     }
 
     /**
@@ -488,13 +768,26 @@ class PilotRegistry {
             bountyTargetId: bountyTargetId ?? null,
             bountyTargetType: bountyTargetType || null,
             bountyPayout: bountyPayout ?? null,
-            isBountyHunter: Boolean(isBountyHunter)
+            isBountyHunter: Boolean(isBountyHunter),
+            assignedGuardIds: [],
+            guardPrincipalId: null,
+            guardAssignmentMs: null
         };
+
+        this._ensureGuardFieldDefaults(pilot);
 
         this.pilots.push(pilot);
 
         if (pilot.isBountyHunter) {
             this.bountyHunterIds.add(pilot.id);
+        }
+
+        if (role === 'guard') {
+            this._maybeAssignGuardPrincipal(pilot, {
+                preferredSystemIndex: systemIndex,
+                preferredStationId: dockedStationId,
+                preferredPosition: position || null
+            });
         }
 
         return pilot;
@@ -533,6 +826,12 @@ class PilotRegistry {
     _updatePilot(pilot, dtSec, galaxyRef, stationEconomyRegistry) {
         if (!pilot.alive) return;
 
+        if (pilot.role === 'guard') {
+            if (this._updateGuardPilot(pilot, dtSec, galaxyRef)) {
+                return;
+            }
+        }
+
         if (pilot.isEventSpawn) {
             pilot.lastUpdateMs = Date.now();
             return;
@@ -567,6 +866,7 @@ class PilotRegistry {
      */
     _maybeSwitchRole(pilot, galaxyRef, stationEconomyRegistry) {
         if (pilot?.isEventSpawn) return;
+        if (pilot.role === 'guard' && pilot.guardPrincipalId != null) return;
 
         const now = Date.now();
         if (!galaxyRef || !stationEconomyRegistry) return;
@@ -653,6 +953,11 @@ class PilotRegistry {
     _applyPilotRole(pilot, newRole, roleContext) {
         if (!pilot || !newRole || pilot.role === newRole) return false;
 
+        const previousRole = pilot.role;
+        if (previousRole === 'guard' && newRole !== 'guard') {
+            this._clearGuardAssignment(pilot);
+        }
+
         const newShipTypeId = this._assignShipForRole(pilot, newRole);
         const shipChanged = newShipTypeId && newShipTypeId !== pilot.shipTypeId;
 
@@ -685,6 +990,12 @@ class PilotRegistry {
 
         // Reset itinerary so the pilot can plan based on the new profession
         pilot.itinerary = [];
+
+        if (newRole === 'guard') {
+            this._ensureGuardFieldDefaults(pilot);
+            this._maybeAssignGuardPrincipal(pilot);
+        }
+
         return true;
     }
 
@@ -938,14 +1249,19 @@ class PilotRegistry {
         // For now, just occasionally undock and pick a destination
         // This is a placeholder for future trading logic
         if (random() < 0.01) { // 1% chance per update to depart
-            // Pick a random connected system
-            const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
-            if (currentSystem && currentSystem.connectedSystemIndices && 
-                currentSystem.connectedSystemIndices.length > 0) {
-                const destIndex = random(currentSystem.connectedSystemIndices);
-                pilot.itinerary = [destIndex];
+            if (pilot.role === 'local_transporter') {
+                // Local transporters undock but stay in the system
                 pilot.dockedStationId = null;
-                console.log(`Pilot ${pilot.name} departed for system ${destIndex}`);
+            } else {
+                // Pick a random connected system
+                const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
+                if (currentSystem && currentSystem.connectedSystemIndices && 
+                    currentSystem.connectedSystemIndices.length > 0) {
+                    const destIndex = random(currentSystem.connectedSystemIndices);
+                    pilot.itinerary = [destIndex];
+                    pilot.dockedStationId = null;
+                    console.log(`Pilot ${pilot.name} departed for system ${destIndex}`);
+                }
             }
         }
     }
@@ -984,6 +1300,9 @@ class PilotRegistry {
      */
     _planNextAction(pilot, galaxyRef) {
         // Simple planning: pick a random destination
+        // Local transporters do not travel between systems
+        if (pilot.role === 'local_transporter') return;
+
         const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
         if (currentSystem && currentSystem.connectedSystemIndices && 
             currentSystem.connectedSystemIndices.length > 0) {
@@ -1416,7 +1735,10 @@ class PilotRegistry {
                 bountyTargetId: p.bountyTargetId ?? null,
                 bountyTargetType: p.bountyTargetType || null,
                 bountyPayout: p.bountyPayout ?? null,
-                isBountyHunter: Boolean(p.isBountyHunter)
+                isBountyHunter: Boolean(p.isBountyHunter),
+                assignedGuardIds: Array.isArray(p.assignedGuardIds) ? [...p.assignedGuardIds] : [],
+                guardPrincipalId: p.guardPrincipalId ?? null,
+                guardAssignmentMs: p.guardAssignmentMs ?? null
             })),
             nextPilotId: this.nextPilotId,
             activeBounties: Array.from(this.activeBounties.values()).map(b => ({
@@ -1446,7 +1768,7 @@ class PilotRegistry {
 
         this.pilots = data.pilots.map(p => {
             const shipDef = p.shipTypeId ? SHIP_DEFINITIONS[p.shipTypeId] : null;
-            return {
+            const pilot = {
                 id: p.id,
                 name: p.name,
                 factionId: p.factionId ?? null,
@@ -1478,8 +1800,13 @@ class PilotRegistry {
                 bountyTargetId: p.bountyTargetId ?? null,
                 bountyTargetType: p.bountyTargetType || null,
                 bountyPayout: p.bountyPayout ?? null,
-                isBountyHunter: Boolean(p.isBountyHunter)
+                isBountyHunter: Boolean(p.isBountyHunter),
+                assignedGuardIds: Array.isArray(p.assignedGuardIds) ? [...p.assignedGuardIds] : [],
+                guardPrincipalId: p.guardPrincipalId ?? null,
+                guardAssignmentMs: p.guardAssignmentMs ?? null
             };
+            this._ensureGuardFieldDefaults(pilot);
+            return pilot;
         });
 
         this._ensurePilotNamesUnique();
@@ -1536,6 +1863,8 @@ class PilotRegistry {
         }
 
         this.lastBountySweepMs = now;
+
+        this._reconcileGuardAssignments();
 
         console.log(`PilotRegistry: Loaded ${this.pilots.length} pilots from save (bounties: ${this.activeBounties.size})`);
     }

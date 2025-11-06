@@ -2736,25 +2736,61 @@ checkProjectileCollisions() {
             }
         }
         
-        // Spawn up to a limit of visible NPC pilots (leave room for other spawns)
-        const maxNPCPilots = Math.min(pilotsInSystem.length, this.maxEnemies - this.enemies.length - this.reservedEnemySlots);
-        let spawned = 0;
-        
+        const availableSlots = this.maxEnemies - this.enemies.length - this.reservedEnemySlots;
+        if (availableSlots <= 0) return;
+
+        const spawnCandidates = [];
         for (const pilot of pilotsInSystem) {
-            // Skip if pilot already has a visible ship
             if (existingPilotIds.has(pilot.id)) continue;
-            
-            // Skip docked pilots (they're at the station)
             if (pilot.dockedStationId) continue;
-            
-            // Spawn limit reached
+            spawnCandidates.push(pilot);
+        }
+
+        if (spawnCandidates.length === 0) return;
+
+        spawnCandidates.sort((a, b) => {
+            const aGuard = a.role === 'guard';
+            const bGuard = b.role === 'guard';
+            if (aGuard && !bGuard) return 1;
+            if (bGuard && !aGuard) return -1;
+            return 0;
+        });
+
+        const maxNPCPilots = Math.min(spawnCandidates.length, availableSlots);
+        let spawned = 0;
+
+        for (const pilot of spawnCandidates) {
             if (spawned >= maxNPCPilots) break;
-            
-            // Create visible ship for this pilot
+
+            let anchorEnemy = null;
+            if (pilot.role === 'guard' && pilot.guardPrincipalId != null) {
+                anchorEnemy = this.enemies.find(enemy => enemy.pilotId === pilot.guardPrincipalId);
+                if (!anchorEnemy) continue;
+            }
+
             const npcShip = this._createNPCShipFromPilot(pilot);
-            if (npcShip) {
-                this.addEnemy(npcShip);
-                spawned++;
+            if (!npcShip) continue;
+
+            if (anchorEnemy && anchorEnemy.pos && npcShip.pos) {
+                const baseAngle = ((pilot.id || 0) * 53) % 360;
+                const angle = baseAngle * (Math.PI / 180);
+                const radius = Math.max(60, (anchorEnemy.size || 60) * 0.8 + (npcShip.size || 40) * 0.4);
+                npcShip.pos.x = anchorEnemy.pos.x + Math.cos(angle) * radius;
+                npcShip.pos.y = anchorEnemy.pos.y + Math.sin(angle) * radius;
+            }
+
+            this.addEnemy(npcShip);
+            existingPilotIds.add(pilot.id);
+            spawned++;
+
+            if (pilot.role === 'guard' && pilot.guardPrincipalId != null) {
+                const principalEnemy = anchorEnemy || this.enemies.find(enemy => enemy.pilotId === pilot.guardPrincipalId);
+                if (principalEnemy) {
+                    npcShip.principal = principalEnemy;
+                    if (typeof npcShip.changeState === 'function') {
+                        npcShip.changeState(AI_STATE.GUARDING, { principal: principalEnemy });
+                    }
+                }
             }
         }
         
