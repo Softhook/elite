@@ -45,6 +45,11 @@ class Enemy {
         // --- Assign CORRECT Properties ---
         this.shipTypeName = actualShipTypeName; // Store the ACTUAL KEY used to find the definition
         this.role = role;
+        this.bountyTargetId = null;
+        this.bountyTargetType = null;
+        this.bountyContractId = null;
+        this.bountyValue = null;
+        this.isBountyTarget = false;
         // ---
 
         // Add forced combat timer
@@ -78,6 +83,7 @@ class Enemy {
         // --- Store Raw Color VALUES ---
         this.baseColorValue = [random(80, 180), random(80, 180), random(80, 180)]; // Store as [R, G, B] array
         this.strokeColorValue = [200, 200, 200]; // Default grey as [R, G, B]
+        this.target = null;
         switch(this.role) {
             case AI_ROLE.POLICE: this.strokeColorValue = [100, 150, 255]; break; // Blue
             case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
@@ -85,11 +91,9 @@ class Enemy {
             case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; break;// Default Alien Green or from shipDef
             case AI_ROLE.BOUNTY_HUNTER:
             this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
-            // Bounty hunters might have slightly better stats or use shipDef overrides
             this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.1; // Slightly faster turning
             this.angleTolerance = shipDef.angleTolerance || (10 * PI/180); // Standard tolerance
             this.drag = shipDef.drag || 0.99; // Slightly less drag
-            this.target = playerRef;
             break;
             case AI_ROLE.GUARD:
                 this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
@@ -106,7 +110,10 @@ class Enemy {
         // ---
 
         // --- Targeting & AI ---
-        this.target = playerRef; this.currentState = AI_STATE.IDLE; // Default state
+        if (!this.target && playerRef instanceof Player) {
+            this.target = playerRef;
+        }
+        this.currentState = AI_STATE.IDLE; // Default state
         this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed
         // AI Tuning Parameters
         this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 350 + this.size * 0.3; this.visualFiringRange = this.firingRange; // Initialize with base range for drawing

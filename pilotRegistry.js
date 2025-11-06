@@ -42,6 +42,16 @@ class PilotRegistry {
             'Yamamoto', 'Zhou', 'Anderson', 'Brown', 'Davis', 'Jensen', 'Singh',
             'Torres', 'Wilson', 'Cooper', 'Morgan', 'Reed', 'Stone', 'Vale', 'West'
         ];
+
+        // Dynamic bounty tracking state
+        this.activeBounties = new Map();
+        this.bountyHunterIds = new Set();
+        this.lastBountySweepMs = 0;
+        this.bountySweepIntervalMs = 60_000;
+        this.maxTrackedBounties = 8;
+        this.maxHuntersPerBounty = 2;
+        this.bountyNotorietyThreshold = 450;
+        this.bountyPayoutMultiplier = 15;
     }
 
     _generatePilotName() {
@@ -60,6 +70,10 @@ class PilotRegistry {
             console.warn('PilotRegistry: Cannot initialize without valid galaxy');
             return;
         }
+
+        this.activeBounties.clear();
+        this.bountyHunterIds.clear();
+        this.lastBountySweepMs = 0;
 
         console.log(`PilotRegistry: Initializing ${count} pilots...`);
 
@@ -99,10 +113,10 @@ class PilotRegistry {
         const roleRoll = random();
         let role;
         if (roleRoll < 0.40) role = 'trader';       // 40% traders
-        else if (roleRoll < 0.60) role = 'hauler';  // 20% haulers (renamed from courier)
+        else if (roleRoll < 0.60) role = 'hauler';  // 20% haulers
         else if (roleRoll < 0.70) role = 'miner';   // 10% miners
-        else if (roleRoll < 0.80) role = 'bounty';  // 10% bounty hunters
-        else if (roleRoll < 0.90) role = 'police';  // 10% police
+        else if (roleRoll < 0.80) role = 'police';  // 10% police
+        else if (roleRoll < 0.90) role = 'smuggler'; // 10% smugglers
         else role = 'pirate';                        // 10% pirates
 
         // Select ship type based on role
@@ -134,7 +148,15 @@ class PilotRegistry {
             lastUpdateMs: Date.now(),
             alive: true,
             lastRoleEvaluationMs: Date.now() + random(-5000, 5000),
-            lastRoleSwitchMs: Date.now()
+            lastRoleSwitchMs: Date.now(),
+            kills: 0,
+            notoriety: 0,
+            hasActiveBounty: false,
+            bountyContractId: null,
+            bountyTargetId: null,
+            bountyTargetType: null,
+            bountyPayout: null,
+            isBountyHunter: false
         };
     }
 
@@ -219,7 +241,17 @@ class PilotRegistry {
             name = null,
             riskTolerance = null,
             tradeContext = null,
-            spawnSource = null
+            spawnSource = null,
+            dockedStationId = null,
+            credits = null,
+            kills = 0,
+            notoriety = 0,
+            hasActiveBounty = false,
+            bountyContractId = null,
+            bountyTargetId = null,
+            bountyTargetType = null,
+            bountyPayout = null,
+            isBountyHunter = false
         } = params || {};
 
         if (!shipTypeId || !SHIP_DEFINITIONS[shipTypeId]) {
@@ -238,15 +270,15 @@ class PilotRegistry {
             factionId: null,
             role,
             shipTypeId,
-            hull: shipDef.baseHull,
-            shields: shipDef.baseShield || 0,
+            hull: shipDef ? shipDef.baseHull : 100,
+            shields: shipDef ? (shipDef.baseShield || 0) : 0,
             currentSystemIndex: systemIndex,
-            dockedStationId: null,
+            dockedStationId,
             pos: position ? { x: position.x, y: position.y } : null,
             itinerary: [],
             cargo: {},
-            cargoCap: shipDef.cargoCapacity || 20,
-            credits: random(2000, 45000),
+            cargoCap: shipDef ? (shipDef.cargoCapacity || 20) : 20,
+            credits: credits ?? random(2000, 45000),
             legalStatus: legalStatus || (role === 'pirate' ? 'wanted' : 'clean'),
             riskTolerance: riskTolerance ?? random(0.4, 0.9),
             tradeFocus: this._selectTradeFocus(role, tradeContext),
@@ -256,10 +288,23 @@ class PilotRegistry {
             lastRoleEvaluationMs: now,
             lastRoleSwitchMs: now,
             isEventSpawn: true,
-            spawnSource
+            spawnSource,
+            kills: kills || 0,
+            notoriety: notoriety || 0,
+            hasActiveBounty: Boolean(hasActiveBounty),
+            bountyContractId: bountyContractId || null,
+            bountyTargetId: bountyTargetId ?? null,
+            bountyTargetType: bountyTargetType || null,
+            bountyPayout: bountyPayout ?? null,
+            isBountyHunter: Boolean(isBountyHunter)
         };
 
         this.pilots.push(pilot);
+
+        if (pilot.isBountyHunter) {
+            this.bountyHunterIds.add(pilot.id);
+        }
+
         return pilot;
     }
 
@@ -283,6 +328,8 @@ class PilotRegistry {
             this.updateIndex = (this.updateIndex + 1) % this.pilots.length;
             updated++;
         }
+
+        this._updateBountySystem(galaxyRef);
     }
 
     /**
@@ -744,13 +791,371 @@ class PilotRegistry {
         }
     }
 
+    _updateBountySystem(galaxyRef) {
+        const now = Date.now();
+        if (now - this.lastBountySweepMs < this.bountySweepIntervalMs) return;
+        this.lastBountySweepMs = now;
+
+        if (!galaxyRef || !Array.isArray(galaxyRef.systems)) return;
+
+        const candidateMap = new Map();
+
+        for (const pilot of this.pilots) {
+            if (!pilot) continue;
+
+            if (!pilot.alive) {
+                if (pilot.hasActiveBounty) {
+                    this._clearBountyForTarget(`pilot:${pilot.id}`);
+                }
+                continue;
+            }
+
+            pilot.notoriety = this._calculatePilotNotoriety(pilot);
+            if (this._shouldIssueBounty(pilot, pilot.notoriety)) {
+                const key = `pilot:${pilot.id}`;
+                candidateMap.set(key, {
+                    key,
+                    targetType: 'pilot',
+                    pilot,
+                    notoriety: pilot.notoriety
+                });
+            }
+        }
+
+        const playerCandidate = this._evaluatePlayerForBounty(galaxyRef);
+        if (playerCandidate) {
+            candidateMap.set(playerCandidate.key, playerCandidate);
+        }
+
+        for (const key of Array.from(this.activeBounties.keys())) {
+            if (!candidateMap.has(key)) {
+                this._clearBountyForTarget(key);
+            }
+        }
+
+        const ranked = Array.from(candidateMap.values())
+            .sort((a, b) => b.notoriety - a.notoriety)
+            .slice(0, this.maxTrackedBounties);
+
+        const rankedKeys = new Set(ranked.map(entry => entry.key));
+        for (const key of Array.from(this.activeBounties.keys())) {
+            if (!rankedKeys.has(key)) {
+                this._clearBountyForTarget(key);
+            }
+        }
+
+        for (const entry of ranked) {
+            const existing = this.activeBounties.get(entry.key);
+            if (existing) {
+                this._refreshBounty(existing, entry, galaxyRef);
+            } else {
+                const bounty = this._createBounty(entry, galaxyRef);
+                if (bounty) {
+                    this.activeBounties.set(entry.key, bounty);
+                }
+            }
+        }
+    }
+
+    _refreshBounty(bounty, entry, galaxyRef) {
+        bounty.notoriety = entry.notoriety;
+        bounty.value = this._calculateBountyValue(entry.notoriety);
+        bounty.lastKnownSystemIndex = this._resolveTargetSystemIndex(entry, galaxyRef, bounty.lastKnownSystemIndex);
+
+        if (entry.targetType === 'pilot' && entry.pilot) {
+            entry.pilot.hasActiveBounty = true;
+            entry.pilot.bountyPayout = bounty.value;
+        }
+
+        this._ensureHuntersForBounty(bounty, galaxyRef);
+    }
+
+    _createBounty(entry, galaxyRef) {
+        if (!entry) return null;
+
+        const now = Date.now();
+        const lastKnownSystemIndex = this._resolveTargetSystemIndex(entry, galaxyRef, 0);
+        const bounty = {
+            id: `bnty_${now}_${Math.floor(Math.random() * 1000)}`,
+            targetKey: entry.key,
+            targetType: entry.targetType,
+            targetPilotId: entry.targetType === 'pilot' ? entry.pilot.id : null,
+            targetName: entry.targetType === 'pilot' ? (entry.pilot.name || `Pilot ${entry.pilot.id}`) : (entry.name || 'Commander'),
+            notoriety: entry.notoriety,
+            value: this._calculateBountyValue(entry.notoriety),
+            issuedAt: now,
+            lastKnownSystemIndex,
+            hunterIds: new Set()
+        };
+
+        if (entry.targetType === 'pilot' && entry.pilot) {
+            entry.pilot.hasActiveBounty = true;
+            entry.pilot.bountyPayout = bounty.value;
+        }
+
+        this._ensureHuntersForBounty(bounty, galaxyRef);
+        return bounty;
+    }
+
+    _ensureHuntersForBounty(bounty, galaxyRef) {
+        if (!bounty) return;
+
+        const targetEntry = bounty.targetType === 'pilot'
+            ? { targetType: 'pilot', pilot: this.getPilotById(bounty.targetPilotId), notoriety: bounty.notoriety }
+            : { targetType: 'player', systemIndex: this._getPlayerSystemIndex(galaxyRef, bounty.lastKnownSystemIndex), notoriety: bounty.notoriety };
+
+        if (targetEntry.targetType === 'pilot' && (!targetEntry.pilot || !targetEntry.pilot.alive)) {
+            return;
+        }
+
+        bounty.lastKnownSystemIndex = this._resolveTargetSystemIndex(targetEntry, galaxyRef, bounty.lastKnownSystemIndex);
+
+        const validHunterIds = new Set();
+        if (bounty.hunterIds && bounty.hunterIds.size > 0) {
+            for (const hunterId of bounty.hunterIds) {
+                const hunter = this.getPilotById(hunterId);
+                if (hunter && hunter.alive) {
+                    hunter.currentSystemIndex = bounty.lastKnownSystemIndex;
+                    hunter.dockedStationId = null;
+                    hunter.pos = null;
+                    hunter.bountyPayout = bounty.value;
+                    hunter.bountyContractId = bounty.id;
+                    hunter.bountyTargetId = bounty.targetPilotId;
+                    hunter.bountyTargetType = bounty.targetType;
+                    hunter.isBountyHunter = true;
+                    validHunterIds.add(hunterId);
+                    this.bountyHunterIds.add(hunterId);
+                } else {
+                    this.bountyHunterIds.delete(hunterId);
+                }
+            }
+        }
+        bounty.hunterIds = validHunterIds;
+
+        while (bounty.hunterIds.size < this.maxHuntersPerBounty) {
+            const hunter = this._spawnBountyHunter(bounty, galaxyRef);
+            if (!hunter) break;
+            bounty.hunterIds.add(hunter.id);
+            this.bountyHunterIds.add(hunter.id);
+        }
+    }
+
+    _spawnBountyHunter(bounty, galaxyRef) {
+        const targetSystemIndex = bounty.lastKnownSystemIndex;
+        if (targetSystemIndex === undefined || targetSystemIndex === null) return null;
+
+        const shipTypeId = this._assignShipForRole({ shipTypeId: null }, 'bounty') || 'Viper';
+        const shipDef = SHIP_DEFINITIONS[shipTypeId];
+        const now = Date.now();
+        const pilot = {
+            id: this.nextPilotId++,
+            name: this._generatePilotName(),
+            factionId: null,
+            role: 'bounty',
+            shipTypeId,
+            hull: shipDef ? shipDef.baseHull : 100,
+            shields: shipDef ? (shipDef.baseShield || 0) : 0,
+            currentSystemIndex: targetSystemIndex,
+            dockedStationId: null,
+            pos: null,
+            itinerary: [],
+            cargo: {},
+            cargoCap: shipDef ? (shipDef.cargoCapacity || 20) : 20,
+            credits: random(20000, 60000),
+            legalStatus: 'clean',
+            riskTolerance: random(0.6, 0.95),
+            tradeFocus: null,
+            missionIds: [],
+            lastUpdateMs: now,
+            alive: true,
+            lastRoleEvaluationMs: now,
+            lastRoleSwitchMs: now,
+            kills: 0,
+            notoriety: 0,
+            hasActiveBounty: false,
+            bountyContractId: bounty.id,
+            bountyTargetId: bounty.targetPilotId,
+            bountyTargetType: bounty.targetType,
+            bountyPayout: bounty.value,
+            isBountyHunter: true
+        };
+
+        this.pilots.push(pilot);
+        return pilot;
+    }
+
+    _calculateBountyValue(notoriety) {
+        return Math.max(500, Math.round(notoriety * this.bountyPayoutMultiplier));
+    }
+
+    _calculatePilotNotoriety(pilot) {
+        if (!pilot) return 0;
+        const creditsScore = (pilot.credits || 0) / 2000;
+        const killScore = (pilot.kills || 0) * 80;
+        const roleBonus = (pilot.role === 'pirate') ? 220 : (pilot.role === 'smuggler' ? 140 : 0);
+        const wantedBonus = pilot.legalStatus === 'wanted' ? 180 : 0;
+        const eventBonus = pilot.isEventSpawn ? 60 : 0;
+        return Math.round(creditsScore + killScore + roleBonus + wantedBonus + eventBonus);
+    }
+
+    _shouldIssueBounty(pilot, notoriety) {
+        if (!pilot) return false;
+        if (notoriety < this.bountyNotorietyThreshold) return false;
+        const isCriminal = pilot.legalStatus === 'wanted' || pilot.role === 'pirate' || pilot.role === 'smuggler';
+        return isCriminal;
+    }
+
+    _evaluatePlayerForBounty(galaxyRef) {
+        if (typeof player === 'undefined' || !player) return null;
+
+        const pseudoPilot = {
+            credits: player.credits || 0,
+            kills: player.kills || 0,
+            role: player.isWanted ? 'pirate' : 'trader',
+            legalStatus: player.isWanted ? 'wanted' : 'clean',
+            isEventSpawn: false
+        };
+
+        const notoriety = this._calculatePilotNotoriety(pseudoPilot);
+        const isCriminal = player.isWanted || pseudoPilot.kills >= 24;
+        if (!isCriminal || notoriety < this.bountyNotorietyThreshold) return null;
+
+        const systemIndex = this._getPlayerSystemIndex(galaxyRef, 0);
+
+        return {
+            key: 'player',
+            targetType: 'player',
+            notoriety,
+            name: 'Commander',
+            systemIndex
+        };
+    }
+
+    _resolveTargetSystemIndex(entry, galaxyRef, fallback = 0) {
+        if (!entry) return fallback;
+        if (entry.targetType === 'pilot' && entry.pilot) {
+            return entry.pilot.currentSystemIndex ?? fallback;
+        }
+        if (entry.targetType === 'player') {
+            return entry.systemIndex ?? this._getPlayerSystemIndex(galaxyRef, fallback);
+        }
+        return fallback;
+    }
+
+    _getPlayerSystemIndex(galaxyRef, fallback = 0) {
+        if (typeof player !== 'undefined' && player?.currentSystem?.systemIndex != null) {
+            return player.currentSystem.systemIndex;
+        }
+        if (galaxyRef && typeof galaxyRef.currentSystemIndex === 'number') {
+            return galaxyRef.currentSystemIndex;
+        }
+        return fallback;
+    }
+
+    _clearBountyForTarget(key) {
+        const bounty = this.activeBounties.get(key);
+        if (!bounty) return;
+
+        if (bounty.targetType === 'pilot' && bounty.targetPilotId != null) {
+            const targetPilot = this.getPilotById(bounty.targetPilotId);
+            if (targetPilot) {
+                targetPilot.hasActiveBounty = false;
+                targetPilot.bountyPayout = null;
+            }
+        }
+
+        if (bounty.hunterIds && bounty.hunterIds.size > 0) {
+            for (const hunterId of bounty.hunterIds) {
+                const hunter = this.getPilotById(hunterId);
+                if (hunter) {
+                    hunter.bountyContractId = null;
+                    hunter.bountyTargetId = null;
+                    hunter.bountyTargetType = null;
+                    hunter.bountyPayout = null;
+                    hunter.isBountyHunter = false;
+                    hunter.alive = false;
+                }
+                this.bountyHunterIds.delete(hunterId);
+            }
+        }
+
+        this.activeBounties.delete(key);
+    }
+
     /**
      * Get all pilots in a specific system.
      * @param {number} systemIndex - System index to query
      * @returns {Array} Array of pilots in that system
      */
     getPilotsInSystem(systemIndex) {
-        return this.pilots.filter(p => p.currentSystemIndex === systemIndex && p.alive);
+        return this.pilots.filter(p => {
+            if (!p || !p.alive) return false;
+            if (p.currentSystemIndex !== systemIndex) return false;
+
+            if (p.role === 'bounty' && p.isBountyHunter) {
+                return this._hunterShouldSpawnInSystem(p, systemIndex);
+            }
+
+            return true;
+        });
+    }
+
+    _hunterShouldSpawnInSystem(hunter, systemIndex) {
+        if (!hunter?.bountyContractId) return false;
+        const bounty = this._findBountyById(hunter.bountyContractId);
+        if (!bounty) return false;
+        if (bounty.lastKnownSystemIndex !== systemIndex) return false;
+
+        if (bounty.targetType === 'player') {
+            return true;
+        }
+
+        const target = this.getPilotById(bounty.targetPilotId);
+        return Boolean(target && target.alive && target.currentSystemIndex === systemIndex);
+    }
+
+    getPilotById(pilotId) {
+        if (pilotId == null) return null;
+        return this.pilots.find(p => p.id === pilotId) || null;
+    }
+
+    getActiveBounties(options = {}) {
+        const { includePlayer = false } = options;
+        const result = [];
+        for (const bounty of this.activeBounties.values()) {
+            if (!includePlayer && bounty.targetType === 'player') continue;
+            result.push({
+                id: bounty.id,
+                targetKey: bounty.targetKey,
+                targetType: bounty.targetType,
+                targetPilotId: bounty.targetPilotId,
+                targetName: bounty.targetName,
+                notoriety: bounty.notoriety,
+                value: bounty.value,
+                lastKnownSystemIndex: bounty.lastKnownSystemIndex,
+                hunterCount: bounty.hunterIds ? bounty.hunterIds.size : 0
+            });
+        }
+        return result.sort((a, b) => b.value - a.value);
+    }
+
+    _findBountyById(bountyId) {
+        if (!bountyId) return null;
+        for (const bounty of this.activeBounties.values()) {
+            if (bounty.id === bountyId) {
+                return bounty;
+            }
+        }
+        return null;
+    }
+
+    getBountyById(bountyId) {
+        return this._findBountyById(bountyId);
+    }
+
+    resolveBountyForTarget(targetType, targetId = null) {
+        const key = targetType === 'player' ? 'player' : `pilot:${targetId}`;
+        this._clearBountyForTarget(key);
     }
 
     /**
@@ -760,30 +1165,51 @@ class PilotRegistry {
     getSaveData() {
         return {
             pilots: this.pilots.map(p => ({
-                // Only save essential data, omit transient fields like pos
                 id: p.id,
                 name: p.name,
+                factionId: p.factionId ?? null,
                 role: p.role,
                 shipTypeId: p.shipTypeId,
                 hull: p.hull,
                 shields: p.shields,
                 currentSystemIndex: p.currentSystemIndex,
                 dockedStationId: p.dockedStationId,
-                itinerary: p.itinerary,
-                cargo: p.cargo,
+                itinerary: Array.isArray(p.itinerary) ? [...p.itinerary] : [],
+                cargo: p.cargo || {},
                 cargoCap: p.cargoCap,
                 credits: p.credits,
                 legalStatus: p.legalStatus,
                 riskTolerance: p.riskTolerance,
                 tradeFocus: p.tradeFocus,
-                missionIds: p.missionIds,
+                missionIds: Array.isArray(p.missionIds) ? [...p.missionIds] : [],
                 alive: p.alive,
                 lastRoleEvaluationMs: p.lastRoleEvaluationMs,
                 lastRoleSwitchMs: p.lastRoleSwitchMs,
-                isEventSpawn: p.isEventSpawn || false,
-                spawnSource: p.spawnSource || null
+                isEventSpawn: Boolean(p.isEventSpawn),
+                spawnSource: p.spawnSource || null,
+                kills: p.kills || 0,
+                notoriety: p.notoriety || 0,
+                hasActiveBounty: Boolean(p.hasActiveBounty),
+                bountyContractId: p.bountyContractId || null,
+                bountyTargetId: p.bountyTargetId ?? null,
+                bountyTargetType: p.bountyTargetType || null,
+                bountyPayout: p.bountyPayout ?? null,
+                isBountyHunter: Boolean(p.isBountyHunter)
             })),
-            nextPilotId: this.nextPilotId
+            nextPilotId: this.nextPilotId,
+            activeBounties: Array.from(this.activeBounties.values()).map(b => ({
+                id: b.id,
+                targetKey: b.targetKey,
+                targetType: b.targetType,
+                targetPilotId: b.targetPilotId ?? null,
+                targetName: b.targetName,
+                notoriety: b.notoriety,
+                value: b.value,
+                issuedAt: b.issuedAt,
+                lastKnownSystemIndex: b.lastKnownSystemIndex,
+                hunterIds: Array.from(b.hunterIds || [])
+            })),
+            bountyHunterIds: Array.from(this.bountyHunterIds)
         };
     }
 
@@ -792,22 +1218,101 @@ class PilotRegistry {
      * @param {Object} data - Save data
      */
     loadSaveData(data) {
-        if (!data || !data.pilots) return;
-        
-        this.pilots = data.pilots.map(p => ({
-            ...p,
-            cargo: p.cargo || {},
-            missionIds: Array.isArray(p.missionIds) ? p.missionIds : [],
-            pos: null, // Reset transient field
-            lastUpdateMs: Date.now(),
-            lastRoleEvaluationMs: p.lastRoleEvaluationMs ?? Date.now(),
-            lastRoleSwitchMs: p.lastRoleSwitchMs ?? Date.now(),
-            isEventSpawn: Boolean(p.isEventSpawn),
-            spawnSource: p.spawnSource || null
-        }));
-        this.nextPilotId = data.nextPilotId || this.pilots.length + 1;
+        if (!data || !Array.isArray(data.pilots)) return;
+
+        const now = Date.now();
+
+        this.pilots = data.pilots.map(p => {
+            const shipDef = p.shipTypeId ? SHIP_DEFINITIONS[p.shipTypeId] : null;
+            return {
+                id: p.id,
+                name: p.name,
+                factionId: p.factionId ?? null,
+                role: p.role,
+                shipTypeId: p.shipTypeId,
+                hull: p.hull ?? (shipDef ? shipDef.baseHull : 100),
+                shields: p.shields ?? (shipDef ? (shipDef.baseShield || 0) : 0),
+                currentSystemIndex: p.currentSystemIndex ?? 0,
+                dockedStationId: p.dockedStationId ?? null,
+                pos: null,
+                itinerary: Array.isArray(p.itinerary) ? [...p.itinerary] : [],
+                cargo: p.cargo ? { ...p.cargo } : {},
+                cargoCap: p.cargoCap ?? (shipDef ? (shipDef.cargoCapacity || 20) : 20),
+                credits: p.credits ?? 0,
+                legalStatus: p.legalStatus || 'clean',
+                riskTolerance: p.riskTolerance ?? 0.5,
+                tradeFocus: p.tradeFocus ?? null,
+                missionIds: Array.isArray(p.missionIds) ? [...p.missionIds] : [],
+                lastUpdateMs: now,
+                alive: p.alive !== false,
+                lastRoleEvaluationMs: p.lastRoleEvaluationMs ?? now,
+                lastRoleSwitchMs: p.lastRoleSwitchMs ?? now,
+                isEventSpawn: Boolean(p.isEventSpawn),
+                spawnSource: p.spawnSource || null,
+                kills: p.kills || 0,
+                notoriety: p.notoriety || 0,
+                hasActiveBounty: Boolean(p.hasActiveBounty),
+                bountyContractId: p.bountyContractId || null,
+                bountyTargetId: p.bountyTargetId ?? null,
+                bountyTargetType: p.bountyTargetType || null,
+                bountyPayout: p.bountyPayout ?? null,
+                isBountyHunter: Boolean(p.isBountyHunter)
+            };
+        });
+
+        this.nextPilotId = data.nextPilotId || (this.pilots.reduce((maxId, pilot) => Math.max(maxId, pilot.id || 0), 0) + 1);
         this.updateIndex = 0;
-        
-        console.log(`PilotRegistry: Loaded ${this.pilots.length} pilots from save`);
+
+        this.activeBounties = new Map();
+        this.bountyHunterIds = new Set(Array.isArray(data.bountyHunterIds) ? data.bountyHunterIds : []);
+
+        if (Array.isArray(data.activeBounties)) {
+            for (const entry of data.activeBounties) {
+                const bounty = {
+                    id: entry.id,
+                    targetKey: entry.targetKey,
+                    targetType: entry.targetType,
+                    targetPilotId: entry.targetPilotId ?? null,
+                    targetName: entry.targetName,
+                    notoriety: entry.notoriety || 0,
+                    value: entry.value || 0,
+                    issuedAt: entry.issuedAt || now,
+                    lastKnownSystemIndex: entry.lastKnownSystemIndex ?? 0,
+                    hunterIds: new Set()
+                };
+
+                const recordedHunterIds = Array.isArray(entry.hunterIds) ? entry.hunterIds : [];
+                for (const hunterId of recordedHunterIds) {
+                    const hunter = this.getPilotById(hunterId);
+                    if (!hunter || !hunter.alive) {
+                        this.bountyHunterIds.delete(hunterId);
+                        continue;
+                    }
+
+                    hunter.isBountyHunter = true;
+                    hunter.bountyContractId = bounty.id;
+                    hunter.bountyTargetId = bounty.targetPilotId;
+                    hunter.bountyTargetType = bounty.targetType;
+                    hunter.bountyPayout = bounty.value;
+
+                    bounty.hunterIds.add(hunterId);
+                    this.bountyHunterIds.add(hunterId);
+                }
+
+                this.activeBounties.set(bounty.targetKey, bounty);
+
+                if (bounty.targetType === 'pilot' && bounty.targetPilotId != null) {
+                    const targetPilot = this.getPilotById(bounty.targetPilotId);
+                    if (targetPilot) {
+                        targetPilot.hasActiveBounty = true;
+                        targetPilot.bountyPayout = bounty.value;
+                    }
+                }
+            }
+        }
+
+        this.lastBountySweepMs = now;
+
+        console.log(`PilotRegistry: Loaded ${this.pilots.length} pilots from save (bounties: ${this.activeBounties.size})`);
     }
 }

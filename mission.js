@@ -39,6 +39,11 @@ class Mission {
         this.destinationStation = data.destinationStation || null; // Target station name (for delivery)
         this.targetDesc = data.targetDesc || null; // Description of bounty target (e.g., "3 Pirate Kraits")
         this.targetCount = data.targetCount || 0; // Number of targets to destroy/collect (for bounty/collection)
+        this.targetPilotId = data.targetPilotId ?? null; // Specific pilot target for bounty missions
+        this.targetPilotType = data.targetPilotType || null; // 'pilot' | 'player'
+        this.targetSystemIndex = data.targetSystemIndex ?? null; // Last known system index for target
+        this.bountyValue = data.bountyValue ?? null; // Posted bounty value for flavour/completion
+        this.targetKey = data.targetKey || null; // Internal reference used by PilotRegistry
 
         // --- Cargo Details (nullable) ---
         this.cargoType = data.cargoType || null;   // Type of commodity for delivery missions
@@ -150,6 +155,12 @@ class Mission {
              } else {
                   details += `\n`;
              }
+         }
+         if (this.bountyValue) {
+             details += `Contract Payout: ${this.bountyValue} Credits\n`;
+         }
+         if (this.targetPilotId != null && this.targetPilotType === 'pilot') {
+             details += `Target Registry ID: ${this.targetPilotId}\n`;
          }
          if (this.timeLimit) details += `Time Limit: ${this.timeLimit} seconds\n`; // Placeholder display
          if (this.requiredRep) details += `Requires Reputation: ${this.requiredRep}\n`; // Placeholder display

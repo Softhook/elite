@@ -2681,6 +2681,23 @@ checkProjectileCollisions() {
             console.warn(`StarSystem: Skipping pilot ${pilot.name || pilot.id} spawn due to unknown ship ${pilot.shipTypeId}`);
             return null;
         }
+
+        if (pilot.role === 'bounty' && pilot.isBountyHunter) {
+            const registry = (typeof worldSimulation !== 'undefined') ? worldSimulation?.pilotRegistry : null;
+            if (!registry || !pilot.bountyContractId) {
+                return null;
+            }
+            const bounty = registry.getBountyById?.(pilot.bountyContractId);
+            if (!bounty || bounty.lastKnownSystemIndex !== this.systemIndex) {
+                return null;
+            }
+            if (bounty.targetType === 'pilot') {
+                const targetPilot = registry.getPilotById(bounty.targetPilotId);
+                if (!targetPilot || !targetPilot.alive || targetPilot.currentSystemIndex !== this.systemIndex) {
+                    return null;
+                }
+            }
+        }
         
         // Determine spawn position - either near station or in space
         let spawnX, spawnY;
@@ -2719,6 +2736,16 @@ checkProjectileCollisions() {
                 npcShip.isSmuggler = true;
             } else if (pilot.role === 'local_transporter') {
                 npcShip.isLocalTransport = true;
+            }
+
+            if (pilot.role === 'bounty' && pilot.isBountyHunter) {
+                npcShip.bountyContractId = pilot.bountyContractId;
+                npcShip.bountyTargetId = pilot.bountyTargetId;
+                npcShip.bountyTargetType = pilot.bountyTargetType;
+                npcShip.bountyValue = pilot.bountyPayout;
+            } else if (pilot.hasActiveBounty) {
+                npcShip.isBountyTarget = true;
+                npcShip.bountyValue = pilot.bountyPayout;
             }
             
             // Set health from pilot data

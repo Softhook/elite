@@ -397,31 +397,52 @@ class MissionGenerator {
         });
     }
     
-    /** Creates a Bounty Hunting Mission - maybe target specific ship types? */
+    /** Creates a Bounty Hunting Mission targeting a specific notorious pilot */
     static createBountyMission(originSystem, originStation, galaxy, player) {
-        let targetCount = floor(random(2, 6));
-        
-        const baseBountyPerShip = 150;
-        // Reward can still be influenced by the origin system's properties, as that's where the contract is given.
-        const techLevelBonus = (originSystem.techLevel || 5) * 10;
-        const securityPenalty = (originSystem.securityLevel === 'High' ? -50 : (originSystem.securityLevel === 'Anarchy' ? 100 : 0));
+        const registry = (typeof worldSimulation !== 'undefined') ? worldSimulation?.pilotRegistry : null;
+        if (!registry) return null;
 
-        let reward = Math.floor(targetCount * baseBountyPerShip + techLevelBonus + securityPenalty + random(50, 300));
-        reward = Math.max(100, Math.floor(reward));
+        const bountyContracts = registry.getActiveBounties({ includePlayer: false });
+        if (!Array.isArray(bountyContracts) || bountyContracts.length === 0) {
+            return null;
+        }
 
-         return new Mission({
+        const targetContract = bountyContracts.reduce((best, current) => {
+            if (!best) return current;
+            return current.value > best.value ? current : best;
+        }, null);
+
+        if (!targetContract) return null;
+
+        const targetSystemIndex = typeof targetContract.lastKnownSystemIndex === 'number'
+            ? targetContract.lastKnownSystemIndex
+            : originSystem.systemIndex;
+        const targetSystem = galaxy?.systems?.[targetSystemIndex] || originSystem;
+        const targetSystemName = targetSystem?.name || originSystem?.name || 'Unknown System';
+
+        let reward = targetContract.value;
+        reward += Math.floor(random(250, 650));
+        reward += (originSystem.securityLevel === 'Anarchy' ? 300 : 0);
+        reward = Math.max(targetContract.value, Math.floor(reward));
+
+        return new Mission({
             type: MISSION_TYPE.BOUNTY_PIRATE,
-            title: `Pirate Cull: Destroy ${targetCount} Pirates`,
-            description: `Pirate activity is a scourge across the galaxy. Eliminate ${targetCount} pirate vessels. Payment will be processed automatically upon fulfilling the contract.`,
-            originSystem: originSystem.name, 
+            title: `Claim Bounty: ${targetContract.targetName}`,
+            description: `Authorities have posted a contract on ${targetContract.targetName}. Track them to ${targetSystemName} and eliminate the threat to claim the posted bounty.`,
+            originSystem: originSystem.name,
             originStation: originStation.name,
-            destinationSystem: null, // No specific destination system
-            destinationStation: null, 
-            targetDesc: `${targetCount} Pirate vessels (any system)`,
-            targetCount: targetCount,
+            destinationSystem: targetSystemName,
+            destinationStation: null,
+            targetDesc: `Eliminate ${targetContract.targetName}`,
+            targetCount: 1,
             rewardCredits: reward,
             isIllegal: false,
-            progressCount: 0 
+            progressCount: 0,
+            targetPilotId: targetContract.targetPilotId,
+            targetPilotType: targetContract.targetType,
+            targetSystemIndex,
+            bountyValue: targetContract.value,
+            targetKey: targetContract.targetKey || null
         });
      }
 

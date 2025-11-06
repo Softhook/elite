@@ -103,38 +103,6 @@ class EventManager {
                         enemy.target = player;
                     }
                 }
-            },
-            {
-                type: "BOUNTY_HUNTER_AMBUSH",
-                probabilityPerFrame: 0.00002,
-                minCooldownFrames: 12 * 60 * 60, // 12 minutes
-                warningDurationFrames: 500,
-                lastTriggeredFrame: -Infinity,
-                isWarningActive: false,
-                eventTriggerFrame: 0,
-                warningConfig: {
-                    message: "WARNING: Bounty hunter contracts activated!",
-                    color: "orange",
-                    consoleLog: "EventManager: Bounty Hunter ambush warning issued."
-                },
-                spawnConfig: {
-                    entityType: 'enemy',
-                    minEntities: 0,
-                    maxEntities: 3,
-                    useRankFactorForCount: true,
-                    shipSelection: {
-                        strategy: 'filteredRandomFromList',
-                        potentialShipList: ["Viper", "GladiusFighter", "GnatInterceptor", "HummingBird", "WaspAssault", "FerDeLance"],
-                        filterAiRole: AI_ROLE.BOUNTY_HUNTER,
-                        fallbackShip: "Viper" // Must be a valid BOUNTY_HUNTER ship
-                    },
-                    aiRole: AI_ROLE.BOUNTY_HUNTER,
-                    spawnRadiusMin: 1700,
-                    spawnRadiusMax: 2300,
-                    spawnAngleSpreadFactor: 0.15, // Used for angleOffset calculation: (i - (num - 1) / 2) * factor
-                    positionRandomnessFactor: 200, // Max random offset for radius
-                    // Enemy constructor should handle initial state and target for BOUNTY_HUNTER
-                }
             }
         ];
     }
@@ -352,11 +320,6 @@ class EventManager {
                 if (event.type === "PIRATE_SWARM" || event.type === "ALIEN_RAID") { // Alien raid also uses this simpler spread
                     currentSpawnAngle += random(-config.spawnAngleSpreadFactor, config.spawnAngleSpreadFactor);
                 } 
-                // For BountyHunter-like distinct angle offset
-                else if (event.type === "BOUNTY_HUNTER_AMBUSH" && numToSpawn > 1) { 
-                    const angleOffset = (i - (numToSpawn - 1) / 2) * config.spawnAngleSpreadFactor;
-                    currentSpawnAngle += angleOffset;
-                }
             }
             
             // Position randomness on radius (consistent with original Bounty Hunter)

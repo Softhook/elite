@@ -179,6 +179,33 @@ class EnemyDamageSystem {
 
         const system = this.getSystem();
         if (system) {
+            if (this.pilotId != null && typeof worldSimulation !== 'undefined' && worldSimulation?.pilotRegistry) {
+                const registry = worldSimulation.pilotRegistry;
+                const pilotRecord = registry.getPilotById(this.pilotId);
+                if (pilotRecord) {
+                    pilotRecord.alive = false;
+                    if (typeof system.systemIndex === 'number') {
+                        pilotRecord.currentSystemIndex = system.systemIndex;
+                    }
+                    if (pilotRecord.isBountyHunter && pilotRecord.bountyContractId) {
+                        const bountyRef = registry.getBountyById(pilotRecord.bountyContractId);
+                        if (bountyRef) {
+                            bountyRef.hunterIds.delete(pilotRecord.id);
+                        }
+                        registry.bountyHunterIds.delete(pilotRecord.id);
+                        pilotRecord.bountyContractId = null;
+                        pilotRecord.bountyTargetId = null;
+                        pilotRecord.bountyTargetType = null;
+                        pilotRecord.bountyPayout = null;
+                    }
+                    if (pilotRecord.hasActiveBounty) {
+                        registry.resolveBountyForTarget('pilot', this.pilotId);
+                        pilotRecord.hasActiveBounty = false;
+                        pilotRecord.bountyPayout = null;
+                    }
+                }
+            }
+
             // Create explosion effect
             this.currentSystem.addExplosion(
                 this.pos.x,
@@ -212,14 +239,24 @@ class EnemyDamageSystem {
 
         // Update mission progress
         if (attacker.activeMission) {
-            if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
-                this.role === AI_ROLE.PIRATE) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Bounty mission target count met! Completing mission...");
-                    system.player.completeMission(); // <<< Use simpler call for auto-complete
-               }
+            if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
+                const mission = attacker.activeMission;
+                const targetedKill = mission.targetPilotId != null && this.pilotId === mission.targetPilotId;
+                const genericKill = mission.targetPilotId == null && this.role === AI_ROLE.PIRATE;
+
+                if (targetedKill || genericKill) {
+                    mission.progressCount = (mission.progressCount || 0) + 1;
+                    AI_LOG(`Updated bounty mission progress: ${mission.progressCount}/${mission.targetCount}`);
+
+                    if (targetedKill && typeof worldSimulation !== 'undefined' && worldSimulation?.pilotRegistry) {
+                        worldSimulation.pilotRegistry.resolveBountyForTarget(mission.targetPilotType || 'pilot', mission.targetPilotId);
+                    }
+
+                    if (mission.progressCount >= mission.targetCount) {
+                        AI_LOG("Bounty mission target count met! Completing mission...");
+                        system.player.completeMission();
+                    }
+                }
             }
         }
 

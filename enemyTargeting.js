@@ -13,18 +13,17 @@ class EnemyTargeting {
      * @return {boolean} Whether a valid target was found
      */
     updateTargeting(system) {
-        // --- BOUNTY HUNTER: Always target player ---
+        // --- BOUNTY HUNTER: Track assigned contract target ---
         if (this.role === AI_ROLE.BOUNTY_HUNTER) {
-            const playerRef = system.player || this.target; // Ensure we have a reference to player
-            if (playerRef instanceof Player && this.isTargetValid(playerRef)) {
-                if (this.target !== playerRef) {
-                    this.target = playerRef;
+            const contractTarget = this._resolveBountyTarget(system);
+            if (contractTarget && this.isTargetValid(contractTarget)) {
+                if (this.target !== contractTarget) {
+                    this.target = contractTarget;
                 }
-                return true; // Player is the target
-            } else {
-                this.target = null; // Player is not valid (e.g., destroyed, not in system)
-                return false;
+                return true;
             }
+            this.target = null;
+            return false;
         }
         // --- END BOUNTY HUNTER ---
 
@@ -144,6 +143,26 @@ class EnemyTargeting {
         }
     }
 
+    _resolveBountyTarget(system) {
+        if (!system) return null;
+
+        if (this.bountyTargetType === 'player') {
+            return system.player || null;
+        }
+
+        if (this.bountyTargetType === 'pilot' && this.bountyTargetId != null && Array.isArray(system.enemies)) {
+            for (let i = 0; i < system.enemies.length; i++) {
+                const candidate = system.enemies[i];
+                if (candidate === this || !candidate || candidate.destroyed) continue;
+                if (candidate.pilotId === this.bountyTargetId) {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Evaluates how attractive a target is for this enemy - with isolation from global scope
      * @param {Object} target - The target to evaluate
@@ -206,11 +225,16 @@ class EnemyTargeting {
 
             // --- BOUNTY HUNTER: Only cares about the player ---
             if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
-                if (target instanceof Player) {
-                    return 1000; // Very high score for the player
-                } else {
-                    return TARGET_SCORE_INVALID; // Ignore all other targets
+                if (enemy.bountyTargetType === 'player') {
+                    return target instanceof Player ? 1200 : TARGET_SCORE_INVALID;
                 }
+                if (enemy.bountyTargetType === 'pilot') {
+                    if (target && target.pilotId != null && target.pilotId === enemy.bountyTargetId) {
+                        return 1200;
+                    }
+                    return TARGET_SCORE_INVALID;
+                }
+                return target instanceof Player ? 1000 : TARGET_SCORE_INVALID;
             }
             // --- END BOUNTY HUNTER ---
 
