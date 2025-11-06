@@ -45,13 +45,46 @@ class PilotRegistry {
             'Alex', 'Blake', 'Casey', 'Dana', 'Ellis', 'Finley', 'Gray', 'Harper',
             'Jordan', 'Kelly', 'Lane', 'Morgan', 'Nova', 'Parker', 'Quinn', 'River',
             'Sage', 'Taylor', 'Val', 'Zephyr', 'Aria', 'Cade', 'Echo', 'Frost',
-            'Kai', 'Luna', 'Orion', 'Phoenix', 'Raven', 'Storm', 'Ash', 'Blaze'
+            'Kai', 'Luna', 'Orion', 'Phoenix', 'Raven', 'Storm', 'Ash', 'Blaze',
+            'Ahmed', 'Amina', 'Carlos', 'Elena', 'Fatima', 'Gustavo', 'Hana', 'Ibrahim',
+            'Javier', 'Katarina', 'Luis', 'Maria', 'Nadia', 'Omar', 'Priya', 'Rafael',
+            'Sofia', 'Tariq', 'Ursula', 'Viktor', 'Wafa', 'Xavier', 'Yasmin', 'Zara',
+            'Bjorn', 'Clara', 'Diego', 'Eva', 'Felix', 'Gabriela', 'Hans', 'Isabella',
+            'Johan', 'Kira', 'Lars', 'Maya', 'Christian', 'Nils', 'Olivia', 'Pedro', 'Quincy',
+            'Rosa', 'Sven', 'Tina', 'Ulf', 'Vera', 'Wolfgang', 'Xena', 'Yuri',
+            'Zoe', 'Akira', 'Bao', 'Chun', 'Dmitri', 'Emiko', 'Fahad', 'Gina',
+            'Hiroshi', 'Ines', 'Jiro', 'Kamal', 'Ling', 'Mateo', 'Nina', 'Oscar',
+            'Pavel', 'Qamar', 'Rina', 'Santiago', 'Tao', 'Uma', 'Vladimir', 'Wei',
+            'Xin', 'Yuki', 'Zheng', 'Anika', 'Poppy', 'Bruno', 'Carmen', 'Dario', 'Elsa',
+            'Fabio', 'Greta', 'Hugo', 'Ivy', 'Jasmine', 'Klaus', 'Lila', 'Miguel',
+            'Nora', 'Otto', 'Paola', 'Ruben', 'Sara', 'Sebastian', 'Theo', 'Ulla', 'Victor',
+            'Wanda', 'Ximena', 'Yara', 'Ziggy', 'Amir', 'Bianca', 'Cesar', 'Diana',
+            'Eduardo', 'Fiona', 'Giuseppe', 'Helena', 'Ivan', 'Julia', 'Kofi', 'Lena',
+            'Marco', 'Nadia', 'Oleg', 'Paula', 'Quentin', 'Rita', 'Sergio', 'Talia',
+            'Ulrich', 'Vanessa', 'Walter', 'Xia', 'Yosef', 'Zara'
         ];
         this.lastNames = [
             'Chen', 'Garcia', 'Ivanov', 'Kim', 'Li', 'Martinez', 'Nguyen', 'Okafor',
             'Patel', 'Rodriguez', 'Santos', 'Smith', 'Takahashi', 'Volkov', 'Wang',
             'Yamamoto', 'Zhou', 'Anderson', 'Brown', 'Davis', 'Jensen', 'Singh',
-            'Torres', 'Wilson', 'Cooper', 'Morgan', 'Reed', 'Stone', 'Vale', 'West'
+            'Torres', 'Wilson', 'Cooper', 'Morgan', 'Reed', 'Stone', 'Vale', 'West',
+            'Abdullah', 'Bianchi', 'Cruz', 'Diaz', 'Esposito', 'Fernandez', 'Gomez',
+            'Hernandez', 'Ito', 'Jimenez', 'Khan', 'Lopez', 'Morales', 'Nakamura',
+            'Ortega', 'Perez', 'Qasim', 'Ramirez', 'Silva', 'Tanaka', 'Uchida',
+            'Vargas', 'Wu', 'Xu', 'Yoshida', 'Zhang', 'Almeida', 'Barbosa', 'Castro',
+            'Dominguez', 'Esteban', 'Flores', 'Gonzalez', 'Herrera', 'Iniguez', 'Juarez',
+            'Kovacs', 'Lima', 'Mendoza', 'Nunez', 'Oliveira', 'Pinto', 'Quintana', 'Reyes',
+            'Sanchez', 'Torres', 'Uribe', 'Vega', 'Wong', 'Xie', 'Yanez', 'Zavala',
+            'Andersson', 'Berg', 'Carlsson', 'Eriksson', 'Gustafsson', 'Hansen', 'Iversen',
+            'Jakobsen', 'Kristensen', 'Larsen', 'Madsen', 'Nielsen', 'Olsen', 'Petersen',
+            'Rasmussen', 'Sorensen', 'Thomsen', 'Vestergaard', 'Winther', 'Zimmermann',
+            'Abe', 'Fujimoto', 'Goto', 'Hasegawa', 'Ishikawa', 'Kato', 'Kobayashi', 'Matsumoto',
+            'Nakagawa', 'Ogawa', 'Saito', 'Sakamoto', 'Suzuki', 'Takagi', 'Taniguchi', 'Ueda',
+            'Watanabe', 'Yamaguchi', 'Yoshimoto', 'Aoki', 'Endo', 'Fukuda', 'Harada', 'Ikeda',
+            'Kojima', 'Maeda', 'Murakami', 'Nishimura', 'Ono', 'Sasaki', 'Shimizu', 'Tamura',
+            'Ueno', 'Yamada', 'Yoshida', 'Arai', 'Chiba', 'Eguchi', 'Fujioka', 'Hara',
+            'Imai', 'Kikuchi', 'Kinoshita', 'Kondo', 'Mori', 'Nagai', 'Ozawa', 'Sato',
+            'Sugiyama', 'Takeda', 'Uchiyama', 'Wada', 'Yamamoto', 'Yokoyama', 'Abe'
         ];
 
         this.usedNames = new Set();
