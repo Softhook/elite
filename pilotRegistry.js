@@ -20,6 +20,7 @@ class PilotRegistry {
         this.GUARD_PIRATE_BONUS_MULT = 600;
 
         // Preferred ship options per role (used when switching careers)
+        // Initialize with sensible static defaults; will be overridden by dynamic mapping below.
         this.roleShipOptions = {
             trader: ['CobraMkIII', 'Python', 'Type6Transporter'],
             hauler: ['Anaconda', 'Python', 'Type9Heavy'],
@@ -33,6 +34,9 @@ class PilotRegistry {
             guard: ['Viper', 'GladiusFighter', 'Vulture', 'WaspAssault'],
             default: ['CobraMkIII']
         };
+
+        // Build dynamic role→ships mapping from SHIP_DEFINITIONS.aiRoles (if available)
+        this._applyDynamicRoleShipOptions();
         
         // Name generation data (simple for now)
         this.firstNames = [
@@ -63,6 +67,71 @@ class PilotRegistry {
         this.maxHuntersPerBounty = 2;
         this.bountyNotorietyThreshold = 450;
         this.bountyPayoutMultiplier = 15;
+    }
+
+    _applyDynamicRoleShipOptions() {
+        try {
+            if (typeof SHIP_DEFINITIONS !== 'object' || !SHIP_DEFINITIONS) return;
+
+            const byTag = {};
+            for (const [key, def] of Object.entries(SHIP_DEFINITIONS)) {
+                if (!def || !Array.isArray(def.aiRoles)) continue;
+                for (const tag of def.aiRoles) {
+                    if (!byTag[tag]) byTag[tag] = [];
+                    byTag[tag].push(key);
+                }
+            }
+
+            const uniq = arr => Array.from(new Set(arr || []));
+            const pick = (arr, fallback) => {
+                const out = uniq(arr);
+                return out.length > 0 ? out : uniq(fallback || []);
+            };
+
+            const cobra = SHIP_DEFINITIONS.CobraMkIII ? ['CobraMkIII'] : [];
+            const defaultList = pick(byTag.HAULER, cobra);
+
+            const minerList = (() => {
+                const out = [];
+                if (SHIP_DEFINITIONS.ProspectorMiner) out.push('ProspectorMiner');
+                // A couple of light haulers commonly used for mining
+                if (byTag.HAULER) {
+                    for (const id of byTag.HAULER) {
+                        if (id === 'Adder' || id === 'CobraMkIII' || id === 'Keelback') out.push(id);
+                    }
+                }
+                return pick(out, defaultList);
+            })();
+
+            const smugglerList = pick(
+                [...(byTag.PIRATE || []), ...(byTag.HAULER || [])],
+                defaultList
+            );
+
+            const guardList = pick(byTag.GUARD, byTag.MILITARY);
+
+            const roleShipOptions = {
+                trader: pick(byTag.HAULER, defaultList),
+                hauler: pick(byTag.HAULER, defaultList),
+                miner: minerList,
+                bounty: pick(byTag.BOUNTY_HUNTER, defaultList),
+                police: pick(byTag.POLICE, defaultList),
+                pirate: pick(byTag.PIRATE, defaultList),
+                smuggler: smugglerList,
+                local_transporter: pick(byTag.TRANSPORT, pick(byTag.HAULER, defaultList)),
+                alien: pick(byTag.ALIEN, defaultList),
+                guard: guardList,
+                default: cobra.length ? cobra : defaultList.slice(0, 1)
+            };
+
+            // Only override if we have at least some populated roles
+            const hasAny = Object.values(roleShipOptions).some(arr => Array.isArray(arr) && arr.length > 0);
+            if (hasAny) {
+                this.roleShipOptions = roleShipOptions;
+            }
+        } catch (e) {
+            console.warn('PilotRegistry: dynamic roleShipOptions build failed:', e);
+        }
     }
 
     _normalizeName(name) {
