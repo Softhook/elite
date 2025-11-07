@@ -310,6 +310,24 @@ class StarSystem {
             this.systemIndex,
             enemy.pos
         );
+
+        // Hint the registry when ships are loitering close to the station so trading can occur
+        try {
+            const registry = worldSimulation.pilotRegistry;
+            const pilot = registry.getPilotById(enemy.pilotId);
+            if (pilot && this.station?.pos) {
+                const dx = enemy.pos.x - this.station.pos.x;
+                const dy = enemy.pos.y - this.station.pos.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const safety = this._getStationSafetyRadius();
+                // Within a little outside the safety ring means "effectively at station"
+                if (dist <= safety + 120) {
+                    pilot._nearStationSystemIndex = this.systemIndex;
+                    pilot._nearStationMs = Date.now();
+                    pilot._nearStationId = this.station.name;
+                }
+            }
+        } catch (_) {}
     }
 
     /**
@@ -2747,10 +2765,7 @@ checkProjectileCollisions() {
         const spawnCandidates = [];
         for (const pilot of pilotsInSystem) {
             if (existingPilotIds.has(pilot.id)) continue;
-            // Skip pilots that are still docked at a station
-            if (pilot.dockedStationId) continue;
-            // Skip event spawns that already have a position but aren't visible yet
-            // (they'll be spawned elsewhere or are in transition)
+            // Allow docked pilots to spawn as stationary ships near station to show loading/purchase phase.
             spawnCandidates.push(pilot);
         }
 
@@ -2796,9 +2811,27 @@ checkProjectileCollisions() {
                 }
             }
 
+            // If pilot is docked, position ship adjacent to station and zero velocity to represent docked state.
+            if (pilot.dockedStationId && this.station?.pos && npcShip.pos) {
+                const angle = random(TWO_PI);
+                const radius = (this.station.size || 220) * 0.9 + random(40, 140);
+                npcShip.pos.x = this.station.pos.x + Math.cos(angle) * radius;
+                npcShip.pos.y = this.station.pos.y + Math.sin(angle) * radius;
+                npcShip.vel.x = 0; npcShip.vel.y = 0;
+                // Light rotation toward jump zone if pending trade exists
+                if (pilot.pendingTrade && this.jumpZoneCenter) {
+                    const dx = this.jumpZoneCenter.x - npcShip.pos.x;
+                    const dy = this.jumpZoneCenter.y - npcShip.pos.y;
+                    npcShip.angle = Math.atan2(dy, dx);
+                }
+            }
             this.addEnemy(npcShip);
             existingPilotIds.add(pilot.id);
             spawned++;
+
+            // Mark pilot as visualized (first on-screen presence)
+            if (!pilot.hasBeenVisualized) pilot.hasBeenVisualized = true;
+            pilot.lastVisualizedMs = Date.now();
 
             if (pilot.role === 'guard' && pilot.guardPrincipalId != null && anchorEnemy) {
                 // Link guard to principal - anchorEnemy already verified to exist
@@ -2897,6 +2930,18 @@ checkProjectileCollisions() {
                 try {
                     const load = npcShip.getCargoLoad ? npcShip.getCargoLoad() : (npcShip.cargoHold ? Object.values(npcShip.cargoHold).reduce((a,b)=>a+Math.max(0,Math.floor(b)),0) : 0);
                     console.log(`[Spawn] Enemy from pilot id=${pilot.id} ${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cargoLoad=${load}/${npcShip.cargoCapacity}`);
+                    // Adjust initial movement intent: if pilot has a pending trade whose destination is another system,
+                    // bias velocity toward jump zone so they appear to be departing rather than (re)approaching station.
+                    if (pilot.pendingTrade && pilot.pendingTrade.destSystemIndex !== this.systemIndex && this.jumpZoneCenter && this.station?.pos) {
+                        const jx = this.jumpZoneCenter.x; const jy = this.jumpZoneCenter.y;
+                        const dx = jx - npcShip.pos.x; const dy = jy - npcShip.pos.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                        const speed = Math.min(npcShip.maxSpeed || 120, 90);
+                        npcShip.vel.x = (dx/dist) * speed * 0.6;
+                        npcShip.vel.y = (dy/dist) * speed * 0.6;
+                        npcShip.angle = Math.atan2(dy, dx);
+                        npcShip.currentState = AI_STATE.PATROLLING; // Maintain non-station loitering
+                    }
                 } catch(_) {}
             } else if (pilot.cargo) {
                 npcShip.cargoHold = { ...pilot.cargo };

@@ -102,6 +102,30 @@ class PilotRegistry {
         this.maxHuntersPerBounty = 2;
         this.bountyNotorietyThreshold = 450;
         this.bountyPayoutMultiplier = 15;
+
+        // Configuration: start all pilots with empty cargo (player can observe first trade cycle)
+        // Set to true to restore legacy behavior of preloading starter goods.
+        this.enableStartingCargo = false;
+    }
+
+    _getGlobalPlayerSystemIndex(fallback = null) {
+        try {
+            const g = (typeof galaxy !== 'undefined') ? galaxy : null;
+            return this._getPlayerSystemIndex(g, fallback);
+        } catch (_) {
+            return fallback;
+        }
+    }
+
+    _shouldLogForSystem(systemIndex) {
+        if (systemIndex == null) return false;
+        const playerIdx = this._getGlobalPlayerSystemIndex(null);
+        return playerIdx != null && playerIdx === systemIndex;
+    }
+
+    _shouldLogForPilot(pilot, system = null) {
+        const idx = system?.systemIndex ?? pilot?.currentSystemIndex ?? null;
+        return this._shouldLogForSystem(idx);
     }
 
     _applyDynamicRoleShipOptions() {
@@ -383,7 +407,9 @@ class PilotRegistry {
             guardPrincipalId: null,
             guardAssignmentMs: null,
             pendingTrade: null,
-            nextDepartureMs: null
+            nextDepartureMs: null,
+            hasBeenVisualized: false,
+            lastVisualizedMs: null
         };
 
         this._ensureGuardFieldDefaults(pilot);
@@ -711,32 +737,29 @@ class PilotRegistry {
      * @private
      */
     _initializePilotStartingCargo(pilot, shipDef) {
+        // Starting cargo disabled unless explicitly enabled.
+        if (!this.enableStartingCargo) {
+            if (pilot && typeof console !== 'undefined' && this._shouldLogForPilot(pilot)) {
+                console.log(`[PilotRegistry] INIT CARGO SKIPPED (empty start) pilot=${pilot.name} role=${pilot?.role} ship=${pilot?.shipTypeId}`);
+            }
+            return;
+        }
         if (!pilot || !shipDef) return;
-        
         const cargoCap = pilot.cargoCap || 0;
         if (cargoCap <= 0) return;
-        
-        // Only traders, haulers, miners, and local transporters start with cargo
         const cargoRoles = ['trader', 'hauler', 'miner', 'local_transporter'];
         if (!cargoRoles.includes(pilot.role)) return;
-        
-        // Get typical cargo from ship definition
         const ILLEGAL_START_GOODS = new Set(['Narcotics','Weapons','Slaves']);
         let typicalCargo = shipDef.typicalCargo;
         if (!typicalCargo || !Array.isArray(typicalCargo) || typicalCargo.length === 0) return;
-
-        // Filter out illegal goods so ships never start with contraband that would deadlock trading
         typicalCargo = typicalCargo.filter(c => !ILLEGAL_START_GOODS.has(c));
-        if (typicalCargo.length === 0) return; // Nothing legal to load
-        
-        // Fill 30-70% of cargo capacity with a random typical commodity
+        if (typicalCargo.length === 0) return;
         const fillPercent = random(0.3, 0.7);
         const startingAmount = Math.floor(cargoCap * fillPercent);
         if (startingAmount <= 0) return;
-        
         const cargoType = random(typicalCargo);
         pilot.cargo[cargoType] = startingAmount;
-        if (typeof console !== 'undefined') {
+        if (typeof console !== 'undefined' && this._shouldLogForPilot(pilot)) {
             console.log(`[PilotRegistry] INIT CARGO pilot=${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cap=${cargoCap} load=${startingAmount} type=${cargoType}`);
         }
     }
@@ -933,11 +956,17 @@ class PilotRegistry {
 
         if (soldAny) {
             this._clearZeroCargo(pilot);
-            console.log(`${pilot.name} sold cargo for ${totalCreditsGained.toFixed(0)} credits`);
-            console.log(`[PilotRegistry] POST-SELL pilot=${pilot.name} cargoEmpty=${Object.keys(pilot.cargo).length===0} credits=${pilot.credits} station=${stationId}`);
+            if (this._shouldLogForPilot(pilot)) {
+                console.log(`${pilot.name} sold cargo for ${totalCreditsGained.toFixed(0)} credits`);
+            }
+            if (this._shouldLogForPilot(pilot)) {
+                console.log(`[PilotRegistry] POST-SELL pilot=${pilot.name} cargoEmpty=${Object.keys(pilot.cargo).length===0} credits=${pilot.credits} station=${stationId}`);
+            }
             // Design: selling at ANY station completes the trade; always clear pendingTrade so pilot can re-plan
             if (pilot.pendingTrade) {
-                console.log(`[PilotRegistry] CLEAR pendingTrade after universal sell pilot=${pilot.name}`);
+                if (this._shouldLogForPilot(pilot)) {
+                    console.log(`[PilotRegistry] CLEAR pendingTrade after universal sell pilot=${pilot.name}`);
+                }
                 pilot.pendingTrade = null;
             }
             // Ensure any on-screen entity reflects final state immediately
@@ -975,7 +1004,7 @@ class PilotRegistry {
         
         // Get all profitable opportunities sorted by profitability
         const allOpportunities = this._findBestCommoditiesToBuy(pilot, system, economy, stationEconomyRegistry, galaxyRef);
-        if (typeof console !== 'undefined') {
+        if (typeof console !== 'undefined' && this._shouldLogForPilot(pilot, system)) {
             console.log(`[PilotRegistry] PURCHASE START pilot=${pilot.name} station=${system.station.name} oppCount=${allOpportunities.length} freeCap=${this._getCargoFreeCapacity(pilot)} credits=${pilot.credits}`);
         }
         if (!allOpportunities || allOpportunities.length === 0) return false;
@@ -1035,8 +1064,12 @@ class PilotRegistry {
                     expectedSellPrice: opp.destPrice,
                     profitability: opp.profitability
                 });
-                console.log(`${pilot.name} bought ${added} ${opp.commodity} for ${(buyPrice * added).toFixed(0)} credits (profit/unit: ${opp.profitability.toFixed(1)})`);
-                console.log(`[PilotRegistry] PURCHASE ITEM pilot=${pilot.name} commodity=${opp.commodity} qty=${added} remainingCap=${freeCapacity} credits=${pilot.credits}`);
+                if (this._shouldLogForPilot(pilot, system)) {
+                    console.log(`${pilot.name} bought ${added} ${opp.commodity} for ${(buyPrice * added).toFixed(0)} credits (profit/unit: ${opp.profitability.toFixed(1)})`);
+                }
+                if (this._shouldLogForPilot(pilot, system)) {
+                    console.log(`[PilotRegistry] PURCHASE ITEM pilot=${pilot.name} commodity=${opp.commodity} qty=${added} remainingCap=${freeCapacity} credits=${pilot.credits}`);
+                }
                 // Live sync: cargo increased on-screen
                 this._syncPilotCargoToEntity(pilot);
             }
@@ -1056,8 +1089,12 @@ class PilotRegistry {
 
         pilot.itinerary = [bestDestination.destSystemIndex];
         pilot.nextDepartureMs = Date.now() + Math.floor(random(2000, 6000));
-        console.log(`${pilot.name} total purchase: ${totalSpent.toFixed(0)} credits, heading to ${bestDestination.destStationId}`);
-        console.log(`[PilotRegistry] PURCHASE COMPLETE pilot=${pilot.name} cargo=${JSON.stringify(pilot.cargo)} credits=${pilot.credits}`);
+        if (this._shouldLogForPilot(pilot, system)) {
+            console.log(`${pilot.name} total purchase: ${totalSpent.toFixed(0)} credits, heading to ${bestDestination.destStationId}`);
+        }
+        if (this._shouldLogForPilot(pilot, system)) {
+            console.log(`[PilotRegistry] PURCHASE COMPLETE pilot=${pilot.name} cargo=${JSON.stringify(pilot.cargo)} credits=${pilot.credits}`);
+        }
         // Final live sync after purchase completes
         this._syncPilotCreditsToEntity(pilot);
         this._syncPilotCargoToEntity(pilot);
@@ -1104,18 +1141,34 @@ class PilotRegistry {
         const economy = stationEconomyRegistry.getEconomy(stationId);
         if (!economy) return;
 
+        // Effective docking: either explicitly docked or loitering near station
+        const isNearStation = (pilot._nearStationSystemIndex === system.systemIndex) && (Date.now() - (pilot._nearStationMs || 0) < 2500);
+        const isAtStation = Boolean(pilot.dockedStationId) || isNearStation;
+        if (!isAtStation) {
+            // Not at station — nothing to do here
+            return;
+        }
+        // Normalize to a real dock so subsequent logic is consistent
+        if (!pilot.dockedStationId && isNearStation) {
+            pilot.dockedStationId = stationId;
+        }
+
         // If we have a pending trade, only sell if we are at the destination station.
         // Prevent immediate re-selling of freshly purchased cargo at the origin.
         if (pilot.pendingTrade) {
             if (pilot.pendingTrade.destStationId === stationId) {
                 const sold = this._sellCargoAtStation(pilot, stationId, stationEconomyRegistry);
                 if (sold) {
-                    console.log(`[PilotRegistry] DELIVERY complete pilot=${pilot.name} sold cargo at destination ${stationId}`);
+                    if (this._shouldLogForPilot(pilot, system)) {
+                        console.log(`[PilotRegistry] DELIVERY complete pilot=${pilot.name} sold cargo at destination ${stationId}`);
+                    }
                     pilot.nextDepartureMs = null;
                     pilot.pendingTrade = null; // Trade fulfilled
                 } else if (this._getTotalCargoUnits(pilot) === 0) {
                     // Edge case: cargo somehow empty but trade still marked
-                    console.log(`[PilotRegistry] CLEAR pendingTrade (no cargo at dest) pilot=${pilot.name}`);
+                    if (this._shouldLogForPilot(pilot, system)) {
+                        console.log(`[PilotRegistry] CLEAR pendingTrade (no cargo at dest) pilot=${pilot.name}`);
+                    }
                     pilot.pendingTrade = null;
                     pilot.nextDepartureMs = null;
                 }
@@ -1148,10 +1201,22 @@ class PilotRegistry {
         const beforePurchaseLoad = this._getTotalCargoUnits(pilot);
         const purchased = this._executePurchase(pilot, system, economy, stationEconomyRegistry, opportunity, galaxyRef);
         if (!purchased) {
-            console.log(`[PilotRegistry] PURCHASE SKIPPED (no opportunities or affordability) pilot=${pilot.name} freeCap=${freeCapacity} credits=${pilot.credits}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] PURCHASE SKIPPED (no opportunities or affordability) pilot=${pilot.name} freeCap=${freeCapacity} credits=${pilot.credits}`);
+            }
         } else {
             const afterLoad = this._getTotalCargoUnits(pilot);
-            console.log(`[PilotRegistry] PURCHASE RESULT pilot=${pilot.name} load ${beforePurchaseLoad}->${afterLoad}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] PURCHASE RESULT pilot=${pilot.name} load ${beforePurchaseLoad}->${afterLoad}`);
+            }
+            // Immediately schedule departure if trade itinerary exists
+            if (pilot.pendingTrade && pilot.itinerary?.length > 0 && !pilot.nextDepartureMs) {
+                const now = Date.now();
+                pilot.nextDepartureMs = now + Math.floor(random(1500, 4500));
+                if (this._shouldLogForPilot(pilot, system)) {
+                    console.log(`[PilotRegistry] DEPARTURE SCHEDULED (post-purchase) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
+                }
+            }
         }
     }
 
@@ -1293,6 +1358,17 @@ class PilotRegistry {
 
         pilot.lastUpdateMs = Date.now();
 
+        // If a live ship is loitering near the station in this system, auto-dock to allow trading
+        try {
+            const system = galaxyRef?.systems?.[pilot.currentSystemIndex];
+            const nearStationRecent = pilot._nearStationSystemIndex === pilot.currentSystemIndex && (Date.now() - (pilot._nearStationMs || 0) < 2500);
+            if (!pilot.dockedStationId && system?.station && nearStationRecent) {
+                pilot.dockedStationId = system.station.name;
+                pilot.pos = null; // Consider docked: position is station
+                pilot.nextDepartureMs = null; // Let dock logic set proper departure
+            }
+        } catch (_) {}
+
         // Evaluate role profitability while docked to enable dynamic role shifts
         if (stationEconomyRegistry && pilot.dockedStationId) {
             this._maybeSwitchRole(pilot, galaxyRef, stationEconomyRegistry);
@@ -1303,7 +1379,7 @@ class PilotRegistry {
             // Pilot is docked - may trade, plan route, or depart
             this._updateDockedPilot(pilot, dtSec, galaxyRef, stationEconomyRegistry);
             if (pilot.dockedStationId && pilot.cargo && pilot.cargoCap) {
-                if (typeof console !== 'undefined') {
+                if (typeof console !== 'undefined' && this._shouldLogForPilot(pilot)) {
                     console.log(`[PilotRegistry] DOCKED STATE pilot=${pilot.name} cargoLoad=${this._getTotalCargoUnits(pilot)}/${pilot.cargoCap} pendingTrade=${pilot.pendingTrade? 'yes':'no'} itineraryLen=${pilot.itinerary.length}`);
                 }
             }
@@ -1370,7 +1446,9 @@ class PilotRegistry {
         if (switched) {
             pilot.lastRoleSwitchMs = now;
             const systemName = system.name || `System ${system.systemIndex}`;
-            console.log(`PilotRegistry: ${pilot.name} switched from ${previousRole} to ${bestRole} in ${systemName}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`PilotRegistry: ${pilot.name} switched from ${previousRole} to ${bestRole} in ${systemName}`);
+            }
         }
     }
 
@@ -1736,13 +1814,17 @@ class PilotRegistry {
 
         if (pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
             pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
-            console.log(`[PilotRegistry] DEPARTURE SCHEDULED pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] DEPARTURE SCHEDULED pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.pendingTrade.destSystemIndex}`);
+            }
         }
 
         // Deterministic departure for non-trade itineraries as well
         if (!pilot.pendingTrade && pilot.itinerary && pilot.itinerary.length > 0 && !pilot.nextDepartureMs) {
             pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
-            console.log(`[PilotRegistry] DEPARTURE SCHEDULED (idle route) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.itinerary[0]}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] DEPARTURE SCHEDULED (idle route) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${pilot.itinerary[0]}`);
+            }
         }
 
         const readyForTradeDeparture = pilot.pendingTrade && pilot.nextDepartureMs && now >= pilot.nextDepartureMs;
@@ -1755,7 +1837,9 @@ class PilotRegistry {
             pilot.nextDepartureMs = null;
             // Deterministic travel window so arrivals are reliable/visible
             pilot.travelArrivalMs = Date.now() + Math.floor(random(5000, 9000));
-            console.log(`[PilotRegistry] UNDOCKING pilot=${pilot.name} routeLen=${pilot.itinerary?.length || 0} pendingTrade=${pilot.pendingTrade? 'yes':'no'}`);
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] UNDOCKING pilot=${pilot.name} routeLen=${pilot.itinerary?.length || 0} pendingTrade=${pilot.pendingTrade? 'yes':'no'}`);
+            }
             return;
         }
     }
@@ -1789,13 +1873,17 @@ class PilotRegistry {
                     pilot.pos = null;
                     pilot.nextDepartureMs = null;
                     pilot.travelArrivalMs = null;
-                    console.log(`Pilot ${pilot.name} arrived and docked at ${destSystem.name}`);
+                    if (this._shouldLogForSystem(destIndex)) {
+                        console.log(`Pilot ${pilot.name} arrived and docked at ${destSystem.name}`);
+                    }
                 } else {
                     // Remain in-flight: treat arrival as reaching the jump zone for next leg.
                     pilot.dockedStationId = null;
                     pilot.travelArrivalMs = null;
                     pilot.nextDepartureMs = null;
-                    console.log(`Pilot ${pilot.name} transited to ${destSystem.name} (in-flight, skipping station)`);
+                    if (this._shouldLogForSystem(destIndex)) {
+                        console.log(`Pilot ${pilot.name} transited to ${destSystem.name} (in-flight, skipping station)`);
+                    }
                 }
             } else {
                 pilot.travelArrivalMs = null;
@@ -1818,6 +1906,11 @@ class PilotRegistry {
         // Local transporters do not travel between systems
         if (pilot.role === 'local_transporter') return;
 
+        // Guard: avoid re-planning if already planned/scheduled
+        if ((pilot.itinerary && pilot.itinerary.length > 0) || pilot.nextDepartureMs) {
+            return;
+        }
+
         const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
         if (currentSystem && currentSystem.connectedSystemIndices && 
             currentSystem.connectedSystemIndices.length > 0) {
@@ -1826,7 +1919,7 @@ class PilotRegistry {
             // Schedule a deterministic undock for non-trade routes
             const now = Date.now();
             pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
-            if (typeof console !== 'undefined') {
+            if (typeof console !== 'undefined' && this._shouldLogForSystem(currentSystem.systemIndex)) {
                 console.log(`[PilotRegistry] DEPARTURE SCHEDULED (planned) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${destIndex}`);
             }
         }
@@ -2134,6 +2227,11 @@ class PilotRegistry {
         }
 
         pilot.dockedStationId = null;
+        // Mark as visualized the first time we receive a live position update
+        if (!pilot.hasBeenVisualized) {
+            pilot.hasBeenVisualized = true;
+        }
+        pilot.lastVisualizedMs = Date.now();
         if (!pilot.pos) {
             pilot.pos = { x: pos.x, y: pos.y };
         } else {
@@ -2329,7 +2427,9 @@ class PilotRegistry {
                 isBountyHunter: Boolean(p.isBountyHunter),
                 assignedGuardIds: Array.isArray(p.assignedGuardIds) ? [...p.assignedGuardIds] : [],
                 guardPrincipalId: p.guardPrincipalId ?? null,
-                guardAssignmentMs: p.guardAssignmentMs ?? null
+                guardAssignmentMs: p.guardAssignmentMs ?? null,
+                hasBeenVisualized: Boolean(p.hasBeenVisualized),
+                lastVisualizedMs: p.lastVisualizedMs ?? null
             })),
             nextPilotId: this.nextPilotId,
             activeBounties: Array.from(this.activeBounties.values()).map(b => ({
@@ -2395,6 +2495,8 @@ class PilotRegistry {
                 assignedGuardIds: Array.isArray(p.assignedGuardIds) ? [...p.assignedGuardIds] : [],
                 guardPrincipalId: p.guardPrincipalId ?? null,
                 guardAssignmentMs: p.guardAssignmentMs ?? null,
+                hasBeenVisualized: Boolean(p.hasBeenVisualized),
+                lastVisualizedMs: p.lastVisualizedMs ?? null,
                 pendingTrade: null,
                 nextDepartureMs: null
             };
