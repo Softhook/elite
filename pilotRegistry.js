@@ -381,7 +381,7 @@ class PilotRegistry {
             hull: shipDef ? shipDef.baseHull : 100,
             shields: shipDef ? (shipDef.baseShield || 0) : 0,
             currentSystemIndex: systemIndex,
-            dockedStationId: stationId,
+            dockedStationId: null, // Start undocked, flying in space
             pos: null, // Only populated in active system
             itinerary: [], // Next system indices to visit
             cargo: {}, // {commodityName: quantity}
@@ -1117,6 +1117,14 @@ class PilotRegistry {
         } catch (_) {}
     }
 
+    _pilotHasLiveEntity(pilot) {
+        let hasEntity = false;
+        this._forEachLiveEntityForPilot(pilot, () => {
+            hasEntity = true;
+        });
+        return hasEntity;
+    }
+
     _syncPilotCreditsToEntity(pilot) {
         this._forEachLiveEntityForPilot(pilot, (enemy) => {
             enemy.pilotCredits = pilot.credits || 0;
@@ -1124,6 +1132,12 @@ class PilotRegistry {
     }
 
     _syncPilotCargoToEntity(pilot) {
+        // Block cargo sync while docked: cargo should only be visible after undocking
+        // This prevents showing cargo in the target overlay before the pilot leaves the station
+        if (pilot?.dockedStationId) {
+            return;
+        }
+        
         this._forEachLiveEntityForPilot(pilot, (enemy) => {
             if (typeof enemy.initializeCargoHoldFromPilot === 'function') {
                 enemy.initializeCargoHoldFromPilot(pilot.cargo, pilot.cargoCap);
@@ -1192,6 +1206,34 @@ class PilotRegistry {
 
         const canPurchase = ['trader', 'hauler', 'smuggler', 'local_transporter', 'miner'].includes(pilot.role);
         if (!canPurchase) return;
+
+        // Only purchase when EXPLICITLY docked, not just "near station"
+        // This prevents purchasing cargo while flying toward/around the station
+        if (!pilot.dockedStationId) {
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] PURCHASE BLOCKED (not explicitly docked) pilot=${pilot.name} dockedStationId=${pilot.dockedStationId}`);
+            }
+            return;
+        }
+
+        // Check if the pilot's visual entity exists and is actually docked (not flying)
+        // This prevents purchases while the ship is still approaching the station
+        let entityIsDocked = false;
+        this._forEachLiveEntityForPilot(pilot, (enemy) => {
+            if (enemy.currentState === AI_STATE.DOCKED || enemy.isDocked || (enemy.vel && Math.abs(enemy.vel.x) < 1 && Math.abs(enemy.vel.y) < 1)) {
+                entityIsDocked = true;
+            }
+        });
+        
+        // If pilot has a visible entity, it must be docked (not flying) to purchase
+        // If no entity exists, allow purchase (background simulation)
+        const hasEntity = this._pilotHasLiveEntity(pilot);
+        if (hasEntity && !entityIsDocked) {
+            if (this._shouldLogForPilot(pilot, system)) {
+                console.log(`[PilotRegistry] PURCHASE BLOCKED (entity not docked, still flying) pilot=${pilot.name}`);
+            }
+            return;
+        }
 
         // Find the best trade opportunity (will use _findBestCommoditiesToBuy internally)
         const opportunity = this._findTradeOpportunity(pilot, system, economy, stationEconomyRegistry, galaxyRef);
@@ -1801,6 +1843,12 @@ class PilotRegistry {
             pilot.nextDepartureMs = Math.min(pilot.nextDepartureMs || (now + 250), now + 250);
         }
 
+        // Don't plan departures or undock until pilot has been visualized at least once
+        // This prevents pilots from undocking in the background before the player sees them
+        if (!pilot.hasBeenVisualized) {
+            return;
+        }
+
         if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.02) {
             this._planNextAction(pilot, galaxyRef);
         }
@@ -1809,6 +1857,8 @@ class PilotRegistry {
             pilot.dockedStationId = null;
             pilot.pos = null;
             pilot.nextDepartureMs = null;
+            // Sync cargo when undocking
+            this._syncPilotCargoToEntity(pilot);
             return;
         }
 
@@ -1837,6 +1887,8 @@ class PilotRegistry {
             pilot.nextDepartureMs = null;
             // Deterministic travel window so arrivals are reliable/visible
             pilot.travelArrivalMs = Date.now() + Math.floor(random(5000, 9000));
+            // Sync cargo to entity NOW that we've undocked (no longer blocked by docked check)
+            this._syncPilotCargoToEntity(pilot);
             if (this._shouldLogForPilot(pilot, system)) {
                 console.log(`[PilotRegistry] UNDOCKING pilot=${pilot.name} routeLen=${pilot.itinerary?.length || 0} pendingTrade=${pilot.pendingTrade? 'yes':'no'}`);
             }
@@ -2230,8 +2282,8 @@ class PilotRegistry {
         // Mark as visualized the first time we receive a live position update
         if (!pilot.hasBeenVisualized) {
             pilot.hasBeenVisualized = true;
+            pilot.lastVisualizedMs = Date.now();
         }
-        pilot.lastVisualizedMs = Date.now();
         if (!pilot.pos) {
             pilot.pos = { x: pos.x, y: pos.y };
         } else {
