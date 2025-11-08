@@ -904,7 +904,7 @@ class PilotRegistry {
             }
 
             // Only include commodities with positive profit potential
-            if (bestDest && bestProfit > 0) {
+            if (bestDest && bestProfit > 0 && bestDest.systemIndex !== system.systemIndex) {
                 opportunities.push({
                     commodity,
                     buyPrice,
@@ -1779,6 +1779,7 @@ class PilotRegistry {
         if (!system || !Array.isArray(system.connectedSystemIndices)) return [];
         const results = [];
         for (const idx of system.connectedSystemIndices) {
+            if (idx === system.systemIndex) continue; // Skip self-links to avoid same-station trades
             const neighbor = galaxyRef.systems?.[idx];
             if (!neighbor || !neighbor.station) continue;
             const stationId = neighbor.station.name;
@@ -1962,6 +1963,15 @@ class PilotRegistry {
      * @param {Galaxy} galaxyRef - Galaxy reference
      */
     _planNextAction(pilot, galaxyRef) {
+        if (!pilot || !galaxyRef) return;
+
+        if (pilot.pendingTrade) {
+            const tradeDest = pilot.pendingTrade.destSystemIndex;
+            if ((!Array.isArray(pilot.itinerary) || pilot.itinerary.length === 0) && Number.isInteger(tradeDest)) {
+                pilot.itinerary = [tradeDest];
+            }
+            return;
+        }
         // Simple planning: pick a random destination
         // Local transporters do not travel between systems
         if (pilot.role === 'local_transporter') return;
