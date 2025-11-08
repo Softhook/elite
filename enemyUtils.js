@@ -149,6 +149,119 @@ class EnemyUtils {
     }
 
     /**
+     * Offers player to follow this ship through a jump gate
+     * @param {Object} system - Current star system
+     * @param {Object} targetSystem - Destination system (null for random connected system)
+     * @returns {boolean} True if player is following (ship should transfer to new system)
+     */
+    _offerPlayerFollowJump(system, targetSystem) {
+        if (!system || !system.player) {
+            console.log('[FollowJump] No system or player');
+            return false;
+        }
+        
+        // Access global galaxy variable
+        const galaxyRef = (typeof galaxy !== 'undefined') ? galaxy : null;
+        if (!galaxyRef) {
+            console.log('[FollowJump] No galaxy reference');
+            return false;
+        }
+        
+        let destinationSystemIndex = null;
+        let destinationSystem = null;
+        let destinationName = 'Unknown';
+        
+        if (targetSystem) {
+            // Guard following principal - we know the destination
+            destinationSystemIndex = galaxyRef.systems.indexOf(targetSystem);
+            destinationSystem = targetSystem;
+            destinationName = targetSystem.name;
+            console.log(`[FollowJump] Guard jumping to known system: ${destinationName} (index ${destinationSystemIndex})`);
+        } else {
+            // Regular ship leaving - pick a random connected system
+            const currentSystemIndex = galaxyRef.currentSystemIndex;
+            const currentSystem = galaxyRef.systems[currentSystemIndex];
+            if (currentSystem?.connectedSystemIndices && currentSystem.connectedSystemIndices.length > 0) {
+                destinationSystemIndex = currentSystem.connectedSystemIndices[Math.floor(Math.random() * currentSystem.connectedSystemIndices.length)];
+                destinationSystem = galaxyRef.systems[destinationSystemIndex];
+                destinationName = destinationSystem?.name || 'Unknown';
+                console.log(`[FollowJump] Ship jumping to random system: ${destinationName} (index ${destinationSystemIndex})`);
+            } else {
+                console.log('[FollowJump] No connected systems available');
+                return false;
+            }
+        }
+        
+        if (destinationSystemIndex !== null && destinationSystemIndex >= 0 && destinationSystem) {
+            // Check if player is in jump zone
+            const isInJumpZone = typeof isPlayerInJumpZone === 'function' ? 
+                isPlayerInJumpZone(system.player, system) : false;
+            
+            console.log(`[FollowJump] Player in jump zone: ${isInJumpZone}`);
+            console.log(`[FollowJump] Destination valid: ${destinationSystemIndex >= 0 && destinationSystemIndex < galaxyRef.systems.length}`);
+            
+            if (isInJumpZone) {
+                // Transfer this ship to the destination system BEFORE player jumps
+                console.log(`[FollowJump] Transferring ${this.shipTypeName} to ${destinationName} (index ${destinationSystemIndex})`);
+                console.log(`[FollowJump] Current system: ${this.currentSystem?.name}, enemies count: ${this.currentSystem?.enemies.length}`);
+                
+                // Remove from current system
+                const index = this.currentSystem.enemies.indexOf(this);
+                if (index !== -1) {
+                    this.currentSystem.enemies.splice(index, 1);
+                    console.log(`[FollowJump] Removed from current system at index ${index}`);
+                }
+                
+                // Add to destination system at jump zone
+                this.currentSystem = destinationSystem;
+                destinationSystem.addEnemy(this);
+                console.log(`[FollowJump] Added to ${destinationSystem.name}, enemies count now: ${destinationSystem.enemies.length}`);
+                
+                if (destinationSystem.jumpZoneCenter) {
+                    const jzX = destinationSystem.jumpZoneCenter.x;
+                    const jzY = destinationSystem.jumpZoneCenter.y;
+                    this.pos.set(jzX, jzY);
+                    this.vel.set(0, 0);
+                    console.log(`[FollowJump] Ship positioned at jump zone: (${jzX.toFixed(1)}, ${jzY.toFixed(1)})`);
+                } else {
+                    console.log(`[FollowJump] WARNING: Destination system has no jump zone center!`);
+                }
+                
+                // Change state back to patrolling
+                this.changeState(AI_STATE.PATROLLING);
+                this.inCombat = false;
+                this.haulerCombatTimer = undefined;
+                
+                console.log(`[FollowJump] Ship transferred successfully to system index ${destinationSystemIndex}`);
+                
+                // Now initiate player jump
+                if (typeof uiManager !== 'undefined' && uiManager.addMessage) {
+                    uiManager.addMessage(`${this.shipTypeName} jumped to ${destinationName}. Following...`, color(100, 200, 255));
+                }
+                
+                if (typeof gameStateManager !== 'undefined' && gameStateManager.startJump) {
+                    console.log(`[FollowJump] Calling gameStateManager.startJump(${destinationSystemIndex}) to ${destinationName}`);
+                    gameStateManager.startJump(destinationSystemIndex);
+                } else {
+                    console.log('[FollowJump] gameStateManager not available');
+                }
+                
+                return true; // Ship was transferred, don't destroy it
+            } else {
+                // Player not in jump zone - just notify
+                console.log(`[FollowJump] Player not in jump zone, only notifying`);
+                if (typeof uiManager !== 'undefined' && uiManager.addMessage) {
+                    uiManager.addMessage(`${this.shipTypeName} jumped to ${destinationName}`, color(150, 150, 150));
+                }
+                return false;
+            }
+        } else {
+            console.log(`[FollowJump] Invalid destination index: ${destinationSystemIndex}`);
+            return false;
+        }
+    }
+
+    /**
      * Applies energy tangle effect to impair movement
      * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased

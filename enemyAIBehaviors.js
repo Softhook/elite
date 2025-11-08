@@ -546,6 +546,11 @@ class EnemyAIBehaviors {
                         // Guards follow their principal to the new system
                         const targetSystem = this.principal.currentSystem;
                         if (targetSystem && targetSystem !== this.currentSystem) {
+                            // Check if player was targeting this guard and offer to follow
+                            if (system?.player && system.player.target === this) {
+                                this._offerPlayerFollowJump(system, targetSystem);
+                                system.player.target = null;
+                            }
                             // Remove from current system
                             const index = this.currentSystem.enemies.indexOf(this);
                             if (index !== -1) {
@@ -568,11 +573,19 @@ class EnemyAIBehaviors {
                             HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
                         }
                     } else {
-                        // Normal hauler/transport leaving
-                        this.inCombat = false;
-                        this.haulerCombatTimer = undefined;
-                        this.destroyed = true;
-                        HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
+                        // Normal hauler/transport leaving - check for player follow
+                        let wasFollowed = false;
+                        if (system?.player && system.player.target === this) {
+                            wasFollowed = this._offerPlayerFollowJump(system, null);
+                        }
+                        
+                        // Only destroy if not followed (if followed, ship transfers to new system)
+                        if (!wasFollowed) {
+                            this.inCombat = false;
+                            this.haulerCombatTimer = undefined;
+                            this.destroyed = true;
+                            HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
+                        }
                     }
                     shouldMove = false;
                 }

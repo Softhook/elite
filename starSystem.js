@@ -669,15 +669,26 @@ try {
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
         this.discover();
-        this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = [];
-        this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
+        
+        // Only clear enemies if entering a fresh system
+        // If enemies already exist (e.g., from following a ship through jump gate), preserve them
+        const hadExistingEnemies = this.enemies && this.enemies.length > 0;
+        if (!hadExistingEnemies) {
+            this.enemies = [];
+        }
+        
+        this.projectiles = []; 
+        this.mines = []; 
+        this.asteroids = [];
+        this.enemySpawnTimer = 0; 
+        this.asteroidSpawnTimer = 0;
         
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
         
         // Set system-wide police alert immediately
         this.policeAlertSent = player?.isWanted || false;
-        console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
+        console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}. Existing enemies: ${hadExistingEnemies ? this.enemies.length : 0}`);
         
         // Initial system population - use this.player consistently in timers
         setTimeout(() => {
@@ -1037,6 +1048,10 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 this._updatePilotRegistryPosition(enemy);
                 
                 if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
+                    // Clear player target if it was this enemy
+                    if (this.player && this.player.target === enemy) {
+                        this.player.target = null;
+                    }
                     this._fastRemove(this.enemies, i);
                 }
             }
