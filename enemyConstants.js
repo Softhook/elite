@@ -71,11 +71,11 @@ const TARGET_SCORE_BASE_WANTED = 100;   // Base score for police targeting wante
 const TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
 const TARGET_SCORE_PIRATE_CARGO_BASE = 30;
 const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
-const TARGET_SCORE_PIRATE_PREY_HAULER = 40; // Score for targeting haulers/transports
+const TARGET_SCORE_PIRATE_PREY_HAULER = 50; // Score for targeting haulers/transports
 const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
 const TARGET_SCORE_RETALIATION_HAULER = 40; // Score for hauler/transport retaliation
 const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
-const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
+const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 15; // Max bonus score for damaged hull
 const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
 
 // -------------------------

@@ -102,7 +102,7 @@ class EnemyTargeting {
 
         // Final target decision
         if (bestTarget && bestScore > 0) {
-            const scoreThresholdForChange = 25;
+            const scoreThresholdForChange = (this.role === AI_ROLE.ALIEN) ? 0 : 25;
             
             if (bestTarget !== this.target) {
                 // Switching to a different target
@@ -303,10 +303,33 @@ class EnemyTargeting {
                 
                     
                 case AI_ROLE.ALIEN:
-                    if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
-                        _score += 50; // Base score for any non-alien target
-                        _interesting = true;
+                    if (target.role === AI_ROLE.ALIEN) {
+                        return TARGET_SCORE_INVALID;
                     }
+
+                    // Aliens prioritise non-aliens with extra bias toward armed threats
+                    let alienBaseScore = target instanceof Player ? 52 : 68;
+
+                    if (target.role === AI_ROLE.POLICE || target.role === AI_ROLE.MILITARY || target.role === AI_ROLE.GUARD) {
+                        alienBaseScore += 12;
+                    } else if (target.role === AI_ROLE.BOUNTY_HUNTER || target.role === AI_ROLE.PIRATE) {
+                        alienBaseScore += 8;
+                    } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                        alienBaseScore += 4;
+                    }
+
+                    if (target === enemy.lastAttacker) {
+                        alienBaseScore += 25;
+                    } else if (target?.lastAttacker === enemy) {
+                        alienBaseScore += 12;
+                    }
+
+                    if (target?.currentWeapon || (Array.isArray(target?.weapons) && target.weapons.length > 0)) {
+                        alienBaseScore += 6;
+                    }
+
+                    _score += alienBaseScore;
+                    _interesting = true;
                     break;
 
                 case AI_ROLE.HAULER:

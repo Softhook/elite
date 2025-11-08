@@ -407,6 +407,7 @@ class EnemyAIBehaviors {
                 this.currentState !== AI_STATE.SNIPING &&
                 this.currentState !== AI_STATE.PATROLLING &&
                 this.currentState !== AI_STATE.NEAR_STATION &&
+                this.currentState !== AI_STATE.LEAVING_SYSTEM &&
                 this.currentState !== AI_STATE.TRANSPORTING &&
                 this.currentState !== AI_STATE.COLLECTING_CARGO) {
                 AI_LOG(`Forcing hauler ${this.shipTypeName} back to APPROACHING state`);

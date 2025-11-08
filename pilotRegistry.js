@@ -1405,9 +1405,14 @@ class PilotRegistry {
             const system = galaxyRef?.systems?.[pilot.currentSystemIndex];
             const nearStationRecent = pilot._nearStationSystemIndex === pilot.currentSystemIndex && (Date.now() - (pilot._nearStationMs || 0) < 2500);
             if (!pilot.dockedStationId && system?.station && nearStationRecent) {
-                pilot.dockedStationId = system.station.name;
-                pilot.pos = null; // Consider docked: position is station
-                pilot.nextDepartureMs = null; // Let dock logic set proper departure
+                const autoDockRoles = ['trader', 'hauler', 'smuggler', 'local_transporter', 'miner'];
+                const hasDeparturePlanned = Array.isArray(pilot.itinerary) && pilot.itinerary.length > 0;
+                const tradeDestMatches = !pilot.pendingTrade || pilot.pendingTrade.destSystemIndex === pilot.currentSystemIndex;
+                if (!hasDeparturePlanned && tradeDestMatches && autoDockRoles.includes(pilot.role)) {
+                    pilot.dockedStationId = system.station.name;
+                    pilot.pos = null; // Consider docked: position is station
+                    pilot.nextDepartureMs = null; // Let dock logic set proper departure
+                }
             }
         } catch (_) {}
 
@@ -1885,6 +1890,9 @@ class PilotRegistry {
             pilot.dockedStationId = null;
             pilot.pos = null; // Will be set by spawn system
             pilot.nextDepartureMs = null;
+            pilot._nearStationSystemIndex = null;
+            pilot._nearStationMs = 0;
+            pilot._nearStationId = null;
             // Deterministic travel window so arrivals are reliable/visible
             pilot.travelArrivalMs = Date.now() + Math.floor(random(5000, 9000));
             // Sync cargo to entity NOW that we've undocked (no longer blocked by docked check)
