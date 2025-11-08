@@ -13,6 +13,7 @@ class PilotRegistry {
         // Background role balancing parameters
         this.roleEvaluationIntervalMs = 60_000; // Evaluate role profitability every minute per pilot
         this.roleSwitchThreshold = 1200; // Require sizable upside before switching careers
+        this.enableRoleSwitching = false; // Pilots retain their initial roles permanently
 
         // Role profitability scoring constants
         this.GUARD_BASE_SALARY = 650;
@@ -1447,6 +1448,7 @@ class PilotRegistry {
      * @private
      */
     _maybeSwitchRole(pilot, galaxyRef, stationEconomyRegistry) {
+        if (!this.enableRoleSwitching) return;
         if (pilot?.isEventSpawn) return;
         if (pilot.role === 'guard' && pilot.guardPrincipalId != null) return;
 
