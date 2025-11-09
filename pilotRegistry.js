@@ -1388,6 +1388,8 @@ class PilotRegistry {
     _updatePilot(pilot, dtSec, galaxyRef, stationEconomyRegistry) {
         if (!pilot.alive) return;
 
+        this._normalizePilotNavigation(pilot);
+
         if (pilot.role === 'guard') {
             if (this._updateGuardPilot(pilot, dtSec, galaxyRef)) {
                 return;
@@ -1779,9 +1781,23 @@ class PilotRegistry {
 
     _gatherConnectedEconomies(system, stationEconomyRegistry, galaxyRef) {
         if (!system || !Array.isArray(system.connectedSystemIndices)) return [];
+
         const results = [];
-        for (const idx of system.connectedSystemIndices) {
-            if (idx === system.systemIndex) continue; // Skip self-links to avoid same-station trades
+        const currentIndex = this._normalizeSystemIndex(system.systemIndex);
+        if (currentIndex != null && system.systemIndex !== currentIndex) {
+            system.systemIndex = currentIndex;
+        }
+
+        const seen = new Set();
+        const normalizedConnections = [];
+        for (const rawIdx of system.connectedSystemIndices) {
+            const idx = this._normalizeSystemIndex(rawIdx);
+            if (idx == null) continue;
+            if (currentIndex != null && idx === currentIndex) continue; // Skip self-links to avoid same-station trades
+            if (seen.has(idx)) continue;
+            seen.add(idx);
+            normalizedConnections.push(idx);
+
             const neighbor = galaxyRef.systems?.[idx];
             if (!neighbor || !neighbor.station) continue;
             const stationId = neighbor.station.name;
@@ -1789,6 +1805,12 @@ class PilotRegistry {
             if (!economy) continue;
             results.push({ systemIndex: idx, stationId, economy });
         }
+
+        if (normalizedConnections.length !== system.connectedSystemIndices.length ||
+            normalizedConnections.some((value, index) => value !== system.connectedSystemIndices[index])) {
+            system.connectedSystemIndices = normalizedConnections;
+        }
+
         return results;
     }
 
@@ -1826,6 +1848,52 @@ class PilotRegistry {
         return Math.min(max, Math.max(min, value));
     }
 
+    _normalizeSystemIndex(index) {
+        if (typeof index === 'number' && Number.isFinite(index)) {
+            return index;
+        }
+        if (typeof index === 'string') {
+            const parsed = parseInt(index, 10);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+        return null;
+    }
+
+    _normalizePilotNavigation(pilot) {
+        if (!pilot) return;
+
+        const normalizedCurrent = this._normalizeSystemIndex(pilot.currentSystemIndex);
+        if (normalizedCurrent != null) {
+            pilot.currentSystemIndex = normalizedCurrent;
+        } else if (pilot.currentSystemIndex == null) {
+            pilot.currentSystemIndex = 0;
+        }
+
+        if (Array.isArray(pilot.itinerary)) {
+            const sanitized = [];
+            for (const stop of pilot.itinerary) {
+                const idx = this._normalizeSystemIndex(stop);
+                if (idx != null && !sanitized.includes(idx)) {
+                    sanitized.push(idx);
+                }
+            }
+            pilot.itinerary = sanitized;
+        } else {
+            pilot.itinerary = [];
+        }
+
+        if (pilot.pendingTrade && typeof pilot.pendingTrade === 'object') {
+            const destIdx = this._normalizeSystemIndex(pilot.pendingTrade.destSystemIndex);
+            pilot.pendingTrade.destSystemIndex = destIdx;
+        }
+
+        if (pilot._nearStationSystemIndex != null) {
+            pilot._nearStationSystemIndex = this._normalizeSystemIndex(pilot._nearStationSystemIndex);
+        }
+    }
+
     /**
      * Update pilot while docked at a station.
      * @param {Object} pilot - The pilot
@@ -1837,6 +1905,11 @@ class PilotRegistry {
 
         const system = galaxyRef.systems?.[pilot.currentSystemIndex];
         if (!system || !system.station) return;
+
+        const systemIndex = this._normalizeSystemIndex(system.systemIndex);
+        if (systemIndex != null && system.systemIndex !== systemIndex) {
+            system.systemIndex = systemIndex;
+        }
 
         if (stationEconomyRegistry) {
             this._handleDockedTrading(pilot, system, stationEconomyRegistry, galaxyRef);
@@ -1922,7 +1995,14 @@ class PilotRegistry {
         }
 
         if (now >= pilot.travelArrivalMs) {
-            const destIndex = pilot.itinerary.shift();
+            const destIndexRaw = pilot.itinerary.shift();
+            const destIndex = this._normalizeSystemIndex(destIndexRaw);
+            if (destIndex == null) {
+                pilot.travelArrivalMs = null;
+                pilot.itinerary = [];
+                return;
+            }
+
             pilot.currentSystemIndex = destIndex;
 
             // Dock at station if available
@@ -1968,9 +2048,12 @@ class PilotRegistry {
         if (!pilot || !galaxyRef) return;
 
         if (pilot.pendingTrade) {
-            const tradeDest = pilot.pendingTrade.destSystemIndex;
-            if ((!Array.isArray(pilot.itinerary) || pilot.itinerary.length === 0) && Number.isInteger(tradeDest)) {
-                pilot.itinerary = [tradeDest];
+            const tradeDest = this._normalizeSystemIndex(pilot.pendingTrade.destSystemIndex);
+            if (tradeDest != null) {
+                pilot.pendingTrade.destSystemIndex = tradeDest;
+                if ((!Array.isArray(pilot.itinerary) || pilot.itinerary.length === 0)) {
+                    pilot.itinerary = [tradeDest];
+                }
             }
             return;
         }
@@ -1983,17 +2066,31 @@ class PilotRegistry {
             return;
         }
 
-        const currentSystem = galaxyRef.systems[pilot.currentSystemIndex];
-        if (currentSystem && currentSystem.connectedSystemIndices && 
-            currentSystem.connectedSystemIndices.length > 0) {
-            const destIndex = random(currentSystem.connectedSystemIndices);
-            pilot.itinerary = [destIndex];
-            // Schedule a deterministic undock for non-trade routes
-            const now = Date.now();
-            pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
-            if (typeof console !== 'undefined' && this._shouldLogForSystem(currentSystem.systemIndex)) {
-                console.log(`[PilotRegistry] DEPARTURE SCHEDULED (planned) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${destIndex}`);
-            }
+        const currentIndex = this._normalizeSystemIndex(pilot.currentSystemIndex);
+        if (currentIndex == null) return;
+
+        const currentSystem = galaxyRef.systems[currentIndex];
+        if (!currentSystem || !Array.isArray(currentSystem.connectedSystemIndices) || currentSystem.connectedSystemIndices.length === 0) {
+            return;
+        }
+
+        const neighbors = currentSystem.connectedSystemIndices
+            .map(idx => this._normalizeSystemIndex(idx))
+            .filter(idx => idx != null && idx !== currentIndex);
+
+        if (neighbors.length === 0) return;
+
+        const destIndex = random(neighbors);
+        pilot.itinerary = [destIndex];
+        // Schedule a deterministic undock for non-trade routes
+        const now = Date.now();
+        pilot.nextDepartureMs = now + Math.floor(random(2000, 6000));
+        const logIndex = this._normalizeSystemIndex(currentSystem.systemIndex);
+        if (logIndex != null && currentSystem.systemIndex !== logIndex) {
+            currentSystem.systemIndex = logIndex;
+        }
+        if (typeof console !== 'undefined' && this._shouldLogForSystem(logIndex)) {
+            console.log(`[PilotRegistry] DEPARTURE SCHEDULED (planned) pilot=${pilot.name} in ${pilot.nextDepartureMs - now}ms destSystemIndex=${destIndex}`);
         }
     }
 
