@@ -121,21 +121,21 @@ class CommunicationSystem {
                 "{enemyName}: We’ll add that to the invoice." 
             ],
             alienEngage: [
-                "⟟⟊⟒⋮⟟ ⊑⟟⟊⟟⟒ ✦ ☼", "⌬𐌰𐌿𐍄 ∴ ʘ͜ʖʘ", "∰⟴⟴⟁⟁⟁", "⋇⋇⋇ ᚠᛇᚻ ᚾᚪᚾ", "◬⟁◬⟁◬",
+                "⟟⟊⟒⋮⟟ ⊑⟟⟊⟟⟒ ✦ ☼", "⌬𐌰𐌿𐍄 ∴ ʘ͜ʖʘ", "∰⟴⟴⟁⟁⟁ ∰⟴⟴⟁⟁⟁", "⋇⋇⋇ ᚠᛇᚻ ᚾᚪᚾ", "◬⟁◬⟁◬",
                 "╳╳╳ ⟟⟟⟟ ϟϟϟ", "ᚷᛟᚾᛖᚱ ᛚᛟᚾᚷ", "҉҉҉ ☍☌☍", "⟁⟊⟟⟒ :: ⌬⌬⌬", "彡彡 彗彗",
                 "ζ≀ζ≀ζ", "ᛝᛝᛝ ∴ ∴", "₪₪₪ ᚺᚨᛚᛚ", "⟁⟁⟁ ⟟⟊⟒", "¤¤¤ ѪѪѪ",
-                "⟟⟟⟟ ᚷᚷᚷ", "≀≀≀ ∿∿∿", "▣▢▣▢", "⟴⟴⟴", "卐卐" 
+                "⟟⟟⟟ ᚷᚷᚷ", "≀≀≀ ∿∿∿", "▣▢▣▢", "⟴⟴⟴", "****" 
             ],
             alienRetort: [
-                "⋔⋇⋔⋇", "⟟⟒⟊⟟⟒", "ϞϟϞ", "ƛƛƛ", "彗彗彗", "ᛣᛣᛣ", "𓆣𓆣𓆣", "₪₪₪", "҉҉҉", "◯◯◯"
+                "⋔⋇⋔⋇", "⟟⟒⟊⟟⟒", "ϞϟϞ", "ƛƛƛ", "彗彗彗", "ᛣᛣᛣ", "𓆣𓆣𓆣", "₪₪₪", "҉҉҉ ҉҉҉", "◯◯◯"
             ],
             pirateDeath: [
-                "{enemyName}: ugh—", "{enemyName}: …static…", "{enemyName}: engines… gone—", "{enemyName}: not like—this—",
+                "{enemyName}: ugh—","{enemyName}: Noooooo", "{enemyName}: Ejecting…", "{enemyName}: …static…", "{enemyName}: engines… gone—", "{enemyName}: not like—this—",
                 "{enemyName}: vents—open—", "{enemyName}: I’m… out—", "{enemyName}: hull… breaking—", "{enemyName}: you— win—",
                 "{enemyName}: reactor—hot—", "{enemyName}: system—dead—"
             ],
             policeDeath: [
-                "Patrol {policeWing}: Officer down—", "{enemyName}: Mayday— systems failing—", "Control {systemName}: We lost a unit!",
+                "Patrol {policeWing}: Officer down—", "{enemyName}: Mayday— systems failing—", "{enemyName}: Mayday—Mayday", "Control {systemName}: We lost a unit!",
                 "{enemyName}: Power—critical—", "{enemyName}: Couldn’t—hold—", "{enemyName}: Hull breach—", "Patrol {policeWing}: Unit offline—"
             ],
             haulerDeath: [
