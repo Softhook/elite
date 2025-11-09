@@ -884,6 +884,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
      */
     update() {
         if (!this.player || !this.player.pos) return;
+        const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        if (deltaSeconds > 0) {
+            if (this.station?.market?.updateDynamicStock) {
+                this.station.market.updateDynamicStock(deltaSeconds);
+            }
+            if (Array.isArray(this.secretStations)) {
+                for (const secretStation of this.secretStations) {
+                    secretStation?.market?.updateDynamicStock?.(deltaSeconds);
+                }
+            }
+        }
         try {
             // Calculate screen bounds for visibility checks - reuse pre-allocated object
             const tx = width / 2 - this.player.pos.x;

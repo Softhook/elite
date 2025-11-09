@@ -44,10 +44,68 @@ const PRICE_BUY_MAX_MULT = 2.75;
 const PRICE_SELL_MIN_MULT = 0.5;
 const PRICE_SELL_MAX_MULT = 2.2;
 
+// Economy drift - governs how quickly systems replenish or consume stock
+const STOCK_TREND_TICK_SECONDS = 30; // Seconds between stock drift ticks
+const BASELINE_DRIFT_THRESHOLD = 0.1; // Begin correcting when >10% away from base
+const BASELINE_RECOVERY_RATE = 0.01; // 1% of base stock per tick for baseline recovery
+const STOCK_TREND_VARIANCE = 0.35; // +/-35% random variance on each drift adjustment
+
+const ECONOMY_STOCK_BEHAVIOR = {
+    Agricultural: {
+        replenish: { 'Food': 0.01, 'Textiles': 0.0075 },
+        consume: { 'Machinery': 0.006, 'Chemicals': 0.006, 'Medicine': 0.005, 'Computers': 0.004, 'Adv Components': 0.003 }
+    },
+    Industrial: {
+        replenish: { 'Machinery': 0.015, 'Metals': 0.01, 'Chemicals': 0.01 },
+        consume: { 'Food': 0.005, 'Luxury Goods': 0.004, 'Medicine': 0.004 }
+    },
+    Mining: {
+        replenish: { 'Metals': 0.02, 'Minerals': 0.025, 'Chemicals': 0.01 },
+        consume: { 'Machinery': 0.0075, 'Food': 0.006, 'Medicine': 0.0045, 'Computers': 0.0035 }
+    },
+    Military: {
+        replenish: { 'Weapons': 0.0125, 'Machinery': 0.01, 'Metals': 0.01 },
+        consume: { 'Luxury Goods': 0.0075, 'Textiles': 0.006, 'Food': 0.006, 'Medicine': 0.006, 'Computers': 0.004 }
+    },
+    Offworld: {
+        replenish: { 'Luxury Goods': 0.015, 'Adv Components': 0.01, 'Computers': 0.0125 },
+        consume: { 'Food': 0.0075, 'Metals': 0.009, 'Textiles': 0.006, 'Chemicals': 0.005 }
+    },
+    Tourism: {
+        replenish: { 'Luxury Goods': 0.0125, 'Textiles': 0.0075, 'Food': 0.01 },
+        consume: { 'Metals': 0.01, 'Minerals': 0.009, 'Chemicals': 0.0075, 'Machinery': 0.006 }
+    },
+    Refinery: {
+        replenish: { 'Metals': 0.0225, 'Chemicals': 0.02 },
+        consume: { 'Minerals': 0.02, 'Machinery': 0.0075, 'Food': 0.005, 'Adv Components': 0.005 }
+    },
+    'Post Human': {
+        replenish: { 'Computers': 0.0175, 'Adv Components': 0.015, 'Medicine': 0.0125 },
+        consume: { 'Food': 0.009, 'Metals': 0.01, 'Chemicals': 0.01, 'Minerals': 0.01, 'Luxury Goods': 0.006 }
+    },
+    Service: {
+        replenish: { 'Food': 0.0075, 'Medicine': 0.0075, 'Textiles': 0.006 },
+        consume: { 'Computers': 0.015, 'Adv Components': 0.0125, 'Metals': 0.01, 'Chemicals': 0.009 }
+    },
+    Separatist: {
+        replenish: { 'Weapons': 0.015, 'Chemicals': 0.0125, 'Machinery': 0.01 },
+        consume: { 'Luxury Goods': 0.01, 'Computers': 0.01, 'Food': 0.0075, 'Medicine': 0.006, 'Adv Components': 0.0075 }
+    },
+    Imperial: {
+        replenish: { 'Luxury Goods': 0.0175, 'Adv Components': 0.015, 'Computers': 0.0125 },
+        consume: { 'Food': 0.0075, 'Textiles': 0.0075, 'Metals': 0.01, 'Machinery': 0.01, 'Medicine': 0.006 }
+    },
+    default: {
+        replenish: { 'Food': 0.006, 'Machinery': 0.006 },
+        consume: { 'Luxury Goods': 0.004, 'Adv Components': 0.004 }
+    }
+};
+
 class Market {
     constructor(systemType) {
         this.systemType = systemType;
         this.systemName = null; // Will be set by Station
+        this._stockTrendAccumulator = 0;
         
         // If Alien, no goods available - return early
         if (systemType === 'Alien') {
@@ -306,6 +364,103 @@ class Market {
         if (MARKET_DEBUG) console.log(` <- Prices updated.`);
     }
 
+    updateDynamicStock(deltaSeconds = 0) {
+        if (!Array.isArray(this.commodities) || this.commodities.length === 0) {
+            return;
+        }
+
+        const seconds = Number(deltaSeconds);
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            return;
+        }
+
+        this._stockTrendAccumulator += seconds;
+        if (this._stockTrendAccumulator < STOCK_TREND_TICK_SECONDS) {
+            return;
+        }
+
+        const ticks = Math.floor(this._stockTrendAccumulator / STOCK_TREND_TICK_SECONDS);
+        this._stockTrendAccumulator -= ticks * STOCK_TREND_TICK_SECONDS;
+
+        const behaviorProfile = ECONOMY_STOCK_BEHAVIOR[this.systemType] || ECONOMY_STOCK_BEHAVIOR.default;
+        let stockChanged = false;
+
+        for (let i = 0; i < ticks; i++) {
+            stockChanged = this._applyBaselineRecoveryTick() || stockChanged;
+            if (behaviorProfile) {
+                stockChanged = this._applyBehaviorAdjustments(behaviorProfile) || stockChanged;
+            }
+        }
+
+        if (stockChanged) {
+            this.updatePrices();
+        }
+    }
+
+    _applyBaselineRecoveryTick() {
+        if (!Array.isArray(this.commodities) || this.commodities.length === 0) {
+            return false;
+        }
+
+        let changed = false;
+        for (const comm of this.commodities) {
+            if (!comm) { continue; }
+            const baseStock = Math.max(1, comm.baseStock || 1);
+            const currentStock = Math.max(0, Number.isFinite(comm.stock) ? comm.stock : 0);
+            const diff = baseStock - currentStock;
+            if (diff === 0) { continue; }
+            if (Math.abs(diff) <= baseStock * BASELINE_DRIFT_THRESHOLD) { continue; }
+
+            const maxStep = Math.max(1, Math.round(baseStock * BASELINE_RECOVERY_RATE));
+            const delta = Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+            if (delta === 0) { continue; }
+
+            const applied = this._applyStockChange(comm, delta);
+            if (applied !== 0) {
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    _applyBehaviorAdjustments(behaviorProfile) {
+        if (!behaviorProfile) {
+            return false;
+        }
+
+        let changed = false;
+        const applyTrend = (entries, direction) => {
+            if (!entries) { return; }
+            for (const [commodityName, rate] of Object.entries(entries)) {
+                if (!Number.isFinite(rate) || rate <= 0) { continue; }
+                const comm = this._getCommodity(commodityName);
+                if (!comm) { continue; }
+                const baseStock = Math.max(1, comm.baseStock || 1);
+                const amount = this._computeTrendAmount(baseStock, rate);
+                if (amount <= 0) { continue; }
+                const applied = this._applyStockChange(comm, direction * amount);
+                if (applied !== 0) {
+                    changed = true;
+                }
+            }
+        };
+
+        applyTrend(behaviorProfile.replenish, 1);
+        applyTrend(behaviorProfile.consume, -1);
+
+        return changed;
+    }
+
+    _computeTrendAmount(baseStock, rate) {
+        if (!Number.isFinite(rate) || rate <= 0) {
+            return 0;
+        }
+        const varianceOffset = (Math.random() * 2 - 1) * STOCK_TREND_VARIANCE;
+        const factor = 1 + varianceOffset;
+        const rawAmount = baseStock * rate * factor;
+        return Math.max(1, Math.round(rawAmount));
+    }
+
     // Handles player attempt to sell commodities
     sell(commodityName, quantity, player) {
         if (MARKET_DEBUG) console.log(`--- Market.sell Attempt: ${commodityName}, Qty: ${quantity} ---`);
@@ -524,6 +679,7 @@ class Market {
 
     setEconomyType(newType, { resetStock = false } = {}) {
         this.systemType = newType;
+        this._stockTrendAccumulator = 0;
         this._applyEconomyStockProfile(resetStock);
         this.updatePrices();
     }
