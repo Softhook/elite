@@ -3,13 +3,19 @@
 // Contains cargo spawn, jettison, drop, and detection methods
 
 // NPC trade heuristics help haulers react to station prices instead of dumping stock blindly.
+// NOTE: NPCs sell TO station (use station buyPrice), buy FROM station (use station sellPrice/buyPrice)
 const NPC_TRADE_RULES = {
-    SELL_FULL_RATIO: 1.05,          // >=5% above base sell price -> unload entire stack
-    SELL_PARTIAL_RATIO: 0.98,       // 98%-105% -> unload a fraction
-    SELL_PARTIAL_FRACTION: 0.5,     // Sell half the stack when within partial range
-    BUY_MAX_RATIO: 1.0,             // Do not buy if price is above base
-    BUY_IDEAL_RATIO: 0.92,          // Strong discount target -> bias towards bigger purchases
-    BUY_PARTIAL_FRACTION: 0.6       // When price near base, only pick up smaller lots
+    // Selling thresholds (NPC → Station, compare station's buyPrice to base)
+    SELL_FULL_RATIO: 0.95,          // >=95% of base -> good deal, unload full stack
+    SELL_PARTIAL_RATIO: 0.85,       // 85%-95% of base -> acceptable, unload fraction
+    SELL_PARTIAL_FRACTION: 0.5,     // Sell half when in partial range
+    SELL_MIN_RATIO: 0.70,           // Below 70% of base -> hold cargo, price too low
+    
+    // Buying thresholds (Station → NPC, compare station's buyPrice to base)
+    BUY_MAX_RATIO: 1.05,            // Don't buy above 105% of base price
+    BUY_IDEAL_RATIO: 0.90,          // At/below 90% of base -> strong buy signal
+    BUY_PARTIAL_FRACTION: 0.6,      // When price near base, buy smaller lots
+    BUY_BULK_MULTIPLIER: 1.4        // When deeply discounted, increase purchase size
 };
 
 /**
@@ -307,17 +313,28 @@ class EnemyCargo {
             return 0;
         }
 
-        const baseSell = Math.max(1, comm.baseSell || comm.baseBuy || comm.sellPrice || 1);
-        const sellPrice = Math.max(1, comm.sellPrice || baseSell);
-        const ratio = sellPrice / baseSell;
+        // NPCs sell TO the station, so compare station's buyPrice (what they pay us) to baseSell
+        const baseSell = Math.max(1, comm.baseSell || 1);
+        if (!Number.isFinite(baseSell) || baseSell <= 0) {
+            return 0; // Invalid base price, skip sale
+        }
+
+        // Station's sellPrice is what WE pay them; buyPrice is what they pay us (not in comm usually)
+        // For NPCs selling, use sellPrice as proxy for what station offers
+        const stationOffer = Math.max(1, comm.sellPrice || baseSell * 0.8);
+        const ratio = stationOffer / baseSell;
 
         if (ratio >= NPC_TRADE_RULES.SELL_FULL_RATIO) {
-            return availableQuantity;
+            return availableQuantity; // Good price, sell everything
         }
         if (ratio >= NPC_TRADE_RULES.SELL_PARTIAL_RATIO) {
             return Math.max(1, Math.floor(availableQuantity * NPC_TRADE_RULES.SELL_PARTIAL_FRACTION));
         }
-        return 0;
+        if (ratio >= NPC_TRADE_RULES.SELL_MIN_RATIO) {
+            // Marginal price, sell small amount
+            return Math.max(1, Math.floor(availableQuantity * 0.25));
+        }
+        return 0; // Price too low, hold cargo
     }
 
     _loadCargoFromOptions(options, targetLoad, station = null) {
@@ -341,21 +358,32 @@ class EnemyCargo {
             if (market) {
                 const comm = this._getMarketCommodity(market, type);
                 if (comm) {
-                    const baseBuy = Math.max(1, comm.baseBuy || comm.buyPrice || 1);
-                    const ratio = Math.max(0, (comm.buyPrice || 0) / baseBuy);
-
-                    if (ratio > NPC_TRADE_RULES.BUY_MAX_RATIO) {
+                    const baseBuy = Math.max(1, comm.baseBuy || 1);
+                    if (!Number.isFinite(baseBuy) || baseBuy <= 0) {
                         attempted.add(type);
                         if (attempted.size >= options.length) {
                             break;
                         }
-                        continue;
+                        continue; // Invalid base price, skip this commodity
+                    }
+
+                    const currentPrice = Math.max(1, comm.buyPrice || baseBuy);
+                    const ratio = currentPrice / baseBuy;
+
+                    if (ratio >= NPC_TRADE_RULES.BUY_MAX_RATIO) {
+                        attempted.add(type);
+                        if (attempted.size >= options.length) {
+                            break;
+                        }
+                        continue; // Too expensive, skip
                     }
 
                     if (ratio > NPC_TRADE_RULES.BUY_IDEAL_RATIO) {
+                        // Near base price, buy smaller amounts
                         amountToLoad = Math.max(1, Math.floor(amountToLoad * NPC_TRADE_RULES.BUY_PARTIAL_FRACTION));
-                    } else if (ratio < NPC_TRADE_RULES.BUY_IDEAL_RATIO * 0.7) {
-                        amountToLoad = Math.max(1, Math.min(remaining, Math.floor(amountToLoad * 1.5)));
+                    } else if (ratio <= NPC_TRADE_RULES.BUY_IDEAL_RATIO) {
+                        // Good discount, increase purchase slightly
+                        amountToLoad = Math.max(1, Math.min(remaining, Math.floor(amountToLoad * NPC_TRADE_RULES.BUY_BULK_MULTIPLIER)));
                     }
                 }
             }
