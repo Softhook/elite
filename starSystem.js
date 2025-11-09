@@ -2780,7 +2780,17 @@ checkProjectileCollisions() {
         const spawnCandidates = [];
         for (const pilot of pilotsInSystem) {
             if (existingPilotIds.has(pilot.id)) continue;
-            // Allow docked pilots to spawn as stationary ships near station to show loading/purchase phase.
+            
+            // Skip pilots that are docked at origin station with pending trade
+            // They should only spawn after undocking with cargo visible
+            if (pilot.dockedStationId && pilot.pendingTrade) {
+                const isAtOrigin = pilot.pendingTrade.destStationId !== pilot.dockedStationId;
+                if (isAtOrigin) {
+                    // Don't spawn - wait until pilot undocks
+                    continue;
+                }
+            }
+            
             spawnCandidates.push(pilot);
         }
 
@@ -2942,18 +2952,12 @@ checkProjectileCollisions() {
             }
 
             if (typeof npcShip.initializeCargoHoldFromPilot === 'function') {
-                // If pilot is docked at their origin station (where they purchased), spawn with EMPTY cargo
-                // Cargo will be synced when they undock
-                // If pilot is at destination station, keep cargo so they can sell it
-                const isAtOriginWithCargo = pilot.dockedStationId && 
-                    pilot.pendingTrade && 
-                    pilot.pendingTrade.destStationId !== pilot.dockedStationId;
-                const cargoToLoad = isAtOriginWithCargo ? {} : pilot.cargo;
-                npcShip.initializeCargoHoldFromPilot(cargoToLoad, pilot.cargoCap);
+                // Initialize cargo from pilot registry - always use actual cargo state
+                npcShip.initializeCargoHoldFromPilot(pilot.cargo, pilot.cargoCap);
                 try {
                     const load = npcShip.getCargoLoad ? npcShip.getCargoLoad() : (npcShip.cargoHold ? Object.values(npcShip.cargoHold).reduce((a,b)=>a+Math.max(0,Math.floor(b)),0) : 0);
                     const pilotLoad = pilot.cargo ? Object.values(pilot.cargo).reduce((a,b)=>a+Math.max(0,Math.floor(b)),0) : 0;
-                    console.log(`[Spawn] Enemy from pilot id=${pilot.id} ${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cargoLoad=${load}/${npcShip.cargoCapacity} pilotCargo=${pilotLoad} docked=${!!pilot.dockedStationId} atOrigin=${isAtOriginWithCargo}`);
+                    console.log(`[Spawn] Enemy from pilot id=${pilot.id} ${pilot.name} role=${pilot.role} ship=${pilot.shipTypeId} cargoLoad=${load}/${npcShip.cargoCapacity} pilotCargo=${pilotLoad} docked=${!!pilot.dockedStationId}`);
                     // Adjust initial movement intent: if pilot has a pending trade whose destination is another system,
                     // bias velocity toward jump zone so they appear to be departing rather than (re)approaching station.
                     if (pilot.pendingTrade && pilot.pendingTrade.destSystemIndex !== this.systemIndex && this.jumpZoneCenter && this.station?.pos) {
@@ -2968,12 +2972,8 @@ checkProjectileCollisions() {
                     }
                 } catch(_) {}
             } else if (pilot.cargo) {
-                // If pilot is docked at their origin station (where they purchased), spawn with EMPTY cargo
-                const isAtOriginWithCargo = pilot.dockedStationId && 
-                    pilot.pendingTrade && 
-                    pilot.pendingTrade.destStationId !== pilot.dockedStationId;
-                const cargoToLoad = isAtOriginWithCargo ? {} : pilot.cargo;
-                npcShip.cargoHold = { ...cargoToLoad };
+                // Fallback: initialize cargo directly if method not available
+                npcShip.cargoHold = { ...pilot.cargo };
                 if (pilot.cargoCap != null) {
                     npcShip.cargoCapacity = pilot.cargoCap;
                 }
