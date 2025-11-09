@@ -377,6 +377,7 @@ class UIManager {
         this.drawWeaponSelector(player);
         
         pop();
+        this.drawTargetOverlay(player);
     }
 
     /** Draws the weapon selector UI */
@@ -497,6 +498,214 @@ class UIManager {
                 
         
         pop();
+    }
+
+    /** Draws an information overlay for the currently targeted ship */
+    drawTargetOverlay(player) {
+        const target = player?.target;
+        if (!target || target === player) { return; }
+        if (typeof target.isDestroyed === 'function' && target.isDestroyed()) { return; }
+
+        const hasShipIdentity = typeof target.shipTypeName === 'string' || typeof target.shipDefinition === 'object';
+        if (!hasShipIdentity) { return; }
+
+        const panelWidth = Math.min(320, Math.max(240, width * 0.25));
+        const padding = 12;
+        const lineHeight = 20;
+        const sectionSpacing = 8;
+        const autopilotOffset = player?.autopilotEnabled ? 35 : 0;
+        const panelX = width - panelWidth - 20;
+        const panelY = 80 + autopilotOffset;
+        const minimapTop = height - this.minimapSize - this.minimapMargin;
+        const maxPanelHeight = Math.max(150, minimapTop - panelY - 10);
+
+        const pilotName = this._getTargetPilotName(target);
+        const shipName = this._getTargetShipName(target);
+        const roleLabel = this._formatRoleLabel(target.role);
+        const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : 'Clean') : null;
+        const hullLine = this._formatStatLine('Hull', target.hull, target.maxHull);
+        const shieldLine = this._formatStatLine('Shield', target.shield, target.maxShield);
+        const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
+        const cargoCapacity = Number.isFinite(target?.cargoCapacity) ? target.cargoCapacity : shipDef?.cargoCapacity;
+        const cargoAmount = (typeof target.getCargoAmount === 'function')
+            ? target.getCargoAmount()
+            : this._computeCargoAmount(target.cargoHold);
+        const rangeLine = this._formatRangeLine(player, target);
+        const speedLine = this._formatSpeedLine(target);
+
+        const infoLines = [];
+        infoLines.push(`Ship: ${shipName}`);
+        if (roleLabel) { infoLines.push(`Role: ${roleLabel}`); }
+        if (wantedLabel) { infoLines.push(`Status: ${wantedLabel}`); }
+        if (hullLine) { infoLines.push(hullLine); }
+        if (shieldLine) { infoLines.push(shieldLine); }
+        if (Number.isFinite(cargoCapacity) && Number.isFinite(cargoAmount)) {
+            infoLines.push(`Cargo Hold: ${cargoAmount}/${cargoCapacity}`);
+        } else if (Number.isFinite(cargoAmount)) {
+            infoLines.push(`Cargo Hold: ${cargoAmount}`);
+        }
+        if (rangeLine) { infoLines.push(rangeLine); }
+        if (speedLine) { infoLines.push(speedLine); }
+
+        const cargoEntries = this._getCargoEntries(target);
+        let cargoLines = cargoEntries.length > 0
+            ? cargoEntries.map(entry => `${entry.name}: ${entry.quantity}`)
+            : ['No cargo detected'];
+
+        const baseHeightWithoutCargo = padding * 2 + lineHeight + lineHeight + sectionSpacing + infoLines.length * lineHeight;
+        let showCargoSection = cargoLines.length > 0;
+        let renderedCargoLines = cargoLines.slice();
+        const cargoHeadingHeight = lineHeight;
+
+        if (showCargoSection) {
+            let spaceAfterBase = maxPanelHeight - baseHeightWithoutCargo;
+            const minimumBlockHeight = sectionSpacing + cargoHeadingHeight + lineHeight;
+            if (spaceAfterBase < minimumBlockHeight) {
+                showCargoSection = false;
+            } else {
+                spaceAfterBase -= sectionSpacing + cargoHeadingHeight;
+                const maxCargoLines = Math.floor(spaceAfterBase / lineHeight);
+                if (maxCargoLines < renderedCargoLines.length) {
+                    if (maxCargoLines < 1) {
+                        showCargoSection = false;
+                        renderedCargoLines = [];
+                    } else {
+                        renderedCargoLines = renderedCargoLines.slice(0, maxCargoLines);
+                        const remaining = cargoLines.length - maxCargoLines;
+                        if (remaining > 0) {
+                            const lastIndex = renderedCargoLines.length - 1;
+                            renderedCargoLines[lastIndex] = `${renderedCargoLines[lastIndex]} (+${remaining} more)`;
+                        }
+                    }
+                }
+            }
+        }
+
+        let panelHeight = baseHeightWithoutCargo;
+        if (showCargoSection && renderedCargoLines.length > 0) {
+            panelHeight += sectionSpacing + cargoHeadingHeight + renderedCargoLines.length * lineHeight;
+        }
+        panelHeight = Math.min(panelHeight, maxPanelHeight);
+
+        push();
+        rectMode(CORNER);
+        textAlign(LEFT, TOP);
+        textFont(font);
+
+        fill(10, 30, 60, 215);
+        stroke(80, 160, 255, 180);
+        strokeWeight(1.5);
+        rect(panelX, panelY, panelWidth, panelHeight, 10);
+        noStroke()
+        const ctx = drawingContext;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(panelX, panelY, panelWidth, panelHeight);
+        ctx.clip();
+
+        let cursorX = panelX + padding;
+        let cursorY = panelY + padding;
+
+        fill(190, 220, 255);
+        textSize(16);
+        text('TARGET', cursorX, cursorY);
+        cursorY += lineHeight;
+
+        fill(255);
+        textSize(18);
+        text(pilotName, cursorX, cursorY);
+        cursorY += lineHeight;
+
+        cursorY += sectionSpacing;
+
+        fill(210);
+        textSize(16);
+        for (let i = 0; i < infoLines.length; i++) {
+            text(infoLines[i], cursorX, cursorY);
+            cursorY += lineHeight;
+        }
+
+        if (showCargoSection && renderedCargoLines.length > 0) {
+            cursorY += sectionSpacing;
+            fill(190, 220, 255);
+            text('Cargo Manifest', cursorX, cursorY);
+            cursorY += lineHeight;
+            fill(210);
+            for (let i = 0; i < renderedCargoLines.length; i++) {
+                text(renderedCargoLines[i], cursorX, cursorY);
+                cursorY += lineHeight;
+            }
+        }
+
+        ctx.restore();
+        pop();
+    }
+
+    _getTargetPilotName(target) {
+        if (!target) { return 'Unknown Pilot'; }
+        if (typeof target.displayName === 'string' && target.displayName.trim().length > 0) {
+            return target.displayName;
+        }
+        if (target.role === AI_ROLE?.ALIEN) { return 'Unknown Lifeform'; }
+        if (typeof target.captainName === 'string' && target.captainName.trim().length > 0) {
+            return target.captainName;
+        }
+        return 'Unidentified Pilot';
+    }
+
+    _getTargetShipName(target) {
+        if (!target) { return 'Unknown Ship'; }
+        const def = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
+        if (def?.name) { return def.name; }
+        if (typeof target.shipTypeName === 'string') { return target.shipTypeName; }
+        return 'Unknown Ship';
+    }
+
+    _formatRoleLabel(role) {
+        if (!role) { return ''; }
+        if (role === AI_ROLE?.BOUNTY_HUNTER) { return 'Bounty Hunter'; }
+        if (typeof role === 'string') { return role.replace(/_/g, ' '); }
+        return '';
+    }
+
+    _formatStatLine(label, current, max) {
+        if (!Number.isFinite(current)) { return null; }
+        const safeCurrent = Math.max(0, current);
+        if (Number.isFinite(max) && max > 0) {
+            const percent = constrain(Math.round((safeCurrent / max) * 100), 0, 999);
+            return `${label}: ${Math.round(safeCurrent)}/${Math.round(max)} (${percent}%)`;
+        }
+        return `${label}: ${Math.round(safeCurrent)}`;
+    }
+
+    _formatRangeLine(player, target) {
+        if (!player?.pos || !target?.pos) { return null; }
+        const distance = dist(player.pos.x, player.pos.y, target.pos.x, target.pos.y);
+        if (!Number.isFinite(distance)) { return null; }
+        return `Range: ${Math.round(distance)} m`;
+    }
+
+    _formatSpeedLine(target) {
+        if (!target?.vel || typeof target.vel.mag !== 'function') { return null; }
+        const speed = target.vel.mag();
+        if (!Number.isFinite(speed)) { return null; }
+        return `Speed: ${speed.toFixed(1)} m/s`;
+    }
+
+    _getCargoEntries(target) {
+        if (!target) { return []; }
+        const hold = Array.isArray(target.cargoHold) ? target.cargoHold : null;
+        if (!hold || hold.length === 0) { return []; }
+        const entries = hold
+            .filter(entry => entry && entry.quantity > 0)
+            .map(entry => ({ name: entry.name || 'Unknown', quantity: entry.quantity }));
+        entries.sort((a, b) => b.quantity - a.quantity);
+        return entries;
+    }
+
+    _computeCargoAmount(cargoHold) {
+        if (!Array.isArray(cargoHold)) { return NaN; }
+        return cargoHold.reduce((sum, entry) => sum + (entry?.quantity || 0), 0);
     }
 
     /** Draws the Main Station Menu (when state is DOCKED) */
