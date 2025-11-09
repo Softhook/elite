@@ -911,34 +911,40 @@ class UIManager {
         // Table setup - adjusted Y position
         let sY = pY+headerHeight+40, tW = pW-60, sX = pX+30;
         
-        // Define column widths for better control
-        const colCommodity = 180;
-        const colBuy = 80;
-        const colSell = 80;
-        const colStock = 100;
-        const colCargo = 100;
-        const colButtons = tW - (colCommodity + colBuy + colSell + colStock + colCargo);
-        
-        textAlign(CENTER,CENTER); textSize(20); fill(200);
-     
-        // Column headers
-        text("Commodity", sX+colCommodity/2, sY);
-        text("Buy", sX+colCommodity+colBuy/2, sY);
-        text("Sell", sX+colCommodity+colBuy+colSell/2, sY);
-        text("Stock", sX+colCommodity+colBuy+colSell+colStock/2, sY);
-        text("Cargo Hold", sX+colCommodity+colBuy+colSell+colStock+colCargo/2, sY);
-
-        // Row setup
-        sY += 30;
+        // Row setup - define button dimensions first
         const rowH = 30;
         const btnW = 100; // Fixed button width same as before
         const btnH = rowH*0.8;
+        
+        // Define column widths - evenly distributed across the screen, accounting for buttons
+        const numDataColumns = 5; // Commodity, Buy, Sell, Stock, Cargo
+        const btnSpacing = 5;
+        const totalBtnWidth = (btnW * 4) + (btnSpacing * 3); // 4 buttons with 3 gaps
+        const remainingWidth = tW - totalBtnWidth;
+        const colWidth = Math.floor(remainingWidth / numDataColumns);
+        const colCommodity = colWidth;
+        const colBuy = colWidth;
+        const colSell = colWidth;
+        const colStock = colWidth;
+        const colCargo = colWidth;
+        const colButtons = totalBtnWidth;
 
         // --- Price Indicator Constants ---
         const indicatorW = 15; // Width of the indicator bar area
         const indicatorMaxH = rowH * 0.6; // Max height of the bar
         const indicatorYOffset = (rowH - indicatorMaxH) / 2; // Center vertically
         const maxDeviation = 0.5; // Max price deviation (e.g., 50%) for full bar height
+
+        // Draw column headers
+        let headerY = sY - 20;
+        fill(255);
+        textAlign(LEFT, CENTER);
+        text("Commodity", sX+10, headerY);
+        textAlign(CENTER, CENTER);
+        text("Buy", sX+colCommodity+colBuy/2, headerY);
+        text("Sell", sX+colCommodity+colBuy+colSell/2, headerY);
+        text("Stock", sX+colCommodity+colBuy+colSell+colStock/2, headerY);
+        text("Cargo Hold", sX+colCommodity+colBuy+colSell+colStock+colCargo/2, headerY);
 
         // Draw commodity rows
         const commoditiesLen = commodities ? commodities.length : 0;
