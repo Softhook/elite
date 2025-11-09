@@ -1925,9 +1925,16 @@ class PilotRegistry {
         }
 
         // Don't plan departures or undock until pilot has been visualized at least once
+        // UNLESS pilot has pendingTrade at origin - then allow undock to trigger spawn
         // This prevents pilots from undocking in the background before the player sees them
         if (!pilot.hasBeenVisualized) {
-            return;
+            // Exception: allow undock for trade pilots at origin station
+            const isAtOriginWithTrade = pilot.pendingTrade && 
+                pilot.dockedStationId && 
+                pilot.pendingTrade.destStationId !== pilot.dockedStationId;
+            if (!isAtOriginWithTrade) {
+                return;
+            }
         }
 
         if ((!pilot.itinerary || pilot.itinerary.length === 0) && random() < 0.02) {
