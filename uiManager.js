@@ -909,7 +909,7 @@ class UIManager {
         const headerHeight = this.drawStationHeader("Commodity Market", station, player, system);
         
         // Table setup - adjusted Y position
-        let sY = pY+headerHeight+40, tW = pW-60, cols = 8, cW = tW/cols, sX = pX+30;
+        let sY = pY+headerHeight+40, tW = pW-60, cols = 9, cW = tW/cols, sX = pX+30;
         
         textAlign(CENTER,CENTER); textSize(20); fill(200);
      
@@ -917,7 +917,8 @@ class UIManager {
         text("Commodity", sX+cW*0.3, sY);
         text("Buy", sX+cW*1.8, sY);
         text("Sell", sX+cW*2.8, sY);
-        text("Cargo Hold", sX+cW*3.8, sY);
+        text("Stock", sX+cW*3.8, sY);
+        text("Cargo Hold", sX+cW*4.8, sY);
 
         // Row setup
         sY += 30;
@@ -951,6 +952,10 @@ class UIManager {
 
             // Check if this is an illegal good in a non-Anarchy system
             const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
+            const stockQty = Math.max(0, Math.floor(comm.stock ?? 0));
+            const baseStock = Math.max(1, Math.floor(comm.baseStock ?? 1));
+            const stockRatio = baseStock > 0 ? stockQty / baseStock : 1;
+            const outOfStock = stockQty <= 0;
             
             // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
             if (isIllegalInSystem) {
@@ -972,9 +977,25 @@ class UIManager {
             }
             
             textAlign(RIGHT, CENTER);
+            fill(255);
             text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
+            fill(255);
             text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
-            text(comm.playerStock??'?', sX+cW*4-10, tY);
+
+            if (outOfStock) {
+                fill(255, 120, 120);
+            } else if (stockRatio < 0.4) {
+                fill(255, 180, 120);
+            } else if (stockRatio > 1.6) {
+                fill(120, 200, 255);
+            } else {
+                fill(220);
+            }
+            const stockLabel = `${stockQty}/${baseStock}`;
+            text(stockLabel, sX+cW*4-10, tY);
+
+            fill(255);
+            text(comm.playerStock??'?', sX+cW*5-10, tY);
 
             // Commodity name and prices (drawn above with legal/illegal styling)
 
@@ -1024,18 +1045,19 @@ class UIManager {
 
 
             // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
-            let btnStartX = sX + cW * 4.2; // Start position for buttons
+            let btnStartX = sX + cW * 5.2; // Start position for buttons
 
  // Buy 1 button
 let buy1X = btnStartX;
 let buy1Y = yP+(rowH-btnH)/2;
 
-if (isIllegalInSystem) {
-    // Gray out button - not clickable for illegal goods in non-Anarchy
+if (isIllegalInSystem || outOfStock) {
+    // Gray out button - not clickable for illegal goods or empty stock
     fill(100); stroke(120); strokeWeight(1);
     rect(buy1X, buy1Y, btnW, btnH, 3);
-    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
+    if (outOfStock) { fill(255, 150, 150); } else { fill(180); }
+    noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text(outOfStock ? "Out" : "Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
     // No marketButtonAreas.push here - button can't be clicked
 } else {
     // Normal button - clickable
@@ -1050,12 +1072,13 @@ if (isIllegalInSystem) {
 let buyAllX = buy1X + btnW + 5; // Position relative to previous button
 let buyAllY = buy1Y;
 
-if (isIllegalInSystem) {
-    // Gray out button - not clickable for illegal goods in non-Anarchy
+if (isIllegalInSystem || outOfStock) {
+    // Gray out button - not clickable for illegal goods or empty stock
     fill(100); stroke(120); strokeWeight(1);
     rect(buyAllX, buyAllY, btnW, btnH, 3);
-    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
+    if (outOfStock) { fill(255, 150, 150); } else { fill(180); }
+    noStroke(); textAlign(CENTER, CENTER); textSize(20);
+    text(outOfStock ? "Out" : "Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
     // No marketButtonAreas.push here - button can't be clicked
 } else {
     // Normal button - clickable
@@ -2786,7 +2809,8 @@ if (isIllegalInSystem || isMissionCargo) {
                 
                 const availableSpace = player.cargoCapacity - player.getCargoAmount();
                 const maxAffordable = Math.floor(player.credits / item.buyPrice);
-                const quantity = Math.min(availableSpace, maxAffordable);
+                const availableStock = Number.isFinite(item.stock) ? Math.max(0, Math.floor(item.stock)) : Number.POSITIVE_INFINITY;
+                const quantity = Math.min(availableSpace, maxAffordable, availableStock);
                 
                 if (quantity > 0) {
                     market.buy(btn.commodity, quantity, player);

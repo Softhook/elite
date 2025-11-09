@@ -171,6 +171,19 @@ class EnemyCargo {
 
         const soldAmount = this.getCargoAmount();
         if (soldAmount > 0) {
+            const soldSnapshot = Array.isArray(this.cargoHold)
+                ? this.cargoHold.filter(item => item && item.quantity > 0).map(item => ({ name: item.name, quantity: item.quantity }))
+                : [];
+
+            if (station?.market && typeof station.market.addStockFromNPC === 'function') {
+                soldSnapshot.forEach(item => {
+                    station.market.addStockFromNPC(item.name, item.quantity, { suppressPriceUpdate: true });
+                });
+                if (typeof station.market.updatePrices === 'function') {
+                    station.market.updatePrices();
+                }
+            }
+
             CARGO_LOG(`Hauler ${this.shipTypeName} offloaded ${soldAmount} units at ${station.name || 'station'}`);
         }
         this.cargoHold = [];
@@ -181,7 +194,7 @@ class EnemyCargo {
         if (targetLoad > 0) {
             const options = this._determineStationCargoOptions(station, shipDef);
             if (options.length > 0) {
-                this._loadCargoFromOptions(options, targetLoad);
+                this._loadCargoFromOptions(options, targetLoad, station);
                 CARGO_LOG(`Hauler ${this.shipTypeName} loaded ${this.getCargoAmount()} units at ${station.name || 'station'}`);
             }
         }
@@ -198,7 +211,7 @@ class EnemyCargo {
 
         if (station?.market?.commodities) {
             station.market.commodities
-                .filter(comm => comm && comm.buyPrice > 0)
+                .filter(comm => comm && comm.buyPrice > 0 && Math.max(0, Math.floor(comm.stock ?? 0)) > 0)
                 .forEach(comm => optionSet.add(comm.name));
         }
 
@@ -216,21 +229,53 @@ class EnemyCargo {
         return Array.from(optionSet);
     }
 
-    _loadCargoFromOptions(options, targetLoad) {
+    _loadCargoFromOptions(options, targetLoad, station = null) {
         if (!Array.isArray(options) || options.length === 0) {
             return;
         }
 
+        const market = station?.market ?? null;
+        const attempted = new Set();
         let guard = 0;
-        while (this.getCargoAmount() < targetLoad && guard < 100) {
+
+        while (this.getCargoAmount() < targetLoad && guard < 120) {
             guard++;
             const type = random(options);
+            if (!type) { continue; }
+
             const remaining = targetLoad - this.getCargoAmount();
             const stackSize = Math.max(1, Math.min(remaining, Math.floor(random(2, 6))));
-            const result = this.addCargo(type, stackSize, true);
+            let amountToLoad = stackSize;
+
+            if (market && typeof market.consumeStockForNPC === 'function') {
+                amountToLoad = market.consumeStockForNPC(type, stackSize, { allowPartial: true, suppressPriceUpdate: true });
+                if (amountToLoad <= 0) {
+                    attempted.add(type);
+                    if (attempted.size >= options.length) {
+                        break;
+                    }
+                    continue;
+                }
+            }
+
+            const result = this.addCargo(type, amountToLoad, true);
             if (!result.success || result.added === 0) {
+                if (market && amountToLoad > 0 && typeof market.addStockFromNPC === 'function') {
+                    market.addStockFromNPC(type, amountToLoad, { suppressPriceUpdate: true });
+                }
                 break;
             }
+
+            if (market && result.added < amountToLoad && typeof market.addStockFromNPC === 'function') {
+                const difference = amountToLoad - result.added;
+                if (difference > 0) {
+                    market.addStockFromNPC(type, difference, { suppressPriceUpdate: true });
+                }
+            }
+        }
+
+        if (market && typeof market.updatePrices === 'function') {
+            market.updatePrices();
         }
     }
 

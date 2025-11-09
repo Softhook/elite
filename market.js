@@ -3,12 +3,46 @@
 // Debug flag to control logging verbosity
 const MARKET_DEBUG = false; // Set to true during development
 
+// Utility helper
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
 // Constants for price calculations
 const PRODUCTION_DISCOUNT_BUY = 0.7;   // Systems produce goods at discount
 const PRODUCTION_DISCOUNT_SELL = 0.8;  // Selling price for produced goods
 const IMPORT_PREMIUM_BUY = 1.2;        // Systems import needed goods at premium
 const IMPORT_PREMIUM_SELL = 1.1;       // Selling price for imported goods
 const SELL_RATIO_SAFETY = 0.8;         // Ensure sell price is at most this % of buy price
+
+// Stock profile constants
+const DEFAULT_BASE_STOCK = 120;
+const BASE_STOCK_LEVELS = {
+    'Food': 480,
+    'Textiles': 360,
+    'Machinery': 120,
+    'Metals': 260,
+    'Minerals': 240,
+    'Chemicals': 140,
+    'Computers': 90,
+    'Medicine': 110,
+    'Adv Components': 60,
+    'Luxury Goods': 40,
+    'Narcotics': 30,
+    'Weapons': 55,
+    'Slaves': 18
+};
+
+const STOCK_ABUNDANT_MULT = 2.2;
+const STOCK_SCARCE_MULT = 0.45;
+const STOCK_CEILING_MULT = 3.5;
+const STOCK_FLOOR_MULT = 0.12;
+
+// Supply/Demand price elasticity
+const PRICE_BUY_ELASTICITY = 1.15;
+const PRICE_SELL_ELASTICITY = 0.85;
+const PRICE_BUY_MIN_MULT = 0.45;
+const PRICE_BUY_MAX_MULT = 2.75;
+const PRICE_SELL_MIN_MULT = 0.5;
+const PRICE_SELL_MAX_MULT = 2.2;
 
 class Market {
     constructor(systemType) {
@@ -33,28 +67,129 @@ class Market {
      * @private
      */
     _initializeCommodities() {
-        this.commodities = [
-            // Name, Base Buy, Base Sell, Current Buy, Current Sell, Player Stock, Legal Status
-            // Basic Goods
-            { name: 'Food',           baseBuy: 10,   baseSell: 8,    buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            // Industrial Goods
-            { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            // Raw Materials
-            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            // Tech Goods
-            { name: 'Computers',      baseBuy: 250,  baseSell: 220,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            // Luxury Goods
-            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: true },
-            // ILLEGAL GOODS - higher profit margins but only available in Anarchy systems
-            { name: 'Narcotics',      baseBuy: 800,  baseSell: 700,  buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
-            { name: 'Weapons',        baseBuy: 1200, baseSell: 1000, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
-            { name: 'Slaves',         baseBuy: 1500, baseSell: 1300, buyPrice: 0, sellPrice: 0, playerStock: 0, isLegal: false },
+        const definitions = [
+            // Name, Base Buy, Base Sell, Player Stock, Legal Status
+            { name: 'Food',           baseBuy: 10,   baseSell: 8,    isLegal: true },
+            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   isLegal: true },
+            { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   isLegal: true },
+            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   isLegal: true },
+            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   isLegal: true },
+            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   isLegal: true },
+            { name: 'Computers',      baseBuy: 250,  baseSell: 220,  isLegal: true },
+            { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  isLegal: true },
+            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  isLegal: true },
+            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  isLegal: true },
+            { name: 'Narcotics',      baseBuy: 800,  baseSell: 700,  isLegal: false },
+            { name: 'Weapons',        baseBuy: 1200, baseSell: 1000, isLegal: false },
+            { name: 'Slaves',         baseBuy: 1500, baseSell: 1300, isLegal: false },
         ];
+
+        this.commodities = definitions.map(def => {
+            const defaultBaseStock = BASE_STOCK_LEVELS[def.name] ?? DEFAULT_BASE_STOCK;
+            const baseStock = Math.max(1, Math.round(defaultBaseStock));
+            const stockCeiling = Math.max(baseStock, Math.round(baseStock * STOCK_CEILING_MULT));
+            const stockFloor = Math.max(0, Math.floor(baseStock * STOCK_FLOOR_MULT));
+
+            return {
+                ...def,
+                buyPrice: 0,
+                sellPrice: 0,
+                playerStock: 0,
+                defaultBaseStock,
+                baseStock,
+                stock: baseStock,
+                stockCeiling,
+                stockFloor,
+                stockRatio: 1
+            };
+        });
+
+        this._applyEconomyStockProfile(true);
+    }
+
+    _applyEconomyStockProfile(resetCurrentStock = false) {
+        if (!Array.isArray(this.commodities) || this.commodities.length === 0) {
+            return;
+        }
+
+        const abundant = new Set();
+        const scarce = new Set();
+
+        const promote = (list = [], targetSet = abundant) => {
+            if (!Array.isArray(list)) return;
+            list.forEach(name => { if (name) targetSet.add(name); });
+        };
+
+        switch (this.systemType) {
+            case 'Agricultural':
+                promote(['Food', 'Textiles']);
+                promote(['Machinery', 'Chemicals', 'Medicine', 'Computers', 'Adv Components'], scarce);
+                break;
+            case 'Industrial':
+                promote(['Machinery', 'Metals', 'Chemicals']);
+                promote(['Food', 'Luxury Goods'], scarce);
+                break;
+            case 'Mining':
+                promote(['Metals', 'Minerals']);
+                promote(['Food', 'Medicine', 'Computers'], scarce);
+                break;
+            case 'Military':
+                promote(['Weapons', 'Machinery', 'Metals']);
+                promote(['Luxury Goods', 'Textiles'], scarce);
+                break;
+            case 'Offworld':
+            case 'Tourism':
+                promote(['Luxury Goods', 'Food']);
+                promote(['Metals', 'Minerals', 'Chemicals'], scarce);
+                break;
+            case 'Refinery':
+                promote(['Metals', 'Chemicals']);
+                promote(['Minerals', 'Food'], scarce);
+                break;
+            case 'Post Human':
+                promote(['Computers', 'Adv Components', 'Medicine']);
+                promote(['Food', 'Minerals'], scarce);
+                break;
+            case 'Service':
+                promote(['Food', 'Medicine', 'Textiles']);
+                promote(['Metals', 'Minerals'], scarce);
+                break;
+            case 'Separatist':
+                promote(['Weapons', 'Chemicals']);
+                promote(['Luxury Goods', 'Computers'], scarce);
+                break;
+            case 'Imperial':
+                promote(['Luxury Goods', 'Adv Components']);
+                promote(['Food', 'Textiles'], scarce);
+                break;
+            case 'Alien':
+                // No goods handled in Alien markets
+                break;
+            default:
+                break;
+        }
+
+        this.commodities.forEach(comm => {
+            const baseLevel = comm.defaultBaseStock ?? DEFAULT_BASE_STOCK;
+            let multiplier = 1;
+            if (abundant.has(comm.name)) {
+                multiplier = STOCK_ABUNDANT_MULT;
+            } else if (scarce.has(comm.name)) {
+                multiplier = STOCK_SCARCE_MULT;
+            }
+
+            comm.baseStock = Math.max(1, Math.round(baseLevel * multiplier));
+            comm.stockCeiling = Math.max(comm.baseStock, Math.round(comm.baseStock * STOCK_CEILING_MULT));
+            comm.stockFloor = Math.max(0, Math.floor(comm.baseStock * STOCK_FLOOR_MULT));
+
+            if (resetCurrentStock || !Number.isFinite(comm.stock)) {
+                comm.stock = comm.baseStock;
+            } else {
+                comm.stock = Math.round(clamp(comm.stock, 0, comm.stockCeiling));
+            }
+
+            comm.stockRatio = comm.baseStock > 0 ? comm.stock / comm.baseStock : 1;
+        });
     }
 
     // Price adjustment based on economy type
@@ -147,14 +282,25 @@ class Market {
                     break;
             }
             
+            const baseStock = Math.max(1, comm.baseStock || 1);
+            const currentStock = Math.max(0, Number.isFinite(comm.stock) ? comm.stock : baseStock);
+            const stockRatio = currentStock / baseStock;
+            comm.stockRatio = stockRatio;
+
+            const buySupplyMult = clamp(1 + (1 - stockRatio) * PRICE_BUY_ELASTICITY, PRICE_BUY_MIN_MULT, PRICE_BUY_MAX_MULT);
+            const sellSupplyMult = clamp(1 + (1 - stockRatio) * PRICE_SELL_ELASTICITY, PRICE_SELL_MIN_MULT, PRICE_SELL_MAX_MULT);
+
+            comm.buyPrice *= buySupplyMult;
+            comm.sellPrice *= sellSupplyMult;
+
             // CRITICAL SAFETY CHECK: Ensure sell price is always lower than buy price
             if (comm.sellPrice >= comm.buyPrice) {
-                comm.sellPrice = Math.floor(comm.buyPrice * SELL_RATIO_SAFETY);
+                comm.sellPrice = comm.buyPrice * SELL_RATIO_SAFETY;
             }
             
             // Ensure prices are integers and never zero
-            comm.buyPrice = max(1, floor(comm.buyPrice));
-            comm.sellPrice = max(1, floor(comm.sellPrice));
+            comm.buyPrice = Math.max(1, Math.floor(comm.buyPrice));
+            comm.sellPrice = Math.max(1, Math.floor(comm.sellPrice));
         });
         
         if (MARKET_DEBUG) console.log(` <- Prices updated.`);
@@ -174,14 +320,16 @@ class Market {
         if (!player) { console.error("SELL FAILED: Player missing"); return false; }
         if (quantity <= 0) { return false; }
 
-        const comm = this.commodities.find(c => c.name === commodityName);
+        const comm = this._getCommodity(commodityName);
         if (!comm) { console.error(`SELL FAILED: ${commodityName} not found`); return false; }
         
         // Check if this is a legal transaction
         const currentSystem = player.currentSystem;
-        if (!comm.isLegal && currentSystem?.securityLevel !== 'Anarchy') {
+        if (!comm.isLegal && currentSystem && currentSystem.securityLevel !== 'Anarchy') {
             console.log(`SELL FAILED: Cannot sell illegal goods in non-Anarchy system.`);
-            uiManager.addMessage(`Can't sell illegal goods in ${currentSystem?.securityLevel} security.`, 'crimson');
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Can't sell illegal goods in ${currentSystem.securityLevel} security.`, 'crimson');
+            }
             return false;
         }
 
@@ -195,10 +343,14 @@ class Market {
         const income = Math.floor(comm.sellPrice * quantity);
         player.addCredits(income);
         player.removeCargo(commodityName, quantity);
+        this._applyStockChange(comm, quantity);
         this.updatePlayerCargo(player.cargo);
+        this.updatePrices();
 
         // Save  Game
-        saveGame();
+        if (typeof saveGame === 'function') {
+            saveGame();
+        }
         
         // Play sell confirm sound
         if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
@@ -211,12 +363,18 @@ class Market {
     // Returns a copy of commodities with current prices
     getPrices() {
         // More efficient than JSON.parse/stringify for shallow copies
+        if (!Array.isArray(this.commodities)) {
+            return [];
+        }
         return this.commodities.map(c => ({...c}));
     }
 
     // --- updatePlayerCargo, buy, getPrices remain the same ---
     // Updates the 'playerStock' field for market display based on player's cargo
     updatePlayerCargo(playerCargo) {
+        if (!Array.isArray(this.commodities)) {
+            return;
+        }
         if (!Array.isArray(playerCargo)) {
             console.warn("updatePlayerCargo received invalid playerCargo:", playerCargo);
             // Reset stocks if cargo is invalid
@@ -231,71 +389,211 @@ class Market {
 
     // Handles player attempt to buy commodities
     buy(commodityName, quantity, player) {
-        console.log(`--- Market.buy Attempt ---`);
-        console.log(`Item: ${commodityName}, Qty: ${quantity}`);
+        if (MARKET_DEBUG) {
+            console.log(`--- Market.buy Attempt: ${commodityName}, Qty: ${quantity} ---`);
+        }
 
-        // Essential checks
         if (!player) { console.error("BUY FAILED: Player object missing."); return false; }
-        if (quantity <= 0) { console.log("BUY FAILED: Quantity <= 0."); return false; }
 
-        const comm = this.commodities.find(c => c.name === commodityName);
-        if (!comm) { console.error(`BUY FAILED: Commodity ${commodityName} not found in market.`); return false; }
-        
-        // Check if this is a legal transaction
-        const currentSystem = player.currentSystem;
-        if (!comm.isLegal && currentSystem?.securityLevel !== 'Anarchy') {
-            console.log(`BUY FAILED: Cannot buy illegal goods in non-Anarchy system.`);
-            uiManager.addMessage(`Can't buy illegal goods in ${currentSystem?.securityLevel} security.`, 'crimson');
+        let requestedQuantity = Math.floor(quantity ?? 0);
+        if (requestedQuantity <= 0) {
+            if (MARKET_DEBUG) console.log("BUY FAILED: Quantity <= 0.");
             return false;
         }
 
-        const cost = Math.floor(comm.buyPrice * quantity); // Floor the total cost
+        const comm = this._getCommodity(commodityName);
+        if (!comm) {
+            console.error(`BUY FAILED: Commodity ${commodityName} not found in market.`);
+            return false;
+        }
+        
+        const currentSystem = player.currentSystem;
+        if (!comm.isLegal && currentSystem && currentSystem.securityLevel !== 'Anarchy') {
+            if (MARKET_DEBUG) console.log(`BUY FAILED: Cannot buy illegal goods in non-Anarchy system.`);
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Can't buy illegal goods in ${currentSystem.securityLevel} security.`, 'crimson');
+            }
+            return false;
+        }
+
+        const availableStock = Math.max(0, Math.floor(Number(comm.stock) || 0));
+        if (availableStock <= 0) {
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`${commodityName} is out of stock.`, 'orange');
+            }
+            if (MARKET_DEBUG) console.log(`BUY FAILED: ${commodityName} out of stock.`);
+            return false;
+        }
+
+        if (requestedQuantity > availableStock) {
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Only ${availableStock} units of ${commodityName} available.`, 'orange');
+            }
+            requestedQuantity = availableStock;
+        }
+
         const currentCargoAmount = player.getCargoAmount();
         const remainingCapacity = player.cargoCapacity - currentCargoAmount;
+        if (requestedQuantity > remainingCapacity) {
+            if (MARKET_DEBUG) console.log("BUY FAILED: Not enough cargo space!");
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Not enough cargo space. Need ${requestedQuantity}, have ${remainingCapacity}.`, 'orange');
+            }
+            return false;
+        }
 
-        console.log(`Cost: ${cost}, Player Credits: ${player.credits}`);
-        console.log(`Cargo Space Needed: ${quantity}, Remaining Capacity: ${remainingCapacity}`);
-
-        // Check Credits
+        const cost = Math.floor(comm.buyPrice * requestedQuantity);
         if (cost > player.credits) {
-            console.log("BUY FAILED: Not enough credits!");
-            // Add UI feedback later (e.g., flash credits red)
+            if (MARKET_DEBUG) console.log("BUY FAILED: Not enough credits!");
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Not enough credits to buy ${requestedQuantity} ${commodityName}.`, 'orange');
+            }
             return false;
         }
 
-        // Check Cargo Space
-        if (quantity > remainingCapacity) {
-            console.log("BUY FAILED: Not enough cargo space!");
-            // Add UI feedback later
+        if (MARKET_DEBUG) {
+            console.log(`Cost: ${cost}, Player Credits: ${player.credits}, Stock Before: ${comm.stock}`);
+        }
+
+        const spendSuccess = player.spendCredits(cost);
+        if (!spendSuccess) {
+            console.error(`BUY FAILED: player.spendCredits(${cost}) failed unexpectedly.`);
             return false;
         }
 
-        // --- If checks pass, proceed with transaction ---
-        console.log("Checks passed. Attempting transaction...");
-        console.log(`Spending ${cost} credits...`);
-        let spendSuccess = player.spendCredits(cost); // Pass floored cost
-        console.log(`player.spendCredits returned: ${spendSuccess}`);
+        player.addCargo(commodityName, requestedQuantity);
+        this._applyStockChange(comm, -requestedQuantity);
+        this.updatePlayerCargo(player.cargo);
+        this.updatePrices();
 
-        if (spendSuccess) {
-            // If credits were spent successfully, add cargo
-            console.log(`Adding ${quantity} ${commodityName} to cargo...`);
-            player.addCargo(commodityName, quantity); // Add item(s) to player inventory
-            this.updatePlayerCargo(player.cargo); // Update market display immediately
-            console.log(`--- Market.buy SUCCESS: Bought ${quantity} ${commodityName} for ${cost} credits. ---`);
-            // Consider saving game state after a successful trade
-            if (typeof saveGame === 'function') { // Check if saveGame exists globally
-                saveGame();
-            }
-            // Play buy confirm sound
-            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                soundManager.playSound('buyConfirm');
-            }
-            return true; // Indicate successful purchase
-        } else {
-            // This case (having enough credits but spendCredits failing) indicates an issue in Player.spendCredits
-            console.error(`BUY FAILED: player.spendCredits(${cost}) failed unexpectedly even though checks passed.`);
-            return false; // Indicate failed purchase
+        if (MARKET_DEBUG) {
+            console.log(`--- Market.buy SUCCESS: Bought ${requestedQuantity} ${commodityName} for ${cost} credits. Stock now ${comm.stock}. ---`);
         }
+
+        if (typeof saveGame === 'function') {
+            saveGame();
+        }
+
+        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            soundManager.playSound('buyConfirm');
+        }
+
+        return true;
+    }
+
+    getAvailableStock(commodityName) {
+        const comm = this._getCommodity(commodityName);
+        return comm ? Math.max(0, Math.floor(Number(comm.stock) || 0)) : 0;
+    }
+
+    addStockFromNPC(commodityName, quantity, options = {}) {
+        const comm = this._getCommodity(commodityName);
+        if (!comm) { return 0; }
+        const amount = Math.max(0, Math.floor(quantity ?? 0));
+        if (amount <= 0) { return 0; }
+        const delta = this._applyStockChange(comm, amount);
+        if (!options.suppressPriceUpdate) {
+            this.updatePrices();
+        }
+        return delta;
+    }
+
+    consumeStockForNPC(commodityName, quantity, options = {}) {
+        const comm = this._getCommodity(commodityName);
+        if (!comm) { return 0; }
+        const available = Math.max(0, Math.floor(Number(comm.stock) || 0));
+        if (available <= 0) { return 0; }
+
+        let request = Math.max(0, Math.floor(quantity ?? 0));
+        if (request <= 0) { return 0; }
+
+        if (request > available) {
+            if (options.allowPartial) {
+                request = available;
+            } else {
+                return 0;
+            }
+        }
+
+        const delta = this._applyStockChange(comm, -request);
+        if (!options.suppressPriceUpdate) {
+            this.updatePrices();
+        }
+        return Math.abs(delta);
+    }
+
+    setEconomyType(newType, { resetStock = false } = {}) {
+        this.systemType = newType;
+        this._applyEconomyStockProfile(resetStock);
+        this.updatePrices();
+    }
+
+    toJSON() {
+        return {
+            systemType: this.systemType,
+            commodities: Array.isArray(this.commodities) ? this.commodities.map(comm => ({
+                name: comm.name,
+                stock: Math.max(0, Math.floor(Number(comm.stock) || 0)),
+                baseStock: Math.max(1, Math.floor(Number(comm.baseStock) || 1)),
+                defaultBaseStock: Math.max(1, Math.floor(Number(comm.defaultBaseStock) || 1)),
+                stockCeiling: Math.max(0, Math.floor(Number(comm.stockCeiling) || 0)),
+                stockFloor: Math.max(0, Math.floor(Number(comm.stockFloor) || 0))
+            })) : []
+        };
+    }
+
+    static fromJSON(data, fallbackType = 'Unknown') {
+        if (!data) { return new Market(fallbackType); }
+        const market = new Market(data.systemType || fallbackType);
+
+        if (Array.isArray(data.commodities)) {
+            data.commodities.forEach(saved => {
+                if (!saved || !saved.name) { return; }
+                const comm = market._getCommodity(saved.name);
+                if (!comm) { return; }
+
+                if (Number.isFinite(saved.defaultBaseStock)) {
+                    comm.defaultBaseStock = Math.max(1, Math.round(saved.defaultBaseStock));
+                }
+                if (Number.isFinite(saved.baseStock)) {
+                    comm.baseStock = Math.max(1, Math.round(saved.baseStock));
+                }
+                if (Number.isFinite(saved.stockCeiling)) {
+                    comm.stockCeiling = Math.max(comm.baseStock, Math.round(saved.stockCeiling));
+                } else {
+                    comm.stockCeiling = Math.max(comm.baseStock, Math.round(comm.baseStock * STOCK_CEILING_MULT));
+                }
+                if (Number.isFinite(saved.stockFloor)) {
+                    comm.stockFloor = Math.max(0, Math.floor(saved.stockFloor));
+                }
+                if (Number.isFinite(saved.stock)) {
+                    comm.stock = Math.max(0, Math.round(saved.stock));
+                } else {
+                    comm.stock = comm.baseStock;
+                }
+                comm.stockRatio = comm.baseStock > 0 ? comm.stock / comm.baseStock : 1;
+            });
+        }
+
+        market.updatePrices();
+        return market;
+    }
+
+    _getCommodity(name) {
+        if (!Array.isArray(this.commodities)) { return null; }
+        return this.commodities.find(c => c.name === name) || null;
+    }
+
+    _applyStockChange(comm, delta) {
+        if (!comm || !Number.isFinite(delta)) { return 0; }
+        const before = Number.isFinite(comm.stock) ? comm.stock : (comm.baseStock || 0);
+        let after = before + delta;
+        if (after < 0) { after = 0; }
+        const ceiling = comm.stockCeiling || Math.round((comm.baseStock || DEFAULT_BASE_STOCK) * STOCK_CEILING_MULT);
+        if (after > ceiling) { after = ceiling; }
+        comm.stock = Math.round(after);
+        comm.stockRatio = comm.baseStock > 0 ? comm.stock / comm.baseStock : 1;
+        return comm.stock - before;
     }
 
 } // End of Market Class

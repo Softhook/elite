@@ -107,8 +107,12 @@ class Station {
         
         // Update market to match new economy
         if (this.market) {
-            this.market.systemType = newEconomyType;
-            this.market.updatePrices();
+            if (typeof this.market.setEconomyType === 'function') {
+                this.market.setEconomyType(newEconomyType);
+            } else {
+                this.market.systemType = newEconomyType;
+                this.market.updatePrices();
+            }
         }
     }
 
@@ -857,7 +861,7 @@ class Station {
         s.angle = data.angle;
         s.rotationSpeed = data.rotationSpeed;
         if (data.market && typeof Market?.fromJSON === "function") {
-            s.market = Market.fromJSON(data.market);
+            s.market = Market.fromJSON(data.market, s.systemType);
         }
         s.discovered = data.discovered || false;
         return s;
