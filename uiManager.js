@@ -909,21 +909,29 @@ class UIManager {
         const headerHeight = this.drawStationHeader("Commodity Market", station, player, system);
         
         // Table setup - adjusted Y position
-        let sY = pY+headerHeight+40, tW = pW-60, cols = 9, cW = tW/cols, sX = pX+30;
+        let sY = pY+headerHeight+40, tW = pW-60, sX = pX+30;
+        
+        // Define column widths for better control
+        const colCommodity = 180;
+        const colBuy = 80;
+        const colSell = 80;
+        const colStock = 100;
+        const colCargo = 100;
+        const colButtons = tW - (colCommodity + colBuy + colSell + colStock + colCargo);
         
         textAlign(CENTER,CENTER); textSize(20); fill(200);
      
         // Column headers
-        text("Commodity", sX+cW*0.3, sY);
-        text("Buy", sX+cW*1.8, sY);
-        text("Sell", sX+cW*2.8, sY);
-        text("Stock", sX+cW*3.8, sY);
-        text("Cargo Hold", sX+cW*4.8, sY);
+        text("Commodity", sX+colCommodity/2, sY);
+        text("Buy", sX+colCommodity+colBuy/2, sY);
+        text("Sell", sX+colCommodity+colBuy+colSell/2, sY);
+        text("Stock", sX+colCommodity+colBuy+colSell+colStock/2, sY);
+        text("Cargo Hold", sX+colCommodity+colBuy+colSell+colStock+colCargo/2, sY);
 
         // Row setup
         sY += 30;
         const rowH = 30;
-        const btnW = cW*0.65;
+        const btnW = 100; // Fixed button width same as before
         const btnH = rowH*0.8;
 
         // --- Price Indicator Constants ---
@@ -953,8 +961,6 @@ class UIManager {
             // Check if this is an illegal good in a non-Anarchy system
             const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
             const stockQty = Math.max(0, Math.floor(comm.stock ?? 0));
-            const baseStock = Math.max(1, Math.floor(comm.baseStock ?? 1));
-            const stockRatio = baseStock > 0 ? stockQty / baseStock : 1;
             const outOfStock = stockQty <= 0;
             
             // Commodity name and prices - grayed out if illegal goods in non-Anarchy system
@@ -965,7 +971,7 @@ class UIManager {
             }
             
             textAlign(LEFT, CENTER);
-            text(comm.name||'?', sX+10, tY, cW-15);
+            text(comm.name||'?', sX+10, tY, colCommodity-15);
             
             // Add "ILLEGAL" indicator for illegal goods
             if (!comm.isLegal) {
@@ -976,26 +982,26 @@ class UIManager {
                 } 
             }
             
-            textAlign(RIGHT, CENTER);
+            textAlign(CENTER, CENTER);
             fill(255);
-            text(comm.buyPrice??'?', sX+cW*2-10-indicatorW, tY);
+            text(comm.buyPrice??'?', sX+colCommodity+colBuy/2, tY);
             fill(255);
-            text(comm.sellPrice??'?', sX+cW*3-10-indicatorW, tY);
+            text(comm.sellPrice??'?', sX+colCommodity+colBuy+colSell/2, tY);
 
+            // Stock display - single number with color coding
             if (outOfStock) {
                 fill(255, 120, 120);
-            } else if (stockRatio < 0.4) {
+            } else if (stockQty < 50) {
                 fill(255, 180, 120);
-            } else if (stockRatio > 1.6) {
+            } else if (stockQty > 200) {
                 fill(120, 200, 255);
             } else {
                 fill(220);
             }
-            const stockLabel = `${stockQty}/${baseStock}`;
-            text(stockLabel, sX+cW*4-10, tY);
+            text(stockQty, sX+colCommodity+colBuy+colSell+colStock/2, tY);
 
             fill(255);
-            text(comm.playerStock??'?', sX+cW*5-10, tY);
+            text(comm.playerStock??'?', sX+colCommodity+colBuy+colSell+colStock+colCargo/2, tY);
 
             // Commodity name and prices (drawn above with legal/illegal styling)
 
@@ -1005,7 +1011,7 @@ class UIManager {
             if (comm.baseBuy > 0) {
                 let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
                 let indicatorH = constrain(abs(buyDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + cW*2 - indicatorW - 5; // Position indicator to the right of text
+                let indicatorX = sX + colCommodity + colBuy + 5; // Position indicator to the right of buy price
                 let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
 
                 if (buyDeviation > 0.05) { // Expensive (Red) - allow small tolerance
@@ -1025,7 +1031,7 @@ class UIManager {
             if (comm.baseSell > 0) {
                 let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
                 let indicatorH = constrain(abs(sellDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + cW*3 - indicatorW - 5; // Position indicator
+                let indicatorX = sX + colCommodity + colBuy + colSell + 5; // Position indicator to the right of sell price
                 let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
 
                 if (sellDeviation > 0.05) { // Good Sell Price (Green)
@@ -1044,8 +1050,12 @@ class UIManager {
             // --- End Price Indicators ---
 
 
-            // --- Buttons (Positioned slightly adjusted if needed, but seem okay) ---
-            let btnStartX = sX + cW * 5.2; // Start position for buttons
+            // --- Buttons (Positioned at the right edge) ---
+            // Position buttons from the right edge of the panel
+            const rightEdge = sX + tW;
+            const btnSpacing = 5;
+            const totalBtnWidth = (btnW * 4) + (btnSpacing * 3); // 4 buttons with 3 gaps
+            let btnStartX = rightEdge - totalBtnWidth;
 
  // Buy 1 button
 let buy1X = btnStartX;
