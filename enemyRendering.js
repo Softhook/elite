@@ -92,8 +92,9 @@ class EnemyRendering {
 
             // UPDATED: Add system name to label (unused system reference removed for perf)
             
-            //let label = `${this.shipTypeName} (${this.role}) | ${stateKey} | Target: ${targetLabel}`;
-            let label = `${shipDef?.name}  Target: ${targetLabel}`;
+            const baseShipName = shipDef?.name || this.shipTypeName;
+            const namePrefix = this.displayName ? `${this.displayName} • ${baseShipName}` : baseShipName;
+            let label = `${namePrefix}  Target: ${targetLabel}`;
             text(label, 0, -this.size / 2 - 15);
 
             pop();
