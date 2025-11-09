@@ -190,6 +190,12 @@ class EnemyDamageSystem {
         this.haulerCombatTimer = undefined;
         this.forcedCombatTimer = 0;
 
+        try {
+            if (typeof communicationSystem !== 'undefined' && communicationSystem && typeof communicationSystem.handleEnemyDestroyed === 'function') {
+                communicationSystem.handleEnemyDestroyed(this);
+            }
+        } catch (_) { /* ignore comm errors on destruction */ }
+
         const system = this.getSystem();
         if (system) {
             // Create explosion effect

@@ -12,8 +12,8 @@ class CommunicationSystem {
 
         this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"]; 
         this._pirateGroups = [
-            "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet",
-            "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves", "Crimson Vector"
+            "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet", "Stokey Krew", "Tottenham Turks", "Hackney Bombers", "Bombacilars",
+            "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves", "Crimson Vector", "Adkins Family"
         ];
         this._pirateDemands = [
             "dump the hold",
@@ -75,7 +75,30 @@ class CommunicationSystem {
                 "{enemyName}: Copy your heat signature. That's one juicy freighter. Put it in neutral and start offloading.",
                 "Broadcast intercept: {pirateGroup} needs new parts. Your {playerShip} will do nicely unless we see cargo streaming out now.",
                 "{enemyName}: {pirateInsult}, you thought you could sneak through {systemName}? Bad call.",
-                "{enemyName}: Look at that, a {pirateInsult} hiding behind fancy paint. Hand over the goods."
+                "{enemyName}: Look at that, a {pirateInsult} hiding behind fancy paint. Hand over the goods.",
+                "{enemyName}: Throttle to idle and pop the hatches—tribute time.",
+                "{enemyName}: Beacon’s live on you. Make this painless: {pirateDemand}.",
+                "{enemyName}: {playerTitle}, your route goes through us now. Pay up.",
+                "{enemyName}: Two options: cargo or caskets. Don’t make us pick.",
+                "{enemyName}: We do collections for the {pirateGroup}. Consider this a friendly visit.",
+                "{enemyName}: Nice heat signature. Must be a full hold. Empty it.",
+                "{enemyName}: Drift and de-spin. We’re latching to your bays in ten.",
+                "{enemyName}: Your {playerShip} is a donation bin today. Start donating.",
+                "{enemyName}: We’ll take the fragile stuff first. Toss it gently.",
+                "{enemyName}: Spool down. Toss manifests. Then toss the crates.",
+                "{enemyName}: See those dots? That’s us. See this dot? That’s you.",
+                "{enemyName}: We’ve got collectors on payroll. Don’t waste their time.",
+                "{enemyName}: We run tolls on {systemName}. Yours is overdue.",
+                "{enemyName}: Toss the {cargoWord} and you keep your wings attached.",
+                "{enemyName}: This is the easy conversation. The hard one involves shrapnel.",
+                "{enemyName}: We’ve got time, ammo, and a quota. Make it easy.",
+                "{enemyName}: We’ll be gentle if your cargo is. Start venting.",
+                "{enemyName}: Don’t make us open you like a tin—{pirateDemand}.",
+                "{enemyName}: Your transponder just pinged a payday. Comply.",
+                "{enemyName}: Last offer: pay the toll or pay the undertow.",
+                "{enemyName}: We’re bored and broke. You can fix both.",
+                "{enemyName}: If you loved that paint job, keep it safe and pay up.",
+                "{enemyName}: We don’t want trouble. We want your {cargoWord}." 
             ],
             pirateRetort: [
                 "{enemyName}: Bold move, {playerTitle}. Let's see how long that bravado lasts.",
@@ -86,7 +109,41 @@ class CommunicationSystem {
                 "{enemyName}: Cannons warming. Say goodbye to that {playerShip}.",
                 "That sting woke us up. We hope you brought friends.",
                 "Alright, {playerTitle}. Opening with live ammo now.",
-                "{enemyName}: You just made the bounty list. Enjoy the notoriety while you can."
+                "{enemyName}: You just made the bounty list. Enjoy the notoriety while you can.",
+                "{enemyName}: That the best you’ve got? We brought more.",
+                "Shields spiked—now we’re interested.",
+                "{enemyName}: You nicked the paint. Now we nick your hull.",
+                "Shouldn’t have done that. Signing your obituary now.",
+                "{enemyName}: Oh good, a workout.",
+                "Spicy. Let’s turn up the heat.",
+                "{enemyName}: We were being polite. Past tense.",
+                "Alright, hero—let’s see if you can tank this.",
+                "{enemyName}: We’ll add that to the invoice." 
+            ],
+            alienEngage: [
+                "⟟⟊⟒⋮⟟ ⊑⟟⟊⟟⟒ ✦ ☼", "⌬𐌰𐌿𐍄 ∴ ʘ͜ʖʘ", "∰⟴⟴⟁⟁⟁", "⋇⋇⋇ ᚠᛇᚻ ᚾᚪᚾ", "◬⟁◬⟁◬",
+                "╳╳╳ ⟟⟟⟟ ϟϟϟ", "ᚷᛟᚾᛖᚱ ᛚᛟᚾᚷ", "҉҉҉ ☍☌☍", "⟁⟊⟟⟒ :: ⌬⌬⌬", "彡彡 彗彗",
+                "ζ≀ζ≀ζ", "ᛝᛝᛝ ∴ ∴", "₪₪₪ ᚺᚨᛚᛚ", "⟁⟁⟁ ⟟⟊⟒", "¤¤¤ ѪѪѪ",
+                "⟟⟟⟟ ᚷᚷᚷ", "≀≀≀ ∿∿∿", "▣▢▣▢", "⟴⟴⟴", "卐卐" 
+            ],
+            alienRetort: [
+                "⋔⋇⋔⋇", "⟟⟒⟊⟟⟒", "ϞϟϞ", "ƛƛƛ", "彗彗彗", "ᛣᛣᛣ", "𓆣𓆣𓆣", "₪₪₪", "҉҉҉", "◯◯◯"
+            ],
+            pirateDeath: [
+                "{enemyName}: ugh—", "{enemyName}: …static…", "{enemyName}: engines… gone—", "{enemyName}: not like—this—",
+                "{enemyName}: vents—open—", "{enemyName}: I’m… out—", "{enemyName}: hull… breaking—", "{enemyName}: you— win—",
+                "{enemyName}: reactor—hot—", "{enemyName}: system—dead—"
+            ],
+            policeDeath: [
+                "Patrol {policeWing}: Officer down—", "{enemyName}: Mayday— systems failing—", "Control {systemName}: We lost a unit!",
+                "{enemyName}: Power—critical—", "{enemyName}: Couldn’t—hold—", "{enemyName}: Hull breach—", "Patrol {policeWing}: Unit offline—"
+            ],
+            haulerDeath: [
+                "{enemyName}: I—can’t—", "{enemyName}: Tell {haulerDestination}… sorry—", "{enemyName}: cargo—everywhere—",
+                "{enemyName}: seals—blown—", "{enemyName}: ugh—", "Freighter {enemyShip}: Losing integrity— goodbye—"
+            ],
+            alienDeath: [
+                "⟟⟊⟒⟒— — —", "҉҉҉ …", "彗… 彗…", "∿∿∿", "◯◯…", "₪₪—", "ᛝᛝᛝ …", "⟁⟁⟁ …", "⌬⌬⌬ —", "◬◬◬ …"
             ],
             haulerPleas: [
                 "{enemyName}: Whoa! I'm a civilian hauler out of {haulerDestination}. Back off!",
@@ -169,6 +226,15 @@ class CommunicationSystem {
                 color: [255, 140, 100],
                 tokens: { engageReason: context.reason || "lock" }
             });
+            return;
+        }
+        if (enemy.role === AI_ROLE.ALIEN) {
+            this._maybeSend(enemy, "alien_engage", this.templates.alienEngage, {
+                chance: 0.65,
+                cooldown: 16000,
+                color: [180, 100, 255]
+            });
+            return;
         }
     }
 
@@ -203,9 +269,40 @@ class CommunicationSystem {
                 cooldown: 14000,
                 color: [255, 140, 100]
             });
+            return;
+        }
+        if (enemy.role === AI_ROLE.ALIEN) {
+            this._maybeSend(enemy, "alien_retort", this.templates.alienRetort, {
+                chance: 0.55,
+                cooldown: 12000,
+                color: [180, 100, 255]
+            });
+            return;
         }
     }
 
+
+    handleEnemyDestroyed(enemy) {
+        if (!enemy) return;
+        if (typeof AI_ROLE === 'undefined') return;
+        let templateList = null;
+        let color = [255, 190, 140];
+        switch (enemy.role) {
+            case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = [255,140,100]; break;
+            case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = [140,180,255]; break;
+            case AI_ROLE.HAULER:
+            case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = [255,220,140]; break;
+            case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180,100,255]; break;
+            default: return; // silent for other roles
+        }
+        if (!templateList || templateList.length === 0) return;
+        this._maybeSend(enemy, 'death_line', templateList, {
+            chance: 0.8,
+            cooldown: 3000,
+            color,
+            duration: (this.uiManager?.communicationDisplayTime || 15000) * 0.6
+        });
+    }
     _maybeSend(enemy, category, templates, options = {}) {
         if (!this.uiManager || !Array.isArray(templates) || templates.length === 0) {
             return false;
