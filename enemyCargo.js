@@ -267,9 +267,19 @@ class EnemyCargo {
             return summary;
         }
 
+        // Check if illegal goods can be traded in this system
+        const isAnarchySystem = this.currentSystem && 
+            typeof this.currentSystem.securityLevel === 'string' && 
+            this.currentSystem.securityLevel.toLowerCase() === 'anarchy';
+
         holdings.forEach(entry => {
             const comm = this._getMarketCommodity(market, entry.name);
             if (!comm) { return; }
+
+            // Skip illegal goods in non-Anarchy systems
+            if (!comm.isLegal && !isAnarchySystem) {
+                return;
+            }
 
             const quantityToSell = this._decideNpcSaleQuantity(entry.quantity, comm);
             if (quantityToSell <= 0) { return; }
@@ -358,6 +368,19 @@ class EnemyCargo {
             if (market) {
                 const comm = this._getMarketCommodity(market, type);
                 if (comm) {
+                    // Skip illegal goods in non-Anarchy systems
+                    const isAnarchySystem = this.currentSystem && 
+                        typeof this.currentSystem.securityLevel === 'string' && 
+                        this.currentSystem.securityLevel.toLowerCase() === 'anarchy';
+                    
+                    if (!comm.isLegal && !isAnarchySystem) {
+                        attempted.add(type);
+                        if (attempted.size >= options.length) {
+                            break;
+                        }
+                        continue; // Skip illegal goods in non-Anarchy systems
+                    }
+
                     const baseBuy = Math.max(1, comm.baseBuy || 1);
                     if (!Number.isFinite(baseBuy) || baseBuy <= 0) {
                         attempted.add(type);
