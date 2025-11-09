@@ -2001,6 +2001,14 @@ class PilotRegistry {
             pilot.travelArrivalMs = now + Math.floor(random(5000, 9000));
         }
 
+        // Prevent arrival/docking until pilot has been visualized at least once
+        // This prevents pilots from completing invisible trade cycles before spawning
+        if (!pilot.hasBeenVisualized && now >= pilot.travelArrivalMs) {
+            // Keep extending arrival time until pilot is visualized
+            pilot.travelArrivalMs = now + 1000;
+            return;
+        }
+
         if (now >= pilot.travelArrivalMs) {
             const destIndexRaw = pilot.itinerary.shift();
             const destIndex = this._normalizeSystemIndex(destIndexRaw);
