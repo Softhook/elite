@@ -112,6 +112,9 @@ class EnemyTargeting {
                     // No current target, immediate acquisition allowed
                     this.target = bestTarget;
                     this.targetSwitchCooldown = 2.0; // Set cooldown for future switches
+                    if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
+                        communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'initial' });
+                    }
                     
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
                     if (this.role === AI_ROLE.GUARD && this.principal && 
@@ -123,6 +126,9 @@ class EnemyTargeting {
                     // Have a target, cooldown expired, and new target is significantly better
                     this.target = bestTarget;
                     this.targetSwitchCooldown = 2.0;
+                    if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
+                        communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'retarget' });
+                    }
                     
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
                     if (this.role === AI_ROLE.GUARD && this.principal && 

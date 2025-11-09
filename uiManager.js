@@ -78,9 +78,14 @@ class UIManager {
         this.messages = [];
         this.messageDisplayTime = 4000;
         this.maxMessagesToShow = 4;
+        this.communicationMessages = [];
+        this.communicationDisplayTime = 15000;
+        this.maxCommunicationMessagesToShow = 5;
+        this.communicationQueueLimit = 12;
         this.marketButtonHeld = null;
         this.lastButtonAction = 0;
         this.buttonRepeatDelay = 150;
+        this._lastMessageBlockHeight = 0;
     }
 
     _initBattleIndicators() {
@@ -2761,12 +2766,25 @@ if (isIllegalInSystem || isMissionCargo) {
         if (this.messages.length > 10) this.messages.shift();
     }
 
+    addCommunicationMessage(msg, color = [255, 190, 140], duration = this.communicationDisplayTime) {
+        this.communicationMessages.push({
+            text: msg,
+            time: millis(),
+            color: color,
+            duration: duration
+        });
+        if (this.communicationMessages.length > this.communicationQueueLimit) {
+            this.communicationMessages.shift();
+        }
+    }
+
     // Draw messages at the bottom of the screen
     drawMessages() {
         const now = millis();
         // Filter messages based on their individual duration
         const recent = this.messages.filter(m => now - m.time < (m.duration || this.messageDisplayTime));
         const toShow = recent.slice(-this.maxMessagesToShow);
+        this._lastMessageBlockHeight = 0;
 
         push();
         textAlign(CENTER, BOTTOM);
@@ -2800,6 +2818,83 @@ if (isIllegalInSystem || isMissionCargo) {
             );
         }
         pop();
+
+        if (toShow.length > 0) {
+            this._lastMessageBlockHeight = toShow.length * 22 + 20; // include margin offset and text baseline
+        }
+
+        this._drawCommunicationMessages();
+    }
+
+    _drawCommunicationMessages() {
+        if (!this.communicationMessages || this.communicationMessages.length === 0) {
+            return;
+        }
+
+        const now = millis();
+        const recent = this.communicationMessages.filter(m => now - m.time < (m.duration || this.communicationDisplayTime));
+        const toShow = recent.slice(-this.maxCommunicationMessagesToShow);
+
+        if (toShow.length === 0) {
+            this.communicationMessages = recent; // prune expired entries
+            return;
+        }
+
+        const boxPadding = 6;
+        const lineHeight = 26;
+        const boxWidth = Math.max(width - 80, 300);
+        const baseX = (width - boxWidth) / 2;
+        const baseY = height - 180; // Fixed position above info messages
+
+        push();
+        textAlign(CENTER, TOP);
+        textFont(font);
+        textSize(18);
+
+        for (let i = 0; i < toShow.length; i++) {
+            const msg = toShow[i];
+            const age = now - msg.time;
+            const effectiveDuration = msg.duration || this.communicationDisplayTime;
+            const fade = constrain(age / effectiveDuration, 0, 1);
+            const easedFade = Math.pow(fade, 1.5);
+            const alpha = 255 - (easedFade * 210); // slow, eased fade preserves legibility
+
+            this._applyMessageFill(msg.color, alpha, [255, 190, 140, 255]);
+
+            const textY = baseY + boxPadding + i * lineHeight;
+            text(msg.text, width / 2, textY);
+        }
+        pop();
+
+        this.communicationMessages = recent; // remove expired entries
+    }
+
+    _applyMessageFill(colorValue, alpha, fallback) {
+        let applied = false;
+        const targetAlpha = constrain(alpha, 0, 255);
+        if (typeof colorValue === 'string') {
+            try {
+                const c = color(colorValue);
+                fill(red(c), green(c), blue(c), Math.min(alpha(c), targetAlpha));
+                applied = true;
+            } catch (_) { /* ignore */ }
+        } else if (Array.isArray(colorValue)) {
+            const [r = 200, g = 200, b = 200, a = 255] = colorValue;
+            fill(r, g, b, Math.min(a, targetAlpha));
+            applied = true;
+        } else if (colorValue && typeof colorValue === 'object' && typeof colorValue.levels !== 'undefined') {
+            const levels = colorValue.levels;
+            if (Array.isArray(levels) && levels.length >= 3) {
+                const existingAlpha = levels.length > 3 ? levels[3] : 255;
+                fill(levels[0], levels[1], levels[2], Math.min(existingAlpha, targetAlpha));
+                applied = true;
+            }
+        }
+
+        if (!applied) {
+            const [r = 200, g = 200, b = 200, a = 255] = fallback || [];
+            fill(r, g, b, Math.min(a, targetAlpha));
+        }
     }
 
     // Update this method to check the back button first

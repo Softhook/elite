@@ -538,6 +538,10 @@ class EnemyStateMachine {
         
         // Execute entry actions for the new state
         this.onStateEntry(newState, stateData);
+
+        if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleStateChange) {
+            communicationSystem.handleStateChange(this, oldState, newState);
+        }
     }
 
     /**

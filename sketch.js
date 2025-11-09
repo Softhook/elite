@@ -8,7 +8,7 @@ const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-scre
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
 
 // --- Global Variables ---
-let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, saveSelectionScreen;
+let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
 let loadGameWasSuccessful = false;
 window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
 let globalSessionSeed; // Declaration for the session seed
@@ -60,6 +60,8 @@ function setup() {
     titleScreen = new TitleScreen();
     inventoryScreen = new InventoryScreen();
     saveSelectionScreen = new SaveSelectionScreen();
+    communicationSystem = new CommunicationSystem();
+    communicationSystem.initialize({ uiManager, player });
 
     // --- Calculate Player Radian Properties ---
     // Now that p5 is ready, calculate radian speed based on degree definition
@@ -806,6 +808,8 @@ function resetGame() {
     inventoryScreen = new InventoryScreen();
     saveSelectionScreen = new SaveSelectionScreen();
     eventManager = new EventManager();
+    communicationSystem = new CommunicationSystem();
+    communicationSystem.initialize({ uiManager, player });
     
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {

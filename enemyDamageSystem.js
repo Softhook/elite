@@ -44,6 +44,19 @@ class EnemyDamageSystem {
      */
     _handleAttackerReference(attacker, amount, system = null) {
         if (attacker) {
+            if (typeof communicationSystem !== 'undefined' && communicationSystem) {
+                let playerSource = null;
+                if (typeof Player !== 'undefined' && attacker instanceof Player) {
+                    playerSource = attacker;
+                } else if (attacker?.owner && typeof Player !== 'undefined' && attacker.owner instanceof Player) {
+                    playerSource = attacker.owner;
+                } else if (attacker?.source && typeof Player !== 'undefined' && attacker.source instanceof Player) {
+                    playerSource = attacker.source;
+                }
+                if (playerSource) {
+                    communicationSystem.handlePlayerDamageReaction(this, playerSource, amount);
+                }
+            }
             // Record attacker regardless of type
             this.lastAttacker = attacker;
             this.lastAttackTime = millis();
