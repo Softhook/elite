@@ -8,6 +8,11 @@ sort out the load screen with the three games
 
 ## Core Gameplay Enhancements
 
+target overlay sowing cargo carried
+
+
+getting hailed by other ships
+
 
 Add a personal log of all the enmies killed in which system
 
@@ -85,7 +90,6 @@ Ai actively hiding behind meterorites
 - editor mirror editing mode
 
 ## Graphics and UI Improvements
-- show sun big on minimap
 - mulitple thurst ports on large ships
 - warning sound when health is low
 - generate names for all the planets

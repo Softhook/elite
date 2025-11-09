@@ -582,6 +582,10 @@ class EnemyStateMachine {
                 // Reset timer on entry
                 this.nearStationTimer = this.stationPauseDuration;
                 this.vel.mult(0.1); // Apply strong initial brake
+                this._hasDockedThisPause = false;
+                if (typeof this.handleStationDocking === 'function') {
+                    this.handleStationDocking(this.getSystem());
+                }
                 break;
                 
             case AI_STATE.LEAVING_SYSTEM:
@@ -691,6 +695,7 @@ class EnemyStateMachine {
             case AI_STATE.NEAR_STATION:
                 // Clear timer on exit
                 this.nearStationTimer = null;
+                this._hasDockedThisPause = false;
                 break;
 
             case AI_STATE.FLEEING:

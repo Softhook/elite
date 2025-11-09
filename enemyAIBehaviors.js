@@ -698,18 +698,27 @@ class EnemyAIBehaviors {
 
     /** Handles cargo collection AI */
     updateCargoCollectionAI(system) {
+        const determineReturnState = () => {
+            if (this.previousState !== null && this.previousState !== undefined) {
+                return this.previousState;
+            }
+            return (this.role === AI_ROLE.TRANSPORT) ? AI_STATE.TRANSPORTING : AI_STATE.IDLE;
+        };
+
+        if (typeof this.getRemainingCargoCapacity === 'function' && this.getRemainingCargoCapacity() <= 0) {
+            this.cargoTarget = null;
+            this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+            this.changeState(determineReturnState());
+            return false;
+        }
+
         // If our target cargo disappeared or was collected, find a new one
         if (!this.cargoTarget || this.cargoTarget.collected) {
             this.cargoTarget = this.detectCargo(system);
 
             // If no cargo found, return to normal behavior
             if (!this.cargoTarget) {
-                if (this.role === AI_ROLE.TRANSPORT) {
-                    this.changeState(this.previousState || AI_STATE.TRANSPORTING);
-                } else {
-                    // Return pirates/others to IDLE or previous combat state if applicable
-                    this.changeState(this.previousState || AI_STATE.IDLE);
-                }
+                this.changeState(determineReturnState());
                 return false; // No cargo to collect, resume normal behavior
             }
         }
@@ -751,14 +760,20 @@ class EnemyAIBehaviors {
                 return false;
             }
             
-            // Collection logic
-            this.cargoTarget.collected = true; // Mark world cargo as collected
+            const pickupResult = (typeof this.collectCargoFromWorld === 'function')
+                ? this.collectCargoFromWorld(this.cargoTarget)
+                : { added: 0, fullyCollected: false };
+            if (pickupResult.added > 0) {
+                CARGO_LOG(`${this.shipTypeName} collected ${this.cargoTarget.type} x${pickupResult.added}`);
+            } else {
+                CARGO_LOG(`${this.shipTypeName} attempted to collect ${this.cargoTarget.type} but lacked capacity`);
+            }
 
-            // Do NOT directly splice StarSystem arrays from outside.
-            // StarSystem.update() will remove collected cargo during its cleanup pass.
+            if (pickupResult.fullyCollected || pickupResult.added <= 0 || pickupResult.capacityFull) {
+                this.cargoTarget = null;
+                this.changeState(determineReturnState());
+            }
 
-            CARGO_LOG(`${this.shipTypeName} collected cargo ${this.cargoTarget.type}`);
-            this.cargoTarget = null; // Clear local target reference
             // Set cooldown before looking for more cargo
             this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
 

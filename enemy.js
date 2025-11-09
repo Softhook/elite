@@ -122,6 +122,11 @@ class Enemy {
         // Add unique ID for force wave tracking
         this.id = Date.now() + "_" + Math.floor(Math.random() * 1000);
 
+        // Cargo bookkeeping
+        this.cargoHold = [];
+        this.cargoCapacity = shipDef.cargoCapacity || 0;
+        this._hasDockedThisPause = false;
+
         // --- Physics & Stats (using the final shipDef) ---
         this.pos = createVector(x, y); this.vel = createVector(0, 0); this.angle = random(TWO_PI); // Radians
         this.size = shipDef.size; this.baseMaxSpeed = shipDef.baseMaxSpeed; this.baseThrust = shipDef.baseThrust;
@@ -329,6 +334,11 @@ class Enemy {
 
         this.hasPlayedLockOnSound = false; // Add this new flag
         this.shieldPlusHullAtStateEntry = null; // For tracking combined health drop during certain states
+
+        // Initialize cargo inventory based on role/ship definition
+        if (typeof this.initializeCargoInventory === 'function') {
+            this.initializeCargoInventory(shipDef);
+        }
     }
 
     // -----------------------------

@@ -8,131 +8,398 @@
  */
 class EnemyCargo {
 
-    /**
-     * Internal helper: Handles spawning cargo based on context (jettison or destruction).
-     * Calculates parameters, creates the Cargo object, and calls system.addCargo().
-     * @param {'jettison' | 'destruction'} context - The reason for spawning cargo.
-     * @returns {boolean} True if cargo was spawned successfully, false otherwise.
-     * @private
-     */
-    _spawnCargo(context) {
-        // 1. Get System and check for addCargo method
+    initializeCargoInventory(shipDef) {
+        this.cargoHold = Array.isArray(this.cargoHold) ? this.cargoHold : [];
+        this.cargoCapacity = shipDef?.cargoCapacity || this.cargoCapacity || 0;
+
+        if (!this.cargoCapacity) { return; }
+
+        const pool = Array.isArray(shipDef?.typicalCargo) ? shipDef.typicalCargo.filter(Boolean) : [];
+
+        let startingLoad = 0;
+        switch (this.role) {
+            case AI_ROLE.HAULER:
+                startingLoad = Math.floor(this.cargoCapacity * random(0.5, 0.85));
+                break;
+            case AI_ROLE.TRANSPORT:
+                startingLoad = Math.floor(this.cargoCapacity * random(0.3, 0.6));
+                break;
+            case AI_ROLE.PIRATE:
+            case AI_ROLE.ALIEN:
+            case AI_ROLE.POLICE:
+            case AI_ROLE.GUARD:
+            case AI_ROLE.BOUNTY_HUNTER:
+                startingLoad = 0;
+                break;
+            default:
+                startingLoad = pool.length > 0 ? Math.floor(this.cargoCapacity * random(0.2, 0.5)) : 0;
+                break;
+        }
+
+        startingLoad = Math.max(0, Math.min(this.cargoCapacity, startingLoad));
+
+        if (startingLoad <= 0 || pool.length === 0) { return; }
+
+        this._loadCargoFromOptions(pool, startingLoad);
+    }
+
+    getCargoAmount() {
+        if (!Array.isArray(this.cargoHold)) { return 0; }
+        return this.cargoHold.reduce((sum, item) => sum + (item?.quantity || 0), 0);
+    }
+
+    getRemainingCargoCapacity() {
+        return Math.max(0, (this.cargoCapacity || 0) - this.getCargoAmount());
+    }
+
+    addCargo(commodityName, quantity, allowPartial = false) {
+        if (!commodityName || quantity <= 0) {
+            return { success: false, added: 0 };
+        }
+
+        const spaceRemaining = this.getRemainingCargoCapacity();
+        if (spaceRemaining <= 0) {
+            return { success: false, added: 0 };
+        }
+
+        let amountToAdd = Math.floor(quantity);
+        if (amountToAdd > spaceRemaining) {
+            if (allowPartial) {
+                amountToAdd = spaceRemaining;
+            } else {
+                return { success: false, added: 0 };
+            }
+        }
+
+        if (amountToAdd <= 0) {
+            return { success: false, added: 0 };
+        }
+
+        if (!Array.isArray(this.cargoHold)) {
+            this.cargoHold = [];
+        }
+
+        const existing = this.cargoHold.find(item => item?.name === commodityName);
+        if (existing) {
+            existing.quantity += amountToAdd;
+        } else {
+            this.cargoHold.push({ name: commodityName, quantity: amountToAdd });
+        }
+
+        return { success: true, added: amountToAdd };
+    }
+
+    removeCargo(commodityName, quantity) {
+        if (!commodityName || quantity <= 0 || !Array.isArray(this.cargoHold)) {
+            return 0;
+        }
+        const idx = this.cargoHold.findIndex(item => item?.name === commodityName);
+        if (idx === -1) {
+            return 0;
+        }
+        const item = this.cargoHold[idx];
+        const amountToRemove = Math.min(item.quantity, Math.floor(quantity));
+        item.quantity -= amountToRemove;
+        if (item.quantity <= 0) {
+            this.cargoHold.splice(idx, 1);
+        }
+        return amountToRemove;
+    }
+
+    hasCargo(commodityName, quantity = 1) {
+        if (!commodityName || quantity <= 0 || !Array.isArray(this.cargoHold)) {
+            return false;
+        }
+        const item = this.cargoHold.find(entry => entry?.name === commodityName);
+        return !!item && item.quantity >= quantity;
+    }
+
+    collectCargoFromWorld(cargo) {
+        if (!cargo || cargo.collected) {
+            return { added: 0, fullyCollected: false };
+        }
+
+        const desiredQuantity = Math.max(1, Math.floor(cargo.quantity || 1));
+        const capacityBefore = this.getRemainingCargoCapacity();
+        if (capacityBefore <= 0) {
+            return { added: 0, fullyCollected: false, capacityFull: true };
+        }
+
+        const amountToTake = Math.min(desiredQuantity, capacityBefore);
+        const addResult = this.addCargo(cargo.type, amountToTake, true);
+
+        if (!addResult.success || addResult.added <= 0) {
+            return { added: 0, fullyCollected: false };
+        }
+
+        if (addResult.added >= desiredQuantity) {
+            cargo.collected = true;
+            return { added: addResult.added, fullyCollected: true, capacityFull: addResult.added >= capacityBefore };
+        }
+
+        const remaining = Math.max(0, desiredQuantity - addResult.added);
+        cargo.quantity = remaining > 0 ? remaining : 0;
+        if (remaining <= 0) {
+            cargo.collected = true;
+        } else if (typeof Cargo !== 'undefined' && typeof Cargo.determineColor === 'function') {
+            cargo.color = Cargo.determineColor(cargo.type);
+        }
+
+        return {
+            added: addResult.added,
+            fullyCollected: remaining <= 0,
+            capacityFull: addResult.added >= capacityBefore
+        };
+    }
+
+    handleStationDocking(system) {
+        if (this._hasDockedThisPause) {
+            return;
+        }
+
+        const eligibleRole = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT);
+        if (!eligibleRole) {
+            this._hasDockedThisPause = true;
+            return;
+        }
+
+        const station = system?.station;
+        if (!station) {
+            this._hasDockedThisPause = true;
+            return;
+        }
+
+        const soldAmount = this.getCargoAmount();
+        if (soldAmount > 0) {
+            CARGO_LOG(`Hauler ${this.shipTypeName} offloaded ${soldAmount} units at ${station.name || 'station'}`);
+        }
+        this.cargoHold = [];
+
+        const shipDef = SHIP_DEFINITIONS?.[this.shipTypeName];
+        const targetLoad = Math.max(0, Math.min(this.cargoCapacity || 0, Math.floor((this.cargoCapacity || 0) * random(0.55, 0.9))));
+
+        if (targetLoad > 0) {
+            const options = this._determineStationCargoOptions(station, shipDef);
+            if (options.length > 0) {
+                this._loadCargoFromOptions(options, targetLoad);
+                CARGO_LOG(`Hauler ${this.shipTypeName} loaded ${this.getCargoAmount()} units at ${station.name || 'station'}`);
+            }
+        }
+
+        this._hasDockedThisPause = true;
+    }
+
+    _determineStationCargoOptions(station, shipDef) {
+        const optionSet = new Set();
+
+        if (Array.isArray(shipDef?.typicalCargo)) {
+            shipDef.typicalCargo.filter(Boolean).forEach(type => optionSet.add(type));
+        }
+
+        if (station?.market?.commodities) {
+            station.market.commodities
+                .filter(comm => comm && comm.buyPrice > 0)
+                .forEach(comm => optionSet.add(comm.name));
+        }
+
+        if (optionSet.size === 0 && typeof ECONOMY_EXPORTS !== 'undefined') {
+            const exports = ECONOMY_EXPORTS[station?.systemType] || ECONOMY_EXPORTS['Default'];
+            if (Array.isArray(exports)) {
+                exports.forEach(name => optionSet.add(name));
+            }
+        }
+
+        if (optionSet.size === 0 && typeof LEGAL_CARGO !== 'undefined') {
+            LEGAL_CARGO.forEach(name => optionSet.add(name));
+        }
+
+        return Array.from(optionSet);
+    }
+
+    _loadCargoFromOptions(options, targetLoad) {
+        if (!Array.isArray(options) || options.length === 0) {
+            return;
+        }
+
+        let guard = 0;
+        while (this.getCargoAmount() < targetLoad && guard < 100) {
+            guard++;
+            const type = random(options);
+            const remaining = targetLoad - this.getCargoAmount();
+            const stackSize = Math.max(1, Math.min(remaining, Math.floor(random(2, 6))));
+            const result = this.addCargo(type, stackSize, true);
+            if (!result.success || result.added === 0) {
+                break;
+            }
+        }
+    }
+
+    _selectRandomCargoEntry() {
+        if (!Array.isArray(this.cargoHold) || this.cargoHold.length === 0) {
+            return null;
+        }
+        const candidates = this.cargoHold.filter(item => item && item.quantity > 0);
+        if (candidates.length === 0) {
+            return null;
+        }
+        const entry = random(candidates);
+        return entry || null;
+    }
+
+    _spawnCargo(context, override = null) {
         const system = this.getSystem();
         if (!system || typeof system.addCargo !== 'function') {
-            console.warn(`${this.shipTypeName} can't ${context} cargo - system or system.addCargo method missing`);
-            return false; // Good check
+            console.warn(`${this.shipTypeName} can't ${context} cargo - system or system.addCargo missing`);
+            return false;
         }
 
-        // 2. Get Ship Definition and check for cargo types
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        if (!shipDef || !shipDef.typicalCargo || shipDef.typicalCargo.length === 0) {
-            return false; // Good check - no cargo defined
+        const fallbackPool = Array.isArray(shipDef?.typicalCargo) ? shipDef.typicalCargo.filter(Boolean) : [];
+
+        const cargoType = override?.type || (fallbackPool.length > 0 ? random(fallbackPool) : null);
+        if (!cargoType) {
+            return false;
         }
 
-        // 3. Initialize variables
-        const cargoType = random(shipDef.typicalCargo); // Selects random type
-        let quantity = 0;
-        let position = createVector(this.pos.x, this.pos.y); // Starts at enemy pos
-        let velocity = createVector(0, 0);
-        let message = "";
+        let quantity = override?.quantity;
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            if (context === 'destruction') {
+                const capacity = this.cargoCapacity || shipDef?.cargoCapacity || 0;
+                quantity = Math.max(1, Math.floor(Math.max(capacity, 3) / 3));
+            } else {
+                quantity = 1;
+            }
+        }
+        quantity = Math.max(1, Math.floor(quantity));
 
-        // 4. Context-Specific Calculations
+        let position = createVector(this.pos.x, this.pos.y);
+        let velocity = createVector(0, 0);
+        let message = '';
+
         if (context === 'jettison') {
-            quantity = 1; // Correct for jettison
-            // Calculates offset position - seems reasonable
             const offsetAngle = random(TWO_PI);
             const offsetDist = this.size * 0.6;
             position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
-            // Calculates velocity based on ship + random push - seems reasonable
             if (this.vel) {
                 velocity.add(p5.Vector.mult(this.vel, 0.3));
                 velocity.add(p5.Vector.random2D().mult(random(0.5, 1.5)));
             }
-            message = `${this.shipTypeName} jettisoned ${quantity} unit of ${cargoType}`;
-
+            message = `${this.shipTypeName} jettisoned ${quantity} unit${quantity > 1 ? 's' : ''} of ${cargoType}`;
         } else if (context === 'destruction') {
-            const cargoCapacity = shipDef.cargoCapacity || 0;
-            if (cargoCapacity <= 0) return false; // Correct check
-            quantity = Math.max(1, Math.floor(cargoCapacity / 3)); // Drops ~1/3 capacity, min 1 - reasonable
-            // Calculates random offset position around destruction point - reasonable
             const offsetAngle = random(TWO_PI);
             const offsetDist = random(this.size * 0.2, this.size * 0.7);
             position.add(cos(offsetAngle) * offsetDist, sin(offsetAngle) * offsetDist);
-            // Calculates random outward velocity - reasonable for explosion
             velocity = p5.Vector.random2D().mult(random(0.8, 2.0));
             message = `${this.shipTypeName} dropped ${quantity} units of ${cargoType}`;
             CARGO_LOG(`${this.shipTypeName} destroyed - dropping cargo: ${quantity} x ${cargoType}`);
-
         } else {
             console.error(`_spawnCargo called with invalid context: ${context}`);
-            return false; // Handles invalid context
+            return false;
         }
 
-        // 5. Check Quantity
-        if (quantity <= 0) return false; // Prevents spawning zero items
-
-        // 6. Create Cargo Object
         let cargoObject = null;
         try {
             cargoObject = new Cargo(position.x, position.y, cargoType, quantity);
             cargoObject.vel = velocity;
-            cargoObject.size = 8; // Standardizes size
+            cargoObject.size = 8;
         } catch (e) {
             console.error(`Error creating Cargo object in _spawnCargo (${context}) for ${this.shipTypeName}:`, e);
-            return false; // Good error handling
+            return false;
         }
 
-        // 7. Add Cargo to System using system.addCargo
-        if (system.addCargo(cargoObject)) { // Correctly uses the existing method
-            // Handle UI Message
+        if (system.addCargo(cargoObject)) {
             if (typeof uiManager !== 'undefined' && message) {
-                uiManager.addMessage(message); // Displays appropriate message
+                uiManager.addMessage(message);
             }
-            return true; // Success
-        } else {
-            // system.addCargo should log its own failure, but add a warning here too
-            console.warn(`_spawnCargo: system.addCargo failed for ${cargoType} x${quantity}`);
-            return false; // Failure
+            return true;
         }
+
+        console.warn(`_spawnCargo: system.addCargo failed for ${cargoType} x${quantity}`);
+        return false;
     }
 
-    /**
-     * Jettisons a single piece of cargo when hit (but not destroyed).
-     * Calls the internal helper with 'jettison' context.
-     */
     jettisonCargo() {
-        this._spawnCargo('jettison');
+        const entry = this._selectRandomCargoEntry();
+        if (!entry) {
+            return false;
+        }
+        const quantity = Math.min(entry.quantity, 1);
+        const spawned = this._spawnCargo('jettison', { type: entry.name, quantity });
+        if (spawned) {
+            this.removeCargo(entry.name, quantity);
+        }
+        return spawned;
     }
 
-    /**
-     * Drops cargo when ship is destroyed.
-     * Calls the internal helper with 'destruction' context.
-     */
     dropCargo() {
-        this._spawnCargo('destruction');
+        const total = this.getCargoAmount();
+        if (total <= 0) {
+            return false;
+        }
+
+        const inventorySnapshot = this.cargoHold
+            .filter(item => item && item.quantity > 0)
+            .map(item => ({ name: item.name, quantity: item.quantity }));
+
+        if (inventorySnapshot.length === 0) {
+            return false;
+        }
+
+        const targetDrop = Math.max(1, Math.floor(total * random(0.6, 0.9)));
+        let remaining = targetDrop;
+        let guard = 0;
+        const drops = [];
+
+        while (remaining > 0 && guard < 10) {
+            guard++;
+            const available = inventorySnapshot.filter(item => item.quantity > 0);
+            if (available.length === 0) {
+                break;
+            }
+            const entry = random(available);
+            const maxForEntry = Math.min(entry.quantity, remaining);
+            const qty = Math.max(1, Math.min(maxForEntry, Math.floor(maxForEntry * random(0.5, 1.0))));
+            entry.quantity -= qty;
+            remaining -= qty;
+            drops.push({ type: entry.name, quantity: qty });
+        }
+
+        if (drops.length === 0) {
+            return false;
+        }
+
+        drops.forEach(drop => {
+            if (this._spawnCargo('destruction', drop)) {
+                this.removeCargo(drop.type, drop.quantity);
+            }
+        });
+
+        return true;
     }
 
-    /** 
-     * Detects nearby cargo within range 
-     * @param {Object} system - The current star system
-     * @return {Object|null} The closest cargo or null if none found
-     */
     detectCargo(system) {
-        if (!system?.cargo || system.cargo.length === 0) return null;
-        
+        if (typeof this.getRemainingCargoCapacity === 'function' && this.getRemainingCargoCapacity() <= 0) {
+            return null;
+        }
+        if (!system?.cargo || system.cargo.length === 0) {
+            return null;
+        }
+
         let closestCargo = null;
         let closestDistance = Infinity;
-        
+
         for (const cargo of system.cargo) {
-            if (cargo.collected) continue;
-            
+            if (!cargo || cargo.collected) {
+                continue;
+            }
+
             const distance = dist(this.pos.x, this.pos.y, cargo.pos.x, cargo.pos.y);
             if (distance < this.cargoDetectionRange && distance < closestDistance) {
                 closestCargo = cargo;
                 closestDistance = distance;
             }
         }
-        
+
         return closestCargo;
     }
 }
