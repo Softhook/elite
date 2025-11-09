@@ -989,9 +989,35 @@ class UIManager {
             }
             
             textAlign(CENTER, CENTER);
-            fill(255);
+            
+            // Buy price with color coding
+            if (comm.baseBuy > 0) {
+                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                if (buyDeviation < -0.05) { // Cheap (Green)
+                    fill(50, 255, 50);
+                } else if (buyDeviation > 0.05) { // Expensive (Red)
+                    fill(255, 50, 50);
+                } else { // Average (White)
+                    fill(255);
+                }
+            } else {
+                fill(255);
+            }
             text(comm.buyPrice??'?', sX+colCommodity+colBuy/2, tY);
-            fill(255);
+            
+            // Sell price with color coding
+            if (comm.baseSell > 0) {
+                let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
+                if (sellDeviation > 0.05) { // Good Sell Price (Green)
+                    fill(50, 255, 50);
+                } else if (sellDeviation < -0.05) { // Bad Sell Price (Red)
+                    fill(255, 50, 50);
+                } else { // Average (White)
+                    fill(255);
+                }
+            } else {
+                fill(255);
+            }
             text(comm.sellPrice??'?', sX+colCommodity+colBuy+colSell/2, tY);
 
             // Stock display - single number with color coding
