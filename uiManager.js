@@ -34,6 +34,7 @@ class UIManager {
     _initUIAreas() {
         this.marketButtonAreas = [];
         this.galaxyMapNodeAreas = [];
+        this.galaxyMapMarketButtonAreas = []; // Market info buttons on galaxy map
         this.jumpButtonArea = {};
         this.stationMenuButtonAreas = [];
         this.missionListButtonAreas = [];
@@ -41,6 +42,7 @@ class UIManager {
         this.policeButtonAreas = [];
         this.inactiveMissionIds = new Set();
         this.marketBackButtonArea = {};
+        this.marketOverlaySystemIndex = -1; // Track which system's market is being displayed
     }
 
     _initMinimap() {
@@ -1477,6 +1479,7 @@ if (isIllegalInSystem || isMissionCargo) {
         if (!galaxy || !player) { console.warn("drawGalaxyMap missing galaxy or player"); return; }
 
         this.galaxyMapNodeAreas = []; // Clear clickable areas for nodes
+        this.galaxyMapMarketButtonAreas = []; // Clear market button areas
         const systems = galaxy.getSystemDataForMap(); // Gets { name, x, y, type, visited, index }
         const currentIdx = galaxy.currentSystemIndex;
         const reachable = galaxy.getReachableSystems(); // Now gets indices based on actual connections
@@ -1619,6 +1622,33 @@ if (isIllegalInSystem || isMissionCargo) {
                     fill(255, 0, 0); // Red for wanted
                     text("Wanted", sysData.x, sysData.y + nodeR + 65);
                 }
+                
+                // Add small market info button for visited systems
+                const btnSize = 20;
+                const btnX = sysData.x + nodeR + 5; // Position to the right of the node
+                const btnY = sysData.y - btnSize / 2; // Center vertically with node
+                
+                // Button background
+                fill(40, 100, 180, 200);
+                stroke(100, 150, 255);
+                strokeWeight(1);
+                rect(btnX, btnY, btnSize, btnSize, 3);
+                
+                // "M" for Market
+                fill(255);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(14);
+                text("M", btnX + btnSize / 2, btnY + btnSize / 2);
+                
+                // Store button area for click detection
+                this.galaxyMapMarketButtonAreas.push({ 
+                    x: btnX, 
+                    y: btnY, 
+                    w: btnSize, 
+                    h: btnSize, 
+                    systemIndex: i 
+                });
             }
         }
         // --- End Draw System Nodes ---
@@ -1650,9 +1680,147 @@ if (isIllegalInSystem || isMissionCargo) {
             text("Click reachable system.", width / 2, height - 70);
         }
 
+        // --- Draw Market Overlay if a system is selected ---
+        if (this.marketOverlaySystemIndex !== -1 && this.marketOverlaySystemIndex < galaxy.systems.length) {
+            this.drawMarketOverlay(galaxy, this.marketOverlaySystemIndex);
+        }
+        // --- End Market Overlay ---
 
         pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
+
+    /** Draws a compact market overlay showing commodity prices for a system */
+    drawMarketOverlay(galaxy, systemIndex) {
+        const system = galaxy.systems[systemIndex];
+        if (!system || !system.station || !system.station.market) {
+            return; // No market data available
+        }
+
+        const market = system.station.market;
+        const commodities = market.getPrices();
+        
+        // Overlay dimensions - compact panel
+        const overlayW = 450;
+        const overlayH = 500;
+        const overlayX = width - overlayW - 20; // Position on right side
+        const overlayY = 80; // Below top bar
+        
+        push();
+        
+        // Background
+        fill(20, 30, 50, 240);
+        stroke(100, 150, 255);
+        strokeWeight(2);
+        rect(overlayX, overlayY, overlayW, overlayH, 8);
+        
+        // Header
+        fill(255);
+        noStroke();
+        textFont(font);
+        textSize(22);
+        textAlign(CENTER, TOP);
+        text(`${system.name} Market`, overlayX + overlayW / 2, overlayY + 10);
+        
+        // Close button
+        const closeBtnSize = 24;
+        const closeBtnX = overlayX + overlayW - closeBtnSize - 8;
+        const closeBtnY = overlayY + 8;
+        fill(180, 50, 50);
+        stroke(255, 100, 100);
+        strokeWeight(1);
+        rect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize, 3);
+        fill(255);
+        noStroke();
+        textSize(18);
+        textAlign(CENTER, CENTER);
+        text("X", closeBtnX + closeBtnSize / 2, closeBtnY + closeBtnSize / 2);
+        
+        // Store close button area for click detection
+        this.marketOverlayCloseButton = { 
+            x: closeBtnX, 
+            y: closeBtnY, 
+            w: closeBtnSize, 
+            h: closeBtnSize 
+        };
+        
+        // Column headers
+        const tableY = overlayY + 45;
+        const rowHeight = 28;
+        const col1X = overlayX + 15; // Commodity name
+        const col2X = overlayX + 210; // Buy price
+        const col3X = overlayX + 320; // Sell price
+        
+        fill(180, 200, 255);
+        textSize(16);
+        textAlign(LEFT, TOP);
+        text("Commodity", col1X, tableY);
+        textAlign(CENTER, TOP);
+        text("Buy", col2X, tableY);
+        text("Sell", col3X, tableY);
+        
+        // Draw commodities
+        let yPos = tableY + 25;
+        const maxRows = Math.floor((overlayH - 90) / rowHeight);
+        
+        for (let i = 0; i < Math.min(commodities.length, maxRows); i++) {
+            const comm = commodities[i];
+            if (!comm) continue;
+            
+            // Alternate row background
+            if (i % 2 === 0) {
+                fill(0, 0, 0, 60);
+                noStroke();
+                rect(overlayX + 5, yPos - 2, overlayW - 10, rowHeight - 2);
+            }
+            
+            // Commodity name
+            fill(255);
+            textSize(15);
+            textAlign(LEFT, TOP);
+            text(comm.name, col1X, yPos);
+            
+            // Buy price with color coding
+            textAlign(CENTER, TOP);
+            if (comm.baseBuy > 0) {
+                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                if (buyDeviation < -0.05) {
+                    fill(100, 255, 100); // Cheap - green
+                } else if (buyDeviation > 0.05) {
+                    fill(255, 100, 100); // Expensive - red
+                } else {
+                    fill(255); // Average - white
+                }
+            } else {
+                fill(255);
+            }
+            text(comm.buyPrice, col2X, yPos);
+            
+            // Sell price with color coding
+            if (comm.baseSell > 0) {
+                let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
+                if (sellDeviation > 0.05) {
+                    fill(100, 255, 100); // Good sell - green
+                } else if (sellDeviation < -0.05) {
+                    fill(255, 100, 100); // Bad sell - red
+                } else {
+                    fill(255); // Average - white
+                }
+            } else {
+                fill(255);
+            }
+            text(comm.sellPrice, col3X, yPos);
+            
+            yPos += rowHeight;
+        }
+        
+        // Footer note
+        fill(180);
+        textSize(12);
+        textAlign(CENTER, BOTTOM);
+        text("Click X to close", overlayX + overlayW / 2, overlayY + overlayH - 8);
+        
+        pop();
+    }
 
     /** Handles clicks on the galaxy map */
     handleGalaxyMapClicks(mouseX, mouseY, galaxy, player, gameStateManager) {
@@ -1665,6 +1833,27 @@ if (isIllegalInSystem || isMissionCargo) {
         // --- Debug Logging ---
         console.log(`[handleGalaxyMapClicks] 'canJump' evaluated as: ${canJump}`);
         // ---
+
+        // Check if market overlay close button is clicked
+        if (this.marketOverlayCloseButton && this.isClickInArea(mouseX, mouseY, this.marketOverlayCloseButton)) {
+            this.marketOverlaySystemIndex = -1; // Close the overlay
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+            return true;
+        }
+
+        // Check if any market button is clicked
+        for (const btn of this.galaxyMapMarketButtonAreas) {
+            if (this.isClickInArea(mouseX, mouseY, btn)) {
+                // Toggle market overlay for this system
+                if (this.marketOverlaySystemIndex === btn.systemIndex) {
+                    this.marketOverlaySystemIndex = -1; // Close if already open
+                } else {
+                    this.marketOverlaySystemIndex = btn.systemIndex; // Open for this system
+                }
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                return true;
+            }
+        }
 
         // Check Jump button first
         if (this.isClickInArea(mouseX, mouseY, this.jumpButtonArea)) {
