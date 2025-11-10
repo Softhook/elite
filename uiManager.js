@@ -542,11 +542,6 @@ class UIManager {
         infoLines.push(`Ship: ${shipName}`);
         if (roleLabel) { infoLines.push(`Role: ${roleLabel}`); }
         if (wantedLabel) { infoLines.push(`Status: ${wantedLabel}`); }
-        if (Number.isFinite(cargoCapacity) && Number.isFinite(cargoAmount)) {
-            infoLines.push(`Cargo Hold: ${cargoAmount}/${cargoCapacity}`);
-        } else if (Number.isFinite(cargoAmount)) {
-            infoLines.push(`Cargo Hold: ${cargoAmount}`);
-        }
         if (rangeLine) { infoLines.push(rangeLine); }
 
         const cargoEntries = this._getCargoEntries(target);
@@ -614,11 +609,6 @@ class UIManager {
         let cursorX = panelX + padding;
         let cursorY = panelY + padding;
 
-        fill(190, 220, 255);
-        textSize(16);
-        text('TARGET', cursorX, cursorY);
-        cursorY += lineHeight;
-
         fill(255);
         textSize(18);
         text(pilotName, cursorX, cursorY);
@@ -627,10 +617,19 @@ class UIManager {
         cursorY += sectionSpacing;
 
         // Draw Hull and Shield status bars with color coding
-        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Hull', target.hull, target.maxHull, hullPercent);
-        cursorY += lineHeight + 4;
         this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Shield', target.shield, target.maxShield, shieldPercent);
+        cursorY += lineHeight + 4;
+        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Hull', target.hull, target.maxHull, hullPercent);
         cursorY += lineHeight;
+
+        cursorY += sectionSpacing;
+
+        fill(210);
+        textSize(16);
+        for (let i = 0; i < infoLines.length; i++) {
+            text(infoLines[i], cursorX, cursorY);
+            cursorY += lineHeight;
+        }
 
         cursorY += sectionSpacing;
 
@@ -647,13 +646,6 @@ class UIManager {
                 cursorY += lineHeight;
             }
             cursorY += sectionSpacing;
-        }
-
-        fill(210);
-        textSize(16);
-        for (let i = 0; i < infoLines.length; i++) {
-            text(infoLines[i], cursorX, cursorY);
-            cursorY += lineHeight;
         }
 
         if (showCargoSection && renderedCargoLines.length > 0) {
@@ -777,7 +769,7 @@ class UIManager {
         rect(barX, y, fillWidth, barHeight, 2);
         
         // Draw value text
-        fill(255);
+        fill(0);
         textAlign(CENTER, TOP);
         textSize(12);
         const valueText = Number.isFinite(max) 
