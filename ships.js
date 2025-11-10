@@ -496,7 +496,7 @@ const SHIP_DEFINITIONS = {
         fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery","Minerals"],
         price: 120000,
-        aiRoles: ["HAULER", "MILITARY"],
+        aiRoles: ["COMBAT", "MILITARY"],
         techLevel: 3 // Mid-tier
     },
     "AspExplorer": {
@@ -892,7 +892,7 @@ const SHIP_DEFINITIONS = {
         strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 40000,
-        aiRoles: ["HAULER","MILITARY"],
+        aiRoles: ["COMBAT","MILITARY"],
         techLevel: 2 // Utility
     },
     "Keelback": {
@@ -1610,7 +1610,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:0.9,y:0.6}, {x:0.7,y:0.8}, {x:-0.7,y:0.8}, {x:-0.9,y:0.6}, {x:-0.9,y:-0.6}, {x:-0.7,y:-0.8}, {x:0.7,y:-0.8}, {x:0.9,y:-0.6} ],
         fillColor: [90, 70, 50], strokeColor: [130, 110, 90], strokeW: 1.6,
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
-        aiRoles: ["HAULER","SEPARATIST"]
+        aiRoles: ["COMBAT","SEPARATIST"]
     },
     "ImperialGuardian": {
         name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
@@ -1732,7 +1732,7 @@ const SHIP_DEFINITIONS = {
         vertexData: [ {x:1.1,y:0}, {x:0.7,y:0.25}, {x:0,y:0.7}, {x:-0.9,y:0.6}, {x:-1.1,y:0.3}, {x:-1.1,y:-0.3}, {x:-0.9,y:-0.6}, {x:0,y:-0.7}, {x:0.7,y:-0.25} ],
         fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
-        aiRoles: ["HAULER", "IMPERIAL"]
+        aiRoles: ["COMBAT", "IMPERIAL"]
     },
         "ObeliskSentinel": {
         name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,

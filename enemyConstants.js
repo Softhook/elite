@@ -14,7 +14,8 @@ const AI_ROLE = {
     TRANSPORT: 'Transport',  // local shuttles
     ALIEN: 'Alien',
     BOUNTY_HUNTER: 'BOUNTY_HUNTER',
-    GUARD: 'Guard'
+    GUARD: 'Guard',
+    COMBAT: 'Combat'  // Military, imperial, and separatist combat ships
 };
 
 // -------------------------
