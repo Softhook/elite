@@ -913,7 +913,7 @@ class EnemyAIBehaviors {
     }
 
     /**
-     * Update combat patrol behavior - patrol between station and jump gate, pausing to scan
+     * Update combat patrol behavior - patrol between station, all planets, and jump gate, pausing to scan
      * @param {Object} system - The current star system
      */
     _updateCombatPatrolBehavior(system) {
@@ -921,38 +921,66 @@ class EnemyAIBehaviors {
             this.changeState(AI_STATE.PATROLLING);
         }
         
-        // Initialize combat patrol waypoint index if not set
-        if (this._combatPatrolWaypointIndex === undefined) {
-            this._combatPatrolWaypointIndex = 0; // Start at station
-        }
-        
-        // Define patrol waypoints: station -> jump gate -> station
-        if (!this.patrolTargetPos) {
-            // Determine next patrol waypoint based on current index
-            if (this._combatPatrolWaypointIndex === 0) {
-                // Waypoint 0: Station
-                if (system?.station?.pos) {
-                    this.patrolTargetPos = system.station.pos.copy();
-                    this._isTargetingStation = true;
-                    this._isTargetingJumpGate = false;
-                } else {
-                    // No station, go to jump gate
-                    this._combatPatrolWaypointIndex = 1;
+        // Build waypoint list: station -> planet1 -> planet2 -> ... -> planetN -> jump gate -> repeat
+        if (this._combatPatrolWaypoints === undefined) {
+            this._combatPatrolWaypoints = [];
+            
+            // Add station as first waypoint
+            if (system?.station?.pos) {
+                this._combatPatrolWaypoints.push({ 
+                    type: 'station', 
+                    pos: system.station.pos,
+                    name: 'station'
+                });
+            }
+            
+            // Add all planets (skip index 0 if it's the sun)
+            if (system?.planets && Array.isArray(system.planets)) {
+                for (let i = 1; i < system.planets.length; i++) {
+                    const planet = system.planets[i];
+                    if (planet && planet.pos) {
+                        this._combatPatrolWaypoints.push({
+                            type: 'planet',
+                            pos: planet.pos,
+                            name: planet.name || `Planet ${i}`,
+                            index: i
+                        });
+                    }
                 }
             }
             
-            if (this._combatPatrolWaypointIndex === 1) {
-                // Waypoint 1: Jump Gate
-                if (system?.jumpZoneCenter) {
-                    this.patrolTargetPos = system.jumpZoneCenter.copy();
-                    this._isTargetingStation = false;
-                    this._isTargetingJumpGate = true;
-                } else {
-                    // No jump gate, reset to station
-                    this._combatPatrolWaypointIndex = 0;
-                    this._isTargetingStation = false;
-                    this._isTargetingJumpGate = false;
-                }
+            // Add jump gate as last waypoint
+            if (system?.jumpZoneCenter) {
+                this._combatPatrolWaypoints.push({
+                    type: 'jumpgate',
+                    pos: system.jumpZoneCenter,
+                    name: 'jump gate'
+                });
+            }
+            
+            // Initialize waypoint index
+            this._combatPatrolWaypointIndex = 0;
+            
+            AI_LOG(`${this.shipTypeName} initialized patrol with ${this._combatPatrolWaypoints.length} waypoints`);
+        }
+        
+        // If no waypoints, fall back to idle behavior
+        if (!this._combatPatrolWaypoints || this._combatPatrolWaypoints.length === 0) {
+            this.vel.mult(0.95);
+            return;
+        }
+        
+        // Select current waypoint
+        if (!this.patrolTargetPos) {
+            const currentWaypoint = this._combatPatrolWaypoints[this._combatPatrolWaypointIndex];
+            if (currentWaypoint && currentWaypoint.pos) {
+                this.patrolTargetPos = currentWaypoint.pos.copy();
+                this._currentWaypointType = currentWaypoint.type;
+                this._currentWaypointName = currentWaypoint.name;
+            } else {
+                // Skip invalid waypoint
+                this._combatPatrolWaypointIndex = (this._combatPatrolWaypointIndex + 1) % this._combatPatrolWaypoints.length;
+                return;
             }
         }
         
@@ -962,16 +990,13 @@ class EnemyAIBehaviors {
             : Infinity;
         
         // Define proximity thresholds for waypoints
-        const stationProximity = 150; // Same as stationProximityThreshold
-        const jumpGateProximity = system?.jumpZoneRadius || 200;
+        let proximityThreshold = 150; // Default for station and planets
+        if (this._currentWaypointType === 'jumpgate') {
+            proximityThreshold = system?.jumpZoneRadius || 200;
+        }
         
         // Determine if we've arrived at current waypoint
-        let arrivedAtWaypoint = false;
-        if (this._isTargetingStation && distToPatrolTarget < stationProximity) {
-            arrivedAtWaypoint = true;
-        } else if (this._isTargetingJumpGate && distToPatrolTarget < jumpGateProximity) {
-            arrivedAtWaypoint = true;
-        }
+        let arrivedAtWaypoint = distToPatrolTarget < proximityThreshold;
         
         if (arrivedAtWaypoint) {
             // Apply braking when near waypoint
@@ -980,17 +1005,19 @@ class EnemyAIBehaviors {
             // Pause to scan at waypoint
             if (!this._scanPauseTimer) {
                 this._scanPauseTimer = random(2, 4); // 2-4 seconds scan time
-                AI_LOG(`${this.shipTypeName} pausing to scan at ${this._isTargetingStation ? 'station' : 'jump gate'}`);
+                AI_LOG(`${this.shipTypeName} pausing to scan at ${this._currentWaypointName}`);
             } else {
                 this._scanPauseTimer -= deltaTime / 1000;
                 if (this._scanPauseTimer <= 0) {
                     // Scan complete, move to next waypoint
                     this._scanPauseTimer = null;
-                    this._combatPatrolWaypointIndex = (this._combatPatrolWaypointIndex + 1) % 2; // Toggle between 0 and 1
-                    this.patrolTargetPos = null; // Will select new target next frame
-                    this._isTargetingStation = false;
-                    this._isTargetingJumpGate = false;
-                    AI_LOG(`${this.shipTypeName} scan complete, heading to ${this._combatPatrolWaypointIndex === 0 ? 'station' : 'jump gate'}`);
+                    this._combatPatrolWaypointIndex = (this._combatPatrolWaypointIndex + 1) % this._combatPatrolWaypoints.length;
+                    this.patrolTargetPos = null;
+                    this._currentWaypointType = null;
+                    this._currentWaypointName = null;
+                    
+                    const nextWaypoint = this._combatPatrolWaypoints[this._combatPatrolWaypointIndex];
+                    AI_LOG(`${this.shipTypeName} scan complete, heading to ${nextWaypoint?.name || 'next waypoint'}`);
                 }
             }
             return; // Don't move while scanning
