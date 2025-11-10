@@ -28,6 +28,7 @@ class UIManager {
         this.roleMinimapColors[AI_ROLE.GUARD] = this.roleMinimapColors[AI_ROLE.HAULER]; // Guards same as haulers
         this.roleMinimapColors[AI_ROLE.PIRATE] = [255, 0, 0];      // Red for pirates
         this.roleMinimapColors[AI_ROLE.ALIEN] = [0, 200, 0];       // Green for aliens
+        this.roleMinimapColors[AI_ROLE.COMBAT] = [128, 0, 128];    // Purple for combat ships
     }
 
     // --- Initialization Helpers ---
