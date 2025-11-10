@@ -335,6 +335,9 @@ class Enemy {
         this.hasPlayedLockOnSound = false; // Add this new flag
         this.shieldPlusHullAtStateEntry = null; // For tracking combined health drop during certain states
 
+        // Turret firing angle sync
+        this.lastTurretFiringAngle = null;
+
         // Initialize cargo inventory based on role/ship definition
         if (typeof this.initializeCargoInventory === 'function') {
             this.initializeCargoInventory(shipDef);

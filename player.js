@@ -140,6 +140,9 @@ class Player {
         this.explosionStartTime = 0;
         this.isDying = false; // Flag to prevent interactions during death animation
 
+        // Turret firing angle for visual sync
+        this.lastTurretFiringAngle = null;
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -936,17 +939,24 @@ handleInput() {
         
         // If this is the selected weapon and we have a target, track it
         if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
-            // Find nearest target for tracking
-            const target = WeaponSystem.findNearestTarget(this, this.currentSystem);
-            
-            if (target && target.pos) {
-                // Calculate angle to target in world space
-                const dx = target.pos.x - this.pos.x;
-                const dy = target.pos.y - this.pos.y;
-                const angleToTarget = atan2(dy, dx);
+            if (this.lastTurretFiringAngle !== null) {
+                // Use the last firing angle to keep visual synced with bullets
+                turretAngle = this.lastTurretFiringAngle - this.angle;
+            } else {
+                // Find nearest target for initial tracking
+                const target = WeaponSystem.findNearestTarget(this, this.currentSystem);
                 
-                // Convert to ship-local angle (subtract ship's angle since we're already rotated)
-                turretAngle = angleToTarget - this.angle;
+                if (target && target.pos) {
+                    // Calculate angle to target in world space
+                    const dx = target.pos.x - this.pos.x;
+                    const dy = target.pos.y - this.pos.y;
+                    const angleToTarget = atan2(dy, dx);
+                    
+                    // Convert to ship-local angle (subtract ship's angle since we're already rotated)
+                    turretAngle = angleToTarget - this.angle;
+                    // Set it for future use
+                    this.lastTurretFiringAngle = angleToTarget;
+                }
             }
         }
         
@@ -955,18 +965,18 @@ handleInput() {
         fill(80, 90, 100);
         stroke(120, 130, 140);
         strokeWeight(1);
-        ellipse(0, 0, turretSize * 1.5, turretSize * 1.5);
+        ellipse(0, 0, turretSize * 1.2, turretSize * 1.2);
         
         // Draw turret barrel (rotates to track target)
         rotate(turretAngle);
         fill(60, 70, 80);
         stroke(100, 110, 120);
         strokeWeight(1);
-        rect(-turretSize * 0.2, -turretSize * 0.4, turretSize * 0.4, turretSize * 0.8);
+        rect(0, -turretSize * 0.2, turretSize * 0.8, turretSize * 0.4);
         
         // Draw barrel tip
         fill(80, 90, 100);
-        rect(-turretSize * 0.15, -turretSize * 0.6, turretSize * 0.3, turretSize * 0.2);
+        rect(turretSize * 0.8, -turretSize * 0.15, turretSize * 0.2, turretSize * 0.3);
         
         pop();
     }
