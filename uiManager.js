@@ -384,7 +384,9 @@ class UIManager {
         this.drawWeaponSelector(player);
         
         pop();
-        this.drawTargetOverlay(player);
+        if (gameStateManager?.currentState !== "GALAXY_MAP") {
+            this.drawTargetOverlay(player);
+        }
     }
 
     /** Draws the weapon selector UI */
@@ -597,10 +599,10 @@ class UIManager {
         textAlign(LEFT, TOP);
         textFont(font);
 
-        fill(10, 30, 60, 215);
-        stroke(80, 160, 255, 180);
-        strokeWeight(1.5);
-        rect(panelX, panelY, panelWidth, panelHeight, 10);
+        fill(20, 30, 50, 240);
+        stroke(100, 150, 255, 180);
+        strokeWeight(2);
+        rect(panelX, panelY, panelWidth, panelHeight, 8);
         noStroke()
         const ctx = drawingContext;
         ctx.save();
@@ -1614,7 +1616,7 @@ if (isIllegalInSystem || isMissionCargo) {
                 
                 // Security level (unchanged)
                 const secLevel = system?.securityLevel || "Unknown";
-                fill(200, 200, 100); // Gold/yellow for visibility
+                fill(180, 200, 255); // Blue for visibility, matching market overlay
                 text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 45);
                 
                 // Wanted status (unchanged)
@@ -1656,7 +1658,7 @@ if (isIllegalInSystem || isMissionCargo) {
 
 
         // --- Instructions ---
-        fill(200); textAlign(CENTER, BOTTOM); textSize(18);
+        fill(255); textAlign(CENTER, BOTTOM); textSize(18);
         // Adjust instruction text based on whether a destination is locked
         if (this.lockedDestinationIndex !== -1) {
             text("Destination locked. Enter jump zone to auto-jump.", width / 2, height - 70);
@@ -1686,9 +1688,8 @@ if (isIllegalInSystem || isMissionCargo) {
         // Calculate dynamic height based on content
         const headerHeight = 45;
         const rowHeight = 28;
-        const closeButtonHeight = 30;
         const closeButtonPadding = 40;
-        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonHeight + closeButtonPadding;
+        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonPadding;
         
         // Overlay dimensions
         const overlayW = 360;
@@ -1785,29 +1786,12 @@ if (isIllegalInSystem || isMissionCargo) {
             yPos += rowHeight;
         }
         
-        // Close button at bottom - styled like inventory close button
-        const closeBtnW = 100;
-        const closeBtnH = 30;
-        const closeBtnX = overlayX + (overlayW - closeBtnW) / 2;
-        const closeBtnY = overlayY + overlayH - closeBtnH - 15;
-        
-        fill(80, 80, 120);
-        stroke(150, 150, 200);
-        strokeWeight(2);
-        rect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 4);
-        
-        fill(255);
-        noStroke();
-        textAlign(CENTER, CENTER);
-        textSize(16);
-        text("Close", closeBtnX + closeBtnW / 2, closeBtnY + closeBtnH / 2);
-        
-        // Store close button area for click detection
-        this.marketOverlayCloseButton = { 
-            x: closeBtnX, 
-            y: closeBtnY, 
-            w: closeBtnW, 
-            h: closeBtnH 
+        // Store overlay area for click detection
+        this.marketOverlayArea = { 
+            x: overlayX, 
+            y: overlayY, 
+            w: overlayW, 
+            h: overlayH 
         };
         
         pop();
@@ -1825,13 +1809,6 @@ if (isIllegalInSystem || isMissionCargo) {
         console.log(`[handleGalaxyMapClicks] 'canJump' evaluated as: ${canJump}`);
         // ---
 
-        // Check if market overlay close button is clicked
-        if (this.marketOverlayCloseButton && this.isClickInArea(mouseX, mouseY, this.marketOverlayCloseButton)) {
-            this.marketOverlaySystemIndex = -1; // Close the overlay
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
-            return true;
-        }
-
         // Check if any market button is clicked
         for (const btn of this.galaxyMapMarketButtonAreas) {
             if (this.isClickInArea(mouseX, mouseY, btn)) {
@@ -1844,6 +1821,13 @@ if (isIllegalInSystem || isMissionCargo) {
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 return true;
             }
+        }
+
+        // If market overlay is open and click is inside it but not on a button, close it
+        if (this.marketOverlaySystemIndex !== -1 && this.marketOverlayArea && this.isClickInArea(mouseX, mouseY, this.marketOverlayArea)) {
+            this.marketOverlaySystemIndex = -1;
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+            return true;
         }
 
         // Check system nodes for SELECTION
