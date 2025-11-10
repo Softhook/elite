@@ -52,6 +52,11 @@ class EnemyCargo {
                 break;
         }
 
+        // Start Pirates and Police with a little food
+        if (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.POLICE) {
+            this.addCargo('Food', Math.floor(random(5)));
+        }
+
         startingLoad = Math.max(0, Math.min(this.cargoCapacity, startingLoad));
 
         if (startingLoad <= 0 || pool.length === 0) { return; }
