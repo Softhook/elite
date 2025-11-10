@@ -1694,7 +1694,8 @@ if (isIllegalInSystem || isMissionCargo) {
         // Overlay dimensions
         const overlayW = 360;
         const overlayX = width - overlayW - 20; // Position on right side
-        const overlayY = 120; // Below top bar
+        const autopilotOffset = (typeof player !== 'undefined' && player?.autopilotEnabled) ? 35 : 0;
+        const overlayY = 80 + autopilotOffset; // Same as target overlay
         
         push();
         
