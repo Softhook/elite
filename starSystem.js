@@ -660,7 +660,8 @@ try {
         // --- Special cases for economy ---
         if (econ === "military") {
             chosenRole = AI_ROLE.COMBAT; // Military systems spawn combat ships
-            chosenShipTypeName = random(COMBAT_SHIPS.length > 0 ? COMBAT_SHIPS : MILITARY_SHIPS); // Prefer COMBAT ships if available
+            // Prefer strictly MILITARY faction ships in Military systems; fallback to generic COMBAT
+            chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : COMBAT_SHIPS);
 
         } else if (econ === "alien") {
             // Mostly alien ships
@@ -710,10 +711,20 @@ try {
 
         } else if (econ === "separatist") {
                 chosenRole = AI_ROLE.COMBAT; // Separatist combat ships
-                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
+                // Small chance (15%) to spawn imperial ships for variety
+                if (random() < 0.15 && IMPERIAL_SHIPS.length > 0) {
+                    chosenShipTypeName = random(IMPERIAL_SHIPS);
+                } else {
+                    chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
+                }
         } else if (econ === "imperial") {
                 chosenRole = AI_ROLE.COMBAT; // Imperial combat ships
-                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
+                // Small chance (15%) to spawn separatist ships for variety
+                if (random() < 0.15 && SEPARATIST_SHIPS.length > 0) {
+                    chosenShipTypeName = random(SEPARATIST_SHIPS);
+                } else {
+                    chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
+                }
 
         } else {
             // --- Standard spawn logic based on security ---

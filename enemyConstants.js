@@ -75,6 +75,16 @@ const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hu
 const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
 
 // -------------------------
+// --- Combat Role Targeting Scores ---
+// -------------------------
+
+// Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
+const TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 150; // Military vs Aliens
+const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 130;   // Imperial vs Separatist rivalry
+const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 40;  // Pirates or player
+const TARGET_SCORE_COMBAT_LOW_PRIORITY = 30;     // Other ships (generic)
+
+// -------------------------
 // --- Movement & Combat Constants ---
 // -------------------------
 
@@ -118,3 +128,17 @@ const SNIPING_HULL_DROP_EXIT_PERCENT = 0.15;  // Exit sniping if hull drops by 1
 // Debug flags/helpers moved to debug.js (loaded early).
 // If needed, you can still check or toggle via the global Debug API:
 //   Debug.get(), Debug.set({ DEBUG_AI: true }), Debug.enable('DEBUG_TARGETING')
+
+// -------------------------
+// --- Combat Role Bonuses ---
+// -------------------------
+
+// Applied in EnemyAIBehaviors: military vs alien bonus
+const COMBAT_MILITARY_TURN_RATE_MULT = 1.3;         // baseTurnRate multiplier
+const COMBAT_MILITARY_ROTATION_SPEED_MULT = 1.3;    // rotationSpeed multiplier
+const COMBAT_MILITARY_ANGLE_TOLERANCE_RAD = 0.15;   // tighter aim tolerance (~8.6°)
+
+// Applied in EnemyAIBehaviors: imperial vs separatist rivalry bonus
+const COMBAT_RIVALRY_MAX_SPEED_MULT = 1.2;
+const COMBAT_RIVALRY_ENGAGE_DISTANCE_MULT = 1.3;
+const COMBAT_RIVALRY_FIRING_RANGE_MULT = 1.2;
