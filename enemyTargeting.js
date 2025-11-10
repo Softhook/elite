@@ -327,23 +327,23 @@ class EnemyTargeting {
                     
                     // Military ships prioritize aliens with significant bonus
                     if (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
-                        _score += 150; // Strong bonus for military vs aliens
+                        _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military vs aliens
                         _interesting = true;
                     }
                     // Imperial and Separatist ships prioritize each other with strong bonus
                     else if ((myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
                              (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
-                        _score += 130; // Strong bonus for faction rivalry
+                        _score += TARGET_SCORE_COMBAT_RIVALRY_BONUS; // Strong bonus for faction rivalry
                         _interesting = true;
                     }
-                    // General combat engagement
-                    else if (target.role === AI_ROLE.PIRATE || isPlayer) {
-                        _score += 60; // Standard combat priority
+                    // General combat engagement - only target pirates, not players
+                    else if (target.role === AI_ROLE.PIRATE) {
+                        _score += TARGET_SCORE_COMBAT_STANDARD_ENGAGE; // Standard combat priority
                         _interesting = true;
                     }
                     // Lower priority for other targets
                     else {
-                        _score += 30; // Low priority for other ships
+                        _score += TARGET_SCORE_COMBAT_LOW_PRIORITY; // Low priority for other ships
                         _interesting = true;
                     }
                     break;

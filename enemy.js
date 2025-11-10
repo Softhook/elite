@@ -160,7 +160,7 @@ class Enemy {
             case AI_ROLE.GUARD:
                 this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
                 // Guards might inherit target from principal or player initially
-                this.target = playerRef; // Default, can be overridden
+                this.target = null; // Default, can be overridden
                 break;
         }
 
@@ -172,7 +172,7 @@ class Enemy {
         // ---
 
         // --- Targeting & AI ---
-        this.target = playerRef; this.currentState = AI_STATE.IDLE; // Default state
+        this.target = null; this.currentState = AI_STATE.IDLE; // Default state
         this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed
         // AI Tuning Parameters
         this.detectionRange = 450 + this.size; this.engageDistance = 180 + this.size * 0.5; this.firingRange = 350 + this.size * 0.3; this.visualFiringRange = this.firingRange; // Initialize with base range for drawing

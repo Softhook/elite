@@ -81,8 +81,8 @@ const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus ca
 // Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
 const TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 150; // Military vs Aliens
 const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 130;   // Imperial vs Separatist rivalry
-const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 40;  // Pirates or player
-const TARGET_SCORE_COMBAT_LOW_PRIORITY = 30;     // Other ships (generic)
+const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 20;  // Pirates
+const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 
 // -------------------------
 // --- Movement & Combat Constants ---

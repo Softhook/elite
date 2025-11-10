@@ -659,9 +659,31 @@ try {
 
         // --- Special cases for economy ---
         if (econ === "military") {
-            chosenRole = AI_ROLE.COMBAT; // Military systems spawn combat ships
-            // Prefer strictly MILITARY faction ships in Military systems; fallback to generic COMBAT
-            chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : COMBAT_SHIPS);
+            const rand = random();
+            if (rand < 0.60 && MILITARY_SHIPS.length > 0) { // 60% military
+                chosenRole = AI_ROLE.COMBAT;
+                chosenShipTypeName = random(MILITARY_SHIPS);
+            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(HAULER_SHIPS);
+            } else if (rand < 0.85 && PIRATE_SHIPS.length > 0) { // 10% pirates
+                chosenRole = AI_ROLE.PIRATE;
+                chosenShipTypeName = random(PIRATE_SHIPS);
+            } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) { // 7% aliens
+                chosenRole = AI_ROLE.ALIEN;
+                chosenShipTypeName = random(ALIEN_SHIPS);
+            } else { // 8% local transports (police/civilian)
+                if (random() < 0.5 && POLICE_SHIPS.length > 0) {
+                    chosenRole = AI_ROLE.POLICE;
+                    chosenShipTypeName = random(POLICE_SHIPS);
+                } else if (HAULER_SHIPS.length > 0) {
+                    chosenRole = AI_ROLE.HAULER;
+                    chosenShipTypeName = random(HAULER_SHIPS);
+                } else {
+                    chosenRole = AI_ROLE.COMBAT;
+                    chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : COMBAT_SHIPS);
+                }
+            }
 
         } else if (econ === "alien") {
             // Mostly alien ships
@@ -710,21 +732,35 @@ try {
             }
 
         } else if (econ === "separatist") {
-                chosenRole = AI_ROLE.COMBAT; // Separatist combat ships
-                // Small chance (15%) to spawn imperial ships for variety
-                if (random() < 0.15 && IMPERIAL_SHIPS.length > 0) {
-                    chosenShipTypeName = random(IMPERIAL_SHIPS);
-                } else {
-                    chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
-                }
+            const rand = random();
+            if (rand < 0.60 && SEPARATIST_SHIPS.length > 0) { // 60% separatist combat
+                chosenRole = AI_ROLE.COMBAT;
+                chosenShipTypeName = random(SEPARATIST_SHIPS);
+            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(HAULER_SHIPS);
+            } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) { // 10% transports
+                chosenRole = AI_ROLE.TRANSPORT;
+                chosenShipTypeName = random(TRANSPORT_SHIPS);
+            } else { // 15% imperial combat (cross-faction)
+                chosenRole = AI_ROLE.COMBAT;
+                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
+            }
         } else if (econ === "imperial") {
-                chosenRole = AI_ROLE.COMBAT; // Imperial combat ships
-                // Small chance (15%) to spawn separatist ships for variety
-                if (random() < 0.15 && SEPARATIST_SHIPS.length > 0) {
-                    chosenShipTypeName = random(SEPARATIST_SHIPS);
-                } else {
-                    chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
-                }
+            const rand = random();
+            if (rand < 0.60 && IMPERIAL_SHIPS.length > 0) { // 60% imperial combat
+                chosenRole = AI_ROLE.COMBAT;
+                chosenShipTypeName = random(IMPERIAL_SHIPS);
+            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
+                chosenRole = AI_ROLE.HAULER;
+                chosenShipTypeName = random(HAULER_SHIPS);
+            } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) { // 10% transports
+                chosenRole = AI_ROLE.TRANSPORT;
+                chosenShipTypeName = random(TRANSPORT_SHIPS);
+            } else { // 15% separatist combat (cross-faction)
+                chosenRole = AI_ROLE.COMBAT;
+                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
+            }
 
         } else {
             // --- Standard spawn logic based on security ---
