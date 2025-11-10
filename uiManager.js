@@ -1655,24 +1655,6 @@ if (isIllegalInSystem || isMissionCargo) {
 
 
 
-        // --- Draw Jump Button ---
-        // Show only if a reachable system (not current) is selected AND player is in the jump zone
-        this.jumpButtonArea = { x: 0, y: 0, w: 0, h: 0 }; // Reset button area
-        if (canJump &&
-            this.lockedDestinationIndex !== -1 &&
-            this.lockedDestinationIndex !== currentIdx &&
-            reachable.includes(this.lockedDestinationIndex))
-        {
-            let btnW = 150, btnH = 40, btnX = width / 2 - btnW / 2, btnY = height - btnH - 20;
-            // Use a brighter blue when jump is possible
-            fill(0, 200, 255); stroke(150, 255, 255); strokeWeight(1);
-            rect(btnX, btnY, btnW, btnH, 5);
-            fill(0); textSize(18); textAlign(CENTER, CENTER); noStroke(); // Black text
-            text(`Jump`, btnX + btnW / 2, btnY + btnH / 2);
-            this.jumpButtonArea = { x: btnX, y: btnY, w: btnW, h: btnH }; // Define clickable area
-        }
-        // --- End Draw Jump Button ---
-
         // --- Instructions ---
         fill(200); textAlign(CENTER, BOTTOM); textSize(18);
         // Adjust instruction text based on whether a destination is locked
@@ -1862,28 +1844,6 @@ if (isIllegalInSystem || isMissionCargo) {
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 return true;
             }
-        }
-
-        // Check Jump button first
-        if (this.isClickInArea(mouseX, mouseY, this.jumpButtonArea)) {
-            console.log("  Jump button clicked.");
-            // Ensure a system is selected and it's reachable
-            if (this.lockedDestinationIndex !== -1 && reachable.includes(this.lockedDestinationIndex)) {
-                if (canJump) { // Double-check canJump status for the button action
-                    console.log("    Attempting jump via button...");
-                    gameStateManager.startJump(this.lockedDestinationIndex);
-                    // Optional: Deselect after initiating jump? Or keep selected?
-                    // this.lockedDestinationIndex = -1;
-                } else {
-                    // This case should ideally not happen if the button is only drawn when canJump allows selection,
-                    // but keep as a safeguard.
-                    console.log("    Jump button ignored: Player not in Jump Zone (safeguard check).");
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                }
-            } else {
-                 console.log(`    Jump button ignored: No valid system selected (${this.lockedDestinationIndex}) or not reachable.`);
-            }
-            return true; // Click was on the button area
         }
 
         // Check system nodes for SELECTION
