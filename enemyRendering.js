@@ -8,6 +8,55 @@
  */
 class EnemyRendering {
 
+    /**
+     * Draws a small turret on top of the ship.
+     * The turret will track the target when the turret weapon is selected.
+     * This method is called within the ship's rotated coordinate space.
+     */
+    drawTurret() {
+        // Turret is drawn in ship-local coordinates (already rotated with ship)
+        const turretSize = this.size * 0.2; // Small turret relative to ship size
+        
+        // Calculate turret angle
+        let turretAngle = 0; // Default: facing forward (ship's direction)
+        
+        // If this is the selected weapon and we have a target, track it
+        if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
+            // Find nearest target for tracking
+            const target = WeaponSystem.findNearestTarget(this, this.currentSystem);
+            
+            if (target && target.pos) {
+                // Calculate angle to target in world space
+                const dx = target.pos.x - this.pos.x;
+                const dy = target.pos.y - this.pos.y;
+                const angleToTarget = atan2(dy, dx);
+                
+                // Convert to ship-local angle (subtract ship's angle since we're already rotated)
+                turretAngle = angleToTarget - this.angle;
+            }
+        }
+        
+        // Draw turret base (centered on ship)
+        push();
+        fill(80, 90, 100);
+        stroke(120, 130, 140);
+        strokeWeight(1);
+        ellipse(0, 0, turretSize * 1.5, turretSize * 1.5);
+        
+        // Draw turret barrel (rotates to track target)
+        rotate(turretAngle);
+        fill(60, 70, 80);
+        stroke(100, 110, 120);
+        strokeWeight(1);
+        rect(-turretSize * 0.2, -turretSize * 0.4, turretSize * 0.4, turretSize * 0.8);
+        
+        // Draw barrel tip
+        fill(80, 90, 100);
+        rect(-turretSize * 0.15, -turretSize * 0.6, turretSize * 0.3, turretSize * 0.2);
+        
+        pop();
+    }
+
     /** Draws the enemy ship using its specific draw function and adds UI elements. */
     draw() {
         if (this.destroyed || isNaN(this.angle)) return;
@@ -108,6 +157,11 @@ class EnemyRendering {
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
         try { drawFunc(this.size, showThrust); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+
+        // Draw turret if enemy has turret weapon
+        if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
+            this.drawTurret();
+        }
 
         // Draw tangle effect if active
         if (this.dragMultiplier > 1.0) {
