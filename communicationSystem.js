@@ -600,7 +600,20 @@ class CommunicationSystem {
             case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = [255,220,140]; break;
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180,100,255]; break;
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200,160,255]; break;
-            case AI_ROLE.COMBAT: templateList = this.templates.combatDeath; color = [255,100,100]; break;
+            case AI_ROLE.COMBAT: 
+                // Determine faction for combat ships
+                const faction = this._getShipFaction(enemy);
+                if (faction === 'IMPERIAL') {
+                    templateList = this.templates.imperialDeath;
+                    color = [255, 180, 100];
+                } else if (faction === 'SEPARATIST') {
+                    templateList = this.templates.separatistDeath;
+                    color = [180, 220, 255];
+                } else {
+                    templateList = this.templates.militaryDeath;
+                    color = [255, 100, 100];
+                }
+                break;
             default: return; // silent for other roles
         }
         if (!templateList || templateList.length === 0) return;
