@@ -604,9 +604,9 @@ handleInput() {
       this.speedBurstEnd   = now + 1000;  // 1000ms burst window
       this.lastBurstTime   = now;
   
-      // Big impulse (optimized - avoid vector allocation)
-      const burstForce = this.thrustForce * this.speedBurstMultiplier;
-      this.vel.add(cos(this.angle) * burstForce, sin(this.angle) * burstForce);
+      // Immediately set velocity to max forward speed
+      const maxBurstSpeed = this.baseMaxSpeed * this.speedBurstMultiplier;
+      this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
   
       uiManager?.addMessage("Speed Burst!", 'lightblue');
     }
