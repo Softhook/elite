@@ -1699,11 +1699,17 @@ if (isIllegalInSystem || isMissionCargo) {
         const market = system.station.market;
         const commodities = market.getPrices();
         
-        // Overlay dimensions - compact panel
-        const overlayW = 450;
-        const overlayH = 500;
+        // Calculate dynamic height based on content
+        const headerHeight = 45;
+        const rowHeight = 28;
+        const closeButtonHeight = 30;
+        const closeButtonPadding = 40;
+        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonHeight + closeButtonPadding;
+        
+        // Overlay dimensions
+        const overlayW = 500;
         const overlayX = width - overlayW - 20; // Position on right side
-        const overlayY = 80; // Below top bar
+        const overlayY = 120; // Below top bar
         
         push();
         
@@ -1721,34 +1727,12 @@ if (isIllegalInSystem || isMissionCargo) {
         textAlign(CENTER, TOP);
         text(`${system.name} Market`, overlayX + overlayW / 2, overlayY + 10);
         
-        // Close button
-        const closeBtnSize = 24;
-        const closeBtnX = overlayX + overlayW - closeBtnSize - 8;
-        const closeBtnY = overlayY + 8;
-        fill(180, 50, 50);
-        stroke(255, 100, 100);
-        strokeWeight(1);
-        rect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize, 3);
-        fill(255);
-        noStroke();
-        textSize(18);
-        textAlign(CENTER, CENTER);
-        text("X", closeBtnX + closeBtnSize / 2, closeBtnY + closeBtnSize / 2);
-        
-        // Store close button area for click detection
-        this.marketOverlayCloseButton = { 
-            x: closeBtnX, 
-            y: closeBtnY, 
-            w: closeBtnSize, 
-            h: closeBtnSize 
-        };
-        
         // Column headers
         const tableY = overlayY + 45;
-        const rowHeight = 28;
         const col1X = overlayX + 15; // Commodity name
-        const col2X = overlayX + 210; // Buy price
-        const col3X = overlayX + 320; // Sell price
+        const col2X = overlayX + 180; // Buy price
+        const col3X = overlayX + 280; // Sell price
+        const col4X = overlayX + 380; // Stock
         
         fill(180, 200, 255);
         textSize(16);
@@ -1757,12 +1741,12 @@ if (isIllegalInSystem || isMissionCargo) {
         textAlign(CENTER, TOP);
         text("Buy", col2X, tableY);
         text("Sell", col3X, tableY);
+        text("Stock", col4X, tableY);
         
         // Draw commodities
         let yPos = tableY + 25;
-        const maxRows = Math.floor((overlayH - 90) / rowHeight);
         
-        for (let i = 0; i < Math.min(commodities.length, maxRows); i++) {
+        for (let i = 0; i < commodities.length; i++) {
             const comm = commodities[i];
             if (!comm) continue;
             
@@ -1810,14 +1794,37 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             text(comm.sellPrice, col3X, yPos);
             
+            // Stock level
+            fill(255);
+            text(Math.floor(comm.stock || 0), col4X, yPos);
+            
             yPos += rowHeight;
         }
         
-        // Footer note
-        fill(180);
-        textSize(12);
-        textAlign(CENTER, BOTTOM);
-        text("Click X to close", overlayX + overlayW / 2, overlayY + overlayH - 8);
+        // Close button at bottom - styled like inventory close button
+        const closeBtnW = 100;
+        const closeBtnH = 30;
+        const closeBtnX = overlayX + (overlayW - closeBtnW) / 2;
+        const closeBtnY = overlayY + overlayH - closeBtnH - 15;
+        
+        fill(80, 80, 120);
+        stroke(150, 150, 200);
+        strokeWeight(2);
+        rect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 4);
+        
+        fill(255);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text("Close", closeBtnX + closeBtnW / 2, closeBtnY + closeBtnH / 2);
+        
+        // Store close button area for click detection
+        this.marketOverlayCloseButton = { 
+            x: closeBtnX, 
+            y: closeBtnY, 
+            w: closeBtnW, 
+            h: closeBtnH 
+        };
         
         pop();
     }
