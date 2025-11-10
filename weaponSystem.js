@@ -921,6 +921,9 @@ static fireTangle(owner, system, angle) {
         const dy = target.pos.y - owner.pos.y;
         const angleToTarget = atan2(dy, dx);
         
+        // Update turret firing angle for visual sync
+        owner.lastTurretFiringAngle = angleToTarget;
+        
         // Fire the projectile at the calculated angle
         this.fireProjectile(owner, system, angleToTarget);
     }
