@@ -913,7 +913,7 @@ class EnemyAIBehaviors {
     }
 
     /**
-     * Update combat patrol behavior - pause to scan, dock occasionally
+     * Update combat patrol behavior - patrol between station and jump gate, pausing to scan
      * @param {Object} system - The current star system
      */
     _updateCombatPatrolBehavior(system) {
@@ -921,19 +921,38 @@ class EnemyAIBehaviors {
             this.changeState(AI_STATE.PATROLLING);
         }
         
-        // Similar to police patrol but occasionally dock at station
+        // Initialize combat patrol waypoint index if not set
+        if (this._combatPatrolWaypointIndex === undefined) {
+            this._combatPatrolWaypointIndex = 0; // Start at station
+        }
+        
+        // Define patrol waypoints: station -> jump gate -> station
         if (!this.patrolTargetPos) {
-            // Random patrol behavior: sometimes station, sometimes random point
-            if (system?.station?.pos && random() < 0.3) {
-                this.patrolTargetPos = system.station.pos.copy();
-            } else {
-                const patrolRange = 2000;
-                const patrolAngle = random(TWO_PI);
-                const patrolDist = random(500, patrolRange);
-                this.patrolTargetPos = createVector(
-                    this.pos.x + cos(patrolAngle) * patrolDist,
-                    this.pos.y + sin(patrolAngle) * patrolDist
-                );
+            // Determine next patrol waypoint based on current index
+            if (this._combatPatrolWaypointIndex === 0) {
+                // Waypoint 0: Station
+                if (system?.station?.pos) {
+                    this.patrolTargetPos = system.station.pos.copy();
+                    this._isTargetingStation = true;
+                    this._isTargetingJumpGate = false;
+                } else {
+                    // No station, go to jump gate
+                    this._combatPatrolWaypointIndex = 1;
+                }
+            }
+            
+            if (this._combatPatrolWaypointIndex === 1) {
+                // Waypoint 1: Jump Gate
+                if (system?.jumpZoneCenter) {
+                    this.patrolTargetPos = system.jumpZoneCenter.copy();
+                    this._isTargetingStation = false;
+                    this._isTargetingJumpGate = true;
+                } else {
+                    // No jump gate, reset to station
+                    this._combatPatrolWaypointIndex = 0;
+                    this._isTargetingStation = false;
+                    this._isTargetingJumpGate = false;
+                }
             }
         }
         
@@ -941,39 +960,43 @@ class EnemyAIBehaviors {
         let distToPatrolTarget = desiredMovementTargetPos
             ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
             : Infinity;
-            
-        if (distToPatrolTarget < 50) {
-            // Pause to "scan" occasionally
-            if (random() < 0.2) {
-                this.vel.mult(0.5); // Slow down
-                // Wait a bit before selecting new patrol point
-                if (!this._scanPauseTimer) {
-                    this._scanPauseTimer = random(1, 3); // 1-3 seconds
-                } else {
-                    this._scanPauseTimer -= deltaTime / 1000;
-                    if (this._scanPauseTimer <= 0) {
-                        this._scanPauseTimer = null;
-                        this.patrolTargetPos = null; // Will select new target next frame
-                    }
-                }
-                return;
-            }
-            
-            // Select new patrol target
-            if (system?.station?.pos && random() < 0.25) {
-                this.patrolTargetPos = system.station.pos.copy();
-            } else {
-                const patrolRange = 2000;
-                const patrolAngle = random(TWO_PI);
-                const patrolDist = random(500, patrolRange);
-                this.patrolTargetPos = createVector(
-                    this.pos.x + cos(patrolAngle) * patrolDist,
-                    this.pos.y + sin(patrolAngle) * patrolDist
-                );
-            }
-            desiredMovementTargetPos = this.patrolTargetPos;
+        
+        // Define proximity thresholds for waypoints
+        const stationProximity = 150; // Same as stationProximityThreshold
+        const jumpGateProximity = system?.jumpZoneRadius || 200;
+        
+        // Determine if we've arrived at current waypoint
+        let arrivedAtWaypoint = false;
+        if (this._isTargetingStation && distToPatrolTarget < stationProximity) {
+            arrivedAtWaypoint = true;
+        } else if (this._isTargetingJumpGate && distToPatrolTarget < jumpGateProximity) {
+            arrivedAtWaypoint = true;
         }
         
+        if (arrivedAtWaypoint) {
+            // Apply braking when near waypoint
+            this.vel.mult(0.7);
+            
+            // Pause to scan at waypoint
+            if (!this._scanPauseTimer) {
+                this._scanPauseTimer = random(2, 4); // 2-4 seconds scan time
+                AI_LOG(`${this.shipTypeName} pausing to scan at ${this._isTargetingStation ? 'station' : 'jump gate'}`);
+            } else {
+                this._scanPauseTimer -= deltaTime / 1000;
+                if (this._scanPauseTimer <= 0) {
+                    // Scan complete, move to next waypoint
+                    this._scanPauseTimer = null;
+                    this._combatPatrolWaypointIndex = (this._combatPatrolWaypointIndex + 1) % 2; // Toggle between 0 and 1
+                    this.patrolTargetPos = null; // Will select new target next frame
+                    this._isTargetingStation = false;
+                    this._isTargetingJumpGate = false;
+                    AI_LOG(`${this.shipTypeName} scan complete, heading to ${this._combatPatrolWaypointIndex === 0 ? 'station' : 'jump gate'}`);
+                }
+            }
+            return; // Don't move while scanning
+        }
+        
+        // Move towards current waypoint
         this.performRotationAndThrust(desiredMovementTargetPos);
     }
 }
