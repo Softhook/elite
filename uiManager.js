@@ -1707,7 +1707,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonHeight + closeButtonPadding;
         
         // Overlay dimensions
-        const overlayW = 500;
+        const overlayW = 360;
         const overlayX = width - overlayW - 20; // Position on right side
         const overlayY = 120; // Below top bar
         
@@ -1730,9 +1730,9 @@ if (isIllegalInSystem || isMissionCargo) {
         // Column headers
         const tableY = overlayY + 45;
         const col1X = overlayX + 15; // Commodity name
-        const col2X = overlayX + 180; // Buy price
-        const col3X = overlayX + 280; // Sell price
-        const col4X = overlayX + 380; // Stock
+        const col2X = overlayX + 160; // Buy price
+        const col3X = overlayX + 240; // Sell price
+        const col4X = overlayX + 320; // Stock
         
         fill(180, 200, 255);
         textSize(16);
