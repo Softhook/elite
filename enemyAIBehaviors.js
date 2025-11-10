@@ -787,6 +787,195 @@ class EnemyAIBehaviors {
         // If we haven't collected yet, return true to stay in this state
         return true;
     }
+
+    /**
+     * Combat Role AI Logic - For military, imperial, and separatist combat ships
+     * These ships patrol, scan, dock at stations, and engage enemies with faction-specific bonuses
+     * @param {Object} system - The current star system
+     */
+    updateCombatRoleAI(system) {
+        // Combat ships don't trade - just patrol and fight
+        // Determine ship faction based on ship type
+        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+        let faction = 'MILITARY'; // Default
+        
+        if (shipDef && shipDef.aiRoles) {
+            if (shipDef.aiRoles.includes('IMPERIAL')) {
+                faction = 'IMPERIAL';
+            } else if (shipDef.aiRoles.includes('SEPARATIST')) {
+                faction = 'SEPARATIST';
+            } else if (shipDef.aiRoles.includes('MILITARY')) {
+                faction = 'MILITARY';
+            }
+        }
+
+        // Update targeting with faction-specific priorities
+        let targetExists = this.updateTargeting(system);
+        
+        // Apply faction-specific AI bonuses when engaging
+        if (targetExists && this.target) {
+            const targetDef = this.target.shipTypeName ? SHIP_DEFINITIONS[this.target.shipTypeName] : null;
+            const targetFaction = this._getShipFaction(this.target);
+            
+            // Military ships get bonus against aliens
+            if (faction === 'MILITARY' && this.target.role === AI_ROLE.ALIEN) {
+                // Apply significant AI bonus: better aim, faster reactions
+                this._applyMilitaryAlienBonus();
+            }
+            
+            // Imperial and Separatist ships get bonus against each other
+            if ((faction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
+                (faction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
+                this._applyFactionRivalryBonus();
+            }
+        }
+
+        targetExists = this.isTargetValid(this.target);
+        
+        // Calculate distance and angle for combat
+        let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
+        let shootingAngle = this.angle;
+        if (targetExists) {
+            shootingAngle = atan2(
+                this.target.pos.y - this.pos.y,
+                this.target.pos.x - this.pos.x
+            );
+            this._handleRangeStall(distanceToTarget);
+        } else {
+            this._resetRangeStall();
+        }
+        
+        // Run state-transition logic
+        this.updateCombatState(targetExists, distanceToTarget);
+        
+        // If in patrol mode (no target), occasionally pause to scan or dock
+        if (!targetExists || this.currentState === AI_STATE.PATROLLING) {
+            this._updateCombatPatrolBehavior(system);
+            return;
+        }
+        
+        // Normal combat behavior
+        const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
+        this.performRotationAndThrust(desiredMovementTargetPos);
+        this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
+    }
+
+    /**
+     * Helper to determine ship faction from ship definition
+     * @param {Object} ship - The ship to check
+     * @returns {string} - Faction identifier
+     */
+    _getShipFaction(ship) {
+        if (!ship || !ship.shipTypeName) return 'UNKNOWN';
+        
+        const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
+        if (shipDef && shipDef.aiRoles) {
+            if (shipDef.aiRoles.includes('IMPERIAL')) return 'IMPERIAL';
+            if (shipDef.aiRoles.includes('SEPARATIST')) return 'SEPARATIST';
+            if (shipDef.aiRoles.includes('MILITARY')) return 'MILITARY';
+        }
+        
+        return 'UNKNOWN';
+    }
+
+    /**
+     * Apply AI bonus for military ships fighting aliens
+     * Increases accuracy and turn rate temporarily
+     */
+    _applyMilitaryAlienBonus() {
+        // Temporarily boost turn rate for better tracking
+        if (!this._militaryBonusApplied) {
+            this._baseTurnRateBackup = this.baseTurnRate;
+            this.baseTurnRate *= 1.3; // 30% better turning
+            this.rotationSpeed *= 1.3;
+            this._militaryBonusApplied = true;
+        }
+        
+        // Tighter angle tolerance for more accurate shots
+        this.angleTolerance = 0.15; // ~8.5 degrees instead of ~15
+    }
+
+    /**
+     * Apply AI bonus for imperial vs separatist rivalry
+     * Increases aggression and combat effectiveness
+     */
+    _applyFactionRivalryBonus() {
+        // Boost combat stats temporarily
+        if (!this._rivalryBonusApplied) {
+            this._baseMaxSpeedBackup = this.maxSpeed;
+            this.maxSpeed *= 1.2; // 20% faster
+            this._rivalryBonusApplied = true;
+        }
+        
+        // More aggressive engagement
+        this.engageDistance *= 1.3;
+        this.firingRange *= 1.2;
+    }
+
+    /**
+     * Update combat patrol behavior - pause to scan, dock occasionally
+     * @param {Object} system - The current star system
+     */
+    _updateCombatPatrolBehavior(system) {
+        if (this.currentState !== AI_STATE.PATROLLING) {
+            this.changeState(AI_STATE.PATROLLING);
+        }
+        
+        // Similar to police patrol but occasionally dock at station
+        if (!this.patrolTargetPos) {
+            // Random patrol behavior: sometimes station, sometimes random point
+            if (system?.station?.pos && random() < 0.3) {
+                this.patrolTargetPos = system.station.pos.copy();
+            } else {
+                const patrolRange = 2000;
+                const patrolAngle = random(TWO_PI);
+                const patrolDist = random(500, patrolRange);
+                this.patrolTargetPos = createVector(
+                    this.pos.x + cos(patrolAngle) * patrolDist,
+                    this.pos.y + sin(patrolAngle) * patrolDist
+                );
+            }
+        }
+        
+        let desiredMovementTargetPos = this.patrolTargetPos;
+        let distToPatrolTarget = desiredMovementTargetPos
+            ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
+            : Infinity;
+            
+        if (distToPatrolTarget < 50) {
+            // Pause to "scan" occasionally
+            if (random() < 0.2) {
+                this.vel.mult(0.5); // Slow down
+                // Wait a bit before selecting new patrol point
+                if (!this._scanPauseTimer) {
+                    this._scanPauseTimer = random(1, 3); // 1-3 seconds
+                } else {
+                    this._scanPauseTimer -= deltaTime / 1000;
+                    if (this._scanPauseTimer <= 0) {
+                        this._scanPauseTimer = null;
+                        this.patrolTargetPos = null; // Will select new target next frame
+                    }
+                }
+                return;
+            }
+            
+            // Select new patrol target
+            if (system?.station?.pos && random() < 0.25) {
+                this.patrolTargetPos = system.station.pos.copy();
+            } else {
+                const patrolRange = 2000;
+                const patrolAngle = random(TWO_PI);
+                const patrolDist = random(500, patrolRange);
+                this.patrolTargetPos = createVector(
+                    this.pos.x + cos(patrolAngle) * patrolDist,
+                    this.pos.y + sin(patrolAngle) * patrolDist
+                );
+            }
+            desiredMovementTargetPos = this.patrolTargetPos;
+        }
+        
+        this.performRotationAndThrust(desiredMovementTargetPos);
+    }
 }
 
 /**

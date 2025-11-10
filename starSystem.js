@@ -16,7 +16,8 @@ const buildShipRoleArrays = () => {
         BOUNTY_HUNTER_SHIPS: [],
         GUARD_SHIPS: [],
         IMPERIAL_SHIPS: [],
-        SEPARATIST_SHIPS: []
+        SEPARATIST_SHIPS: [],
+        COMBAT_SHIPS: []
     };
     
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -47,7 +48,8 @@ const {
     BOUNTY_HUNTER_SHIPS,
     GUARD_SHIPS,
     IMPERIAL_SHIPS,
-    SEPARATIST_SHIPS
+    SEPARATIST_SHIPS,
+    COMBAT_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -64,6 +66,7 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("GUARD_SHIPS:", GUARD_SHIPS);
     console.log("IMPERIAL_SHIPS:",IMPERIAL_SHIPS);
     console.log("SEPARATIST_SHIPS:", SEPARATIST_SHIPS);
+    console.log("COMBAT_SHIPS:", COMBAT_SHIPS);
 }
 
 // --- Jump Zone Constants ---
@@ -656,8 +659,8 @@ try {
 
         // --- Special cases for economy ---
         if (econ === "military") {
-            chosenRole = AI_ROLE.HAULER; // Military systems might have military haulers
-            chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : HAULER_SHIPS); // Prefer military ships if available
+            chosenRole = AI_ROLE.COMBAT; // Military systems spawn combat ships
+            chosenShipTypeName = random(COMBAT_SHIPS.length > 0 ? COMBAT_SHIPS : MILITARY_SHIPS); // Prefer COMBAT ships if available
 
         } else if (econ === "alien") {
             // Mostly alien ships
@@ -691,9 +694,9 @@ try {
             if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.HAULER; 
                 chosenShipTypeName = random(EXPLORER_SHIPS);
-            } else if (rand < 0.50 && MILITARY_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.HAULER; 
-                chosenShipTypeName = random(MILITARY_SHIPS);
+            } else if (rand < 0.50 && COMBAT_SHIPS.length > 0) {
+                chosenRole = AI_ROLE.COMBAT; 
+                chosenShipTypeName = random(COMBAT_SHIPS);
             } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
                 chosenRole = AI_ROLE.PIRATE;
                 chosenShipTypeName = random(PIRATE_SHIPS);
@@ -706,11 +709,11 @@ try {
             }
 
         } else if (econ === "separatist") {
-                chosenRole = AI_ROLE.HAULER; // Or another role if you want
-                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : HAULER_SHIPS);
+                chosenRole = AI_ROLE.COMBAT; // Separatist combat ships
+                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
         } else if (econ === "imperial") {
-                chosenRole = AI_ROLE.HAULER; // Or another role if you want
-                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : HAULER_SHIPS);
+                chosenRole = AI_ROLE.COMBAT; // Imperial combat ships
+                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
 
         } else {
             // --- Standard spawn logic based on security ---

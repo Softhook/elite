@@ -74,9 +74,11 @@ class EnemyTargeting {
         }
         
         // Evaluate other enemies (no debug)
-        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN);
+        const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.COMBAT);
         if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
             const isAlien = this.role === AI_ROLE.ALIEN;
+            const isCombat = this.role === AI_ROLE.COMBAT;
+            
             for (let i = 0, len = system.enemies.length; i < len; i++) {
                 const otherEnemy = system.enemies[i];
                 if (otherEnemy === this || otherEnemy === bestTarget) {
@@ -85,6 +87,15 @@ class EnemyTargeting {
                 // For Aliens, ensure they don't target other Aliens
                 if (isAlien && otherEnemy.role === AI_ROLE.ALIEN) {
                     continue;
+                }
+                // Combat ships prioritize based on faction
+                if (isCombat) {
+                    // Skip allies (same faction)
+                    const myFaction = this._getShipFaction(this);
+                    const theirFaction = this._getShipFaction(otherEnemy);
+                    if (myFaction === theirFaction && myFaction !== 'UNKNOWN') {
+                        continue; // Don't target allies
+                    }
                 }
                 if (!this.isTargetValid(otherEnemy)) {
                     continue;
@@ -306,6 +317,34 @@ class EnemyTargeting {
                         _score += TARGET_SCORE_RETALIATION_HAULER;
                         _interesting = true;
                         if (enemy.hull < enemy.maxHull * 0.5) _score -= 20;
+                    }
+                    break;
+                    
+                case AI_ROLE.COMBAT:
+                    // Combat ships prioritize based on faction
+                    const myFaction = enemy._getShipFaction ? enemy._getShipFaction(enemy) : 'UNKNOWN';
+                    const targetFaction = enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN';
+                    
+                    // Military ships prioritize aliens with significant bonus
+                    if (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
+                        _score += 150; // Strong bonus for military vs aliens
+                        _interesting = true;
+                    }
+                    // Imperial and Separatist ships prioritize each other with strong bonus
+                    else if ((myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
+                             (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
+                        _score += 130; // Strong bonus for faction rivalry
+                        _interesting = true;
+                    }
+                    // General combat engagement
+                    else if (target.role === AI_ROLE.PIRATE || isPlayer) {
+                        _score += 60; // Standard combat priority
+                        _interesting = true;
+                    }
+                    // Lower priority for other targets
+                    else {
+                        _score += 30; // Low priority for other ships
+                        _interesting = true;
                     }
                     break;
             }
