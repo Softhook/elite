@@ -5,7 +5,7 @@ class UIManager {
         // --- UI Areas ---
         this._initUIAreas();
         // --- UI State ---
-        this.selectedSystemIndex = -1; // Tracks selected system on Galaxy Map (-1 for none)
+        this.lockedDestinationIndex = -1; // Tracks locked destination on Galaxy Map (-1 for none)
         // --- Minimap ---
         this._initMinimap();
         // --- Shipyard/Upgrade/Repairs ---
@@ -1528,7 +1528,7 @@ if (isIllegalInSystem || isMissionCargo) {
             if (!sysData) continue;
 
             let isCurrent = (i === currentIdx);
-            let isSelected = (i === this.selectedSystemIndex);
+            let isSelected = (i === this.lockedDestinationIndex);
             let isReachable = reachable.includes(i);
 
             let nodeColor; // This will be a p5.Color object
@@ -1659,9 +1659,9 @@ if (isIllegalInSystem || isMissionCargo) {
         // Show only if a reachable system (not current) is selected AND player is in the jump zone
         this.jumpButtonArea = { x: 0, y: 0, w: 0, h: 0 }; // Reset button area
         if (canJump &&
-            this.selectedSystemIndex !== -1 &&
-            this.selectedSystemIndex !== currentIdx &&
-            reachable.includes(this.selectedSystemIndex))
+            this.lockedDestinationIndex !== -1 &&
+            this.lockedDestinationIndex !== currentIdx &&
+            reachable.includes(this.lockedDestinationIndex))
         {
             let btnW = 150, btnH = 40, btnX = width / 2 - btnW / 2, btnY = height - btnH - 20;
             // Use a brighter blue when jump is possible
@@ -1674,10 +1674,12 @@ if (isIllegalInSystem || isMissionCargo) {
         // --- End Draw Jump Button ---
 
         // --- Instructions ---
-        fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        // Adjust instruction text slightly based on canJump status
-        if (canJump) {
-            text("Click reachable system.", width / 2, height - 70);
+        fill(200); textAlign(CENTER, BOTTOM); textSize(18);
+        // Adjust instruction text based on whether a destination is locked
+        if (this.lockedDestinationIndex !== -1) {
+            text("Destination locked. Enter jump zone to auto-jump.", width / 2, height - 70);
+        } else {
+            text("Click reachable system to lock as destination.", width / 2, height - 70);
         }
 
         // --- Draw Market Overlay if a system is selected ---
@@ -1866,12 +1868,12 @@ if (isIllegalInSystem || isMissionCargo) {
         if (this.isClickInArea(mouseX, mouseY, this.jumpButtonArea)) {
             console.log("  Jump button clicked.");
             // Ensure a system is selected and it's reachable
-            if (this.selectedSystemIndex !== -1 && reachable.includes(this.selectedSystemIndex)) {
+            if (this.lockedDestinationIndex !== -1 && reachable.includes(this.lockedDestinationIndex)) {
                 if (canJump) { // Double-check canJump status for the button action
                     console.log("    Attempting jump via button...");
-                    gameStateManager.startJump(this.selectedSystemIndex);
+                    gameStateManager.startJump(this.lockedDestinationIndex);
                     // Optional: Deselect after initiating jump? Or keep selected?
-                    // this.selectedSystemIndex = -1;
+                    // this.lockedDestinationIndex = -1;
                 } else {
                     // This case should ideally not happen if the button is only drawn when canJump allows selection,
                     // but keep as a safeguard.
@@ -1879,7 +1881,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                 }
             } else {
-                 console.log(`    Jump button ignored: No valid system selected (${this.selectedSystemIndex}) or not reachable.`);
+                 console.log(`    Jump button ignored: No valid system selected (${this.lockedDestinationIndex}) or not reachable.`);
             }
             return true; // Click was on the button area
         }
@@ -1895,24 +1897,18 @@ if (isIllegalInSystem || isMissionCargo) {
                  if (clickedIndex === galaxy.currentSystemIndex) {
                      // Always allow clicking the current system to deselect
                      console.log(`    -> Clicked current system. Deselecting.`);
-                     this.selectedSystemIndex = -1;
+                     this.lockedDestinationIndex = -1;
                      if (typeof soundManager !== 'undefined') soundManager.playSound('click_off'); // Different sound?
                      return true;
                  }
-                 // --- Selection Restriction ---
-                 else if (!canJump) {
-                     // If NOT in jump zone, ignore clicks on other systems
-                     console.log(`    -> Click ignored: Must be in Jump Zone to select target.`);
-                     return true; // Click handled (by ignoring)
-                 }
-                 // --- End Selection Restriction ---
-                 else if (reachable.includes(clickedIndex)) {
-                     // If IN jump zone and system is reachable, allow selection
-                     console.log(`    -> System is reachable. Selecting index: ${clickedIndex}`);
-                     this.selectedSystemIndex = clickedIndex; // SELECT the system
+                 // --- Selection Logic ---
+                 if (reachable.includes(clickedIndex)) {
+                     // If system is reachable, allow selection/locking as destination
+                     console.log(`    -> System is reachable. Locking as destination: ${clickedIndex}`);
+                     this.lockedDestinationIndex = clickedIndex; // LOCK the system as destination
                      if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                  } else {
-                     // If IN jump zone but system is NOT reachable
+                     // If system is NOT reachable, show error
                      console.log(`    -> System is NOT reachable. Selection ignored.`);
                     if (typeof uiManager !== 'undefined') this.addMessage("Route unavailable.", color(255, 150, 150));
                      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
@@ -1923,7 +1919,7 @@ if (isIllegalInSystem || isMissionCargo) {
 
         // If click wasn't on button or any node, deselect
         // console.log("Clicked empty space on map. Deselecting.");
-        // this.selectedSystemIndex = -1; // Optional: Deselect on empty space click?
+        // this.lockedDestinationIndex = -1; // Optional: Deselect on empty space click?
         return false; // Click not handled by map elements
     }
 

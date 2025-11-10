@@ -217,6 +217,14 @@ this.showingInventory = false;
                             try { saveGame(); } catch(_) {}
                         }
                     }
+
+                    // Check for auto-jump: if player has a locked destination and is in jump zone
+                    if (uiManager && uiManager.lockedDestinationIndex !== -1 && isPlayerInJumpZone(player, currentSystem)) {
+                        GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${uiManager.lockedDestinationIndex}`);
+                        this.startJump(uiManager.lockedDestinationIndex);
+                        // Clear the locked destination after initiating jump
+                        uiManager.lockedDestinationIndex = -1;
+                    }
                 } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }
                 break;
 
