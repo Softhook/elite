@@ -14,11 +14,15 @@ window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSel
 let globalSessionSeed; // Declaration for the session seed
 // --- End Global Variables ---
 
+// --- p5.js Preload Function ---
+// Runs before setup to load assets
+function preload() {
+    font = loadFont('libraries/Frontier.ttf');
+}
+
 // --- p5.js Setup Function ---
 // Runs once at the beginning when the sketch starts.
 function setup() {
-
-    font = loadFont('libraries/Frontier.ttf');
 
     soundManager = new SoundManager(); // Create the manager
 

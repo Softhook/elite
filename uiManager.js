@@ -528,36 +528,39 @@ class UIManager {
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : 'Clean') : null;
-        const hullLine = this._formatStatLine('Hull', target.hull, target.maxHull);
-        const shieldLine = this._formatStatLine('Shield', target.shield, target.maxShield);
+        const hullPercent = this._getStatPercent(target.hull, target.maxHull);
+        const shieldPercent = this._getStatPercent(target.shield, target.maxShield);
         const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
         const cargoCapacity = Number.isFinite(target?.cargoCapacity) ? target.cargoCapacity : shipDef?.cargoCapacity;
         const cargoAmount = (typeof target.getCargoAmount === 'function')
             ? target.getCargoAmount()
             : this._computeCargoAmount(target.cargoHold);
         const rangeLine = this._formatRangeLine(player, target);
-        const speedLine = this._formatSpeedLine(target);
+        const weaponsList = this._getTargetWeapons(target);
 
         const infoLines = [];
         infoLines.push(`Ship: ${shipName}`);
         if (roleLabel) { infoLines.push(`Role: ${roleLabel}`); }
         if (wantedLabel) { infoLines.push(`Status: ${wantedLabel}`); }
-        if (hullLine) { infoLines.push(hullLine); }
-        if (shieldLine) { infoLines.push(shieldLine); }
         if (Number.isFinite(cargoCapacity) && Number.isFinite(cargoAmount)) {
             infoLines.push(`Cargo Hold: ${cargoAmount}/${cargoCapacity}`);
         } else if (Number.isFinite(cargoAmount)) {
             infoLines.push(`Cargo Hold: ${cargoAmount}`);
         }
         if (rangeLine) { infoLines.push(rangeLine); }
-        if (speedLine) { infoLines.push(speedLine); }
 
         const cargoEntries = this._getCargoEntries(target);
         let cargoLines = cargoEntries.length > 0
             ? cargoEntries.map(entry => `${entry.name}: ${entry.quantity}`)
             : ['No cargo detected'];
 
-        const baseHeightWithoutCargo = padding * 2 + lineHeight + lineHeight + sectionSpacing + infoLines.length * lineHeight;
+        // Calculate heights for new sections
+        const statBarsHeight = (lineHeight + 4) * 2; // Two stat bars with spacing
+        const weaponsHeight = (weaponsList && weaponsList.length > 0) 
+            ? (sectionSpacing + lineHeight + weaponsList.length * lineHeight + sectionSpacing)
+            : 0;
+
+        const baseHeightWithoutCargo = padding * 2 + lineHeight + lineHeight + sectionSpacing + statBarsHeight + sectionSpacing + weaponsHeight + infoLines.length * lineHeight;
         let showCargoSection = cargoLines.length > 0;
         let renderedCargoLines = cargoLines.slice();
         const cargoHeadingHeight = lineHeight;
@@ -622,6 +625,29 @@ class UIManager {
         cursorY += lineHeight;
 
         cursorY += sectionSpacing;
+
+        // Draw Hull and Shield status bars with color coding
+        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Hull', target.hull, target.maxHull, hullPercent);
+        cursorY += lineHeight + 4;
+        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Shield', target.shield, target.maxShield, shieldPercent);
+        cursorY += lineHeight;
+
+        cursorY += sectionSpacing;
+
+        // Draw weapons if available
+        if (weaponsList && weaponsList.length > 0) {
+            fill(190, 220, 255);
+            textSize(16);
+            text('Weapons', cursorX, cursorY);
+            cursorY += lineHeight;
+            fill(210);
+            textSize(14);
+            for (let i = 0; i < weaponsList.length; i++) {
+                text(weaponsList[i], cursorX, cursorY);
+                cursorY += lineHeight;
+            }
+            cursorY += sectionSpacing;
+        }
 
         fill(210);
         textSize(16);
@@ -695,6 +721,86 @@ class UIManager {
         const speed = target.vel.mag();
         if (!Number.isFinite(speed)) { return null; }
         return `Speed: ${speed.toFixed(1)} m/s`;
+    }
+
+    _getStatPercent(current, max) {
+        if (!Number.isFinite(current)) { return 0; }
+        const safeCurrent = Math.max(0, current);
+        if (Number.isFinite(max) && max > 0) {
+            return constrain((safeCurrent / max) * 100, 0, 100);
+        }
+        return 0;
+    }
+
+    _drawStatBar(x, y, width, label, current, max, percent) {
+        const barHeight = 14;
+        const barWidth = width * 0.6;
+        const labelWidth = width * 0.4;
+        
+        // Draw label
+        push();
+        textAlign(LEFT, TOP);
+        textSize(14);
+        fill(210);
+        text(`${label}:`, x, y);
+        
+        // Draw background bar
+        const barX = x + labelWidth;
+        fill(40, 40, 60, 200);
+        noStroke();
+        rect(barX, y, barWidth, barHeight, 2);
+        
+        // Draw filled portion with color based on percentage
+        const fillWidth = (percent / 100) * barWidth;
+        let barColor;
+        if (label === 'Shield') {
+            // Shield colors: cyan to blue to dark
+            if (percent > 66) {
+                barColor = [0, 200, 255]; // Cyan
+            } else if (percent > 33) {
+                barColor = [80, 150, 220]; // Blue
+            } else {
+                barColor = [60, 100, 180]; // Dark blue
+            }
+        } else {
+            // Hull colors: green to yellow to red
+            if (percent > 66) {
+                barColor = [80, 255, 80]; // Green
+            } else if (percent > 33) {
+                barColor = [255, 220, 0]; // Yellow
+            } else {
+                barColor = [255, 80, 80]; // Red
+            }
+        }
+        
+        fill(barColor[0], barColor[1], barColor[2]);
+        rect(barX, y, fillWidth, barHeight, 2);
+        
+        // Draw value text
+        fill(255);
+        textAlign(CENTER, TOP);
+        textSize(12);
+        const valueText = Number.isFinite(max) 
+            ? `${Math.round(current)}/${Math.round(max)}` 
+            : `${Math.round(current)}`;
+        text(valueText, barX + barWidth / 2, y + 1);
+        pop();
+    }
+
+    _getTargetWeapons(target) {
+        if (!target) { return []; }
+        
+        // Check if target has weapons array
+        if (!Array.isArray(target.weapons) || target.weapons.length === 0) {
+            return [];
+        }
+        
+        // Extract weapon names, filtering out null/undefined
+        const weaponNames = target.weapons
+            .filter(weapon => weapon && weapon.name)
+            .map(weapon => weapon.name);
+        
+        return weaponNames.length > 0 ? weaponNames : [];
     }
 
     _getCargoEntries(target) {
