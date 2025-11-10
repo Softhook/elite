@@ -145,6 +145,12 @@ function draw() {
                 }
             }
 
+            // Periodic cleanup of communication system to prevent memory leaks
+            // Run every ~60 seconds (60000ms / 16.67ms per frame ≈ 3600 frames at 60 FPS)
+            if (communicationSystem && typeof communicationSystem.performPeriodicCleanup === 'function' && frameCount % 3600 === 0) {
+                communicationSystem.performPeriodicCleanup();
+            }
+
             // Continuous firing logic
             if (currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
                 player.handleFireInput();

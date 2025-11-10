@@ -50,6 +50,24 @@ class CommunicationSystem {
             "Directive-28", "Order-6F", "Warrant-02", "Protocol-3"
         ];
 
+        this._guardPrincipals = [
+            "the boss", "my principal", "my charge", "the VIP", "my client"
+        ];
+
+        this._militaryUnits = [
+            "Echo Squadron", "Delta Wing", "Sword Flight", "Hammer Group", "Vanguard Unit",
+            "Strike Force Alpha", "Patrol Beta", "Defense Grid Gamma"
+        ];
+
+        this._imperialRanks = [
+            "His Majesty's Navy", "Imperial Command", "Crown Fleet", "Royal Squadron", "the Empire"
+        ];
+
+        this._separatistSlogans = [
+            "Freedom over tyranny", "The Republic will fall", "Liberty or death", "Down with the Crown",
+            "We fight for the people", "No more kings"
+        ];
+
         this.templates = {
             pirateEngage: [
                 "{enemyName}: Wrong vector, {playerTitle}. Kill thrust and {pirateDemand} before we vent your {playerShip}.",
@@ -172,6 +190,202 @@ class CommunicationSystem {
                 "Orbital Control {systemName}: Stand down, {playerTitle}. You violate security statute {policeCharge}.",
                 "Patrol {policeWing}: You just crossed the line. Break off or we'll disable you.",
                 "Enforcer {policeWing}: Final warning. Power down weapons and submit to scan."
+            ],
+            guardEngage: [
+                "{enemyName}: Stay away from {guardPrincipal}!",
+                "{enemyName}: You're threatening {guardPrincipal}. Back off now!",
+                "Guard {enemyShip}: Protective detail engaged. You're too close to {guardPrincipal}.",
+                "{enemyName}: I'm paid to keep {guardPrincipal} safe. You're a threat.",
+                "Escort {enemyShip}: You just painted a target on {guardPrincipal}. Big mistake.",
+                "{enemyName}: Security protocol active. Disengage from {guardPrincipal} immediately.",
+                "{enemyName}: This is your only warning. Move away from {guardPrincipal}.",
+                "Bodyguard {enemyShip}: My job is simple: keep {guardPrincipal} alive. You're making that complicated.",
+                "{enemyName}: Touch {guardPrincipal} and you'll answer to me.",
+                "{enemyName}: Protective zone breach detected. Stand down or be eliminated.",
+                "Guard unit {enemyShip}: {guardPrincipal} is under my protection. You're not getting close.",
+                "{enemyName}: You don't want this fight, {playerTitle}. Leave {guardPrincipal} alone.",
+                "{enemyName}: I've got one job: protect {guardPrincipal}. Don't make me do it the hard way.",
+                "Escort leader: Hostile intent detected toward {guardPrincipal}. Engaging.",
+                "{enemyName}: You picked the wrong convoy to mess with.",
+                "{enemyName}: Security detail here. {guardPrincipal} stays safe, you don't."
+            ],
+            guardRetort: [
+                "{enemyName}: You just signed your death warrant!",
+                "{enemyName}: That was a mistake. I don't go down easy.",
+                "Guard {enemyShip}: You think that hurt? I'm just getting started.",
+                "{enemyName}: Nice shot. Now let me return the favor.",
+                "{enemyName}: You're going to regret that.",
+                "Bodyguard {enemyShip}: Is that all you've got?",
+                "{enemyName}: I've taken worse hits from asteroids.",
+                "{enemyName}: You'll pay for that. {guardPrincipal} doesn't forgive threats.",
+                "{enemyName}: Wrong move. I'm trained for this.",
+                "Escort {enemyShip}: Armor holding. Can you say the same?"
+            ],
+            guardDeath: [
+                "{enemyName}: {guardPrincipal}… get clear…",
+                "{enemyName}: Sorry… couldn't… protect you…",
+                "Guard {enemyShip}: Systems failing… {guardPrincipal}, run!",
+                "{enemyName}: I… failed…",
+                "{enemyName}: Tell {guardPrincipal}… I tried…",
+                "Escort {enemyShip}: Hull breach… can't… continue…",
+                "{enemyName}: Not… like this…",
+                "{enemyName}: {guardPrincipal}… forgive me…"
+            ],
+            militaryEngage: [
+                "{enemyName} ({militaryUnit}): Hostile contact. Weapons hot.",
+                "Military vessel {enemyShip}: Target acquired. Engaging by authority of Naval Command.",
+                "{enemyName}: {militaryUnit} reporting hostile in {systemName}. Neutralizing threat.",
+                "Command, this is {militaryUnit}. Engaging enemy combatant.",
+                "{enemyName}: Military protocol engaged. You are designated hostile.",
+                "{enemyName}: This sector is under military protection. Stand down or be destroyed.",
+                "Defense grid active. {militaryUnit} moving to intercept.",
+                "{enemyName}: You've entered a restricted zone. Prepare to be boarded or destroyed.",
+                "{enemyName} ({militaryUnit}): Threat assessment complete. Engaging.",
+                "Military broadcast: Unauthorized vessel, you will comply or be eliminated.",
+                "{enemyName}: Fleet orders are clear: neutralize all threats in {systemName}.",
+                "{militaryUnit} leader: Target locked. Commencing attack run.",
+                "{enemyName}: This is military space. You don't belong here.",
+                "{enemyName}: Rules of engagement satisfied. Opening fire.",
+                "Tactical {enemyShip}: Hostile vessel identified. Weapons free."
+            ],
+            militaryRetort: [
+                "{enemyName}: Shields up. Returning fire!",
+                "{militaryUnit}: Taking damage. Requesting backup.",
+                "{enemyName}: You just attacked a military vessel. That's a death sentence.",
+                "{enemyName}: Hit confirmed. Counter-attack authorized.",
+                "Military vessel {enemyShip}: Armor compromised. Escalating response.",
+                "{enemyName}: You're outgunned and you don't even know it.",
+                "{enemyName} ({militaryUnit}): That's an act of war. Prepare for retaliation.",
+                "{enemyName}: All units, we are taking fire. Engage at will!",
+                "{enemyName}: Command, we have a hostile. Permission to use lethal force?",
+                "{enemyName}: That scorch mark will be the last thing you see."
+            ],
+            militaryDeath: [
+                "{enemyName}: {militaryUnit} down… Mayday…",
+                "{militaryUnit} leader: We're hit… systems critical…",
+                "{enemyName}: Command… we're not going to make it…",
+                "Military vessel {enemyShip}: Hull failing… tell command…",
+                "{enemyName}: Ejecting… shields gone…",
+                "{enemyName}: {militaryUnit}… reporting… casualty…",
+                "{enemyName}: Ship lost… crew… evacuating…",
+                "{enemyName}: This is {militaryUnit}… going dark…"
+            ],
+            imperialEngage: [
+                "{enemyName}: In the name of {imperialRank}, you will stand down!",
+                "Imperial vessel {enemyShip}: You face the might of the Empire. Surrender now.",
+                "{enemyName}: Glory to the Crown! Target identified, engaging.",
+                "{enemyName}: {imperialRank} does not tolerate defiance. Prepare to be destroyed.",
+                "For the Empire! {enemyName} engaging hostile contact.",
+                "{enemyName}: You dare challenge Imperial authority in {systemName}?",
+                "Imperial Command: Hostile vessel detected. Eliminating in the Emperor's name.",
+                "{enemyName}: The Empire's justice is swift. Your time has come.",
+                "{enemyName}: Long live the Empire! All guns, fire at will!",
+                "Crown fleet {enemyShip}: You will bow before Imperial power or burn.",
+                "{enemyName}: Traitors and rebels will be crushed. Engaging.",
+                "{enemyName}: {imperialRank} protects this sector. You are not welcome.",
+                "Imperial Squadron: Target acquired. For the glory of the Crown!",
+                "{enemyName}: You oppose the Empire? Foolish. Weapons hot.",
+                "{enemyName}: The Emperor's word is law. You violate it at your peril."
+            ],
+            imperialRetort: [
+                "{enemyName}: You dare strike an Imperial vessel?!",
+                "{enemyName}: That was treason. The Empire will remember this!",
+                "Imperial {enemyShip}: Shields holding. The Crown does not fall so easily.",
+                "{enemyName}: Your rebellion ends here!",
+                "{enemyName}: For every Imperial you harm, ten more will hunt you down!",
+                "{enemyName}: The Empire's wrath is upon you now!",
+                "{enemyName}: You've made a powerful enemy today, rebel scum!",
+                "{enemyName}: Imperial armor is superior. You'll see.",
+                "{enemyName}: That shot seals your fate. The Emperor demands justice!",
+                "{enemyName}: Attack the Empire and face annihilation!"
+            ],
+            imperialDeath: [
+                "{enemyName}: Long… live… the Emperor…",
+                "Imperial {enemyShip}: For… the Crown… ugh…",
+                "{enemyName}: The Empire… will avenge… me…",
+                "{enemyName}: Glory to… {imperialRank}… fading…",
+                "{enemyName}: I die… for the Empire…",
+                "Crown vessel {enemyShip}: Systems… failing… Emperor…",
+                "{enemyName}: Tell the Emperor… we fought… bravely…",
+                "{enemyName}: The Empire… endures… even… as I fall…"
+            ],
+            separatistEngage: [
+                "{enemyName}: {separatistSlogan}! Engaging Imperial oppressor!",
+                "Separatist fighter {enemyShip}: You're with the Empire? Then you're the enemy!",
+                "{enemyName}: For freedom! We'll never bow to tyrants!",
+                "{enemyName}: The Republic rises! Death to Imperial dogs!",
+                "Freedom fighter {enemyName}: You support the Crown? Then you fall with it!",
+                "{enemyName}: We fight for the people! Engaging enemy of the Republic!",
+                "{enemyName}: {separatistSlogan}! Target locked.",
+                "Rebel {enemyShip}: Imperial scum detected in {systemName}. Attacking!",
+                "{enemyName}: The chains are broken! We are free, and we fight!",
+                "{enemyName}: For every world they've crushed, we strike back! Engaging!",
+                "{enemyName}: The Separatist cause is just. You picked the wrong side!",
+                "Freedom squadron: Imperial contact. All units, weapons free!",
+                "{enemyName}: We remember the oppression. Now we deliver justice!",
+                "{enemyName}: The Republic will not be silenced! Fire!",
+                "{enemyName}: Crown loyalists die today. For the Republic!"
+            ],
+            separatistRetort: [
+                "{enemyName}: The Republic does not yield!",
+                "{enemyName}: You can't stop us! {separatistSlogan}!",
+                "Separatist {enemyShip}: Every hit makes our cause stronger!",
+                "{enemyName}: We've endured worse than you, Imperial!",
+                "{enemyName}: For freedom! We will not fall!",
+                "{enemyName}: The people stand with us. You fight alone!",
+                "{enemyName}: That the best the Empire can do?",
+                "{enemyName}: We've survived Imperial bombardments. This is nothing!",
+                "{enemyName}: Strike us down and a thousand more will rise!",
+                "{enemyName}: You can't kill an idea, oppressor!"
+            ],
+            separatistDeath: [
+                "{enemyName}: The Republic… will live on…",
+                "Separatist {enemyShip}: Tell them… we fought… for freedom…",
+                "{enemyName}: {separatistSlogan}… always…",
+                "{enemyName}: I die… free…",
+                "{enemyName}: The cause… endures…",
+                "Freedom fighter: Others… will finish… what we started…",
+                "{enemyName}: For… the Republic… ugh…",
+                "{enemyName}: We… are… not defeated… only… fallen…"
+            ],
+            combatEngage: [
+                "{enemyName}: Combat protocols engaged. Weapons hot.",
+                "Warship {enemyShip}: Target designated hostile. Commencing attack.",
+                "{enemyName}: You're in my sights. This won't take long.",
+                "{enemyName}: Combat vessel ready. Let's see what you've got.",
+                "Battle cruiser {enemyShip}: Hostile contact confirmed. Engaging.",
+                "{enemyName}: Time to earn my pay. Target acquired.",
+                "{enemyName}: This sector belongs to those who can hold it. Prove yourself.",
+                "{enemyName}: I'm built for war. You're just target practice.",
+                "Combat ship {enemyName}: Threat detected. Eliminating.",
+                "{enemyName}: My weapons are primed. Your shields won't last.",
+                "{enemyName}: You want a fight? You've got one.",
+                "{enemyName}: Combat systems online. Engaging enemy.",
+                "Tactical vessel {enemyShip}: Target lock achieved. Opening fire.",
+                "{enemyName}: Let's dance, {playerTitle}. Hope you brought armor.",
+                "{enemyName}: Another day, another hostile. Weapons free."
+            ],
+            combatRetort: [
+                "{enemyName}: That tickled. My turn.",
+                "{enemyName}: You're going to regret that shot.",
+                "Combat vessel {enemyShip}: Damage minimal. Returning fire.",
+                "{enemyName}: Nice try. I've got better armor than that.",
+                "{enemyName}: You hit like a freighter. Let me show you real firepower.",
+                "{enemyName}: Shields holding. Can you say the same?",
+                "{enemyName}: That's it? I expected more from you.",
+                "{enemyName}: You just upgraded this from a warning to a kill.",
+                "Warship {enemyShip}: Taking fire. Retaliating with full force.",
+                "{enemyName}: Bad move. Combat ships don't go down easy."
+            ],
+            combatDeath: [
+                "{enemyName}: Systems… failing… well fought…",
+                "Combat vessel {enemyShip}: Hull breach… I'm done…",
+                "{enemyName}: You… earned this… one…",
+                "{enemyName}: Ship… critical… ejecting…",
+                "{enemyName}: Damn… didn't… see that coming…",
+                "Warship {enemyShip}: Reactor… overload… goodbye…",
+                "{enemyName}: Not bad… for a… {playerShip}…",
+                "{enemyName}: This… isn't… over…"
             ]
         };
     }
@@ -204,6 +418,34 @@ class CommunicationSystem {
                     cooldown: 16000,
                     color: [255, 140, 100]
                 });
+            } else if (engages && enemy.role === AI_ROLE.GUARD && enemy.isArmed?.()) {
+                this._maybeSend(enemy, "guard_engage", this.templates.guardEngage, {
+                    chance: 0.7,
+                    cooldown: 18000,
+                    color: [200, 160, 255]
+                });
+            } else if (engages && enemy.role === AI_ROLE.COMBAT && enemy.isArmed?.()) {
+                // Determine faction for combat ships
+                const faction = this._getShipFaction(enemy);
+                let templateList, color;
+                
+                if (faction === 'IMPERIAL') {
+                    templateList = this.templates.imperialEngage;
+                    color = [255, 180, 100];
+                } else if (faction === 'SEPARATIST') {
+                    templateList = this.templates.separatistEngage;
+                    color = [180, 220, 255];
+                } else {
+                    // Default to military
+                    templateList = this.templates.militaryEngage;
+                    color = [255, 100, 100];
+                }
+                
+                this._maybeSend(enemy, "combat_engage", templateList, {
+                    chance: 0.65,
+                    cooldown: 16000,
+                    color
+                });
             }
         }
     }
@@ -233,6 +475,38 @@ class CommunicationSystem {
                 chance: 0.65,
                 cooldown: 16000,
                 color: [180, 100, 255]
+            });
+            return;
+        }
+        if (enemy.role === AI_ROLE.GUARD && enemy.isArmed?.()) {
+            this._maybeSend(enemy, "guard_engage", this.templates.guardEngage, {
+                chance: 0.7,
+                cooldown: 18000,
+                color: [200, 160, 255]
+            });
+            return;
+        }
+        if (enemy.role === AI_ROLE.COMBAT && enemy.isArmed?.()) {
+            // Determine faction for combat ships
+            const faction = this._getShipFaction(enemy);
+            let templateList, color;
+            
+            if (faction === 'IMPERIAL') {
+                templateList = this.templates.imperialEngage;
+                color = [255, 180, 100];
+            } else if (faction === 'SEPARATIST') {
+                templateList = this.templates.separatistEngage;
+                color = [180, 220, 255];
+            } else {
+                // Default to military
+                templateList = this.templates.militaryEngage;
+                color = [255, 100, 100];
+            }
+            
+            this._maybeSend(enemy, "combat_engage", templateList, {
+                chance: 0.65,
+                cooldown: 16000,
+                color
             });
             return;
         }
@@ -279,6 +553,38 @@ class CommunicationSystem {
             });
             return;
         }
+        if (enemy.role === AI_ROLE.GUARD && enemy.isArmed?.()) {
+            this._maybeSend(enemy, "guard_retort", this.templates.guardRetort, {
+                chance: 0.6,
+                cooldown: 14000,
+                color: [200, 160, 255]
+            });
+            return;
+        }
+        if (enemy.role === AI_ROLE.COMBAT && enemy.isArmed?.()) {
+            // Determine faction for combat ships
+            const faction = this._getShipFaction(enemy);
+            let templateList, color;
+            
+            if (faction === 'IMPERIAL') {
+                templateList = this.templates.imperialRetort;
+                color = [255, 180, 100];
+            } else if (faction === 'SEPARATIST') {
+                templateList = this.templates.separatistRetort;
+                color = [180, 220, 255];
+            } else {
+                // Default to military
+                templateList = this.templates.militaryRetort;
+                color = [255, 100, 100];
+            }
+            
+            this._maybeSend(enemy, "combat_retort", templateList, {
+                chance: 0.5,
+                cooldown: 14000,
+                color
+            });
+            return;
+        }
     }
 
 
@@ -293,6 +599,21 @@ class CommunicationSystem {
             case AI_ROLE.HAULER:
             case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = [255,220,140]; break;
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180,100,255]; break;
+            case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200,160,255]; break;
+            case AI_ROLE.COMBAT: 
+                // Determine faction for combat ships
+                const faction = this._getShipFaction(enemy);
+                if (faction === 'IMPERIAL') {
+                    templateList = this.templates.imperialDeath;
+                    color = [255, 180, 100];
+                } else if (faction === 'SEPARATIST') {
+                    templateList = this.templates.separatistDeath;
+                    color = [180, 220, 255];
+                } else {
+                    templateList = this.templates.militaryDeath;
+                    color = [255, 100, 100];
+                }
+                break;
             default: return; // silent for other roles
         }
         if (!templateList || templateList.length === 0) return;
@@ -302,6 +623,9 @@ class CommunicationSystem {
             color,
             duration: (this.uiManager?.communicationDisplayTime || 15000) * 0.6
         });
+        
+        // Clean up cooldown entry for destroyed enemy to prevent memory leak
+        this._cleanupEnemy(enemy);
     }
     _maybeSend(enemy, category, templates, options = {}) {
         if (!this.uiManager || !Array.isArray(templates) || templates.length === 0) {
@@ -365,6 +689,10 @@ class CommunicationSystem {
         tokens.haulerExcuse = tokens.haulerExcuse ?? this._pick(this._haulerExcuses);
         tokens.policeWing = tokens.policeWing ?? this._generatePoliceWingId(enemy);
         tokens.policeCharge = tokens.policeCharge ?? this._pick(this._policeCharges);
+        tokens.guardPrincipal = tokens.guardPrincipal ?? this._pick(this._guardPrincipals);
+        tokens.militaryUnit = tokens.militaryUnit ?? this._pick(this._militaryUnits);
+        tokens.imperialRank = tokens.imperialRank ?? this._pick(this._imperialRanks);
+        tokens.separatistSlogan = tokens.separatistSlogan ?? this._pick(this._separatistSlogans);
         return this._resolveTokenEntries(tokens);
     }
 
@@ -493,6 +821,33 @@ class CommunicationSystem {
         return `${prefix}-${number}`;
     }
 
+    _getShipFaction(ship) {
+        // Determine ship faction based on ship type definition
+        if (!ship || !ship.shipTypeName) {
+            return 'MILITARY'; // Default
+        }
+        
+        // Check if SHIP_DEFINITIONS is available
+        if (typeof SHIP_DEFINITIONS === 'undefined') {
+            return 'MILITARY';
+        }
+        
+        const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
+        if (!shipDef || !shipDef.aiRoles) {
+            return 'MILITARY';
+        }
+        
+        if (shipDef.aiRoles.includes('IMPERIAL')) {
+            return 'IMPERIAL';
+        } else if (shipDef.aiRoles.includes('SEPARATIST')) {
+            return 'SEPARATIST';
+        } else if (shipDef.aiRoles.includes('MILITARY')) {
+            return 'MILITARY';
+        }
+        
+        return 'MILITARY'; // Default
+    }
+
     _getEnemyKey(enemy) {
         if (!enemy) {
             return null;
@@ -548,5 +903,35 @@ class CommunicationSystem {
             return true;
         }
         return false;
+    }
+
+    _cleanupEnemy(enemy) {
+        // Remove cooldown entry for destroyed enemy to prevent memory leak
+        const enemyKey = this._getEnemyKey(enemy);
+        if (enemyKey) {
+            this._enemyCooldowns.delete(enemyKey);
+        }
+    }
+
+    performPeriodicCleanup() {
+        // Periodic cleanup to prevent memory leaks from stale cooldown entries
+        // This should be called occasionally (e.g., every 60 seconds) from the main game loop
+        const now = this._now();
+        const staleThreshold = 120000; // 2 minutes - entries older than this are considered stale
+        
+        const keysToDelete = [];
+        this._enemyCooldowns.forEach((record, key) => {
+            // Check if any category has been updated recently
+            const categoryTimes = Object.values(record);
+            const mostRecent = Math.max(...categoryTimes);
+            
+            if (now - mostRecent > staleThreshold) {
+                keysToDelete.push(key);
+            }
+        });
+        
+        keysToDelete.forEach(key => this._enemyCooldowns.delete(key));
+        
+        return keysToDelete.length; // Return count of cleaned up entries for debugging
     }
 }
