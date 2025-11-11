@@ -790,7 +790,8 @@ class EnemyAIBehaviors {
 
     /**
      * Combat Role AI Logic - For military, imperial, and separatist combat ships
-     * These ships patrol, scan, dock at stations, and engage enemies with faction-specific bonuses
+     * These ships patrol, scan, dock at stations, and engage enemies with faction-specific bonuses.
+     * Implements combat timer to allow ships to disengage and return to patrol after engagement.
      * @param {Object} system - The current star system
      */
     updateCombatRoleAI(system) {
