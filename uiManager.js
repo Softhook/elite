@@ -519,7 +519,7 @@ class UIManager {
         const hasShipIdentity = typeof target.shipTypeName === 'string' || typeof target.shipDefinition === 'object';
         if (!hasShipIdentity) { return; }
 
-        const panelWidth = Math.min(320, Math.max(240, width * 0.25));
+        const panelWidth = Math.min(280, Math.max(200, width * 0.2));
         const padding = 12;
         const lineHeight = 20;
         const sectionSpacing = 8;
@@ -544,9 +544,9 @@ class UIManager {
         const weaponsList = this._getTargetWeapons(target);
 
         const infoLines = [];
-        infoLines.push(`Ship: ${shipName}`);
-        if (roleLabel) { infoLines.push(`Role: ${roleLabel}`); }
-        if (wantedLabel) { infoLines.push(`Status: ${wantedLabel}`); }
+        infoLines.push(`${shipName}`);
+        if (roleLabel) { infoLines.push(`${roleLabel}`); }
+        if (wantedLabel) { infoLines.push(`${wantedLabel}`); }
         if (rangeLine) { infoLines.push(rangeLine); }
 
         const cargoEntries = this._getCargoEntries(target);
@@ -630,7 +630,7 @@ class UIManager {
         cursorY += sectionSpacing;
 
         fill(210);
-        textSize(16);
+        textSize(18);
         for (let i = 0; i < infoLines.length; i++) {
             text(infoLines[i], cursorX, cursorY);
             cursorY += lineHeight;
@@ -641,11 +641,9 @@ class UIManager {
         // Draw weapons if available
         if (weaponsList && weaponsList.length > 0) {
             fill(190, 220, 255);
-            textSize(16);
             text('Weapons', cursorX, cursorY);
             cursorY += lineHeight;
             fill(210);
-            textSize(14);
             for (let i = 0; i < weaponsList.length; i++) {
                 text(weaponsList[i], cursorX, cursorY);
                 cursorY += lineHeight;
@@ -731,13 +729,12 @@ class UIManager {
 
     _drawStatBar(x, y, width, label, current, max, percent) {
         const barHeight = 14;
-        const barWidth = width * 0.6;
-        const labelWidth = width * 0.4;
+        const barWidth = width * 0.7;
+        const labelWidth = width * 0.3;
         
         // Draw label
         push();
         textAlign(LEFT, TOP);
-        textSize(14);
         fill(210);
         text(`${label}:`, x, y);
         
@@ -772,15 +769,6 @@ class UIManager {
         
         fill(barColor[0], barColor[1], barColor[2]);
         rect(barX, y, fillWidth, barHeight, 2);
-        
-        // Draw value text
-        fill(0);
-        textAlign(CENTER, TOP);
-        textSize(12);
-        const valueText = Number.isFinite(max) 
-            ? `${Math.round(current)}/${Math.round(max)}` 
-            : `${Math.round(current)}`;
-        text(valueText, barX + barWidth / 2, y + 1);
         pop();
     }
 
