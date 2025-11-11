@@ -532,7 +532,7 @@ class UIManager {
         const pilotName = this._getTargetPilotName(target);
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
-        const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : 'Clean') : null;
+        const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
         const hullPercent = this._getStatPercent(target.hull, target.maxHull);
         const shieldPercent = this._getStatPercent(target.shield, target.maxShield);
         const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
@@ -544,10 +544,10 @@ class UIManager {
         const weaponsList = this._getTargetWeapons(target);
 
         const infoLines = [];
-        infoLines.push(`${shipName}`);
-        if (roleLabel) { infoLines.push(`${roleLabel}`); }
-        if (wantedLabel) { infoLines.push(`${wantedLabel}`); }
-        if (rangeLine) { infoLines.push(rangeLine); }
+        infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        if (rangeLine) {
+            infoLines.push(rangeLine);
+        }
 
         const cargoEntries = this._getCargoEntries(target);
         let cargoLines = cargoEntries.length > 0
@@ -617,6 +617,11 @@ class UIManager {
         fill(255);
         textSize(18);
         text(pilotName, cursorX, cursorY);
+        if (wantedLabel) {
+            fill(255, 0, 0);
+            text(` (${wantedLabel})`, cursorX + textWidth(pilotName), cursorY);
+            fill(255);
+        }
         cursorY += lineHeight;
 
         cursorY += sectionSpacing;
@@ -645,9 +650,15 @@ class UIManager {
             cursorY += lineHeight;
             fill(210);
             for (let i = 0; i < weaponsList.length; i++) {
+                if (weaponsList[i] === target.currentWeapon?.name) {
+                    fill(255, 255, 0); // Highlight current weapon in yellow
+                } else {
+                    fill(210);
+                }
                 text(weaponsList[i], cursorX, cursorY);
                 cursorY += lineHeight;
             }
+            fill(210); // Reset fill for subsequent text
             cursorY += sectionSpacing;
         }
 
