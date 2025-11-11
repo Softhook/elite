@@ -790,10 +790,90 @@ class EnemyAIBehaviors {
 
     /**
      * Combat Role AI Logic - For military, imperial, and separatist combat ships
-     * These ships patrol, scan, dock at stations, and engage enemies with faction-specific bonuses
+     * These ships patrol, scan, dock at stations, and engage enemies with faction-specific bonuses.
+     * Implements combat timer to allow ships to disengage and return to patrol after engagement.
      * @param {Object} system - The current star system
      */
     updateCombatRoleAI(system) {
+        // Check for attackers FIRST - similar to hauler logic
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
+            this.currentState !== AI_STATE.FLEEING && // Don't interrupt fleeing
+            this.currentState !== AI_STATE.APPROACHING && // Don't interrupt combat
+            this.currentState !== AI_STATE.ATTACK_PASS &&
+            this.currentState !== AI_STATE.REPOSITIONING &&
+            this.currentState !== AI_STATE.SNIPING && // Don't interrupt sniping
+            (!this.attackCooldown || this.attackCooldown <= 0)) {
+
+            const attackerDistance = this.distanceTo(this.lastAttacker);
+            if (attackerDistance < this.detectionRange * 1.5) {
+                // Store current state before switching to combat
+                this.previousCombatState = this.currentState;
+                this.previousTargetPos = this.patrolTargetPos ? this.patrolTargetPos.copy() : null;
+
+                AI_LOG(`Combat ship ${this.shipTypeName} engaging attacker ${this.lastAttacker.shipTypeName || 'Player'}`);
+                this.target = this.lastAttacker;
+                this.changeState(AI_STATE.APPROACHING);
+                this.combatEngagementTimer = 15.0; // Engage for 15 seconds before disengaging
+                this.inCombat = true; // Mark as in combat
+                this.attackCooldown = 3.0; // Prevent re-triggering for 3 seconds
+                
+                // Continue with combat logic below
+            }
+        }
+
+        // Check if currently in combat mode
+        if (this.inCombat === true) {
+            // Update combat timer
+            if (this.combatEngagementTimer !== undefined) {
+                this.combatEngagementTimer -= deltaTime / 1000;
+                if (this.combatEngagementTimer <= 0) {
+                    AI_LOG(`Combat ship ${this.shipTypeName} disengaging from combat.`);
+                    this.combatEngagementTimer = undefined; // Clear timer
+                    this.lastAttacker = null; // Forget attacker
+                    this.target = null; // Clear target
+                    this.inCombat = false; // Clear combat flag
+                    this.attackCooldown = 10.0; // Prevent immediate re-engagement
+                    
+                    // Return to patrol
+                    this.changeState(AI_STATE.PATROLLING);
+                    this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy();
+                    
+                    // Move towards patrol target this frame
+                    this.performRotationAndThrust(this.patrolTargetPos);
+                    this.updatePhysics();
+                    return;
+                }
+            }
+
+            // Force reinstate combat state if needed
+            if (this.currentState !== AI_STATE.APPROACHING && 
+                this.currentState !== AI_STATE.ATTACK_PASS &&
+                this.currentState !== AI_STATE.REPOSITIONING &&
+                this.currentState !== AI_STATE.FLEEING &&
+                this.currentState !== AI_STATE.SNIPING &&
+                this.currentState !== AI_STATE.PATROLLING) {
+                AI_LOG(`Forcing combat ship ${this.shipTypeName} back to APPROACHING state`);
+                this.changeState(AI_STATE.APPROACHING);
+            }
+
+            // Continue with normal combat AI below
+        }
+
+        // Check the combat state flags as well (backup check)
+        if (this.currentState === AI_STATE.FLEEING ||
+            this.currentState === AI_STATE.APPROACHING ||
+            this.currentState === AI_STATE.ATTACK_PASS ||
+            this.currentState === AI_STATE.REPOSITIONING ||
+            this.currentState === AI_STATE.SNIPING) {
+            // Set the inCombat flag if needed
+            this.inCombat = true;
+        } else {
+            // Reset combat flag if not in combat state and timer expired
+            if (!this.combatEngagementTimer || this.combatEngagementTimer <= 0) {
+                this.inCombat = false;
+            }
+        }
+
         // Combat ships don't trade - just patrol and fight
         // Determine ship faction based on ship type
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];

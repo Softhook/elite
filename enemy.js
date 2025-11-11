@@ -284,6 +284,10 @@ class Enemy {
         // Initialize attack cooldown
         this.attackCooldown = 0;
 
+        // Combat engagement tracking (for combat role ships)
+        this.combatEngagementTimer = 0;
+        this.inCombat = false;
+
         // Add shield properties
         this.maxShield = shipDef.baseShield || 0;
         this.shield = this.maxShield;
