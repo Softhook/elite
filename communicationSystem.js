@@ -303,6 +303,7 @@ class CommunicationSystem {
                 "{enemyName}: Long… live… the Emperor…",
                 "Imperial {enemyShip}: For… the Crown… ugh…",
                 "{enemyName}: The Empire… will avenge… me…",
+                "{enemyName}: The Emperor protects…",
                 "{enemyName}: Glory to… {imperialRank}… fading…",
                 "{enemyName}: I die… for the Empire…",
                 "Crown vessel {enemyShip}: Systems… failing… Emperor…",
@@ -340,6 +341,7 @@ class CommunicationSystem {
             ],
             separatistDeath: [
                 "{enemyName}: The Republic… will live on…",
+                "{enemyName}: Freedom!…",
                 "Separatist {enemyShip}: Tell them… we fought… for freedom…",
                 "{enemyName}: {separatistSlogan}… always…",
                 "{enemyName}: I die… free…",
@@ -472,7 +474,7 @@ class CommunicationSystem {
         }
         if (enemy.role === AI_ROLE.ALIEN) {
             this._maybeSend(enemy, "alien_engage", this.templates.alienEngage, {
-                chance: 0.65,
+                chance: 0.8,
                 cooldown: 16000,
                 color: [180, 100, 255]
             });
@@ -547,7 +549,7 @@ class CommunicationSystem {
         }
         if (enemy.role === AI_ROLE.ALIEN) {
             this._maybeSend(enemy, "alien_retort", this.templates.alienRetort, {
-                chance: 0.55,
+                chance: 0.8,
                 cooldown: 12000,
                 color: [180, 100, 255]
             });
