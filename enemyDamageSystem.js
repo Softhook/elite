@@ -242,6 +242,9 @@ class EnemyDamageSystem {
             }
         }
 
+        // Award faction bounties
+        this._awardFactionBounty(attacker);
+
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
 
         // Set player wanted status if a non-pirate was destroyed
@@ -268,6 +271,69 @@ class EnemyDamageSystem {
                 AI_LOG(`Player marked as WANTED (fallback) for destroying ${this.shipTypeName}`);
             }
         }
+    }
+
+    /**
+     * Internal helper: Awards faction bounties based on player faction and killed enemy type.
+     * @param {Player} attacker - The player who killed this enemy
+     */
+    _awardFactionBounty(attacker) {
+        if (!attacker) return;
+
+        let bountyAmount = 0;
+        let bountyMessage = null;
+
+        // Police bounties - 1,000 credits for killing pirates
+        if (attacker.isPolice && this.role === AI_ROLE.PIRATE) {
+            bountyAmount = 1000;
+            bountyMessage = "Police bounty: 1,000 cr";
+        }
+        // Separatist bounties - 2,000 credits for killing Imperial ships
+        else if (attacker.playerFaction === 'SEPARATIST' && this._isImperialShip()) {
+            bountyAmount = 2000;
+            bountyMessage = "Separatist bounty: 2,000 cr";
+        }
+        // Imperial bounties - 2,000 credits for killing Separatist ships
+        else if (attacker.playerFaction === 'IMPERIAL' && this._isSeparatistShip()) {
+            bountyAmount = 2000;
+            bountyMessage = "Imperial bounty: 2,000 cr";
+        }
+        // Military bounties - 4,000 credits for killing Alien ships
+        else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.ALIEN) {
+            bountyAmount = 4000;
+            bountyMessage = "Military bounty: 4,000 cr";
+        }
+
+        // Award the bounty
+        if (bountyAmount > 0 && bountyMessage) {
+            attacker.addCredits(bountyAmount);
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(bountyMessage, [100, 255, 100]);
+            }
+            AI_LOG(`Faction bounty awarded: ${bountyAmount} credits (${bountyMessage})`);
+        }
+    }
+
+    /**
+     * Helper: Checks if this enemy is an Imperial ship
+     * @returns {boolean}
+     */
+    _isImperialShip() {
+        // Check if this ship type is in the IMPERIAL_SHIPS array
+        return typeof IMPERIAL_SHIPS !== 'undefined' && 
+               Array.isArray(IMPERIAL_SHIPS) && 
+               IMPERIAL_SHIPS.includes(this.shipTypeName);
+    }
+
+    /**
+     * Helper: Checks if this enemy is a Separatist ship
+     * @returns {boolean}
+     */
+    _isSeparatistShip() {
+        // Check if this ship type is in the SEPARATIST_SHIPS array
+        return typeof SEPARATIST_SHIPS !== 'undefined' && 
+               Array.isArray(SEPARATIST_SHIPS) && 
+               SEPARATIST_SHIPS.includes(this.shipTypeName);
     }
 
     /**

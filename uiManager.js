@@ -968,6 +968,14 @@ class UIManager {
         fill(statusColor);
         textSize(24);
         text(statusText, pX+pW/2, contentY+30);
+        
+        // Display police bounty information
+        if (player.isPolice) {
+            fill(100, 255, 100);
+            textSize(18);
+            text("Active Bounty: 1,000 cr per pirate killed", pX+pW/2, contentY+65);
+        }
+        
         let fineAmount = 300;
         if (system?.securityLevel === 'High') fineAmount = 1000;
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
@@ -975,11 +983,11 @@ class UIManager {
             fineAmount *= 3;
             fill(255, 200, 100);
             textSize(16);
-            text("Fines tripled for former police officer", pX + pW/2, contentY + 60);
+            text("Fines tripled for former police officer", pX + pW/2, contentY + 95);
         }
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.hasBeenPolice ? 90 : 70);
+        let btnY1 = contentY + (player.isPolice ? 100 : (player.hasBeenPolice ? 125 : 90));
         if (isWanted) {
             this.policeButtonAreas.push(
                 this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount})
@@ -3897,9 +3905,16 @@ if (isIllegalInSystem || isMissionCargo) {
             text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
         }
         
+        // Display Imperial bounty information
+        if (player.playerFaction === 'IMPERIAL') {
+            fill(100, 255, 100);
+            textSize(18);
+            text("Active Bounty: 2,000 cr per Separatist killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
+        }
+        
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        let btnY1 = contentY + (player.playerFaction === 'IMPERIAL' ? 200 : (player.playerFaction ? 170 : 150));
         
         // Fine payment if wanted
         if (isWanted) {
@@ -3989,9 +4004,16 @@ if (isIllegalInSystem || isMissionCargo) {
             text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
         }
         
+        // Display Separatist bounty information
+        if (player.playerFaction === 'SEPARATIST') {
+            fill(100, 255, 100);
+            textSize(18);
+            text("Active Bounty: 2,000 cr per Imperial killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
+        }
+        
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        let btnY1 = contentY + (player.playerFaction === 'SEPARATIST' ? 200 : (player.playerFaction ? 170 : 150));
         
         // Fine payment if wanted
         if (isWanted) {
@@ -4081,9 +4103,16 @@ if (isIllegalInSystem || isMissionCargo) {
             text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
         }
         
+        // Display Military bounty information
+        if (player.playerFaction === 'MILITARY') {
+            fill(100, 255, 100);
+            textSize(18);
+            text("Active Bounty: 4,000 cr per Alien killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
+        }
+        
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction ? 170 : 150);
+        let btnY1 = contentY + (player.playerFaction === 'MILITARY' ? 200 : (player.playerFaction ? 170 : 150));
         
         // Fine payment if wanted
         if (isWanted) {
