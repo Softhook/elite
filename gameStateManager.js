@@ -596,9 +596,9 @@ this.showingInventory = false;
                     } catch(e) {}
                 }
                 
-                if (uiManager && currentSystem?.station && player) {
+                if (uiManager && player) {
                     try {
-                        uiManager.drawStorageMenu(currentSystem.station, player);
+                        uiManager.drawStorageMenu(currentSystem?.station || null, player);
                     } catch(e) { 
                         console.error("Error drawing storage menu:", e); 
                     }
