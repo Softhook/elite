@@ -1883,10 +1883,6 @@ if (isIllegalInSystem || isMissionCargo) {
         fill(255);
         textSize(30);
         text("Click anywhere or press any key to start again", width / 2, height / 2 + 20);
-        
-        fill(180);
-        textSize(20);
-        text("(Your progress has been lost)", width / 2, height / 2 + 60);
 
         pop();
     } // --- End drawGameOverScreen ---

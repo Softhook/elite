@@ -203,7 +203,7 @@ class Enemy {
             this.currentWeapon = this.weapons[0];
             this.fireRate = this.currentWeapon.fireRate;
             if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
-                uiManager.addMessage(`Detected ${this.shipTypeName} armed with ${this.currentWeapon.name}`);
+                uiManager.addMessage(`${this.shipTypeName} detected `);
             }
         } else {
             // No weapons resolved. Keep ship unarmed. Certain combat-centric roles may receive a safe fallback.
