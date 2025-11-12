@@ -3589,7 +3589,7 @@ if (isIllegalInSystem || isMissionCargo) {
             text("Storage is empty", pX + pW/2, storageY);
         } else {
             textAlign(LEFT, TOP);
-            textSize(18);
+            textSize(20);
             for (let i = 0; i < storage.length; i++) {
                 const item = storage[i];
                 const itemY = storageY + i * 40;
@@ -3601,7 +3601,8 @@ if (isIllegalInSystem || isMissionCargo) {
 
                 noStroke();
                 fill(220);
-                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 10);
+                textAlign(LEFT, CENTER);
+                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
 
                 const btnW = 95;
                 const btnH = 25;
@@ -3637,7 +3638,7 @@ if (isIllegalInSystem || isMissionCargo) {
             text("No cargo in hold", pX + pW/2, cargoY);
         } else {
             textAlign(LEFT, TOP);
-            textSize(18);
+            textSize(20);
             for (let i = 0; i < playerCargo.length; i++) {
                 const item = playerCargo[i];
                 const itemY = cargoY + i * 40;
@@ -3649,7 +3650,8 @@ if (isIllegalInSystem || isMissionCargo) {
 
                 noStroke();
                 fill(220);
-                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 10);
+                textAlign(LEFT, CENTER);
+                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
 
                 const btnW = 95;
                 const btnH = 25;
