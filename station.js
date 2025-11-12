@@ -29,6 +29,9 @@ class Station {
         this.isSecret = isSecret;
         this.stationSubtype = stationSubtype;
         this.discovered = !isSecret; // Only discovered if not secret
+        
+        // Storage locker - station-specific cargo storage
+        this.storage = []; // Array of {name: string, quantity: number}
     }
 
     /**
@@ -834,7 +837,8 @@ class Station {
                 : null,
             isSecret: this.isSecret || false,
             stationSubtype: this.stationSubtype || null,
-            discovered: this.discovered || false
+            discovered: this.discovered || false,
+            storage: this.storage || []
         };
     }
 
@@ -864,6 +868,7 @@ class Station {
             s.market = Market.fromJSON(data.market, s.systemType);
         }
         s.discovered = data.discovered || false;
+        s.storage = Array.isArray(data.storage) ? data.storage : [];
         return s;
     }
 
