@@ -28,15 +28,6 @@ class EnemyMovement {
             }
         }
         
-        // SNIPING turret-mode: if we didn't get a usable movement vector, still rotate to face the target
-        if (angleDifference === PI && this.currentState === AI_STATE.SNIPING && this.isTargetValid && this.isTargetValid(this.target)) {
-            const desiredAngle = atan2(
-                this.target.pos.y - this.pos.y,
-                this.target.pos.x - this.pos.x
-            );
-            angleDifference = this.rotateTowards(desiredAngle);
-        }
-        
         // Default thrust multiplier
         let effectiveThrustMultiplier = 1.0;
         let canThrust = false; // Master flag to decide if thrusting happens
@@ -166,35 +157,30 @@ class EnemyMovement {
                 break;
                 
             case AI_STATE.SNIPING:
-                // Turret mode: maintain optimal standoff range
+                // Turret mode with subtle forward drift toward target (no standoff maintenance)
                 if (this.isTargetValid && this.isTargetValid(this.target)) {
                     // Compute distance using provided argument when possible to avoid recomputing
-                    let currentDistance = (typeof distanceToTarget === 'number' && isFinite(distanceToTarget))
+                    let safeDistance = (typeof distanceToTarget === 'number' && isFinite(distanceToTarget))
                         ? distanceToTarget
                         : this.distanceTo(this.target);
 
-                    // Calculate ideal sniping range - 70% of effective firing range
-                    const idealSnipingRange = this.visualFiringRange * SNIPING_IDEAL_RANGE_FACTOR;
-                    const rangeTolerance = this.visualFiringRange * SNIPING_STANDOFF_TOLERANCE_FACTOR;
-                    
-                    // Calculate distance deviation from ideal
-                    const distanceDeviation = currentDistance - idealSnipingRange;
-                    
-                    // Only adjust position if we're outside the tolerance band
-                    if (Math.abs(distanceDeviation) > rangeTolerance) {
-                        // Reuse tempVector to point from self to target
+                    // Soft stop near collision range
+                    const targetSize = this.target.size || this.size;
+                    const combinedSize = (this.size + targetSize);
+                    const minApproachDistance = combinedSize * 1.2;
+
+                    if (safeDistance > minApproachDistance) {
+                        // Reuse tempVector to point from self to target, then clamp to a tiny step
                         this.tempVector.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
                         const magSq = this.tempVector.magSq();
                         if (magSq > 0.0001) {
-                            this.tempVector.normalize();
-                            
-                            // If too close, back away; if too far, move closer
-                            const adjustmentDistance = distanceDeviation > 0 
-                                ? Math.min(distanceDeviation * 0.5, this.size * 2) // Too far: move closer
-                                : Math.max(distanceDeviation * 0.5, -this.size * 2); // Too close: back away
-                            
-                            this.tempVector.mult(adjustmentDistance);
-                            
+                            // Step is small but above thrust threshold check (size * 0.05)
+                            const minStep = this.size * 0.08;
+                            const maxStep = this.size * 0.9;
+                            const distStep = safeDistance * 0.02; // 2% of current distance
+                            const step = constrain(distStep, minStep, maxStep);
+                            this.tempVector.normalize().mult(step);
+
                             // Use a reusable vector for drift target to avoid per-frame allocations
                             if (!this._snipingDriftTarget) {
                                 this._snipingDriftTarget = createVector(0, 0);
