@@ -1941,6 +1941,10 @@ handleInput() {
      */
     addKill() {
         this.kills++;
+        // Record ship destruction in personal record
+        if (this.target) {
+            this.recordShipDestruction(this.target);
+        }
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
     }
 
