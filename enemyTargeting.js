@@ -297,8 +297,14 @@ class EnemyTargeting {
                     
                 case AI_ROLE.ALIEN:
                     if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
-                        _score += 50; // Base score for any non-alien target
+                        _score += 50; // Base score for any non-alien target (human ships)
                         _interesting = true;
+                        
+                        // Bonus against military ships
+                        const targetFaction = enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN';
+                        if (targetFaction === 'MILITARY') {
+                            _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military targets
+                        }
                     }
                     break;
 
