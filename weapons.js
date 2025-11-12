@@ -18,7 +18,7 @@ const WEAPON_UPGRADES = [
         damage: 35,
         color: [200, 200, 255], // Pale blue
         fireRate: 0.7,
-        price: 3200,
+        price: 2500,
         desc: "Slow but powerful shot."
     },
     {
@@ -27,7 +27,7 @@ const WEAPON_UPGRADES = [
         damage: 60,
         color: [180, 80, 80], // Brownish
         fireRate: 1.0,
-        price: 5000,
+        price: 3000,
         desc: "Very high damage, long cooldown."
     },
     
@@ -44,7 +44,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.12,
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
-        price: 2500,
+        price: 1600,
         desc: "Continuous beam, high energy use."
     },
     {
@@ -57,7 +57,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.08,
         heatDissipation: 0.42,
         heatRecoveryFactor: 0.28,
-        price: 3500,
+        price: 2200,
         desc: "Low damage, rapid-fire beam."
     },
     {
@@ -70,7 +70,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.18,
         heatDissipation: 0.32,
         heatRecoveryFactor: 0.35,
-        price: 4200,
+        price: 1400,
         desc: "Short beam, disables enemy shields."
     },
     
@@ -83,7 +83,7 @@ const WEAPON_UPGRADES = [
         damage: 4,
         color: [0, 180, 255], // Blue
         fireRate: 0.35,
-        price: 1600,
+        price: 800,
         desc: "Fires two parallel shots."
     },
     {
@@ -92,7 +92,7 @@ const WEAPON_UPGRADES = [
         damage: 6,
         color: [255, 0, 255], // Purple
         fireRate: 0.4,
-        price: 2500,
+        price: 1100,
         desc: "Fast 3-way parallel shots."
     },
     {
@@ -101,7 +101,7 @@ const WEAPON_UPGRADES = [
         damage: 7,
         color: [0, 255, 180], // Aqua
         fireRate: 0.5,
-        price: 5000,
+        price: 1300,
         desc: "Four parallel shots."
     },
     
@@ -114,7 +114,7 @@ const WEAPON_UPGRADES = [
         damage: 12,
         color: [255, 255, 0], // Yellow
         fireRate: 0.4,
-        price: 1400,
+        price: 1700,
         desc: "Two angled shots, good for close range."
     },
     {
@@ -123,7 +123,7 @@ const WEAPON_UPGRADES = [
         damage: 18,
         color: [120, 120, 255], // Violet
         fireRate: 0.7,
-        price: 2700,
+        price: 1400,
         desc: "Two heavy shots at a wide angle."
     },
     
@@ -136,7 +136,7 @@ const WEAPON_UPGRADES = [
         damage: 10,
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
-        price: 1800,
+        price: 2400,
         desc: "Ballistic, 3-way spread, good vs hull."
     },
     {
@@ -158,7 +158,7 @@ const WEAPON_UPGRADES = [
         damage: 6,
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
-        price: 2100,
+        price: 1400,
         desc: "Wide 4-way spread, covers more area."
     },
 
@@ -171,7 +171,7 @@ const WEAPON_UPGRADES = [
         damage: 6,
         color: [255, 0, 0], // Red
         fireRate: 0.3,
-        price: 6100,
+        price: 1600,
         desc: "Tight 5-way spread."
     },
     
@@ -184,7 +184,7 @@ const WEAPON_UPGRADES = [
         damage: 18,
         color: [80, 255, 80], // Light green
         fireRate: 0.7,
-        price: 3200,
+        price: 2300,
         desc: "Auto-aims, moderate damage."
     },
     {
@@ -193,7 +193,7 @@ const WEAPON_UPGRADES = [
         damage: 50,
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
-        price: 4000,
+        price: 4500,
         desc: "High damage, slow fire, auto-aims."
     },
     
@@ -206,7 +206,7 @@ const WEAPON_UPGRADES = [
         damage: 400,
         color: [255, 0, 0], // Red
         fireRate: 2, 
-        price: 10000,
+        price: 32500,
         maxRadius: 300,
         desc: "Area effect."
     },
@@ -216,7 +216,7 @@ const WEAPON_UPGRADES = [
         damage: 500,
         color: [255, 255, 0], // Purple
         fireRate: 2, 
-        price: 10000,
+        price: 40600,
         maxRadius: 750,
         desc: "Super damage, area effect."
     },
@@ -230,7 +230,7 @@ const WEAPON_UPGRADES = [
         color: [0, 255, 255],
         projectileSize: 7,
         fireRate: 5.0,         // Long reload
-        price: 4500,
+        price: 2400,
         speed: 2,              // Missile projectile speed
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
@@ -243,7 +243,7 @@ const WEAPON_UPGRADES = [
         color: [255, 255, 255], // White
         projectileSize: 5,
         fireRate: 5.0,         // Long reload
-        price: 8000,
+        price: 2400,
         speed: 10,              // Missile projectile speed
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
@@ -256,7 +256,7 @@ const WEAPON_UPGRADES = [
         color: [255, 150, 50], // Orange-ish
         projectileSize: 5,
         fireRate: 4.0,         // Long reload
-        price: 4500,
+        price: 1800,
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
@@ -269,7 +269,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 100], // Reddish
         projectileSize: 5,
         fireRate: 7.0,          // Very long reload
-        price: 12000,
+        price: 3400,
         speed: 4,               // Slightly slower, heavier
         turnRate: 0.08,         
         lifespan: 300,
@@ -284,7 +284,7 @@ const WEAPON_UPGRADES = [
         damage: 5,           // low direct damage
         color: [20, 200, 100], // Green
         fireRate: 0.5,       // Good firing rate (slightly faster)
-        price: 6800,
+        price: 2200,
         tangleDuration: 8.0, // Seconds target is affected by tangle
         dragMultiplier: 2.0, // Strong drag effect
         rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
@@ -297,7 +297,7 @@ const WEAPON_UPGRADES = [
         damage: 10,           //Direct damage
         color: [30, 240, 120], // Brighter green
         fireRate: 1.0,       // Slower firing rate
-        price: 11000,
+        price: 2200,
         tangleDuration: 15.0, // Longer tangle effect
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
@@ -317,7 +317,7 @@ const WEAPON_UPGRADES = [
         mineHealth: 25,
         color: [255, 100, 0], // Orange
         fireRate: 3.0,
-        price: 4500,
+        price: 2500,
         desc: "Proximity mine that explodes when enemies approach. Can be destroyed by weapons."
     },
     {
@@ -329,7 +329,7 @@ const WEAPON_UPGRADES = [
         mineHealth: 40,
         color: [255, 50, 0], // Red-orange
         fireRate: 4.0,
-        price: 8000,
+        price: 2800,
         desc: "Powerful mine with larger blast radius and more damage."
     },
     {
@@ -341,7 +341,7 @@ const WEAPON_UPGRADES = [
         mineHealth: 60,
         color: [200, 0, 0], // Dark red
         fireRate: 5.0,
-        price: 12000,
+        price: 4500,
         desc: "Devastating mine with massive blast radius. Very durable."
     },
 
@@ -355,7 +355,7 @@ const WEAPON_UPGRADES = [
         duration: 10.0,        // 10 seconds
         fireRate: 15.0,       // Cooldown in seconds
         color: [100, 100, 255], // Light blue for visual effect
-        price: 4500,
+        price: 7500,
         desc: "Temporary barrier that halves incoming damage."
     },
     {
@@ -365,7 +365,7 @@ const WEAPON_UPGRADES = [
         duration: 15.0,        // 10 seconds
         fireRate: 20.0,       // Cooldown in seconds
         color: [154, 205, 50], // Green visual effect
-        price: 7500,
+        price: 13500,
         desc: "Temporary barrier that strongly reduces incoming damage."
     },
     {
@@ -375,7 +375,7 @@ const WEAPON_UPGRADES = [
         duration: 15.0,        // 10 seconds
         fireRate: 20.0,       // Cooldown in seconds
         color: [255, 215, 0], // Gold for visual effect
-        price: 10000,
+        price: 18000,
         desc: "Temporary barrier that blocks incoming damage."
     }
 
