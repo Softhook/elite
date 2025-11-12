@@ -84,12 +84,12 @@ this.showingInventory = false;
         // Play transition-specific sounds
         try {
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"];
                 if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
                     soundManager.playSound('dockSuccess');
                 } else if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
                     soundManager.playSound('undock');
-                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT"].includes(newState)) {
+                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD"].includes(newState)) {
                     soundManager.playSound('uiTransition');
                 } else if (newState === "GALAXY_MAP" && this.previousState !== "GALAXY_MAP") {
                     soundManager.playSound('mapOpen');
@@ -121,7 +121,7 @@ this.showingInventory = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"]; // Add other station states here later
+        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"]; // Add other station states here later
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
@@ -383,6 +383,16 @@ this.showingInventory = false;
                 // No update logic needed for Military recruitment menu
                 if (player) { player.vel.set(0, 0); }
                 break;
+                
+            case "VIEWING_STORAGE":
+                // No update logic needed for storage menu
+                if (player) { player.vel.set(0, 0); }
+                break;
+                
+            case "VIEWING_RECORD":
+                // No update logic needed for personal record menu
+                if (player) { player.vel.set(0, 0); }
+                break;
 
              case "GAME_OVER":
              case "LOADING":
@@ -564,6 +574,60 @@ this.showingInventory = false;
                         uiManager.drawMilitaryRecruitmentMenu(player);
                     } catch(e) { 
                         console.error("Error drawing Military recruitment menu:", e); 
+                    }
+                }
+                break;
+                
+            case "VIEWING_STORAGE":
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(20,20,40); 
+                }
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && currentSystem?.station && player) {
+                    try {
+                        uiManager.drawStorageMenu(currentSystem.station, player);
+                    } catch(e) { 
+                        console.error("Error drawing storage menu:", e); 
+                    }
+                }
+                break;
+                
+            case "VIEWING_RECORD":
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(20,20,40); 
+                }
+                
+                if (player) { 
+                    try {
+                        player.draw();
+                    } catch(e) {}
+                }
+                
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawPersonalRecordMenu(player);
+                    } catch(e) { 
+                        console.error("Error drawing personal record menu:", e); 
                     }
                 }
                 break;

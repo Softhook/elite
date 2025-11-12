@@ -502,6 +502,11 @@ class Market {
         this.updatePlayerCargo(player.cargo);
         this.updatePrices();
 
+        // Record the trade in player's personal record
+        if (player.currentSystem?.station && typeof player.recordStationTrade === 'function') {
+            player.recordStationTrade(player.currentSystem.station.name, player.currentSystem.name);
+        }
+
         // Save  Game
         if (typeof saveGame === 'function') {
             saveGame();
@@ -620,6 +625,11 @@ class Market {
         this._applyStockChange(comm, -requestedQuantity);
         this.updatePlayerCargo(player.cargo);
         this.updatePrices();
+        
+        // Record the trade in player's personal record
+        if (player.currentSystem?.station && typeof player.recordStationTrade === 'function') {
+            player.recordStationTrade(player.currentSystem.station.name, player.currentSystem.name);
+        }
 
         if (MARKET_DEBUG) {
             console.log(`--- Market.buy SUCCESS: Bought ${requestedQuantity} ${commodityName} for ${cost} credits. Stock now ${comm.stock}. ---`);

@@ -321,6 +321,11 @@ class Galaxy {
 
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter
+            
+            // Record system visit in player's personal record
+            if (player && typeof player.recordSystemVisit === 'function') {
+                player.recordSystemVisit(newSystemName);
+            }
 
             if (player && newSystem) { // Check if newSystem is valid
                 // --- Clear player's nebula/storm effects from the PREVIOUS system ---

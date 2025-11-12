@@ -847,7 +847,9 @@ class UIManager {
             { text: "Shipyard", state: "VIEWING_SHIPYARD" },
             { text: "Upgrades", state: "VIEWING_UPGRADES" },
             { text: "Repairs", state: "VIEWING_REPAIRS" },
-            { text: "Protection Services", state: "VIEWING_PROTECTION" }
+            { text: "Protection Services", state: "VIEWING_PROTECTION" },
+            { text: "Storage Locker", state: "VIEWING_STORAGE" },
+            { text: "Personal Record", state: "VIEWING_RECORD" }
         ];
         if (factionOption) {
             menuOpts.push(factionOption);
@@ -2289,6 +2291,7 @@ if (isIllegalInSystem || isMissionCargo) {
             "IN_FLIGHT","DOCKED","VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD",
             "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
+            "VIEWING_STORAGE","VIEWING_RECORD",
             "GALAXY_MAP","JUMPING"
         ];
         if (!statesExpectingSystem.includes(currentState)) {
@@ -2310,7 +2313,8 @@ if (isIllegalInSystem || isMissionCargo) {
                                btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
                                btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE" ||
                                btn.state === "VIEWING_PROTECTION" || btn.state === "VIEWING_IMPERIAL_RECRUITMENT" ||
-                               btn.state === "VIEWING_SEPARATIST_RECRUITMENT" || btn.state === "VIEWING_MILITARY_RECRUITMENT") {
+                               btn.state === "VIEWING_SEPARATIST_RECRUITMENT" || btn.state === "VIEWING_MILITARY_RECRUITMENT" ||
+                               btn.state === "VIEWING_STORAGE" || btn.state === "VIEWING_RECORD") {
                         // Audio: click feedback when opening a station submenu (transition sound handled in GameStateManager)
                         if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                         if(gameStateManager)gameStateManager.setState(btn.state);
@@ -2653,6 +2657,76 @@ if (isIllegalInSystem || isMissionCargo) {
         // --- VIEWING_MILITARY_RECRUITMENT State ---
         else if (currentState === "VIEWING_MILITARY_RECRUITMENT") {
             return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
+        }
+        
+        // --- VIEWING_STORAGE State ---
+        else if (currentState === "VIEWING_STORAGE") {
+            for (const btn of this.storageButtonAreas) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "BACK") {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                    else if (btn.action === "DEPOSIT_STORAGE") {
+                        // Deposit cargo into station storage
+                        const item = player.cargo.find(c => c.name === btn.commodity);
+                        if (item && item.quantity > 0) {
+                            // Add to station storage
+                            const storageItem = currentStation.storage.find(s => s.name === btn.commodity);
+                            if (storageItem) {
+                                storageItem.quantity += item.quantity;
+                            } else {
+                                currentStation.storage.push({name: btn.commodity, quantity: item.quantity});
+                            }
+                            // Remove from player cargo
+                            player.cargo = player.cargo.filter(c => c.name !== btn.commodity);
+                            this.addMessage(`Deposited ${item.quantity}t of ${btn.commodity} into storage.`, [100, 255, 100]);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                            saveGame();
+                        }
+                        return true;
+                    }
+                    else if (btn.action === "RETRIEVE_STORAGE") {
+                        // Retrieve cargo from station storage
+                        const storageItem = currentStation.storage.find(s => s.name === btn.commodity);
+                        if (storageItem && storageItem.quantity > 0) {
+                            const availableSpace = player.cargoCapacity - player.getCargoAmount();
+                            const retrieveAmount = Math.min(storageItem.quantity, availableSpace);
+                            
+                            if (retrieveAmount > 0) {
+                                // Add to player cargo
+                                player.addCargo(btn.commodity, retrieveAmount);
+                                // Remove from station storage
+                                storageItem.quantity -= retrieveAmount;
+                                if (storageItem.quantity <= 0) {
+                                    currentStation.storage = currentStation.storage.filter(s => s.name !== btn.commodity);
+                                }
+                                this.addMessage(`Retrieved ${retrieveAmount}t of ${btn.commodity} from storage.`, [100, 255, 100]);
+                                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                                saveGame();
+                            } else {
+                                this.addMessage("Not enough cargo space!", [255, 100, 100]);
+                                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // --- VIEWING_RECORD State ---
+        else if (currentState === "VIEWING_RECORD") {
+            for (const btn of this.recordButtonAreas) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "BACK") {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         // --- GALAXY_MAP State ---
@@ -3421,6 +3495,270 @@ if (isIllegalInSystem || isMissionCargo) {
         );
         backButton.state = "DOCKED";
         this.protectionServicesButtons.push(backButton);
+        
+        pop();
+    }
+
+    /** Draws the Storage Locker menu (when state is VIEWING_STORAGE) */
+    drawStorageMenu(station, player) {
+        if (!station || !player) return;
+        
+        push();
+        this.storageButtonAreas = [];
+        
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30, 40, 60, 220], [120, 140, 180]);
+        
+        const system = galaxy?.getCurrentSystem();
+        const headerHeight = this.drawStationHeader("Storage Locker", station, player, system);
+        
+        // Display storage info
+        textFont(font);
+        fill(220);
+        textSize(20);
+        textAlign(CENTER, TOP);
+        let infoY = pY + headerHeight + 10;
+        text("Store items in this station's locker. Items are specific to this station.", pX + pW/2, infoY);
+        
+        // Storage contents section
+        fill(180, 200, 255);
+        textSize(22);
+        textAlign(LEFT, TOP);
+        text("Station Storage:", pX + 40, infoY + 40);
+        
+        const storage = station.storage || [];
+        let storageY = infoY + 70;
+        
+        if (storage.length === 0) {
+            fill(180);
+            textSize(18);
+            textAlign(CENTER, TOP);
+            text("Storage is empty", pX + pW/2, storageY);
+        } else {
+            // Display stored items with retrieve buttons
+            textAlign(LEFT, TOP);
+            textSize(18);
+            
+            for (let i = 0; i < storage.length; i++) {
+                const item = storage[i];
+                const itemY = storageY + i * 40;
+                
+                // Item background
+                fill(40, 50, 80);
+                stroke(100, 120, 160);
+                strokeWeight(1);
+                rect(pX + 40, itemY, pW - 80, 35, 3);
+                
+                // Item text
+                noStroke();
+                fill(220);
+                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 10);
+                
+                // Retrieve button
+                const btnW = 80;
+                const btnH = 25;
+                const btnX = pX + pW - 130;
+                const btnY = itemY + 5;
+                
+                const retrieveBtn = this._drawButton(
+                    btnX, btnY, btnW, btnH,
+                    "Retrieve",
+                    [0, 100, 0], [100, 200, 100],
+                    3
+                );
+                retrieveBtn.action = "RETRIEVE_STORAGE";
+                retrieveBtn.commodity = item.name;
+                this.storageButtonAreas.push(retrieveBtn);
+            }
+        }
+        
+        // Player cargo section for depositing
+        const cargoSectionY = storageY + Math.max(storage.length * 40, 60) + 30;
+        fill(180, 200, 255);
+        textSize(22);
+        textAlign(LEFT, TOP);
+        text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
+        
+        const playerCargo = player.cargo || [];
+        let cargoY = cargoSectionY + 35;
+        
+        if (playerCargo.length === 0) {
+            fill(180);
+            textSize(18);
+            textAlign(CENTER, TOP);
+            text("No cargo to deposit", pX + pW/2, cargoY);
+        } else {
+            // Display player cargo with deposit buttons
+            textAlign(LEFT, TOP);
+            textSize(18);
+            
+            for (let i = 0; i < playerCargo.length; i++) {
+                const item = playerCargo[i];
+                const itemY = cargoY + i * 40;
+                
+                // Item background
+                fill(40, 50, 80);
+                stroke(100, 120, 160);
+                strokeWeight(1);
+                rect(pX + 40, itemY, pW - 80, 35, 3);
+                
+                // Item text
+                noStroke();
+                fill(220);
+                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 10);
+                
+                // Deposit button
+                const btnW = 80;
+                const btnH = 25;
+                const btnX = pX + pW - 130;
+                const btnY = itemY + 5;
+                
+                const depositBtn = this._drawButton(
+                    btnX, btnY, btnW, btnH,
+                    "Deposit",
+                    [80, 80, 0], [180, 180, 100],
+                    3
+                );
+                depositBtn.action = "DEPOSIT_STORAGE";
+                depositBtn.commodity = item.name;
+                depositBtn.quantity = item.quantity;
+                this.storageButtonAreas.push(depositBtn);
+            }
+        }
+        
+        // Back button
+        const backW = 100, backH = 30;
+        const backX = pX + pW/2 - backW/2;
+        const backY = pY + pH - backH - 15;
+        const backBtn = this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [220, 100, 100]);
+        backBtn.action = "BACK";
+        this.storageButtonAreas.push(backBtn);
+        
+        pop();
+    }
+
+    /** Draws the Personal Record menu (when state is VIEWING_RECORD) */
+    drawPersonalRecordMenu(player) {
+        if (!player) return;
+        
+        push();
+        this.recordButtonAreas = [];
+        
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30, 30, 50, 220], [150, 150, 200]);
+        
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Personal Record", station, player, system);
+        
+        // Scrollable content
+        textFont(font);
+        
+        const contentY = pY + headerHeight + 10;
+        const contentH = pH - headerHeight - 60;
+        const lineHeight = 22;
+        
+        // Calculate total records
+        const shipsDestroyed = player.shipsDestroyed || [];
+        const systemsVisited = player.systemsVisited || [];
+        const stationsTraded = player.stationsTraded || [];
+        
+        // Display sections
+        let currentY = contentY;
+        
+        // Ships destroyed section
+        fill(255, 200, 200);
+        textSize(24);
+        textAlign(LEFT, TOP);
+        text(`Ships Destroyed: ${shipsDestroyed.length}`, pX + 30, currentY);
+        currentY += 35;
+        
+        fill(220);
+        textSize(16);
+        if (shipsDestroyed.length === 0) {
+            fill(150);
+            text("None", pX + 50, currentY);
+            currentY += lineHeight;
+        } else {
+            // Show last 10 ships destroyed
+            const recentShips = shipsDestroyed.slice(-10).reverse();
+            for (let i = 0; i < recentShips.length; i++) {
+                const record = recentShips[i];
+                text(`${record.pilotName} (${record.shipType})`, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+            if (shipsDestroyed.length > 10) {
+                fill(150);
+                text(`... and ${shipsDestroyed.length - 10} more`, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+        }
+        
+        currentY += 20;
+        
+        // Systems visited section
+        fill(200, 220, 255);
+        textSize(24);
+        text(`Systems Visited: ${systemsVisited.length}`, pX + 30, currentY);
+        currentY += 35;
+        
+        fill(220);
+        textSize(16);
+        if (systemsVisited.length === 0) {
+            fill(150);
+            text("None", pX + 50, currentY);
+            currentY += lineHeight;
+        } else {
+            // Show last 10 systems visited
+            const recentSystems = systemsVisited.slice(-10).reverse();
+            for (let i = 0; i < recentSystems.length; i++) {
+                const record = recentSystems[i];
+                text(record.systemName, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+            if (systemsVisited.length > 10) {
+                fill(150);
+                text(`... and ${systemsVisited.length - 10} more`, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+        }
+        
+        currentY += 20;
+        
+        // Stations traded section
+        fill(200, 255, 200);
+        textSize(24);
+        text(`Stations Traded: ${stationsTraded.length}`, pX + 30, currentY);
+        currentY += 35;
+        
+        fill(220);
+        textSize(16);
+        if (stationsTraded.length === 0) {
+            fill(150);
+            text("None", pX + 50, currentY);
+            currentY += lineHeight;
+        } else {
+            // Show last 10 stations traded
+            const recentStations = stationsTraded.slice(-10).reverse();
+            for (let i = 0; i < recentStations.length; i++) {
+                const record = recentStations[i];
+                text(`${record.stationName} (${record.systemName})`, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+            if (stationsTraded.length > 10) {
+                fill(150);
+                text(`... and ${stationsTraded.length - 10} more`, pX + 50, currentY);
+                currentY += lineHeight;
+            }
+        }
+        
+        // Back button
+        const backW = 100, backH = 30;
+        const backX = pX + pW/2 - backW/2;
+        const backY = pY + pH - backH - 15;
+        const backBtn = this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [220, 100, 100]);
+        backBtn.action = "BACK";
+        this.recordButtonAreas.push(backBtn);
         
         pop();
     }

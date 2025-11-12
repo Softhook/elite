@@ -143,6 +143,11 @@ class Player {
         // Turret firing angle for visual sync
         this.lastTurretFiringAngle = null;
 
+        // Personal record tracking
+        this.shipsDestroyed = []; // Array of {pilotName, shipType, timestamp}
+        this.systemsVisited = []; // Array of {systemName, timestamp}
+        this.stationsTraded = []; // Array of {stationName, systemName, timestamp}
+
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
 
@@ -1387,6 +1392,46 @@ handleInput() {
         return this.currentSystem?.isPlayerWanted() || false;
     }
 
+    /** Records a ship destruction in the personal record */
+    recordShipDestruction(enemy) {
+        if (!enemy) return;
+        const pilotName = enemy.displayName || enemy.captainName || "Unknown Pilot";
+        const shipType = enemy.shipTypeName || "Unknown Ship";
+        this.shipsDestroyed.push({
+            pilotName: pilotName,
+            shipType: shipType,
+            timestamp: Date.now()
+        });
+    }
+
+    /** Records a system visit in the personal record */
+    recordSystemVisit(systemName) {
+        if (!systemName) return;
+        // Only record if not already the most recent entry
+        if (this.systemsVisited.length === 0 || 
+            this.systemsVisited[this.systemsVisited.length - 1].systemName !== systemName) {
+            this.systemsVisited.push({
+                systemName: systemName,
+                timestamp: Date.now()
+            });
+        }
+    }
+
+    /** Records a trade at a station in the personal record */
+    recordStationTrade(stationName, systemName) {
+        if (!stationName || !systemName) return;
+        // Only record if not already the most recent entry
+        if (this.stationsTraded.length === 0 || 
+            this.stationsTraded[this.stationsTraded.length - 1].stationName !== stationName ||
+            this.stationsTraded[this.stationsTraded.length - 1].systemName !== systemName) {
+            this.stationsTraded.push({
+                stationName: stationName,
+                systemName: systemName,
+                timestamp: Date.now()
+            });
+        }
+    }
+
     // --- Save/Load Functionality ---
     /** Save data for persistence */
     getSaveData() {
@@ -1463,7 +1508,11 @@ handleInput() {
                 hull: (typeof g.hull === 'number') ? g.hull : null,
                 maxHull: (typeof g.maxHull === 'number') ? g.maxHull : null,
                 destroyed: !!g.destroyed
-            }))
+            })),
+            // Personal record tracking
+            shipsDestroyed: this.shipsDestroyed || [],
+            systemsVisited: this.systemsVisited || [],
+            stationsTraded: this.stationsTraded || []
             // -----------------------------------------
         };
     }
@@ -1612,6 +1661,11 @@ handleInput() {
             // Ensure property exists for runtime code
             this.activeBodyguards = this.activeBodyguards || [];
         }
+
+        // Restore personal record tracking
+        this.shipsDestroyed = Array.isArray(data.shipsDestroyed) ? data.shipsDestroyed : [];
+        this.systemsVisited = Array.isArray(data.systemsVisited) ? data.systemsVisited : [];
+        this.stationsTraded = Array.isArray(data.stationsTraded) ? data.stationsTraded : [];
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
@@ -1887,6 +1941,10 @@ handleInput() {
      */
     addKill() {
         this.kills++;
+        // Record ship destruction in personal record
+        if (this.target) {
+            this.recordShipDestruction(this.target);
+        }
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
     }
 
