@@ -1132,11 +1132,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         const dist = Math.sqrt(distSq);
                         const distRatio = dist / maxRadiusAdj;
                         
-                        // Gentler falloff curve with reduced distance impact
-                        const falloff = Math.pow(1 - distRatio, 0.9);
+                        // More gradual falloff curve for better damage distribution across distance
+                        // Using 0.5 exponent gives much more gradual falloff than 0.9
+                        const falloff = Math.pow(1 - distRatio, 0.5);
                         
-                        // Ensure meaningful minimum damage
-                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.5));
+                        // Ensure meaningful minimum damage (at least 30% of max damage)
+                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.3));
                         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
 
                         // Apply damage and mark as processed (pass system for immediate targeting updates)
