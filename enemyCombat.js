@@ -71,12 +71,20 @@ class EnemyCombat {
             const isVeryCloseRange = distanceToTarget <= effectiveRange * 0.2; // Very close = 20% of firing range
             
             // --- FORCE WEAPON LOGIC ---
-            // Force weapons are highly effective at very close range
+            // Force weapons are area-of-effect weapons effective up to their maxRadius
             if (baseType === WEAPON_TYPE.FORCE) {
-                if (isVeryCloseRange) {
-                    score += 5; // Highest priority at very close range
-                } else if (!isShortRange) {
-                    score -= 1; // Mild penalty outside close range
+                const forceMaxRadius = weapon.maxRadius || 500; // Default to 500 if not specified
+                
+                // Force weapons are most effective when target is within 60% of maxRadius
+                // and should be prioritized when within the actual blast radius
+                if (distanceToTarget <= forceMaxRadius * 0.6) {
+                    score += 5; // Highest priority within optimal range
+                } else if (distanceToTarget <= forceMaxRadius) {
+                    score += 3; // Good priority within blast radius
+                } else if (distanceToTarget <= forceMaxRadius * 1.2) {
+                    score += 1; // Mild bonus just outside range (they might move in)
+                } else {
+                    score -= 2; // Penalty when clearly out of range
                 }
             }
 
@@ -318,6 +326,10 @@ class EnemyCombat {
                 case WEAPON_TYPE.BEAM: effectiveFiringRange *= 1.2; break;
                 case WEAPON_TYPE.MISSILE: effectiveFiringRange *= 1.8; break;
                 case WEAPON_TYPE.TURRET: effectiveFiringRange *= 0.8; break;
+                case WEAPON_TYPE.FORCE: 
+                    // Force weapons should use their actual maxRadius as effective range
+                    effectiveFiringRange = this.currentWeapon.maxRadius || this.firingRange; 
+                    break;
             }
         }
         this.visualFiringRange = effectiveFiringRange;
