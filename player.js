@@ -151,6 +151,8 @@ class Player {
         this.eliteStatusChanges = []; // Array of {oldRating, newRating, kills, timestamp}
         this.missionsCompleted = []; // Array of {title, type, reward, timestamp}
         this.wantedStatusChanges = []; // Array of {isWanted, systemName, timestamp}
+        this.shipsPurchased = []; // Array of {shipType, price, systemName, timestamp}
+        this.weaponsUpgraded = []; // Array of {weaponName, weaponType, price, slotIndex, systemName, timestamp}
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -1484,6 +1486,30 @@ handleInput() {
         }
     }
 
+    /** Records a ship purchase in the personal record */
+    recordShipPurchase(shipType, price, systemName) {
+        if (!shipType) return;
+        this.shipsPurchased.push({
+            shipType: shipType,
+            price: price || 0,
+            systemName: systemName || 'Unknown',
+            timestamp: Date.now()
+        });
+    }
+
+    /** Records a weapon upgrade in the personal record */
+    recordWeaponUpgrade(weaponName, weaponType, price, slotIndex, systemName) {
+        if (!weaponName) return;
+        this.weaponsUpgraded.push({
+            weaponName: weaponName,
+            weaponType: weaponType || 'Unknown',
+            price: price || 0,
+            slotIndex: slotIndex !== undefined ? slotIndex : -1,
+            systemName: systemName || 'Unknown',
+            timestamp: Date.now()
+        });
+    }
+
     // --- Save/Load Functionality ---
     /** Save data for persistence */
     getSaveData() {
@@ -1568,7 +1594,9 @@ handleInput() {
             factionsJoined: this.factionsJoined || [],
             eliteStatusChanges: this.eliteStatusChanges || [],
             missionsCompleted: this.missionsCompleted || [],
-            wantedStatusChanges: this.wantedStatusChanges || []
+            wantedStatusChanges: this.wantedStatusChanges || [],
+            shipsPurchased: this.shipsPurchased || [],
+            weaponsUpgraded: this.weaponsUpgraded || []
             // -----------------------------------------
         };
     }
@@ -1726,6 +1754,8 @@ handleInput() {
         this.eliteStatusChanges = Array.isArray(data.eliteStatusChanges) ? data.eliteStatusChanges : [];
         this.missionsCompleted = Array.isArray(data.missionsCompleted) ? data.missionsCompleted : [];
         this.wantedStatusChanges = Array.isArray(data.wantedStatusChanges) ? data.wantedStatusChanges : [];
+        this.shipsPurchased = Array.isArray(data.shipsPurchased) ? data.shipsPurchased : [];
+        this.weaponsUpgraded = Array.isArray(data.weaponsUpgraded) ? data.weaponsUpgraded : [];
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }

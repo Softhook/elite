@@ -2409,6 +2409,11 @@ if (isIllegalInSystem || isMissionCargo) {
                         if (player.credits >= finalPrice) {
                             player.spendCredits(finalPrice);
                             player.applyShipDefinition(area.shipTypeKey);
+                            
+                            // Record ship purchase in player record
+                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
+                            player.recordShipPurchase(area.shipName, finalPrice, systemName);
+                            
                             saveGame && saveGame();
                             this.addMessage("You bought a " + area.shipName + "!");
                             if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
@@ -2420,6 +2425,11 @@ if (isIllegalInSystem || isMissionCargo) {
                         // Player gets a refund or even swap
                         player.addCredits(-finalPrice); // Convert negative to positive for refund
                         player.applyShipDefinition(area.shipTypeKey);
+                        
+                        // Record ship purchase in player record
+                        const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
+                        player.recordShipPurchase(area.shipName, finalPrice, systemName);
+                        
                         saveGame && saveGame();
                         
                         if (finalPrice < 0) {
@@ -2477,6 +2487,16 @@ if (isIllegalInSystem || isMissionCargo) {
                         
                         // Install weapon to selected slot (instead of setWeaponByName)
                         player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
+                        
+                        // Record weapon upgrade in player record
+                        const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
+                        player.recordWeaponUpgrade(
+                            area.upgrade.name,
+                            area.upgrade.type,
+                            area.upgrade.price,
+                            this.selectedWeaponSlot,
+                            systemName
+                        );
                         
                         // Play purchase sound if available
                         if (typeof soundManager !== 'undefined') {
@@ -3717,6 +3737,8 @@ if (isIllegalInSystem || isMissionCargo) {
         const eliteStatusChanges = toArray(player.eliteStatusChanges);
         const missionsCompleted = toArray(player.missionsCompleted);
         const wantedStatusChanges = toArray(player.wantedStatusChanges);
+        const shipsPurchased = toArray(player.shipsPurchased);
+        const weaponsUpgraded = toArray(player.weaponsUpgraded);
 
         const events = [];
         const appendEvent = (timestamp, type, description) => {
@@ -3829,6 +3851,17 @@ if (isIllegalInSystem || isMissionCargo) {
             const statusText = rec.isWanted ? "WANTED" : "CLEAN";
             appendEvent(rec.timestamp, 'Legal', `Status changed to ${statusText} in ${rec.systemName}`);
         }
+        
+        for (let i = 0; i < shipsPurchased.length; i++) {
+            const rec = shipsPurchased[i];
+            appendEvent(rec.timestamp, 'Ship', `Purchased ${rec.shipType} for ${rec.price}cr in ${rec.systemName}`);
+        }
+        
+        for (let i = 0; i < weaponsUpgraded.length; i++) {
+            const rec = weaponsUpgraded[i];
+            const slotText = rec.slotIndex >= 0 ? ` (Slot ${rec.slotIndex + 1})` : '';
+            appendEvent(rec.timestamp, 'Weapon', `Upgraded to ${rec.weaponName} (${rec.weaponType})${slotText} for ${rec.price}cr in ${rec.systemName}`);
+        }
 
         if (startEventInfo) {
             let startTimestamp = Number.isFinite(startEventInfo.baseTimestamp) ? startEventInfo.baseTimestamp : Infinity;
@@ -3895,7 +3928,9 @@ if (isIllegalInSystem || isMissionCargo) {
                 Faction: [255, 215, 0],
                 Elite: [255, 215, 0],
                 Mission: [220, 190, 255],
-                Legal: [255, 200, 100]
+                Legal: [255, 200, 100],
+                Ship: [255, 150, 50],
+                Weapon: [200, 150, 255]
             };
             const formatLogTime = (timestamp) => {
                 if (!Number.isFinite(timestamp)) return "--:--";
@@ -3940,6 +3975,26 @@ if (isIllegalInSystem || isMissionCargo) {
                 textSize(14);
                 textAlign(LEFT, TOP);
                 text("↓ Later entries", pX + 50, currentY);
+            }
+            
+            // Draw scrollbar if needed
+            if (this.recordScrollMax > 0) {
+                const scrollAreaH = contentH - 35; // Adjust for header
+                const barX = pX + pW - 18;
+                const barY = contentY + 35;
+                const barW = 12;
+                const barH = scrollAreaH;
+                
+                fill(60, 60, 100);
+                stroke(150, 150, 200);
+                rect(barX, barY, barW, barH, 6);
+                
+                const handleH = max(30, barH * (visibleLines / totalEntries));
+                const handleY = barY + (barH - handleH) * (this.recordScrollOffset / this.recordScrollMax);
+                
+                fill(180, 180, 220);
+                noStroke();
+                rect(barX + 1, handleY, barW - 2, handleH, 6);
             }
         }
 
