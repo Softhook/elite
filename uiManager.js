@@ -3733,11 +3733,15 @@ if (isIllegalInSystem || isMissionCargo) {
         const firstVisit = systemsVisited.length > 0 ? systemsVisited[0] : null;
         const fallbackSystem = player.currentSystem || locateSystemByName(firstVisit?.systemName);
         const startName = firstVisit?.systemName || fallbackSystem?.name || null;
+        let startEventInfo = null;
         if (startName) {
             const startSystem = locateSystemByName(startName) || fallbackSystem;
             const startType = startSystem?.economyType || startSystem?.systemType || 'Unknown';
             const baseTimestamp = Number.isFinite(firstVisit?.timestamp) ? firstVisit.timestamp : Date.now();
-            appendEvent(baseTimestamp - 1, 'Start', `Deployment at ${startName} (${startType})`);
+            startEventInfo = {
+                description: `Deployment at ${startName} (${startType})`,
+                baseTimestamp
+            };
         }
 
         for (let i = 0; i < systemsVisited.length; i++) {
@@ -3753,6 +3757,22 @@ if (isIllegalInSystem || isMissionCargo) {
         for (let i = 0; i < stationsTraded.length; i++) {
             const rec = stationsTraded[i];
             appendEvent(rec.timestamp, 'Trade', `Traded at ${rec.stationName} (${rec.systemName})`);
+        }
+
+        if (startEventInfo) {
+            let startTimestamp = Number.isFinite(startEventInfo.baseTimestamp) ? startEventInfo.baseTimestamp : Infinity;
+            for (let i = 0; i < events.length; i++) {
+                const candidateTs = events[i]?.timestamp;
+                if (Number.isFinite(candidateTs)) {
+                    startTimestamp = Math.min(startTimestamp, candidateTs);
+                }
+            }
+            if (!Number.isFinite(startTimestamp)) {
+                startTimestamp = Date.now();
+            } else {
+                startTimestamp -= 1;
+            }
+            appendEvent(startTimestamp, 'Start', startEventInfo.description);
         }
 
         events.sort((a, b) => {

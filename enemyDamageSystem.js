@@ -225,7 +225,7 @@ class EnemyDamageSystem {
 
 
         AI_LOG(`BEFORE: Player kills = ${system.player.kills}`);
-        system.player.addKill();
+        system.player.addKill(this);
         AI_LOG(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
         
 

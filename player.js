@@ -1939,11 +1939,12 @@ handleInput() {
     /**
      * Increments the kill counter when the player destroys an enemy
      */
-    addKill() {
+    addKill(enemy = null) {
         this.kills++;
-        // Record ship destruction in personal record
-        if (this.target) {
-            this.recordShipDestruction(this.target);
+        // Prefer the actual destroyed enemy when available; fall back to current target
+        const killTarget = enemy || this.target;
+        if (killTarget) {
+            this.recordShipDestruction(killTarget);
         }
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
     }
