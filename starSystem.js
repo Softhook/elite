@@ -181,6 +181,8 @@ class StarSystem {
             return;
         }
 
+        // Track if wanted status is actually changing
+        const previousWantedStatus = this.playerWanted;
         this.playerWanted = wanted;
 
         if (wanted && this.player && this.player.isPolice) {
@@ -206,6 +208,11 @@ class StarSystem {
             this.playerWantedLevel = 0;
             this.playerWantedExpiry = null;
             this.policeAlertSent = false;
+        }
+        
+        // Record wanted status change if it actually changed
+        if (previousWantedStatus !== wanted && this.player) {
+            this.player.recordWantedStatusChange(wanted, this.name);
         }
     }
 
