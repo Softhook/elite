@@ -3741,16 +3741,46 @@ if (isIllegalInSystem || isMissionCargo) {
         if (startName) {
             const startSystem = locateSystemByName(startName) || fallbackSystem;
             const startType = startSystem?.economyType || startSystem?.systemType || 'Unknown';
+            const startSecurity = startSystem?.securityLevel || 'Unknown';
             const baseTimestamp = Number.isFinite(firstVisit?.timestamp) ? firstVisit.timestamp : Date.now();
+            
+            // Use stored details from first visit if available, otherwise use current system data
+            let deploymentDetails = [];
+            if (firstVisit?.economyType && firstVisit.economyType !== 'Unknown') {
+                deploymentDetails.push(firstVisit.economyType);
+            } else if (startType !== 'Unknown') {
+                deploymentDetails.push(startType);
+            }
+            if (firstVisit?.securityLevel && firstVisit.securityLevel !== 'Unknown') {
+                deploymentDetails.push(firstVisit.securityLevel + ' Security');
+            } else if (startSecurity !== 'Unknown') {
+                deploymentDetails.push(startSecurity + ' Security');
+            }
+            
+            const detailsStr = deploymentDetails.length > 0 ? ` (${deploymentDetails.join(', ')})` : '';
             startEventInfo = {
-                description: `Deployment at ${startName} (${startType})`,
+                description: `Deployment at ${startName}${detailsStr}`,
                 baseTimestamp
             };
         }
 
         for (let i = 0; i < systemsVisited.length; i++) {
             const rec = systemsVisited[i];
-            appendEvent(rec.timestamp, 'Travel', `Visited ${rec.systemName}`);
+            let visitDesc = `Visited ${rec.systemName}`;
+            // Add economy and security info if available
+            if (rec.economyType || rec.securityLevel) {
+                const details = [];
+                if (rec.economyType && rec.economyType !== 'Unknown') {
+                    details.push(rec.economyType);
+                }
+                if (rec.securityLevel && rec.securityLevel !== 'Unknown') {
+                    details.push(rec.securityLevel + ' Security');
+                }
+                if (details.length > 0) {
+                    visitDesc += ` (${details.join(', ')})`;
+                }
+            }
+            appendEvent(rec.timestamp, 'Travel', visitDesc);
         }
 
         for (let i = 0; i < shipsDestroyed.length; i++) {

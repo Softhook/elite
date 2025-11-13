@@ -322,9 +322,13 @@ class Galaxy {
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter
             
-            // Record system visit in player's personal record
+            // Record system visit in player's personal record with economy and security context
             if (player && typeof player.recordSystemVisit === 'function') {
-                player.recordSystemVisit(newSystemName);
+                player.recordSystemVisit(
+                    newSystemName,
+                    newSystem?.economyType,
+                    newSystem?.securityLevel
+                );
             }
 
             if (player && newSystem) { // Check if newSystem is valid

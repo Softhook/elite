@@ -1416,31 +1416,26 @@ handleInput() {
     }
 
     /** Records a system visit in the personal record */
-    recordSystemVisit(systemName) {
+    recordSystemVisit(systemName, economyType = null, securityLevel = null) {
         if (!systemName) return;
-        // Only record if not already the most recent entry
-        if (this.systemsVisited.length === 0 || 
-            this.systemsVisited[this.systemsVisited.length - 1].systemName !== systemName) {
-            this.systemsVisited.push({
-                systemName: systemName,
-                timestamp: Date.now()
-            });
-        }
+        // Record every visit with economy and security context
+        this.systemsVisited.push({
+            systemName: systemName,
+            economyType: economyType || 'Unknown',
+            securityLevel: securityLevel || 'Unknown',
+            timestamp: Date.now()
+        });
     }
 
     /** Records a trade at a station in the personal record */
     recordStationTrade(stationName, systemName) {
         if (!stationName || !systemName) return;
-        // Only record if not already the most recent entry
-        if (this.stationsTraded.length === 0 || 
-            this.stationsTraded[this.stationsTraded.length - 1].stationName !== stationName ||
-            this.stationsTraded[this.stationsTraded.length - 1].systemName !== systemName) {
-            this.stationsTraded.push({
-                stationName: stationName,
-                systemName: systemName,
-                timestamp: Date.now()
-            });
-        }
+        // Record every trade occurrence
+        this.stationsTraded.push({
+            stationName: stationName,
+            systemName: systemName,
+            timestamp: Date.now()
+        });
     }
 
     /** Records a faction join event in the personal record */
