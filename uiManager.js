@@ -3713,6 +3713,10 @@ if (isIllegalInSystem || isMissionCargo) {
         const systemsVisited = toArray(player.systemsVisited);
         const shipsDestroyed = toArray(player.shipsDestroyed);
         const stationsTraded = toArray(player.stationsTraded);
+        const factionsJoined = toArray(player.factionsJoined);
+        const eliteStatusChanges = toArray(player.eliteStatusChanges);
+        const missionsCompleted = toArray(player.missionsCompleted);
+        const wantedStatusChanges = toArray(player.wantedStatusChanges);
 
         const events = [];
         const appendEvent = (timestamp, type, description) => {
@@ -3751,12 +3755,49 @@ if (isIllegalInSystem || isMissionCargo) {
 
         for (let i = 0; i < shipsDestroyed.length; i++) {
             const rec = shipsDestroyed[i];
-            appendEvent(rec.timestamp, 'Combat', `Destroyed ${rec.pilotName} (${rec.shipType})`);
+            let roleText = rec.role || "Unknown";
+            // Convert AI_ROLE enum values to human-readable text
+            if (typeof AI_ROLE !== 'undefined') {
+                if (rec.role === AI_ROLE.PIRATE) roleText = "Pirate";
+                else if (rec.role === AI_ROLE.ALIEN) roleText = "Alien";
+                else if (rec.role === AI_ROLE.POLICE) roleText = "Police";
+                else if (rec.role === AI_ROLE.HAULER) roleText = "Hauler";
+                else if (rec.role === AI_ROLE.TRANSPORT) roleText = "Transport";
+                else if (rec.role === AI_ROLE.COMBAT) roleText = "Combat Ship";
+                else if (rec.role === AI_ROLE.GUARD) roleText = "Guard";
+                else if (rec.role === AI_ROLE.BOUNTY_HUNTER) roleText = "Bounty Hunter";
+            }
+            let description = `Destroyed ${rec.pilotName} (${rec.shipType}, ${roleText})`;
+            if (rec.faction) {
+                description += ` - ${rec.faction} faction`;
+            }
+            appendEvent(rec.timestamp, 'Combat', description);
         }
 
         for (let i = 0; i < stationsTraded.length; i++) {
             const rec = stationsTraded[i];
             appendEvent(rec.timestamp, 'Trade', `Traded at ${rec.stationName} (${rec.systemName})`);
+        }
+        
+        for (let i = 0; i < factionsJoined.length; i++) {
+            const rec = factionsJoined[i];
+            appendEvent(rec.timestamp, 'Faction', `Joined ${rec.factionName} faction`);
+        }
+        
+        for (let i = 0; i < eliteStatusChanges.length; i++) {
+            const rec = eliteStatusChanges[i];
+            appendEvent(rec.timestamp, 'Elite', `Combat Rating: ${rec.oldRating} → ${rec.newRating} (${rec.kills} kills)`);
+        }
+        
+        for (let i = 0; i < missionsCompleted.length; i++) {
+            const rec = missionsCompleted[i];
+            appendEvent(rec.timestamp, 'Mission', `Completed: ${rec.title} (${rec.type}) - ${rec.reward}cr`);
+        }
+        
+        for (let i = 0; i < wantedStatusChanges.length; i++) {
+            const rec = wantedStatusChanges[i];
+            const statusText = rec.isWanted ? "WANTED" : "CLEAN";
+            appendEvent(rec.timestamp, 'Legal', `Status changed to ${statusText} in ${rec.systemName}`);
         }
 
         if (startEventInfo) {
@@ -3820,7 +3861,11 @@ if (isIllegalInSystem || isMissionCargo) {
                 Start: [255, 220, 140],
                 Travel: [190, 220, 255],
                 Combat: [255, 180, 180],
-                Trade: [190, 255, 190]
+                Trade: [190, 255, 190],
+                Faction: [255, 215, 0],
+                Elite: [255, 215, 0],
+                Mission: [220, 190, 255],
+                Legal: [255, 200, 100]
             };
             const formatLogTime = (timestamp) => {
                 if (!Number.isFinite(timestamp)) return "--:--";

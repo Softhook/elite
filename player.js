@@ -144,9 +144,13 @@ class Player {
         this.lastTurretFiringAngle = null;
 
         // Personal record tracking
-        this.shipsDestroyed = []; // Array of {pilotName, shipType, timestamp}
+        this.shipsDestroyed = []; // Array of {pilotName, shipType, role, faction, timestamp}
         this.systemsVisited = []; // Array of {systemName, timestamp}
         this.stationsTraded = []; // Array of {stationName, systemName, timestamp}
+        this.factionsJoined = []; // Array of {factionName, timestamp}
+        this.eliteStatusChanges = []; // Array of {oldRating, newRating, kills, timestamp}
+        this.missionsCompleted = []; // Array of {title, type, reward, timestamp}
+        this.wantedStatusChanges = []; // Array of {isWanted, systemName, timestamp}
 
         // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
     }
@@ -361,6 +365,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         console.log(`   Credits after addCredits call: ${this.credits}`);
 
         this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
+
+        // Record mission completion in personal record
+        this.recordMissionCompletion(this.activeMission);
 
         if (this.activeMission && typeof uiManager !== 'undefined') {
             uiManager.inactiveMissionIds.add(this.activeMission.id);
@@ -1397,9 +1404,13 @@ handleInput() {
         if (!enemy) return;
         const pilotName = enemy.displayName || enemy.captainName || "Unknown Pilot";
         const shipType = enemy.shipTypeName || "Unknown Ship";
+        const role = enemy.role || "Unknown";
+        const faction = enemy.faction || null; // Enemies may not have factions
         this.shipsDestroyed.push({
             pilotName: pilotName,
             shipType: shipType,
+            role: role,
+            faction: faction,
             timestamp: Date.now()
         });
     }
@@ -1426,6 +1437,52 @@ handleInput() {
             this.stationsTraded[this.stationsTraded.length - 1].systemName !== systemName) {
             this.stationsTraded.push({
                 stationName: stationName,
+                systemName: systemName,
+                timestamp: Date.now()
+            });
+        }
+    }
+
+    /** Records a faction join event in the personal record */
+    recordFactionJoin(factionName) {
+        if (!factionName) return;
+        this.factionsJoined.push({
+            factionName: factionName,
+            timestamp: Date.now()
+        });
+    }
+
+    /** Records an Elite status change in the personal record */
+    recordEliteStatusChange(oldRating, newRating) {
+        if (!newRating) return;
+        this.eliteStatusChanges.push({
+            oldRating: oldRating,
+            newRating: newRating,
+            kills: this.kills,
+            timestamp: Date.now()
+        });
+    }
+
+    /** Records a mission completion in the personal record */
+    recordMissionCompletion(mission) {
+        if (!mission) return;
+        this.missionsCompleted.push({
+            title: mission.title,
+            type: mission.type,
+            reward: mission.rewardCredits,
+            description: mission.description || "",
+            timestamp: Date.now()
+        });
+    }
+
+    /** Records a wanted status change in the personal record */
+    recordWantedStatusChange(isWanted, systemName) {
+        if (!systemName) return;
+        // Only record if status actually changed from previous state
+        if (this.wantedStatusChanges.length === 0 || 
+            this.wantedStatusChanges[this.wantedStatusChanges.length - 1].isWanted !== isWanted) {
+            this.wantedStatusChanges.push({
+                isWanted: isWanted,
                 systemName: systemName,
                 timestamp: Date.now()
             });
@@ -1512,7 +1569,11 @@ handleInput() {
             // Personal record tracking
             shipsDestroyed: this.shipsDestroyed || [],
             systemsVisited: this.systemsVisited || [],
-            stationsTraded: this.stationsTraded || []
+            stationsTraded: this.stationsTraded || [],
+            factionsJoined: this.factionsJoined || [],
+            eliteStatusChanges: this.eliteStatusChanges || [],
+            missionsCompleted: this.missionsCompleted || [],
+            wantedStatusChanges: this.wantedStatusChanges || []
             // -----------------------------------------
         };
     }
@@ -1666,6 +1727,10 @@ handleInput() {
         this.shipsDestroyed = Array.isArray(data.shipsDestroyed) ? data.shipsDestroyed : [];
         this.systemsVisited = Array.isArray(data.systemsVisited) ? data.systemsVisited : [];
         this.stationsTraded = Array.isArray(data.stationsTraded) ? data.stationsTraded : [];
+        this.factionsJoined = Array.isArray(data.factionsJoined) ? data.factionsJoined : [];
+        this.eliteStatusChanges = Array.isArray(data.eliteStatusChanges) ? data.eliteStatusChanges : [];
+        this.missionsCompleted = Array.isArray(data.missionsCompleted) ? data.missionsCompleted : [];
+        this.wantedStatusChanges = Array.isArray(data.wantedStatusChanges) ? data.wantedStatusChanges : [];
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
@@ -1940,13 +2005,25 @@ handleInput() {
      * Increments the kill counter when the player destroys an enemy
      */
     addKill(enemy = null) {
+        const oldRating = this.getEliteRating();
         this.kills++;
+        const newRating = this.getEliteRating();
+        
         // Prefer the actual destroyed enemy when available; fall back to current target
         const killTarget = enemy || this.target;
         if (killTarget) {
             this.recordShipDestruction(killTarget);
         }
-        PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${this.getEliteRating()}`);
+        
+        // Record Elite status change if rating changed
+        if (oldRating !== newRating) {
+            this.recordEliteStatusChange(oldRating, newRating);
+            if (typeof uiManager !== "undefined") {
+                uiManager.addMessage(`Combat Rating: ${newRating}!`, [255, 215, 0]);
+            }
+        }
+        
+        PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${newRating}`);
     }
 
     /**
@@ -2081,6 +2158,9 @@ handleInput() {
         this.playerFaction = factionName;
         this.hasJoinedFaction = true;
         this.factionShip = shipType;
+        
+        // Record faction joining in personal record
+        this.recordFactionJoin(factionName);
 
         console.log(`Player joined ${factionName} faction and received ${shipType}`);
         return true;
