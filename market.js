@@ -7,11 +7,12 @@ const MARKET_DEBUG = false; // Set to true during development
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 // Constants for price calculations
-const PRODUCTION_DISCOUNT_BUY = 0.7;   // Systems produce goods at discount
-const PRODUCTION_DISCOUNT_SELL = 0.8;  // Selling price for produced goods
-const IMPORT_PREMIUM_BUY = 1.2;        // Systems import needed goods at premium
-const IMPORT_PREMIUM_SELL = 1.1;       // Selling price for imported goods
-const SELL_RATIO_SAFETY = 0.8;         // Ensure sell price is at most this % of buy price
+// Increased differentiation to make trading more profitable between economy types
+const PRODUCTION_DISCOUNT_BUY = 0.5;   // Systems produce goods at steep discount (was 0.7)
+const PRODUCTION_DISCOUNT_SELL = 0.65; // Selling price for produced goods (was 0.8)
+const IMPORT_PREMIUM_BUY = 1.8;        // Systems import needed goods at premium (was 1.2)
+const IMPORT_PREMIUM_SELL = 1.5;       // Selling price for imported goods (was 1.1)
+const SELL_RATIO_SAFETY = 0.75;        // Ensure sell price is at most this % of buy price (was 0.8)
 
 // Stock profile constants
 const DEFAULT_BASE_STOCK = 120;
@@ -275,65 +276,147 @@ class Market {
             comm.buyPrice = comm.baseBuy;
             comm.sellPrice = comm.baseSell;
             
-            // Apply system economy adjustments using constants instead of magic numbers
+            // Apply system economy adjustments - increased differentiation for better trading
             switch (this.systemType) {
                 case 'Agricultural':
+                    // Agricultural produces Food and Textiles cheaply, imports tech/machinery
                     if (['Food', 'Textiles'].includes(comm.name)) { 
                         comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
                         comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
                     }
-                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers'].includes(comm.name)) { 
+                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers', 'Adv Components'].includes(comm.name)) { 
                         comm.buyPrice *= IMPORT_PREMIUM_BUY; 
                         comm.sellPrice *= IMPORT_PREMIUM_SELL; 
                     }
                     break;
                 case 'Industrial':
-                    if (comm.name === 'Machinery') { comm.buyPrice *= 0.8; comm.sellPrice *= 0.9; }
-                    if (['Food', 'Metals', 'Minerals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
+                    // Industrial produces Machinery, Metals, Chemicals; needs Food and Luxury goods
+                    if (['Machinery', 'Metals', 'Chemicals'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Food', 'Luxury Goods', 'Medicine'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
+                    if (['Computers', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= 1.4; 
+                        comm.sellPrice *= 1.25; 
+                    }
                     break;
                 case 'Mining':
-                    if (['Metals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; }
-                    if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
+                    // Mining produces Metals and Minerals cheaply; needs Food, Machinery, tech
+                    if (['Metals', 'Minerals'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Military':
-                    if (['Machinery', 'Metals', 'Computers', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
-                    if (['Luxury Goods', 'Textiles', 'Food'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
+                    // Military produces Weapons and uses lots of tech; pays premium for consumables
+                    if (['Weapons', 'Machinery', 'Metals'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Luxury Goods', 'Textiles', 'Food', 'Medicine'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Offworld':
-                    if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.85; }
-                    if (['Food', 'Textiles', 'Metals'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
+                    // Offworld produces Luxury Goods, Adv Components, Computers; needs basics
+                    if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Food', 'Textiles', 'Metals', 'Chemicals'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Alien':
-                    if (['Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.5; comm.sellPrice *= 0.6; }
-                    if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) { comm.buyPrice *= 2.0; comm.sellPrice *= 1.8; }
+                    // Alien tech is cheap, but they want basics at extreme prices
+                    if (['Luxury Goods', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= 0.4; 
+                        comm.sellPrice *= 0.5; 
+                    }
+                    if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) { 
+                        comm.buyPrice *= 2.5; 
+                        comm.sellPrice *= 2.0; 
+                    }
                     break;
                 case 'Refinery':
-                    if (['Metals', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.75; comm.sellPrice *= 0.85; }
-                    if (['Minerals', 'Machinery', 'Food', 'Computers'].includes(comm.name)) { comm.buyPrice *= 1.25; comm.sellPrice *= 1.15; }
+                    // Refinery produces Metals and Chemicals from Minerals; needs raw materials
+                    if (['Metals', 'Chemicals'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Minerals', 'Machinery', 'Food', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Post Human':
-                    if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 0.7; comm.sellPrice *= 0.8; }
-                    if (['Food', 'Metals', 'Chemicals', 'Minerals'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
-                    if (['Luxury Goods'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
+                    // Post Human produces high tech; needs raw materials and luxuries
+                    if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Tourism':
-                    if (['Food', 'Medicine', 'Luxury Goods', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.5; comm.sellPrice *= 1.4; }
+                    // Tourism consumes everything, produces little; pays premium for goods
+                    if (['Luxury Goods', 'Textiles'].includes(comm.name)) { 
+                        comm.buyPrice *= 0.7; 
+                        comm.sellPrice *= 0.8; 
+                    }
+                    if (['Food', 'Medicine'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
+                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { 
+                        comm.buyPrice *= 2.0; 
+                        comm.sellPrice *= 1.7; 
+                    }
                     break;
                 case 'Service':
-                    if (['Food', 'Computers', 'Machinery', 'Medicine', 'Textiles'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Luxury Goods', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.4; comm.sellPrice *= 1.3; }
+                    // Service produces Food, Medicine, Textiles; needs tech and raw materials
+                    if (['Food', 'Medicine', 'Textiles'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Metals', 'Minerals', 'Chemicals', 'Computers', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Separatist':
-                    if (['Machinery', 'Chemicals'].includes(comm.name)) { comm.buyPrice *= 0.8; comm.sellPrice *= 0.9; }
-                    if (['Metals', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) { comm.buyPrice *= 1.3; comm.sellPrice *= 1.2; }
-                    if (['Computers'].includes(comm.name)) { comm.buyPrice *= 1.1; comm.sellPrice *= 1.05; }
+                    // Separatist produces Weapons, Chemicals, Machinery; needs tech and luxuries
+                    if (['Weapons', 'Chemicals', 'Machinery'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Luxury Goods', 'Computers', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 case 'Imperial':
-                    if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) { comm.buyPrice *= 0.6; comm.sellPrice *= 0.7; }
-                    if (['Food', 'Textiles', 'Metals', 'Machinery'].includes(comm.name)) { comm.buyPrice *= 1.2; comm.sellPrice *= 1.1; }
-                    if (['Medicine'].includes(comm.name)) { comm.buyPrice *= 0.9; comm.sellPrice *= 0.95; }
+                    // Imperial produces Luxury Goods, Adv Components, Computers; needs basics
+                    if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) { 
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    }
+                    if (['Food', 'Textiles', 'Metals', 'Machinery', 'Medicine'].includes(comm.name)) { 
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    }
                     break;
                 default:
                     if (MARKET_DEBUG) console.warn(`Market: Unhandled economy type '${this.systemType}' - using base prices.`);
