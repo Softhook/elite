@@ -2046,6 +2046,9 @@ handleInput() {
             if (typeof uiManager !== "undefined") {
                 uiManager.addMessage(`Combat Rating: ${newRating}!`, [255, 215, 0]);
             }
+            if (typeof soundManager !== "undefined") {
+                soundManager.playSound("promotion");
+            }
         }
         
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${newRating}`);
