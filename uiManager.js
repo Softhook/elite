@@ -1505,6 +1505,25 @@ if (isIllegalInSystem || isMissionCargo) {
         push(); // Isolate map drawing
        // background(10, 0, 20); // Dark space background
 
+        // --- Compute bounding box and transformation ---
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (let sys of systems) {
+            minX = min(minX, sys.x);
+            maxX = max(maxX, sys.x);
+            minY = min(minY, sys.y);
+            maxY = max(maxY, sys.y);
+        }
+        const margin = 100;
+        const mapWidth = maxX - minX;
+        const mapHeight = maxY - minY;
+        if (mapWidth === 0 || mapHeight === 0) return; // avoid division by zero
+        const scaleX = (width - 2 * margin) / mapWidth;
+        const scaleY = (height - 2 * margin) / mapHeight;
+        const scale = min(scaleX, scaleY);
+        const offsetX = margin - minX * scale;
+        const offsetY = margin - minY * scale;
+        // --- End compute transformation ---
+
         // --- Draw Connections (Lines) ---
         stroke(150, 150, 200, 200); // Brighter connection line color
         strokeWeight(1);
@@ -1520,10 +1539,10 @@ if (isIllegalInSystem || isMissionCargo) {
                 if (j > i) {
                     const systemB = galaxy.systems[j];
                     if (systemB?.galaxyPos) { // Check if target system is valid
-                        let x1 = systemA.galaxyPos.x;
-                        let y1 = systemA.galaxyPos.y;
-                        let x2 = systemB.galaxyPos.x;
-                        let y2 = systemB.galaxyPos.y;
+                        let x1 = systemA.galaxyPos.x * scale + offsetX;
+                        let y1 = systemA.galaxyPos.y * scale + offsetY;
+                        let x2 = systemB.galaxyPos.x * scale + offsetX;
+                        let y2 = systemB.galaxyPos.y * scale + offsetY;
 
                         // When drawing connection lines, verify against the actual connections
                         if (galaxy.systems[i].connectedSystemIndices.includes(j)) {
@@ -1604,19 +1623,23 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
+            // Compute transformed position
+            const drawX = sysData.x * scale + offsetX;
+            const drawY = sysData.y * scale + offsetY;
+
             // Draw the ellipse
             strokeWeight(nodeStrokeWeight);
             stroke(nodeStrokeColor);
             fill(nodeColor);
-            ellipse(sysData.x, sysData.y, nodeR * 2, nodeR * 2);
+            ellipse(drawX, drawY, nodeR * 2, nodeR * 2);
             // Store clickable area
-            this.galaxyMapNodeAreas.push({ x: sysData.x, y: sysData.y, radius: nodeR, index: i });
+            this.galaxyMapNodeAreas.push({ x: drawX, y: drawY, radius: nodeR, index: i });
 
             // Draw Text Labels
             textFont(font);
             
             fill(textColor); noStroke(); textAlign(CENTER, TOP); textSize(20);
-            text(sysData.name, sysData.x, sysData.y + nodeR + 5);
+            text(sysData.name, drawX, drawY + nodeR + 5);
 
             // Show type/security only if visited or current
             if (sysData.visited || isCurrent) {
@@ -1625,23 +1648,23 @@ if (isIllegalInSystem || isMissionCargo) {
                 const techLevel = system?.techLevel || "?";
                 
                 // Display economy type with tech level
-                text(`(${sysData.type} - Tech ${techLevel})`, sysData.x, sysData.y + nodeR + 25);
+                text(`(${sysData.type} - Tech ${techLevel})`, drawX, drawY + nodeR + 25);
                 
                 // Security level (unchanged)
                 const secLevel = system?.securityLevel || "Unknown";
                 fill(180, 200, 255); // Blue for visibility, matching market overlay
-                text(`Security: ${secLevel}`, sysData.x, sysData.y + nodeR + 45);
+                text(`Security: ${secLevel}`, drawX, drawY + nodeR + 45);
                 
                 // Wanted status (unchanged)
                 if (system && system.playerWanted) {
                     fill(255, 0, 0); // Red for wanted
-                    text("Wanted", sysData.x, sysData.y + nodeR + 65);
+                    text("Wanted", drawX, drawY + nodeR + 65);
                 }
                 
                 // Add small market info button for visited systems
                 const btnSize = 20;
-                const btnX = sysData.x + nodeR + 5; // Position to the right of the node
-                const btnY = sysData.y - btnSize / 2; // Center vertically with node
+                const btnX = drawX + nodeR + 5; // Position to the right of the node
+                const btnY = drawY - btnSize / 2; // Center vertically with node
                 
                 // Button background
                 fill(40, 100, 180, 200);
