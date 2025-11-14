@@ -98,6 +98,8 @@ this.showingInventory = false;
                 } else if (newState === "DOCKED" && stationStates.includes(this.previousState)) {
                     // Back from sub-menu to docked
                     soundManager.playSound('uiTransition');
+                } else if (newState === "GAME_OVER") {
+                    soundManager.playSound('gameOver');
                 }
             }
         } catch (e) { /* ignore audio errors */ }

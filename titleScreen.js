@@ -670,6 +670,10 @@ class TitleScreen {
     
     handleClick() {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
+            // Play start sound on first interaction
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                soundManager.playSound('startSound');
+            }
             gameStateManager.setState("INSTRUCTIONS");
         } else if (gameStateManager.currentState === "INSTRUCTIONS") {
             // Go to save selection screen instead of directly to game
