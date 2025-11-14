@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sound Test</title>
+    <script src="libraries/p5.min.js"></script>
+    <script src="libraries/p5.sound.min.js"></script>
+    <script src="libraries/riffwave.js"></script>
+    <script src="libraries/sfxr.js"></script>
+    <script src="debug.js"></script>
+    <script src="soundManager.js"></script>
+</head>
+<body>
+    <h1>Sound Manager Test</h1>
+    <button onclick="testSounds()">Test Ambient Sounds</button>
+    <div id="status"></div>
+    <script>
+        function log(msg) {
+            document.getElementById('status').innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+        
+        let sm, ambientId;
+        
+        function setup() {
+            noCanvas();
+            log('p5 setup() called');
+            
+            try {
+                sm = new SoundManager();
+                log('✓ SoundManager created');
+                log(`✓ Found ${Object.keys(sm.sounds).length} sounds`);
+                log(`✓ Ambient sounds: sunAmbient=${!!sm.sounds.sunAmbient}, stationAmbient=${!!sm.sounds.stationAmbient}`);
+            } catch (e) {
+                log('✗ Error creating SoundManager: ' + e.message);
+            }
+        }
+        
+        function testSounds() {
+            if (!sm) {
+                log('✗ SoundManager not initialized');
+                return;
+            }
+            
+            log('Starting sun ambient sound...');
+            ambientId = sm.startAmbientSound('sunAmbient', 0, 0, 0.3);
+            if (ambientId !== null) {
+                log('✓ Ambient sound started with ID: ' + ambientId);
+                
+                // Update volume for 5 seconds
+                let updates = 0;
+                const interval = setInterval(() => {
+                    sm.updateAmbientSounds(createVector(updates * 100, 0));
+                    updates++;
+                    if (updates >= 50) {
+                        clearInterval(interval);
+                        log('Stopping ambient sound...');
+                        sm.stopAmbientSound(ambientId);
+                        log('✓ Test complete');
+                    }
+                }, 100);
+            } else {
+                log('✗ Failed to start ambient sound');
+            }
+        }
+    </script>
+</body>
+</html>
