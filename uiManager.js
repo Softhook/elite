@@ -1520,8 +1520,8 @@ if (isIllegalInSystem || isMissionCargo) {
         const scaleX = (width - 2 * margin) / mapWidth;
         const scaleY = (height - 2 * margin) / mapHeight;
         const scale = min(scaleX, scaleY);
-        const offsetX = margin - minX * scale;
-        const offsetY = margin - minY * scale;
+        const offsetX = width / 2 - (minX + mapWidth / 2) * scale;
+        const offsetY = height / 2 - (minY + mapHeight / 2) * scale;
         // --- End compute transformation ---
 
         // --- Draw Connections (Lines) ---
