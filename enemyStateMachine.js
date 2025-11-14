@@ -341,7 +341,12 @@ class EnemyStateMachine {
                 : Infinity;
 
             if (threatToPrincipalDist < guardDistance * 2) {
-                this.changeState(AI_STATE.APPROACHING);
+                // Only switch to APPROACHING if we don't already have an active engagement lock
+                // This prevents rapid state switching (jitter) when we're already engaged
+                if (this.guardEngagementLock <= 0) {
+                    this.guardEngagementLock = 3.0; // Set engagement lock when switching
+                    this.changeState(AI_STATE.APPROACHING);
+                }
                 return;
             }
 

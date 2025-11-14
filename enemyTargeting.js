@@ -41,6 +41,17 @@ class EnemyTargeting {
         }
         // --- END SNIPING ---
 
+        // --- GUARD ENGAGEMENT LOCK: Maintain target during active engagement ---
+        if (this.role === AI_ROLE.GUARD && this.guardEngagementLock > 0) {
+            if (this.isTargetValid(this.target)) {
+                // Keep current target locked during engagement lock period
+                return true;
+            }
+            // If target becomes invalid during lock, allow retargeting but keep the lock active
+            // The lock will naturally expire via the timer in enemy.js update()
+        }
+        // --- END GUARD ENGAGEMENT LOCK ---
+
         let bestScore = TARGET_SCORE_INVALID;
         let bestTarget = null;
         let currentTargetScore = TARGET_SCORE_INVALID;
