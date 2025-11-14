@@ -12,6 +12,11 @@ class SoundManager {
         this.maxInstancesPerSound = 5; // Maximum overlapping instances per sound
         this.activeInstances = {}; // Track active audio instances per sound
         this.activeWebSources = {}; // Track active WebAudio BufferSource nodes per sound for polyphony control
+        
+        // Ambient looping sounds management
+        this.ambientSounds = {}; // Track active ambient loops: { id: { source, gainNode, sourcePos, baseVolume } }
+        this.nextAmbientId = 0; // Counter for generating unique IDs
+        
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -1056,6 +1061,162 @@ class SoundManager {
                 "sound_vol": 0.04,
                 "sample_rate": 44100,
                 "sample_size": 8
+            },
+            
+            // --- Ambient Looping Sounds ---
+            // Sun ambient hum - deep, powerful
+            sunAmbient: {
+                "oldParams": true,
+                "wave_type": 0, // Square wave for rich harmonics
+                "p_env_attack": 0.02,
+                "p_env_sustain": 0.95,
+                "p_env_punch": 0,
+                "p_env_decay": 0.05,
+                "p_base_freq": 0.08, // Very low frequency for deep hum
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0.15, // Slow vibration for pulsing effect
+                "p_vib_speed": 0.3,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0.5,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0,
+                "p_pha_ramp": 0,
+                "p_lpf_freq": 0.4, // Low-pass to make it deep and muffled
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0.3,
+                "p_hpf_freq": 0,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.15,
+                "sample_rate": 44100,
+                "sample_size": 16
+            },
+            
+            // Station ambient hum - mechanical, steady
+            stationAmbient: {
+                "oldParams": true,
+                "wave_type": 1, // Sawtooth for mechanical feel
+                "p_env_attack": 0.01,
+                "p_env_sustain": 0.96,
+                "p_env_punch": 0,
+                "p_env_decay": 0.03,
+                "p_base_freq": 0.12,
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0.08,
+                "p_vib_speed": 0.5,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0.5,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0,
+                "p_pha_ramp": 0,
+                "p_lpf_freq": 0.5,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0.2,
+                "p_hpf_freq": 0.02,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.12,
+                "sample_rate": 44100,
+                "sample_size": 16
+            },
+            
+            // Jump gate ambient - energy field sound
+            jumpGateAmbient: {
+                "oldParams": true,
+                "wave_type": 0, // Square wave
+                "p_env_attack": 0.015,
+                "p_env_sustain": 0.97,
+                "p_env_punch": 0,
+                "p_env_decay": 0.015,
+                "p_base_freq": 0.18,
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0.25, // More vibration for energy feel
+                "p_vib_speed": 0.7,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0.45,
+                "p_duty_ramp": 0.02,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0.05,
+                "p_pha_ramp": 0.01,
+                "p_lpf_freq": 0.6,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0.4,
+                "p_hpf_freq": 0.03,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.10,
+                "sample_rate": 44100,
+                "sample_size": 16
+            },
+            
+            // Planet ambient - low tone (base, will be varied by color)
+            planetAmbient: {
+                "oldParams": true,
+                "wave_type": 2, // Sine wave for smooth tone
+                "p_env_attack": 0.03,
+                "p_env_sustain": 0.94,
+                "p_env_punch": 0,
+                "p_env_decay": 0.03,
+                "p_base_freq": 0.10,
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0.12,
+                "p_vib_speed": 0.4,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0,
+                "p_pha_ramp": 0,
+                "p_lpf_freq": 0.55,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0.15,
+                "p_hpf_freq": 0.01,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.08,
+                "sample_rate": 44100,
+                "sample_size": 16
+            },
+            
+            // Planet with rings - higher pitch variant
+            planetRingsAmbient: {
+                "oldParams": true,
+                "wave_type": 2, // Sine wave
+                "p_env_attack": 0.03,
+                "p_env_sustain": 0.94,
+                "p_env_punch": 0,
+                "p_env_decay": 0.03,
+                "p_base_freq": 0.15, // Higher than regular planet
+                "p_freq_limit": 0,
+                "p_freq_ramp": 0,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0.18,
+                "p_vib_speed": 0.6,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0.03,
+                "p_pha_ramp": 0,
+                "p_lpf_freq": 0.65,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0.25,
+                "p_hpf_freq": 0.02,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.09,
+                "sample_rate": 44100,
+                "sample_size": 16
             }
         };
 
@@ -1581,6 +1742,173 @@ class SoundManager {
         } catch (e) {
             console.warn("Error stopping sounds:", e);
         }
+    }
+    
+    /**
+     * Starts a looping ambient sound at a specific world position.
+     * Returns an ID that can be used to stop or update the sound.
+     * @param {string} soundName - Name of the sound to loop
+     * @param {number} sourceX - World X coordinate
+     * @param {number} sourceY - World Y coordinate
+     * @param {number} baseVolume - Base volume for this sound (0-1)
+     * @returns {number|null} - ID of the ambient sound, or null if failed
+     */
+    startAmbientSound(soundName, sourceX, sourceY, baseVolume = 0.5) {
+        if (!this.audioContext) {
+            AUDIO_LOG('Cannot start ambient sound: no AudioContext');
+            return null;
+        }
+        
+        const soundEntry = this.sounds[soundName];
+        if (!soundEntry || !soundEntry.audioBuffer) {
+            console.warn(`startAmbientSound: Sound '${soundName}' not found or has no buffer`);
+            return null;
+        }
+        
+        try {
+            // Handle AudioContext state
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+            
+            // Create a looping buffer source
+            const source = this.audioContext.createBufferSource();
+            source.buffer = soundEntry.audioBuffer;
+            source.loop = true; // Enable looping
+            
+            // Create a gain node for volume control
+            const gainNode = this.audioContext.createGain();
+            gainNode.gain.value = 0; // Start silent, will be updated
+            
+            // Connect through the audio chain
+            source.connect(gainNode);
+            
+            const bus = window._eliteAudioBus;
+            if (bus && bus.compressor) {
+                try {
+                    gainNode.connect(bus.compressor);
+                } catch (_) {
+                    gainNode.connect(this.audioContext.destination);
+                }
+            } else {
+                gainNode.connect(this.audioContext.destination);
+            }
+            
+            // Generate unique ID
+            const id = this.nextAmbientId++;
+            
+            // Track this ambient sound
+            this.ambientSounds[id] = {
+                source: source,
+                gainNode: gainNode,
+                sourcePos: { x: sourceX, y: sourceY },
+                baseVolume: baseVolume,
+                soundName: soundName
+            };
+            
+            // Start playback
+            source.start(0);
+            
+            // Clean up when it ends (shouldn't happen for loops, but safety measure)
+            source.onended = () => {
+                this._cleanupAmbientSound(id);
+            };
+            
+            AUDIO_LOG(`Started ambient sound '${soundName}' with ID ${id}`);
+            return id;
+            
+        } catch (e) {
+            console.error(`Failed to start ambient sound '${soundName}':`, e);
+            return null;
+        }
+    }
+    
+    /**
+     * Stops a looping ambient sound by its ID.
+     * @param {number} id - The ID returned from startAmbientSound
+     */
+    stopAmbientSound(id) {
+        const ambient = this.ambientSounds[id];
+        if (!ambient) return;
+        
+        try {
+            // Fade out before stopping to avoid clicks
+            const fadeTime = 0.1;
+            ambient.gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + fadeTime);
+            
+            // Stop after fade
+            setTimeout(() => {
+                try {
+                    ambient.source.stop();
+                } catch (e) {
+                    // Already stopped, ignore
+                }
+                this._cleanupAmbientSound(id);
+            }, fadeTime * 1000 + 50);
+            
+        } catch (e) {
+            console.error(`Error stopping ambient sound ${id}:`, e);
+            this._cleanupAmbientSound(id);
+        }
+    }
+    
+    /**
+     * Updates the volume of all ambient sounds based on listener position.
+     * Should be called every frame.
+     * @param {p5.Vector} listenerPos - The world position of the listener (player)
+     */
+    updateAmbientSounds(listenerPos) {
+        if (!listenerPos) return;
+        
+        for (const id in this.ambientSounds) {
+            const ambient = this.ambientSounds[id];
+            if (!ambient || !ambient.gainNode) continue;
+            
+            const volume = this._computeIntendedVolume(
+                ambient.baseVolume,
+                ambient.sourcePos.x,
+                ambient.sourcePos.y,
+                listenerPos
+            );
+            
+            // Smooth volume changes to avoid crackling
+            try {
+                const now = this.audioContext.currentTime;
+                ambient.gainNode.gain.setTargetAtTime(volume, now, 0.05);
+            } catch (e) {
+                // Ignore timing errors
+            }
+        }
+    }
+    
+    /**
+     * Stops all ambient sounds. Used when leaving a system.
+     */
+    stopAllAmbientSounds() {
+        const ids = Object.keys(this.ambientSounds);
+        for (const id of ids) {
+            this.stopAmbientSound(parseInt(id));
+        }
+        AUDIO_LOG(`Stopped ${ids.length} ambient sounds`);
+    }
+    
+    /**
+     * Internal cleanup for ambient sound resources.
+     * @param {number} id - The ambient sound ID to clean up
+     * @private
+     */
+    _cleanupAmbientSound(id) {
+        const ambient = this.ambientSounds[id];
+        if (!ambient) return;
+        
+        try {
+            ambient.gainNode.disconnect();
+            ambient.source.disconnect();
+        } catch (e) {
+            // Already disconnected, ignore
+        }
+        
+        delete this.ambientSounds[id];
     }
 }
 

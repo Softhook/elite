@@ -161,6 +161,9 @@ class StarSystem {
         // Cooldowns to prevent collision bump sound spam
         this._lastPlayerAsteroidBumpSoundTime = 0;
         this._lastPlayerShipBumpSoundTime = 0;
+        
+        // Track ambient sound IDs for cleanup
+        this.ambientSoundIds = [];
     }
 
     /**
@@ -577,6 +580,11 @@ try {
         this.policeAlertSent = player?.isWanted || false;
         console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
         
+        // Initialize ambient sounds after a short delay to ensure everything is loaded
+        setTimeout(() => {
+            this.initAmbientSounds();
+        }, 200);
+        
         // Initial system population - use this.player consistently in timers
         setTimeout(() => {
             if (this.player && this.player.pos) {  // CHANGE: Use this.player instead of player
@@ -653,6 +661,117 @@ try {
             }
         }
         // Optionally, update market even if already visited
+    }
+
+    /**
+     * Initializes ambient sounds for static objects in the system.
+     * Called after entering the system and player position is available.
+     */
+    initAmbientSounds() {
+        if (typeof soundManager === 'undefined' || !soundManager.startAmbientSound) {
+            return;
+        }
+        
+        // Clear any existing ambient sounds first
+        this.stopAmbientSounds();
+        
+        // Sun ambient sound (at origin 0, 0)
+        const sunId = soundManager.startAmbientSound('sunAmbient', 0, 0, 0.15);
+        if (sunId !== null) {
+            this.ambientSoundIds.push(sunId);
+        }
+        
+        // Station ambient sound
+        if (this.station && this.station.pos) {
+            const stationId = soundManager.startAmbientSound(
+                'stationAmbient',
+                this.station.pos.x,
+                this.station.pos.y,
+                0.12
+            );
+            if (stationId !== null) {
+                this.ambientSoundIds.push(stationId);
+            }
+        }
+        
+        // Secret stations ambient sounds
+        if (Array.isArray(this.secretStations)) {
+            for (const secretStation of this.secretStations) {
+                if (secretStation && secretStation.pos) {
+                    const secretId = soundManager.startAmbientSound(
+                        'stationAmbient',
+                        secretStation.pos.x,
+                        secretStation.pos.y,
+                        0.10 // Slightly quieter for secret stations
+                    );
+                    if (secretId !== null) {
+                        this.ambientSoundIds.push(secretId);
+                    }
+                }
+            }
+        }
+        
+        // Jump gate ambient sound
+        if (this.jumpZoneCenter) {
+            const jumpId = soundManager.startAmbientSound(
+                'jumpGateAmbient',
+                this.jumpZoneCenter.x,
+                this.jumpZoneCenter.y,
+                0.10
+            );
+            if (jumpId !== null) {
+                this.ambientSoundIds.push(jumpId);
+            }
+        }
+        
+        // Planet ambient sounds (varying by color and rings)
+        if (Array.isArray(this.planets)) {
+            for (const planet of this.planets) {
+                if (!planet || !planet.pos) continue;
+                
+                // Skip the sun (first planet is typically the sun)
+                if (planet.isSun) continue;
+                
+                // Choose sound based on planet properties
+                let soundName = 'planetAmbient';
+                let baseVol = 0.08;
+                
+                // Planets with rings get a different sound
+                if (planet.hasRings) {
+                    soundName = 'planetRingsAmbient';
+                    baseVol = 0.09;
+                }
+                
+                const planetId = soundManager.startAmbientSound(
+                    soundName,
+                    planet.pos.x,
+                    planet.pos.y,
+                    baseVol
+                );
+                if (planetId !== null) {
+                    this.ambientSoundIds.push(planetId);
+                }
+            }
+        }
+        
+        AUDIO_LOG(`Initialized ${this.ambientSoundIds.length} ambient sounds for ${this.name}`);
+    }
+    
+    /**
+     * Stops all ambient sounds for this system.
+     * Called when leaving the system.
+     */
+    stopAmbientSounds() {
+        if (typeof soundManager === 'undefined' || !soundManager.stopAmbientSound) {
+            return;
+        }
+        
+        for (const id of this.ambientSoundIds) {
+            soundManager.stopAmbientSound(id);
+        }
+        
+        this.ambientSoundIds = [];
+        AUDIO_LOG(`Stopped ambient sounds for ${this.name}`);
     }
 
 
@@ -1252,6 +1371,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
                 this.trySpawnAsteroid(); // CHANGE: Don't pass player
                 this.asteroidSpawnTimer = 0; 
+            }
+            
+            // Update ambient sound volumes based on player position
+            if (typeof soundManager !== 'undefined' && soundManager.updateAmbientSounds && this.player && this.player.pos) {
+                soundManager.updateAmbientSounds(this.player.pos);
             }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
 
