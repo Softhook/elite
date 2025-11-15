@@ -669,6 +669,11 @@ function loadGame(slotIndex) {
                     savedData = primary.data;
                 }
                 
+                // Clean up any existing ambient layers before rebuilding from save data
+                if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
+                    ambientSoundManager.cleanup();
+                }
+
                 // 1. Load Galaxy Data First
                 if (savedData.galaxyData) {
                     galaxy.loadSaveData(savedData.galaxyData); // This populates galaxy.systems

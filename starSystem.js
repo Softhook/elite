@@ -641,6 +641,18 @@ try {
         }
     }
 
+    /**
+     * Rebuilds this system's ambient audio layers without touching seeded data.
+     * Useful after loading save data where static elements already exist.
+     */
+    rebuildAmbientSounds() {
+        if (typeof ambientSoundManager === 'undefined' || !ambientSoundManager) {
+            return;
+        }
+        this.cleanupAmbientSounds();
+        this.initAmbientSounds();
+    }
+
     /** Draws the Jump Zone marker if the player is close enough. Assumes called within translated space. */
     drawJumpZone(playerPos) {
         if (!this.jumpZoneCenter || this.jumpZoneRadius <= 0) return;

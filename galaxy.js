@@ -504,10 +504,19 @@ class Galaxy {
         // The original seed (this.systemIndex) is sufficient to reconstruct the saved state.
         this.systems.forEach((sys, idx) => {
             if (sys && typeof sys.initStaticElements === 'function') {
+                const wasInitialized = !!sys.staticElementsInitialized;
                 try {
                     sys.initStaticElements(); // No globalSessionSeed here for loading
                 } catch (e) {
                     console.error(`Error during initStaticElements for loaded system ${idx} (${sys?.name || 'N/A'}):`, e);
+                }
+
+                if (wasInitialized && typeof sys.rebuildAmbientSounds === 'function') {
+                    try {
+                        sys.rebuildAmbientSounds();
+                    } catch (e) {
+                        console.error(`Error rebuilding ambient sounds for loaded system ${idx} (${sys?.name || 'N/A'}):`, e);
+                    }
                 }
             }
         });

@@ -65,7 +65,9 @@ class AmbientSoundManager {
             gains: [],
             mainGain: this.audioContext.createGain(),
             position: null, // Will be set externally
-            baseVolume: profile.baseVolume || 0.5
+            baseVolume: profile.baseVolume || 0.5,
+            lastVolume: 0,
+            cachedUndockedVolume: profile.baseVolume || 0.5
         };
         
         // Create oscillator layers based on profile
@@ -173,9 +175,35 @@ class AmbientSoundManager {
                 volume = 0;
             }
             
+            soundConfig.lastVolume = volume;
+            if (!this.isDocked) {
+                soundConfig.cachedUndockedVolume = volume;
+            }
+
             // Smooth volume changes to avoid clicking
+            this._rampGain(soundConfig.mainGain.gain, volume, 0.1);
+        }
+    }
+
+    /**
+     * Smoothly ramp an AudioParam toward the desired value.
+     * @param {AudioParam} audioParam
+     * @param {number} targetValue
+     * @param {number} duration
+     */
+    _rampGain(audioParam, targetValue, duration = 0.15) {
+        if (!this.audioContext || !audioParam) return;
+        try {
             const currentTime = this.audioContext.currentTime;
-            soundConfig.mainGain.gain.linearRampToValueAtTime(volume, currentTime + 0.1);
+            audioParam.cancelScheduledValues(currentTime);
+            audioParam.setValueAtTime(audioParam.value, currentTime);
+            audioParam.linearRampToValueAtTime(targetValue, currentTime + duration);
+        } catch (e) {
+            try {
+                audioParam.value = targetValue;
+            } catch (_) {
+                // Ignore if AudioParam is not writable (should not happen in Web Audio)
+            }
         }
     }
     
@@ -185,6 +213,24 @@ class AmbientSoundManager {
      */
     setDockedState(docked) {
         this.isDocked = docked;
+        if (!this.audioContext) return;
+
+        for (const soundConfig of this.activeSources.values()) {
+            if (!soundConfig?.mainGain) continue;
+            const gainParam = soundConfig.mainGain.gain;
+            const isInternal = typeof soundConfig.id === 'string' && soundConfig.id.includes('station_internal');
+
+            if (docked) {
+                if (!isInternal) {
+                    const resumeVolume = soundConfig.lastVolume ?? soundConfig.baseVolume;
+                    soundConfig.cachedUndockedVolume = resumeVolume;
+                    this._rampGain(gainParam, 0, 0.12);
+                }
+            } else {
+                const targetVolume = soundConfig.cachedUndockedVolume ?? soundConfig.lastVolume ?? soundConfig.baseVolume;
+                this._rampGain(gainParam, targetVolume, 0.2);
+            }
+        }
     }
     
     /**
