@@ -232,10 +232,10 @@ class AmbientSoundManager {
                 return {
                     baseVolume: 0.4,
                     layers: [
-                        { type: 'sawtooth', frequency: 110, volume: 0.3 }, // Mechanical hum
-                        { type: 'square', frequency: 220, volume: 0.15, detune: 3 }, // Electrical buzz
-                        { type: 'sine', frequency: 55, volume: 0.25 }, // Deep machinery
-                        { type: 'triangle', frequency: 165, volume: 0.1, detune: -5 } // Ventilation
+                        //{ type: 'sawtooth', frequency: 110, volume: 0.3 }, // Mechanical hum
+                        //{ type: 'square', frequency: 220, volume: 0.15, detune: 3 }, // Electrical buzz
+                        { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
+                        { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
                     ]
                 };
                 
