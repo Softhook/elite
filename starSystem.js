@@ -471,6 +471,14 @@ try {
     }
 } catch(e) { console.error("Error generating nebulae:", e); }
 
+        // --- Initialize Ambient Sounds ---
+        try {
+            if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                this.initAmbientSounds();
+                console.log(`         Ambient sounds initialized`);
+            }
+        } catch(e) { console.error("Error initializing ambient sounds:", e); }
+
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         randomSeed(); // Reset to non-deterministic (time-based) random
 
@@ -528,6 +536,110 @@ try {
             console.log(`         Main station positioned near planet index ${randomIndex}`);
         }
     } // End createRandomPlanets
+
+    /**
+     * Initialize ambient sounds for static objects in the system
+     */
+    initAmbientSounds() {
+        if (typeof ambientSoundManager === 'undefined' || !ambientSoundManager) {
+            return;
+        }
+        
+        // Create ambient sound for the sun (at 0,0)
+        if (this.planets && this.planets.length > 0 && this.planets[0].isSun) {
+            const sunProfile = AmbientSoundManager.getSoundProfile('sun');
+            const sunSound = ambientSoundManager.createAmbientSound(
+                `${this.name}_sun`,
+                sunProfile
+            );
+            if (sunSound) {
+                sunSound.position = createVector(0, 0);
+            }
+        }
+        
+        // Create ambient sound for the main station
+        if (this.station && this.station.pos) {
+            const stationProfile = AmbientSoundManager.getSoundProfile('station');
+            const stationSound = ambientSoundManager.createAmbientSound(
+                `${this.name}_station`,
+                stationProfile
+            );
+            if (stationSound) {
+                stationSound.position = this.station.pos.copy();
+            }
+        }
+        
+        // Create ambient sounds for secret stations
+        if (this.secretStations && this.secretStations.length > 0) {
+            for (let i = 0; i < this.secretStations.length; i++) {
+                const secretStation = this.secretStations[i];
+                if (secretStation && secretStation.pos) {
+                    const secretProfile = AmbientSoundManager.getSoundProfile('station');
+                    const secretSound = ambientSoundManager.createAmbientSound(
+                        `${this.name}_secret_${i}`,
+                        secretProfile
+                    );
+                    if (secretSound) {
+                        secretSound.position = secretStation.pos.copy();
+                    }
+                }
+            }
+        }
+        
+        // Create ambient sound for the jump gate
+        if (this.jumpZoneCenter) {
+            const jumpProfile = AmbientSoundManager.getSoundProfile('jumpgate');
+            const jumpSound = ambientSoundManager.createAmbientSound(
+                `${this.name}_jumpgate`,
+                jumpProfile
+            );
+            if (jumpSound) {
+                jumpSound.position = this.jumpZoneCenter.copy();
+            }
+        }
+        
+        // Create ambient sounds for planets (excluding the sun)
+        if (this.planets && this.planets.length > 1) {
+            for (let i = 1; i < this.planets.length; i++) {
+                const planet = this.planets[i];
+                if (planet && planet.pos) {
+                    // Get color value for frequency variation
+                    const colorValue = planet.baseColor ? 
+                        (red(planet.baseColor) + green(planet.baseColor) + blue(planet.baseColor)) / 3 : 150;
+                    
+                    const planetProfile = AmbientSoundManager.getSoundProfile('planet', {
+                        hasRings: planet.hasRings || false,
+                        colorValue: colorValue
+                    });
+                    
+                    const planetSound = ambientSoundManager.createAmbientSound(
+                        `${this.name}_planet_${i}`,
+                        planetProfile
+                    );
+                    if (planetSound) {
+                        planetSound.position = planet.pos.copy();
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Clean up ambient sounds for this system
+     */
+    cleanupAmbientSounds() {
+        if (typeof ambientSoundManager === 'undefined' || !ambientSoundManager) {
+            return;
+        }
+        
+        // Remove all sounds associated with this system
+        const soundIds = Array.from(ambientSoundManager.activeSources.keys());
+        for (let soundId of soundIds) {
+            if (soundId.startsWith(this.name)) {
+                ambientSoundManager.removeAmbientSound(soundId);
+            }
+        }
+    }
 
     /** Draws the Jump Zone marker if the player is close enough. Assumes called within translated space. */
     drawJumpZone(playerPos) {
@@ -952,6 +1064,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
         }
+        
+        // Update ambient sound volumes based on player position
+        if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+            ambientSoundManager.updateSoundVolumes(this.player.pos);
+        }
+        
         try {
             // Calculate screen bounds for visibility checks - reuse pre-allocated object
             const tx = width / 2 - this.player.pos.x;

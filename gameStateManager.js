@@ -80,6 +80,17 @@ this.showingInventory = false;
         this.currentState = newState; // Update the current state
 
         // --- Handle Logic Specific to State Transitions ---
+        
+        // Update ambient sound manager docked state
+        try {
+            if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"];
+                const isDocked = stationStates.includes(newState);
+                ambientSoundManager.setDockedState(isDocked);
+            }
+        } catch (e) {
+            console.warn('Error updating ambient sound docked state:', e);
+        }
 
         // Play transition-specific sounds
         try {

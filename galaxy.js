@@ -318,6 +318,12 @@ class Galaxy {
             const oldSystemName = this.systems[this.currentSystemIndex]?.name || "Unknown";
             const newSystemName = this.systems[targetIndex]?.name || "Unknown";
             console.log(`Jumping from ${oldSystemName} to ${newSystemName} (Index: ${targetIndex})`);
+            
+            // Clean up ambient sounds from old system
+            const oldSystem = this.systems[this.currentSystemIndex];
+            if (oldSystem && typeof oldSystem.cleanupAmbientSounds === 'function') {
+                oldSystem.cleanupAmbientSounds();
+            }
 
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter

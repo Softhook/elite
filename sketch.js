@@ -8,7 +8,7 @@ const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-scre
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
 
 // --- Global Variables ---
-let player, galaxy, uiManager, gameStateManager, soundManager, titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
+let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager, titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
 let loadGameWasSuccessful = false;
 window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
 let globalSessionSeed; // Declaration for the session seed
@@ -25,6 +25,7 @@ function preload() {
 function setup() {
 
     soundManager = new SoundManager(); // Create the manager
+    ambientSoundManager = new AmbientSoundManager(); // Create ambient sound manager
 
     // Initialize EventManager - references will be set in newGame/loadGame
     eventManager = new EventManager(); 
@@ -803,6 +804,11 @@ function resetGame() {
     // Stop all sounds
     if (soundManager && typeof soundManager.stopAllSounds === 'function') {
         soundManager.stopAllSounds();
+    }
+    
+    // Clean up ambient sounds
+    if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
+        ambientSoundManager.cleanup();
     }
     
     // Reset global state
