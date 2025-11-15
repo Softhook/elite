@@ -622,6 +622,30 @@ try {
                 }
             }
         }
+
+        // Create ambient sounds for nebulae
+        if (Array.isArray(this.nebulae) && this.nebulae.length > 0) {
+            for (let i = 0; i < this.nebulae.length; i++) {
+                const neb = this.nebulae[i];
+                if (!neb?.pos) continue;
+                const nebProfile = AmbientSoundManager.getSoundProfile('nebula', { type: neb.type });
+                const id = `${this.name}_nebula_${i}_${neb.type}`;
+                const nebSound = ambientSoundManager.createAmbientSound(id, nebProfile);
+                if (nebSound) nebSound.position = neb.pos.copy();
+            }
+        }
+
+        // Create ambient sounds for active cosmic storms (if any at init)
+        if (Array.isArray(this.cosmicStorms) && this.cosmicStorms.length > 0) {
+            for (let i = 0; i < this.cosmicStorms.length; i++) {
+                const st = this.cosmicStorms[i];
+                if (!st?.pos) continue;
+                const stProfile = AmbientSoundManager.getSoundProfile('storm', { type: st.type });
+                const id = `${this.name}_storm_${i}_${st.type}`;
+                const stSound = ambientSoundManager.createAmbientSound(id, stProfile);
+                if (stSound) stSound.position = st.pos.copy();
+            }
+        }
     }
     
     /**
@@ -1334,9 +1358,24 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
                 const storm = this.cosmicStorms[i];
                 const keepStorm = storm.update(); // Get return value from update
+                // Update corresponding ambient sound position if exists
+                try {
+                    if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                        const id = `${this.name}_storm_${i}_${storm.type}`;
+                        const cfg = ambientSoundManager.activeSources.get(id);
+                        if (cfg && storm.pos) cfg.position = storm.pos;
+                    }
+                } catch(_) {}
                 
                 // Remove the storm if it has dissipated
                 if (!keepStorm) {
+                    // Remove ambient sound layer
+                    try {
+                        if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                            const id = `${this.name}_storm_${i}_${storm.type}`;
+                            ambientSoundManager.removeAmbientSound(id);
+                        }
+                    } catch(_) {}
                     this._fastRemove(this.cosmicStorms, i);
                     continue; // Skip the rest of this iteration
                 }
@@ -1364,6 +1403,18 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     stormType
                 ));
                 if (STAR_SYSTEM_DEBUG) console.log(`New ${stormType} storm spawned naturally`);
+
+                // Create ambient sound for the newly spawned storm
+                try {
+                    if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                        const idx = this.cosmicStorms.length - 1;
+                        const st = this.cosmicStorms[idx];
+                        const profile = AmbientSoundManager.getSoundProfile('storm', { type: stormType });
+                        const id = `${this.name}_storm_${idx}_${stormType}`;
+                        const snd = ambientSoundManager.createAmbientSound(id, profile);
+                        if (snd && st?.pos) snd.position = st.pos.copy();
+                    }
+                } catch(_) {}
             }
 
 

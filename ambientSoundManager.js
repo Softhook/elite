@@ -263,6 +263,71 @@ class AmbientSoundManager {
      */
     static getSoundProfile(objectType, params = {}) {
         switch (objectType) {
+            case 'nebula': {
+                const t = (params.type || 'ion').toLowerCase();
+                if (t === 'ion') {
+                    return {
+                        baseVolume: 0.28,
+                        layers: [
+                            { type: 'sine', frequency: 65, volume: 0.35 },
+                            { type: 'triangle', frequency: 130, volume: 0.22, detune: 4 },
+                            { type: 'sine', frequency: 18, volume: 0.18 } // low rumble
+                        ]
+                    };
+                } else if (t === 'radiation') {
+                    return {
+                        baseVolume: 0.32,
+                        layers: [
+                            { type: 'sine', frequency: 95, volume: 0.28 },
+                            { type: 'sine', frequency: 190, volume: 0.18, detune: -6 },
+                            { type: 'triangle', frequency: 40, volume: 0.15 }
+                        ]
+                    };
+                } else if (t === 'emp') {
+                    return {
+                        baseVolume: 0.30,
+                        layers: [
+                            { type: 'sine', frequency: 50, volume: 0.30 },
+                            { type: 'sine', frequency: 200, volume: 0.16, detune: 8 },
+                            { type: 'triangle', frequency: 25, volume: 0.20 }
+                        ]
+                    };
+                }
+                return { baseVolume: 0.28, layers: [ { type: 'sine', frequency: 90, volume: 0.3 } ] };
+            }
+
+            case 'storm': {
+                const t = (params.type || 'electromagnetic').toLowerCase();
+                if (t === 'electromagnetic') {
+                    return {
+                        baseVolume: 0.38,
+                        layers: [
+                            { type: 'sine', frequency: 140, volume: 0.32 },
+                            { type: 'sine', frequency: 280, volume: 0.18, detune: 12 },
+                            { type: 'triangle', frequency: 60, volume: 0.22 }
+                        ]
+                    };
+                } else if (t === 'gravitational') {
+                    return {
+                        baseVolume: 0.36,
+                        layers: [
+                            { type: 'triangle', frequency: 30, volume: 0.30 },
+                            { type: 'sine', frequency: 60, volume: 0.24, detune: -7 },
+                            { type: 'sine', frequency: 15, volume: 0.18 }
+                        ]
+                    };
+                } else if (t === 'radiation') {
+                    return {
+                        baseVolume: 0.40,
+                        layers: [
+                            { type: 'sine', frequency: 220, volume: 0.26 },
+                            { type: 'sine', frequency: 440, volume: 0.14, detune: 9 },
+                            { type: 'triangle', frequency: 90, volume: 0.20 }
+                        ]
+                    };
+                }
+                return { baseVolume: 0.34, layers: [ { type: 'sine', frequency: 120, volume: 0.3 } ] };
+            }
             case 'sun':
                 return {
                     baseVolume: 0.6,
