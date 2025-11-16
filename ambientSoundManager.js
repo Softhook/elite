@@ -461,7 +461,7 @@ class AmbientSoundManager {
                         return {
                             baseVolume: 0.35,
                             texture: true,
-                            lfoFreq: 0.15,
+                            lfoFreq: 0.4,
                             lfoDepthFactor: 0.2,
                             layers: [
                                 { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
@@ -525,7 +525,7 @@ class AmbientSoundManager {
                             lfoDepthFactor: 0.08,
                             layers: [
                                 { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
-                                { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
+                                { type: 'triangle', frequency: 50, volume: 0.4, detune: -5 } // Ventilation
                             ]
                         };
                 }
