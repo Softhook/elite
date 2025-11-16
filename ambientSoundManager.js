@@ -399,7 +399,7 @@ class AmbientSoundManager {
                 switch (stationType) {
                     case 'military':
                         return {
-                            baseVolume: 0.45,
+                            baseVolume: 0.35,
                             texture: true,
                             lfoFreq: 0.7,
                             lfoDepthFactor: 0.10,
@@ -435,7 +435,7 @@ class AmbientSoundManager {
                         };
                     case 'industrial':
                         return {
-                            baseVolume: 0.35,
+                            baseVolume: 0.25,
                             texture: true,
                             lfoFreq: 0.65,
                             lfoDepthFactor: 0.11,
@@ -447,7 +447,7 @@ class AmbientSoundManager {
                         };
                     case 'mining':
                         return {
-                            baseVolume: 0.46,
+                            baseVolume: 0.25,
                             texture: true,
                             lfoFreq: 0.55,
                             lfoDepthFactor: 0.10,
@@ -471,7 +471,7 @@ class AmbientSoundManager {
                         };
                     case 'refinery':
                         return {
-                            baseVolume: 0.44,
+                            baseVolume: 0.25,
                             texture: true,
                             lfoFreq: 0.6,
                             lfoDepthFactor: 0.08,
