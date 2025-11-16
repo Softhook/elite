@@ -67,7 +67,10 @@ class AmbientSoundManager {
             position: null, // Will be set externally
             baseVolume: profile.baseVolume || 0.5,
             lastVolume: 0,
-            cachedUndockedVolume: profile.baseVolume || 0.5
+            cachedUndockedVolume: profile.baseVolume || 0.5,
+            // Optional texture modulation (LFO)
+            lfoOsc: null,
+            modulationGains: []
         };
         
         // Create oscillator layers based on profile
@@ -94,6 +97,39 @@ class AmbientSoundManager {
             
             // Start the oscillator
             osc.start();
+        }
+
+        // If profile requests texture, add a low-frequency oscillator (LFO)
+        // to subtly modulate each layer's gain and create beat-like textures.
+        if (profile && profile.texture) {
+            try {
+                const lfo = this.audioContext.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = profile.lfoFreq || 0.6; // Hz
+
+                // Create a small gain node per layer to scale the LFO signal
+                for (let i = 0; i < soundConfig.gains.length; i++) {
+                    const layerGainNode = soundConfig.gains[i];
+                    const layerDef = profile.layers[i] || {};
+                    const baseVol = layerDef.volume || 0.3;
+                    const modDepthFactor = profile.lfoDepthFactor ?? 0.08;
+
+                    const modGain = this.audioContext.createGain();
+                    // modulation amplitude (kept small so overall gain stays positive)
+                    modGain.gain.value = baseVol * modDepthFactor;
+
+                    lfo.connect(modGain);
+                    // connect modulation signal into the AudioParam of the layer gain
+                    modGain.connect(layerGainNode.gain);
+                    soundConfig.modulationGains.push(modGain);
+                }
+
+                lfo.start();
+                soundConfig.lfoOsc = lfo;
+            } catch (e) {
+                // If the environment doesn't support some nodes, ignore gracefully
+                console.warn('AmbientSoundManager: failed to create LFO texture', e);
+            }
         }
         
         // Connect main gain to master
@@ -137,6 +173,25 @@ class AmbientSoundManager {
                 soundConfig.mainGain.disconnect();
             } catch (e) {
                 // Already disconnected
+            }
+            // Stop and disconnect any LFO texture nodes
+            try {
+                if (soundConfig.lfoOsc) {
+                    try {
+                        soundConfig.lfoOsc.stop();
+                    } catch (e) {}
+                    try {
+                        soundConfig.lfoOsc.disconnect();
+                    } catch (e) {}
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            for (let mg of soundConfig.modulationGains || []) {
+                try {
+                    mg.disconnect();
+                } catch (e) {}
             }
         } catch (e) {
             console.warn(`Error cleaning up ambient sound ${sourceId}:`, e);
@@ -345,6 +400,9 @@ class AmbientSoundManager {
                     case 'military':
                         return {
                             baseVolume: 0.45,
+                            texture: true,
+                            lfoFreq: 0.7,
+                            lfoDepthFactor: 0.10,
                             layers: [
                                 { type: 'square', frequency: 45, volume: 0.5 }, // Heavy machinery
                                 { type: 'sawtooth', frequency: 90, volume: 0.35, detune: 3 }, // Aggressive hum
@@ -354,6 +412,9 @@ class AmbientSoundManager {
                     case 'alien':
                         return {
                             baseVolume: 0.42,
+                            texture: true,
+                            lfoFreq: 0.9,
+                            lfoDepthFactor: 0.07,
                             layers: [
                                 { type: 'sine', frequency: 120, volume: 0.4 }, // High-frequency alien tech
                                 { type: 'triangle', frequency: 240, volume: 0.3, detune: 7 }, // Harmonic shimmer
@@ -363,6 +424,9 @@ class AmbientSoundManager {
                     case 'agricultural':
                         return {
                             baseVolume: 0.38,
+                            texture: true,
+                            lfoFreq: 0.45,
+                            lfoDepthFactor: 0.06,
                             layers: [
                                 { type: 'sine', frequency: 50, volume: 0.45 }, // Gentle organic hum
                                 { type: 'triangle', frequency: 100, volume: 0.4, detune: 2 }, // Ventilation
@@ -371,16 +435,22 @@ class AmbientSoundManager {
                         };
                     case 'industrial':
                         return {
-                            baseVolume: 0.48,
+                            baseVolume: 0.35,
+                            texture: true,
+                            lfoFreq: 0.65,
+                            lfoDepthFactor: 0.11,
                             layers: [
                                 { type: 'sawtooth', frequency: 40, volume: 0.5 }, // Heavy industrial rumble
-                                { type: 'square', frequency: 80, volume: 0.4, detune: -3 }, // Machinery
-                                { type: 'triangle', frequency: 160, volume: 0.25, detune: 5 } // High-pitched whine
+                                { type: 'square', frequency: 40, volume: 0.4, detune: -3 }, // Machinery
+                                { type: 'triangle', frequency: 60, volume: 0.25, detune: 5 } // High-pitched whine
                             ]
                         };
                     case 'mining':
                         return {
                             baseVolume: 0.46,
+                            texture: true,
+                            lfoFreq: 0.55,
+                            lfoDepthFactor: 0.10,
                             layers: [
                                 { type: 'sawtooth', frequency: 35, volume: 0.5 }, // Drilling vibration
                                 { type: 'square', frequency: 70, volume: 0.4, detune: 4 }, // Heavy equipment
@@ -390,15 +460,21 @@ class AmbientSoundManager {
                     case 'tourism':
                         return {
                             baseVolume: 0.35,
+                            texture: true,
+                            lfoFreq: 0.15,
+                            lfoDepthFactor: 0.2,
                             layers: [
                                 { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
                                 { type: 'triangle', frequency: 150, volume: 0.3, detune: 3 }, // Melodic harmony
-                                { type: 'sine', frequency: 55, volume: 0.35} // Comforting base
+                                { type: 'sine', frequency: 85, volume: 0.35} // Comforting base
                             ]
                         };
                     case 'refinery':
                         return {
                             baseVolume: 0.44,
+                            texture: true,
+                            lfoFreq: 0.6,
+                            lfoDepthFactor: 0.08,
                             layers: [
                                 { type: 'sawtooth', frequency: 65, volume: 0.45 }, // Chemical processing
                                 { type: 'square', frequency: 130, volume: 0.35, detune: 6 }, // Pumping systems
@@ -408,6 +484,9 @@ class AmbientSoundManager {
                     case 'posthuman':
                         return {
                             baseVolume: 0.4,
+                            texture: true,
+                            lfoFreq: 1.0,
+                            lfoDepthFactor: 0.07,
                             layers: [
                                 { type: 'sine', frequency: 150, volume: 0.4 }, // Clean electronic
                                 { type: 'triangle', frequency: 300, volume: 0.3, detune: 8 }, // Digital harmonics
@@ -417,6 +496,9 @@ class AmbientSoundManager {
                     case 'imperial':
                         return {
                             baseVolume: 0.4,
+                            texture: true,
+                            lfoFreq: 0.5,
+                            lfoDepthFactor: 0.06,
                             layers: [
                                 { type: 'sine', frequency: 85, volume: 0.45 }, // Regal depth
                                 { type: 'triangle', frequency: 170, volume: 0.35, detune: 4 }, // Noble harmonics
@@ -426,6 +508,9 @@ class AmbientSoundManager {
                     case 'separatist':
                         return {
                             baseVolume: 0.4,
+                            texture: true,
+                            lfoFreq: 0.6,
+                            lfoDepthFactor: 0.1,
                             layers: [
                                 { type: 'sawtooth', frequency: 50, volume: 0.5 }, // Rough machinery
                                 { type: 'square', frequency: 100, volume: 0.4, detune: 5 }, // Industrial edge
@@ -435,6 +520,9 @@ class AmbientSoundManager {
                     default: // standard
                         return {
                             baseVolume: 0.4,
+                            texture: true,
+                            lfoFreq: 0.6,
+                            lfoDepthFactor: 0.08,
                             layers: [
                                 { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
                                 { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
