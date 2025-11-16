@@ -13,10 +13,6 @@ function Harpoon(owner, target, opts) {
     this.lifetime = opts.lifetime || 80000; // ms
     this.age = 0;
     this.damping = opts.damping || 0.995;
-    // parameters for pull behaviour (spring-damper)
-    this.springK = opts.springK || 60; // spring stiffness (force per pixel)
-    this.pullDamping = opts.pullDamping || 12; // damper coefficient (reduces oscillation)
-    this.maxPull = opts.maxPull || 200; // maximum force applied to anchors
     this.segments = [];
     this.broken = false;
 
@@ -124,39 +120,17 @@ Harpoon.prototype.update = function(dtMs) {
         const restTotal = this.restLength * (this.segmentCount - 1);
         const stretch = dist - restTotal;
         if (stretch > 0.5) {
+            const pull = Math.min(stretch * 0.6, 400);
             const nx = dx / dist;
             const ny = dy / dist;
-
-            // Spring-damper: F = k * stretch - c * (relativeVelocityAlongRope)
-            const k = this.springK;
-            const c = this.pullDamping;
-            const maxF = this.maxPull;
-
-            const relVx = (this.target.vel ? this.target.vel.x : 0) - (this.owner.vel ? this.owner.vel.x : 0);
-            const relVy = (this.target.vel ? this.target.vel.y : 0) - (this.owner.vel ? this.owner.vel.y : 0);
-            const relVelAlong = relVx * nx + relVy * ny;
-
-            const springForce = k * stretch;
-            const dampingForce = c * relVelAlong;
-            let totalForce = springForce - dampingForce;
-            if (totalForce < 0) totalForce = 0;
-            totalForce = Math.min(totalForce, maxF);
-
-            // apply by mass if available (accelerations), otherwise assume mass=1
-            const ownerMass = (this.owner.mass !== undefined) ? this.owner.mass : ((this.owner.size !== undefined) ? Math.max(1, this.owner.size*this.owner.size) : 1);
-            const targetMass = (this.target.mass !== undefined) ? this.target.mass : ((this.target.size !== undefined) ? Math.max(1, this.target.size*this.target.size) : 1);
-
-            const ownerAcc = totalForce / ownerMass;
-            const targetAcc = totalForce / targetMass;
-
-            // integrate acceleration to velocity using real dt (seconds)
+            // apply to velocities if available
             if (this.owner.vel) {
-                this.owner.vel.x += nx * ownerAcc * dt;
-                this.owner.vel.y += ny * ownerAcc * dt;
+                this.owner.vel.x += nx * pull * (dt / (1/60));
+                this.owner.vel.y += ny * pull * (dt / (1/60));
             }
             if (this.target.vel) {
-                this.target.vel.x -= nx * targetAcc * dt;
-                this.target.vel.y -= ny * targetAcc * dt;
+                this.target.vel.x -= nx * pull * (dt / (1/60));
+                this.target.vel.y -= ny * pull * (dt / (1/60));
             }
         }
     }
