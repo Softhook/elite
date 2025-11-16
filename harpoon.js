@@ -120,17 +120,25 @@ Harpoon.prototype.update = function(dtMs) {
         const restTotal = this.restLength * (this.segmentCount - 1);
         const stretch = dist - restTotal;
         if (stretch > 0.5) {
-            const pull = Math.min(stretch * 0.6, 400);
             const nx = dx / dist;
             const ny = dy / dist;
-            // apply to velocities if available
+            // gentler pull: reduce scalar and limit dt scaling to avoid huge impulses on slow frames
+            const basePull = Math.min(stretch * 0.12, 100); // reduced from 0.6/400 to 0.12/100
+            const dtScale = Math.min(dt / (1/60), 2); // cap dt scaling
+            const impulse = basePull * dtScale;
+            const maxImpulsePerAxis = 50;
+            // apply to velocities if available, but clamp so it's not a sudden huge jump
             if (this.owner.vel) {
-                this.owner.vel.x += nx * pull * (dt / (1/60));
-                this.owner.vel.y += ny * pull * (dt / (1/60));
+                this.owner.vel.x += nx * impulse;
+                this.owner.vel.y += ny * impulse;
+                this.owner.vel.x = Math.max(Math.min(this.owner.vel.x, this.owner.maxVel || maxImpulsePerAxis), -(this.owner.maxVel || maxImpulsePerAxis));
+                this.owner.vel.y = Math.max(Math.min(this.owner.vel.y, this.owner.maxVel || maxImpulsePerAxis), -(this.owner.maxVel || maxImpulsePerAxis));
             }
             if (this.target.vel) {
-                this.target.vel.x -= nx * pull * (dt / (1/60));
-                this.target.vel.y -= ny * pull * (dt / (1/60));
+                this.target.vel.x -= nx * impulse;
+                this.target.vel.y -= ny * impulse;
+                this.target.vel.x = Math.max(Math.min(this.target.vel.x, this.target.maxVel || maxImpulsePerAxis), -(this.target.maxVel || maxImpulsePerAxis));
+                this.target.vel.y = Math.max(Math.min(this.target.vel.y, this.target.maxVel || maxImpulsePerAxis), -(this.target.maxVel || maxImpulsePerAxis));
             }
         }
     }
