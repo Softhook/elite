@@ -2025,7 +2025,44 @@ checkProjectileCollisions() {
                 const enemy = this.enemies[j];
                 // Skip if the enemy is shooting itself
                 if (enemy !== proj.owner && proj.checkCollision(enemy)) {
-                    // Use centralized hit handler from WeaponSystem
+                    // Harpoon special-case: spawn a Harpoon tether between enemies
+                    if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                        const owner = proj.owner;
+                        const target = enemy;
+                        const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                        const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
+
+                        if (!ownerHasPos || !targetHasPos) {
+                            if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                console.warn('Harpoon spawn skipped (enemy->enemy): missing anchor positions', {
+                                    projType: proj.type,
+                                    owner: owner && owner.constructor ? owner.constructor.name : owner,
+                                    ownerPos: owner && owner.pos,
+                                    targetPos: target && target.pos,
+                                    projPos: proj.pos
+                                });
+                            }
+                            this.removeProjectile(i);
+                            break;
+                        }
+
+                        try {
+                            if (typeof Harpoon !== 'undefined') {
+                                const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                if (!this.harpoons) this.harpoons = [];
+                                this.harpoons.push(har);
+                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                    console.log('Harpoon spawned (enemy->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                }
+                            }
+                            this.addExplosion(proj.pos.x, proj.pos.y, 6, [180,220,255]);
+                        } catch(e) { console.error('Failed to create Harpoon (enemy->enemy)', e); }
+                        this.removeProjectile(i);
+                        hit = true;
+                        break;
+                    }
+
+                    // Use centralized hit handler from WeaponSystem for other projectile types
                     WeaponSystem.handleHitEffects(
                         enemy,
                         proj.pos,
@@ -2034,7 +2071,7 @@ checkProjectileCollisions() {
                         this,
                         proj.color
                     );
-                    
+
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                         enemy.applyDragEffect(
@@ -2043,7 +2080,7 @@ checkProjectileCollisions() {
                             (proj.rotationBlockMultiplier || 0.1)
                         );
                     }
-                    
+
                     this.removeProjectile(i);
                     hit = true;          // mark that we've handled this projectile
                     break;

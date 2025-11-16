@@ -19,6 +19,18 @@ function Harpoon(owner, target, system, opts) {
     this.restTotal = this.restLength * Math.max(1, this.segmentCount - 1);
     this.midIndex = Math.floor(this.segmentCount / 2);
 
+    // Track active harpoon counts on anchors for quick checks elsewhere
+    try {
+        if (this.target) {
+            this.target._harpoonCount = (this.target._harpoonCount || 0) + 1;
+        }
+        if (this.owner) {
+            this.owner._harpoonCount = (this.owner._harpoonCount || 0) + 1;
+        }
+    } catch (e) {
+        // defensive: ignore if anchors are exotic objects
+    }
+
     // initialize straight line segments between owner and target
     for (let i = 0; i < this.segmentCount; i++) {
         const t = i / (this.segmentCount - 1);
@@ -220,6 +232,13 @@ Harpoon.prototype.draw = function() {
 Harpoon.prototype.break = function() {
     if (this.broken) return;
     this.broken = true;
+    // Decrement active harpoon counters on anchors (defensive)
+    try {
+        if (this.target) this.target._harpoonCount = Math.max(0, (this.target._harpoonCount || 0) - 1);
+        if (this.owner) this.owner._harpoonCount = Math.max(0, (this.owner._harpoonCount || 0) - 1);
+    } catch (e) {
+        // ignore
+    }
     // small visual marker
     if (this.system && typeof this.system.addExplosion === 'function') {
         const p = this.segments[this.midIndex];
