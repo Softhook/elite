@@ -9,7 +9,7 @@ class AmbientSoundManager {
         this.masterGain = null;
         this.activeSources = new Map(); // Maps source ID to sound configuration
         this.enabled = true;
-        this.globalVolume = 1; // Master volume for all ambient sounds
+        this.globalVolume = 0.8; // Master volume for all ambient sounds
         this.maxDistance = 3000; // Maximum distance for sound audibility
         this.minVolume = 0.01; // Minimum volume threshold
         this.isDocked = false; // Track docked state
@@ -392,8 +392,8 @@ class AmbientSoundManager {
                             baseVolume: 0.35,
                             layers: [
                                 { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
-                                { type: 'triangle', frequency: 220, volume: 0.3, detune: 3 }, // Melodic harmony
-                                { type: 'sine', frequency: 55, volume: 0.35, detune: -2 } // Comforting base
+                                { type: 'triangle', frequency: 150, volume: 0.3, detune: 3 }, // Melodic harmony
+                                { type: 'sine', frequency: 55, volume: 0.35} // Comforting base
                             ]
                         };
                     case 'refinery':
