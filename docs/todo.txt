@@ -5,9 +5,12 @@
 
 ## Core Gameplay Enhancements
 
-add more sound - planets and station make looping world sounds with proximity
+Getting faction wide annoucments. If the player is part of her faction.
+Increased/decreased bounty bonus
 
-getting hailed by other ships
+Harpoon weapon that attaches to another ship
+
+assination missions with named pilots - make sure they stay in the ststem and down unspawn making it impossible to compete the mission
 
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 

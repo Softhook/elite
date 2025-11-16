@@ -289,7 +289,7 @@ class AmbientSoundManager {
                         layers: [
                             { type: 'sine', frequency: 50, volume: 0.30 },
                             { type: 'sine', frequency: 200, volume: 0.16, detune: 8 },
-                            { type: 'triangle', frequency: 25, volume: 0.20 }
+                            { type: 'triangle', frequency: 25, volume: 0.20 },
                         ]
                     };
                 }
@@ -304,7 +304,8 @@ class AmbientSoundManager {
                         layers: [
                             { type: 'sine', frequency: 140, volume: 0.32 },
                             { type: 'sine', frequency: 280, volume: 0.18, detune: 12 },
-                            { type: 'triangle', frequency: 60, volume: 0.22 }
+                            { type: 'triangle', frequency: 60, volume: 0.22 },
+                            { type: 'square', frequency: 300, volume: 0.15, detune: 3 },
                         ]
                     };
                 } else if (t === 'gravitational') {
@@ -313,7 +314,8 @@ class AmbientSoundManager {
                         layers: [
                             { type: 'triangle', frequency: 30, volume: 0.30 },
                             { type: 'sine', frequency: 60, volume: 0.24, detune: -7 },
-                            { type: 'sine', frequency: 15, volume: 0.18 }
+                            { type: 'sine', frequency: 15, volume: 0.18 },
+                            { type: 'square', frequency: 220, volume: 0.15, detune: 3 },
                         ]
                     };
                 } else if (t === 'radiation') {
@@ -344,7 +346,7 @@ class AmbientSoundManager {
                     baseVolume: 0.4,
                     layers: [
                         //{ type: 'sawtooth', frequency: 110, volume: 0.3 }, // Mechanical hum
-                        //{ type: 'square', frequency: 220, volume: 0.15, detune: 3 }, // Electrical buzz
+                        
                         { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
                         { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
                     ]
