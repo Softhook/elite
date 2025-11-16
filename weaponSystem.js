@@ -859,6 +859,10 @@ static fireHarpoon(owner, system, angle) {
     proj.size = weapon.projectileSize || 6;
     system.addProjectile(proj);
 
+        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+            console.log('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
+        }
+
     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
         try { soundManager.playWorldSound('harpoonFire', ownerX, ownerY, player.pos); } catch(_) {}
     }

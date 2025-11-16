@@ -562,7 +562,7 @@ const SHIP_DEFINITIONS = {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Quad Pulse", "Beam Laser", "Avenger Missile","Heavy Tangle","Barrier Field", "Heavy Mine"], // Balanced heavy firepower
+        armament: ["Quad Pulse", "Beam Laser", "Avenger Missile","Harpoon Launcher","Barrier Field", "Heavy Mine"], // Balanced heavy firepower
         costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
         drawFunction: drawCenturionGunship, 
         vertexLayers: [
@@ -630,7 +630,7 @@ const SHIP_DEFINITIONS = {
         name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile","Heavy Tangle","Barrier Field"],
+        armament: ["Disruptor","Twin Pulse","Force Blaster", "Avenger Missile","Harpoon Launcher","Barrier Field"],
         costCategory: "Low", description: "Standard Police.",
         drawFunction: drawDestroyer,         vertexLayers: [
             {
@@ -664,7 +664,7 @@ const SHIP_DEFINITIONS = {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile","Heavy Tangle","Barrier Field", "Heavy Mine"], // Military arsenal
+        armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile","Harpoon Launcher","Barrier Field", "Heavy Mine"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         drawFunction: drawFederalAssaultShip, 
         
@@ -702,7 +702,7 @@ const SHIP_DEFINITIONS = {
         name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Heavy Tangle","Barrier Field","Heavy Mine"],
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse","Kalibr Missile","Harpoon Launcher","Barrier Field","Heavy Mine"],
         costCategory: "Very High", description: "Luxury high-performance combat ship.",
         drawFunction: drawFerDeLance, 
         vertexLayers: [
@@ -775,7 +775,7 @@ const SHIP_DEFINITIONS = {
         name: "Geister", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
-        armament: ["Burst Blaster", "Beam Laser"], // Fast attack loadout
+        armament: ["Burst Blaster", "Beam Laser","Harpoon Launcher"], // Fast attack loadout
         costCategory: "Medium", description: "Fast Stealth Ship.",
         drawFunction: drawGeister, 
         vertexLayers: [
@@ -821,7 +821,7 @@ const SHIP_DEFINITIONS = {
         name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Heavy Tangle","Barrier Field","Advanced Mine"], // Military loadout
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter","Kalibr Missile","Harpoon Launcher","Barrier Field","Advanced Mine"], // Military loadout
         costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
         drawFunction: drawHammerheadCorvette, 
         vertexLayers: [

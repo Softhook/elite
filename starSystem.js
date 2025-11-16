@@ -1865,6 +1865,45 @@ checkProjectileCollisions() {
             distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
             
             if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(this.player)) {
+                // Harpoon special-case: if an enemy fired a harpoon at the player, spawn a Harpoon tether
+                if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                    // Ensure owner and target have positions before creating tether
+                    const owner = proj.owner;
+                    const target = this.player;
+                    const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                    const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
+
+                    if (!ownerHasPos || !targetHasPos) {
+                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                            console.warn('Harpoon spawn skipped: missing anchor positions', {
+                                projType: proj.type,
+                                owner: owner && owner.constructor ? owner.constructor.name : owner,
+                                ownerPos: owner && owner.pos,
+                                targetPos: target && target.pos,
+                                projPos: projPos
+                            });
+                        }
+                        // Remove projectile anyway to avoid lingering projectile
+                        this.removeProjectile(i);
+                        continue;
+                    }
+
+                    try {
+                        if (typeof Harpoon !== 'undefined') {
+                            const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                            if (!this.harpoons) this.harpoons = [];
+                            this.harpoons.push(har);
+                            if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
+                            }
+                        }
+                        // small impact visual and sound
+                        this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
+                    } catch(e) { console.error('Failed to create Harpoon', e); }
+                    this.removeProjectile(i);
+                    continue;
+                }
+
                 // Use centralized hit handler from WeaponSystem
                 WeaponSystem.handleHitEffects(
                     this.player,
@@ -1914,15 +1953,38 @@ checkProjectileCollisions() {
                 if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
                     // Harpoon special-case: spawn a Harpoon tether instead of normal hit
                     if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                                try {
-                                    if (typeof Harpoon !== 'undefined') {
-                                        const har = new Harpoon(proj.owner, enemy, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                        if (!this.harpoons) this.harpoons = [];
-                                        this.harpoons.push(har);
-                                    }
-                                    // small impact visual and sound
-                                    this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
-                                } catch(e) { console.error('Failed to create Harpoon', e); }
+                        // Ensure owner and target have positions before creating tether
+                        const owner = proj.owner;
+                        const target = enemy;
+                        const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                        const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
+
+                        if (!ownerHasPos || !targetHasPos) {
+                            if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                console.warn('Harpoon spawn skipped: missing anchor positions', {
+                                    projType: proj.type,
+                                    owner: owner && owner.constructor ? owner.constructor.name : owner,
+                                    ownerPos: owner && owner.pos,
+                                    targetPos: target && target.pos,
+                                    projPos: projPos
+                                });
+                            }
+                            this.removeProjectile(i);
+                            break;
+                        }
+
+                        try {
+                            if (typeof Harpoon !== 'undefined') {
+                                const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                if (!this.harpoons) this.harpoons = [];
+                                this.harpoons.push(har);
+                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                    console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                }
+                            }
+                            // small impact visual and sound
+                            this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
+                        } catch(e) { console.error('Failed to create Harpoon', e); }
                         this.removeProjectile(i);
                         break;
                     }

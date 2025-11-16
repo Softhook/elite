@@ -107,6 +107,32 @@ class EnemyCombat {
                 }
             }
 
+            // --- HARPOON WEAPON LOGIC ---
+            if (baseType === WEAPON_TYPE.HARPOON && target) {
+                // Avoid firing harpoon at already entangled targets
+                if (targetAlreadyEntangled) {
+                    score -= 10;
+                } else {
+                    // Prefer harpoon when the target is faster than us or generally fast
+                    const targetSpeed = target.maxSpeed || (target.vel ? Math.sqrt((target.vel.x||0)*(target.vel.x||0) + (target.vel.y||0)*(target.vel.y||0)) : 0);
+                    const ourSpeed = this.maxSpeed || (this.vel ? Math.sqrt((this.vel.x||0)*(this.vel.x||0) + (this.vel.y||0)*(this.vel.y||0)) : 0);
+
+                    // High priority when target is significantly faster or very fast in general
+                    if (targetSpeed > ourSpeed + 1.5 || targetSpeed > 6) {
+                        score += 6;
+                    } else if (targetSpeed > ourSpeed) {
+                        score += 3;
+                    }
+
+                    // Harpoon excels at medium ranges (throwing distance)
+                    if (isMediumRange) score += 2;
+                    else if (isShortRange) score += 1;
+
+                    // Slight bonus vs larger targets (better to tether heavy ships)
+                    if (target.size && target.size > 40) score += 1;
+                }
+            }
+
             // --- MINE WEAPON LOGIC ---
             // Mines are good when being chased, fleeing, or very close
             if (baseType === WEAPON_TYPE.MINE && target) {
@@ -518,6 +544,49 @@ class EnemyCombat {
         // Extra safety: prevent firing at cargo with any weapon type
         if (targetToPass && targetToPass.constructor && targetToPass.constructor.name === 'Cargo') {
             return;
+        }
+
+        // If firing a harpoon, attempt a simple leading solution so the harpoon
+        // projectile (which has significant speed) will intercept faster targets.
+        if (weaponType === WEAPON_TYPE.HARPOON && targetToPass && targetToPass.pos && targetToPass.vel) {
+            try {
+                const tx = targetToPass.pos.x - this.pos.x;
+                const ty = targetToPass.pos.y - this.pos.y;
+                const tvx = targetToPass.vel.x || 0;
+                const tvy = targetToPass.vel.y || 0;
+                const s = (this.currentWeapon && this.currentWeapon.speed) ? this.currentWeapon.speed : 30;
+
+                // Solve quadratic for interception time: (tv^2 - s^2) t^2 + 2*(r·v) t + r^2 = 0
+                const a = (tvx*tvx + tvy*tvy) - (s*s);
+                const b = 2 * (tx*tvx + ty*tvy);
+                const c = tx*tx + ty*ty;
+                let t = null;
+                if (Math.abs(a) < 1e-6) {
+                    // Degenerate to linear: b t + c = 0 -> t = -c/b
+                    if (Math.abs(b) > 1e-6) {
+                        const tl = -c / b;
+                        if (tl > 0) t = tl;
+                    }
+                } else {
+                    const disc = b*b - 4*a*c;
+                    if (disc >= 0) {
+                        const sqrtD = Math.sqrt(disc);
+                        const t1 = (-b - sqrtD) / (2*a);
+                        const t2 = (-b + sqrtD) / (2*a);
+                        // pick smallest positive time
+                        const candidates = [t1, t2].filter(v => v > 0).sort((A,B)=>A-B);
+                        if (candidates.length) t = candidates[0];
+                    }
+                }
+
+                if (t && isFinite(t) && t > 0) {
+                    const aimX = targetToPass.pos.x + tvx * t;
+                    const aimY = targetToPass.pos.y + tvy * t;
+                    fireAngle = atan2(aimY - this.pos.y, aimX - this.pos.x);
+                }
+            } catch (e) {
+                // If anything fails, fall back to non-leading fireAngle
+            }
         }
 
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, weaponType, targetToPass);
