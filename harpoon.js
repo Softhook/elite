@@ -10,8 +10,6 @@ function Harpoon(owner, target, opts) {
     this.restLength = opts.restLength || (totalDist / Math.max(1, this.segmentCount - 1));
     this.stiffness = opts.stiffness !== undefined ? opts.stiffness : 1.0;
     this.breakTension = opts.breakTension || 800; // tuning value - higher = stronger cable
-    this.lifetime = opts.lifetime || 80000; // ms
-    this.age = 0;
     this.damping = opts.damping || 0.995;
     this.segments = [];
     this.broken = false;
@@ -28,7 +26,7 @@ function Harpoon(owner, target, opts) {
 Harpoon.prototype.update = function(dtMs) {
     if (this.broken) return;
     const dt = (typeof dtMs === 'number') ? dtMs / 1000 : (deltaTime ? deltaTime / 1000 : 1/60);
-    this.age += (dtMs || deltaTime || 16);
+    // age/lifetime removed: harpoon persists until broken by tension or explicitly
 
     // Verlet integration for middle segments
     for (let i = 1; i < this.segmentCount - 1; i++) {
@@ -101,13 +99,10 @@ Harpoon.prototype.update = function(dtMs) {
     }
 
     // scale approx tension to break threshold units
-    const approxTension = maxStretch * 200; // tuning scalar
+    // reduce sensitivity to avoid immediate breaking from small numerical/stretch differences
+    let approxTension = maxStretch * 50; // tuning scalar (reduced)
+    if (maxStretch < 5) approxTension = 0; // ignore very small stretches
     if (approxTension > this.breakTension) {
-        this.break();
-        return;
-    }
-
-    if (this.age > this.lifetime) {
         this.break();
         return;
     }
@@ -129,14 +124,22 @@ Harpoon.prototype.update = function(dtMs) {
             const maxImpulsePerAxis = 50;
             // apply to velocities if available, but clamp so it's not a sudden huge jump
             if (this.owner.vel) {
-                this.owner.vel.x += nx * impulse;
-                this.owner.vel.y += ny * impulse;
+                // use ship `size` as a proxy for mass (larger ships are heavier)
+                const ownerMass = (this.owner.size && this.owner.size > 0) ? this.owner.size : 1;
+                const dvx = (nx * impulse) / ownerMass;
+                const dvy = (ny * impulse) / ownerMass;
+                this.owner.vel.x += dvx;
+                this.owner.vel.y += dvy;
                 this.owner.vel.x = Math.max(Math.min(this.owner.vel.x, this.owner.maxVel || maxImpulsePerAxis), -(this.owner.maxVel || maxImpulsePerAxis));
                 this.owner.vel.y = Math.max(Math.min(this.owner.vel.y, this.owner.maxVel || maxImpulsePerAxis), -(this.owner.maxVel || maxImpulsePerAxis));
             }
             if (this.target.vel) {
-                this.target.vel.x -= nx * impulse;
-                this.target.vel.y -= ny * impulse;
+                // use ship `size` as a proxy for mass (larger ships are heavier)
+                const targetMass = (this.target.size && this.target.size > 0) ? this.target.size : 1;
+                const dvxT = (nx * impulse) / targetMass;
+                const dvyT = (ny * impulse) / targetMass;
+                this.target.vel.x -= dvxT;
+                this.target.vel.y -= dvyT;
                 this.target.vel.x = Math.max(Math.min(this.target.vel.x, this.target.maxVel || maxImpulsePerAxis), -(this.target.maxVel || maxImpulsePerAxis));
                 this.target.vel.y = Math.max(Math.min(this.target.vel.y, this.target.maxVel || maxImpulsePerAxis), -(this.target.maxVel || maxImpulsePerAxis));
             }
