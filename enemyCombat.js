@@ -223,7 +223,7 @@ class EnemyCombat {
                 this.currentWeapon = this.weapons[this.weaponIndex];
                 this.fireRate = this.currentWeapon.fireRate;
                 // Reset cooldown when switching weapons (half normal delay)
-                this.fireCooldown = this.fireRate * 0.5;
+                this.fireCooldown = this.computeCooldown(this.fireRate * 0.5);
                 
                 // Log weapon change for debugging
                 if (this.lastWeaponSwitch === undefined || 
@@ -241,6 +241,28 @@ class EnemyCombat {
      */
     isWeaponReady() {
         return this.fireCooldown <= 0;
+    }
+
+    /**
+     * Compute adjusted cooldown based on tangle/drag effects.
+     * When a ship is tangled (`dragEffectTimer > 0`) increase cooldown proportionally
+     * to the dragMultiplier but clamp the effect to avoid extreme slowdowns.
+     * @param {number} baseCooldown - The base cooldown in seconds
+     * @return {number} Adjusted cooldown in seconds
+     */
+    computeCooldown(baseCooldown) {
+        if (!baseCooldown || baseCooldown <= 0) return baseCooldown;
+        try {
+            if (this.dragEffectTimer > 0 && this.dragMultiplier > 1.0) {
+                // Scale factor: modest scaling of dragMultiplier (10 -> ~1.9x)
+                const scale = 1 + Math.min(3, (this.dragMultiplier - 1.0) * 0.1);
+                return baseCooldown * scale;
+            }
+        } catch (e) {
+            // In case something is undefined on exotic objects, fall back to base
+            return baseCooldown;
+        }
+        return baseCooldown;
     }
 
     /**
@@ -377,7 +399,7 @@ class EnemyCombat {
         const type = this.currentWeapon?.type || WEAPON_TYPE.PROJECTILE;
         const fired = WeaponSystem.fire(this, system, fireAngleRadians, type, this.target);
         if (fired) {
-            this.fireCooldown = this.fireRate;
+            this.fireCooldown = this.computeCooldown(this.fireRate);
         }
     }
 
@@ -468,7 +490,7 @@ class EnemyCombat {
         if (weaponType === WEAPON_TYPE.MINE) {
             const firedMine = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
             if (firedMine) {
-                this.fireCooldown = this.fireRate; // General weapon fire cooldown
+                this.fireCooldown = this.computeCooldown(this.fireRate); // General weapon fire cooldown
             }
 
             // Immediately switch to a different weapon after dropping mine
@@ -500,7 +522,7 @@ class EnemyCombat {
 
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, weaponType, targetToPass);
         if (fired) {
-            this.fireCooldown = this.fireRate; // General weapon fire cooldown
+            this.fireCooldown = this.computeCooldown(this.fireRate); // General weapon fire cooldown
         } else if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined' &&
                WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
             this._switchWeaponAfterBeamOverheat();

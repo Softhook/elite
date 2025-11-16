@@ -507,6 +507,25 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
         soundManager.playWorldSound('electricField', this.pos.x, this.pos.y, this.pos);
     }
 }
+    
+    /**
+     * Compute adjusted cooldown based on tangle/drag effects for player.
+     * Mirrors Enemy.computeCooldown behavior so players also shoot slower when tangled.
+     * @param {number} baseCooldown - Base cooldown in seconds
+     * @returns {number} Adjusted cooldown
+     */
+    computeCooldown(baseCooldown) {
+        if (!baseCooldown || baseCooldown <= 0) return baseCooldown;
+        try {
+            if (this.dragEffectTimer > 0 && this.dragMultiplier > 1.0) {
+                const scale = 1 + Math.min(3, (this.dragMultiplier - 1.0) * 0.1);
+                return baseCooldown * scale;
+            }
+        } catch (e) {
+            return baseCooldown;
+        }
+        return baseCooldown;
+    }
 
     /** Switches to the specified weapon index */
     switchToWeapon(index) {
@@ -756,7 +775,7 @@ handleInput() {
                 this.barrierDamageReduction = this.currentWeapon.damageReduction;
                 this.barrierDurationTimer = this.currentWeapon.duration;
                 this.barrierColor = this.currentWeapon.color;
-                this.fireCooldown = this.currentWeapon.fireRate; // Set cooldown for the barrier
+                this.fireCooldown = this.computeCooldown(this.currentWeapon.fireRate); // Set cooldown for the barrier
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage("Barrier Activated!", this.barrierColor, 2000);
                 }
@@ -790,7 +809,7 @@ handleInput() {
 
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
         if (fired) {
-            this.fireCooldown = this.fireRate;
+            this.fireCooldown = this.computeCooldown(this.fireRate);
             return true;
         }
         return false;
