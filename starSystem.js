@@ -1330,9 +1330,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             if (this.harpoons && this.harpoons.length) {
                 for (let i = this.harpoons.length - 1; i >= 0; i--) {
                     const h = this.harpoons[i];
-                    try { h.system = this; h.update && h.update(deltaTime || 16); } catch(e) { console.error('Harpoon update error', e); h && h.break && h.break(); }
+                    try { h.update && h.update(deltaTime || 16); } catch(e) { console.error('Harpoon update error', e); h && h.break && h.break(); }
                     // Remove if broken or invalid
-                    if (!h || h.broken || !h.owner || !h.target || (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed())) {
+                    const targetDestroyed = !h || h.broken || !h.owner || !h.target || (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed());
+                    const done = (h && typeof h.isDone === 'function') ? h.isDone() : false;
+                    if (targetDestroyed || done) {
                         this._fastRemove(this.harpoons, i);
                     }
                 }
@@ -1912,16 +1914,15 @@ checkProjectileCollisions() {
                 if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
                     // Harpoon special-case: spawn a Harpoon tether instead of normal hit
                     if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                        try {
-                            if (typeof Harpoon !== 'undefined') {
-                                const har = new Harpoon(proj.owner, enemy, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                har.system = this;
-                                if (!this.harpoons) this.harpoons = [];
-                                this.harpoons.push(har);
-                            }
-                            // small impact visual and sound
-                            this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
-                        } catch(e) { console.error('Failed to create Harpoon', e); }
+                                try {
+                                    if (typeof Harpoon !== 'undefined') {
+                                        const har = new Harpoon(proj.owner, enemy, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                    }
+                                    // small impact visual and sound
+                                    this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
+                                } catch(e) { console.error('Failed to create Harpoon', e); }
                         this.removeProjectile(i);
                         break;
                     }
@@ -2596,8 +2597,9 @@ checkProjectileCollisions() {
             for (let h of this.harpoons) {
                 if (!h || h.broken) continue;
                 // cull by endpoints
-                const a = h.segments && h.segments[0] && h.segments[0].pos;
-                const b = h.segments && h.segments[h.segments.length-1] && h.segments[h.segments.length-1].pos;
+                // Harpoon segments now use numeric {x,y,px,py} fields, not p5 vectors
+                const a = h.segments && h.segments[0] && h.segments[0];
+                const b = h.segments && h.segments[h.segments.length-1] && h.segments[h.segments.length-1];
                 if (!a || !b) continue;
                 if (this.isInView(a.x, a.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom) ||
                     this.isInView(b.x, b.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
