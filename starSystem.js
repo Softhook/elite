@@ -559,7 +559,7 @@ try {
         
         // Create ambient sound for the main station
         if (this.station && this.station.pos) {
-            const stationProfile = AmbientSoundManager.getSoundProfile('station');
+            const stationProfile = AmbientSoundManager.getSoundProfile('station', { type: this.station.stationType });
             const stationSound = ambientSoundManager.createAmbientSound(
                 `${this.name}_station`,
                 stationProfile
@@ -574,7 +574,7 @@ try {
             for (let i = 0; i < this.secretStations.length; i++) {
                 const secretStation = this.secretStations[i];
                 if (secretStation && secretStation.pos) {
-                    const secretProfile = AmbientSoundManager.getSoundProfile('station');
+                    const secretProfile = AmbientSoundManager.getSoundProfile('station', { type: secretStation.stationType });
                     const secretSound = ambientSoundManager.createAmbientSound(
                         `${this.name}_secret_${i}`,
                         secretProfile

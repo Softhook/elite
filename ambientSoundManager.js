@@ -170,9 +170,9 @@ class AmbientSoundManager {
                 }
             }
             
-            // Apply docked state - mute external sounds when docked
-            if (this.isDocked && !sourceId.includes('station_internal')) {
-                volume = 0;
+            // Apply docked state - reduce all ambient sounds when docked
+            if (this.isDocked) {
+                volume = volume * 0.01;
             }
             
             soundConfig.lastVolume = volume;
@@ -218,14 +218,12 @@ class AmbientSoundManager {
         for (const soundConfig of this.activeSources.values()) {
             if (!soundConfig?.mainGain) continue;
             const gainParam = soundConfig.mainGain.gain;
-            const isInternal = typeof soundConfig.id === 'string' && soundConfig.id.includes('station_internal');
 
             if (docked) {
-                if (!isInternal) {
-                    const resumeVolume = soundConfig.lastVolume ?? soundConfig.baseVolume;
-                    soundConfig.cachedUndockedVolume = resumeVolume;
-                    this._rampGain(gainParam, 0, 0.12);
-                }
+                const resumeVolume = soundConfig.lastVolume ?? soundConfig.baseVolume;
+                soundConfig.cachedUndockedVolume = resumeVolume;
+                const dockVolume = Math.max(0, resumeVolume * 0.5);
+                this._rampGain(gainParam, dockVolume, 0.12);
             } else {
                 const targetVolume = soundConfig.cachedUndockedVolume ?? soundConfig.lastVolume ?? soundConfig.baseVolume;
                 this._rampGain(gainParam, targetVolume, 0.2);
@@ -342,15 +340,107 @@ class AmbientSoundManager {
                 };
                 
             case 'station':
-                return {
-                    baseVolume: 0.4,
-                    layers: [
-                        //{ type: 'sawtooth', frequency: 110, volume: 0.3 }, // Mechanical hum
-                        
-                        { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
-                        { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
-                    ]
-                };
+                const stationType = (params.type || 'standard').toLowerCase();
+                switch (stationType) {
+                    case 'military':
+                        return {
+                            baseVolume: 0.45,
+                            layers: [
+                                { type: 'square', frequency: 45, volume: 0.5 }, // Heavy machinery
+                                { type: 'sawtooth', frequency: 90, volume: 0.35, detune: 3 }, // Aggressive hum
+                                { type: 'triangle', frequency: 135, volume: 0.25, detune: -2 } // Alert systems
+                            ]
+                        };
+                    case 'alien':
+                        return {
+                            baseVolume: 0.42,
+                            layers: [
+                                { type: 'sine', frequency: 120, volume: 0.4 }, // High-frequency alien tech
+                                { type: 'triangle', frequency: 240, volume: 0.3, detune: 7 }, // Harmonic shimmer
+                                { type: 'sine', frequency: 60, volume: 0.35, detune: -4 } // Sub-bass thrum
+                            ]
+                        };
+                    case 'agricultural':
+                        return {
+                            baseVolume: 0.38,
+                            layers: [
+                                { type: 'sine', frequency: 50, volume: 0.45 }, // Gentle organic hum
+                                { type: 'triangle', frequency: 100, volume: 0.4, detune: 2 }, // Ventilation
+                                { type: 'sine', frequency: 25, volume: 0.3 } // Low rumble
+                            ]
+                        };
+                    case 'industrial':
+                        return {
+                            baseVolume: 0.48,
+                            layers: [
+                                { type: 'sawtooth', frequency: 40, volume: 0.5 }, // Heavy industrial rumble
+                                { type: 'square', frequency: 80, volume: 0.4, detune: -3 }, // Machinery
+                                { type: 'triangle', frequency: 160, volume: 0.25, detune: 5 } // High-pitched whine
+                            ]
+                        };
+                    case 'mining':
+                        return {
+                            baseVolume: 0.46,
+                            layers: [
+                                { type: 'sawtooth', frequency: 35, volume: 0.5 }, // Drilling vibration
+                                { type: 'square', frequency: 70, volume: 0.4, detune: 4 }, // Heavy equipment
+                                { type: 'sine', frequency: 140, volume: 0.3, detune: -6 } // Compressor hum
+                            ]
+                        };
+                    case 'tourism':
+                        return {
+                            baseVolume: 0.35,
+                            layers: [
+                                { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
+                                { type: 'triangle', frequency: 220, volume: 0.3, detune: 3 }, // Melodic harmony
+                                { type: 'sine', frequency: 55, volume: 0.35, detune: -2 } // Comforting base
+                            ]
+                        };
+                    case 'refinery':
+                        return {
+                            baseVolume: 0.44,
+                            layers: [
+                                { type: 'sawtooth', frequency: 65, volume: 0.45 }, // Chemical processing
+                                { type: 'square', frequency: 130, volume: 0.35, detune: 6 }, // Pumping systems
+                                { type: 'triangle', frequency: 30, volume: 0.3 } // Low hiss
+                            ]
+                        };
+                    case 'posthuman':
+                        return {
+                            baseVolume: 0.4,
+                            layers: [
+                                { type: 'sine', frequency: 150, volume: 0.4 }, // Clean electronic
+                                { type: 'triangle', frequency: 300, volume: 0.3, detune: 8 }, // Digital harmonics
+                                { type: 'sine', frequency: 75, volume: 0.35, detune: -5 } // Subtle base
+                            ]
+                        };
+                    case 'imperial':
+                        return {
+                            baseVolume: 0.4,
+                            layers: [
+                                { type: 'sine', frequency: 85, volume: 0.45 }, // Regal depth
+                                { type: 'triangle', frequency: 170, volume: 0.35, detune: 4 }, // Noble harmonics
+                                { type: 'sine', frequency: 42.5, volume: 0.4, detune: -3 } // Stately base
+                            ]
+                        };
+                    case 'separatist':
+                        return {
+                            baseVolume: 0.4,
+                            layers: [
+                                { type: 'sawtooth', frequency: 50, volume: 0.5 }, // Rough machinery
+                                { type: 'square', frequency: 100, volume: 0.4, detune: 5 }, // Industrial edge
+                                { type: 'triangle', frequency: 25, volume: 0.35 } // Deep vibration
+                            ]
+                        };
+                    default: // standard
+                        return {
+                            baseVolume: 0.4,
+                            layers: [
+                                { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
+                                { type: 'triangle', frequency: 100, volume: 0.4, detune: -5 } // Ventilation
+                            ]
+                        };
+                }
                 
             case 'jumpgate':
                 return {
