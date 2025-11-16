@@ -11,7 +11,8 @@ const WEAPON_TYPE = {
     MISSILE: 'missile',
     TANGLE: 'tangle',
     BARRIER: 'barrier', // Added Barrier type
-    MINE: 'mine' // Added Mine type
+    MINE: 'mine', // Added Mine type
+    HARPOON: 'harpoon' // Harpoon tether
 };
 
 class WeaponSystem {
@@ -362,6 +363,10 @@ static fireForce(owner, system) {
                 break;
             case WEAPON_TYPE.TANGLE: // Add this case
                 this.fireTangle(owner, system, angle);
+                fired = true;
+                break;
+            case WEAPON_TYPE.HARPOON:
+                this.fireHarpoon(owner, system, angle);
                 fired = true;
                 break;
             case WEAPON_TYPE.BARRIER: // Added Barrier case
@@ -829,6 +834,36 @@ static fireTangle(owner, system, angle) {
         soundManager.playWorldSound('tangleCast', ownerX, ownerY, player.pos);
     }
 }
+
+/**
+ * Fire a harpoon projectile. On hit the projectile will spawn a Harpoon tether.
+ */
+static fireHarpoon(owner, system, angle) {
+    if (!owner?.currentWeapon || !system) return;
+    const weapon = owner.currentWeapon;
+    const ownerX = owner.pos.x;
+    const ownerY = owner.pos.y;
+    const speed = weapon.speed || 10;
+
+    let proj;
+    if (this.projectilePool) {
+        proj = this.projectilePool.get(
+            ownerX, ownerY, angle, owner,
+            speed, weapon.damage, weapon.color, "harpoon", null, 120, 0, 0, 5.0, 10.0, 0.1, system
+        );
+    }
+    if (!proj) {
+        proj = new Projectile(ownerX, ownerY, angle, owner, speed, weapon.damage, weapon.color, "harpoon");
+        proj.system = system;
+    }
+    proj.size = weapon.projectileSize || 6;
+    system.addProjectile(proj);
+
+    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        try { soundManager.playWorldSound('harpoonFire', ownerX, ownerY, player.pos); } catch(_) {}
+    }
+}
+
 
     /**
      * Fire/drop a proximity mine

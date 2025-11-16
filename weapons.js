@@ -292,6 +292,17 @@ const WEAPON_UPGRADES = [
         desc: "Temporarily immobilizes enemy ships with energy tethers."
     },
     {
+        name: "Harpoon Launcher",
+        type: "harpoon",
+        damage: 8,
+        color: [180, 220, 255], // pale cyan
+        fireRate: 1.5,
+        price: 4200,
+        projectileSize: 6,
+        speed: 12,
+        desc: "Fires a harpoon that tethers to enemies and pulls ships together until the cable breaks."
+    },
+    {
         name: "Heavy Tangle",
         type: "tangle",
         damage: 10,           //Direct damage

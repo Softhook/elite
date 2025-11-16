@@ -715,7 +715,7 @@ try {
     /** Called when player enters system. Resets dynamic objects. */
     enterSystem(player) {
         this.discover();
-        this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = [];
+        this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
         
         // CRITICAL FIX: Associate the player with this system
@@ -1326,6 +1326,18 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
+            // Update Harpoons
+            if (this.harpoons && this.harpoons.length) {
+                for (let i = this.harpoons.length - 1; i >= 0; i--) {
+                    const h = this.harpoons[i];
+                    try { h.system = this; h.update && h.update(deltaTime || 16); } catch(e) { console.error('Harpoon update error', e); h && h.break && h.break(); }
+                    // Remove if broken or invalid
+                    if (!h || h.broken || !h.owner || !h.target || (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed())) {
+                        this._fastRemove(this.harpoons, i);
+                    }
+                }
+            }
+
             // Update explosions - OPTIMIZED with pooling and fast removal
             for (let i = this.explosions.length - 1; i >= 0; i--) {
                 const exp = this.explosions[i];
@@ -1898,6 +1910,22 @@ checkProjectileCollisions() {
                 distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
                 
                 if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
+                    // Harpoon special-case: spawn a Harpoon tether instead of normal hit
+                    if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                        try {
+                            if (typeof Harpoon !== 'undefined') {
+                                const har = new Harpoon(proj.owner, enemy, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                har.system = this;
+                                if (!this.harpoons) this.harpoons = [];
+                                this.harpoons.push(har);
+                            }
+                            // small impact visual and sound
+                            this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
+                        } catch(e) { console.error('Failed to create Harpoon', e); }
+                        this.removeProjectile(i);
+                        break;
+                    }
+
                     // Use centralized hit handler from WeaponSystem
                     WeaponSystem.handleHitEffects(
                         enemy,
@@ -1907,7 +1935,7 @@ checkProjectileCollisions() {
                         this,
                         proj.color
                     );
-                    
+
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                         enemy.applyDragEffect(
@@ -1915,13 +1943,13 @@ checkProjectileCollisions() {
                             proj.dragMultiplier || 10.0,
                             proj.rotationBlockMultiplier || 0.1
                         );
-                        
+
                         // Add visual feedback for player
                         if (typeof uiManager !== 'undefined') {
                             uiManager.addMessage(`${enemy.shipTypeName} caught in energy tangle!`, "#30FFB4");
                         }
                     }
-                    
+
                     this.removeProjectile(i);
                     break;
                 }
@@ -2560,6 +2588,21 @@ checkProjectileCollisions() {
             const proj = this.projectiles[i];
             if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 proj.draw();
+            }
+        }
+
+        // Draw harpoons (if any)
+        if (this.harpoons && this.harpoons.length) {
+            for (let h of this.harpoons) {
+                if (!h || h.broken) continue;
+                // cull by endpoints
+                const a = h.segments && h.segments[0] && h.segments[0].pos;
+                const b = h.segments && h.segments[h.segments.length-1] && h.segments[h.segments.length-1].pos;
+                if (!a || !b) continue;
+                if (this.isInView(a.x, a.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom) ||
+                    this.isInView(b.x, b.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                    try { h.draw && h.draw(); } catch(e) {}
+                }
             }
         }
 
