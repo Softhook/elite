@@ -9,7 +9,7 @@ class AmbientSoundManager {
         this.masterGain = null;
         this.activeSources = new Map(); // Maps source ID to sound configuration
         this.enabled = true;
-        this.globalVolume = 0.3; // Master volume for all ambient sounds
+        this.globalVolume = 1; // Master volume for all ambient sounds
         this.maxDistance = 3000; // Maximum distance for sound audibility
         this.minVolume = 0.01; // Minimum volume threshold
         this.isDocked = false; // Track docked state
