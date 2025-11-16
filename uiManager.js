@@ -2404,6 +2404,7 @@ if (isIllegalInSystem || isMissionCargo) {
                 // grey out this mission
                 this.inactiveMissionIds.add(activeMission.id);
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+                if (typeof saveGame === 'function') saveGame();
                 return true;
             }
 
@@ -2437,7 +2438,7 @@ if (isIllegalInSystem || isMissionCargo) {
                             const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
                             player.recordShipPurchase(area.shipName, finalPrice, systemName);
                             
-                            saveGame && saveGame();
+                            if (typeof saveGame === 'function') saveGame();
                             this.addMessage("You bought a " + area.shipName + "!");
                             if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                         } else {
@@ -2453,7 +2454,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
                         player.recordShipPurchase(area.shipName, finalPrice, systemName);
                         
-                        saveGame && saveGame();
+                        if (typeof saveGame === 'function') saveGame();
                         
                         if (finalPrice < 0) {
                             this.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
@@ -2530,7 +2531,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         
                         // Auto-save if possible
                         if (typeof saveGame === 'function') {
-                            saveGame();
+                            if (typeof saveGame === 'function') saveGame();
                         }
                     } else {
                         this.addMessage("Not enough credits!");
@@ -2562,6 +2563,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     player.hull = player.maxHull;
                     this.addMessage(`Ship fully repaired for ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
                 } else {
                     this.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
@@ -2582,6 +2584,7 @@ if (isIllegalInSystem || isMissionCargo) {
                     if (player.hull > player.maxHull) player.hull = player.maxHull;
                     this.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
                 } else {
                     this.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
@@ -2603,6 +2606,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         if (typeof soundManager !== 'undefined') {
                             soundManager.playSound('upgrade');
                         }
+                        if (typeof saveGame === 'function') saveGame();
                     }
                 } else {
                     this.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
@@ -2668,6 +2672,7 @@ if (isIllegalInSystem || isMissionCargo) {
                             if (typeof soundManager !== 'undefined') {
                                 soundManager.playSound('upgrade');
                             }
+                            if (typeof saveGame === 'function') saveGame();
                             // If we reached max bodyguards, refresh the UI
                             if (player.activeBodyguards.length >= player.bodyguardLimit) {
                                 if (gameStateManager) {
@@ -2684,6 +2689,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         player.dismissBodyguards();
                         this.addMessage("All bodyguards have been dismissed.", [255, 180, 100]);
                         if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+                        if (typeof saveGame === 'function') saveGame();
                         if (gameStateManager) {
                             gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
                         }
@@ -2778,7 +2784,7 @@ if (isIllegalInSystem || isMissionCargo) {
                                 }
                                 this.addMessage(`Retrieved ${retrieveAmount}t of ${btn.commodity} from storage.`, [100, 255, 100]);
                                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                                saveGame();
+                                if (typeof saveGame === 'function') saveGame();
                             } else {
                                 this.addMessage("Not enough cargo space!", [255, 100, 100]);
                                 if (typeof soundManager !== 'undefined') soundManager.playSound('error');

@@ -204,7 +204,7 @@ class Player {
 
         if (this.activeMission.status === 'Active') {
             console.log(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
-            saveGame();
+            if (typeof saveGame === 'function') saveGame();
             // Play mission accept sound
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
                 soundManager.playSound('missionAccept');
@@ -389,7 +389,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
             soundManager.playSound('missionComplete');
         }
 
-        saveGame(); // Save progress
+        if (typeof saveGame === 'function') saveGame(); // Save progress
         return true; // Success
     }
 

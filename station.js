@@ -881,7 +881,7 @@ class Station {
         if (player.credits >= area.price) {
             player.spendCredits(area.price);
             player.applyShipDefinition(area.shipType);
-            saveGame && saveGame();
+            if (typeof saveGame === 'function') saveGame();
             alert(`You bought a ${area.shipType}!`);
         }
     }
