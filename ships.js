@@ -197,6 +197,10 @@ function drawGladiusFighter(s, thrusting = false) { // Medium Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.GladiusFighter;
     drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
 }
+function drawGeister(s, thrusting = false) { // Medium Fighter
+    let r = s / 2; let def = SHIP_DEFINITIONS.Geister;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+}
 
 function drawCenturionGunship(s, thrusting = false) { // Heavy Fighter
     let r = s / 2; let def = SHIP_DEFINITIONS.CenturionGunship;
@@ -765,6 +769,39 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Computers"],
         price: 28400,
         aiRoles: ["MILITARY","BOUNTY_HUNTER","GUARD"],
+        techLevel: 3 // Mid-tier
+    },
+        "Geister": {
+        name: "Geister", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
+        armament: ["Burst Blaster", "Beam Laser"], // Fast attack loadout
+        costCategory: "Medium", description: "Fast Stealth Ship.",
+        drawFunction: drawGeister, 
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.7205, y: 0.0000 }, { x: 0.5929, y: 0.4300 }, { x: -0.6050, y: 0.6968 }, { x: -0.3295, y: 0.4865 }, { x: -0.5929, y: 0.4300 }, { x: -0.3295, y: 0.1830 }, { x: -0.7205, y: 0.0000 }, { x: -0.3295, y: -0.1830 }, { x: -0.5929, y: -0.4300 }, { x: -0.3295, y: -0.4865 }, { x: -0.6050, y: -0.6968 }, { x: 0.5929, y: -0.4300 } ],
+                fillColor: [65, 48, 197],
+                strokeColor: [120, 125, 140],
+                strokeW: 1.50
+            },
+            {
+                vertexData: [ { x: 0.6165, y: 0.0000 }, { x: 0.3009, y: 0.1809 }, { x: 0.3009, y: -0.1809 } ],
+                fillColor: [250, 100, 0],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: 0.0000, y: 0.1777 }, { x: 0.2510, y: 0.0000 }, { x: 0.0000, y: -0.1777 } ],
+                fillColor: [250, 100, 0],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
+        fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
+        typicalCargo: ["Computers"],
+        price: 18400,
+        aiRoles: ["PIRATE"],
         techLevel: 3 // Mid-tier
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
