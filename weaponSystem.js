@@ -843,7 +843,7 @@ static fireHarpoon(owner, system, angle) {
     const weapon = owner.currentWeapon;
     const ownerX = owner.pos.x;
     const ownerY = owner.pos.y;
-    const speed = weapon.speed || 10;
+    const speed = weapon.speed || 30; // increased default harpoon projectile speed to fly quickly
 
     let proj;
     if (this.projectilePool) {

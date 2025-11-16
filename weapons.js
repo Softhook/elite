@@ -299,7 +299,7 @@ const WEAPON_UPGRADES = [
         fireRate: 1.5,
         price: 4200,
         projectileSize: 6,
-        speed: 12,
+        speed: 30,
         desc: "Fires a harpoon that tethers to enemies and pulls ships together until the cable breaks."
     },
     {

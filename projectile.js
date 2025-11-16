@@ -40,6 +40,7 @@ class Projectile {
         this._isPlayer = false;
         this._isMissile = false;
         this._isTangle = false;
+        this._isHarpoon = false;
         this._timeCorrection = 1.0;
 
         // Call reset if parameters provided
@@ -115,6 +116,7 @@ class Projectile {
                 this.initialLifespan = lifespan;
                 this.size = this._isPlayer ? 4 : 3;
             }
+        
         } else {
             // Fallback if no owner or currentWeapon
             this.damage = damage;
@@ -138,6 +140,7 @@ class Projectile {
         // Note: External code should use these cached flags instead of comparing this.type
         this._isMissile = (this.type === "missile");
         this._isTangle = (this.type === "tangle");
+        this._isHarpoon = (this.type === "harpoon" || this.type === "HARPOON");
         
         this.lifespan = this.initialLifespan;
         
@@ -230,6 +233,20 @@ class Projectile {
                     vertex(x, y);
                 }
                 endShape();
+            }
+            pop();
+        } else if (this._isHarpoon) {
+            // Harpoon projectile: render as a single straight tether line (matches Harpoon tether color/weight)
+            push();
+            stroke(180, 220, 255);
+            strokeWeight(2);
+            noFill();
+            const ownerPos = this.owner && this.owner.pos ? this.owner.pos : null;
+            if (ownerPos) {
+                line(ownerPos.x, ownerPos.y, this.pos.x, this.pos.y);
+            } else {
+                // Fallback to a short line pointing to the projectile
+                line(this.pos.x - (this.size * 2), this.pos.y, this.pos.x, this.pos.y);
             }
             pop();
         } else {
