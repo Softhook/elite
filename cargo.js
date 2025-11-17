@@ -12,6 +12,10 @@ class Cargo {
         this.rotation = random(TWO_PI);
         this.rotationSpeed = random(-0.01, 0.01);
         this.collected = false;
+        // Harpoon/attachment state
+        this.attached = false;     // whether currently attached to a ship
+        this.attachedTo = null;    // reference to ship collecting it
+        this.attachedBy = null;    // string marker, e.g. 'harpoon'
         this.lifetime = 1800; // Exists for 30 seconds (60fps * 30)
         this.color = Cargo.determineColor(this.type);
     }
@@ -45,6 +49,81 @@ class Cargo {
 
     update() {
         if (this.collected) return;
+
+        // If attached to a ship (harpooned), pull towards the ship and attempt auto-collection
+        if (this.attached && this.attachedTo && this.attachedTo.pos) {
+            // defensive check: if owner destroyed, detach
+            if (this.attachedTo.destroyed || (typeof this.attachedTo.isDestroyed === 'function' && this.attachedTo.isDestroyed())) {
+                this.attached = false;
+                this.attachedTo = null;
+                this.attachedBy = null;
+            } else {
+                const dx = this.attachedTo.pos.x - this.pos.x;
+                const dy = this.attachedTo.pos.y - this.pos.y;
+                const dist = Math.sqrt(dx*dx + dy*dy) || 0.0001;
+
+                // Pull speed: proportional to distance but clamped for stability
+                const speed = Math.min(12, 0.12 * dist + 2.0);
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                // Move cargo towards ship
+                this.pos.x += nx * speed;
+                this.pos.y += ny * speed;
+                this.vel.x = nx * speed;
+                this.vel.y = ny * speed;
+
+                // If close enough, attempt to add to ship's cargo/inventory
+                const collectRadius = (this.attachedTo.size || 16) / 2 + 6;
+                if (dist <= collectRadius) {
+                    // Try to add to owner's cargo if method exists
+                    const owner = this.attachedTo;
+                    let added = 0;
+                    let success = false;
+                    try {
+                        if (typeof owner.addCargo === 'function') {
+                            const res = owner.addCargo(this.type, this.quantity, true);
+                            success = !!res && !!res.success;
+                            added = (res && res.added) ? res.added : 0;
+                        } else {
+                            // Fallback: if no addCargo, mark as collected
+                            success = true;
+                            added = this.quantity;
+                        }
+                    } catch (e) {
+                        success = false;
+                        added = 0;
+                    }
+
+                    if (success && added > 0) {
+                        // Play pickup sound if available
+                        try { if (typeof soundManager !== 'undefined') soundManager.playSound && soundManager.playSound('pickupCoin'); } catch(_) {}
+                        // If partial add, reduce quantity and remain in world
+                        if (added < this.quantity) {
+                            this.quantity -= added;
+                            this.attached = false;
+                            this.attachedTo = null;
+                            this.attachedBy = null;
+                        } else {
+                            this.collected = true;
+                        }
+                    } else {
+                        // Owner couldn't accept cargo (full etc.) - detach and resume drifting
+                        this.attached = false;
+                        this.attachedTo = null;
+                        this.attachedBy = null;
+                        // Give a small outward velocity so it doesn't immediately reattach
+                        this.vel.x = nx * -2;
+                        this.vel.y = ny * -2;
+                    }
+                }
+                // decrement lifetime while being pulled (so cargo won't persist forever)
+                this.lifetime--;
+                return;
+            }
+        }
+
+        // Default floating behavior
         this.pos.add(this.vel);
         this.vel.mult(0.98);
         this.rotation = (this.rotation + this.rotationSpeed) % TWO_PI;

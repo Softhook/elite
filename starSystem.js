@@ -1857,6 +1857,42 @@ checkProjectileCollisions() {
         
         // If already hit something, skip the rest of the checks
         if (hit) continue;
+
+        // Check against cargo - allow harpoon projectiles to attach cargo and pull it to the owner
+        if (this.cargo && this.cargo.length) {
+            for (let j = this.cargo.length - 1; j >= 0; j--) {
+                const cargoItem = this.cargo[j];
+                if (!cargoItem || cargoItem.collected) continue;
+
+                const combinedRadius = (cargoItem.size || 8) + projSize;
+                const combinedRadiusSquared = combinedRadius * combinedRadius;
+                distCheckVector.set(cargoItem.pos.x - projPos.x, cargoItem.pos.y - projPos.y);
+
+                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(cargoItem)) {
+                    // Harpoon special-case: attach cargo to the firing ship
+                    if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                        try {
+                            cargoItem.attached = true;
+                            cargoItem.attachedTo = proj.owner || null;
+                            cargoItem.attachedBy = 'harpoon';
+                            if (cargoItem.vel) { cargoItem.vel.x = 0; cargoItem.vel.y = 0; }
+                            // small impact visual and sound
+                            this.addExplosion(projPos.x, projPos.y, 4, [180,220,255]);
+                            try { if (typeof soundManager !== 'undefined') soundManager.playWorldSound && soundManager.playWorldSound('harpoonFire', projPos.x, projPos.y, this.player.pos); } catch(_) {}
+                        } catch (e) { console.error('Error attaching cargo to harpoon:', e); }
+                        this.removeProjectile(i);
+                        hit = true;
+                        break;
+                    } else {
+                        // Non-harpoon projectiles simply create a small explosion and are removed
+                        this.addExplosion(projPos.x, projPos.y, 6, [255,160,0]);
+                        this.removeProjectile(i);
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+        }
         
         // For player hits - use quick distance check first
         if (proj.owner instanceof Enemy) {
