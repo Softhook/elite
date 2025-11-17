@@ -106,6 +106,7 @@ class CosmicStorm {
     }
 
     generateLightning() {
+        // Create bolt objects with metadata for richer rendering
         this.lightningBolts = [];
         const boltCount = floor(random(1, 4) * this.intensity);
         for (let i = 0; i < boltCount; i++) {
@@ -121,23 +122,47 @@ class CosmicStorm {
                 x: this.pos.x + cos(endAngle) * endDist,
                 y: this.pos.y + sin(endAngle) * endDist
             };
-            const segments = floor(random(4, 8));
-            const points = [start];
+            const segments = floor(random(5, 9));
+            const basePoints = [start];
             for (let j = 1; j < segments; j++) {
                 const t = j / segments;
                 const midX = lerp(start.x, end.x, t);
                 const midY = lerp(start.y, end.y, t);
                 const perpX = -(end.y - start.y);
                 const perpY = end.x - start.x;
-                const perpLen = sqrt(perpX * perpX + perpY * perpY);
-                const jitterAmt = this.radius * 0.15 * (1 - t) * random(0.5, 1.5);
-                points.push({
+                const perpLen = max(0.0001, sqrt(perpX * perpX + perpY * perpY));
+                const jitterAmt = this.radius * 0.12 * (1 - t) * random(0.5, 1.6);
+                basePoints.push({
                     x: midX + (perpX / perpLen) * jitterAmt * (random() > 0.5 ? 1 : -1),
                     y: midY + (perpY / perpLen) * jitterAmt * (random() > 0.5 ? 1 : -1)
                 });
             }
-            points.push(end);
-            this.lightningBolts.push(points);
+            basePoints.push(end);
+
+            // Branch generation: create small sub-branches off the main bolt
+            const branches = [];
+            const branchCount = floor(random(0, 3) * this.intensity);
+            for (let b = 0; b < branchCount; b++) {
+                const segIndex = floor(random(1, basePoints.length - 2));
+                const segPoint = basePoints[segIndex];
+                const dir = p5.Vector.sub(createVector(basePoints[segIndex + 1].x, basePoints[segIndex + 1].y), createVector(basePoints[segIndex - 1].x, basePoints[segIndex - 1].y)).normalize();
+                const branchLen = this.radius * random(0.08, 0.25) * (1 - segIndex / basePoints.length);
+                const branchPoints = [{ x: segPoint.x, y: segPoint.y }];
+                const branchSegments = floor(random(2, 5));
+                for (let bs = 1; bs <= branchSegments; bs++) {
+                    const t = bs / branchSegments;
+                    const offset = p5.Vector.add(createVector(segPoint.x, segPoint.y), p5.Vector.mult(dir.copy().rotate(random(-PI/3, PI/3)), branchLen * t));
+                    branchPoints.push({ x: offset.x + random(-8, 8), y: offset.y + random(-8, 8) });
+                }
+                branches.push(branchPoints);
+            }
+
+            this.lightningBolts.push({
+                basePoints,
+                branches,
+                thickness: random(2, 6) * this.intensity,
+                alpha: random(0.7, 1.0)
+            });
         }
     }
 
@@ -205,20 +230,62 @@ class CosmicStorm {
         const color0 = this.color[0];
         const color1 = this.color[1];
         const color2 = this.color[2];
+
+        // Use canvas blending and shadow for glow
+        const ctx = drawingContext;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = `rgba(${color0}, ${color1}, ${color2}, 0.9)`;
+        ctx.shadowBlur = 20 * this.intensity;
+
         for (let i = 0, len = this.lightningBolts.length; i < len; i++) {
             const bolt = this.lightningBolts[i];
-            const boltLen = bolt.length - 1;
-            stroke(255, 255, 255, 200);
-            strokeWeight(3);
-            for (let j = 0; j < boltLen; j++) {
-                line(bolt[j].x, bolt[j].y, bolt[j+1].x, bolt[j+1].y);
+
+            // Create a jittered copy of base points for flicker effect
+            const jitterAmp = 6 * (1 - (this.lightningDuration / max(this.lightningDuration, 1))) * this.intensity;
+            const jittered = bolt.basePoints.map(p => ({ x: p.x + random(-jitterAmp, jitterAmp), y: p.y + random(-jitterAmp, jitterAmp) }));
+
+            // Outer colored glow stroke
+            stroke(color0, color1, color2, 110 * bolt.alpha);
+            strokeWeight(bolt.thickness * 1.6);
+            noFill();
+            for (let j = 0; j < jittered.length - 1; j++) {
+                line(jittered[j].x, jittered[j].y, jittered[j+1].x, jittered[j+1].y);
             }
-            stroke(color0, color1, color2, 100);
-            strokeWeight(6);
-            for (let j = 0; j < boltLen; j++) {
-                line(bolt[j].x, bolt[j].y, bolt[j+1].x, bolt[j+1].y);
+
+            // Inner white core
+            stroke(255, 255, 255, 240 * bolt.alpha);
+            strokeWeight(max(1, bolt.thickness * 0.5));
+            for (let j = 0; j < jittered.length - 1; j++) {
+                line(jittered[j].x, jittered[j].y, jittered[j+1].x, jittered[j+1].y);
+            }
+
+            // Draw branches
+            for (let br = 0; br < bolt.branches.length; br++) {
+                const branch = bolt.branches[br].map(p => ({ x: p.x + random(-3, 3), y: p.y + random(-3, 3) }));
+                stroke(color0, color1, color2, 120 * bolt.alpha);
+                strokeWeight(max(1, bolt.thickness * 0.6));
+                for (let j = 0; j < branch.length - 1; j++) {
+                    line(branch[j].x, branch[j].y, branch[j+1].x, branch[j+1].y);
+                }
+                stroke(255, 255, 255, 200 * bolt.alpha);
+                strokeWeight(max(0.6, bolt.thickness * 0.25));
+                for (let j = 0; j < branch.length - 1; j++) {
+                    line(branch[j].x, branch[j].y, branch[j+1].x, branch[j+1].y);
+                }
+            }
+
+            // Sparks: small bright points along bolt
+            for (let j = 0; j < jittered.length; j += max(1, floor(random(1, 3)))) {
+                const p = jittered[j];
+                noStroke();
+                fill(255, 255, 255, 200 * bolt.alpha);
+                ellipse(p.x, p.y, random(1.5, 4) * this.intensity);
             }
         }
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
     }
 
     drawDebug() {
