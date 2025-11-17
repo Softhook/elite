@@ -88,7 +88,6 @@ class EnemyTargeting {
         const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.COMBAT);
         if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
             const isAlien = this.role === AI_ROLE.ALIEN;
-            const isCombat = this.role === AI_ROLE.COMBAT;
             
             for (let i = 0, len = system.enemies.length; i < len; i++) {
                 const otherEnemy = system.enemies[i];
@@ -99,13 +98,14 @@ class EnemyTargeting {
                 if (isAlien && otherEnemy.role === AI_ROLE.ALIEN) {
                     continue;
                 }
-                // Combat ships prioritize based on faction
-                if (isCombat) {
-                    // Skip allies (same faction)
+                // Skip allies (same faction) - applies to all roles
+                // The faction penalty in evaluateTargetScore will handle nuanced scoring,
+                // but we skip evaluation entirely here for efficiency
+                if (this._getShipFaction) {
                     const myFaction = this._getShipFaction(this);
                     const theirFaction = this._getShipFaction(otherEnemy);
                     if (myFaction === theirFaction && myFaction !== 'UNKNOWN') {
-                        continue; // Don't target allies
+                        continue; // Don't even evaluate allies
                     }
                 }
                 if (!this.isTargetValid(otherEnemy)) {
@@ -269,6 +269,30 @@ class EnemyTargeting {
                 _score += TARGET_SCORE_RETALIATION_PIRATE;
                 _interesting = true;
             }
+            
+            // --- FACTION CHECK: Apply large penalty for same-faction targeting ---
+            // This prevents friendly fire between ships of the same faction
+            // Exception: Allow brief retaliation if same-faction ship attacked us
+            if (enemy._getShipFaction) {
+                const myFaction = enemy._getShipFaction(enemy);
+                const targetFaction = enemy._getShipFaction(target);
+                
+                // Only apply faction logic if both have known factions (not UNKNOWN)
+                if (myFaction !== 'UNKNOWN' && targetFaction !== 'UNKNOWN' && myFaction === targetFaction) {
+                    // Same faction - apply large penalty to discourage targeting
+                    // But still allow retaliation if they attacked us first
+                    if (!isAttacker) {
+                        // Not our attacker - heavily discourage targeting same faction
+                        _score -= TARGET_SCORE_SAME_FACTION_PENALTY;
+                    } else {
+                        // They attacked us - allow brief retaliation but with reduced enthusiasm
+                        // The retaliation bonus is already added above, but we'll add a moderate penalty
+                        // This means they CAN retaliate but won't prioritize it as much
+                        _score -= (TARGET_SCORE_SAME_FACTION_PENALTY * 0.5);
+                    }
+                }
+            }
+            // --- END FACTION CHECK ---
             
             // Role-specific scoring - add based on enemy role
             switch (enemy.role) {

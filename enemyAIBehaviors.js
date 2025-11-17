@@ -941,24 +941,6 @@ class EnemyAIBehaviors {
     }
 
     /**
-     * Helper to determine ship faction from ship definition
-     * @param {Object} ship - The ship to check
-     * @returns {string} - Faction identifier
-     */
-    _getShipFaction(ship) {
-        if (!ship || !ship.shipTypeName) return 'UNKNOWN';
-        
-        const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
-        if (shipDef && shipDef.aiRoles) {
-            if (shipDef.aiRoles.includes('IMPERIAL')) return 'IMPERIAL';
-            if (shipDef.aiRoles.includes('SEPARATIST')) return 'SEPARATIST';
-            if (shipDef.aiRoles.includes('MILITARY')) return 'MILITARY';
-        }
-        
-        return 'UNKNOWN';
-    }
-
-    /**
      * Apply AI bonus for military ships fighting aliens
      * Increases accuracy and turn rate temporarily
      */
