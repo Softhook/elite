@@ -1863,12 +1863,21 @@ checkProjectileCollisions() {
             for (let j = this.cargo.length - 1; j >= 0; j--) {
                 const cargoItem = this.cargo[j];
                 if (!cargoItem || cargoItem.collected) continue;
+                // Skip cargo already attached to a ship (being reeled in)
+                if (cargoItem.attached) continue;
 
-                const combinedRadius = (cargoItem.size || 8) + projSize;
+                let combinedRadius = (cargoItem.size || 8) + projSize;
+                // Give harpoon projectiles a larger effective hit-area for easier grabs
+                if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                    const extra = Math.max(8, (cargoItem.size || 8) * 0.6);
+                    combinedRadius += extra;
+                }
                 const combinedRadiusSquared = combinedRadius * combinedRadius;
                 distCheckVector.set(cargoItem.pos.x - projPos.x, cargoItem.pos.y - projPos.y);
 
-                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(cargoItem)) {
+                // For harpoons accept the expanded broadphase as a hit; otherwise fall back to precise check
+                const collisionPass = (proj.type === 'harpoon' || proj.type === 'HARPOON') ? true : proj.checkCollision(cargoItem);
+                if (distCheckVector.magSq() <= combinedRadiusSquared && collisionPass) {
                     // Harpoon special-case: attach cargo to the firing ship
                     if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
                         try {
