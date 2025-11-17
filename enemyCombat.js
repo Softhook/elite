@@ -46,12 +46,16 @@ class EnemyCombat {
 
         // Check if target is already entangled (tangle effect) or currently harpooned by any active harpoon
         const targetAlreadyEntangled = target && 
-                                    target.dragMultiplier > 1.0 && 
-                                    target.dragEffectTimer > 0;
+                        target.dragMultiplier > 1.0 && 
+                        target.dragEffectTimer > 0;
 
         // Detect whether the target is currently part of an active Harpoon tether in the system
         // Use a simple counter on the entity for O(1) checks (set when harpoon is created/broken)
         const targetHarpooned = !!(target && (target._harpoonCount && target._harpoonCount > 0));
+
+        // Also detect whether *we* (the owner) already have an active harpoon tether.
+        // If the ship already has a tether out, it should not attempt to fire another one.
+        const ownerHarpooned = !!(this._harpoonCount && this._harpoonCount > 0);
         
         for (const weapon of this.weapons) {
             let score = 0;
@@ -114,7 +118,8 @@ class EnemyCombat {
             // --- HARPOON WEAPON LOGIC ---
             if (baseType === WEAPON_TYPE.HARPOON && target) {
                 // Avoid firing harpoon at already entangled targets OR targets already attached to a harpoon
-                if (targetAlreadyEntangled || targetHarpooned) {
+                // Also avoid selecting harpoon if *we* already have an active harpoon tether.
+                if (targetAlreadyEntangled || targetHarpooned || ownerHarpooned) {
                     score -= 10;
                 } else {
                     // Prefer harpoon when the target is faster than us or generally fast
@@ -369,7 +374,8 @@ class EnemyCombat {
         // If the target is currently attached to an active Harpoon tether, avoid holding/firing a harpoon against it
         try {
             const targetIsHarpooned = !!(this.target && (this.target._harpoonCount && this.target._harpoonCount > 0));
-            if (targetIsHarpooned && this.currentWeapon) {
+            const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
+            if ((targetIsHarpooned || ownerHasHarpoon) && this.currentWeapon) {
                 const curBase = getBaseWeaponType(this.currentWeapon.type || '');
                 if (curBase === WEAPON_TYPE.HARPOON) {
                     // Immediately cycle away from harpoon to avoid redundant shots
@@ -377,7 +383,7 @@ class EnemyCombat {
                     // Small cooldown to avoid instant re-selection spam
                     this.fireCooldown = Math.max(this.fireCooldown || 0, 0.05);
                     if (typeof AI_LOG !== 'undefined') {
-                        AI_LOG(`${this.shipTypeName} avoided firing harpoon at already-harpooned target and switched weapon`);
+                        AI_LOG(`${this.shipTypeName} avoided firing duplicate harpoon (ownerHas=${ownerHasHarpoon}, targetHas=${targetIsHarpooned}) and switched weapon`);
                     }
                 }
             }
@@ -511,6 +517,19 @@ class EnemyCombat {
             }
         }
         let weaponType = (this.currentWeapon.type || '');
+
+        // Prevent firing a second harpoon if either we already have an active tether
+        // or the target is already attached to a harpoon. Cycle to another weapon instead.
+        if (weaponType === WEAPON_TYPE.HARPOON) {
+            const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
+            const targetHasHarpoon = !!(targetToPass && (targetToPass._harpoonCount && targetToPass._harpoonCount > 0));
+            if (ownerHasHarpoon || targetHasHarpoon) {
+                this.cycleWeapon();
+                this.fireCooldown = Math.max(this.fireCooldown || 0, 0.05);
+                if (typeof AI_LOG !== 'undefined') AI_LOG(`${this.shipTypeName} avoided firing duplicate harpoon (ownerHas=${ownerHasHarpoon}, targetHas=${targetHasHarpoon})`);
+                return;
+            }
+        }
 
         if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {
             if (WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
