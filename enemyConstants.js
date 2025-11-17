@@ -84,6 +84,9 @@ const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 130;   // Imperial vs Separatist rival
 const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 20;  // Pirates
 const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 
+// Faction-based targeting modifier
+const TARGET_SCORE_SAME_FACTION_PENALTY = 500;  // Large penalty for targeting same faction (prevents friendly fire)
+
 // -------------------------
 // --- Movement & Combat Constants ---
 // -------------------------

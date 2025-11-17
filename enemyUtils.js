@@ -184,6 +184,32 @@ class EnemyUtils {
         let sumRadii = (target.size / 2) + (this.size / 2); 
         return dSq < sq(sumRadii);
     }
+
+    /**
+     * Helper to determine ship faction from ship definition or player faction property
+     * @param {Object} ship - The ship to check (enemy or player)
+     * @returns {string} - Faction identifier: 'IMPERIAL', 'SEPARATIST', 'MILITARY', 'UNKNOWN'
+     */
+    _getShipFaction(ship) {
+        if (!ship) return 'UNKNOWN';
+        
+        // Check if this is a player with a faction
+        if (ship.playerFaction) {
+            return ship.playerFaction;
+        }
+        
+        // Check ship definition for faction in aiRoles
+        if (ship.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined') {
+            const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
+            if (shipDef && shipDef.aiRoles) {
+                if (shipDef.aiRoles.includes('IMPERIAL')) return 'IMPERIAL';
+                if (shipDef.aiRoles.includes('SEPARATIST')) return 'SEPARATIST';
+                if (shipDef.aiRoles.includes('MILITARY')) return 'MILITARY';
+            }
+        }
+        
+        return 'UNKNOWN';
+    }
 }
 
 // Apply utility methods to Enemy prototype
