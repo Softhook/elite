@@ -827,10 +827,13 @@ try {
             } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) { // 7% aliens
                 chosenRole = AI_ROLE.ALIEN;
                 chosenShipTypeName = random(ALIEN_SHIPS);
-            } else { // 8% local transports (police/civilian)
-                if (random() < 0.5 && POLICE_SHIPS.length > 0) {
-                    chosenRole = AI_ROLE.POLICE;
-                    chosenShipTypeName = random(POLICE_SHIPS);
+            } else { // 8% local transports (non-police)
+                // Police are no longer launched based on system/economy type.
+                // Use non-police transport/hauler options here; policing is determined
+                // centrally by security level via getEnemyRoleProbabilities().
+                if (random() < 0.6 && TRANSPORT_SHIPS.length > 0) {
+                    chosenRole = AI_ROLE.TRANSPORT;
+                    chosenShipTypeName = random(TRANSPORT_SHIPS);
                 } else if (HAULER_SHIPS.length > 0) {
                     chosenRole = AI_ROLE.HAULER;
                     chosenShipTypeName = random(HAULER_SHIPS);
@@ -853,9 +856,8 @@ try {
                 if (HAULER_SHIPS.length > 0) {
                     rolesToConsider.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
                 }
-                if (POLICE_SHIPS.length > 0) { 
-                    rolesToConsider.push({ role: AI_ROLE.POLICE, ships: POLICE_SHIPS });
-                }
+                // Police removed from alien-branch ad-hoc pools; police spawning is
+                // governed by system security level instead of economy type.
 
                 if (rolesToConsider.length > 0) {
                     const selectedPool = random(rolesToConsider);
