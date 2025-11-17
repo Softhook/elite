@@ -749,6 +749,99 @@ class EnemyAIBehaviors {
         }
         // --- End Braking ---
 
+        // --- Attempt ranged harpoon if available ---
+        // Quick guard: skip heavy firing calculations if we don't have a harpoon weapon
+        try {
+            const hasHarpoon = Array.isArray(this.weapons) && this.weapons.some(w => {
+                try {
+                    return (typeof getBaseWeaponType === 'function') ? getBaseWeaponType(w.type || '') === WEAPON_TYPE.HARPOON : (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon'));
+                } catch (e) {
+                    return (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon'));
+                }
+            });
+
+            if (hasHarpoon && distanceToCargo >= collectionRadius && distanceToCargo <= (this.firingRange || 0)) {
+                const harpoonIdx = (Array.isArray(this.weapons)) ? this.weapons.findIndex(w => {
+                    try { return (typeof getBaseWeaponType === 'function') ? getBaseWeaponType(w.type || '') === WEAPON_TYPE.HARPOON : (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); } catch(e) { return (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); }
+                }) : -1;
+                if (harpoonIdx !== -1 && typeof this.isWeaponReady === 'function' && this.isWeaponReady()) {
+                    // Prevent firing duplicate harpoons if owner or cargo already has a tether
+                    const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
+                    const cargoHarpooned = !!(this.cargoTarget && this.cargoTarget._harpoonCount && this.cargoTarget._harpoonCount > 0);
+                    if (ownerHasHarpoon || cargoHarpooned) {
+                        // Skip firing if already tethered
+                    } else {
+                        // Temporarily activate the harpoon weapon with proper bookkeeping
+                        const prevWeapon = this.currentWeapon;
+                        const prevFireRate = this.fireRate;
+                        const prevWeaponIndex = this.weaponIndex;
+
+                        const harpoonWeapon = this.weapons[harpoonIdx];
+                        this.weaponIndex = harpoonIdx;
+                        this.currentWeapon = harpoonWeapon;
+                        this.fireRate = harpoonWeapon.fireRate || this.fireRate;
+
+                        // Leading calculation copied from fireWeapon for harpoon interception
+                        let fireAngle = atan2(this.cargoTarget.pos.y - this.pos.y, this.cargoTarget.pos.x - this.pos.x);
+                        try {
+                            const tx = this.cargoTarget.pos.x - this.pos.x;
+                            const ty = this.cargoTarget.pos.y - this.pos.y;
+                            const tvx = (this.cargoTarget.vel && this.cargoTarget.vel.x) ? this.cargoTarget.vel.x : 0;
+                            const tvy = (this.cargoTarget.vel && this.cargoTarget.vel.y) ? this.cargoTarget.vel.y : 0;
+                            const s = (harpoonWeapon && harpoonWeapon.speed) ? harpoonWeapon.speed : 30;
+
+                            const a = (tvx*tvx + tvy*tvy) - (s*s);
+                            const b = 2 * (tx*tvx + ty*tvy);
+                            const c = tx*tx + ty*ty;
+                            let t = null;
+                            if (Math.abs(a) < 1e-6) {
+                                if (Math.abs(b) > 1e-6) {
+                                    const tl = -c / b;
+                                    if (tl > 0) t = tl;
+                                }
+                            } else {
+                                const disc = b*b - 4*a*c;
+                                if (disc >= 0) {
+                                    const sqrtD = Math.sqrt(disc);
+                                    const t1 = (-b - sqrtD) / (2*a);
+                                    const t2 = (-b + sqrtD) / (2*a);
+                                    const candidates = [t1, t2].filter(v => v > 0).sort((A,B)=>A-B);
+                                    if (candidates.length) t = candidates[0];
+                                }
+                            }
+
+                            if (t && isFinite(t) && t > 0) {
+                                const aimX = this.cargoTarget.pos.x + tvx * t;
+                                const aimY = this.cargoTarget.pos.y + tvy * t;
+                                fireAngle = atan2(aimY - this.pos.y, aimX - this.pos.x);
+                            }
+                        } catch (e) {
+                            // fall back to direct aim
+                        }
+
+                        // Fire via WeaponSystem directly (avoids fireWeapon's Cargo block)
+                        try {
+                            const fired = (typeof WeaponSystem !== 'undefined')
+                                ? WeaponSystem.fire(this, system, fireAngle, harpoonWeapon.type, null)
+                                : false;
+                            if (fired) {
+                                this.fireCooldown = this.computeCooldown(this.fireRate);
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+
+                        // restore previous weapon state
+                        this.weaponIndex = prevWeaponIndex;
+                        this.currentWeapon = prevWeapon;
+                        this.fireRate = prevFireRate;
+                    }
+                }
+            }
+        } catch (e) {
+            // defensive: ignore any issues here
+        }
+
 
         // --- Check if we've reached the cargo for collection ---
         if (distanceToCargo < collectionRadius) {
