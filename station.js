@@ -473,6 +473,182 @@ class Station {
         pop();
     }
 
+    // --- Additional decorative elements (20 new helpers) ---
+    _drawAntennaArray(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.02 * scale;
+        stroke(180); strokeWeight(1);
+        for (let i = -1; i <= 1; i++) {
+            line(i * s * 0.8, 0, i * s * 0.8, -s * (1.6 + sin(this.lightTimer * 0.6 + i) * 0.2));
+            ellipse(i * s * 0.8, -s * (1.6 + sin(this.lightTimer * 0.6 + i) * 0.2), s * 0.18, s * 0.18);
+        }
+        pop();
+    }
+
+    _drawSatelliteDish(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.035 * scale;
+        stroke(90); fill(60);
+        arc(0, 0, s * 1.6, s * 1.6, -PI/3, PI/3, CHORD);
+        // slowly nodding mount
+        rotate(sin(this.lightTimer * 0.3 + this.animationOffset) * 0.08);
+        rect(-s * 0.08, s * 0.3, s * 0.16, s * 0.4, 2);
+        pop();
+    }
+
+    _drawServiceBot(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.018 * scale;
+        // bobbing
+        translate(0, sin(this.lightTimer * 0.9 + this.animationOffset) * 2);
+        fill(200); stroke(80);
+        ellipse(0, 0, s * 1.2, s * 1.2);
+        rect(-s * 0.25, s * 0.5, s * 0.5, s * 0.2, 2);
+        pop();
+    }
+
+    _drawMaintenanceArm(x = 0, y = 0, length = 1, scale = 1) {
+        push(); translate(x, y);
+        stroke(90); strokeWeight(2);
+        const s = this.size * 0.02 * scale;
+        const ang = sin(this.lightTimer * 0.5 + this.animationOffset) * 0.6;
+        rotate(ang);
+        line(0, 0, 0, -s * length * 3);
+        ellipse(0, -s * length * 3, s * 0.4, s * 0.4);
+        pop();
+    }
+
+    _drawCargoTug(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.03 * scale;
+        translate(sin(this.lightTimer * 0.7 + this.animationOffset) * 2, 0);
+        fill(180); stroke(70);
+        rect(-s * 0.7, -s * 0.25, s * 1.2, s * 0.5, 2);
+        fill(30,100,180); noStroke(); ellipse(-s * 0.4, 0, s * 0.35, s * 0.25);
+        pop();
+    }
+
+    _drawSignalBeacon(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.02 * scale;
+        fill(255, 220, 120, 80 + sin(this.lightTimer * 0.8 + this.animationOffset) * 80);
+        ellipse(0, 0, s * 0.6, s * 0.6);
+        pop();
+    }
+
+    _drawFloatingLightBall(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y + sin(this.lightTimer * 0.6 + this.animationOffset) * 3);
+        noStroke(); fill(120, 200, 255, 120);
+        ellipse(0, 0, this.size * 0.02 * scale, this.size * 0.02 * scale);
+        pop();
+    }
+
+    _drawHoloBillboard(x = 0, y = 0, w = 1, h = 0.5) {
+        push(); translate(x, y);
+        const sw = this.size * 0.06 * w, sh = this.size * 0.035 * h;
+        noStroke(); fill(180,120,255,120 + sin(this.lightTimer * 0.7 + this.animationOffset) * 40);
+        rect(-sw/2, -sh/2, sw, sh, 3);
+        pop();
+    }
+
+    _drawRepairDrone(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y + sin(this.lightTimer * 1.1 + this.animationOffset) * 2);
+        const s = this.size * 0.015 * scale;
+        fill(220); stroke(80);
+        ellipse(0, 0, s * 1.1, s * 1.1);
+        line(0, s * 0.6, 0, s * 1.2);
+        pop();
+    }
+
+    _drawScannerBeam(x = 0, y = 0, length = 1) {
+        push(); translate(x, y);
+        stroke(80,200,255,80);
+        strokeWeight(2);
+        const ang = sin(this.lightTimer * 0.6 + this.animationOffset) * 0.6;
+        rotate(ang);
+        line(0, 0, 0, -this.size * 0.18 * length);
+        pop();
+    }
+
+    _drawRotatingMiniRing(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        noFill(); stroke(200,180,100,120);
+        const r = this.size * 0.06 * scale;
+        ellipse(0, 0, r, r);
+        rotate(this.lightTimer * 0.08 + this.animationOffset * 0.2);
+        stroke(220); line(-r*0.5,0,r*0.5,0);
+        pop();
+    }
+
+    _drawDockingPylon(x = 0, y = 0) {
+        push(); translate(x, y);
+        stroke(100); fill(140);
+        rect(-this.size*0.01, 0, this.size*0.02, -this.size*0.06, 2);
+        pop();
+    }
+
+    _drawTetheredNet(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        stroke(120,90,60,120);
+        const s = this.size * 0.045 * scale;
+        for (let i = 0; i < 5; i++) line(-s/2 + i*(s/5), -s/2, -s/2 + i*(s/5), s/2);
+        pop();
+    }
+
+    _drawCargoSwing(x = 0, y = 0, swing = 1) {
+        push(); translate(x, y + sin(this.lightTimer * 0.9 + this.animationOffset) * 4 * swing);
+        stroke(90); fill(160,120,80);
+        rect(-this.size*0.02, -this.size*0.02, this.size*0.04, this.size*0.04, 2);
+        pop();
+    }
+
+    _drawMiniCommsArray(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        stroke(150); fill(120);
+        rect(-this.size*0.02, -this.size*0.03, this.size*0.04, this.size*0.06, 2);
+        pop();
+    }
+
+    _drawSolarArraySpinner(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        rotate(this.lightTimer * 0.05 * this.animSpeed + this.animationOffset*0.1);
+        stroke(80); fill(30,60,120);
+        rect(-this.size*0.06, -this.size*0.01, this.size*0.12, this.size*0.02, 2);
+        pop();
+    }
+
+    _drawBeaconRing(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        noFill(); stroke(255,200,60,60 + sin(this.lightTimer*0.6 + this.animationOffset)*60);
+        ellipse(0,0,this.size*0.12*scale,this.size*0.12*scale);
+        pop();
+    }
+
+    _drawMaintenancePod(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y + sin(this.lightTimer*0.85 + this.animationOffset)*3);
+        fill(200); stroke(90);
+        ellipse(0,0,this.size*0.03*scale,this.size*0.02*scale);
+        pop();
+    }
+
+    _drawFloatBanner(x = 0, y = 0, textScale = 1) {
+        push(); translate(x, y);
+        noStroke(); fill(220,160,60,120);
+        rect(-this.size*0.04, -this.size*0.02, this.size*0.08, this.size*0.03, 3);
+        pop();
+    }
+
+    _drawTrafficSwarm(count = 6, radius = 0.36) {
+        for (let i = 0; i < count; i++) {
+            push();
+            const phase = this.animationOffset * 0.3 + i * TWO_PI / count;
+            rotate(phase + this.lightTimer * 0.08 + i * 0.02);
+            translate(0, -this.size * radius + sin(this.lightTimer * 0.9 + i) * 3);
+            this._drawTinyShuttle(0,0,0.35 + (i%2)*0.1);
+            pop();
+        }
+    }
+
     /**
      * Draws solar panels extending from the hub.
      * @private
@@ -541,6 +717,10 @@ class Station {
         // Draw weapon turrets instead of solar panels
         this._drawWeaponTurrets();
         // Draw military running lights
+        // Add antennas, repair drones and traffic
+        this._drawAntennaArray(-this.size*0.08, -this.size*0.02, 1);
+        this._drawRepairDrone(this.size*0.06, -this.size*0.05, 0.9);
+        this._drawTrafficSwarm(4, 0.42);
         this._drawMilitaryLights();
     }
     
@@ -738,6 +918,10 @@ class Station {
         this._drawAlienModules();
         this._drawEnergyFields();
         this._drawAlienLights();
+        // Alien ambient decorations: floating light balls and rotating mini rings
+        this._drawFloatingLightBall(-this.size*0.12, -this.size*0.05, 1.1);
+        this._drawFloatingLightBall(this.size*0.14, -this.size*0.08, 0.9);
+        this._drawRotatingMiniRing(0, this.size*0.18, 0.7);
     }
     
     /**
@@ -1090,6 +1274,11 @@ class Station {
             pop();
         }
 
+        // Tethered nets, cargo swings and maintenance pods
+        this._drawTetheredNet(this.size*0.05, -this.size*0.46, 0.8);
+        this._drawCargoSwing(-this.size*0.07, -this.size*0.4, 0.9);
+        this._drawMaintenancePod(this.size*0.08, -this.size*0.44, 0.9);
+
         // Yellow/green running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1140,6 +1329,10 @@ class Station {
         translate(-this.size * 0.15, -this.size * 0.22 + sin(this.lightTimer * 0.7 + this.animationOffset) * 3);
         this._drawTinyShuttle(0, 0, 0.8);
         pop();
+
+        // Maintenance arms and dock pylons
+        this._drawMaintenanceArm(this.size*0.09, this.size*0.08, 1.8, 1);
+        this._drawDockingPylon(-this.size*0.08, -this.size*0.06);
 
         // Orange/white running lights
         noStroke();
@@ -1205,6 +1398,10 @@ class Station {
             this._drawFloatingCrate(0, 0, 1);
             pop();
         }
+
+        // Mining laser swings and maintenance pods
+        this._drawScannerBeam(0, -this.size*0.02, 1.2);
+        this._drawMaintenancePod(-this.size*0.06, -this.size*0.04, 1);
         // Red/yellow running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1243,7 +1440,7 @@ class Station {
             }
             pop();
         }
-        this._drawSolarPanels();
+        //this._drawSolarPanels();
 
         // Decorative shuttles and tourists with slower, desynced motion
         for (let i = 0; i < 3; i++) {
@@ -1262,6 +1459,10 @@ class Station {
             this._drawTinyAstronaut(0, 0, 0.45);
             pop();
         }
+
+        // Holographic billboards and float banners
+        this._drawHoloBillboard(this.size*0.08, -this.size*0.32, 0.9, 0.5);
+        this._drawFloatBanner(-this.size*0.09, -this.size*0.34, 1);
         // Purple/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1298,6 +1499,9 @@ class Station {
         }
         this._drawSolarPanels();
         // Red/orange running lights
+        // Scanner beams and floating light balls for refinery activity
+        this._drawScannerBeam(-this.size*0.05, -this.size*0.02, 1.1);
+        this._drawFloatingLightBall(this.size*0.07, -this.size*0.03, 1.0);
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
@@ -1340,6 +1544,10 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
+
+        // Futuristic rotating mini-rings and holo billboards
+        this._drawRotatingMiniRing(-this.size*0.06, -this.size*0.04, 0.7);
+        this._drawHoloBillboard(this.size*0.1, -this.size*0.28, 0.8, 0.4);
     }
 
     /**
@@ -1384,6 +1592,10 @@ class Station {
         this._drawTinyShuttle(0, 0, 0.7);
         pop();
 
+        // Beacon ring and mini comms arrays
+        this._drawBeaconRing(this.size*0.0, -this.size*0.02, 0.9);
+        this._drawMiniCommsArray(this.size*0.06, -this.size*0.1, 1);
+
         // Gold/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1418,6 +1630,9 @@ class Station {
             return null;
         };
         this._drawRunningLights(separatistLightFn, 16, 0.48, 3);
+        // Extra comms and rotor spinners for the separatists
+        this._drawMiniCommsArray(-this.size*0.06, -this.size*0.04, 1);
+        this._drawSolarArraySpinner(this.size*0.06, -this.size*0.03, 0.9);
     }
 
     /**
@@ -1443,6 +1658,12 @@ class Station {
         pop();
 
         this._drawStandardRunningLights();
+
+        // Small comms arrays and solar spinners
+        this._drawMiniCommsArray(-this.size*0.09, -this.size*0.04);
+        this._drawSolarArraySpinner(this.size*0.09, -this.size*0.02, 1);
+        // Busy little traffic
+        this._drawTrafficSwarm(5, 0.38);
     }
 }
 
