@@ -247,6 +247,69 @@ class Station {
     }
 
     /**
+     * Draws separatist-specific habitation modules with angular pods,
+     * hanging solar fins and pennants to give a distinct silhouette.
+     * @private
+     */
+    _drawSeparatistHabitationModules() {
+        // Sleeker separatist modules: low-profile pods with angled fins
+        for (let i = 0; i < 16; i++) {
+            push();
+            // small alternating offset for a handcrafted look
+            const baseAngle = i * TWO_PI / 16 + (i % 2 === 0 ? -0.02 : 0.02);
+            rotate(baseAngle);
+
+            const outerY = -this.size * 0.48;
+            if (i % 4 === 0) {
+                // Reinforced docking bay with curved canopy
+                push();
+                translate(0, outerY + this.size * 0.01);
+                fill(200, 200, 200);
+                stroke(110, 75, 40);
+                strokeWeight(1.5);
+                // base platform
+                rect(-this.size * 0.055, -this.size * 0.02, this.size * 0.11, this.size * 0.05, 4);
+                // curved canopy
+               fill(50, 50, 50);
+                noStroke();
+                ellipse(0, -this.size * 0.005, this.size * 0.09, this.size * 0.04);
+                // subtle stripe
+                fill(200, 95, 10);
+                rect(-this.size * 0.02, -this.size * 0.01, this.size * 0.04, this.size * 0.008, 2);
+                pop();
+            } else {
+                // Sleek habitation pod
+                push();
+                translate(0, outerY);
+                rotate(-0.06 + (i % 3) * 0.02);
+                // pod body
+                fill(100, 100, 100);
+                stroke(110, 70, 40);
+                strokeWeight(1);
+                beginShape();
+                vertex(-this.size * 0.045, -this.size * 0.01);
+                bezierVertex(-this.size * 0.03, -this.size * 0.035, this.size * 0.03, -this.size * 0.035, this.size * 0.045, -this.size * 0.01);
+                vertex(this.size * 0.03, this.size * 0.02);
+                vertex(-this.size * 0.03, this.size * 0.02);
+                endShape(CLOSE);
+
+                // glowing window stripe
+                noStroke();
+                fill(255, 230, 140, 140 + sin(this.lightTimer*2 + i) * 60);
+                rect(-this.size * 0.02, -this.size * 0.008, this.size * 0.04, this.size * 0.008, 2);
+                pop();
+            }
+
+            // small accent light to tie into running-lights rhythm
+            noStroke();
+            fill(255, 200, 120, 160 + sin(this.lightTimer*2 + i) * 80);
+            ellipse(0, -this.size * 0.475, 3.2, 3.2);
+
+            pop();
+        }
+    }
+
+    /**
      * Draws a docking bay module with status lights.
      * @param {number} index - Module index for animation timing
      * @private
@@ -1161,10 +1224,20 @@ class Station {
         this._drawCentralHub();
         this._drawMainArms();
         this._drawRings();
-        this._drawHabitationModules();
+        //this._drawHabitationModules();
         // Draw standard panels plus two extra at 135° and 315°
         this._drawSolarPanels([PI * 3/4, PI * 7/4]);
-        this._drawStandardRunningLights();
+        // Use a separate habitation layout for separatists
+        this._drawSeparatistHabitationModules();
+
+        // Draw running lights aligned to the separatist modules
+        const separatistLightFn = (i, t) => {
+            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t*3 + i) * 100);
+            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t*3 + i + PI) * 100);
+            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t*2 + i*0.3) * 100);
+            return null;
+        };
+        this._drawRunningLights(separatistLightFn, 16, 0.48, 3);
     }
 
     /**
