@@ -9,7 +9,7 @@ class AmbientSoundManager {
         this.masterGain = null;
         this.activeSources = new Map(); // Maps source ID to sound configuration
         this.enabled = true;
-        this.globalVolume = 0.8; // Master volume for all ambient sounds
+        this.globalVolume = 0.3; // Master volume for all ambient sounds
         this.maxDistance = 3000; // Maximum distance for sound audibility
         this.minVolume = 0.01; // Minimum volume threshold
         this.isDocked = false; // Track docked state
@@ -399,7 +399,7 @@ class AmbientSoundManager {
                 switch (stationType) {
                     case 'military':
                         return {
-                            baseVolume: 0.35,
+                            baseVolume: 0.1,
                             texture: true,
                             lfoFreq: 0.7,
                             lfoDepthFactor: 0.10,
@@ -435,7 +435,7 @@ class AmbientSoundManager {
                         };
                     case 'industrial':
                         return {
-                            baseVolume: 0.25,
+                            baseVolume: 0.1,
                             texture: true,
                             lfoFreq: 0.65,
                             lfoDepthFactor: 0.11,
@@ -447,7 +447,7 @@ class AmbientSoundManager {
                         };
                     case 'mining':
                         return {
-                            baseVolume: 0.25,
+                            baseVolume: 0.1,
                             texture: true,
                             lfoFreq: 0.55,
                             lfoDepthFactor: 0.10,
@@ -471,7 +471,7 @@ class AmbientSoundManager {
                         };
                     case 'refinery':
                         return {
-                            baseVolume: 0.25,
+                            baseVolume: 0.1,
                             texture: true,
                             lfoFreq: 0.6,
                             lfoDepthFactor: 0.08,
@@ -507,7 +507,7 @@ class AmbientSoundManager {
                         };
                     case 'separatist':
                         return {
-                            baseVolume: 0.4,
+                            baseVolume: 0.1,
                             texture: true,
                             lfoFreq: 0.6,
                             lfoDepthFactor: 0.1,

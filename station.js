@@ -20,7 +20,7 @@ class Station {
         this.systemType = systemType;
         this.market = new Market(systemType);
         this.market.systemName = name.replace(" Hub", "");
-        this.size = 160;
+        this.size = 600;
         this.dockingRadius = this.size;
         this._setStationAppearance();
         this.angle = 0;
@@ -39,8 +39,7 @@ class Station {
      * @private
      */
     _setStationAppearance() {
-        // Reset size and rotation speed to defaults before applying type-specific settings
-        this.size = 160;
+        // Reset rotation speed to default; preserve any size already set (e.g. by constructor/save)
         this.rotationSpeed = 0.0015;
         
         switch (this.systemType) {
@@ -52,7 +51,7 @@ class Station {
                 this.color = color(80, 220, 170); // Alien teal
                 this.stationType = "alien";
                 this.rotationSpeed = 0.002; // Slightly faster rotation
-                this.size = 180; // Slightly larger
+                //this.size = 180; // Slightly larger
                 break;
             case "Agricultural":
                 this.color = color(120, 180, 100); // Agricultural green
@@ -66,7 +65,7 @@ class Station {
             case "Mining":
                 this.color = color(160, 130, 90); // Mining rust/copper
                 this.stationType = "mining";
-                this.size = 170; // Slightly larger
+                //this.size = 170; // Slightly larger
                 break;
             case "Tourism":
                 this.color = color(200, 160, 220); // Tourism lavender

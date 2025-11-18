@@ -138,16 +138,29 @@ this.showingInventory = false;
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
-                const offsetMultiplier = 10; const offsetDistance = player.size * offsetMultiplier;
-                let undockOffset = createVector(0, -offsetDistance); // Simple 'up' offset
-                player.pos.add(undockOffset); player.vel.mult(0);
-                
+                // Prefer station-based distance so undocking scales with station size
+                const station = galaxy?.getCurrentSystem()?.station;
+                const dockRadius = station?.dockingRadius ?? station?.size ?? 160; // Fallback to historic value
+
+                // Place player just outside the station docking radius plus a small margin
+                const margin = Math.max(10, player.size * 1.5);
+                const offsetDistance = dockRadius + margin;
+
+                // Use station position as origin (ensure we're not offsetting from a stale player.pos)
+                if (station && station.pos) {
+                    player.pos = station.pos.copy().add(createVector(0, -offsetDistance));
+                } else {
+                    // Fallback: relative offset from current player.pos
+                    player.pos.add(createVector(0, -offsetDistance));
+                }
+                player.vel.mult(0);
+
                 // Spawn any hired bodyguards when undocking
                 if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
                     console.log("Spawning bodyguards when undocking from station");
                     player.spawnBodyguards(galaxy?.getCurrentSystem());
                 }
-                
+
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
             } else { console.error("Player object missing during undock offset!"); }
         }
