@@ -26,7 +26,10 @@ class Station {
         this._setStationAppearance();
         this.angle = 0;
         this.rotationSpeed = 0.0015;
-        this.lightTimer = 0;
+        this.lightTimer = random(TWO_PI);
+        // Per-station animation offset and speed to desynchronize and vary motion
+        this.animationOffset = random(TWO_PI);
+        this.animSpeed = random(0.85, 1.15);
         this.isSecret = isSecret;
         this.stationSubtype = stationSubtype;
         this.discovered = !isSecret; // Only discovered if not secret
@@ -132,7 +135,10 @@ class Station {
     draw() {
         // Update animation values
         this.angle += this.rotationSpeed;
-        this.lightTimer = (this.lightTimer + 0.03) % TWO_PI;
+        // Slow, frame-rate independent timer with per-station speed variation.
+        // Do NOT modulo here — keep a continuously increasing timer to avoid
+        // discontinuities when wrapping, which causes jittery resets.
+        this.lightTimer += 0.0012 * (typeof deltaTime !== 'undefined' ? deltaTime : 16) * this.animSpeed;
         
         push();
         translate(this.pos.x, this.pos.y);
@@ -371,6 +377,100 @@ class Station {
             let y = this.size * 0.16 + j * this.size * 0.05;
             line(-this.size * 0.15, y, this.size * 0.15, y);
         }
+    }
+
+    /**
+     * Small decorative astronaut figure used around domes and modules.
+     * Drawn relative to current translation.
+     * @private
+     */
+    _drawTinyAstronaut(x = 0, y = 0, scale = 1) {
+        push();
+        translate(x, y);
+        const s = this.size * 0.02 * scale;
+
+        // tether / shadow
+        stroke(120, 120, 120, 120);
+        strokeWeight(1);
+        line(0, s * 0.6, 0, s * 1.6);
+
+        // body pack
+        fill(220);
+        stroke(80);
+        rect(-s * 0.33, -s * 0.1, s * 0.66, s * 1.0, s * 0.08);
+
+        // backpack
+        fill(190);
+        rect(-s * 0.45, -s * 0.05, s * 0.22, s * 0.6, s * 0.06);
+
+        // helmet
+        fill(245);
+        stroke(60);
+        ellipse(0, -s * 0.6, s * 0.9, s * 0.9);
+        // visor
+        noStroke();
+        fill(20, 100, 160, 220);
+        ellipse(0, -s * 0.6, s * 0.52, s * 0.36);
+
+        // small arm accents
+        stroke(80);
+        strokeWeight(1);
+        line(-s * 0.33, s * 0.1, -s * 0.7, s * 0.2);
+        line(s * 0.33, s * 0.1, s * 0.7, s * 0.2);
+
+        pop();
+    }
+
+    /**
+     * Small decorative shuttle drawn at current translation.
+     * @private
+     */
+    _drawTinyShuttle(x = 0, y = 0, scale = 1) {
+        push();
+        translate(x, y);
+        const s = this.size * 0.03 * scale;
+
+        // body
+        fill(200);
+        stroke(60);
+        beginShape();
+        vertex(-s * 0.9, s * 0.2);
+        vertex(s * 0.9, s * 0.0);
+        vertex(-s * 0.9, -s * 0.2);
+        endShape(CLOSE);
+
+        // cockpit
+        noStroke();
+        fill(30, 110, 180, 220);
+        ellipse(-s * 0.3, 0, s * 0.5, s * 0.35);
+
+        // thruster flame
+        fill(255, 140, 30, 200);
+        beginShape();
+        vertex(s * 0.9, 0);
+        vertex(s * 1.3, s * 0.12);
+        vertex(s * 1.3, -s * 0.12);
+        endShape(CLOSE);
+
+        pop();
+    }
+
+    /**
+     * Small floating cargo crate used for industrial/mining decoration.
+     * @private
+     */
+    _drawFloatingCrate(x = 0, y = 0, scale = 1) {
+        push();
+        translate(x, y);
+        const s = this.size * 0.03 * scale;
+        fill(150, 110, 70);
+        stroke(80, 60, 40);
+        rect(-s * 0.5, -s * 0.5, s, s, 2);
+        // strap lines
+        stroke(60, 40, 30);
+        line(-s * 0.2, -s * 0.5, -s * 0.2, s * 0.5);
+        line(s * 0.2, -s * 0.5, s * 0.2, s * 0.5);
+        pop();
     }
 
     /**
@@ -665,12 +765,12 @@ class Station {
         
         // Inner energy pattern
         noFill();
-        stroke(120, 255, 200, 150 + sin(this.lightTimer * 2) * 100);
+        stroke(120, 255, 200, 150 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 100);
         strokeWeight(1.5);
         beginShape();
         for (let i = 0; i < 12; i++) {
             let angle = i * TWO_PI / 12 + this.lightTimer;
-            let radius = pulseSize * 0.6 * (1 + sin(i + this.lightTimer * 3) * 0.2);
+            let radius = pulseSize * 0.6 * (1 + sin(i + this.lightTimer * 3 * 0.55 + this.animationOffset) * 0.2);
             vertex(cos(angle) * radius, sin(angle) * radius);
         }
         endShape(CLOSE);
@@ -712,7 +812,7 @@ class Station {
             stroke(80, 220, 180);
             for (let j = 1; j < 4; j++) {
                 let y = -j * this.size * 0.11;
-                let size = this.size * 0.04 * (1 + sin(this.lightTimer * 2 + j) * 0.2);
+                let size = this.size * 0.04 * (1 + sin(this.lightTimer * 2 * 0.55 + j + this.animationOffset) * 0.2);
                 ellipse(0, y, size, size);
             }
             
@@ -753,8 +853,8 @@ class Station {
         strokeWeight(4);
         beginShape();
         for (let i = 0; i < 40; i++) {
-            let angle = i * TWO_PI / 40 - this.lightTimer * 0.5;
-            let radius = this.size * (0.4 + sin(angle * 4 + this.lightTimer * 2) * 0.02);
+            let angle = i * TWO_PI / 40 - (this.lightTimer * 0.5 * 0.55 + this.animationOffset * 0.15);
+            let radius = this.size * (0.4 + sin(angle * 4 + this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.02);
             vertex(cos(angle) * radius, sin(angle) * radius);
         }
         endShape(CLOSE);
@@ -778,9 +878,9 @@ class Station {
                 ellipse(0, -this.size * 0.48, this.size * 0.08, this.size * 0.08);
                 
                 // Portal energy
-                fill(100, 255, 200, 150 + sin(this.lightTimer * 3 + i) * 100);
+                fill(100, 255, 200, 150 + sin(this.lightTimer * 3 * 0.55 + i + this.animationOffset) * 100);
                 noStroke();
-                ellipse(0, -this.size * 0.48, this.size * 0.05 * (1 + sin(this.lightTimer * 2) * 0.2), this.size * 0.05 * (1 + sin(this.lightTimer * 2) * 0.2));
+                ellipse(0, -this.size * 0.48, this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2), this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2));
             } else {
                 // Organic pods
                 fill(50, 180, 140);
@@ -800,7 +900,7 @@ class Station {
                 for (let w = 0; w < 2; w++) {
                     let x = (w - 0.5) * this.size * 0.02;
                     let y = -this.size * 0.48;
-                    let size = this.size * 0.01 * (1 + sin(this.lightTimer * 3 + i + w) * 0.3);
+                    let size = this.size * 0.01 * (1 + sin(this.lightTimer * 3 * 0.55 + i + w + this.animationOffset) * 0.3);
                     ellipse(x, y, size, size);
                 }
             }
@@ -823,12 +923,12 @@ class Station {
             ellipse(0, this.size * 0.15, this.size * 0.06, this.size * 0.06);
             
             // Energy field - pulsating
-            fill(100, 255, 200, 40 + sin(this.lightTimer * 2) * 30);
+            fill(100, 255, 200, 40 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 30);
             stroke(120, 255, 220, 100 + sin(this.lightTimer) * 50);
             beginShape();
             for (let j = 0; j < 24; j++) {
                 let angle = j * TWO_PI / 24 + this.lightTimer;
-                let radius = this.size * (0.15 + sin(j * 3 + this.lightTimer * 4) * 0.03);
+                let radius = this.size * (0.15 + sin(j * 3 + this.lightTimer * 4 * 0.55 + this.animationOffset) * 0.03);
                 vertex(cos(angle) * radius, sin(angle) * radius + this.size * 0.15);
             }
             endShape(CLOSE);
@@ -837,7 +937,7 @@ class Station {
             stroke(80, 220, 180, 150);
             strokeWeight(1);
             for (let j = 0; j < 8; j++) {
-                let angle = j * TWO_PI / 8 + this.lightTimer * 0.5;
+                let angle = j * TWO_PI / 8 + (this.lightTimer * 0.5 * 0.55 + this.animationOffset * 0.12);
                 let x1 = cos(angle) * this.size * 0.05;
                 let y1 = sin(angle) * this.size * 0.05 + this.size * 0.15;
                 let x2 = cos(angle) * this.size * 0.14;
@@ -980,6 +1080,16 @@ class Station {
             pop();
         }
         this._drawSolarPanels();
+        // pollinator drones for the greenhouses (slower and with offset)
+        for (let i = 0; i < 3; i++) {
+            push();
+            const phase = this.animationOffset * 0.4 + i * 0.08;
+            rotate(i * TWO_PI / 3 + phase + this.lightTimer * 0.12);
+            translate(0, -this.size * 0.44 + sin(this.lightTimer * 0.9 + this.animationOffset + i * 0.5) * 3);
+            this._drawTinyShuttle(0, 0, 0.5);
+            pop();
+        }
+
         // Yellow/green running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1016,6 +1126,21 @@ class Station {
             pop();
         }
         this._drawSolarPanels();
+        // Floating crates and a service shuttle with varied timing
+        for (let i = 0; i < 3; i++) {
+            push();
+            const phase = this.animationOffset * 0.6 + i * 0.2;
+            rotate(i * TWO_PI / 3 + phase + this.lightTimer * 0.12);
+            translate(this.size * 0.06 * (i - 1), -this.size * 0.28 + sin(this.lightTimer * 0.9 + this.animationOffset + i * 0.4) * 4);
+            this._drawFloatingCrate(0, 0, 0.9 - i * 0.15);
+            pop();
+        }
+        push();
+        rotate(this.animationOffset * -0.2 + this.lightTimer * 0.14);
+        translate(-this.size * 0.15, -this.size * 0.22 + sin(this.lightTimer * 0.7 + this.animationOffset) * 3);
+        this._drawTinyShuttle(0, 0, 0.8);
+        pop();
+
         // Orange/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1063,6 +1188,23 @@ class Station {
             line(0, this.size * 0.28, this.size * 0.08, this.size * 0.32);
             pop();
         }
+        // Mining drones and floating ore crates with slower, varied rhythms
+        for (let i = 0; i < 2; i++) {
+            push();
+            const phase = this.animationOffset * (i ? 0.6 : -0.3);
+            rotate(i * PI + phase + this.lightTimer * 0.14);
+            translate(0, -this.size * 0.38 + sin(this.lightTimer * 0.9 + this.animationOffset + i * 0.5) * 4);
+            this._drawTinyShuttle(0, 0, 0.7);
+            pop();
+        }
+        for (let i = 0; i < 2; i++) {
+            push();
+            const phase = this.animationOffset * 0.25 + i * 0.2;
+            rotate(i * PI / 2 + phase + this.lightTimer * 0.18);
+            translate(this.size * (i ? 0.12 : -0.12), -this.size * 0.45 + sin(this.lightTimer * 0.9 + this.animationOffset + i * 0.6) * 3);
+            this._drawFloatingCrate(0, 0, 1);
+            pop();
+        }
         // Red/yellow running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1102,6 +1244,24 @@ class Station {
             pop();
         }
         this._drawSolarPanels();
+
+        // Decorative shuttles and tourists with slower, desynced motion
+        for (let i = 0; i < 3; i++) {
+            push();
+            const phase = this.animationOffset * 0.5 + i * 0.05;
+            rotate(i * TWO_PI / 3 + phase + this.lightTimer * 0.12);
+            translate(-this.size * 0.02, -this.size * 0.42 + sin(this.lightTimer + this.animationOffset + i * 0.7) * (3 + 0.8 * i));
+            this._drawTinyShuttle(0, 0, 0.6 + i * 0.08);
+            pop();
+        }
+        for (let i = 0; i < 4; i++) {
+            push();
+            const phase = 0.5 + i * 0.12;
+            rotate(i * TWO_PI / 4 + phase + this.animationOffset * 0.2);
+            translate(0, -this.size * 0.51 + sin(this.lightTimer + this.animationOffset + i * 0.6) * 3);
+            this._drawTinyAstronaut(0, 0, 0.45);
+            pop();
+        }
         // Purple/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1204,6 +1364,26 @@ class Station {
             pop();
         }
         this._drawSolarPanels();
+        // Regal pennants and a ceremonial shuttle
+        for (let i = 0; i < 6; i++) {
+            push();
+            rotate(i * TWO_PI / 6 + this.lightTimer * 0.05);
+            translate(0, -this.size * 0.52);
+            fill(255, 220, 100, 200);
+            noStroke();
+            beginShape();
+            vertex(0, 0);
+            vertex(-this.size * 0.02, this.size * 0.04);
+            vertex(this.size * 0.02, this.size * 0.04);
+            endShape(CLOSE);
+            pop();
+        }
+        push();
+        rotate(this.animationOffset * -0.25 - this.lightTimer * 0.14);
+        translate(this.size * 0.12, -this.size * 0.36 + sin(this.lightTimer * 0.8 + this.animationOffset * 0.4) * 3);
+        this._drawTinyShuttle(0, 0, 0.7);
+        pop();
+
         // Gold/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1250,6 +1430,18 @@ class Station {
         this._drawRings();
         this._drawHabitationModules();
         this._drawSolarPanels();
+        // small shuttle and astronaut for life, slowed and desynced
+        push();
+        rotate(this.animationOffset * 0.2 + this.lightTimer * 0.18);
+        translate(-this.size * 0.12, -this.size * 0.36 + sin(this.lightTimer * 0.9 + this.animationOffset) * 3);
+        this._drawTinyShuttle(0, 0, 0.7);
+        pop();
+        push();
+        rotate(this.animationOffset * -0.15 - this.lightTimer * 0.18);
+        translate(this.size * 0.08, -this.size * 0.5 + sin(this.lightTimer * 0.8 + this.animationOffset * 0.5) * 3);
+        this._drawTinyAstronaut(0, 0, 0.5);
+        pop();
+
         this._drawStandardRunningLights();
     }
 }
