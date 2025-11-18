@@ -12,6 +12,10 @@ class SoundManager {
         this.maxInstancesPerSound = 5; // Maximum overlapping instances per sound
         this.activeInstances = {}; // Track active audio instances per sound
         this.activeWebSources = {}; // Track active WebAudio BufferSource nodes per sound for polyphony control
+        this.globalActiveSources = []; // Track ALL active Web Audio sources globally
+        this.maxGlobalSources = 32; // Hard limit on total concurrent sounds
+        this.soundThrottles = {}; // Track last play time for each sound type
+        this.minSoundInterval = 50; // Minimum ms between playing same sound type
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -1140,12 +1144,12 @@ class SoundManager {
             if (!window._eliteAudioBus) {
                 try {
                     const compressor = this.audioContext.createDynamicsCompressor();
-                    // Limiter-ish settings (mild): tame peaks when many sounds overlap
-                    compressor.threshold.setValueAtTime(-10, this.audioContext.currentTime);
-                    compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
-                    compressor.ratio.setValueAtTime(8, this.audioContext.currentTime);
-                    compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-                    compressor.release.setValueAtTime(0.12, this.audioContext.currentTime);
+                    // More transparent limiter settings: prevent clipping without obvious compression
+                    compressor.threshold.setValueAtTime(-6, this.audioContext.currentTime);  // Higher threshold (was -10)
+                    compressor.knee.setValueAtTime(12, this.audioContext.currentTime);       // Softer knee (was 30)
+                    compressor.ratio.setValueAtTime(12, this.audioContext.currentTime);      // Harder ratio for true limiting (was 8)
+                    compressor.attack.setValueAtTime(0.001, this.audioContext.currentTime);  // Faster attack (was 0.003)
+                    compressor.release.setValueAtTime(0.05, this.audioContext.currentTime);  // Faster release (was 0.12)
 
                     compressor.connect(this.audioContext.destination);
                     window._eliteAudioBus = { compressor };
@@ -1286,6 +1290,99 @@ class SoundManager {
     }
 
     /**
+     * Calculate priority for a sound based on volume and distance.
+     * Higher priority = more important to play.
+     * @param {number} volume - Intended playback volume (0-1)
+     * @param {number} sourceX - World X coordinate
+     * @param {number} sourceY - World Y coordinate
+     * @param {p5.Vector} listenerPos - Listener position
+     * @returns {number} Priority value (higher = more important)
+     */
+    _calculateSoundPriority(volume, sourceX, sourceY, listenerPos) {
+        if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number') {
+            return 0;
+        }
+        
+        const dx = sourceX - listenerPos.x;
+        const dy = sourceY - listenerPos.y;
+        const distanceSq = dx * dx + dy * dy;
+        
+        // Priority based on volume and inverse distance (closer = higher priority)
+        // Volume range: 0-1, distance contribution: 0-1 (clamped)
+        const distanceFactor = 1 / (1 + distanceSq / 1000000); // Normalize distance influence
+        return volume * 0.7 + distanceFactor * 0.3;
+    }
+
+    /**
+     * Stops the oldest/lowest priority sources to make room for new ones.
+     * @param {number} count - Number of sources to stop
+     */
+    _cullOldestSources(count) {
+        if (!this.globalActiveSources || this.globalActiveSources.length === 0) return;
+        
+        // Sort by priority (lowest first) and age (oldest first)
+        const now = Date.now();
+        this.globalActiveSources.sort((a, b) => {
+            // First sort by priority (lower priority gets culled first)
+            if (a.priority !== b.priority) {
+                return a.priority - b.priority;
+            }
+            // Then by age (older gets culled first)
+            return a.startTime - b.startTime;
+        });
+        
+        // Stop the lowest priority/oldest sources
+        for (let i = 0; i < Math.min(count, this.globalActiveSources.length); i++) {
+            const source = this.globalActiveSources[i];
+            if (source && source.source) {
+                try {
+                    source.source.stop();
+                    source.source._ended = true;
+                } catch (e) {
+                    // Already stopped, ignore
+                }
+            }
+        }
+        
+        // Clean up ended sources
+        this._cleanupGlobalSources();
+    }
+
+    /**
+     * Remove ended sources from global tracking.
+     */
+    _cleanupGlobalSources() {
+        if (!this.globalActiveSources) return;
+        
+        for (let i = this.globalActiveSources.length - 1; i >= 0; i--) {
+            if (this.globalActiveSources[i].source._ended) {
+                this.globalActiveSources.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * Checks if a sound can be played based on throttling rules.
+     * @param {string} name - Sound name
+     * @returns {boolean} True if sound can play
+     */
+    _canPlayThrottled(name) {
+        if (!this.soundThrottles[name]) {
+            this.soundThrottles[name] = 0;
+        }
+        
+        const now = Date.now();
+        const lastPlayTime = this.soundThrottles[name];
+        
+        if (now - lastPlayTime < this.minSoundInterval) {
+            return false;
+        }
+        
+        this.soundThrottles[name] = now;
+        return true;
+    }
+
+    /**
      * Checks if a world position is off-screen relative to the listener's view.
      * @param {number} sourceX - World X coordinate.
      * @param {number} sourceY - World Y coordinate.
@@ -1371,6 +1468,14 @@ class SoundManager {
         // Skip if volume is too low
         if (intendedVolume < 0.01) return;
 
+        // Apply throttling to prevent sound spam
+        if (!this._canPlayThrottled(name)) {
+            return;
+        }
+
+        // Calculate priority for this sound
+        const priority = this._calculateSoundPriority(intendedVolume, sourceX, sourceY, listenerPos);
+
         // --- Use cached Web Audio buffers for optimal performance ---
         let usedWebAudio = false;
         if (this.audioContext && soundEntry.audioBuffer) {
@@ -1386,6 +1491,21 @@ class SoundManager {
                     this.audioContext.resume();
                 }
                 
+                // Clean up ended sources first
+                this._cleanupGlobalSources();
+                
+                // Check global limit and cull if needed
+                if (this.globalActiveSources.length >= this.maxGlobalSources) {
+                    // Check if this sound is higher priority than the lowest priority active sound
+                    const lowestPriority = Math.min(...this.globalActiveSources.map(s => s.priority));
+                    if (priority <= lowestPriority) {
+                        // Skip this sound if it's lower priority than all active sounds
+                        return;
+                    }
+                    // Cull one source to make room
+                    this._cullOldestSources(1);
+                }
+                
                 // Track active Web Audio sources for this sound
                 if (!this.activeWebSources[name]) this.activeWebSources[name] = [];
                 const webList = this.activeWebSources[name];
@@ -1399,9 +1519,9 @@ class SoundManager {
                 source.buffer = soundEntry.audioBuffer;
                 const gainNode = this.audioContext.createGain();
                 
-                // Gentle gain scaling: reduce volume moderately as instances stack
+                // Stronger gain scaling: more aggressive volume reduction as sounds stack
                 const activeCount = webList.length;
-                const scale = 1 / Math.pow(activeCount + 1, 0.6); // Between linear and sqrt - balanced reduction
+                const scale = 1 / Math.pow(activeCount + 1, 0.85); // Increased from 0.6 to 0.85 for more aggressive reduction
                 gainNode.gain.value = Math.max(0, Math.min(1, intendedVolume * scale));
                 
                 source.connect(gainNode);
@@ -1418,18 +1538,33 @@ class SoundManager {
                     gainNode.connect(this.audioContext.destination);
                 }
                 
-                // Track this source and clean up when it ends
+                // Track this source globally and per-sound
+                const sourceInfo = {
+                    source: source,
+                    gainNode: gainNode,
+                    priority: priority,
+                    startTime: Date.now(),
+                    name: name
+                };
+                
+                this.globalActiveSources.push(sourceInfo);
                 webList.push(source);
+                
                 source.onended = () => {
                     try {
                         gainNode.disconnect();
                         source.disconnect();
                         source._ended = true;
-                        // Remove from tracking list
+                        
+                        // Remove from per-sound tracking list
                         if (this.activeWebSources[name]) {
                             const idx = this.activeWebSources[name].indexOf(source);
                             if (idx !== -1) this.activeWebSources[name].splice(idx, 1);
                         }
+                        
+                        // Remove from global tracking list
+                        const globalIdx = this.globalActiveSources.findIndex(s => s.source === source);
+                        if (globalIdx !== -1) this.globalActiveSources.splice(globalIdx, 1);
                     } catch (e) {
                         // Already disconnected, ignore
                     }
@@ -1602,6 +1737,29 @@ class SoundManager {
      */
     stopAllSounds() {
         try {
+            // Stop all Web Audio sources
+            if (this.globalActiveSources) {
+                for (const sourceInfo of this.globalActiveSources) {
+                    try {
+                        if (sourceInfo.source && !sourceInfo.source._ended) {
+                            sourceInfo.source.stop();
+                            sourceInfo.source._ended = true;
+                        }
+                        if (sourceInfo.gainNode) {
+                            sourceInfo.gainNode.disconnect();
+                        }
+                    } catch (e) {
+                        // Ignore errors for individual sources
+                    }
+                }
+                this.globalActiveSources = [];
+            }
+            
+            // Clear per-sound Web Audio tracking
+            for (const name in this.activeWebSources) {
+                this.activeWebSources[name] = [];
+            }
+            
             // Stop all pooled instances
             for (const name in this.activeInstances) {
                 const instances = this.activeInstances[name];
@@ -1631,6 +1789,9 @@ class SoundManager {
                     }
                 }
             }
+            
+            // Clear throttle timers
+            this.soundThrottles = {};
             
             // Don't suspend/resume AudioContext - just let it be
             // Suspending can cause issues with subsequent playback
