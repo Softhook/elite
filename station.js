@@ -29,7 +29,7 @@ class Station {
         this.lightTimer = random(TWO_PI);
         // Per-station animation offset and speed to desynchronize and vary motion
         this.animationOffset = random(TWO_PI);
-        this.animSpeed = random(0.85, 1.15);
+        this.animSpeed = random(0.1, 0.5);
         this.isSecret = isSecret;
         this.stationSubtype = stationSubtype;
         this.discovered = !isSecret; // Only discovered if not secret

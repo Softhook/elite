@@ -3235,12 +3235,13 @@ if (isIllegalInSystem || isMissionCargo) {
 
         const boxPadding = 6;
         const lineHeight = 26;
-        const boxWidth = Math.max(width - 80, 300);
-        const baseX = (width - boxWidth) / 2;
-        const baseY = height - 180; // Fixed position above info messages
+        const boxWidth = Math.min(360, Math.max(300, width - 40));
+        const baseX = 20; // left margin
+        const autopilotOffset = (typeof player !== 'undefined' && player?.autopilotEnabled) ? 35 : 0;
+        const baseY = 80 + autopilotOffset; // align with target/market overlay Y
 
         push();
-        textAlign(CENTER, TOP);
+        textAlign(LEFT, TOP);
         textFont(font);
         textSize(18);
 
@@ -3255,7 +3256,7 @@ if (isIllegalInSystem || isMissionCargo) {
             this._applyMessageFill(msg.color, alpha, [255, 190, 140, 255]);
 
             const textY = baseY + boxPadding + i * lineHeight;
-            text(msg.text, width / 2, textY);
+            text(msg.text, baseX + boxPadding, textY);
         }
         pop();
 
