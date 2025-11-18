@@ -21,7 +21,8 @@ class Station {
         this.market = new Market(systemType);
         this.market.systemName = name.replace(" Hub", "");
         this.size = 600;
-        this.dockingRadius = this.size;
+        // dockingRadius should be the visual radius (half the size) plus a small margin
+        this.dockingRadius = this.size * 0.5 + Math.max(10, this.size * 0.05);
         this._setStationAppearance();
         this.angle = 0;
         this.rotationSpeed = 0.0015;
@@ -94,8 +95,8 @@ class Station {
                 break;
         }
         
-        // Update docking radius to match new size
-        this.dockingRadius = this.size;
+        // Update docking radius to match visual radius (half size) plus a margin
+        this.dockingRadius = this.size * 0.5 + Math.max(10, this.size * 0.05);
     }
 
     /**

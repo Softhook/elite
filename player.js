@@ -1896,9 +1896,11 @@ handleInput() {
             }
             targetPos = this.currentSystem.station.pos.copy();
             
-            // Disable if we're very close to station
+            // Disable if we're very close to station — use dockingRadius (visual) instead of raw size
             const stationDistance = p5.Vector.dist(this.pos, targetPos);
-            if (stationDistance < this.currentSystem.station.size * 2) {
+            const dockRadius = this.currentSystem.station.dockingRadius ?? (this.currentSystem.station.size * 0.5);
+            const margin = Math.max(10, dockRadius * 0.05);
+            if (stationDistance < dockRadius + margin) {
                 this.disableAutopilot();
                 if (uiManager) uiManager.addMessage("Autopilot disengaged: Approaching station");
                 return;
