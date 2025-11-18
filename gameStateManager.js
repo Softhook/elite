@@ -138,17 +138,17 @@ this.showingInventory = false;
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
-                // Prefer station-based distance so undocking scales with station size
-                const station = galaxy?.getCurrentSystem()?.station;
-                const dockRadius = station?.dockingRadius ?? station?.size ?? 160; // Fallback to historic value
+                // Prefer the specific station we docked at so secret stations undock correctly
+                const dockedStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
+                const dockRadius = dockedStation?.dockingRadius ?? dockedStation?.size ?? 160; // Fallback to historic value
 
                 // Place player just outside the station docking radius plus a small margin
                 const margin = Math.max(10, player.size * 1.5);
                 const offsetDistance = dockRadius + margin;
 
-                // Use station position as origin (ensure we're not offsetting from a stale player.pos)
-                if (station && station.pos) {
-                    player.pos = station.pos.copy().add(createVector(0, -offsetDistance));
+                // Use docked station position as origin (ensure we're not offsetting from a stale player.pos)
+                if (dockedStation && dockedStation.pos) {
+                    player.pos = dockedStation.pos.copy().add(createVector(0, -offsetDistance));
                 } else {
                     // Fallback: relative offset from current player.pos
                     player.pos.add(createVector(0, -offsetDistance));
@@ -160,15 +160,19 @@ this.showingInventory = false;
                     console.log("Spawning bodyguards when undocking from station");
                     player.spawnBodyguards(galaxy?.getCurrentSystem());
                 }
-
+                // Clear recorded docked station after undocking
+                this.currentDockedStation = null;
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
             } else { console.error("Player object missing during undock offset!"); }
         }
         // Snap position ONLY when docking occurs FROM IN_FLIGHT
         else if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
              GS_LOG("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
-             if (player && galaxy?.getCurrentSystem()?.station?.pos) { // Safe access
-                 player.pos = galaxy?.getCurrentSystem()?.station?.pos?.copy() || player.pos; player.vel.mult(0);
+             const dockStation = galaxy?.getCurrentSystem()?.station;
+             // Record the exact station we docked at so undocking can reference it later
+             this.currentDockedStation = dockStation || null;
+             if (player && dockStation?.pos) { // Safe access
+                 player.pos = dockStation.pos.copy() || player.pos; player.vel.mult(0);
              } else { console.error("Could not snap player to station - required objects missing."); }
         }
         // Ensure player stopped when entering DOCKED from sub-menus or other states
@@ -224,7 +228,27 @@ this.showingInventory = false;
                     player.update();
                     currentSystem.update(player); // Update everything
                     const station = currentSystem.station; // Check docking
+                    // Primary station docking check
+                    let dockStation = null;
                     if (station && player.canDock(station)) {
+                        dockStation = station;
+                    } else if (currentSystem.secretStations && currentSystem.secretStations.length > 0) {
+                        // Allow docking at a discovered secret station
+                        for (const s of currentSystem.secretStations) {
+                            if (!s) continue;
+                            if (!s.discovered) continue; // Only allow docking if discovered
+                            try {
+                                if (player.canDock(s)) { dockStation = s; break; }
+                            } catch (e) { /* ignore errors from malformed station */ }
+                        }
+                        // If we're docking to a secret station, temporarily replace system.station
+                        if (dockStation && dockStation !== currentSystem.station) {
+                            currentSystem._previousStation = currentSystem.station;
+                            currentSystem.station = dockStation;
+                        }
+                    }
+
+                    if (dockStation) {
                         this.setState("DOCKED");
                         // Suppress the immediate auto-save triggered by docking if we just loaded a game
                         // This prevents the slot's savedAt from updating merely due to load-side docking snap
@@ -449,6 +473,14 @@ this.showingInventory = false;
 
         // Only get currentSystem if in a state where it's expected to exist
         const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+                // If we had temporarily swapped in a secret station for docking, restore the original station now
+                try {
+                    const sys = galaxy?.getCurrentSystem();
+                    if (sys && sys._previousStation) {
+                        sys.station = sys._previousStation;
+                        delete sys._previousStation;
+                    }
+                } catch (e) { /* ignore restore errors */ }
         if (statesExpectingSystem.includes(this.currentState)) {
             currentSystem = galaxy?.getCurrentSystem();
         }
