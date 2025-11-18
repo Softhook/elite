@@ -281,7 +281,7 @@ class Galaxy {
         // If galaxy hasn't been initialized or has no systems yet, fail quietly
         if (!this.systems || !Array.isArray(this.systems) || this.systems.length === 0) {
             if (!this._warnedEmptyOnce) {
-                console.warn(`getCurrentSystem: Galaxy not initialized or systems empty yet.`);
+                console.log(`getCurrentSystem: Galaxy not initialized or systems empty yet.`);
                 this._warnedEmptyOnce = true;
             }
             return null;
