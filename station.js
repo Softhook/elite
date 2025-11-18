@@ -214,6 +214,31 @@ class Station {
             // Connection to outer ring
             fill(120, 120, 140);
             rect(-this.size * 0.06, -this.size * 0.47, this.size * 0.12, this.size * 0.04, 3);
+
+            // Draw station name on the last arm for identification (skip for military/alien)
+            if (i === 3 && this.stationType !== 'military' && this.stationType !== 'alien') {
+                push();
+                // position the text along the arm (between hub and outer ring)
+                translate(0, -this.size * 0.22);
+                // rotate the text to line up with the arm (90 degrees)
+                rotate(-PI/2);
+                // Use global font if available so the name matches the UI
+                if (typeof font !== 'undefined' && font) {
+                    try { textFont(font); } catch (e) {}
+                }
+                textStyle(NORMAL);
+                textAlign(CENTER, CENTER);
+                const ts = constrain(this.size * 0.045, 10, 26);
+                textSize(ts);
+                noStroke();
+                // subtle drop shadow
+                fill(10, 10, 20, 200);
+                text(this.name, 2, 2);
+                // bright main text
+                fill(240, 240, 220);
+                text(this.name, 0, 0);
+                pop();
+            }
             pop();
         }
     }
@@ -1665,6 +1690,8 @@ class Station {
         // Busy little traffic
         this._drawTrafficSwarm(5, 0.38);
     }
+
+
 }
 
 window.Station = Station;
