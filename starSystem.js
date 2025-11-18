@@ -2274,52 +2274,58 @@ checkProjectileCollisions() {
         this.drawOptimalStarfield();
     }
     
-    drawOptimalStarfield() {
+drawOptimalStarfield() {
+        // Cache global values once per frame
+        const currentMillis = millis();
+        const _width = width;
+        const _height = height;
+        
         // Resolution-independent base sizing
+        // Cache pixelDensity to avoid function call overhead
         const pixelRatio = pixelDensity();
         const baseStarSize = Math.max(1, pixelRatio * 0.6);
         
-        // Viewport bounds with smaller padding for performance
-        const padding = 200;
-        const left = this.player.pos.x - width/2 - padding;
-        const right = this.player.pos.x + width/2 + padding;
-        const top = this.player.pos.y - height/2 - padding;
-        const bottom = this.player.pos.y + height/2 + padding;
+        // Viewport bounds
+        // Reduced padding slightly - 100 is usually sufficient for stars
+        const padding = 100;
+        const playerX = this.player.pos.x;
+        const playerY = this.player.pos.y;
         
-        // Optimized 3-layer approach for better visuals
-        // Layer 1: Background stars (most stars, mostly white)
+        const left = playerX - _width/2 - padding;
+        const right = playerX + _width/2 + padding;
+        const top = playerY - _height/2 - padding;
+        const bottom = playerY + _height/2 + padding;
+        
+        // Optimized 3-layer approach
+        // Layer 1: Background stars
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 45,
             maxStarsPerCell: 3,
             sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
             brightnessRange: [80, 160],
-            colorTypes: ['white', 'white', 'white', 'blue', 'yellow'] // Mostly white
-        });
+            colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+        }, currentMillis);
         
-        // Layer 2: Rare bright feature stars (much fewer, subtle colors)
+        // Layer 2: Rare bright feature stars
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 200,
             maxStarsPerCell: 1,
             sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
             brightnessRange: [180, 255],
-            colorTypes: ['white', 'white', 'blue', 'yellow', 'red'] // Mostly white, few colors
-        });
+            colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+        }, currentMillis);
         
-        // Layer 3: Spectacular phenomena (very rare, dramatic effects)
-        this.drawSpectacularStars(left, right, top, bottom, baseStarSize);
+        // Layer 3: Spectacular phenomena
+        this.drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis);
     }
     
-    drawStarLayer(left, right, top, bottom, config) {
+    drawStarLayer(left, right, top, bottom, config, currentMillis) {
         const gridSize = config.gridSize;
         const systemSeed = this.systemIndex * 1337;
         
-        // Pre-calculate viewport culling bounds
-        const cullLeft = this.player.pos.x - width/2 - 50;
-        const cullRight = this.player.pos.x + width/2 + 50;
-        const cullTop = this.player.pos.y - height/2 - 50;
-        const cullBottom = this.player.pos.y + height/2 + 50;
-        
-        // Color lookup table for performance - more subtle palette
+        // Pre-define colors to avoid object creation inside loops
+        // Using Int16Array or simple vars is faster, but object lookup is optimized enough in V8
+        // providing we don't recreate the object every frame
         const colors = {
             white: [255, 255, 255],
             blue: [200, 220, 255],
@@ -2327,92 +2333,99 @@ checkProjectileCollisions() {
             red: [255, 200, 180]
         };
         
-        // Loop through grid cells in viewport only
+        // Integer math for grid coordinates is faster
         const startGX = Math.floor(left / gridSize);
         const endGX = Math.ceil(right / gridSize);
         const startGY = Math.floor(top / gridSize);
         const endGY = Math.ceil(bottom / gridSize);
         
-        // Minimize state changes: no stroke for star layers
         noStroke();
 
+        // Extract config values to local variables for faster access inside loop
+        const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+        const minSize = sizeRange[0];
+        const sizeDiff = sizeRange[1] - minSize;
+        const minBright = brightnessRange[0];
+        const brightDiff = brightnessRange[1] - minBright;
+        const typesLen = colorTypes.length;
+        
+        // Reuse variables to avoid GC
+        let rng, cellSeed, starCount, worldX, worldY;
+        let size, brightness, colorType, baseColor, r, g, b;
+        
         for (let gx = startGX; gx <= endGX; gx++) {
+            // Cache the X part of the seed calculation
+            const gxSeed = (gx * 73856093) >>> 0;
+            
             for (let gy = startGY; gy <= endGY; gy++) {
                 
-                // Simple deterministic random for this cell
-                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
-                let rng = cellSeed;
+                // Deterministic random seed
+                cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                rng = cellSeed;
                 
-                // Fast pseudo-random function
-                function fastRandom() {
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    return (rng >>> 0) / 4294967296;
-                }
+                // INLINED fastRandom() logic
+                // 1. Skip Check
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
                 
-                // Skip some cells for organic distribution - make large stars much rarer
-                const skipChance = (config.gridSize > 100) ? 0.85 : 0.7; // Large stars much rarer
-                if (fastRandom() > skipChance) continue;
-                
-                // Generate 1-3 stars per cell
-                const starCount = Math.floor(fastRandom() * config.maxStarsPerCell) + 1;
+                // 2. Star Count
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
                 
                 for (let i = 0; i < starCount; i++) {
-                    // Random position within expanded cell bounds
-                    const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 2;
-                    const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 2;
+                    // 3. World X
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
                     
-                    // Early viewport culling
-                    if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
-                        continue;
-                    }
+                    // 4. World Y
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
                     
-                    // Star properties
-                    const sizeRand = fastRandom();
-                    const size = config.sizeRange[0] + sizeRand * (config.sizeRange[1] - config.sizeRange[0]);
+                    // 5. Size
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    size = minSize + (rng / 4294967296) * sizeDiff;
                     
-                    const brightRand = fastRandom();
-                    let brightness = config.brightnessRange[0] + brightRand * (config.brightnessRange[1] - config.brightnessRange[0]);
+                    // 6. Brightness
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    brightness = minBright + (rng / 4294967296) * brightDiff;
                     
-                    // Boost brightness for smaller stars to make them more visible
                     if (size < 2) {
-                        brightness = Math.min(255, brightness * 1.4);
+                        brightness = (brightness * 1.4 > 255) ? 255 : brightness * 1.4;
                     }
                     
-                    // Color selection with variety
-                    const colorTypeIndex = Math.floor(fastRandom() * config.colorTypes.length);
-                    const colorType = config.colorTypes[colorTypeIndex];
-                    const baseColor = colors[colorType];
+                    // 7. Color
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    colorType = colorTypes[Math.floor((rng / 4294967296) * typesLen)];
+                    baseColor = colors[colorType];
                     
-                    // Add brightness variation to color
+                    // Apply brightness
                     const brightnessFactor = brightness / 255;
-                    const r = Math.min(255, baseColor[0] * brightnessFactor);
-                    const g = Math.min(255, baseColor[1] * brightnessFactor);
-                    const b = Math.min(255, baseColor[2] * brightnessFactor);
+                    r = baseColor[0] * brightnessFactor;
+                    g = baseColor[1] * brightnessFactor;
+                    b = baseColor[2] * brightnessFactor;
                     
-                    // Render star efficiently
                     fill(r, g, b);
                     
                     if (size <= 2) {
-                        // Small stars - fast rectangles
-                        const starSize = Math.max(1, Math.round(size));
-                        rect(worldX, worldY, starSize, starSize);
+                        // Use square instead of rect for slight optimization
+                        square(worldX, worldY, (size < 1 ? 1 : Math.round(size)));
                     } else {
-                        // Medium/large stars - circles with optional glow
                         ellipse(worldX, worldY, size, size);
                         
-                        // Glow effect for brightest stars only
+                        // Glow effect - Only for stars that are large AND bright
                         if (brightness > 200 && size > 3) {
                             fill(r, g, b, 40);
                             ellipse(worldX, worldY, size * 1.5, size * 1.5);
                         }
                     }
                     
-                    // Twinkling effect for large bright stars
+                    // Twinkling effect
+                    // Optimization: Pre-check logic before calculating sin/cos
                     if (size > 4 && brightness > 180) {
-                        const twinkle = 0.3 + 0.4 * Math.sin(millis() * 0.005 + worldX * 0.01 + worldY * 0.01);
+                        // Use cached currentMillis
+                        const twinkle = 0.3 + 0.4 * Math.sin(currentMillis * 0.005 + worldX * 0.01 + worldY * 0.01);
                         fill(r, g, b, brightness * twinkle * 0.3);
                         
-                        // Cross-shaped twinkle
                         const twinkleSize = size * 0.3;
                         rect(worldX - size, worldY - twinkleSize/2, size * 2, twinkleSize);
                         rect(worldX - twinkleSize/2, worldY - size, twinkleSize, size * 2);
@@ -2422,224 +2435,203 @@ checkProjectileCollisions() {
         }
     }
 
-    drawSpectacularStars(left, right, top, bottom, baseStarSize) {
-        const gridSize = 400; // Very large grid for rare phenomena
+    drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis) {
+        const gridSize = 400;
         const systemSeed = this.systemIndex * 1337;
         
-        // Pre-calculate viewport culling bounds
-        const cullLeft = this.player.pos.x - width/2 - 100;
-        const cullRight = this.player.pos.x + width/2 + 100;
-        const cullTop = this.player.pos.y - height/2 - 100;
-        const cullBottom = this.player.pos.y + height/2 + 100;
-        
-        // Loop through very sparse grid
+        // Integer math
         const startGX = Math.floor(left / gridSize);
         const endGX = Math.ceil(right / gridSize);
         const startGY = Math.floor(top / gridSize);
         const endGY = Math.ceil(bottom / gridSize);
         
+        // Helper for specific RNG needs inside phenomena
+        // (We can't easily inline this in the sub-functions, so we pass a simple generator)
+        // Using a shared object reduces allocation
+        const rngState = { val: 0 };
+        const nextRand = () => {
+             rngState.val = (rngState.val * 1664525 + 1013904223) >>> 0;
+             return (rngState.val >>> 0) / 4294967296;
+        };
+
         for (let gx = startGX; gx <= endGX; gx++) {
+            // Cache X seed
+            const gxSeed = (gx * 73856093) >>> 0;
+            
             for (let gy = startGY; gy <= endGY; gy++) {
                 
-                // Deterministic random for this cell
-                const cellSeed = ((gx * 73856093) ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
-                let rng = cellSeed;
+                const cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                rngState.val = cellSeed; // Reset RNG for this cell
                 
-                function fastRandom() {
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    return (rng >>> 0) / 4294967296;
-                }
+                if (nextRand() > 0.05) continue;
                 
-                // Very rare phenomena - only 5% chance per cell
-                if (fastRandom() > 0.05) continue;
+                const worldX = gx * gridSize + (nextRand() - 0.5) * gridSize * 1.5;
+                const worldY = gy * gridSize + (nextRand() - 0.5) * gridSize * 1.5;
                 
-                // Random position within cell
-                const worldX = gx * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
-                const worldY = gy * gridSize + (fastRandom() - 0.5) * gridSize * 1.5;
+                // Strict culling for expensive spectacular stars
+                // We do this check here because the drawing functions are heavy
+                if (worldX < left || worldX > right || worldY < top || worldY > bottom) continue;
+
+                const phenomType = nextRand();
                 
-                // Viewport culling
-                if (worldX < cullLeft || worldX > cullRight || worldY < cullTop || worldY > cullBottom) {
-                    continue;
-                }
-                
-                // Determine phenomenon type
-                const phenomType = fastRandom();
-                
+                // Pass cached currentMillis to avoid calling millis() inside sub-functions
                 if (phenomType < 0.3) {
-                    // SUPERNOVA - Brilliant expanding shell
-                    this.drawSupernova(worldX, worldY, baseStarSize, fastRandom);
+                    this.drawSupernova(worldX, worldY, baseStarSize, nextRand, currentMillis);
                 } else if (phenomType < 0.5) {
-                    // NEUTRON STAR - Pulsing with beams
-                    this.drawNeutronStar(worldX, worldY, baseStarSize, fastRandom);
+                    this.drawNeutronStar(worldX, worldY, baseStarSize, nextRand, currentMillis);
                 } else if (phenomType < 0.7) {
-                    // BINARY STAR SYSTEM - Two orbiting stars
-                    this.drawBinaryStar(worldX, worldY, baseStarSize, fastRandom);
+                    this.drawBinaryStar(worldX, worldY, baseStarSize, nextRand, currentMillis);
                 } else if (phenomType < 0.85) {
-                    // NEBULA STAR - Star with colorful gas cloud
-                    this.drawNebulaStar(worldX, worldY, baseStarSize, fastRandom);
+                    this.drawNebulaStar(worldX, worldY, baseStarSize, nextRand, currentMillis);
                 } else {
-                    // GIANT STAR WITH MASSIVE HALO
-                    this.drawGiantStar(worldX, worldY, baseStarSize, fastRandom);
+                    this.drawGiantStar(worldX, worldY, baseStarSize, nextRand, currentMillis);
                 }
             }
         }
     }
     
-    drawSupernova(x, y, baseSize, rng) {
-        const time = millis() * 0.003;
+    drawSupernova(x, y, baseSize, rng, timeMs) {
+        const time = timeMs * 0.003;
         const phase = Math.sin(time + x * 0.01 + y * 0.01);
         
-        // Core - brilliant white center
         const coreSize = baseSize * (3 + phase * 0.5);
         fill(255, 255, 255);
         ellipse(x, y, coreSize, coreSize);
         
-        // Expanding shell - multiple rings
         for (let ring = 1; ring <= 3; ring++) {
             const ringSize = coreSize * (1.5 + ring * 0.8 + phase * 0.3);
             const opacity = 80 / ring;
             
-            // Color shifts from white to red to purple
-            if (ring === 1) {
-                fill(255, 200, 150, opacity);
-            } else if (ring === 2) {
-                fill(255, 100, 100, opacity);
-            } else {
-                fill(150, 50, 200, opacity);
-            }
+            if (ring === 1) fill(255, 200, 150, opacity);
+            else if (ring === 2) fill(255, 100, 100, opacity);
+            else fill(150, 50, 200, opacity);
             
             ellipse(x, y, ringSize, ringSize);
         }
         
-        // Radiating filaments
         stroke(255, 150, 100, 60);
         strokeWeight(1);
+        const baseLen = baseSize * (8 + phase * 2);
         for (let i = 0; i < 8; i++) {
-            const angle = (i * PI / 4) + time * 0.5;
-            const length = baseSize * (8 + phase * 2);
-            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+            const angle = (i * 0.785) + time * 0.5; // 0.785 is PI/4
+            line(x, y, x + Math.cos(angle) * baseLen, y + Math.sin(angle) * baseLen);
         }
         noStroke();
     }
     
-    drawNeutronStar(x, y, baseSize, rng) {
-        const time = millis() * 0.003; // Much slower time progression
-        const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01); // Gentler pulse, slower frequency
+    drawNeutronStar(x, y, baseSize, rng, timeMs) {
+        const time = timeMs * 0.003;
+        const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01);
         
-        // Core - intense white-blue
-        fill(180, 200, 230, 200 * pulse); // More subtle color and lower intensity
-        ellipse(x, y, baseSize * 1.5 * pulse, baseSize * 1.5 * pulse); // Smaller core
+        fill(180, 200, 230, 200 * pulse);
+        const s = baseSize * 1.5 * pulse;
+        ellipse(x, y, s, s);
         
-        // Magnetic field lines - pulsing beams
-        if (pulse > 0.9) { // Higher threshold for beams
-            stroke(120, 150, 200, 60); // More subtle beam color
-            strokeWeight(1); // Thinner beams
+        if (pulse > 0.9) {
+            stroke(120, 150, 200, 60);
+            strokeWeight(1);
             
-            // Two opposing beams
-            const beamLength = baseSize * 6; // Much shorter beams
-            const beamAngle = time * 0.5 + x * 0.002; // Slower rotation
+            const beamLength = baseSize * 6;
+            const beamAngle = time * 0.5 + x * 0.002;
+            const cosA = Math.cos(beamAngle);
+            const sinA = Math.sin(beamAngle);
             
-            line(x + cos(beamAngle) * baseSize, y + sin(beamAngle) * baseSize,
-                 x + cos(beamAngle) * beamLength, y + sin(beamAngle) * beamLength);
-            line(x - cos(beamAngle) * baseSize, y - sin(beamAngle) * baseSize,
-                 x - cos(beamAngle) * beamLength, y - sin(beamAngle) * beamLength);
+            line(x + cosA * baseSize, y + sinA * baseSize,
+                 x + cosA * beamLength, y + sinA * beamLength);
+            line(x - cosA * baseSize, y - sinA * baseSize,
+                 x - cosA * beamLength, y - sinA * beamLength);
         }
         noStroke();
     }
     
-    drawBinaryStar(x, y, baseSize, rng) {
-        const time = millis() * 0.002;
+    drawBinaryStar(x, y, baseSize, rng, timeMs) {
+        const time = timeMs * 0.002;
         const orbitRadius = baseSize * 4;
         const angle = time + x * 0.01 + y * 0.01;
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
         
-        // Primary star (larger, yellow)
-        const star1X = x + cos(angle) * orbitRadius * 0.6;
-        const star1Y = y + sin(angle) * orbitRadius * 0.6;
+        const star1X = x + cosA * orbitRadius * 0.6;
+        const star1Y = y + sinA * orbitRadius * 0.6;
         fill(255, 240, 180);
         ellipse(star1X, star1Y, baseSize * 3, baseSize * 3);
         
-        // Secondary star (smaller, blue)
-        const star2X = x - cos(angle) * orbitRadius * 0.4;
-        const star2Y = y - sin(angle) * orbitRadius * 0.4;
+        const star2X = x - cosA * orbitRadius * 0.4;
+        const star2Y = y - sinA * orbitRadius * 0.4;
         fill(180, 200, 255);
         ellipse(star2X, star2Y, baseSize * 2, baseSize * 2);
         
-        // Material transfer stream
         stroke(255, 150, 100, 100);
         strokeWeight(1);
-        const steps = 10;
+        // Reduced steps from 10 to 6 for performance without visual loss
+        const steps = 6; 
+        const invSteps = 1 / steps;
         for (let i = 0; i < steps; i++) {
-            const t = i / steps;
-            const streamX = lerp(star1X, star2X, t) + sin(time * 2 + t * PI) * baseSize * 0.5;
-            const streamY = lerp(star1Y, star2Y, t) + cos(time * 2 + t * PI) * baseSize * 0.3;
+            const t = i * invSteps;
+            const streamX = lerp(star1X, star2X, t) + Math.sin(time * 2 + t * Math.PI) * baseSize * 0.5;
+            const streamY = lerp(star1Y, star2Y, t) + Math.cos(time * 2 + t * Math.PI) * baseSize * 0.3;
             point(streamX, streamY);
         }
         noStroke();
     }
     
-    drawNebulaStar(x, y, baseSize, rng) {
-        const time = millis() * 0.001;
+    drawNebulaStar(x, y, baseSize, rng, timeMs) {
+        const time = timeMs * 0.001;
         
-        // Nebula cloud - multiple layers
         for (let layer = 0; layer < 3; layer++) {
             const cloudSize = baseSize * (8 + layer * 3);
             const opacity = 25 / (layer + 1);
-            const offset = sin(time + layer) * baseSize * 0.5;
+            const offset = Math.sin(time + layer) * baseSize * 0.5;
             
-            // Different nebula colors
-            if (layer === 0) {
-                fill(100, 50, 200, opacity); // Purple
-            } else if (layer === 1) {
-                fill(200, 50, 100, opacity); // Magenta
-            } else {
-                fill(50, 100, 200, opacity); // Blue
-            }
+            if (layer === 0) fill(100, 50, 200, opacity);
+            else if (layer === 1) fill(200, 50, 100, opacity);
+            else fill(50, 100, 200, opacity);
             
             ellipse(x + offset, y - offset, cloudSize, cloudSize * 0.7);
         }
         
-        // Central star
         fill(255, 255, 255);
         ellipse(x, y, baseSize * 2.5, baseSize * 2.5);
         
-        // Glow
         fill(255, 255, 255, 60);
         ellipse(x, y, baseSize * 5, baseSize * 5);
     }
     
-    drawGiantStar(x, y, baseSize, rng) {
-        const time = millis() * 0.002;
-        const breathe = 0.9 + 0.1 * sin(time + x * 0.005);
+    drawGiantStar(x, y, baseSize, rng, timeMs) {
+        const time = timeMs * 0.002;
+        const breathe = 0.9 + 0.1 * Math.sin(time + x * 0.005);
         
-        // Multiple halos - largest first
-        const halos = [
-            { size: 15, color: [255, 100, 50, 15], offset: 0 },
-            { size: 10, color: [255, 150, 100, 25], offset: 0.5 },
-            { size: 6, color: [255, 200, 150, 40], offset: 1.0 },
-            { size: 3, color: [255, 220, 180, 80], offset: 1.5 }
-        ];
+        // Hardcoded halos to avoid array creation
+        // Size 15
+        let shimmer = 0.8 + 0.2 * Math.sin((time) * 2);
+        fill(255, 100, 50, 15 * shimmer);
+        ellipse(x, y, baseSize * 15 * breathe, baseSize * 15 * breathe);
         
-        // Draw halos from largest to smallest
-        for (let halo of halos) {
-            const haloSize = baseSize * halo.size * breathe;
-            const phase = time + halo.offset;
-            const shimmer = 0.8 + 0.2 * sin(phase * 2);
-            
-            fill(halo.color[0], halo.color[1], halo.color[2], halo.color[3] * shimmer);
-            ellipse(x, y, haloSize, haloSize);
-        }
+        // Size 10
+        shimmer = 0.8 + 0.2 * Math.sin((time + 0.5) * 2);
+        fill(255, 150, 100, 25 * shimmer);
+        ellipse(x, y, baseSize * 10 * breathe, baseSize * 10 * breathe);
         
-        // Core star
+        // Size 6
+        shimmer = 0.8 + 0.2 * Math.sin((time + 1.0) * 2);
+        fill(255, 200, 150, 40 * shimmer);
+        ellipse(x, y, baseSize * 6 * breathe, baseSize * 6 * breathe);
+
+        // Size 3
+        shimmer = 0.8 + 0.2 * Math.sin((time + 1.5) * 2);
+        fill(255, 220, 180, 80 * shimmer);
+        ellipse(x, y, baseSize * 3 * breathe, baseSize * 3 * breathe);
+        
+        // Core
         fill(255, 200, 100);
         ellipse(x, y, baseSize * 4 * breathe, baseSize * 4 * breathe);
         
-        // Corona effects
         stroke(255, 150, 50, 40);
         strokeWeight(1);
         for (let i = 0; i < 12; i++) {
-            const angle = (i * PI / 6) + time;
-            const length = baseSize * (8 + 2 * sin(time * 3 + i));
-            line(x, y, x + cos(angle) * length, y + sin(angle) * length);
+            const angle = (i * 0.523) + time; // 0.523 is PI/6
+            const length = baseSize * (8 + 2 * Math.sin(time * 3 + i));
+            line(x, y, x + Math.cos(angle) * length, y + Math.sin(angle) * length);
         }
         noStroke();
     }
