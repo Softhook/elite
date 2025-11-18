@@ -956,6 +956,28 @@ handleInput() {
 
         // Sync bodyguard status from their enemy references
         this.syncBodyguardStatus();
+
+        // --- Secret Station Discovery ---
+        // Only check for discoveries when we have secret stations and only every
+        // few frames to reduce cost.
+        if (this.currentSystem && this.currentSystem.secretStations && this.currentSystem.secretStations.length > 0 && frameCount % 10 === 0) {
+            for (const station of this.currentSystem.secretStations) {
+                if (!station || station.discovered) continue;
+                // Use squared distance to avoid sqrt cost
+                const dx = this.pos.x - station.pos.x;
+                const dy = this.pos.y - station.pos.y;
+                const distSq = dx*dx + dy*dy;
+                const discoveryDistance = (station.size * 3) || 200; // fallback
+                const discoverySq = discoveryDistance * discoveryDistance;
+                if (distSq < discoverySq) {
+                    station.discovered = true;
+                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Secret Base Discovered: ${station.name}!`, [0,255,255]);
+                    console.log(`Player discovered secret station: ${station.name}`);
+                    // Clear any navigation cache so UI updates immediately
+                    this._cachedNavigation = null;
+                }
+            }
+        }
     }
 
     /**
@@ -1171,6 +1193,75 @@ handleInput() {
             line(this.lastBeam.start.x, this.lastBeam.start.y, 
                  this.lastBeam.end.x, this.lastBeam.end.y);
             pop();
+        }
+
+        // Draw line to secret base if feature is active (early exit if not active)
+        if (this.showSecretBaseNavigation && this.currentSystem && this.currentSystem.secretStations &&
+            this.currentSystem.secretStations.length > 0) {
+
+            // Cache closest station data to avoid recalculating every frame
+            if (!this._cachedNavigation || frameCount % 30 === 0) {
+                // Only recalculate every 30 frames or if cache is empty
+                let closestStation = this.currentSystem.secretStations[0];
+                let closestDist = Infinity;
+
+                for (const station of this.currentSystem.secretStations) {
+                    // Use faster squared distance calculation
+                    const dx = this.pos.x - station.pos.x;
+                    const dy = this.pos.y - station.pos.y;
+                    const distSquared = dx*dx + dy*dy;
+
+                    if (distSquared < closestDist) {
+                        closestDist = distSquared;
+                        closestStation = station;
+                    }
+                }
+
+                // Now take the sqrt only once for the closest station
+                closestDist = Math.sqrt(closestDist);
+
+                // Cache the results
+                this._cachedNavigation = {
+                    station: closestStation,
+                    distance: closestDist,
+                    lastUpdated: frameCount
+                };
+            }
+
+            const closestStation = this._cachedNavigation.station;
+            const closestDist = this._cachedNavigation.distance;
+
+            // Draw line with dash effect
+            push();
+            stroke(0, 255, 255, 150); // Cyan color with transparency
+            strokeWeight(2);
+
+            // Calculate dash pattern based on distance
+            const dashLength = map(closestDist, 0, 5000, 5, 20);
+            drawingContext.setLineDash([dashLength, dashLength * 1.5]);
+
+            // Draw the line
+            line(this.pos.x, this.pos.y, closestStation.pos.x, closestStation.pos.y);
+            
+            // Draw distance text at a fixed position above the ship (independent of rotation)
+            const nearX = this.pos.x;
+            const nearY = this.pos.y - (this.size + 18);
+            fill(0, 255, 255);
+            textAlign(CENTER, CENTER);
+            textSize(14);
+
+            // Show discovery status in distance text (draw near player)
+            const statusText = closestStation.discovered ?
+                `Secret Base: ${Math.floor(closestDist)} units` :
+                `Locate Secret Base: ${Math.floor(closestDist)} units`;
+            text(statusText, nearX, nearY - 10);
+
+            // Reset line dash
+            drawingContext.setLineDash([]);
+            pop();
+        } else if (this._cachedNavigation) {
+            // Clear cache when not in use to free memory
+            this._cachedNavigation = null;
         }
     }
 

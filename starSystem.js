@@ -2692,6 +2692,10 @@ checkProjectileCollisions() {
             }
         }
 
+        // (Navigation overlay removed) Secret-base indicator is drawn by the
+        // player drawing code to preserve original dashed-line + distance label
+        // behavior and correct layering. See `player.draw()` for implementation.
+
         // Determine sun position using the first planet if it exists
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
 
