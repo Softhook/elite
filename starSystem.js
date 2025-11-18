@@ -2267,7 +2267,7 @@ checkProjectileCollisions() {
     /** Draws background stars using optimal multi-layer noise-based rendering. */
     drawBackground() {
         // Clear background with dark space color
-        fill(0, 0, 8); 
+        fill(0, 0, 0); 
         noStroke();
         rect(-width * 2, -height * 2, width * 4, height * 4);
         
