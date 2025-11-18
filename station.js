@@ -239,8 +239,53 @@ class Station {
                 text(this.name, 0, 0);
                 pop();
             }
+
+            // Draw a small station-specific slogan on the second arm (i === 1).
+            // Skip for heavily stylized stations like military/alien.
+            if (i === 1 && this.stationType !== 'military' && this.stationType !== 'alien') {
+                const slogan = this._getStationSlogan();
+                if (slogan) {
+                    push();
+                    translate(0, -this.size * 0.22);
+                    rotate(-PI/2);
+                    if (typeof font !== 'undefined' && font) {
+                        try { textFont(font); } catch (e) {}
+                    }
+                    textStyle(NORMAL);
+                    textAlign(CENTER, CENTER);
+                    const ts2 = constrain(this.size * 0.03, 8, 18);
+                    textSize(ts2);
+                    noStroke();
+                    fill(0);
+                    text(slogan, 0, 0);
+                    pop();
+                }
+            }
+
+
+            
             pop();
         }
+    }
+
+    /**
+     * Returns a short, station-specific slogan for rendering on the second arm.
+     * @private
+     */
+    _getStationSlogan() {
+        const map = {
+            separatist: 'Anarcho Syndicalism for All',
+            industrial: 'Powered by Industry',
+            mining: 'Ore For All',
+            tourism: 'Dreams Above the Stars',
+            agricultural: 'The Conquest of Bread',
+            refinery: 'Fuel the Future',
+            posthuman: 'More than Flesh',
+            imperial: 'The Emperor Commands',
+            service: 'Cheap labour available',
+            standard: 'Welcome Aboard'
+        };
+        return map[this.stationType] || '';
     }
 
     /**
