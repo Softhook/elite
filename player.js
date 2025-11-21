@@ -1774,10 +1774,12 @@ handleInput() {
         // Load faction kills with defaults
         this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
         // Ensure all faction keys exist (check for undefined/null, not falsy values)
-        if (this.factionKills.POLICE === undefined || this.factionKills.POLICE === null) this.factionKills.POLICE = 0;
-        if (this.factionKills.MILITARY === undefined || this.factionKills.MILITARY === null) this.factionKills.MILITARY = 0;
-        if (this.factionKills.IMPERIAL === undefined || this.factionKills.IMPERIAL === null) this.factionKills.IMPERIAL = 0;
-        if (this.factionKills.SEPARATIST === undefined || this.factionKills.SEPARATIST === null) this.factionKills.SEPARATIST = 0;
+        const requiredFactions = ['POLICE', 'MILITARY', 'IMPERIAL', 'SEPARATIST'];
+        requiredFactions.forEach(faction => {
+            if (this.factionKills[faction] === undefined || this.factionKills[faction] === null) {
+                this.factionKills[faction] = 0;
+            }
+        });
 
         // Restore player weapons from saved data with defensive repair
         let weaponsRepaired = false;
@@ -2221,7 +2223,7 @@ handleInput() {
 
     /**
      * Determines player's faction rank based on faction-specific kills
-     * @param {string} factionName - The faction name ("POLICE", "MILITARY", "IMPERIAL_SEPARATIST")
+     * @param {string} factionName - The faction name ("POLICE", "MILITARY", "IMPERIAL", "SEPARATIST")
      * @returns {string} The faction rank
      */
     getFactionRank(factionName) {
