@@ -8,7 +8,7 @@ class Player {
     constructor(shipTypeName = "Sidewinder") {
         // console.log(`Creating Player instance with ship: ${shipTypeName}`); // Optional log
         this.shipTypeName = shipTypeName; // Store the type name initially
-        let shipDef = SHIP_DEFINITIONS[this.shipTypeName]; // Get definition first
+        // constructor continues; initialization follows below
         if (!shipDef) {
             console.error(`FATAL: Ship definition "${shipTypeName}" not found! Defaulting to Sidewinder.`);
             this.shipTypeName = "Sidewinder";
@@ -140,61 +140,7 @@ class Player {
         this.isBarrierActive = false;
         this.barrierDurationTimer = 0;
         this.barrierDamageReduction = 0;
-        this.barrierColor = [100, 100, 255]; // Default color, will be overridden by weapon
-
-        // Death state properties
-        this.destroyed = false;
-        this.exploding = false;
-        this.explosionStartTime = 0;
-        this.isDying = false; // Flag to prevent interactions during death animation
-
-        // Turret firing angle for visual sync
-        this.lastTurretFiringAngle = null;
-
-        // Personal record tracking
-        this.shipsDestroyed = []; // Array of {pilotName, shipType, role, faction, timestamp}
-        this.systemsVisited = []; // Array of {systemName, timestamp}
-        this.stationsTraded = []; // Array of {stationName, systemName, timestamp}
-        this.factionsJoined = []; // Array of {factionName, timestamp}
-        this.eliteStatusChanges = []; // Array of {oldRating, newRating, kills, timestamp}
-        this.missionsCompleted = []; // Array of {title, type, reward, timestamp}
-        this.wantedStatusChanges = []; // Array of {isWanted, systemName, timestamp}
-        this.shipsPurchased = []; // Array of {shipType, price, systemName, timestamp}
-        this.weaponsUpgraded = []; // Array of {weaponName, weaponType, price, slotIndex, systemName, timestamp}
-
-        // Note: applyShipDefinition (called later) calculates this.rotationSpeed.
-    }
-
-
-    /** Accepts a mission if none is active and requirements are met. */
-    acceptMission(mission) {
-        console.log(`--- Attempting Player.acceptMission() for: ${mission?.title || 'Invalid Mission'}`);
-
-        if (this.activeMission) { console.warn("Accept Failed: Mission already active."); return false; }
-        if (!mission) { console.warn("Accept Failed: Invalid mission object provided."); return false; }
-        if (mission.status !== 'Available') { console.warn(`Accept Failed: Mission status is '${mission.status}'.`); return false; }
-        if (typeof mission.activate !== 'function') { console.warn("Accept Failed: Mission missing activate method."); return false; }
-
-        console.log(`   Mission "${mission.title}" checks passed (status: ${mission.status}).`);
-
-        // Check cargo space for delivery missions
-        if (mission.type === MISSION_TYPE.DELIVERY_LEGAL || mission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
-             let spaceNeeded = mission.cargoQuantity || 0;
-             let currentCargo = this.getCargoAmount();
-             console.log(`   Delivery Check: Need=${spaceNeeded}, Have=${this.cargoCapacity - currentCargo} free.`);
-             if (currentCargo + spaceNeeded > this.cargoCapacity) {
-                  console.warn(`   Accept Failed: Not enough cargo space.`); return false;
-             }
-             // Add cargo if needed
-             if (mission.cargoType && spaceNeeded > 0) {
-                 console.log(`   Adding mission cargo: ${spaceNeeded}t ${mission.cargoType}`);
-                 this.addCargo(mission.cargoType, spaceNeeded);
-             }
-        }
-
-        // --- Assign and ACTIVATE ---
-        console.log(`   Assigning mission object to player.activeMission...`);
-        this.activeMission = mission; // Assign the reference
+        this.barrierDamageReduction = 0;
         console.log(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
 
         try {
@@ -2162,35 +2108,66 @@ handleInput() {
      */
     addKill(enemy = null) {
         const oldRating = this.getEliteRating();
-        this.kills++;
+
+        // Increment global kills and compute new rating
+        this.kills = (this.kills || 0) + 1;
         const newRating = this.getEliteRating();
-        
+
         // Prefer the actual destroyed enemy when available; fall back to current target
         const killTarget = enemy || this.target;
         if (killTarget) {
             this.recordShipDestruction(killTarget);
-            
-            // Track faction-specific kills based on enemy faction
+
             if (killTarget.faction) {
-                const oldFactionRank = this.getFactionRank(killTarget.faction);
-                if (this.factionKills[killTarget.faction] !== undefined) {
-                    this.factionKills[killTarget.faction]++;
-                    const newFactionRank = this.getFactionRank(killTarget.faction);
-                    
-                    // Notify player of faction rank change
-                    if (oldFactionRank !== newFactionRank) {
-                        const factionDisplayName = this.getFactionDisplayName(killTarget.faction);
-                        if (typeof uiManager !== "undefined") {
-                            uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
+                // Determine player's faction key (POLICE tracked by `isPolice`)
+                const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
+
+                // Opposition mapping: when player is IMPERIAL, kills of SEPARATIST count towards Imperial progression
+                const oppositionMap = {
+                    IMPERIAL: 'SEPARATIST',
+                    SEPARATIST: 'IMPERIAL',
+                    MILITARY: 'ALIEN'
+                };
+
+                // Police increment when killing pirates (by role, not faction)
+                if (this.isPolice && killTarget.role === AI_ROLE.PIRATE) {
+                    if (this.factionKills && this.factionKills['POLICE'] !== undefined) {
+                        const oldFactionRank = this.getFactionRank('POLICE');
+                        this.factionKills['POLICE']++;
+                        const newFactionRank = this.getFactionRank('POLICE');
+
+                        if (oldFactionRank !== newFactionRank) {
+                            const factionDisplayName = this.getFactionDisplayName('POLICE');
+                            if (typeof uiManager !== "undefined") {
+                                uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
+                            }
+                            if (typeof soundManager !== "undefined") {
+                                soundManager.playSound("promotion");
+                            }
                         }
-                        if (typeof soundManager !== "undefined") {
-                            soundManager.playSound("promotion");
+                    }
+                } else if (playerFactionKey && oppositionMap[playerFactionKey] === killTarget.faction) {
+                    // Increment the player's faction-specific kills
+                    if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
+                        const oldFactionRank = this.getFactionRank(playerFactionKey);
+                        this.factionKills[playerFactionKey]++;
+                        const newFactionRank = this.getFactionRank(playerFactionKey);
+
+                        // Notify player of faction rank change
+                        if (oldFactionRank !== newFactionRank) {
+                            const factionDisplayName = this.getFactionDisplayName(playerFactionKey);
+                            if (typeof uiManager !== "undefined") {
+                                uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
+                            }
+                            if (typeof soundManager !== "undefined") {
+                                soundManager.playSound("promotion");
+                            }
                         }
                     }
                 }
             }
         }
-        
+
         // Record Elite status change if rating changed
         if (oldRating !== newRating) {
             this.recordEliteStatusChange(oldRating, newRating);
@@ -2201,7 +2178,7 @@ handleInput() {
                 soundManager.playSound("promotion");
             }
         }
-        
+
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${newRating}`);
     }
 
@@ -2239,13 +2216,13 @@ handleInput() {
             if (kills >= 10) return "Constable";
             return "Recruit";
         } else if (factionName === "MILITARY") {
-            if (kills >= 1000) return "Admiral";
-            if (kills >= 500) return "Commodore";
-            if (kills >= 250) return "Captain";
-            if (kills >= 100) return "Commander";
-            if (kills >= 50) return "Lieutenant";
-            if (kills >= 25) return "Ensign";
-            if (kills >= 10) return "Cadet";
+            if (kills >= 500) return "Admiral";
+            if (kills >= 250) return "Commodore";
+            if (kills >= 125) return "Captain";
+            if (kills >= 50) return "Commander";
+            if (kills >= 25) return "Lieutenant";
+            if (kills >= 12) return "Ensign";
+            if (kills >= 5) return "Cadet";
             return "Trainee";
         } else if (factionName === "IMPERIAL") {
             if (kills >= 1000) return "Emperor";

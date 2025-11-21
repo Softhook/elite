@@ -121,6 +121,8 @@ class Enemy {
                 // Military ships (Vulture, Viper, FederalAssaultShip, etc.)
                 this.faction = "MILITARY";
             }
+        } else if (this.role === AI_ROLE.ALIEN) {
+            this.faction = "ALIEN";
         }
         // ---
 
