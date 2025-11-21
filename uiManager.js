@@ -333,9 +333,12 @@ class UIManager {
             } else if (player.playerFaction === "MILITARY") {
                 factionDisplay = "MILITARY";
                 factionRank = player.getFactionRank("MILITARY");
-            } else if (player.playerFaction === "IMPERIAL" || player.playerFaction === "SEPARATIST") {
-                factionDisplay = player.playerFaction === "IMPERIAL" ? "IMPERIAL" : "SEPARATIST";
-                factionRank = player.getFactionRank("IMPERIAL_SEPARATIST");
+            } else if (player.playerFaction === "IMPERIAL") {
+                factionDisplay = "IMPERIAL";
+                factionRank = player.getFactionRank("IMPERIAL");
+            } else if (player.playerFaction === "SEPARATIST") {
+                factionDisplay = "SEPARATIST";
+                factionRank = player.getFactionRank("SEPARATIST");
             } else {
                 factionDisplay = "LEGAL";
             }

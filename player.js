@@ -112,7 +112,8 @@ class Player {
         this.factionKills = {
             POLICE: 0,
             MILITARY: 0,
-            IMPERIAL_SEPARATIST: 0
+            IMPERIAL: 0,
+            SEPARATIST: 0
         };
 
         // Initialize wanted status
@@ -1692,7 +1693,7 @@ handleInput() {
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
             kills: this.kills,
-            factionKills: this.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL_SEPARATIST: 0 },
+            factionKills: this.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 },
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -1771,11 +1772,12 @@ handleInput() {
         this.kills = data.kills || 0;
         
         // Load faction kills with defaults
-        this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL_SEPARATIST: 0 };
+        this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
         // Ensure all faction keys exist (check for undefined/null, not falsy values)
         if (this.factionKills.POLICE === undefined || this.factionKills.POLICE === null) this.factionKills.POLICE = 0;
         if (this.factionKills.MILITARY === undefined || this.factionKills.MILITARY === null) this.factionKills.MILITARY = 0;
-        if (this.factionKills.IMPERIAL_SEPARATIST === undefined || this.factionKills.IMPERIAL_SEPARATIST === null) this.factionKills.IMPERIAL_SEPARATIST = 0;
+        if (this.factionKills.IMPERIAL === undefined || this.factionKills.IMPERIAL === null) this.factionKills.IMPERIAL = 0;
+        if (this.factionKills.SEPARATIST === undefined || this.factionKills.SEPARATIST === null) this.factionKills.SEPARATIST = 0;
 
         // Restore player weapons from saved data with defensive repair
         let weaponsRepaired = false;
@@ -2243,7 +2245,16 @@ handleInput() {
             if (kills >= 25) return "Ensign";
             if (kills >= 10) return "Cadet";
             return "Trainee";
-        } else if (factionName === "IMPERIAL_SEPARATIST") {
+        } else if (factionName === "IMPERIAL") {
+            if (kills >= 1000) return "Emperor";
+            if (kills >= 500) return "Grand Duke";
+            if (kills >= 250) return "Duke";
+            if (kills >= 100) return "Marquis";
+            if (kills >= 50) return "Count";
+            if (kills >= 25) return "Baron";
+            if (kills >= 10) return "Knight";
+            return "Squire";
+        } else if (factionName === "SEPARATIST") {
             if (kills >= 1000) return "Supreme Leader";
             if (kills >= 500) return "War Marshal";
             if (kills >= 250) return "Battle Commander";
@@ -2259,12 +2270,13 @@ handleInput() {
 
     /**
      * Converts a faction key to a display-friendly name
-     * @param {string} factionKey - The faction key ("POLICE", "MILITARY", "IMPERIAL_SEPARATIST")
+     * @param {string} factionKey - The faction key ("POLICE", "MILITARY", "IMPERIAL", "SEPARATIST")
      * @returns {string} The formatted faction display name
      */
     getFactionDisplayName(factionKey) {
         if (!factionKey) return null;
-        if (factionKey === "IMPERIAL_SEPARATIST") return "Imperial Separatist";
+        // All faction keys are already in the format we want for display
+        // POLICE -> Police, MILITARY -> Military, IMPERIAL -> Imperial, SEPARATIST -> Separatist
         return factionKey.charAt(0) + factionKey.slice(1).toLowerCase();
     }
 

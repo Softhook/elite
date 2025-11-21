@@ -114,9 +114,9 @@ class Enemy {
         } else if (this.role === AI_ROLE.COMBAT) {
             // Combat ships can be Military, Imperial, or Separatist based on ship type
             if (actualShipTypeName.includes("Imperial")) {
-                this.faction = "IMPERIAL_SEPARATIST";
+                this.faction = "IMPERIAL";
             } else if (actualShipTypeName.includes("Separatist")) {
-                this.faction = "IMPERIAL_SEPARATIST";
+                this.faction = "SEPARATIST";
             } else {
                 // Military ships (Vulture, Viper, FederalAssaultShip, etc.)
                 this.faction = "MILITARY";
