@@ -108,6 +108,13 @@ class Player {
         // Track enemy kills for Elite rating
         this.kills = 0;
 
+        // Track faction-specific kills for faction rankings
+        this.factionKills = {
+            POLICE: 0,
+            MILITARY: 0,
+            IMPERIAL_SEPARATIST: 0
+        };
+
         // Initialize wanted status
         this.isWanted = false;
 
@@ -1685,6 +1692,7 @@ handleInput() {
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
             kills: this.kills,
+            factionKills: this.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL_SEPARATIST: 0 },
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -1761,6 +1769,13 @@ handleInput() {
         this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
 
         this.kills = data.kills || 0;
+        
+        // Load faction kills with defaults
+        this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL_SEPARATIST: 0 };
+        // Ensure all faction keys exist
+        if (!this.factionKills.POLICE) this.factionKills.POLICE = 0;
+        if (!this.factionKills.MILITARY) this.factionKills.MILITARY = 0;
+        if (!this.factionKills.IMPERIAL_SEPARATIST) this.factionKills.IMPERIAL_SEPARATIST = 0;
 
         // Restore player weapons from saved data with defensive repair
         let weaponsRepaired = false;
@@ -2150,6 +2165,28 @@ handleInput() {
         const killTarget = enemy || this.target;
         if (killTarget) {
             this.recordShipDestruction(killTarget);
+            
+            // Track faction-specific kills based on enemy faction
+            if (killTarget.faction) {
+                const oldFactionRank = this.getFactionRank(killTarget.faction);
+                if (this.factionKills[killTarget.faction] !== undefined) {
+                    this.factionKills[killTarget.faction]++;
+                    const newFactionRank = this.getFactionRank(killTarget.faction);
+                    
+                    // Notify player of faction rank change
+                    if (oldFactionRank !== newFactionRank) {
+                        const factionDisplayName = killTarget.faction === "IMPERIAL_SEPARATIST" 
+                            ? "Imperial Separatist" 
+                            : killTarget.faction.charAt(0) + killTarget.faction.slice(1).toLowerCase();
+                        if (typeof uiManager !== "undefined") {
+                            uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
+                        }
+                        if (typeof soundManager !== "undefined") {
+                            soundManager.playSound("promotion");
+                        }
+                    }
+                }
+            }
         }
         
         // Record Elite status change if rating changed
@@ -2180,6 +2217,58 @@ handleInput() {
         if (this.kills >= 16) return "Poor";
         if (this.kills >= 8) return "Mostly Harmless";
         return "Harmless";
+    }
+
+    /**
+     * Determines player's faction rank based on faction-specific kills
+     * @param {string} factionName - The faction name ("POLICE", "MILITARY", "IMPERIAL_SEPARATIST")
+     * @returns {string} The faction rank
+     */
+    getFactionRank(factionName) {
+        const kills = this.factionKills[factionName] || 0;
+        
+        if (factionName === "POLICE") {
+            if (kills >= 1000) return "Commissioner";
+            if (kills >= 500) return "Chief Inspector";
+            if (kills >= 250) return "Inspector";
+            if (kills >= 100) return "Sergeant";
+            if (kills >= 50) return "Corporal";
+            if (kills >= 25) return "Officer";
+            if (kills >= 10) return "Constable";
+            return "Recruit";
+        } else if (factionName === "MILITARY") {
+            if (kills >= 1000) return "Admiral";
+            if (kills >= 500) return "Commodore";
+            if (kills >= 250) return "Captain";
+            if (kills >= 100) return "Commander";
+            if (kills >= 50) return "Lieutenant";
+            if (kills >= 25) return "Ensign";
+            if (kills >= 10) return "Cadet";
+            return "Trainee";
+        } else if (factionName === "IMPERIAL_SEPARATIST") {
+            if (kills >= 1000) return "Supreme Leader";
+            if (kills >= 500) return "War Marshal";
+            if (kills >= 250) return "Battle Commander";
+            if (kills >= 100) return "Strike Leader";
+            if (kills >= 50) return "Squadron Leader";
+            if (kills >= 25) return "Wing Commander";
+            if (kills >= 10) return "Fighter";
+            return "Initiate";
+        }
+        
+        return "Unknown";
+    }
+
+    /**
+     * Gets the player's current faction display name
+     * @returns {string} The faction display name
+     */
+    getCurrentFactionDisplayName() {
+        if (this.isPolice) return "Police";
+        if (this.playerFaction === "MILITARY") return "Military";
+        if (this.playerFaction === "IMPERIAL") return "Imperial";
+        if (this.playerFaction === "SEPARATIST") return "Separatist";
+        return null;
     }
 
     /**

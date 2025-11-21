@@ -323,8 +323,29 @@ class UIManager {
             fill(255);
             textAlign(CENTER, CENTER);
             
-            // Add Elite rating to status display
-            text(`${eliteRating} - ` + (player.isPolice ? "POLICE" : "LEGAL"), width/2, statusLineY);
+            // Determine faction display
+            let factionDisplay = "";
+            let factionRank = "";
+            
+            if (player.isPolice) {
+                factionDisplay = "POLICE";
+                factionRank = player.getFactionRank("POLICE");
+            } else if (player.playerFaction === "MILITARY") {
+                factionDisplay = "MILITARY";
+                factionRank = player.getFactionRank("MILITARY");
+            } else if (player.playerFaction === "IMPERIAL" || player.playerFaction === "SEPARATIST") {
+                factionDisplay = player.playerFaction === "IMPERIAL" ? "IMPERIAL" : "SEPARATIST";
+                factionRank = player.getFactionRank("IMPERIAL_SEPARATIST");
+            } else {
+                factionDisplay = "LEGAL";
+            }
+            
+            // Display Elite rating and faction rank (if applicable)
+            if (factionRank) {
+                text(`${eliteRating} - ${factionDisplay} (${factionRank})`, width/2, statusLineY);
+            } else {
+                text(`${eliteRating} - ${factionDisplay}`, width/2, statusLineY);
+            }
         }
         
         // Right side - Ship info - aligned with statusLineY
