@@ -1772,10 +1772,10 @@ handleInput() {
         
         // Load faction kills with defaults
         this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL_SEPARATIST: 0 };
-        // Ensure all faction keys exist
-        if (!this.factionKills.POLICE) this.factionKills.POLICE = 0;
-        if (!this.factionKills.MILITARY) this.factionKills.MILITARY = 0;
-        if (!this.factionKills.IMPERIAL_SEPARATIST) this.factionKills.IMPERIAL_SEPARATIST = 0;
+        // Ensure all faction keys exist (check for undefined/null, not falsy values)
+        if (this.factionKills.POLICE === undefined || this.factionKills.POLICE === null) this.factionKills.POLICE = 0;
+        if (this.factionKills.MILITARY === undefined || this.factionKills.MILITARY === null) this.factionKills.MILITARY = 0;
+        if (this.factionKills.IMPERIAL_SEPARATIST === undefined || this.factionKills.IMPERIAL_SEPARATIST === null) this.factionKills.IMPERIAL_SEPARATIST = 0;
 
         // Restore player weapons from saved data with defensive repair
         let weaponsRepaired = false;
@@ -2175,9 +2175,7 @@ handleInput() {
                     
                     // Notify player of faction rank change
                     if (oldFactionRank !== newFactionRank) {
-                        const factionDisplayName = killTarget.faction === "IMPERIAL_SEPARATIST" 
-                            ? "Imperial Separatist" 
-                            : killTarget.faction.charAt(0) + killTarget.faction.slice(1).toLowerCase();
+                        const factionDisplayName = this.getFactionDisplayName(killTarget.faction);
                         if (typeof uiManager !== "undefined") {
                             uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
                         }
@@ -2257,6 +2255,17 @@ handleInput() {
         }
         
         return "Unknown";
+    }
+
+    /**
+     * Converts a faction key to a display-friendly name
+     * @param {string} factionKey - The faction key ("POLICE", "MILITARY", "IMPERIAL_SEPARATIST")
+     * @returns {string} The formatted faction display name
+     */
+    getFactionDisplayName(factionKey) {
+        if (!factionKey) return null;
+        if (factionKey === "IMPERIAL_SEPARATIST") return "Imperial Separatist";
+        return factionKey.charAt(0) + factionKey.slice(1).toLowerCase();
     }
 
     /**
