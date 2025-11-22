@@ -997,7 +997,7 @@ class UIManager {
         if (player.isPolice) {
             fill(100, 255, 100);
             textSize(18);
-            text("Active Bounty: 1,000 cr per pirate killed", pX+pW/2, contentY+65);
+            text("Active Bounty: 1,000 cr per Alien killed", pX+pW/2, contentY+65);
         }
         // Show police faction kill progress
         try {
@@ -4356,6 +4356,7 @@ if (isIllegalInSystem || isMissionCargo) {
             fill(100, 255, 100);
             textSize(18);
             text("Active Bounty: 4,000 cr per Alien killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
+            text("Active Bounty: 1,000 cr per Pirate killed", pX+pW/2, contentY + (player.playerFaction ? 190 : 170));
         }
 
         // Show Military faction kill progress

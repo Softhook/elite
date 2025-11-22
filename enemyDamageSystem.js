@@ -285,8 +285,8 @@ class EnemyDamageSystem {
         let bountyAmount = 0;
         let bountyMessage = null;
 
-        // Police bounties - 1,000 credits for killing pirates
-        if (attacker.isPolice && this.role === AI_ROLE.PIRATE) {
+        // Police bounties - 1,000 credits for killing aliens
+        if (attacker.isPolice && this.role === AI_ROLE.ALIEN) {
             bountyAmount = 1000;
             bountyMessage = "Police bounty: 1,000 cr";
         }
@@ -304,6 +304,11 @@ class EnemyDamageSystem {
         else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.ALIEN) {
             bountyAmount = 4000;
             bountyMessage = "Military bounty: 4,000 cr";
+        }
+        // Military bounties - 1,000 credits for killing pirates
+        else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.PIRATE) {
+            bountyAmount = 1000;
+            bountyMessage = "Military bounty: 1,000 cr";
         }
 
         // Award the bounty
