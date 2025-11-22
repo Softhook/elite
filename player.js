@@ -2166,6 +2166,13 @@ handleInput() {
 
             // Police increment when killing pirates (by role, not faction)
             if (this.isPolice && killTarget.role === AI_ROLE.PIRATE) {
+                // Police get bounty for killing pirates
+                this.addCredits(1000);
+                PLAYER_LOG(`Police bounty: +1000 credits for killing pirate`);
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Police bounty: 1,000 cr", [100, 255, 100]);
+                }
+                
                 if (this.factionKills && this.factionKills['POLICE'] !== undefined) {
                     const oldFactionRank = this.getFactionRank('POLICE');
                     this.factionKills['POLICE']++;
