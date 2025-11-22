@@ -2210,6 +2210,53 @@ class Station {
         // Futuristic rotating mini-rings and holo billboards
         this._drawRotatingMiniRing(-this.size*0.06, -this.size*0.04, 0.7);
         this._drawHoloBillboard(this.size*0.1, -this.size*0.28, 0.8, 0.4);
+
+        // --- Post-Human extras: filaments, drones, holo-arcs, and soft glows ---
+        // fiber-optic filaments near the hub (subtle glowing lines)
+        push();
+        stroke(120, 220, 255, 60);
+        strokeWeight(1);
+        for (let f = 0; f < 8; f++) {
+            const a = f * TWO_PI / 8 + this.lightTimer * 0.02;
+            const r1 = this.size * 0.08;
+            const r2 = this.size * (0.18 + 0.02 * sin(this.lightTimer + f));
+            line(cos(a) * r1, sin(a) * r1, cos(a) * r2, sin(a) * r2);
+        }
+        pop();
+
+        // small repair/detail drones orbiting the hub
+        for (let d = 0; d < 3; d++) {
+            push();
+            const ang = this.lightTimer * (0.12 + d*0.02) + d * TWO_PI / 3 + this.animationOffset * 0.1;
+            rotate(ang);
+            translate(0, -this.size * (0.22 + 0.03 * d));
+            this._drawRepairDrone(0, 0, 1 - d*0.12);
+            pop();
+        }
+
+        // holographic arc panels intentionally removed (visual cleanup)
+
+        // Additional rotating mini-ring and a subtle beacon for posthuman tech
+        this._drawRotatingMiniRing(this.size*0.08, -this.size*0.06, 0.5);
+        this._drawPulsingBeacon(-this.size*0.08, -this.size*0.02, 0.5, color(140,220,255));
+
+        // Orbiting micro-spheres for a 'nanofabricator' effect
+        this._drawOrbitingCubes(4, 0.28, 0.25);
+
+        // small maintenance arm and comms array cluster
+        this._drawMaintenanceArm(this.size*0.06, -this.size*0.12, 1.1, 0.9);
+        this._drawMiniCommsArray(-this.size*0.04, -this.size*0.14, 0.9);
+
+        // tiny shuttle and translucent crate cluster for added life
+        push();
+        rotate(this.animationOffset * -0.15 - this.lightTimer * 0.14);
+        translate(this.size * 0.12, -this.size * 0.36 + sin(this.lightTimer * 0.8 + this.animationOffset * 0.4) * 3);
+        this._drawTinyShuttle(0, 0, 0.6);
+        pop();
+
+        if (this.stationType === 'posthuman') {
+            // crates and floating blobby lights removed for cleaner posthuman aesthetic
+        }
     }
 
     /**
