@@ -480,9 +480,40 @@ class MissionGenerator {
 
     /** Creates a Named Assassination Mission (single target, named). */
     static createAssassinationMission(originSystem, originStation, galaxy, player) {
-        // Select a target name using global helper if present
-        let targetName = (typeof generateHumanEnemyName === 'function') ? generateHumanEnemyName() : (`${random(['Mr.','Capt.','Cmdr.','Dr.','Sen.'])} ${Math.floor(random(100,9999))}`);
-
+        // Enhanced target name generation with flavorful titles and roles
+        const targetTitles = [
+            'Senator', 'Governor', 'Ambassador', 'Chancellor', 'Director', 'Executive',
+            'Warlord', 'Syndicate Boss', 'Clan Leader', 'Mercenary Captain', 'Smuggler King',
+            'Corporate Baron', 'Pirate Lord', 'Rebel Commander', 'Imperial Prefect', 'Trade Magnate',
+            'Military Commander', 'Intelligence Chief', 'Black Market Kingpin', 'Rogue Admiral'
+        ];
+        
+        const missionSources = [
+            'shadowy corporate interests', 'rival political factions', 'underground syndicates',
+            'military intelligence', 'corporate espionage divisions', 'rebel cells',
+            'imperial security services', 'black market consortiums', 'pirate cartels',
+            'separatist movements', 'industrial magnates', 'colonial governors',
+            'trade guilds', 'mercenary guilds', 'intelligence agencies'
+        ];
+        
+        const targetBackgrounds = [
+            'corrupt politician embezzling funds', 'ruthless warlord terrorizing colonies',
+            'syndicate boss controlling illegal trade', 'corporate executive suppressing workers',
+            'pirate captain raiding shipping lanes', 'rebel leader inciting unrest',
+            'imperial official abusing power', 'smuggler kingpin evading authorities',
+            'military defector selling secrets', 'trade baron manipulating markets',
+            'intelligence operative gone rogue', 'colonial administrator exploiting natives'
+        ];
+        
+        // Generate target name with title
+        const baseName = (typeof generateHumanEnemyName === 'function') ? generateHumanEnemyName() : (`${random(['Mr.','Capt.','Cmdr.','Dr.','Sen.'])} ${Math.floor(random(100,9999))}`);
+        const title = random(targetTitles);
+        const targetName = `${title} ${baseName}`;
+        
+        // Select mission source and background
+        const source = random(missionSources);
+        const background = random(targetBackgrounds);
+        
         // Pick a ship type to travel in (try combat ships, fall back to pirate list)
         let shipType = null;
         if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) shipType = random(COMBAT_SHIPS);
@@ -518,10 +549,21 @@ class MissionGenerator {
         else if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) guardShipType = random(COMBAT_SHIPS);
         else guardShipType = (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
 
+        // Create flavorful description
+        const descriptionTemplates = [
+            `A contract has been issued by ${source} to eliminate ${targetName}, the ${background}. The target is known to pilot a ${shipType} and may be accompanied by security personnel. Complete the mission discreetly to avoid unwanted attention.`,
+            `${source} requires the permanent removal of ${targetName}, a ${background} whose activities threaten their interests. Intelligence indicates the target travels in a ${shipType}. The operation must be executed with precision.`,
+            `Eliminate ${targetName}, the ${background}, at the behest of ${source}. The target operates a ${shipType} and maintains a security detail. Success will be rewarded handsomely, but failure may have consequences.`,
+            `${source} seeks the assassination of ${targetName}, notorious as a ${background}. The target commands a ${shipType} and is rarely without protection. The target may attempt to flee the system if threatened.`,
+            `A high-priority contract from ${source} demands the death of ${targetName}, the ${background}. Expect heavy resistance from the target's ${shipType} and escort vessels. The mission cancels if the target escapes the system.`
+        ];
+        
+        const description = random(descriptionTemplates);
+
         return new Mission({
             type: MISSION_TYPE.ASSASSINATION,
             title: `Assassinate ${targetName} (${shipType})`,
-            description: `Eliminate the named target ${targetName}. They are expected to be traveling in a ${shipType}. The target may move; if they escape the system the mission will be canceled.`,
+            description: description,
             originSystem: originSystem.name, originStation: originStation.name,
             destinationSystem: null,
             destinationStation: null,
