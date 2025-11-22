@@ -240,6 +240,61 @@ class Station {
             default: this._drawStandardStation(); break;
         }
         
+        // Walker robots for non-military stations (varied by type)
+        if (this.stationType !== 'military') {
+            let robotConfigs = [];
+            
+            switch (this.stationType) {
+                case 'tourism':
+                    robotConfigs = [0, 1, 2, 3]; // All types
+                    break;
+                case 'industrial':
+                    robotConfigs = [0, 0, 2]; // Two maintenance, one cargo
+                    break;
+                case 'mining':
+                    robotConfigs = [2, 2]; // Two cargo bots
+                    break;
+                case 'agricultural':
+                    robotConfigs = [1]; // One utility bot
+                    break;
+                case 'standard':
+                    robotConfigs = [0, 3]; // Maintenance and repair
+                    break;
+                case 'imperial':
+                    robotConfigs = [];
+                    break;
+                case 'posthuman':
+                    robotConfigs = [1, 1, 1, 1]; // Four utility bots
+                    break;
+                case 'alien':
+                    robotConfigs = [];
+                    break;
+                case 'refinery':
+                    robotConfigs = [2]; // One cargo bot
+                    break;
+                case 'separatist':
+                    robotConfigs = [0, 1]; // Maintenance and utility
+                    break;
+                default:
+                    robotConfigs = [0]; // Default one maintenance bot
+                    break;
+            }
+            
+            for (let i = 0; i < robotConfigs.length; i++) {
+                push();
+                rotate(i * PI / 2);
+                // Calculate position along the arm
+                const phase = (this.lightTimer * 0.03 + i * PI / 2) % (2 * PI);
+                const armLength = 0.42; // from 0 to -0.42 (closer to edge)
+                const yPos = -map(sin(phase), -1, 1, 0, armLength) * this.size;
+                const xSide = cos(phase) > 0 ? -1 : 1; // left or right side
+                const xOffset = xSide * this.size * 0.025; // offset from center
+                translate(xOffset, yPos);
+                this._drawWalkerRobot(0, 0, 1, robotConfigs[i]);
+                pop();
+            }
+        }
+        
         // subtle glint and small rotating glyphs for visual polish (drawn in station space)
         this._drawGlint(this.size*0.02, -this.size*0.18, 0.9);
         // Skip rotating glyph/star pattern for military stations
@@ -1032,6 +1087,84 @@ class Station {
         line(0, -s * 0.2, 0, -s * 0.5);
         fill(50, 50, 50);
         ellipse(0, -s * 0.5, s * 0.1, s * 0.1);
+        pop();
+    }
+
+    // --- Walker robot for stations (non-military) ---
+    _drawWalkerRobot(x = 0, y = 0, scale = 1, style = 0) {
+        push(); translate(x, y);
+        const s = this.size * 0.015 * scale;
+        
+        switch (style % 4) {
+            case 0: // Boxy maintenance bot
+                fill(120, 120, 120);
+                stroke(80, 80, 80);
+                rect(-s * 0.6, -s * 0.6, s * 1.2, s * 1.2, 3);
+                fill(100, 100, 100);
+                rect(-s * 0.4, -s * 0.8, s * 0.8, s * 0.3, 2);
+                fill(0, 255, 0, 200);
+                ellipse(-s * 0.2, -s * 0.7, s * 0.15, s * 0.15);
+                ellipse(s * 0.2, -s * 0.7, s * 0.15, s * 0.15);
+                fill(80, 80, 80);
+                rect(-s * 0.7, s * 0.4, s * 1.4, s * 0.2, 1);
+                stroke(150, 150, 150);
+                line(0, -s * 0.8, 0, -s * 1.1);
+                fill(255, 255, 0, 180);
+                ellipse(0, -s * 1.1, s * 0.1, s * 0.1);
+                break;
+                
+            case 1: // Tall utility bot
+                fill(110, 110, 130);
+                stroke(70, 70, 90);
+                rect(-s * 0.4, -s * 0.8, s * 0.8, s * 1.6, 2);
+                fill(90, 90, 110);
+                rect(-s * 0.3, -s * 1.0, s * 0.6, s * 0.3, 1);
+                fill(255, 100, 100, 200);
+                ellipse(0, -s * 0.9, s * 0.12, s * 0.12);
+                fill(60, 60, 80);
+                rect(-s * 0.5, s * 0.6, s, s * 0.15, 1);
+                stroke(130, 130, 150);
+                line(0, -s * 1.0, 0, -s * 1.3);
+                fill(100, 200, 255, 180);
+                ellipse(0, -s * 1.3, s * 0.08, s * 0.08);
+                break;
+                
+            case 2: // Wide cargo bot
+                fill(130, 120, 100);
+                stroke(90, 80, 60);
+                rect(-s * 0.8, -s * 0.5, s * 1.6, s, 4);
+                fill(110, 100, 80);
+                rect(-s * 0.6, -s * 0.7, s * 1.2, s * 0.3, 3);
+                fill(255, 255, 100, 200);
+                ellipse(-s * 0.3, -s * 0.6, s * 0.1, s * 0.1);
+                ellipse(s * 0.3, -s * 0.6, s * 0.1, s * 0.1);
+                fill(70, 60, 50);
+                rect(-s * 0.9, s * 0.3, s * 1.8, s * 0.25, 2);
+                stroke(120, 110, 90);
+                line(0, -s * 0.7, 0, -s * 0.9);
+                fill(255, 150, 0, 180);
+                ellipse(0, -s * 0.9, s * 0.12, s * 0.12);
+                break;
+                
+            case 3: // Compact repair bot
+                fill(100, 120, 140);
+                stroke(60, 80, 100);
+                rect(-s * 0.5, -s * 0.5, s, s, 1);
+                fill(80, 100, 120);
+                rect(-s * 0.35, -s * 0.7, s * 0.7, s * 0.25, 1);
+                fill(0, 255, 255, 200);
+                ellipse(0, -s * 0.6, s * 0.14, s * 0.14);
+                fill(50, 70, 90);
+                rect(-s * 0.6, s * 0.3, s * 1.2, s * 0.18, 1);
+                stroke(90, 110, 130);
+                line(-s * 0.2, -s * 0.7, -s * 0.2, -s * 0.9);
+                line(s * 0.2, -s * 0.7, s * 0.2, -s * 0.9);
+                fill(255, 0, 255, 180);
+                ellipse(-s * 0.2, -s * 0.9, s * 0.06, s * 0.06);
+                ellipse(s * 0.2, -s * 0.9, s * 0.06, s * 0.06);
+                break;
+        }
+        
         pop();
     }
 
