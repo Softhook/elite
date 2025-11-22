@@ -2120,54 +2120,63 @@ handleInput() {
         if (killTarget) {
             this.recordShipDestruction(killTarget);
 
-            if (killTarget.faction) {
-                // Determine player's faction key (POLICE tracked by `isPolice`)
-                const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
+            // Police increment when killing pirates (by role, not faction)
+            if (this.isPolice && killTarget.role === AI_ROLE.PIRATE) {
+                if (this.factionKills && this.factionKills['POLICE'] !== undefined) {
+                    const oldFactionRank = this.getFactionRank('POLICE');
+                    this.factionKills['POLICE']++;
+                    const newFactionRank = this.getFactionRank('POLICE');
 
-                // Opposition mapping: when player is IMPERIAL, kills of SEPARATIST count towards Imperial progression
-                const oppositionMap = {
-                    IMPERIAL: 'SEPARATIST',
-                    SEPARATIST: 'IMPERIAL',
-                    MILITARY: 'ALIEN'
-                };
-
-                // Police increment when killing pirates (by role, not faction)
-                if (this.isPolice && killTarget.role === AI_ROLE.PIRATE) {
-                    if (this.factionKills && this.factionKills['POLICE'] !== undefined) {
-                        const oldFactionRank = this.getFactionRank('POLICE');
-                        this.factionKills['POLICE']++;
-                        const newFactionRank = this.getFactionRank('POLICE');
-
-                        if (oldFactionRank !== newFactionRank) {
-                            const factionDisplayName = this.getFactionDisplayName('POLICE');
-                            if (typeof uiManager !== "undefined") {
-                                uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
-                            }
-                            if (typeof soundManager !== "undefined") {
-                                soundManager.playSound("promotion");
-                            }
+                    if (oldFactionRank !== newFactionRank) {
+                        const factionDisplayName = this.getFactionDisplayName('POLICE');
+                        if (typeof uiManager !== "undefined") {
+                            uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
                         }
-                    }
-                } else if (playerFactionKey && oppositionMap[playerFactionKey] === killTarget.faction) {
-                    // Increment the player's faction-specific kills
-                    if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
-                        const oldFactionRank = this.getFactionRank(playerFactionKey);
-                        this.factionKills[playerFactionKey]++;
-                        const newFactionRank = this.getFactionRank(playerFactionKey);
-
-                        // Notify player of faction rank change
-                        if (oldFactionRank !== newFactionRank) {
-                            const factionDisplayName = this.getFactionDisplayName(playerFactionKey);
-                            if (typeof uiManager !== "undefined") {
-                                uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
-                            }
-                            if (typeof soundManager !== "undefined") {
-                                soundManager.playSound("promotion");
-                            }
+                        if (typeof soundManager !== "undefined") {
+                            soundManager.playSound("promotion");
                         }
                     }
                 }
             }
+
+            // Determine player's faction key (POLICE tracked by `isPolice`)
+            const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
+
+            // Opposition mapping: when player is IMPERIAL, kills of SEPARATIST count towards Imperial progression
+            const oppositionMap = {
+                IMPERIAL: 'SEPARATIST',
+                SEPARATIST: 'IMPERIAL',
+                MILITARY: 'ALIEN'
+            };
+
+            // Only increment faction progression if the killed ship has a faction and it matches the opposition map
+            if (killTarget.faction && playerFactionKey && oppositionMap[playerFactionKey] === killTarget.faction) {
+                if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
+                    const oldFactionRank = this.getFactionRank(playerFactionKey);
+                    this.factionKills[playerFactionKey]++;
+                    const newFactionRank = this.getFactionRank(playerFactionKey);
+
+                    // Notify player of faction rank change
+                    if (oldFactionRank !== newFactionRank) {
+                        const factionDisplayName = this.getFactionDisplayName(playerFactionKey);
+                        if (typeof uiManager !== "undefined") {
+                            uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
+                        }
+                        if (typeof soundManager !== "undefined") {
+                            soundManager.playSound("promotion");
+                        }
+                    }
+                }
+            }
+        } else {
+            // Ensure we always log a kill entry even when no enemy object is available
+            this.recordShipDestruction({
+                pilotName: 'Unknown Pilot',
+                shipTypeName: 'Unknown',
+                role: 'Unknown',
+                faction: null,
+                timestamp: Date.now()
+            });
         }
 
         // Record Elite status change if rating changed
@@ -2236,13 +2245,13 @@ handleInput() {
             if (kills >= 10) return "Knight";
             return "Squire";
         } else if (factionName === "SEPARATIST") {
-            if (kills >= 1000) return "Supreme Leader";
-            if (kills >= 500) return "War Marshal";
-            if (kills >= 250) return "Battle Commander";
-            if (kills >= 100) return "Strike Leader";
-            if (kills >= 50) return "Squadron Leader";
-            if (kills >= 25) return "Wing Commander";
-            if (kills >= 10) return "Fighter";
+            if (kills >= 1000) return "People's Vanguard";
+            if (kills >= 500) return "Commissar-General";
+            if (kills >= 250) return "Regional Commissar";
+            if (kills >= 100) return "Collective Coordinator";
+            if (kills >= 50) return "Cell Leader";
+            if (kills >= 25) return "Operative";
+            if (kills >= 10) return "Brawler";
             return "Initiate";
         }
         
