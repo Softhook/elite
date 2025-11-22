@@ -167,7 +167,7 @@ class MissionGenerator {
 
         // Small global chance to generate an assassination mission (named target)
         let hasAssassination = false;
-        if (random() < 0.08) { // Normal chance
+        if (random() < 0.20) { // Increased chance from 0.08 to 0.20
             try {
                 let assMission = this.createAssassinationMission(currentSystem, currentStation, galaxy, player);
                 if (assMission) {
@@ -521,9 +521,9 @@ class MissionGenerator {
         else shipType = 'Krait';
 
         // Reward calculation: named target carries influence/value
-        const baseReward = 1500 + (originSystem.techLevel || 5) * 100;
-        const securityBonus = (originSystem.securityLevel === 'Anarchy') ? 250 : 0;
-        const reward = Math.floor(baseReward + securityBonus + random(200, 1200));
+        const baseReward = 2500 + (originSystem.techLevel || 5) * 150; // Increased base from 1500 to 2500, tech multiplier from 100 to 150
+        const securityBonus = (originSystem.securityLevel === 'Anarchy') ? 400 : 0; // Increased security bonus from 250 to 400
+        const reward = Math.floor(baseReward + securityBonus + random(500, 2000)); // Increased random range from 200-1200 to 500-2000
 
         // Determine whether the assassination would be considered 'legal' (e.g., sanctioned pirate kills)
         // If the chosen ship type is a known pirate ship, treat as legal bounty-style assassination.
