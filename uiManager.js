@@ -2678,6 +2678,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         player.applyShipDefinition('ACAB');
                         this.addMessage("You have joined the Police Force!", 'lightblue');
                         player.isPolice = true; // Set police status flag
+                        player.recordFactionJoin("POLICE"); // Record in personal record
                         if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                         
                         // Clear wanted status as a bonus
