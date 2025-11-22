@@ -414,10 +414,10 @@ class Station {
      */
     _getStationSlogan() {
         const map = {
-            separatist: 'Anarcho Syndicalism for All',
-            industrial: 'Powered by Industry',
+            separatist: 'Freedom for All',
+            industrial: 'Powering Industry',
             mining: 'Ore For All',
-            tourism: 'Dreams Above the Stars',
+            tourism: 'Dreams Above',
             agricultural: 'The Conquest of Bread',
             refinery: 'Fuel the Future',
             posthuman: 'More than Flesh',
