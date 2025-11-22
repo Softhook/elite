@@ -159,6 +159,10 @@ class Station {
             default: this._drawStandardStation(); break;
         }
         
+        // subtle glint and small rotating glyphs for visual polish (drawn in station space)
+        this._drawGlint(this.size*0.02, -this.size*0.18, 0.9);
+        // Skip rotating glyph/star pattern for military stations
+        if (this.stationType !== 'military') this._drawRotatingGlyphs(this.size*0.0, -this.size*0.16, 0.6);
         pop();
     }
 
@@ -302,6 +306,7 @@ class Station {
         // Inner ring structure
         strokeWeight(1);
         ellipse(0, 0, this.size * 0.9, this.size * 0.9);
+        // (ring is neutral; per-type orbiting decorations applied in specific station draws)
     }
 
     /**
@@ -698,6 +703,105 @@ class Station {
         push(); translate(x, y + sin(this.lightTimer*0.85 + this.animationOffset)*3);
         fill(200); stroke(90);
         ellipse(0,0,this.size*0.03*scale,this.size*0.02*scale);
+        pop();
+    }
+
+    // --- New lightweight decorations (low CPU) ---
+    _drawGlint(x = 0, y = 0, scale = 1, hueShift = 0) {
+        push(); translate(x, y);
+        noStroke();
+        const pulse = 0.6 + 0.4 * sin(this.lightTimer * 2 + this.animationOffset);
+        const s = this.size * 0.02 * scale * pulse;
+        fill(255, 255, 220, 80 + 80 * pulse);
+        ellipse(0, 0, s * 1.6, s * 0.9);
+        // small sharp highlight
+        fill(255, 255, 255, 180);
+        ellipse(s * 0.18, -s * 0.08, s * 0.25, s * 0.12);
+        pop();
+    }
+
+    _drawOrbitingCubes(count = 3, radius = 0.34, scale = 0.6) {
+        // Very small number of cubes orbiting, cheap to draw
+        for (let i = 0; i < count; i++) {
+            push();
+            const ang = this.lightTimer * 0.12 + i * TWO_PI / count;
+            rotate(ang);
+            translate(0, -this.size * radius + sin(this.lightTimer * 0.9 + i) * 3);
+            push();
+            const s = this.size * 0.02 * scale;
+            rotate(ang * 2 + i);
+            fill(160, 140, 120);
+            stroke(90, 80, 70);
+            rect(-s*0.5, -s*0.5, s, s, 2);
+            pop();
+            pop();
+        }
+    }
+
+    _drawPulsingBeacon(x = 0, y = 0, scale = 1, c = null) {
+        push(); translate(x, y);
+        noFill();
+        const pulse = 0.6 + 0.4 * sin(this.lightTimer * 3 + this.animationOffset);
+        const base = this.size * 0.03 * scale;
+        const col = c || color(255, 200, 120);
+        stroke(red(col), green(col), blue(col), 40 + 80 * pulse);
+        strokeWeight(2);
+        ellipse(0, 0, base * (1 + pulse * 1.6), base * (1 + pulse * 0.9));
+        // central core
+        noStroke();
+        fill(red(col), green(col), blue(col), 120 + 80 * pulse);
+        ellipse(0, 0, base * 0.4, base * 0.4);
+        pop();
+    }
+
+    _drawRotatingGlyphs(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        noFill(); stroke(180, 220, 255, 90);
+        strokeWeight(1);
+        const r = this.size * 0.06 * scale;
+        rotate(this.lightTimer * 0.06 + this.animationOffset * 0.2);
+        for (let i = 0; i < 6; i++) {
+            push(); rotate(i * TWO_PI / 6 + i * 0.03);
+            line(r * 0.2, 0, r * 0.9, 0);
+            pop();
+        }
+        pop();
+    }
+
+    _drawCometTrail(angleOffset = 0, radius = 0.5) {
+        // Subtle comet: single head with a short faded-dot tail along the ring
+        push();
+        const ang = this.lightTimer * 0.12 + angleOffset;
+        // compute head position on ring
+        const rx = cos(ang) * this.size * radius;
+        const ry = sin(ang) * this.size * radius;
+        // draw short tail of small faded dots behind the head
+        const tailLen = 4;
+        for (let t = 0; t < tailLen; t++) {
+            const f = t / tailLen; // 0..1 further back
+            const a = lerp(160, 20, f); // alpha fades
+            const s = lerp(this.size * 0.018, this.size * 0.006, f);
+            // position slightly further along the ring for tail
+            const ta = ang - f * 0.12;
+            const tx = cos(ta) * this.size * radius;
+            const ty = sin(ta) * this.size * radius;
+            noStroke();
+            fill(255, 220, 160, a);
+            ellipse(tx, ty, s, s * 0.6);
+        }
+        // head
+        noStroke();
+        fill(255, 230, 180, 220);
+        ellipse(rx, ry, this.size * 0.02, this.size * 0.01);
+        pop();
+    }
+
+    _drawOrbitalGlow(alpha = 30) {
+        push();
+        noStroke();
+        fill(200, 220, 255, alpha);
+        const r = this.size * 0.55;
+        ellipse(0, 0, r, r * 0.42);
         pop();
     }
 
@@ -1401,6 +1505,8 @@ class Station {
         pop();
 
         // Maintenance arms and dock pylons
+        // Industrial-specific orbiting scrap
+        if (this.stationType === 'industrial') this._drawOrbitingCubes(3, 0.32, 0.6);
         this._drawMaintenanceArm(this.size*0.09, this.size*0.08, 1.8, 1);
         this._drawDockingPylon(-this.size*0.08, -this.size*0.06);
 
@@ -1472,6 +1578,8 @@ class Station {
         // Mining laser swings and maintenance pods
         this._drawScannerBeam(0, -this.size*0.02, 1.2);
         this._drawMaintenancePod(-this.size*0.06, -this.size*0.04, 1);
+        // Mining-specific pulsing beacon to indicate loading points
+        if (this.stationType === 'mining') this._drawPulsingBeacon(0, -this.size*0.42, 0.9, color(255,180,80));
         // Red/yellow running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
@@ -1580,6 +1688,11 @@ class Station {
             if (i % 3 === 0) fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
+        }
+        // Refinery: faint orbital glow and a single comet trail for activity
+        if (this.stationType === 'refinery') {
+            this._drawCometTrail(this.animationOffset * 0.5, 0.48);
+            this._drawOrbitalGlow(26);
         }
     }
 
