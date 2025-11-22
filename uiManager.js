@@ -999,6 +999,20 @@ class UIManager {
             textSize(18);
             text("Active Bounty: 1,000 cr per pirate killed", pX+pW/2, contentY+65);
         }
+        // Show police faction kill progress
+        try {
+            const pk = player.getFactionKillsProgress && player.getFactionKillsProgress('POLICE');
+            if (pk) {
+                fill(200);
+                textSize(16);
+                textAlign(CENTER, TOP);
+                if (pk.nextThreshold) {
+                    text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW/2, contentY + 95);
+                } else {
+                    text(`Police Kills: ${pk.kills} — Max Rank`, pX + pW/2, contentY + 95);
+                }
+            }
+        } catch (e) { /* fail silently */ }
         
         let fineAmount = 300;
         if (system?.securityLevel === 'High') fineAmount = 1000;
@@ -4115,6 +4129,21 @@ if (isIllegalInSystem || isMissionCargo) {
             textSize(18);
             text("Active Bounty: 2,000 cr per Separatist killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
         }
+
+        // Show Imperial faction kill progress
+        try {
+            const ip = player.getFactionKillsProgress && player.getFactionKillsProgress('IMPERIAL');
+            if (ip) {
+                fill(230,220,180);
+                textSize(16);
+                textAlign(CENTER, TOP);
+                if (ip.nextThreshold) {
+                    text(`Imperial Kills: ${ip.kills} — ${ip.killsToNext} to ${ip.nextRank}`, pX + pW/2, contentY + 240);
+                } else {
+                    text(`Imperial Kills: ${ip.kills} — Max Rank`, pX + pW/2, contentY + 240);
+                }
+            }
+        } catch (e) { }
         
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
@@ -4214,6 +4243,21 @@ if (isIllegalInSystem || isMissionCargo) {
             textSize(18);
             text("Active Bounty: 2,000 cr per Imperial killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
         }
+
+        // Show Separatist faction kill progress
+        try {
+            const sp = player.getFactionKillsProgress && player.getFactionKillsProgress('SEPARATIST');
+            if (sp) {
+                fill(255,210,160);
+                textSize(16);
+                textAlign(CENTER, TOP);
+                if (sp.nextThreshold) {
+                    text(`Separatist Kills: ${sp.kills} — ${sp.killsToNext} to ${sp.nextRank}`, pX + pW/2, contentY + 240);
+                } else {
+                    text(`Separatist Kills: ${sp.kills} — Max Rank`, pX + pW/2, contentY + 240);
+                }
+            }
+        } catch (e) { }
         
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;
@@ -4313,6 +4357,21 @@ if (isIllegalInSystem || isMissionCargo) {
             textSize(18);
             text("Active Bounty: 4,000 cr per Alien killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
         }
+
+        // Show Military faction kill progress
+        try {
+            const mp = player.getFactionKillsProgress && player.getFactionKillsProgress('MILITARY');
+            if (mp) {
+                fill(220,230,240);
+                textSize(16);
+                textAlign(CENTER, TOP);
+                if (mp.nextThreshold) {
+                    text(`Military Kills: ${mp.kills} — ${mp.killsToNext} to ${mp.nextRank}`, pX + pW/2, contentY + 240);
+                } else {
+                    text(`Military Kills: ${mp.kills} — Max Rank`, pX + pW/2, contentY + 240);
+                }
+            }
+        } catch (e) { }
         
         let btnW = pW*0.5, btnH = 45;
         let btnX = pX+pW/2-btnW/2;

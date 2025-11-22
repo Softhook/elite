@@ -2215,47 +2215,33 @@ handleInput() {
      * @returns {string} The faction rank
      */
     getFactionRank(factionName) {
+        const cfg = FACTION_RANKS[factionName];
+        if (!cfg) return "Unknown";
+
         const kills = this.factionKills[factionName] || 0;
-        
-        if (factionName === "POLICE") {
-            if (kills >= 1000) return "Commissioner";
-            if (kills >= 500) return "Chief Inspector";
-            if (kills >= 250) return "Inspector";
-            if (kills >= 100) return "Sergeant";
-            if (kills >= 50) return "Corporal";
-            if (kills >= 25) return "Officer";
-            if (kills >= 10) return "Constable";
-            return "Recruit";
-        } else if (factionName === "MILITARY") {
-            if (kills >= 500) return "Admiral";
-            if (kills >= 250) return "Commodore";
-            if (kills >= 125) return "Captain";
-            if (kills >= 50) return "Commander";
-            if (kills >= 25) return "Lieutenant";
-            if (kills >= 12) return "Ensign";
-            if (kills >= 5) return "Cadet";
-            return "Trainee";
-        } else if (factionName === "IMPERIAL") {
-            if (kills >= 1000) return "Emperor";
-            if (kills >= 500) return "Grand Duke";
-            if (kills >= 250) return "Duke";
-            if (kills >= 100) return "Marquis";
-            if (kills >= 50) return "Count";
-            if (kills >= 25) return "Baron";
-            if (kills >= 10) return "Knight";
-            return "Squire";
-        } else if (factionName === "SEPARATIST") {
-            if (kills >= 1000) return "People's Vanguard";
-            if (kills >= 500) return "Commissar-General";
-            if (kills >= 250) return "Regional Commissar";
-            if (kills >= 100) return "Collective Coordinator";
-            if (kills >= 50) return "Cell Leader";
-            if (kills >= 25) return "Operative";
-            if (kills >= 10) return "Brawler";
-            return "Initiate";
+        // Iterate from highest threshold downwards
+        for (let i = cfg.thresholds.length - 1; i >= 0; i--) {
+            if (kills >= cfg.thresholds[i]) return cfg.ranks[i];
         }
-        
-        return "Unknown";
+        return cfg.base;
+    }
+
+    /**
+     * Returns faction kill stats and progression toward next rank
+     * @param {string} factionName
+     * @returns {{kills:number, nextThreshold:number|null, killsToNext:number|null, nextRank:string|null}}
+     */
+    getFactionKillsProgress(factionName) {
+        const cfg = FACTION_RANKS[factionName];
+        const kills = this.factionKills && Number.isFinite(this.factionKills[factionName]) ? this.factionKills[factionName] : 0;
+        if (!cfg) return { kills, nextThreshold: null, killsToNext: null, nextRank: null };
+
+        for (let i = 0; i < cfg.thresholds.length; i++) {
+            if (kills < cfg.thresholds[i]) {
+                return { kills, nextThreshold: cfg.thresholds[i], killsToNext: cfg.thresholds[i] - kills, nextRank: cfg.ranks[i] };
+            }
+        }
+        return { kills, nextThreshold: null, killsToNext: null, nextRank: null };
     }
 
     /**
@@ -2680,3 +2666,27 @@ handleInput() {
     }
 
 } // End of Player Class
+
+// Single source-of-truth for faction thresholds, ranks and base rank
+const FACTION_RANKS = {
+    POLICE: {
+        base: 'Recruit',
+        thresholds: [10,25,50,100,250,500,1000],
+        ranks: ['Constable','Officer','Corporal','Sergeant','Inspector','Chief Inspector','Commissioner']
+    },
+    MILITARY: {
+        base: 'Trainee',
+        thresholds: [5,12,25,50,125,250,500],
+        ranks: ['Cadet','Ensign','Lieutenant','Commander','Captain','Commodore','Admiral']
+    },
+    IMPERIAL: {
+        base: 'Squire',
+        thresholds: [10,25,50,100,250,500,1000],
+        ranks: ['Knight','Baron','Count','Marquis','Duke','Grand Duke','Emperor']
+    },
+    SEPARATIST: {
+        base: 'Initiate',
+        thresholds: [10,25,50,100,250,500,1000],
+        ranks: ["Brawler","Operative","Cell Leader","Collective Coordinator","Regional Commissar","Commissar-General","People's Vanguard"]
+    }
+};
