@@ -597,9 +597,12 @@ class EnemyStateMachine {
                 }
                 break;
                 
-            case AI_STATE.LEAVING_SYSTEM:
-                this.setLeavingSystemTarget(this.currentSystem);
-                this.nearStationTimer = null; // Clear station timer
+            case AI_STATE.FLEEING:
+                // Show message when enemy starts fleeing
+                if (typeof uiManager !== 'undefined' && this.target === window.player) {
+                    const shipName = this.displayName || this.shipTypeName || "Enemy ship";
+                    uiManager.addMessage(`${shipName} is fleeing!`, [255, 165, 0]);
+                }
                 break;
                 
             case AI_STATE.COLLECTING_CARGO: {

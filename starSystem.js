@@ -1164,6 +1164,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         );
                         this.addCargo(cargoDrop);
                         
+                        // Notify player of mineral collection
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
+                        }
+                        
                         if (STAR_SYSTEM_DEBUG) {
                             console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
                         }
@@ -2181,7 +2186,7 @@ checkProjectileCollisions() {
                     }
                     // Optional: Add UI message
                     if (typeof uiManager !== 'undefined') {
-                        //uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
+                        uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
                     }
 
                     // If the full quantity wasn't added (partial add), update the cargo item's quantity
@@ -2203,7 +2208,7 @@ checkProjectileCollisions() {
                      if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
                          // Avoid spamming this message - maybe only show once per few seconds?
                          // Simple approach: just show it
-                         //uiManager.addMessage(`Cargo hold full!`);
+                         uiManager.addMessage(`Cargo hold full!`, [255, 200, 0]);
                      }
                 }
             }
@@ -3070,6 +3075,11 @@ drawOptimalStarfield() {
                             soundManager.playSound('thargoid');
                         }
                         this._lastAlienSpawnSoundTime = now;
+                        
+                        // Add UI message for alien detection
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage("Alien presence detected!", [255, 0, 255]);
+                        }
                     }
                 }
             } catch (e) {

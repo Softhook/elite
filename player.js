@@ -1257,7 +1257,7 @@ handleInput() {
             if (actualDamage <= this.shield) {
                 // Shield absorbs all damage
                 this.shield -= actualDamage;
-                //uiManager.addMessage(`Shield damage: ${actualDamage.toFixed(1)}`);
+                //uiManager.addMessage(`Shield damage: ${actualDamage.toFixed(1)}`, [255, 100, 100]);
                 return { damage: actualDamage, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
@@ -1266,7 +1266,7 @@ handleInput() {
                 this.hull -= remainingDamage;
                 
                 // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
-                //uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`);
+                //uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`, [255, 50, 50]);
                 
                 // Always report as a shield hit if shields absorbed ANY damage
                 shieldHit = true;
@@ -1274,7 +1274,7 @@ handleInput() {
         } else {
             // No shields, damage hull directly
             this.hull -= actualDamage;
-            //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`);
+            //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`, [255, 50, 50]);
             shieldHit = false;
         }
         // Shield down cue on transition >0 -> 0
