@@ -388,6 +388,54 @@ class CommunicationSystem {
                 "Warship {enemyShip}: Reactor… overload… goodbye…",
                 "{enemyName}: Not bad… for a… {playerShip}…",
                 "{enemyName}: This… isn't… over…"
+            ],
+            imperialMotivation: [
+                "Imperial Command: {playerTitle}, your service to the Crown is exemplary. Continue the fight!",
+                "Crown Fleet: Glory to the Empire! Your victories strengthen our cause.",
+                "Imperial Dispatch: {playerTitle}, the Emperor watches your deeds with pride.",
+                "{imperialRank}: Your loyalty to the Crown is unwavering. Press on!",
+                "Imperial High Command: {playerTitle}, you embody the spirit of the Empire.",
+                "Crown Intelligence: Your actions serve the greater good of Imperial unity.",
+                "Imperial Fleet: {playerTitle}, your ship flies true under the Imperial banner.",
+                "{imperialRank}: The Empire grows stronger with commanders like you.",
+                "Imperial Command: {playerTitle}, your dedication to the Crown inspires us all.",
+                "Crown Fleet: For the Emperor! Your service honors the Imperial legacy."
+            ],
+            militaryMotivation: [
+                "Naval Command: {playerTitle}, your tactical prowess serves the fleet well.",
+                "{militaryUnit}: Outstanding performance in the field. Keep it up!",
+                "Military High Command: {playerTitle}, your service strengthens our defenses.",
+                "Fleet Operations: Your combat record is exemplary. Continue the mission.",
+                "{militaryUnit}: {playerTitle}, you represent the best of military discipline.",
+                "Naval Intelligence: Your strategic decisions protect our borders.",
+                "Military Command: {playerTitle}, your ship is a beacon of military might.",
+                "{militaryUnit}: Your dedication to duty is commendable. Press on!",
+                "Fleet Command: {playerTitle}, your victories bolster our security.",
+                "Military Operations: {playerTitle}, you embody the spirit of the fleet."
+            ],
+            separatistMotivation: [
+                "Republic Council: {playerTitle}, your fight for freedom inspires the people!",
+                "Freedom Forces: {playerTitle}, your actions bring us closer to liberty.",
+                "{separatistSlogan}! Your courage strengthens our cause.",
+                "Separatist Command: {playerTitle}, you are a true champion of the Republic.",
+                "Freedom Fleet: Your victories against tyranny will be remembered.",
+                "Republic Intelligence: {playerTitle}, your dedication to the people is unwavering.",
+                "{separatistSlogan}! {playerTitle}, you fight with the heart of a true rebel.",
+                "Separatist High Command: Your ship flies proudly for freedom.",
+                "Republic Forces: {playerTitle}, your service to the cause is legendary.",
+                "Freedom Command: {playerTitle}, together we will overthrow the oppressors!"
+            ],
+            policeMotivation: [
+                "Police Headquarters: {playerTitle}, your enforcement actions maintain order.",
+                "Law Enforcement: {playerTitle}, your dedication to justice is exemplary.",
+                "Police Command: Your patrols keep the sectors safe. Well done!",
+                "Justice Division: {playerTitle}, your service upholds the rule of law.",
+                "Police Fleet: {playerTitle}, you are a guardian of peace and order.",
+                "Law Enforcement HQ: Your arrest record strengthens our authority.",
+                "Police Operations: {playerTitle}, your vigilance protects innocent lives.",
+                "Justice Command: {playerTitle}, you embody the principles of law enforcement.",
+                "Police High Command: Your service to justice is commendable.",
+                "Law Division: {playerTitle}, continue enforcing peace across the stars."
             ]
         };
     }
@@ -935,5 +983,84 @@ class CommunicationSystem {
         keysToDelete.forEach(key => this._enemyCooldowns.delete(key));
         
         return keysToDelete.length; // Return count of cleaned up entries for debugging
+    }
+
+    /**
+     * Sends occasional motivational messages based on player's faction membership
+     * Should be called periodically from the game loop (e.g., every few minutes)
+     */
+    sendFactionMotivationMessage() {
+        if (!this.player || !this.uiManager) {
+            return false;
+        }
+
+        // Determine player's faction
+        let faction = null;
+        let templateList = null;
+        let color = [255, 255, 255];
+
+        if (this.player.isPolice) {
+            faction = 'police';
+            templateList = this.templates.policeMotivation;
+            color = [140, 180, 255]; // Blue for police
+        } else if (this.player.playerFaction === 'IMPERIAL') {
+            faction = 'imperial';
+            templateList = this.templates.imperialMotivation;
+            color = [255, 180, 100]; // Gold for imperial
+        } else if (this.player.playerFaction === 'MILITARY') {
+            faction = 'military';
+            templateList = this.templates.militaryMotivation;
+            color = [255, 100, 100]; // Red for military
+        } else if (this.player.playerFaction === 'SEPARATIST') {
+            faction = 'separatist';
+            templateList = this.templates.separatistMotivation;
+            color = [120, 140, 120]; // Greeny gray for separatist
+        }
+
+        if (!faction || !templateList) {
+            return false; // Player not in a faction
+        }
+
+        // Use a global cooldown for faction messages to prevent spam
+        const now = this._now();
+        const category = `faction_${faction}_motivation`;
+        const lastTime = this._enemyCooldowns.get('player_faction')?.[category] ?? -Infinity;
+        const cooldown = 300000; // 5 minutes between faction messages
+
+        if (now - lastTime < cooldown) {
+            return false;
+        }
+
+        // Low chance to send message (makes it occasional)
+        const chance = 0.15; // 15% chance when called
+        if (this._random() > chance) {
+            return false;
+        }
+
+        // Send the message
+        const template = this._pickTemplate(templateList);
+        if (!template) {
+            return false;
+        }
+
+        const tokens = this._buildTokenMap(null, {}); // Use null enemy for player messages
+        const message = this._applyTokens(template, tokens).trim();
+        if (!message) {
+            return false;
+        }
+
+        const duration = this.uiManager.communicationDisplayTime || this.uiManager.messageDisplayTime || 6000;
+        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+            : this.uiManager.addMessage.bind(this.uiManager);
+        
+        addFn(message, color, duration);
+
+        // Update cooldown
+        const playerRecord = this._enemyCooldowns.get('player_faction') || {};
+        playerRecord[category] = now;
+        this._enemyCooldowns.set('player_faction', playerRecord);
+
+        return true;
     }
 }

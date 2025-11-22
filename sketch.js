@@ -152,6 +152,12 @@ function draw() {
                 communicationSystem.performPeriodicCleanup();
             }
 
+            // Periodic faction motivation messages
+            // Run every ~2 minutes (120000ms / 16.67ms per frame ≈ 7200 frames at 60 FPS)
+            if (communicationSystem && typeof communicationSystem.sendFactionMotivationMessage === 'function' && frameCount % 7200 === 0) {
+                communicationSystem.sendFactionMotivationMessage();
+            }
+
             // Continuous firing logic
             if (currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
                 player.handleFireInput();
