@@ -135,9 +135,211 @@ class EventManager {
                     positionRandomnessFactor: 200, // Max random offset for radius
                     // Enemy constructor should handle initial state and target for BOUNTY_HUNTER
                 }
+            },
+            {
+                type: "COMET",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 20 * 60 * 60, // 20 minutes
+                warningDurationFrames: 600,     // 10 seconds
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "WARNING: Massive comet approaching!",
+                    color: "yellow",
+                    consoleLog: "EventManager: Comet warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'asteroid',
+                    isComet: true,
+                    minEntities: 1,
+                    maxEntities: 1,
+                    useRankFactorForCount: false,
+                    spawnRadiusMin: 2000,
+                    spawnRadiusMax: 2500,
+                    clusterSpreadRadius: 0,
+                    asteroidSizeMin: 150,
+                    asteroidSizeMax: 200,
+                    speed: 8 // towards player
+                }
+            },
+            {
+                type: "METEOR_SHOWER",
+                probabilityPerFrame: 0.00004,
+                minCooldownFrames: 12 * 60 * 60, // 12 minutes
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "WARNING: Meteor shower detected!",
+                    color: "orange",
+                    consoleLog: "EventManager: Meteor shower warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'asteroid',
+                    minEntities: 20,
+                    maxEntities: 40,
+                    useRankFactorForCount: false,
+                    spawnRadiusMin: 1800,
+                    spawnRadiusMax: 2200,
+                    clusterSpreadRadius: 800,
+                    asteroidSizeMin: 10,
+                    asteroidSizeMax: 40,
+                }
+            },
+            {
+                type: "COSMIC_STORM",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 25 * 60 * 60, // 25 minutes
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "ALERT: Cosmic storm forming!",
+                    color: "cyan",
+                    consoleLog: "EventManager: Cosmic storm warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'cosmicStorm',
+                    minEntities: 1,
+                    maxEntities: 1,
+                    useRankFactorForCount: false,
+                    spawnRadiusMin: 1000,
+                    spawnRadiusMax: 1500,
+                    radius: 800,
+                    type: 'electromagnetic'
+                }
+            },
+            {
+                type: "DISTRESS_SIGNAL",
+                probabilityPerFrame: 0.00003,
+                minCooldownFrames: 15 * 60 * 60, // 15 minutes
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "DISTRESS: Ship in need of assistance!",
+                    color: "red",
+                    consoleLog: "EventManager: Distress signal warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'enemy',
+                    minEntities: 1,
+                    maxEntities: 1,
+                    useRankFactorForCount: false,
+                    shipSelection: {
+                        strategy: 'randomFromList',
+                        shipList: ["Viper", "CobraMKIII"],
+                        fallbackShip: "Viper"
+                    },
+                    aiRole: AI_ROLE.POLICE,
+                    spawnRadiusMin: 1600,
+                    spawnRadiusMax: 2000,
+                    spawnAngleSpreadFactor: 0,
+                    positionRandomnessFactor: 0,
+                    additionalEnemySetup: (enemy, player) => {
+                        enemy.currentState = AI_STATE.IDLE; // Friendly, not attacking
+                        enemy.hull = enemy.maxHull * 0.3; // Damaged
+                    }
+                }
+            },
+            {
+                type: "TRADER_CONVOY",
+                probabilityPerFrame: 0.000025,
+                minCooldownFrames: 18 * 60 * 60, // 18 minutes
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "TRADE: Merchant convoy approaching!",
+                    color: "green",
+                    consoleLog: "EventManager: Trader convoy warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'enemy',
+                    minEntities: 2,
+                    maxEntities: 5,
+                    useRankFactorForCount: false,
+                    shipSelection: {
+                        strategy: 'randomFromList',
+                        shipList: ["CobraMKIII", "Python", "Type6"],
+                        fallbackShip: "CobraMKIII"
+                    },
+                    aiRole: AI_ROLE.HAULER,
+                    spawnRadiusMin: 1800,
+                    spawnRadiusMax: 2200,
+                    spawnAngleSpreadFactor: 0.3,
+                    positionRandomnessFactor: 100,
+                    additionalEnemySetup: (enemy, player) => {
+                        enemy.currentState = AI_STATE.IDLE; // Not hostile
+                    }
+                }
+            },
+            {
+                type: "NAVAL_PATROL",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 20 * 60 * 60, // 20 minutes
+                warningDurationFrames: 400,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "PATROL: Naval forces detected!",
+                    color: "blue",
+                    consoleLog: "EventManager: Naval patrol warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'enemy',
+                    minEntities: 3,
+                    maxEntities: 6,
+                    useRankFactorForCount: true,
+                    shipSelection: {
+                        strategy: 'randomFromList',
+                        shipList: ["Viper", "GladiusFighter", "FederalCorvette"],
+                        fallbackShip: "Viper"
+                    },
+                    aiRole: AI_ROLE.POLICE,
+                    spawnRadiusMin: 1700,
+                    spawnRadiusMax: 2100,
+                    spawnAngleSpreadFactor: 0.2,
+                    positionRandomnessFactor: 150,
+                    additionalEnemySetup: (enemy, player) => {
+                        enemy.currentState = AI_STATE.PATROLLING;
+                    }
+                }
+            },
+            {
+                type: "ALIEN_ARTIFACT",
+                probabilityPerFrame: 0.000005,
+                minCooldownFrames: 30 * 60 * 60, // 30 minutes
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: {
+                    message: "ANOMALY: Unknown artifact detected!",
+                    color: "magenta",
+                    consoleLog: "EventManager: Alien artifact warning issued."
+                },
+                spawnConfig: {
+                    entityType: 'cargo',
+                    minEntities: 1,
+                    maxEntities: 1,
+                    useRankFactorForCount: false,
+                    spawnRadiusMin: 1500,
+                    spawnRadiusMax: 2000,
+                    cargoType: 'Alien Artifact',
+                    quantity: 1
+                }
             }
         ];
     }
+
+    // New events added below
 
     initializeReferences(starSystem, player, uiManager) {
         this.starSystem = starSystem;
@@ -212,6 +414,10 @@ class EventManager {
                 this._executeAsteroidSpawn(event);
             } else if (event.spawnConfig.entityType === 'enemy') {
                 this._executeEnemySpawn(event);
+            } else if (event.spawnConfig.entityType === 'cosmicStorm') {
+                this._executeCosmicStormSpawn(event);
+            } else if (event.spawnConfig.entityType === 'cargo') {
+                this._executeCargoSpawn(event);
             } else {
                 console.warn(`EventManager: Unknown entityType '${event.spawnConfig.entityType}' for event ${eventType}.`);
             }
@@ -317,7 +523,18 @@ class EventManager {
             const offsetX = random(-config.clusterSpreadRadius, config.clusterSpreadRadius);
             const offsetY = random(-config.clusterSpreadRadius, config.clusterSpreadRadius);
             const asteroidSize = random(config.asteroidSizeMin, config.asteroidSizeMax);
-            this.starSystem.addAsteroid(baseSpawnX + offsetX, baseSpawnY + offsetY, asteroidSize);
+            
+            const asteroid = new Asteroid(baseSpawnX + offsetX, baseSpawnY + offsetY, asteroidSize);
+            
+            // Special comet setup
+            if (config.isComet && asteroid) {
+                asteroid.isComet = true;
+                // Set velocity towards player
+                const angleToPlayer = atan2(this.player.pos.y - asteroid.pos.y, this.player.pos.x - asteroid.pos.x);
+                asteroid.vel = p5.Vector.fromAngle(angleToPlayer).mult(config.speed || 5);
+            }
+            
+            this.starSystem.asteroids.push(asteroid);
         }
     }
 
@@ -391,6 +608,42 @@ class EventManager {
             }
             
             this.starSystem.addEnemy(newEnemy);
+        }
+    }
+
+    _executeCosmicStormSpawn(event) {
+        const config = event.spawnConfig;
+        const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
+
+        const spawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        const spawnAngle = random(TWO_PI);
+
+        const spawnX = this.player.pos.x + cos(spawnAngle) * spawnRadius;
+        const spawnY = this.player.pos.y + sin(spawnAngle) * spawnRadius;
+
+        EVENT_LOG(`EventManager: Spawning ${event.type}: cosmic storm at (${spawnX.toFixed(0)}, ${spawnY.toFixed(0)})`);
+
+        for (let i = 0; i < numToSpawn; i++) {
+            const storm = new CosmicStorm(spawnX, spawnY, config.radius || 500, config.type || 'electromagnetic');
+            this.starSystem.cosmicStorms.push(storm);
+        }
+    }
+
+    _executeCargoSpawn(event) {
+        const config = event.spawnConfig;
+        const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
+
+        const spawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        const spawnAngle = random(TWO_PI);
+
+        const spawnX = this.player.pos.x + cos(spawnAngle) * spawnRadius;
+        const spawnY = this.player.pos.y + sin(spawnAngle) * spawnRadius;
+
+        EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} cargo at (${spawnX.toFixed(0)}, ${spawnY.toFixed(0)})`);
+
+        for (let i = 0; i < numToSpawn; i++) {
+            const cargo = new Cargo(spawnX, spawnY, config.cargoType || 'Unknown', config.quantity || 1);
+            this.starSystem.addCargo(cargo);
         }
     }
 }

@@ -1707,11 +1707,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 const asteroid = this.asteroids[i];
                 if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                 if (this.player.checkCollision(asteroid)) {
-                    // Handle player-asteroid collision
-                    const collisionDamage = Math.floor(this.player.vel.mag());
-                    if (STAR_SYSTEM_DEBUG) console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
-                    this.player.takeDamage(collisionDamage, asteroid);
-                    asteroid.takeDamage(20, this.player, this); // Fixed damage to asteroid, pass system
+                    // Special comet collision: destroys ship outright
+                    if (asteroid.isComet) {
+                        this.player.takeDamage(999999, asteroid); // Instant destruction
+                        asteroid.takeDamage(20, this.player, this); // Damage the comet too
+                    } else {
+                        // Handle normal player-asteroid collision
+                        const collisionDamage = Math.floor(this.player.vel.mag());
+                        if (STAR_SYSTEM_DEBUG) console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
+                        this.player.takeDamage(collisionDamage, asteroid);
+                        asteroid.takeDamage(20, this.player, this); // Fixed damage to asteroid, pass system
+                    }
 
                     // Play a subtle bump/hit sound with simple cooldown (avoid audio spam)
                     try {
@@ -1759,9 +1765,15 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const asteroid = this.asteroids[j];
                     if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                     if (enemy.checkCollision(asteroid)) {
-                        // Handle enemy-asteroid collision
-                        enemy.takeDamage(10);
-                        asteroid.takeDamage(10);
+                        // Special comet collision: destroys ship outright
+                        if (asteroid.isComet) {
+                            enemy.takeDamage(999999, asteroid); // Instant destruction
+                            asteroid.takeDamage(10);
+                        } else {
+                            // Handle enemy-asteroid collision
+                            enemy.takeDamage(10);
+                            asteroid.takeDamage(10);
+                        }
                         
                         // Apply physics push - optimized
                         const dx = asteroid.pos.x - enemy.pos.x;
@@ -2227,6 +2239,15 @@ checkProjectileCollisions() {
                     if (typeof uiManager !== 'undefined') {
                         uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
                     }
+
+                    // Special: Alien Artifact grants credits on pickup
+                    try {
+                        if (cargoItem.type === 'Alien Artifact' && this.player && typeof this.player.addCredits === 'function') {
+                            this.player.addCredits(5000);
+                            if (typeof uiManager !== 'undefined') uiManager.addMessage('+5000cr (Alien Artifact)', 'magenta');
+                            console.log('Alien Artifact collected: awarded 5000 credits to player');
+                        }
+                    } catch (e) { console.error('Error granting Alien Artifact reward:', e); }
 
                     // If the full quantity wasn't added (partial add), update the cargo item's quantity
                     if (addResult.added < cargoItem.quantity) {

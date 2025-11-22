@@ -22,6 +22,8 @@ class Asteroid {
         this.mineralMultiplier = 1;
         this.seamColor = null;
 
+        this.isComet = false; // Flag for special comet behavior
+
         if (this.isRich) {
             // Gold: color(218, 165, 32, 180), MediumSeaGreen: color(60, 179, 113, 180)
             this.seamColor = random(1) < 0.5 ? color(218, 165, 32, 180) : color(60, 179, 113, 180);
