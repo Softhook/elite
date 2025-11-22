@@ -247,8 +247,10 @@ class EnemyDamageSystem {
 
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
 
-        // Set player wanted status if a non-pirate was destroyed
-        if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN && this.role !== AI_ROLE.BOUNTY_HUNTER) {
+        // Set player wanted status if a non-pirate/non-combat was destroyed
+        // NOTE: Combat ships are considered legitimate engagement targets and
+        // should not make the player wanted when destroyed.
+        if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN && this.role !== AI_ROLE.BOUNTY_HUNTER && this.role !== AI_ROLE.COMBAT) {
             if (isAnarchySystem) {
                 AI_LOG(`Wanted status skipped in ${system.name} (Anarchy system).`);
                 return;
