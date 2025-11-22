@@ -2083,26 +2083,73 @@ class Station {
         this._drawCentralHub();
         this._drawMainArms();
         this._drawRings();
-        // Tanks and pipes
+        // Tanks, pipes and clustered refinery decorations
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
+            // main module body
             fill(this.color);
             stroke(180, 80, 50);
             rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 2);
+
+            // clustered tanks at cardinal points with connecting pipes
             if (i % 4 === 0) {
-                fill(200, 80, 50);
-                ellipse(0, -this.size * 0.51, this.size * 0.06, this.size * 0.06);
-                stroke(180, 80, 50);
-                line(0, -this.size * 0.51, 0, -this.size * 0.47);
+                // tank cluster
+                push();
+                translate(0, -this.size * 0.51);
+                fill(200, 90, 60);
+                stroke(160, 70, 40);
+                // vertical tanks
+                for (let t = -1; t <= 1; t++) {
+                    push();
+                    translate(t * this.size * 0.02, 0);
+                    rect(-this.size * 0.01, -this.size * 0.06, this.size * 0.02, this.size * 0.06, 3);
+                    // tank cap
+                    ellipse(0, -this.size * 0.06, this.size * 0.02, this.size * 0.01);
+                    pop();
+                }
+                // short pipe connecting tanks to module
+                stroke(140, 60, 30);
+                strokeWeight(2);
+                line(-this.size * 0.03, this.size * 0.01, this.size * 0.03, this.size * 0.01);
+                pop();
+
+                // short vent / stack with faint smoke puffs
+                push();
+                translate(this.size * 0.035, -this.size * 0.52);
+                fill(90, 90, 90);
+                rect(-this.size * 0.006, -this.size * 0.03, this.size * 0.012, this.size * 0.03, 1);
+                // smoke puff
+                noStroke();
+                fill(180, 180, 180, 40 + 40 * sin(this.lightTimer * 3 + i));
+                ellipse(0, -this.size * 0.06 + sin(this.lightTimer * 2 + i) * 2, this.size * 0.02, this.size * 0.01);
+                pop();
             }
+
             pop();
         }
+
+        // Pipes along arms (subtle lines) and additional solar arrays for utility
+        for (let a = 0; a < 4; a++) {
+            push();
+            rotate(a * PI / 2);
+            // simple pipe running along arm
+            stroke(140, 80, 50);
+            strokeWeight(1.5);
+            line(-this.size * 0.03, -this.size * 0.05, -this.size * 0.03, -this.size * 0.42);
+            // small maintenance arm near the pipe
+            this._drawMaintenanceArm(-this.size*0.02, -this.size*0.24, 1.6, 0.9);
+            pop();
+        }
+
         this._drawSolarPanels();
-        // Red/orange running lights
-        // Scanner beams and floating light balls for refinery activity
+
+        // Activity indicators: scanner beams, floating light balls and a cargo tug
         this._drawScannerBeam(-this.size*0.05, -this.size*0.02, 1.1);
         this._drawFloatingLightBall(this.size*0.07, -this.size*0.03, 1.0);
+        this._drawCargoTug(-this.size*0.09, -this.size*0.28, 0.9);
+
+        // Running lights (red/orange) around perimeter
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
@@ -2112,10 +2159,19 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
-        // Refinery: faint orbital glow and a single comet trail for activity
+
+        // Subtle activity: small comet trail and orbital glow for active refineries
         if (this.stationType === 'refinery') {
             this._drawCometTrail(this.animationOffset * 0.5, 0.48);
             this._drawOrbitalGlow(26);
+            // clustered crates and small orbiting tanks for visual richness
+            this._drawCrates();
+            this._drawOrbitingCubes(2, 0.34, 0.45);
+            // pulsing processing beacon near the hub
+            push();
+            translate(this.size * 0.08, -this.size * 0.06);
+            this._drawPulsingBeacon(0, 0, 0.6, color(255,160,100));
+            pop();
         }
     }
 
