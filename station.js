@@ -36,6 +36,87 @@ class Station {
         
         // Storage locker - station-specific cargo storage
         this.storage = []; // Array of {name: string, quantity: number}
+        // Pre-generate crate field (positions/styles) for richer decoration (cheap per-frame)
+        this.crateField = null;
+        this._generateCrates();
+    }
+
+    /**
+     * Pre-generate a field of crate specs for use in decoration.
+     * Creates many small crate variations clustered around arm/ring areas.
+     * Runs once in constructor to avoid allocations per-frame.
+     * @private
+     */
+    _generateCrates() {
+        if (this.crateField) return;
+        const preferredTypes = ['industrial', 'mining', 'refinery', 'standard'];
+        // Only generate for types that benefit visually; still keep array for others but small
+        const count = preferredTypes.includes(this.stationType) ? 120 : 32;
+        this.crateField = [];
+        for (let i = 0; i < count; i++) {
+            // cluster around one of the main arms or rings
+            const arm = Math.floor(random(0, 4));
+            const armBase = arm * PI/2;
+            const ang = armBase + random(-0.28, 0.28) + random(-0.1, 0.1);
+            // radius slightly outside the habitation modules
+            const radius = random(0.40, 0.52);
+            const x = cos(ang) * this.size * radius;
+            const y = sin(ang) * this.size * radius;
+
+            // crate visual properties
+            const s = random(this.size * 0.008, this.size * 0.034);
+            const rot = random(-PI/6, PI/6);
+            const strokeW = random([0.5,1,1.5,2,3]); // occasional thicker lines
+            const shading = random() < 0.42; // some crates have shading pattern
+            // color by station type with small variance
+            let baseCol;
+            switch (this.stationType) {
+                case 'industrial': baseCol = [160 + random(-20,20),140 + random(-20,20),120 + random(-20,20)]; break;
+                case 'mining': baseCol = [170 + random(-30,30),120 + random(-30,30),70 + random(-20,20)]; break;
+                case 'refinery': baseCol = [200 + random(-30,30),120 + random(-30,30),80 + random(-30,30)]; break;
+                case 'tourism': baseCol = [200 + random(-40,40),160 + random(-30,30),220 + random(-30,30)]; break;
+                default: baseCol = [180 + random(-30,30),180 + random(-30,30),200 + random(-30,30)];
+            }
+
+            this.crateField.push({ x, y, s, rot, strokeW, shading, baseCol, arm });
+        }
+    }
+
+    /**
+     * Draw the pre-generated crate field. Cheap to execute; uses simple rects and optional shading.
+     * @private
+     */
+    _drawCrates() {
+        if (!this.crateField || this.crateField.length === 0) return;
+        // Draw crates grouped by simple loops
+        for (let i = 0; i < this.crateField.length; i++) {
+            const c = this.crateField[i];
+            push();
+            translate(c.x, c.y);
+            rotate(c.rot + sin(this.lightTimer * 0.5 + i) * 0.02);
+            // base
+            noStroke();
+            fill(c.baseCol[0], c.baseCol[1], c.baseCol[2]);
+            rectMode(CENTER);
+            rect(0, 0, c.s, c.s * 0.9, 2);
+            // outline (thicker for emphasis)
+            stroke(40, 40, 40, 200);
+            strokeWeight(c.strokeW);
+            noFill();
+            rect(0, 0, c.s, c.s * 0.9, 2);
+            // shading / strap or hatch
+            if (c.shading) {
+                noStroke();
+                fill(0, 0, 0, 30);
+                // a subtle offset darker stripe to create shading
+                rect(c.s * 0.08, c.s * 0.02, c.s * 0.36, c.s * 0.16, 1);
+                // a diagonal strap line (cheap single line)
+                stroke(30,20,10,160);
+                strokeWeight(1);
+                line(-c.s*0.35, -c.s*0.35 * 0.9, c.s*0.35, c.s*0.35 * 0.9);
+            }
+            pop();
+        }
     }
 
     /**
@@ -1519,6 +1600,8 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
+        // industrial crate field
+        if (this.stationType === 'industrial') this._drawCrates();
     }
 
     /**
@@ -1590,6 +1673,8 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
+        // mining crate field
+        if (this.stationType === 'mining') this._drawCrates();
     }
 
     /**
@@ -1789,6 +1874,8 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
+        // refinery crate field (smaller accretion near tanks)
+        if (this.stationType === 'refinery') this._drawCrates();
     }
     
     /**
@@ -1828,6 +1915,8 @@ class Station {
         this._drawRings();
         this._drawHabitationModules();
         this._drawSolarPanels();
+        // standard station gets a lighter crate field for around modules
+        if (this.stationType === 'standard') this._drawCrates();
         // small shuttle and astronaut for life, slowed and desynced
         push();
         rotate(this.animationOffset * 0.2 + this.lightTimer * 0.18);
