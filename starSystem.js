@@ -1865,6 +1865,45 @@ checkProjectileCollisions() {
         // If already hit something, skip the rest of the checks
         if (hit) continue;
 
+        // --- Check collisions against missiles (other projectiles) ---
+        // Allow projectiles (e.g., lasers, bullets) to hit missiles and damage/destroy them
+        if (this.projectiles && this.projectiles.length > 0) {
+            for (let j = this.projectiles.length - 1; j >= 0; j--) {
+                // Skip self
+                if (j === i) continue;
+                const other = this.projectiles[j];
+                if (!other || !other.pos) continue;
+                // Only consider destructible missiles (projectiles marked as missile)
+                if (!other._isMissile) continue;
+                // Prevent friendly-fire hitting own missiles
+                if (other.owner === proj.owner) continue;
+
+                const combinedRadius = (other.size || 3) + projSize;
+                const combinedRadiusSquared = combinedRadius * combinedRadius;
+                distCheckVector.set(other.pos.x - projPos.x, other.pos.y - projPos.y);
+                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(other)) {
+                    try {
+                        // Apply damage to the missile
+                        if (typeof other.takeDamage === 'function') {
+                            other.takeDamage(proj.damage || 1, proj.owner, this);
+                        } else {
+                            // Fallback: remove missile immediately
+                            other.lifespan = 0;
+                            other.destroyed = true;
+                            this.addExplosion(other.pos.x, other.pos.y, 8, [255,150,0]);
+                        }
+                    } catch (e) { console.error('Error applying damage to missile:', e); }
+
+                    // Remove the projectile that struck the missile
+                    this.removeProjectile(i);
+                    // Small hit effect
+                    this.addExplosion(projPos.x, projPos.y, 5, [255,200,0]);
+                    hit = true;
+                    break;
+                }
+            }
+        }
+
         // Check against cargo - allow harpoon projectiles to attach cargo and pull it to the owner
         if (this.cargo && this.cargo.length) {
             for (let j = this.cargo.length - 1; j >= 0; j--) {

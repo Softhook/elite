@@ -704,6 +704,21 @@ static fireForce(owner, system) {
             }
         }
 
+        // Allow beams to hit missiles (projectiles) as well
+        if (system?.projectiles && system.projectiles.length) {
+            const projList = system.projectiles;
+            for (let i = 0, len = projList.length; i < len; i++) {
+                const p = projList[i];
+                if (!p || !p.pos) continue;
+                // Only consider missiles (or other destructible projectiles)
+                if (!p._isMissile) continue;
+                // Don't hit our own missiles
+                if (p.owner === owner) continue;
+                const radius = p.size ? p.size * 0.5 : 0;
+                evaluateTarget(p, radius);
+            }
+        }
+
         if (system?.asteroids?.length) {
             const asteroids = system.asteroids;
             for (let i = 0, len = asteroids.length; i < len; i++) {

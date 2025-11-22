@@ -23,6 +23,10 @@ class Projectile {
         
         // Set default values (will be overridden by reset())
         this.size = 3;
+        // Hull for destructible projectiles (missiles/mines)
+        this.maxHull = 0;
+        this.hull = 0;
+        this.destroyed = false;
         this.lifespan = 90;
         this.initialLifespan = 90;
         this.damage = 10;
@@ -112,6 +116,9 @@ class Projectile {
                 this.turnRate = weapon.turnRate || 0;
                 this.initialLifespan = weapon.lifespan || lifespan;
                 this.size = weapon.projectileSize || 3;
+                // Hull for missiles: allow weapons to specify `missileHull` else derive a reasonable default
+                this.maxHull = weapon.missileHull || Math.max(20, Math.floor((weapon.damage || 10) * 2));
+                this.hull = this.maxHull;
             } else {
                 this.initialLifespan = lifespan;
                 this.size = this._isPlayer ? 4 : 3;
@@ -143,6 +150,7 @@ class Projectile {
         this._isHarpoon = (this.type === "harpoon" || this.type === "HARPOON");
         
         this.lifespan = this.initialLifespan;
+        this.destroyed = false;
         
         // Set velocity vector
         const effectiveSpeed = this._isMissile ? this.missileSpeed : speed;
@@ -174,6 +182,36 @@ class Projectile {
         this.lifespan--;
     }
 
+    /** Apply damage to this projectile (used primarily for missiles/mines)
+     * @param {number} damage
+     * @param {Object} attacker
+     * @param {Object} system
+     */
+    takeDamage(damage, attacker, system) {
+        if (!Number.isFinite(damage)) damage = 0;
+        // If this projectile has no hull, treat as instant-death (legacy behavior)
+        if (!this.maxHull || this.maxHull <= 0) {
+            this.lifespan = 0;
+            this.destroyed = true;
+            if (system && typeof system.addExplosion === 'function') {
+                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255,150,0];
+                system.addExplosion(this.pos.x, this.pos.y, 8, col);
+            }
+            return;
+        }
+
+        this.hull -= Math.max(0, Math.floor(damage));
+        if (this.hull <= 0) {
+            this.hull = 0;
+            this.destroyed = true;
+            this.lifespan = 0;
+            if (system && typeof system.addExplosion === 'function') {
+                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255,150,0];
+                system.addExplosion(this.pos.x, this.pos.y, 12, col);
+            }
+        }
+    }
+
     draw() {
         // Use cached type checks to avoid repeated string comparisons
         if (this._isMissile) {
@@ -193,6 +231,22 @@ class Projectile {
             fill(255, lifeAlpha1 > 150 ? 150 : lifeAlpha1, 0, lifeAlpha2 > 100 ? 100 : lifeAlpha2);
             ellipse(-this.size * 2, 0, this.size * 1.5, this.size * 0.8);
             pop();
+
+            // Draw hull bar for missiles only if damaged
+            if (this.hull !== undefined && this.maxHull !== undefined && this.hull < this.maxHull) {
+                const barWidth = this.size * 2;
+                const barHeight = 2;
+                const barX = this.pos.x - barWidth / 2;
+                const barY = this.pos.y - this.size * 2.5 - barHeight - 1; // Above the missile
+                // Background
+                fill(0, 0, 0, 150);
+                noStroke();
+                rect(barX, barY, barWidth, barHeight);
+                // Hull
+                const hullRatio = this.hull / this.maxHull;
+                fill(0, 255, 0, 200); // Green
+                rect(barX, barY, barWidth * hullRatio, barHeight);
+            }
         } else if (this._isTangle) {
             push();
             translate(this.pos.x, this.pos.y);

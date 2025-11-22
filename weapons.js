@@ -234,6 +234,7 @@ const WEAPON_UPGRADES = [
         speed: 2,              // Missile projectile speed
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
+        missileHull: 50,       // Hull for destructible missiles
         desc: "Very slow, slow reload."
     },
     {
@@ -247,6 +248,7 @@ const WEAPON_UPGRADES = [
         speed: 10,              // Missile projectile speed
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
+        missileHull: 50,       // Hull for destructible missiles
         desc: "Extremely fast, slow reload."
     },
     {
@@ -260,6 +262,7 @@ const WEAPON_UPGRADES = [
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
+        missileHull: 30,       // Hull for destructible missiles
         desc: "Basic missile with moderate damage."
     },
     {
@@ -273,6 +276,7 @@ const WEAPON_UPGRADES = [
         speed: 4,               // Slightly slower, heavier
         turnRate: 0.08,         
         lifespan: 300,
+        missileHull: 100,       // Hull for destructible missiles
         desc: "Devastating but slow-reloading."
     },
      // -----------------------------
