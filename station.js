@@ -893,6 +893,148 @@ class Station {
         pop();
     }
 
+    // --- Tourism-specific attractions ---
+    _drawFerrisWheel(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.08 * scale;
+        // Central hub
+        fill(200, 200, 200);
+        stroke(100, 100, 100);
+        ellipse(0, 0, s * 0.3, s * 0.3);
+        // Rotating wheel
+        rotate(this.lightTimer * 0.1 + this.animationOffset * 0.2);
+        noFill();
+        stroke(150, 150, 150);
+        ellipse(0, 0, s * 2, s * 2);
+        // Spokes and cabins
+        for (let i = 0; i < 8; i++) {
+            push();
+            rotate(i * TWO_PI / 8);
+            stroke(120, 120, 120);
+            line(0, 0, 0, s);
+            // Cabin
+            fill(255, 200, 100, 180);
+            noStroke();
+            ellipse(0, s, s * 0.25, s * 0.15);
+            pop();
+        }
+        pop();
+    }
+
+    _drawCarousel(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.06 * scale;
+        // Base
+        fill(180, 120, 80);
+        stroke(100, 80, 60);
+        ellipse(0, 0, s * 0.4, s * 0.4);
+        // Rotating platform
+        rotate(this.lightTimer * 0.15 + this.animationOffset * 0.3);
+        noFill();
+        stroke(200, 150, 100);
+        ellipse(0, 0, s * 1.8, s * 1.8);
+        // Horses
+        for (let i = 0; i < 6; i++) {
+            push();
+            rotate(i * TWO_PI / 6);
+            translate(0, s * 0.9);
+            // Simple horse shape
+            fill(255, 220, 180);
+            noStroke();
+            ellipse(0, 0, s * 0.2, s * 0.15);
+            // Pole
+            stroke(150, 100, 50);
+            line(0, s * 0.075, 0, s * 0.3);
+            pop();
+        }
+        pop();
+    }
+
+    _drawSpaceSlide(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.05 * scale;
+        // Slide structure
+        fill(100, 200, 255, 150);
+        stroke(50, 150, 200);
+        strokeWeight(2);
+        beginShape();
+        vertex(-s * 0.5, -s * 0.2);
+        bezierVertex(-s * 0.3, -s * 0.5, s * 0.3, -s * 0.5, s * 0.5, -s * 0.2);
+        vertex(s * 0.5, s * 0.2);
+        vertex(-s * 0.5, s * 0.2);
+        endShape(CLOSE);
+        // Slide path
+        noFill();
+        stroke(255, 255, 255, 200);
+        strokeWeight(3);
+        bezier(-s * 0.4, -s * 0.1, -s * 0.2, -s * 0.4, s * 0.2, -s * 0.4, s * 0.4, -s * 0.1);
+        // Sliding figure
+        const slidePos = (sin(this.lightTimer * 0.8 + this.animationOffset) + 1) * 0.5; // 0 to 1
+        const slideX = lerp(-s * 0.4, s * 0.4, slidePos);
+        const slideY = bezierPoint(-s * 0.1, -s * 0.4, -s * 0.4, -s * 0.1, slidePos);
+        fill(255, 100, 100);
+        noStroke();
+        ellipse(slideX, slideY, s * 0.1, s * 0.1);
+        pop();
+    }
+
+    _drawRollerCoasterTrack(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.04 * scale;
+        noFill();
+        stroke(200, 200, 200);
+        strokeWeight(2);
+        // Track loop
+        beginShape();
+        for (let i = 0; i <= 20; i++) {
+            const angle = i * TWO_PI / 20;
+            const radius = s * (1 + 0.3 * sin(angle * 2));
+            vertex(cos(angle) * radius, sin(angle) * radius);
+        }
+        endShape();
+        // Supports
+        stroke(150, 150, 150);
+        for (let i = 0; i < 4; i++) {
+            push();
+            rotate(i * PI / 2);
+            line(0, 0, 0, s * 1.5);
+            pop();
+        }
+        // Moving cart
+        const cartAngle = this.lightTimer * 0.2 + this.animationOffset;
+        const cartRadius = s * (1 + 0.3 * sin(cartAngle * 2));
+        const cartX = cos(cartAngle) * cartRadius;
+        const cartY = sin(cartAngle) * cartRadius;
+        fill(255, 0, 0);
+        noStroke();
+        ellipse(cartX, cartY, s * 0.15, s * 0.1);
+        pop();
+    }
+
+    _drawObservationDeck(x = 0, y = 0, scale = 1) {
+        push(); translate(x, y);
+        const s = this.size * 0.06 * scale;
+        // Deck platform
+        fill(180, 180, 200, 150);
+        stroke(120, 120, 140);
+        ellipse(0, 0, s * 1.5, s * 0.8);
+        // Windows
+        fill(100, 150, 200, 120);
+        noStroke();
+        for (let i = 0; i < 6; i++) {
+            push();
+            rotate(i * TWO_PI / 6);
+            ellipse(0, s * 0.3, s * 0.2, s * 0.15);
+            pop();
+        }
+        // Telescope
+        stroke(100, 100, 100);
+        line(0, -s * 0.2, 0, -s * 0.5);
+        fill(50, 50, 50);
+        ellipse(0, -s * 0.5, s * 0.1, s * 0.1);
+        pop();
+    }
+
     _drawTrafficSwarm(count = 6, radius = 0.36) {
         for (let i = 0; i < count; i++) {
             push();
@@ -1722,6 +1864,67 @@ class Station {
             rotate(i * TWO_PI / 4 + phase + this.animationOffset * 0.2);
             translate(0, -this.size * 0.51 + sin(this.lightTimer + this.animationOffset + i * 0.6) * 3);
             this._drawTinyAstronaut(0, 0, 0.45);
+            pop();
+        }
+
+        // Tourism attractions positioned on the station
+        // Ferris wheel on the first arm
+        push();
+        rotate(0);
+        // Base platform on the arm
+        fill(150, 150, 170);
+        stroke(180, 180, 200);
+        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        translate(0, -this.size * 0.35);
+        this._drawFerrisWheel(0, 0, 0.8);
+        pop();
+
+        // Carousel on the second arm
+        push();
+        rotate(PI / 2);
+        // Base platform on the arm
+        fill(150, 150, 170);
+        stroke(180, 180, 200);
+        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        translate(0, -this.size * 0.35);
+        this._drawCarousel(0, 0, 0.7);
+        pop();
+
+        // Space slide on the third arm
+        push();
+        rotate(PI);
+        // Base platform on the arm
+        fill(150, 150, 170);
+        stroke(180, 180, 200);
+        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        translate(0, -this.size * 0.35);
+        this._drawSpaceSlide(0, 0, 0.9);
+        pop();
+
+        // Roller coaster track on the fourth arm
+        push();
+        rotate(3 * PI / 2);
+        // Base platform on the arm
+        fill(150, 150, 170);
+        stroke(180, 180, 200);
+        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        translate(0, -this.size * 0.35);
+        this._drawRollerCoasterTrack(0, 0, 0.6);
+        pop();
+
+        // Observation deck near the hub
+        this._drawObservationDeck(this.size * 0.15, -this.size * 0.1, 0.8);
+
+        // Additional slides around the ring
+        for (let i = 0; i < 4; i++) {
+            push();
+            rotate(i * PI / 2 + PI / 4);
+            // Small platform extending from the ring
+            fill(150, 150, 170);
+            stroke(180, 180, 200);
+            rect(-this.size * 0.04, -this.size * 0.51, this.size * 0.08, this.size * 0.03, 2);
+            translate(0, -this.size * 0.52);
+            this._drawSpaceSlide(0, 0, 0.5);
             pop();
         }
 
