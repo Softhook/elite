@@ -7,6 +7,7 @@ const MISSION_TYPE = {
     BOUNTY_PIRATE: 'Bounty',
     BOUNTY_POLICE: 'Bounty',
     BOUNTY_ALIEN: 'Alien Bounty', // Add this new type
+    ASSASSINATION: 'Assassination', // Named-target assassination
     //ASSASSINATION_CLEAN: 'Official Assassination',
     //ASSASSINATION_WANTED: 'Political Assassination',
     //COURIER: 'Courier (Highspeed Delivery)',
@@ -50,13 +51,30 @@ class Mission {
         this.requiredRep = data.requiredRep || 0;    // Placeholder for reputation needed later
         this.timeLimit = data.timeLimit || null;    // Placeholder for time limit later (e.g., seconds)
 
+        // --- Assassination-specific fields ---
+        // `targetName`: human-readable name of the individual to eliminate
+        // `targetShipType`: ship type the target will be traveling in (key from `SHIP_DEFINITIONS`)
+        // `canLeaveSystem`: whether the target may leave the system (if true, mission cancels on exit)
+        this.targetName = data.targetName || null;
+        this.targetShipType = data.targetShipType || null;
+        this.canLeaveSystem = data.canLeaveSystem || false;
+        this.guardCount = data.guardCount || 0;
+        this.guardShipType = data.guardShipType || null;
+        // runtime reference to the spawned enemy (if spawned)
+        // Keep runtime enemy reference non-enumerable so save/clone operations don't include large objects
+        Object.defineProperty(this, '_targetEnemyRef', { value: null, writable: true, enumerable: false, configurable: true });
+        this._targetEnemyId = data._targetEnemyId || null;
+        // runtime guard tracking (non-enumerable): arrays of guard objects and guard ids
+        Object.defineProperty(this, '_guardRefs', { value: [], writable: true, enumerable: false, configurable: true });
+        this._guardIds = data._guardIds || [];
+
         // --- Tracking Properties ---
         // Initialize status and progress from saved data if present, otherwise use defaults for a new mission
         this.status = data.status || 'Available'; // 'Available', 'Active', 'Completable', 'Completed', 'Failed'
         this.progressCount = data.progressCount || 0; // e.g., number of pirates killed so far
 
         // Optional log to trace object creation/rehydration
-        // console.log(`Mission object created/rehydrated: ID=${this.id.toString().slice(-5)}, Title=${this.title}, Status=${this.status}, Progress=${this.progressCount}`);
+        console.log(`Mission object created/rehydrated: ID=${this.id.toString().slice(-5)}, Title=${this.title}, Status=${this.status}, Progress=${this.progressCount}, TargetName=${this.targetName}`);
     }
 
     /** Sets the mission status to 'Active'. Called by Player.acceptMission. */
@@ -68,6 +86,163 @@ class Mission {
         } else {
              console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
         }
+        // Special handling for assassination missions: spawn the named target near the player
+        try {
+            if (this.type === MISSION_TYPE.ASSASSINATION && typeof player !== 'undefined' && player && player.currentSystem) {
+                // Only spawn if not already spawned
+                if (!this._targetEnemyRef) {
+                    const sys = player.currentSystem;
+                    const angle = random(TWO_PI);
+                    const spawnDist = sys._getDiagonalDistance ? sys._getDiagonalDistance() + random(150, 400) : (500 + random(150,400));
+                    const spawnX = player.pos.x + cos(angle) * spawnDist;
+                    const spawnY = player.pos.y + sin(angle) * spawnDist;
+                    // Choose ship type fallback
+                    let shipType = this.targetShipType || (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
+                    // Default role: use COMBAT so target may defend themselves
+                    const role = (typeof AI_ROLE !== 'undefined') ? (AI_ROLE.COMBAT) : 'COMBAT';
+                    const newEnemy = new Enemy(spawnX, spawnY, player, shipType, role);
+                    newEnemy.calculateRadianProperties && newEnemy.calculateRadianProperties();
+                    newEnemy.initializeColors && newEnemy.initializeColors();
+                    // Set the display name if provided
+                    if (this.targetName) newEnemy.displayName = this.targetName;
+                    // Mark as a named assassination target for later checks
+                    newEnemy.isAssassinationTarget = true;
+                    // Add to system
+                    sys.addEnemy(newEnemy);
+                    // Spawn guards if mission requests them (guardCount provided by generator)
+                    try {
+                        let guardCount = this.guardCount || 1;
+                        const guardShipType = this.guardShipType || null;
+                        console.log(`Spawning ${guardCount} guards for assassination mission.`);
+                        if (guardCount > 0) {
+                            // ensure runtime containers exist
+                            if (!this._guardRefs) Object.defineProperty(this, '_guardRefs', { value: [], writable: true, enumerable: false, configurable: true });
+                            if (!Array.isArray(this._guardIds)) this._guardIds = [];
+                            for (let g = 0; g < guardCount; g++) {
+                                const gAngle = angle + (TWO_PI * (g+1) / (guardCount + 1)) + random(-0.25, 0.25);
+                                const gDist = spawnDist * 0.4 + random(80, 220);
+                                const gx = newEnemy.pos.x + cos(gAngle) * gDist;
+                                const gy = newEnemy.pos.y + sin(gAngle) * gDist;
+                                const gShip = guardShipType || ((typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length>0) ? random(COMBAT_SHIPS) : (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
+                                const guardRole = (typeof AI_ROLE !== 'undefined') ? AI_ROLE.GUARD : 'GUARD';
+                                const guardNPC = new Enemy(gx, gy, player, gShip, guardRole);
+                                guardNPC.calculateRadianProperties && guardNPC.calculateRadianProperties();
+                                guardNPC.initializeColors && guardNPC.initializeColors();
+                                guardNPC.displayName = "Escort"; // For testing, give guards a name
+                                guardNPC.isAssassinationGuard = true;
+                                // Link guard to principal (the named target) so AI will guard/follow
+                                guardNPC.principal = newEnemy;
+                                // Set small formation offset to keep guards spaced
+                                try { guardNPC.guardFormationOffset = createVector(cos(gAngle) * (80 + g*30), sin(gAngle) * (80 + g*30)); } catch(e) { /* createVector may be unavailable in some contexts */ }
+                                // Add guard NPC to system
+                                sys.addEnemy(guardNPC);
+                                // Track guard refs and ids (ids are persisted, refs are runtime-only)
+                                try { this._guardRefs.push(guardNPC); } catch (e) { /* ignore */ }
+                                try { this._guardIds.push(guardNPC.id); } catch (e) { /* ignore */ }
+                                MISSION_LOG(`  -> Spawned guard for target: ${guardNPC.shipTypeName} at (${gx.toFixed(0)},${gy.toFixed(0)})`);
+                            }
+                            console.log(`Spawned ${guardCount} guards successfully.`);
+                            if (typeof uiManager !== 'undefined') uiManager.addMessage(`${guardCount} escort(s) detected around the target.`);
+                        }
+                    } catch (e) { console.warn('Failed to spawn guards for assassination mission:', e); }
+                    // Store references for mission tracking
+                    Object.defineProperty(this, '_targetEnemyRef', { value: newEnemy, writable: true, enumerable: false, configurable: true });
+                    this._targetEnemyId = newEnemy.id;
+                    MISSION_LOG(`Assassination target spawned: ${newEnemy.displayName || newEnemy.shipTypeName} (${newEnemy.id}) at (${spawnX.toFixed(0)},${spawnY.toFixed(0)})`);
+                    // Notify player
+                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Target spotted: ${newEnemy.displayName || newEnemy.shipTypeName}`);
+                }
+            }
+        } catch (e) { console.error('Mission.activate (assassination) failed:', e); }
+    }
+
+    /** Per-frame update called from Player.update to monitor special mission targets. */
+    update(currentSystem) {
+        if (this.type !== MISSION_TYPE.ASSASSINATION) return;
+        if (this.status !== 'Active') return; // Only monitor active assassination missions
+        // Attempt to relink runtime references if possible (useful after load)
+        try { this._ensureRuntimeLinked(currentSystem); } catch (e) { MISSION_LOG('Runtime relink failed:', e); }
+        // If no spawned target, nothing to monitor
+        if (!this._targetEnemyRef) return;
+        try {
+            const enemy = this._targetEnemyRef;
+            // If the enemy was destroyed -> allow completion (player may have killed them)
+            if (enemy.destroyed) {
+                // Award reward and clear mission via Player.completeMission() if player still has it
+                if (typeof player !== 'undefined' && player && player.activeMission === this) {
+                    // Increase progress so player.completeMission will succeed when invoked
+                    this.progressCount = Math.max(1, this.progressCount);
+                    // Directly complete the mission via its own complete() to grant reward
+                    if (typeof this.complete === 'function') {
+                            this.complete(player);
+                            // Clean up runtime guards/refs after completion
+                            try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after complete failed:', e); }
+                            if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+                    }
+                }
+                return;
+            }
+
+            // If the target left the player's current system, cancel the mission
+            if (enemy.currentSystem && currentSystem && enemy.currentSystem !== currentSystem) {
+                // Cancel mission and notify
+                this.fail();
+                if (typeof uiManager !== 'undefined') uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`,[255,120,80]);
+                // Clear player's active mission if it's this one
+                // Also cleanup runtime guard links
+                try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after fail failed:', e); }
+                if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+            }
+        } catch (e) { console.error('Mission.update (assassination) error:', e); }
+    }
+
+    /**
+     * Try to link runtime enemy and guard objects from saved ids when possible.
+     * Safe to call frequently; will no-op when already linked.
+     */
+    _ensureRuntimeLinked(currentSystem) {
+        if (!currentSystem) return;
+        // Link target enemy if we have an id but no runtime ref
+        if (!this._targetEnemyRef && this._targetEnemyId) {
+            const list = currentSystem.enemies || [];
+            const found = list.find(e => e && e.id === this._targetEnemyId);
+            if (found) {
+                Object.defineProperty(this, '_targetEnemyRef', { value: found, writable: true, enumerable: false, configurable: true });
+            }
+        }
+        // Link guards if we have guard ids
+        if (Array.isArray(this._guardIds) && this._guardIds.length > 0 && Array.isArray(this._guardRefs) && this._guardRefs.length === 0) {
+            const list = currentSystem.enemies || [];
+            for (let gid of this._guardIds) {
+                const g = list.find(e => e && e.id === gid);
+                if (g) {
+                    try { this._guardRefs.push(g); } catch (e) {}
+                    // Re-establish principal if missing
+                    if (!g.principal && this._targetEnemyRef) g.principal = this._targetEnemyRef;
+                }
+            }
+        }
+    }
+
+    /**
+     * Cleanup runtime references for assassination mission: clear guard principals and null refs.
+     */
+    _cleanupAssassinationRuntime(currentSystem) {
+        try {
+            // Clear guard principals so guards revert to normal AI
+            if (Array.isArray(this._guardRefs)) {
+                for (let guard of this._guardRefs) {
+                    try { if (guard) { guard.principal = null; guard.isAssassinationGuard = false; } } catch (e) {}
+                }
+            }
+            // Optionally remove guards from system? We will not remove them automatically to avoid surprising the world state.
+            // Clear runtime refs
+            try { Object.defineProperty(this, '_targetEnemyRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetEnemyRef = null; }
+            try { this._guardRefs.length = 0; } catch (e) { this._guardRefs = []; }
+            // Clear persisted ids as mission is finished
+            this._targetEnemyId = null;
+            this._guardIds = [];
+        } catch (e) { MISSION_LOG('Error during assassination runtime cleanup:', e); }
     }
 
     /**
@@ -82,7 +257,27 @@ class Mission {
             MISSION_LOG(`      -> Granting reward: ${this.rewardCredits} Credits`);
             player.addCredits(this.rewardCredits);
             this.status = 'Completed'; // Mark as completed
-            // TODO: Add reputation changes or other effects later
+            // Apply consequences for illegal assassinations (mark player wanted locally)
+            try {
+                if (this.isIllegal) {
+                    const enemy = this._targetEnemyRef || null;
+                    let wantedLevel = 1;
+                    if (enemy && typeof enemy.role !== 'undefined') {
+                        if (enemy.role === (typeof AI_ROLE !== 'undefined' ? AI_ROLE.POLICE : 'POLICE')) wantedLevel = 3;
+                        else if (enemy.role === (typeof AI_ROLE !== 'undefined' ? AI_ROLE.HAULER : 'HAULER')) wantedLevel = 2;
+                    }
+                    if (player && player.currentSystem && typeof player.currentSystem.setPlayerWanted === 'function') {
+                        player.currentSystem.setPlayerWanted(true, wantedLevel, 60); // 60s wanted duration
+                        if (typeof uiManager !== 'undefined') uiManager.addMessage('WANTED: Authorities alerted by this assassination!', '#ff4444');
+                    } else if (player) {
+                        // Fallback flag
+                        player.isWanted = true;
+                        if (typeof uiManager !== 'undefined') uiManager.addMessage('WANTED: Authorities alerted!', '#ff4444');
+                    }
+                }
+            } catch (e) { MISSION_LOG('Error applying illegal-consequence in Mission.complete():', e); }
+            // Cleanup runtime refs (guards/principal) after awarding reward
+            try { this._cleanupAssassinationRuntime(player?.currentSystem); } catch (e) { MISSION_LOG('Cleanup in complete() failed:', e); }
         } else {
             console.error("Mission.complete() called without valid player object or addCredits method!");
         }
@@ -92,7 +287,9 @@ class Mission {
     fail() {
         MISSION_LOG(`Mission Failed: ${this.title}`);
         this.status = 'Failed';
-         // TODO: Add penalties (credits, rep) or consequences later
+            // Cleanup runtime refs when mission fails
+            try { this._cleanupAssassinationRuntime(null); } catch (e) { MISSION_LOG('Cleanup in fail() failed:', e); }
+            // TODO: Add penalties (credits, rep) or consequences later
     }
 
     // Update the getSummary method
@@ -115,6 +312,10 @@ class Mission {
             progressInfo = ` (${this.progressCount}/${this.targetCount})`;
         }
         
+        // Include named target for assassination missions
+        if (this.type === MISSION_TYPE.ASSASSINATION && this.targetName) {
+            return `${statusPrefix}${this.title} [Target: ${this.targetName}] - ${this.rewardCredits}cr`;
+        }
         // Basic summary with status prefix
         return `${statusPrefix}${this.title}${progressInfo} - ${this.rewardCredits}cr`;
     }
@@ -157,6 +358,12 @@ class Mission {
          // Add warning for illegal missions
          if (this.isIllegal) {
              details += `\n!! WARNING:\nThis mission involves illegal activity. Discovery by authorities may lead to fines, bounties, or destruction. Proceed with caution. !!\n`;
+         }
+
+         // Add explicit named target info for assassination missions
+         if (this.type === MISSION_TYPE.ASSASSINATION) {
+             if (this.targetName) details += `Named Target: ${this.targetName}\n`;
+             if (this.targetShipType) details += `Target Ship: ${this.targetShipType}\n`;
          }
 
          return details;

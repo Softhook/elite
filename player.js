@@ -957,6 +957,15 @@ handleInput() {
         // Sync bodyguard status from their enemy references
         this.syncBodyguardStatus();
 
+        // Per-frame mission monitoring (ensure mission logic runs each update)
+        if (this.activeMission && typeof this.activeMission.update === 'function') {
+            try {
+                this.activeMission.update(this.currentSystem);
+            } catch (e) {
+                console.error('Error during mission update:', e);
+            }
+        }
+
         // --- Secret Station Discovery ---
         // Only check for discoveries when we have secret stations and only every
         // few frames to reduce cost.
@@ -1619,6 +1628,8 @@ handleInput() {
             timestamp: Date.now()
         });
     }
+
+    
 
     // --- Save/Load Functionality ---
     /** Save data for persistence */

@@ -165,6 +165,21 @@ class MissionGenerator {
             }
         }
 
+        // Small global chance to generate an assassination mission (named target)
+        let hasAssassination = false;
+        if (random() < 0.08) { // Normal chance
+            try {
+                let assMission = this.createAssassinationMission(currentSystem, currentStation, galaxy, player);
+                if (assMission) {
+                    availableMissions.push(assMission);
+                    hasAssassination = true;
+                }
+            } catch (e) { console.error('Failed to create assassination mission:', e); }
+        }
+
+        // Adjust maxMissions based on whether assassination was added
+        let adjustedMaxMissions = hasAssassination ? Math.max(3, maxMissions - 1) : maxMissions;
+
         // --- Normalize Probabilities ---
         // Ensure all adjusted probabilities are non-negative
         adjustedLegal = max(0, adjustedLegal);
@@ -194,7 +209,7 @@ class MissionGenerator {
         // let normOther = adjustedOther / totalAdjustedChance; // Normalize others if added
 
         // --- Generate Missions based on Normalized Probabilities ---
-        for (let i = 0; i < maxMissions; i++) {
+        for (let i = 0; i < adjustedMaxMissions; i++) {
             let mission = null;
             let missionTypeRoll = random(); // Roll 0.0 to 1.0
 
@@ -460,6 +475,67 @@ class MissionGenerator {
             rewardCredits: reward, 
             isIllegal: true, 
             completionFlagName: completionFlagName 
+        });
+    }
+
+    /** Creates a Named Assassination Mission (single target, named). */
+    static createAssassinationMission(originSystem, originStation, galaxy, player) {
+        // Select a target name using global helper if present
+        let targetName = (typeof generateHumanEnemyName === 'function') ? generateHumanEnemyName() : (`${random(['Mr.','Capt.','Cmdr.','Dr.','Sen.'])} ${Math.floor(random(100,9999))}`);
+
+        // Pick a ship type to travel in (try combat ships, fall back to pirate list)
+        let shipType = null;
+        if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) shipType = random(COMBAT_SHIPS);
+        else if (typeof PIRATE_SHIP_TYPES !== 'undefined' && PIRATE_SHIP_TYPES.length > 0) shipType = random(PIRATE_SHIP_TYPES);
+        else shipType = 'Krait';
+
+        // Reward calculation: named target carries influence/value
+        const baseReward = 1500 + (originSystem.techLevel || 5) * 100;
+        const securityBonus = (originSystem.securityLevel === 'Anarchy') ? 250 : 0;
+        const reward = Math.floor(baseReward + securityBonus + random(200, 1200));
+
+        // Determine whether the assassination would be considered 'legal' (e.g., sanctioned pirate kills)
+        // If the chosen ship type is a known pirate ship, treat as legal bounty-style assassination.
+        let targetIsPirateShip = false;
+        if (typeof PIRATE_SHIP_TYPES !== 'undefined' && Array.isArray(PIRATE_SHIP_TYPES)) {
+            targetIsPirateShip = PIRATE_SHIP_TYPES.includes(shipType);
+        }
+        // If the target is a hauler/transport (civilian), this is clearly illegal
+        let targetIsHauler = false;
+        if (typeof HAULER_SHIPS !== 'undefined' && Array.isArray(HAULER_SHIPS)) {
+            targetIsHauler = HAULER_SHIPS.includes(shipType);
+        }
+
+        // Legality: pirate targets are typically legal to kill; others (haulers, combat VIPs) are illegal
+        const illegalFlag = !targetIsPirateShip;
+
+        // Compute guard count based on reward magnitude (higher reward -> more guards)
+        let guardCount = 1; // Base 1 guard
+
+        // Choose guard ship types - prefer combat/police ships if available
+        let guardShipType = null;
+        if (typeof POLICE_SHIPS !== 'undefined' && POLICE_SHIPS.length > 0) guardShipType = random(POLICE_SHIPS);
+        else if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) guardShipType = random(COMBAT_SHIPS);
+        else guardShipType = (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
+
+        return new Mission({
+            type: MISSION_TYPE.ASSASSINATION,
+            title: `Assassinate ${targetName} (${shipType})`,
+            description: `Eliminate the named target ${targetName}. They are expected to be traveling in a ${shipType}. The target may move; if they escape the system the mission will be canceled.`,
+            originSystem: originSystem.name, originStation: originStation.name,
+            destinationSystem: null,
+            destinationStation: null,
+            targetDesc: `Target: ${targetName} in a ${shipType}`,
+            targetCount: 1,
+            rewardCredits: reward,
+            isIllegal: illegalFlag,
+            progressCount: 0,
+            targetName: targetName,
+            targetShipType: shipType,
+            canLeaveSystem: true,
+            // Extra fields to drive guard spawning at activation (runtime-only semantics handled in Mission.activate)
+            guardCount: guardCount,
+            guardShipType: guardShipType
         });
     }
 
