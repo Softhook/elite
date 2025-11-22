@@ -143,6 +143,50 @@ class Player {
         this.barrierDurationTimer = 0;
         this.barrierDamageReduction = 0;
         this.barrierDamageReduction = 0;
+    }
+
+    /**
+     * Accepts a mission from the station's mission board
+     * @param {Object|Mission} missionInput - The mission data object or Mission instance
+     * @returns {boolean} Success status
+     */
+    acceptMission(missionInput) {
+        console.log("--- Player.acceptMission() called ---");
+        
+        // Check if player already has an active mission
+        if (this.activeMission) {
+            console.warn("Cannot accept mission: Player already has an active mission");
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("Cannot accept mission: You already have an active mission", [255, 100, 100]);
+            }
+            return false;
+        }
+
+        // Validate mission input
+        if (!missionInput) {
+            console.error("acceptMission: No mission input provided");
+            return false;
+        }
+
+        console.log(`   Attempting to accept mission: ${missionInput.title}`);
+
+        // Handle both Mission objects and mission data objects
+        if (missionInput instanceof Mission) {
+            // Already a Mission object, use it directly
+            this.activeMission = missionInput;
+            console.log(`   Using existing Mission object: ${this.activeMission.title}`);
+        } else {
+            // Plain mission data object, create new Mission
+            try {
+                this.activeMission = new Mission(missionInput);
+                console.log(`   Mission object created: ${this.activeMission.title}`);
+            } catch (e) {
+                console.error("   Failed to create Mission object:", e);
+                this.activeMission = null;
+                return false;
+            }
+        }
+
         console.log(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
 
         try {
@@ -172,7 +216,7 @@ class Player {
             this.activeMission = null; // Clear inconsistent mission
             return false; // Indicate failure
         }
-    } // --- End acceptMission method ---
+    }
 
     /** Removes up to `quantity` units of `commodityName` from cargo */
     removeCargo(commodityName, quantity) {

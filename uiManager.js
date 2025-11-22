@@ -316,40 +316,42 @@ class UIManager {
         const statusLineY = 20; // Central Y position for all status elements
         
         // Center - LEGAL status - aligned at statusLineY
-        if (player.currentSystem?.isPlayerWanted()) {
-            fill(255, 0, 0);
-            text(`${eliteRating} - Wanted`, width/2, statusLineY);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        
+        // Determine faction display
+        let factionDisplay = "";
+        let factionRank = "";
+        
+        if (player.isPolice) {
+            factionDisplay = "POLICE";
+            factionRank = player.getFactionRank("POLICE");
+        } else if (player.playerFaction === "MILITARY") {
+            factionDisplay = "MILITARY";
+            factionRank = player.getFactionRank("MILITARY");
+        } else if (player.playerFaction === "IMPERIAL") {
+            factionDisplay = "IMPERIAL";
+            factionRank = player.getFactionRank("IMPERIAL");
+        } else if (player.playerFaction === "SEPARATIST") {
+            factionDisplay = "SEPARATIST";
+            factionRank = player.getFactionRank("SEPARATIST");
         } else {
-            fill(255);
-            textAlign(CENTER, CENTER);
-            
-            // Determine faction display
-            let factionDisplay = "";
-            let factionRank = "";
-            
-            if (player.isPolice) {
-                factionDisplay = "POLICE";
-                factionRank = player.getFactionRank("POLICE");
-            } else if (player.playerFaction === "MILITARY") {
-                factionDisplay = "MILITARY";
-                factionRank = player.getFactionRank("MILITARY");
-            } else if (player.playerFaction === "IMPERIAL") {
-                factionDisplay = "IMPERIAL";
-                factionRank = player.getFactionRank("IMPERIAL");
-            } else if (player.playerFaction === "SEPARATIST") {
-                factionDisplay = "SEPARATIST";
-                factionRank = player.getFactionRank("SEPARATIST");
-            } else {
-                factionDisplay = "LEGAL";
-            }
-            
-            // Display Elite rating and faction rank (if applicable)
-            if (factionRank) {
-                text(`${eliteRating} - ${factionDisplay} (${factionRank})`, width/2, statusLineY);
-            } else {
-                text(`${eliteRating} - ${factionDisplay}`, width/2, statusLineY);
-            }
+            factionDisplay = "LEGAL";
         }
+        
+        // Build the status text
+        let statusText = `${eliteRating} - ${factionDisplay}`;
+        if (factionRank) {
+            statusText += ` (${factionRank})`;
+        }
+        
+        // Add wanted status if applicable
+        if (player.currentSystem?.isPlayerWanted()) {
+            statusText += " - Wanted";
+            fill(255, 0, 0); // Red text for wanted status
+        }
+        
+        text(statusText, width/2, statusLineY);
         
         // Right side - Ship info - aligned with statusLineY
         fill(255);
