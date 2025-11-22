@@ -348,6 +348,20 @@ class EnemyCombat {
         this.activateBarrierIfNeeded();
         if (!targetExists) return;
 
+        // Final sanity: if we have a target reference, verify it's still valid
+        // This prevents race windows where a cached positional target remains
+        // and the AI fires at an empty location after the entity was destroyed.
+        try {
+            if (this.target && typeof this.isTargetValid === 'function' && !this.isTargetValid(this.target)) {
+                // Clear any precomputed attack pass position to avoid shooting at stale coords
+                if (this.attackPassTargetPos) this.attackPassTargetPos = null;
+                return;
+            }
+        } catch (e) {
+            // defensive: if validation throws, bail out of firing for safety
+            return;
+        }
+
         // Safety: never fire at Cargo objects (should be collected instead)
         if (this.target && this.target.constructor && this.target.constructor.name === 'Cargo') {
             return;
