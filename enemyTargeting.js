@@ -275,7 +275,10 @@ class EnemyTargeting {
             // Exception: Allow brief retaliation if same-faction ship attacked us
             if (enemy._getShipFaction) {
                 const myFaction = enemy._getShipFaction(enemy);
-                const targetFaction = enemy._getShipFaction(target);
+                // For Player targets, use their actual faction, not their ship's faction
+                const targetFaction = (target instanceof Player && target.playerFaction) 
+                    ? target.playerFaction 
+                    : enemy._getShipFaction(target);
                 
                 // Only apply faction logic if both have known factions (not UNKNOWN)
                 if (myFaction !== 'UNKNOWN' && targetFaction !== 'UNKNOWN' && myFaction === targetFaction) {
@@ -335,8 +338,10 @@ class EnemyTargeting {
                         _score += 50; // Base score for any non-alien target (human ships)
                         _interesting = true;
                         
-                        // Bonus against military ships
-                        const targetFaction = enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN';
+                        // Bonus against military ships - check player's actual faction
+                        const targetFaction = (target instanceof Player && target.playerFaction) 
+                            ? target.playerFaction 
+                            : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
                         if (targetFaction === 'MILITARY') {
                             _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military targets
                         }
@@ -364,7 +369,10 @@ class EnemyTargeting {
                 case AI_ROLE.COMBAT:
                     // Combat ships prioritize based on faction
                     const myFaction = enemy._getShipFaction ? enemy._getShipFaction(enemy) : 'UNKNOWN';
-                    const targetFaction = enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN';
+                    // For Player targets, use their actual faction, not their ship's faction
+                    const targetFaction = (target instanceof Player && target.playerFaction) 
+                        ? target.playerFaction 
+                        : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
                     
                     // Military ships prioritize aliens with significant bonus
                     if (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {

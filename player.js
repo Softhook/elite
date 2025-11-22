@@ -9,10 +9,12 @@ class Player {
         // console.log(`Creating Player instance with ship: ${shipTypeName}`); // Optional log
         this.shipTypeName = shipTypeName; // Store the type name initially
         // constructor continues; initialization follows below
+        // Resolve ship definition safely (avoid referencing undefined `shipDef`)
+        let shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[this.shipTypeName] : null;
         if (!shipDef) {
             console.error(`FATAL: Ship definition "${shipTypeName}" not found! Defaulting to Sidewinder.`);
             this.shipTypeName = "Sidewinder";
-            shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+            shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[this.shipTypeName] : null;
         }
 
         this.activeMission = null;  // Holds the currently accepted Mission object or null
