@@ -472,8 +472,8 @@ class Station {
         // Sleeker separatist modules: low-profile pods with angled fins
         for (let i = 0; i < 16; i++) {
             push();
-            // small alternating offset for a handcrafted look
-            const baseAngle = i * TWO_PI / 16 + (i % 2 === 0 ? -0.02 : 0.02);
+            // Uneven spacing for more asymmetrical appearance
+            const baseAngle = i * TWO_PI / 16 + sin(i * 0.8) * 0.08 + (i % 3 === 0 ? sin(i * 1.3) * 0.04 : 0);
             rotate(baseAngle);
 
             const outerY = -this.size * 0.48;
@@ -2241,6 +2241,74 @@ class Station {
         // Extra comms and rotor spinners for the separatists
         this._drawMiniCommsArray(-this.size*0.06, -this.size*0.04, 1);
         this._drawSolarArraySpinner(this.size*0.06, -this.size*0.03, 0.9);
+
+        // Additional asymmetrical visual elements for separatists
+        // Asymmetrical antenna tower on one side
+        push();
+        rotate(PI / 6); // Offset from cardinal direction
+        translate(0, -this.size * 0.35);
+        this._drawAntennaArray(0, 0, 1.2);
+        // Add a small platform below
+        fill(150, 120, 100);
+        stroke(100, 80, 60);
+        rect(-this.size * 0.02, this.size * 0.05, this.size * 0.04, this.size * 0.03, 2);
+        pop();
+
+        // Floating separatist banner/flags on the opposite side
+        push();
+        rotate(-PI / 4);
+        translate(0, -this.size * 0.4);
+        this._drawFloatBanner(0, 0, 1.1);
+        // Add a small pennant
+        fill(255, 100, 50, 180);
+        noStroke();
+        beginShape();
+        vertex(0, 0);
+        vertex(-this.size * 0.015, this.size * 0.03);
+        vertex(this.size * 0.015, this.size * 0.03);
+        endShape(CLOSE);
+        pop();
+
+        // Asymmetrical extension arm with extra modules
+        push();
+        rotate(PI * 5/6); // Another offset angle
+        translate(0, -this.size * 0.42);
+        // Extra small module
+        fill(180, 120, 80);
+        stroke(120, 80, 40);
+        rect(-this.size * 0.025, -this.size * 0.02, this.size * 0.05, this.size * 0.04, 3);
+        // Add a small antenna on top
+        stroke(100, 100, 100);
+        strokeWeight(1);
+        line(0, -this.size * 0.02, 0, -this.size * 0.05);
+        fill(255, 200, 100, 150);
+        noStroke();
+        ellipse(0, -this.size * 0.05, this.size * 0.008, this.size * 0.008);
+        pop();
+
+        // Orbiting separatist drones (asymmetrical count)
+        for (let i = 0; i < 3; i++) {
+            push();
+            const angle = this.lightTimer * 0.08 + i * TWO_PI / 3 + this.animationOffset * 0.2;
+            rotate(angle);
+            translate(0, -this.size * 0.38 + sin(this.lightTimer * 0.7 + i) * 2);
+            this._drawServiceBot(0, 0, 0.8);
+            pop();
+        }
+
+        // Unique separatist beacon on one arm
+        push();
+        rotate(PI * 3/4);
+        translate(0, -this.size * 0.3);
+        this._drawPulsingBeacon(0, 0, 0.7, color(255, 150, 50));
+        pop();
+
+        // Asymmetrical cargo pods hanging from arms
+        push();
+        rotate(PI / 3);
+        translate(this.size * 0.08, -this.size * 0.25);
+        this._drawCargoSwing(0, 0, 1.2);
+        pop();
     }
 
     /**
