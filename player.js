@@ -2317,33 +2317,45 @@ handleInput() {
      * @private
      */
     _getCheapestFactionShip(factionName) {
-        // Define faction-specific ships with their prices
-        const factionShips = {
-            "IMPERIAL": [
-                { name: "ImperialCourier", price: 50000 },
-                { name: "ImperialEagleMkII", price: 58000 },
-                { name: "ImperialLancer", price: 62000 }
-            ],
-            "SEPARATIST": [
-                { name: "SeparatistPartisan", price: 28000 },
-                { name: "SeparatistLiberator", price: 52000 },
-                { name: "SeparatistOutlander", price: 70000 }
-            ],
-            "MILITARY": [
-                { name: "Vulture", price: 40000 },
-                { name: "Viper", price: 60000 },
-                { name: "FederalAssaultShip", price: 90000 }
-            ]
-        };
-
-        const ships = factionShips[factionName];
-        if (!ships || ships.length === 0) {
+        // Dynamically find the cheapest ship for the faction from SHIP_DEFINITIONS
+        if (typeof SHIP_DEFINITIONS === 'undefined') {
+            console.error("SHIP_DEFINITIONS not available");
             return null;
         }
 
-        // Sort by price and return the cheapest
-        ships.sort((a, b) => a.price - b.price);
-        return ships[0].name;
+        let cheapestShip = null;
+        let lowestPrice = Infinity;
+
+        // Iterate through all ships to find faction-specific ones
+        for (const [shipName, shipDef] of Object.entries(SHIP_DEFINITIONS)) {
+            let isFactionShip = false;
+            
+            if (factionName === 'MILITARY') {
+                // Military ships are identified by having "MILITARY" in their aiRoles
+                isFactionShip = shipDef.aiRoles && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('MILITARY');
+            } else {
+                // Imperial and Separatist ships are identified by name prefix
+                isFactionShip = shipName.toUpperCase().startsWith(factionName.toUpperCase());
+            }
+            
+            if (!isFactionShip) {
+                continue; // Skip ships that don't match the faction
+            }
+
+            // Check if ship has a valid price
+            if (shipDef.price && typeof shipDef.price === 'number' && shipDef.price > 0 && shipDef.price < lowestPrice) {
+                lowestPrice = shipDef.price;
+                cheapestShip = shipName;
+            }
+        }
+
+        if (!cheapestShip) {
+            console.warn(`No valid ships found for faction: ${factionName}`);
+            return null;
+        }
+
+        console.log(`Cheapest ship for ${factionName}: ${cheapestShip} (price: ${lowestPrice})`);
+        return cheapestShip;
     }
 
     /**
