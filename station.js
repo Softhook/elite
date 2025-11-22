@@ -49,9 +49,9 @@ class Station {
      */
     _generateCrates() {
         if (this.crateField) return;
-        const preferredTypes = ['industrial', 'mining', 'refinery', 'standard'];
+        const preferredTypes = ['industrial', 'mining', 'refinery', 'standard', 'agricultural'];
         // Only generate for types that benefit visually; still keep array for others but small
-        const count = preferredTypes.includes(this.stationType) ? 120 : 32;
+        const count = preferredTypes.includes(this.stationType) ? 60 : 20;
         this.crateField = [];
         for (let i = 0; i < count; i++) {
             // cluster around one of the main arms or rings
@@ -74,7 +74,7 @@ class Station {
                 case 'industrial': baseCol = [160 + random(-20,20),140 + random(-20,20),120 + random(-20,20)]; break;
                 case 'mining': baseCol = [170 + random(-30,30),120 + random(-30,30),70 + random(-20,20)]; break;
                 case 'refinery': baseCol = [200 + random(-30,30),120 + random(-30,30),80 + random(-30,30)]; break;
-                case 'tourism': baseCol = [200 + random(-40,40),160 + random(-30,30),220 + random(-30,30)]; break;
+                case 'agricultural': baseCol = [120 + random(-20,20),180 + random(-30,30),100 + random(-20,20)]; break;
                 default: baseCol = [180 + random(-30,30),180 + random(-30,30),200 + random(-30,30)];
             }
 
@@ -1543,6 +1543,8 @@ class Station {
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
+        // agricultural crate clusters (planter boxes, pollinator crates)
+        if (this.stationType === 'agricultural') this._drawCrates();
     }
 
     /**
