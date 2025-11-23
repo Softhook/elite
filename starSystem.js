@@ -154,6 +154,7 @@ class StarSystem {
         // Initialize new arrays for nebulae, cosmic storms, and asteroid fields
         this.nebulae = [];
         this.cosmicStorms = [];
+        this.spaceObjects = []; // decorative satellites/telescopes
 
         // Cooldown to prevent spamming alien spawn sound during batch spawns
         this._lastAlienSpawnSoundTime = 0;
@@ -743,6 +744,11 @@ try {
                 for (let i = 0; i < 8; i++) {
                     try { this.trySpawnAsteroid(); } catch(e) {}
                 }
+                // Spawn a couple of decorative space objects near the player for testing
+                try {
+                    this.spawnSpaceObjectsNearPlayer(2);
+                    if (STAR_SYSTEM_DEBUG) console.log('Spawned test space objects near player');
+                } catch (e) { console.error('Failed to spawn test space objects', e); }
                 
                 // Use this.player in nested setTimeout too
                 setTimeout(() => {
@@ -1206,6 +1212,35 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         planet.update();
                     } catch(e) {
                         console.error("Error updating planet:", e, planet);
+                    }
+                }
+            }
+
+            // Update decorative space objects (satellites / telescopes)
+            if (this.spaceObjects && this.spaceObjects.length) {
+                for (let i = this.spaceObjects.length - 1; i >= 0; i--) {
+                    const so = this.spaceObjects[i];
+                    if (!so) { this._fastRemove(this.spaceObjects, i); continue; }
+                    try { so.update(this); } catch (e) { console.error('SpaceObject.update error', e); }
+                    // If destroyed, spawn a small metals cargo and remove
+                    if (so.destroyed) {
+                        try {
+                            if (random() < 0.95) {
+                                const baseQuantity = max(1, floor(map(so.size, 28, 110, 1, 6)));
+                                const quantity = max(1, baseQuantity);
+                                const offsetX = random(-so.size * 0.2, so.size * 0.2);
+                                const offsetY = random(-so.size * 0.2, so.size * 0.2);
+                                const cargoDrop = new Cargo(so.pos.x + offsetX, so.pos.y + offsetY, "Metals", quantity);
+                                this.addCargo(cargoDrop);
+                                if (typeof uiManager !== 'undefined') uiManager.addMessage(`Recovered ${quantity}t Metals from wreckage`);
+                            }
+                        } catch (e) { console.error('Error spawning cargo from spaceObject:', e); }
+                        this._fastRemove(this.spaceObjects, i);
+                        continue;
+                    }
+
+                    if (this.shouldDespawnEntity(so, 1.2)) {
+                        this._fastRemove(this.spaceObjects, i);
                     }
                 }
             }
@@ -1756,6 +1791,42 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     asteroid.vel.y += normalizedY * asteroidImpulseFactor;
                 }
             }
+
+            // Player vs SpaceObjects collision
+            const soCount = this.spaceObjects ? this.spaceObjects.length : 0;
+            for (let i = 0; i < soCount; i++) {
+                const so = this.spaceObjects[i];
+                const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
+                if (!so || !so.pos || soDestroyed) continue;
+                if (this.player.checkCollision(so)) {
+                    const collisionDamage = Math.floor(this.player.vel.mag());
+                    if (STAR_SYSTEM_DEBUG) console.log(`Player hit spaceObject! Damage: ${collisionDamage}`);
+                    this.player.takeDamage(collisionDamage, so);
+                    try { so.takeDamage(20, this.player, this); } catch (e) { try { so.takeDamage(20); } catch(_) {} }
+
+                    // Play bump sound
+                    try {
+                        if (typeof soundManager !== 'undefined') {
+                            const now = (typeof millis === 'function') ? millis() : Date.now();
+                            if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
+                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
+                                this._lastPlayerAsteroidBumpSoundTime = now;
+                            }
+                        }
+                    } catch (e) {}
+
+                    // Apply impulse to player (space objects are mostly static/lightweight)
+                    const dx = so.pos.x - this.player.pos.x;
+                    const dy = so.pos.y - this.player.pos.y;
+                    const distSq = dx * dx + dy * dy;
+                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+                    const normalizedX = dx * invDist;
+                    const normalizedY = dy * invDist;
+                    const playerImpulseFactor = 2.0;
+                    this.player.vel.x -= normalizedX * playerImpulseFactor;
+                    this.player.vel.y -= normalizedY * playerImpulseFactor;
+                }
+            }
             
             // Enemy vs Asteroid collisions - optimized with cached lengths
             for (let i = 0; i < enemyCount; i++) {
@@ -1787,6 +1858,29 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         enemy.vel.y -= normalizedY;
                         asteroid.vel.x += normalizedX * 0.5;
                         asteroid.vel.y += normalizedY * 0.5;
+                    }
+                }
+                // Enemy vs SpaceObject collisions
+                if (this.spaceObjects && this.spaceObjects.length) {
+                    for (let j = 0; j < this.spaceObjects.length; j++) {
+                        const so = this.spaceObjects[j];
+                        const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
+                        if (!so || !so.pos || soDestroyed) continue;
+                        if (enemy.checkCollision(so)) {
+                            enemy.takeDamage(10);
+                            try { so.takeDamage(10); } catch (e) { try { so.takeDamage(10); } catch(_) {} }
+
+                            // Apply a small push to enemy
+                            const dx = so.pos.x - enemy.pos.x;
+                            const dy = so.pos.y - enemy.pos.y;
+                            const distSq = dx * dx + dy * dy;
+                            const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+                            const normalizedX = dx * invDist * 2;
+                            const normalizedY = dy * invDist * 2;
+                            enemy.vel.x -= normalizedX;
+                            enemy.vel.y -= normalizedY;
+                            if (so.vel) { so.vel.x += normalizedX * 0.5; so.vel.y += normalizedY * 0.5; }
+                        }
                     }
                 }
             }
@@ -1843,6 +1937,29 @@ checkProjectileCollisions() {
                 }
             }
         }
+
+            // Check against decorative space objects (satellites, telescopes)
+            if (!hit && this.spaceObjects && this.spaceObjects.length) {
+                for (let j = this.spaceObjects.length - 1; j >= 0; j--) {
+                    const so = this.spaceObjects[j];
+                    const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
+                    if (!so || soDestroyed) continue;
+
+                    const combinedRadius = (so.size || 24) + projSize;
+                    const combinedRadiusSquared = combinedRadius * combinedRadius;
+                    distCheckVector.set(so.pos.x - projPos.x, so.pos.y - projPos.y);
+
+                    if (distCheckVector.magSq() <= combinedRadiusSquared) {
+                        if (so.checkCollision && so.checkCollision(proj)) {
+                            try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
+                            this.removeProjectile(i);
+                            this.addExplosion(projPos.x, projPos.y, 8, [200,100,255]);
+                            hit = true;
+                            break;
+                        }
+                    }
+                }
+            }
         
         // If already hit something, skip the rest of the checks
         if (hit) continue;
@@ -2772,6 +2889,17 @@ drawOptimalStarfield() {
             }
         }
 
+        // Draw decorative space objects (satellites, telescopes)
+        if (this.spaceObjects && this.spaceObjects.length) {
+            for (let i = 0; i < this.spaceObjects.length; i++) {
+                const so = this.spaceObjects[i];
+                if (!so || !so.pos) continue;
+                if (this.isInView(so.pos.x, so.pos.y, so.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                    try { so.draw(); } catch(e) { console.error('SpaceObject.draw error', e); }
+                }
+            }
+        }
+
         // Draw only visible cargo
         if (this.cargo && this.cargo.length > 0) {
             for (let i = 0; i < this.cargo.length; i++) {
@@ -3098,6 +3226,31 @@ drawOptimalStarfield() {
             array[index] = array[lastIndex];
         }
         array.pop();
+    }
+
+    /**
+     * Spawn a few decorative space objects near the player for testing.
+     * Creates a mix of satellites and telescopes at short range.
+     */
+    spawnSpaceObjectsNearPlayer(count = 2) {
+        if (!this.player || !this.player.pos) return;
+        if (typeof SpaceObject === 'undefined') return;
+
+        const types = ['satellite','telescope','relay','habitat','debris','probe','beacon'];
+        for (let i = 0; i < count; i++) {
+            const angle = random(TWO_PI);
+            const dist = random(200, 600);
+            const x = this.player.pos.x + Math.cos(angle) * dist;
+            const y = this.player.pos.y + Math.sin(angle) * dist;
+            // Pick a random type from our available space object types
+            const type = random(types);
+            try {
+                const obj = new SpaceObject(x, y, type);
+                this.spaceObjects.push(obj);
+            } catch (e) {
+                console.error('Failed to create SpaceObject', e);
+            }
+        }
     }
     
     /**
