@@ -397,7 +397,13 @@ class StarSystem {
         }
         // --- End Jump Zone Calculation ---
 
-// --- Generate Nebulae ---
+        // --- Spawn Space Objects for Planets and Jump Gate ---
+        try {
+            this.spawnSpaceObjectsForPlanets();
+            console.log(`         Space objects spawned`);
+        } catch(e) { console.error("Error spawning space objects:", e); }
+
+        // --- Generate Nebulae ---
 try {
     // Skip nebula generation if we already have nebulae from saved data
     if (this.nebulae.length > 0) {
@@ -536,10 +542,6 @@ try {
             this.mainStationPlanetIndex = randomIndex;
             console.log(`         Main station positioned near planet index ${randomIndex}`);
         }
-
-        // Spawn space objects near planets based on system economy
-        this.spaceObjects = [];
-        this.spawnSpaceObjectsForPlanets();
     } // End createRandomPlanets
 
     /**
@@ -3253,7 +3255,8 @@ drawOptimalStarfield() {
 
         const availableTypes = typesByEconomy[this.economyType] || defaultTypes;
 
-        for (let planet of this.planets) {
+        for (let i = 1; i < this.planets.length; i++) {
+            const planet = this.planets[i];
             if (['Industrial', 'Refinery', 'Mining'].includes(this.economyType)) {
                 // Always spawn at least one mining platform
                 const angle = random(TWO_PI);
@@ -3297,6 +3300,25 @@ drawOptimalStarfield() {
                     } catch (e) {
                         console.error('Failed to create SpaceObject', e);
                     }
+                }
+            }
+        }
+
+        // Spawn 1-3 objects near the jump gate
+        if (this.jumpZoneCenter) {
+            const jumpGateTypes = ['signalFlare', 'relay', 'satellite', 'decoyBuoy', 'probe'];
+            const numJumpObjects = Math.floor(random(1, 4)); // 1 to 3
+            for (let i = 0; i < numJumpObjects; i++) {
+                const type = random(jumpGateTypes);
+                const angle = random(TWO_PI);
+                const dist = random(200, 600); // Fixed distance range for jump gate objects
+                const x = this.jumpZoneCenter.x + Math.cos(angle) * dist;
+                const y = this.jumpZoneCenter.y + Math.sin(angle) * dist;
+                try {
+                    const obj = new SpaceObject(x, y, type);
+                    this.spaceObjects.push(obj);
+                } catch (e) {
+                    console.error('Failed to create jump gate SpaceObject', e);
                 }
             }
         }

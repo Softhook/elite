@@ -138,6 +138,17 @@ class Player {
         this.activeBodyguards = []; // Tracks hired bodyguards - destroyed ones are automatically removed
         this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
 
+        // Personal record tracking
+        this.shipsDestroyed = [];
+        this.systemsVisited = [];
+        this.stationsTraded = [];
+        this.factionsJoined = [];
+        this.eliteStatusChanges = [];
+        this.missionsCompleted = [];
+        this.wantedStatusChanges = [];
+        this.shipsPurchased = [];
+        this.weaponsUpgraded = [];
+
         // Barrier properties
         this.isBarrierActive = false;
         this.barrierDurationTimer = 0;
