@@ -500,7 +500,7 @@ try {
     createRandomPlanets() {
         // Clear any previous planets and add the central star at (0,0)
         this.planets = [];
-        this.planets.push(Planet.createSun());
+        this.planets.push(Planet.createSun(this.name));
 
         let numPlanets = floor(random(2, 7));
         let minOrbit = 1200;
@@ -521,8 +521,8 @@ try {
             let c1 = color(random(50, 200), random(50, 200), random(50, 200));
             let c2 = color(random(50, 200), random(50, 200), random(50, 200));
 
-            // Create the planet with the computed world coordinates
-            let planet = new Planet(px, py, sz, c1, c2);
+            // Create the planet with the computed world coordinates, system name, and planet index
+            let planet = new Planet(px, py, sz, c1, c2, this.name, i + 1); // i+1 since 0 is sun
             this.planets.push(planet);
 
             console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}`);

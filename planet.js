@@ -10,8 +10,10 @@ class Planet {
      * @param {number} size - Diameter of the planet.
      * @param {p5.Color} color1 - Primary base color object passed from StarSystem.
      * @param {p5.Color} color2 - Secondary color object passed from StarSystem.
+     * @param {string} systemName - Name of the star system for generating planet name.
+     * @param {number} planetIndex - Index of the planet in the system (0 for sun, 1+ for planets).
      */
-    constructor(worldX, worldY, size, color1, color2) {
+    constructor(worldX, worldY, size, color1, color2, systemName = "Unknown", planetIndex = 0) {
         this.pos = createVector(worldX, worldY);
         this.size = size;
         this.radius = size * 0.5; // Cache radius
@@ -60,10 +62,109 @@ class Planet {
         // Initialize shadowOffset to null. It will be set later.
         this.shadowOffset = null;
         
+        // Generate planet name etymologically related to system name
+        this.name = this.generatePlanetName(systemName, planetIndex);
+        this.systemName = systemName;
+        this.planetIndex = planetIndex;
+        
         // Flag to track buffer creation status
         this.buffersCreated = false;
     }
-    
+
+    /**
+     * Generates a planet name etymologically related to the system name.
+     * Uses Latin/Greek roots and Roman numerals for uniqueness.
+     * @param {string} systemName - The name of the star system.
+     * @param {number} planetIndex - Index of the planet (0 = sun, 1+ = planets).
+     * @returns {string} The generated planet name.
+     */
+    generatePlanetName(systemName, planetIndex) {
+        if (planetIndex === 0) return systemName; // Sun keeps system name
+        
+        // Etymological roots based on system name
+        const roots = {
+            'Sol': ['Sol', 'Helio', 'Phoeb'],
+            'Alpha': ['Prim', 'Prot', 'Arch'],
+            'Beta': ['Secund', 'Deut', 'Vice'],
+            'Gamma': ['Tert', 'Gamm', 'Tri'],
+            'Delta': ['Quart', 'Delt', 'Tet'],
+            'Terra': ['Geo', 'Tell', 'Chthon'],
+            'Aqua': ['Hydr', 'Aqu', 'Naut'],
+            'Nova': ['Nov', 'Kai', 'Ne'],
+            'Stella': ['Aster', 'Stell', 'Sid'],
+            'Orion': ['Hunt', 'Ori', 'Sagitt'],
+            'Ursa': ['Bear', 'Ark', 'Urs'],
+            'Draco': ['Drag', 'Drac', 'Serp'],
+            'Lyra': ['Lyr', 'Mel', 'Chord'],
+            'Vega': ['Veg', 'Luc', 'Bright'],
+            'Sirius': ['Sir', 'Can', 'Dog'],
+            'Rigel': ['Rig', 'Foot', 'Ped'],
+            'Betelgeuse': ['Bet', 'Arm', 'Should'],
+            'Altair': ['Alt', 'Eagl', 'Aquil'],
+            'Deneb': ['Den', 'Tail', 'Caud'],
+            'Polaris': ['Pol', 'North', 'Septentr'],
+            'Arcturus': ['Arc', 'Bear', 'Guard'],
+            'Spica': ['Spic', 'Ear', 'Spike'],
+            'Antares': ['Ant', 'Heart', 'Scorp'],
+            'Vulpecula': ['Vulp', 'Fox', 'Little'],
+            'Cassiopeia': ['Cass', 'Queen', 'Seat'],
+            'Andromeda': ['Andr', 'Woman', 'Chain'],
+            'Pegasus': ['Peg', 'Wing', 'Horse'],
+            'Perseus': ['Pers', 'Hero', 'Rescuer'],
+            'Hercules': ['Herc', 'Strong', 'Lab'],
+            'Ulysses': ['Uly', 'Wise', 'Odys'],
+            'Achilles': ['Ach', 'Heel', 'Swift'],
+            'Odyssey': ['Odys', 'Journey', 'Quest'],
+            'Icarus': ['Icar', 'Fly', 'Wax'],
+            'Daedalus': ['Daed', 'Craft', 'Maze'],
+            'Minos': ['Min', 'King', 'Bull'],
+            'Theseus': ['Thes', 'Athen', 'Thread'],
+            'Ares': ['Are', 'War', 'Mars'],
+            'Aphrodite': ['Aphr', 'Love', 'Venus'],
+            'Apollo': ['Apol', 'Light', 'Sun'],
+            'Artemis': ['Arte', 'Hunt', 'Moon'],
+            'Athena': ['Athe', 'Wise', 'Minerv'],
+            'Demeter': ['Dem', 'Earth', 'Corn'],
+            'Dionysus': ['Dion', 'Wine', 'Bacchus'],
+            'Hades': ['Had', 'Under', 'Pluto'],
+            'Hephaestus': ['Heph', 'Forge', 'Vulcan'],
+            'Hera': ['Her', 'Queen', 'Jun'],
+            'Hermes': ['Herm', 'Mess', 'Merc'],
+            'Poseidon': ['Pose', 'Sea', 'Nept'],
+            'Zeus': ['Ze', 'Sky', 'Jup']
+        };
+
+        // Roman numerals for planet numbering
+        const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+        
+        // Get root based on system name
+        let root = systemName;
+        for (let key in roots) {
+            if (systemName.toLowerCase().includes(key.toLowerCase())) {
+                const variants = roots[key];
+                root = variants[Math.floor(this.featureRand * variants.length) % variants.length];
+                break;
+            }
+        }
+        
+        // Generate suffix based on planet properties
+        let suffix = '';
+        if (this.isInhabited) {
+            suffix = 'Hab';
+        } else if (this.hasRings) {
+            suffix = 'Ring';
+        } else if (this.hasAtmosphere) {
+            suffix = 'Atmos';
+        } else {
+            const suffixes = ['Prime', 'Secund', 'Tert', 'Major', 'Minor', 'Max', 'Min', 'Cent', 'Orb'];
+            suffix = suffixes[Math.floor(this.featureRand * suffixes.length) % suffixes.length];
+        }
+        
+        // Combine root, suffix, and Roman numeral
+        const romanNum = romanNumerals[Math.min(planetIndex, romanNumerals.length - 1)];
+        return `${root}${suffix} ${romanNum}`.trim();
+    }
+
     // Call this method once you know the sun's position.
     computeShadowOffset(sunPos) {
         if (sunPos && sunPos instanceof p5.Vector) {
@@ -85,11 +186,11 @@ class Planet {
     }
 
     // Add a static method that creates the sun (at 0,0)
-    static createSun() {
+    static createSun(systemName = "Unknown") {
         let sunSize = 400;  // Adjust as needed
         let sunColor1 = color(255, 255, 100);  // Bright yellow
         let sunColor2 = color(255, 200, 100);
-        let sun = new Planet(0, 0, sunSize, sunColor1, sunColor2);
+        let sun = new Planet(0, 0, sunSize, sunColor1, sunColor2, systemName, 0);
         sun.isSun = true; // Mark this planet as the sun.
         return sun;
     }
@@ -752,6 +853,22 @@ class Planet {
                 ellipse(this.shadowOffset.x, this.shadowOffset.y, this._shadowSize, this._shadowSize);
             }
         }
+
+        // Draw planet name in the center
+        if (this.name && !this.isSun) {
+            push();
+            // Keep rotation to match planet's rotation
+            fill(255, 255, 255, 200); // White text with some transparency
+            noStroke();
+            textAlign(CENTER, CENTER);
+            // Use global font if available so the name matches the UI
+            if (typeof font !== 'undefined' && font) {
+                textFont(font);
+            }
+            textSize(18); // Fixed size for all planets
+            text(this.name, 0, 0);
+            pop();
+        }
         
         pop();
     }
@@ -821,7 +938,10 @@ class Planet {
             currentRotation: this.currentRotation,
             isInhabited: this.isInhabited,
             cityLightsColor: this.cityLightsColor ? this.cityLightsColor.toString() : null,
-            cityLightsDensity: this.cityLightsDensity
+            cityLightsDensity: this.cityLightsDensity,
+            name: this.name,
+            systemName: this.systemName,
+            planetIndex: this.planetIndex
         };
     }
 
@@ -829,7 +949,7 @@ class Planet {
         // Use baseColor and featureColor1/2 if possible, else fallback to random
         let c1 = data.baseColor && typeof color === "function" ? color(data.baseColor) : undefined;
         let c2 = data.featureColor1 && typeof color === "function" ? color(data.featureColor1) : undefined;
-        const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2);
+        const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2, data.systemName || "Unknown", data.planetIndex || 0);
         p.featureColor2 = data.featureColor2 && typeof color === "function" ? color(data.featureColor2) : p.featureColor2;
         p.featureRand = data.featureRand;
         p.noiseScale = data.noiseScale;
@@ -849,6 +969,7 @@ class Planet {
         p.isInhabited = data.isInhabited;
         p.cityLightsColor = data.cityLightsColor && typeof color === "function" ? color(data.cityLightsColor) : null;
         p.cityLightsDensity = data.cityLightsDensity;
+        p.name = data.name || p.name; // Use saved name if available
         return p;
     }
 } // End of Planet Class
