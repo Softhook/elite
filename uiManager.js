@@ -2211,6 +2211,25 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
+            // --- Map and Draw Space Objects ---
+            const spaceObjects = system.spaceObjects || [];
+            for (let i = 0, len = spaceObjects.length; i < len; i++) {
+                const obj = spaceObjects[i];
+                if (!obj?.pos) continue;
+                let objX = obj.pos.x;
+                let objY = obj.pos.y;
+                let relX = objX - player.pos.x;
+                let relY = objY - player.pos.y;
+                let mapX = mapCenterX + relX * this.minimapScale;
+                let mapY = mapCenterY + relY * this.minimapScale;
+                if (isFullyWithinBounds(mapX, mapY, 2, 2)) {
+                    noStroke();
+                    fill(255); // White dots
+                    ellipse(mapX, mapY, 2, 2);
+                }
+            }
+            // ---
+
             // --- Map and Draw Locked Target Indicator (Reticle) ---
             if (player.target && !player.target.isDestroyed?.() && player.target.pos) {
                 const tgt = player.target;

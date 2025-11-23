@@ -737,7 +737,7 @@ class SpaceObject {
             case 'telescope':
                 // Telescope dish small tilt/scan
                 anim.telescopeTilt = Math.random() * 0.06 - 0.03;
-                anim.telescopeSpeed = (Math.random() * 0.00008 + 0.00002);
+                anim.telescopeSpeed = (Math.random() * 0.00004 + 0.00001);
                 break;
             case 'relay':
                 // Relay antennae phase
@@ -789,25 +789,25 @@ class SpaceObject {
         // Much slower rotation so they don't look like tiny spinning toys
         // Much slower rotations for subtle motion
         const rotMap = {
-            telescope: 0.00015,
-            satellite: 0.00045,
-            relay: 0.0004,
-            habitat: 0.00012,
+            telescope: 0.000075,
+            satellite: 0.000225,
+            relay: 0.0002,
+            habitat: 0.00006,
             // make debris spin much slower so large chunks feel massive
-            debris: 0.00008,
-            probe: 0.0012,
-            beacon: 0.00025
+            debris: 0.00004,
+            probe: 0.0003,
+            beacon: 0.000125
             ,
             // New types rotation speeds (subtle)
-            solarSail: 0.00006,
-            engineArray: 0.0009,
-            cargoCluster: 0.0002,
-            researchArray: 0.00018,
-            orbitalGarden: 0.00014,
-            decoyBuoy: 0.0003,
-            miningPlatform: 0.00009,
-            ancientRelic: 0.00005,
-            signalFlare: 0.0006
+            solarSail: 0.00003,
+            engineArray: 0.00045,
+            cargoCluster: 0.0001,
+            researchArray: 0.00009,
+            orbitalGarden: 0.00007,
+            decoyBuoy: 0.00015,
+            miningPlatform: 0.000045,
+            ancientRelic: 0.000025,
+            signalFlare: 0.0003
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -849,7 +849,7 @@ class SpaceObject {
                 const ry = Math.sin(ang) * dist;
                 const verts = 3 + Math.floor(rndf(4));
                 const rr = (this.size * 0.12) * (0.6 + rndf(1.2));
-                const spin = (rndf(0.002) - 0.001) * (0.5 + rndf(1));
+                const spin = (rndf(0.001) - 0.0005) * (0.5 + rndf(1));
                 this._shards.push({ rx, ry, baseAng: ang, angle: rndf(TWO_PI), spin, verts, rrScale: 0.6 + rndf(1.2) });
             }
         }
@@ -870,21 +870,21 @@ class SpaceObject {
         // advance per-type animations (cache anim ref)
         if (typeof anim.panelAngle === 'number') anim.panelAngle += (anim.panelSpeed || 0) * dt;
         if (typeof anim.telescopeTilt === 'number') anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
-        if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0012 * dt;
-        if (typeof anim.habitatWindowPhase === 'number') anim.habitatWindowPhase += 0.004 * dt;
-        if (typeof anim.probeBlink === 'number') anim.probeBlink += 0.02 * dt;
+        if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0006 * dt;
+        if (typeof anim.habitatWindowPhase === 'number') anim.habitatWindowPhase += 0.002 * dt;
+        if (typeof anim.probeBlink === 'number') anim.probeBlink += 0.01 * dt;
         // Advance new-type animation phases for richer motion
-        if (typeof anim.solarSailAngle === 'number') anim.solarSailAngle += 0.00008 * dt;
-        if (typeof anim.engineGlow === 'number') anim.engineGlow += 0.009 * dt;
-        if (typeof anim.engineParticlePhase === 'number') anim.engineParticlePhase += 0.01 * dt;
-        if (typeof anim.cargoHatch === 'number') anim.cargoHatch += 0.007 * dt;
-        if (typeof anim.researchArraySweep === 'number') anim.researchArraySweep += 0.0045 * dt;
-        if (typeof anim.researchPing === 'number') anim.researchPing += 0.006 * dt;
-        if (typeof anim.gardenBreeze === 'number') anim.gardenBreeze += 0.0035 * dt;
-        if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.012 * dt;
-        if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.004 * dt;
-        if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.0045 * dt;
-        if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.006 * dt;
+        if (typeof anim.solarSailAngle === 'number') anim.solarSailAngle += 0.00004 * dt;
+        if (typeof anim.engineGlow === 'number') anim.engineGlow += 0.0045 * dt;
+        if (typeof anim.engineParticlePhase === 'number') anim.engineParticlePhase += 0.005 * dt;
+        if (typeof anim.cargoHatch === 'number') anim.cargoHatch += 0.0035 * dt;
+        if (typeof anim.researchArraySweep === 'number') anim.researchArraySweep += 0.00225 * dt;
+        if (typeof anim.researchPing === 'number') anim.researchPing += 0.003 * dt;
+        if (typeof anim.gardenBreeze === 'number') anim.gardenBreeze += 0.00175 * dt;
+        if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.006 * dt;
+        if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.002 * dt;
+        if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.00225 * dt;
+        if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.003 * dt;
 
         if (this._shards && this._shards.length) {
             for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
@@ -893,8 +893,8 @@ class SpaceObject {
         if (this._drones && this._drones.length) {
             for (let di = 0; di < this._drones.length; di++) {
                 const d = this._drones[di];
-                d.ang += 0.0009 * dt * (1 + di * 0.05);
-                d.phase += 0.01 * dt;
+                d.ang += 0.00045 * dt * (1 + di * 0.05);
+                d.phase += 0.005 * dt;
             }
         }
         // update ice trail shards positions for subtle drifting
