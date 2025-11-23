@@ -1232,7 +1232,10 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                                 const offsetY = random(-so.size * 0.2, so.size * 0.2);
                                 const cargoDrop = new Cargo(so.pos.x + offsetX, so.pos.y + offsetY, "Metals", quantity);
                                 this.addCargo(cargoDrop);
-                                if (typeof uiManager !== 'undefined') uiManager.addMessage(`Recovered ${quantity}t Metals from wreckage`);
+                                if (typeof uiManager !== 'undefined') {
+                                    const name = (so && typeof so.getDisplayName === 'function') ? so.getDisplayName() : (so.type || 'space object');
+                                    uiManager.addMessage(`Recovered ${quantity}t Metals from ${name} wreckage`);
+                                }
                             }
                         } catch (e) { console.error('Error spawning cargo from spaceObject:', e); }
                         this._fastRemove(this.spaceObjects, i);
@@ -3236,7 +3239,11 @@ drawOptimalStarfield() {
         if (!this.player || !this.player.pos) return;
         if (typeof SpaceObject === 'undefined') return;
 
-        const types = ['satellite','telescope','relay','habitat','debris','probe','beacon'];
+        const types = ['satellite','telescope','relay','habitat','debris','probe','beacon',
+            // newly added decorative types
+            'solarSail','engineArray','cargoCluster','researchArray','orbitalGarden',
+            'decoyBuoy','miningPlatform','ancientRelic','signalFlare'
+        ];
         for (let i = 0; i < count; i++) {
             const angle = random(TWO_PI);
             const dist = random(200, 600);
