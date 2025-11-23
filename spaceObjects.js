@@ -652,25 +652,25 @@ class SpaceObject {
         this.type = type; // 'satellite' | 'telescope' | 'relay' | 'habitat' | 'debris' | 'probe' | 'beacon'
         // Larger default sizes for better visibility
         const sizeMap = {
-            satellite: 54,
-            telescope: 96,
-            relay: 60,
-            habitat: 110,
+            satellite: 108,
+            telescope: 192,
+            relay: 120,
+            habitat: 220,
             // debris is now much larger for visibility and presence in systems
-            debris: 140,
-            probe: 28,
-            beacon: 46
+            debris: 280,
+            probe: 56,
+            beacon: 92
             ,
             // New types
-            solarSail: 160,
-            engineArray: 92,
-            cargoCluster: 120,
-            researchArray: 88,
-            orbitalGarden: 100,
-            decoyBuoy: 42,
-            miningPlatform: 130,
-            ancientRelic: 150,
-            signalFlare: 50
+            solarSail: 320,
+            engineArray: 184,
+            cargoCluster: 240,
+            researchArray: 176,
+            orbitalGarden: 200,
+            decoyBuoy: 84,
+            miningPlatform: 260,
+            ancientRelic: 300,
+            signalFlare: 100
         };
         this.size = sizeMap[type] || 48;
         // Collision footprint: use visual radius so collision matches what is seen
