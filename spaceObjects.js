@@ -31,35 +31,81 @@ const SpaceObjectRenderers = {
     },
 
     telescope: function(obj, size, anim, bob) {
-        // Taller truss
+        // Redesigned telescope: sleek cylindrical body with deployable dish, solar arrays, and instrument boom
         noStroke();
-        fill(150);
-        rect(0, 6 + bob, size * 0.14, size * 1.05, 2);
-        // Large parabolic dish with concentric rings and struts
+        // Main cylindrical body (sleek and metallic)
+        fill(180, 190, 200);
+        rect(0, bob, size * 0.12, size * 0.8, 4);
+        // Top cap
+        fill(160, 170, 180);
+        ellipse(0, -size * 0.4 + bob, size * 0.14, size * 0.08);
+        // Bottom base
+        fill(140, 150, 160);
+        ellipse(0, size * 0.4 + bob, size * 0.16, size * 0.1);
+
+        // Deployable parabolic dish (large and segmented)
         push();
-        translate(0, -size * 0.08 + bob);
-        fill(225);
-        // subtle scanning motion via telescopeTilt
-        rotate(0.15 + Math.sin(anim ? anim.telescopeTilt : 0) * 0.06);
-        ellipse(0, 0, size * 1.25, size * 0.9);
-        // rings
-        noFill(); stroke(200); strokeWeight(1);
-        for (let r = 1; r <= 3; r++) ellipse(0, 0, size * (1.25 - r * 0.18), size * (0.9 - r * 0.12));
+        translate(0, -size * 0.32 + bob);
+        // subtle scanning tilt
+        rotate(0.1 + Math.sin(anim ? anim.telescopeTilt : 0) * 0.04);
+        // Dish segments (hexagonal pattern for realism)
+        fill(220, 230, 240);
+        for (let seg = 0; seg < 6; seg++) {
+            const ang = seg * (TWO_PI / 6);
+            push();
+            rotate(ang);
+            ellipse(size * 0.08, 0, size * 0.18, size * 0.12);
+            pop();
+        }
+        // Central feed horn
+        fill(100, 110, 120);
+        ellipse(0, 0, size * 0.06, size * 0.04);
+        // Support struts for dish
+        stroke(120, 130, 140, 150); strokeWeight(1);
+        for (let s = 0; s < 3; s++) {
+            const sang = s * (TWO_PI / 3);
+            line(0, 0, Math.cos(sang) * size * 0.12, Math.sin(sang) * size * 0.08);
+        }
+        noStroke();
         pop();
-        // Secondary mirror/support
-        fill(120);
-        ellipse(size * 0.12, -size * 0.18 + bob, size * 0.22, size * 0.14);
-        // support struts
-        stroke(120); strokeWeight(1.2);
-        line(-size * 0.25, size * 0.1 + bob, -size * 0.05, -size * 0.05 + bob);
-        line(size * 0.25, size * 0.1 + bob, size * 0.05, -size * 0.05 + bob);
+
+        // Solar arrays (extendable panels)
+        fill(40, 70, 120);
+        rect(-size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, 2);
+        rect(size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, 2);
+        // Panel details (grid lines)
+        stroke(30, 50, 100, 180); strokeWeight(0.8);
+        for (let p = -2; p <= 2; p++) {
+            const px = p * (size * 0.08);
+            line(-size * 0.5 + px, bob - size * 0.13, -size * 0.5 + px, bob - size * 0.07);
+            line(size * 0.5 + px, bob - size * 0.13, size * 0.5 + px, bob - size * 0.07);
+        }
         noStroke();
-        // base platform with panel detail
-        fill(90);
-        rect(0, size * 0.42, size * 0.8, size * 0.18, 3);
-        stroke(60); strokeWeight(0.7);
-        line(-size * 0.36, size * 0.42, size * 0.36, size * 0.42);
+
+        // Instrument boom (extendable arm with sensors)
+        stroke(130, 140, 150); strokeWeight(2);
+        line(size * 0.08, bob, size * 0.35, bob - size * 0.15);
         noStroke();
+        // Sensors on boom
+        fill(200, 210, 220);
+        ellipse(size * 0.35, bob - size * 0.15, size * 0.08, size * 0.06);
+        fill(255, 100, 100);
+        ellipse(size * 0.35, bob - size * 0.15, 4, 4); // indicator light
+
+        // Antennas (small dishes or rods)
+        fill(120, 130, 140);
+        ellipse(-size * 0.08, -size * 0.2 + bob, size * 0.06, size * 0.04);
+        ellipse(size * 0.08, -size * 0.2 + bob, size * 0.06, size * 0.04);
+        // Antenna rods
+        stroke(100, 110, 120); strokeWeight(1.5);
+        line(-size * 0.08, -size * 0.22 + bob, -size * 0.08, -size * 0.32 + bob);
+        line(size * 0.08, -size * 0.22 + bob, size * 0.08, -size * 0.32 + bob);
+        noStroke();
+
+        // Cooling fins or radiators
+        fill(160, 170, 180, 150);
+        rect(-size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, 1);
+        rect(size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, 1);
     },
 
     relay: function(obj, size, anim, bob) {
