@@ -22,6 +22,8 @@ class SpaceObject {
         this.collisionRadius = Math.max(6, (this.size / 2));
         // Animation state: per-instance animated properties (panels, windows, shards, etc.)
         this._anim = {};
+        // unique id used by debris RNG and other persistent behaviors
+        this.id = 'spaceobj_' + (Date.now() % 100000) + '_' + Math.floor(Math.random() * 10000);
         // Satellite solar panel angle (disabled animation for satellites)
         this._anim.panelAngle = 0;
         this._anim.panelSpeed = 0;
@@ -37,9 +39,10 @@ class SpaceObject {
         // Debris: create persistent shards so they animate consistently
         if (this.type === 'debris') {
             this._shards = [];
+            // deterministic simple RNG seeded from id
             let seed = 0;
-            for (let i = 0; i < this.id.length; i++) seed += this.id.charCodeAt(i);
-            let rnd = seed % 233280;
+            for (let i = 0; i < this.id.length; i++) seed = (seed * 31 + this.id.charCodeAt(i)) & 0xffffffff;
+            let rnd = (seed >>> 0) % 233280;
             const rndf = (scale = 1) => { rnd = (rnd * 9301 + 49297) % 233280; return (rnd / 233280) * scale; };
             const shardCount = Math.max(5, 4 + Math.floor(this.size / 30));
             for (let s = 0; s < shardCount; s++) {
@@ -70,7 +73,6 @@ class SpaceObject {
         this.bobPhase = Math.random() * Math.PI * 2;
         this.destroyed = false;
         this._drift = { x: (Math.random() - 0.5) * 0.06, y: (Math.random() - 0.5) * 0.06 };
-        this.id = 'spaceobj_' + (Date.now() % 100000) + '_' + Math.floor(Math.random() * 10000);
         // Health properties (treat like a lightweight asteroid)
         this.maxHealth = Math.max(30, Math.floor(this.size * 1.8));
         this.health = this.maxHealth;
@@ -85,16 +87,17 @@ class SpaceObject {
             this.pos.x += this._drift.x;
             this.pos.y += this._drift.y;
         }
-        // advance per-type animations
-        if (this._anim) {
-            if (typeof this._anim.panelAngle === 'number') this._anim.panelAngle += this._anim.panelSpeed * dt;
-            if (typeof this._anim.telescopeTilt === 'number') this._anim.telescopeTilt += this._anim.telescopeSpeed * dt;
-            if (typeof this._anim.relayPhase === 'number') this._anim.relayPhase += 0.0012 * dt;
-            if (typeof this._anim.habitatWindowPhase === 'number') this._anim.habitatWindowPhase += 0.004 * dt;
-            if (typeof this._anim.probeBlink === 'number') this._anim.probeBlink += 0.02 * dt;
+        // advance per-type animations (cache anim ref)
+        const anim = this._anim;
+        if (anim) {
+            if (typeof anim.panelAngle === 'number') anim.panelAngle += (anim.panelSpeed || 0) * dt;
+            if (typeof anim.telescopeTilt === 'number') anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
+            if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0012 * dt;
+            if (typeof anim.habitatWindowPhase === 'number') anim.habitatWindowPhase += 0.004 * dt;
+            if (typeof anim.probeBlink === 'number') anim.probeBlink += 0.02 * dt;
         }
         if (this._shards && this._shards.length) {
-            for (let sh of this._shards) sh.angle += sh.spin * dt;
+            for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
         }
     }
 
@@ -105,35 +108,38 @@ class SpaceObject {
         rotate(this.angle);
         rectMode(CENTER);
 
+        // cache size/anim locally for a small speedup and clarity
+        const size = this.size;
+        const anim = this._anim;
         // subtle bob when drawing
-        const bob = Math.sin(this.bobPhase) * Math.min(6, this.size * 0.06);
+        const bob = Math.sin(this.bobPhase) * Math.min(6, size * 0.06);
 
         switch (this.type) {
             case 'satellite':
                 noStroke();
                 // central bus (vertical bob only — remove sideways shift)
                 fill(190, 190, 210);
-                rect(0, bob, this.size * 0.6, this.size * 0.42, 4);
+                rect(0, bob, size * 0.6, size * 0.42, 4);
                 // solar panels
                 fill(30, 80, 160);
                 // solar panels (static)
-                rect(-this.size * 0.78, bob, this.size * 0.64, this.size * 0.22, 3);
-                rect(this.size * 0.78, bob, this.size * 0.64, this.size * 0.22, 3);
+                rect(-size * 0.78, bob, size * 0.64, size * 0.22, 3);
+                rect(size * 0.78, bob, size * 0.64, size * 0.22, 3);
                 // solar panel grid lines
                 stroke(20, 40, 90, 180);
                 strokeWeight(1);
                 for (let g = -2; g <= 2; g++) {
-                    const gx = g * (this.size * 0.64 / 6);
-                    line(-this.size * 0.78 - this.size * 0.32, gx + bob, -this.size * 0.78 + this.size * 0.32, gx + bob);
-                    line(this.size * 0.78 - this.size * 0.32, gx + bob, this.size * 0.78 + this.size * 0.32, gx + bob);
+                    const gx = g * (size * 0.64 / 6);
+                    line(-size * 0.78 - size * 0.32, gx + bob, -size * 0.78 + size * 0.32, gx + bob);
+                    line(size * 0.78 - size * 0.32, gx + bob, size * 0.78 + size * 0.32, gx + bob);
                 }
                 noStroke();
                 // antenna dish
                 fill(120);
-                ellipse(this.size * 0.28, -this.size * 0.12 + bob, this.size * 0.22, this.size * 0.14);
+                ellipse(size * 0.28, -size * 0.12 + bob, size * 0.22, size * 0.14);
                 // small nav light
                 fill(255, 90, 80);
-                ellipse(-this.size * 0.18, -this.size * 0.18 + bob, 4, 4);
+                ellipse(-size * 0.18, -size * 0.18 + bob, 4, 4);
                 break;
 
             case 'telescope':
@@ -146,25 +152,25 @@ class SpaceObject {
                 translate(0, -this.size * 0.08 + bob);
                 fill(225);
                 // subtle scanning motion via telescopeTilt
-                rotate(0.15 + Math.sin(this._anim ? this._anim.telescopeTilt : 0) * 0.06);
-                ellipse(0, 0, this.size * 1.25, this.size * 0.9);
+                rotate(0.15 + Math.sin(anim ? anim.telescopeTilt : 0) * 0.06);
+                ellipse(0, 0, size * 1.25, size * 0.9);
                 // rings
                 noFill(); stroke(200); strokeWeight(1);
-                for (let r = 1; r <= 3; r++) ellipse(0, 0, this.size * (1.25 - r * 0.18), this.size * (0.9 - r * 0.12));
+                for (let r = 1; r <= 3; r++) ellipse(0, 0, size * (1.25 - r * 0.18), size * (0.9 - r * 0.12));
                 pop();
                 // Secondary mirror/support
                 fill(120);
-                ellipse(this.size * 0.12, -this.size * 0.18 + bob, this.size * 0.22, this.size * 0.14);
+                ellipse(size * 0.12, -size * 0.18 + bob, size * 0.22, size * 0.14);
                 // support struts
                 stroke(120); strokeWeight(1.2);
-                line(-this.size * 0.25, this.size * 0.1 + bob, -this.size * 0.05, -this.size * 0.05 + bob);
-                line(this.size * 0.25, this.size * 0.1 + bob, this.size * 0.05, -this.size * 0.05 + bob);
+                line(-size * 0.25, size * 0.1 + bob, -size * 0.05, -size * 0.05 + bob);
+                line(size * 0.25, size * 0.1 + bob, size * 0.05, -size * 0.05 + bob);
                 noStroke();
                 // base platform with panel detail
                 fill(90);
-                rect(0, this.size * 0.42, this.size * 0.8, this.size * 0.18, 3);
+                rect(0, size * 0.42, size * 0.8, size * 0.18, 3);
                 stroke(60); strokeWeight(0.7);
-                line(-this.size * 0.36, this.size * 0.42, this.size * 0.36, this.size * 0.42);
+                line(-size * 0.36, size * 0.42, size * 0.36, size * 0.42);
                 noStroke();
                 break;
 
@@ -174,21 +180,21 @@ class SpaceObject {
                 stroke(200);
                 strokeWeight(1.5);
                 for (let i = 0; i < 5; i++) {
-                    const a = (i / 5) * TWO_PI + (this._anim ? this._anim.relayPhase : 0) + this.bobPhase * 0.06 * (i%2?1:-1);
-                    const lx = Math.cos(a) * (this.size * 0.6);
-                    const ly = Math.sin(a) * (this.size * 0.3);
+                    const a = (i / 5) * TWO_PI + (anim ? anim.relayPhase : 0) + this.bobPhase * 0.06 * (i%2?1:-1);
+                    const lx = Math.cos(a) * (size * 0.6);
+                    const ly = Math.sin(a) * (size * 0.3);
                     line(0, 0, lx, ly);
                     fill(200);
                     noStroke();
-                    ellipse(lx, ly, this.size * 0.12, this.size * 0.08);
+                    ellipse(lx, ly, size * 0.12, size * 0.08);
                 }
                 // hub with small panel decals
                 fill(170);
                 noStroke();
-                ellipse(0, 0, this.size * 0.36, this.size * 0.26);
+                ellipse(0, 0, size * 0.36, size * 0.26);
                 fill(100, 120, 150);
-                rect(-this.size * 0.06, 0, this.size * 0.08, this.size * 0.04, 2);
-                rect(this.size * 0.06, 0, this.size * 0.08, this.size * 0.04, 2);
+                rect(-size * 0.06, 0, size * 0.08, size * 0.04, 2);
+                rect(size * 0.06, 0, size * 0.08, size * 0.04, 2);
                 break;
 
             case 'habitat':
@@ -212,12 +218,12 @@ class SpaceObject {
                 const winSpacing = cylW / (winCount + 1);
                 for (let i = 0; i < winCount; i++) {
                     const wx = -cylW * 0.5 + winSpacing * (i + 1);
-                    const wy = -this.size * 0.05 + bob;
-                    const flick = 0.5 + 0.5 * Math.sin(this._anim ? (this._anim.habitatWindowPhase + i * 0.6) : this.bobPhase);
+                    const wy = -size * 0.05 + bob;
+                    const flick = 0.5 + 0.5 * Math.sin(anim ? (anim.habitatWindowPhase + i * 0.6) : this.bobPhase);
                     fill(30, Math.floor(110 + 90 * flick), Math.floor(180 + 40 * flick), Math.floor(160 * (0.6 + 0.4 * flick)));
-                    rect(wx, wy, this.size * 0.10, this.size * 0.18, 4);
+                    rect(wx, wy, size * 0.10, size * 0.18, 4);
                     // frame
-                    stroke(20, 40, 60, 160); strokeWeight(0.7); noFill(); rect(wx, wy, this.size * 0.10, this.size * 0.18, 4); noStroke();
+                    stroke(20, 40, 60, 160); strokeWeight(0.7); noFill(); rect(wx, wy, size * 0.10, size * 0.18, 4); noStroke();
                 }
                 // docking ring (thinner) to match new proportions
                 stroke(120); strokeWeight(1.4); noFill(); ellipse(0, 0 + bob, cylW * 0.98, cylH * 0.88);
@@ -234,20 +240,21 @@ class SpaceObject {
                 noStroke();
                 fill(140, 120, 110);
                 if (this._shards && this._shards.length) {
-                    for (let sh of this._shards) {
+                    for (let i = 0; i < this._shards.length; i++) {
+                        const sh = this._shards[i];
                         push();
                         translate(sh.rx, sh.ry);
                         rotate(sh.angle + Math.sin(this.bobPhase * 0.002) * 0.03);
                         beginShape();
                         for (let v = 0; v < sh.verts; v++) {
                             const a = v * (TWO_PI / sh.verts) + (v % 2 ? 0.2 : -0.15);
-                            const rr = sh.rrScale * (this.size * 0.12) * (0.6 + (v % 3) * 0.15);
+                            const rr = sh.rrScale * (size * 0.12) * (0.6 + (v % 3) * 0.15);
                             vertex(Math.cos(a) * rr, Math.sin(a) * rr);
                         }
                         endShape(CLOSE);
                         // edge scratch
                         stroke(180, 160, 140, 200); strokeWeight(0.6);
-                        line(-this.size * 0.12, -this.size * 0.06, this.size * 0.12, this.size * 0.06);
+                        line(-size * 0.12, -size * 0.06, size * 0.12, size * 0.06);
                         noStroke();
                         pop();
                     }
@@ -259,35 +266,35 @@ class SpaceObject {
                 noStroke();
                 fill(200, 200, 220);
                 // body
-                rect(0, 0 + bob, this.size * 0.18, this.size * 0.9, 3);
+                rect(0, 0 + bob, size * 0.18, size * 0.9, 3);
                 // nose cone
                 fill(170);
-                triangle(0 - this.size * 0.09, -this.size * 0.45 + bob, 0 + this.size * 0.09, -this.size * 0.45 + bob, 0, -this.size * 0.62 + bob);
+                triangle(0 - size * 0.09, -size * 0.45 + bob, 0 + size * 0.09, -size * 0.45 + bob, 0, -size * 0.62 + bob);
                 // small solar panel with grid
                 fill(30, 80, 160);
-                rect(0, this.size * 0.28 + bob, this.size * 0.36, this.size * 0.08, 2);
+                rect(0, size * 0.28 + bob, size * 0.36, size * 0.08, 2);
                 stroke(20,40,90,160); strokeWeight(0.6);
-                for (let l = -1; l <= 1; l++) line(-this.size*0.16, this.size * 0.28 + bob + l * 3, this.size*0.16, this.size * 0.28 + bob + l * 3);
+                for (let l = -1; l <= 1; l++) line(-size*0.16, size * 0.28 + bob + l * 3, size*0.16, size * 0.28 + bob + l * 3);
                 noStroke();
                 // small blinking nav light
-                const blink = 0.5 + 0.5 * Math.sin(this._anim ? this._anim.probeBlink : this.bobPhase * 0.1);
+                const blink = 0.5 + 0.5 * Math.sin(anim ? anim.probeBlink : this.bobPhase * 0.1);
                 fill(255, 140, 80, 220 * blink);
-                ellipse(0, -this.size * 0.42 + bob, 5 * (1 + blink), 5 * (1 + blink));
+                ellipse(0, -size * 0.42 + bob, 5 * (1 + blink), 5 * (1 + blink));
                 break;
 
             case 'beacon':
                 // small floating beacon with pulsing light
                 noStroke();
                 fill(100);
-                rect(0, 6 + bob, this.size * 0.18, this.size * 0.5, 3);
+                rect(0, 6 + bob, size * 0.18, size * 0.5, 3);
                 // light (stronger pulse)
                 const pulse = (Math.sin(this.bobPhase * 1.6) + 1) * 0.5;
                 const glow = 0.5 + 0.5 * pulse;
                 noStroke();
                 fill(255, 220, 60, 160 * glow);
-                ellipse(0, -this.size * 0.12 + bob, this.size * 0.42 * (0.9 + 0.4 * pulse));
+                ellipse(0, -size * 0.12 + bob, size * 0.42 * (0.9 + 0.4 * pulse));
                 // small ring / halo
-                stroke(200, 200, 80, 90); strokeWeight(1.2); noFill(); ellipse(0, 0 + bob, this.size * (0.8 + pulse * 0.6), this.size * (0.6 + pulse * 0.4)); noStroke();
+                stroke(200, 200, 80, 90); strokeWeight(1.2); noFill(); ellipse(0, 0 + bob, size * (0.8 + pulse * 0.6), size * (0.6 + pulse * 0.4)); noStroke();
                 break;
 
             default:
@@ -309,9 +316,10 @@ class SpaceObject {
 
             push();
             noStroke();
-            fill(160, 40, 40);
+            // match asteroid health bar colors: red background, green foreground
+            fill(255, 0, 0);
             rect(barX, barY, barW, barH);
-            fill(50, 200, 80);
+            fill(0, 255, 0);
             rect(barX, barY, barW * healthPercent, barH);
             pop();
         }
