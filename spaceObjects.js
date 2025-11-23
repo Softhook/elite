@@ -930,8 +930,7 @@ class SpaceObject {
             decoyBuoy: 'Decoy Buoy',
             miningPlatform: 'Mining Platform',
             ancientRelic: 'Ancient Relic',
-            signalFlare: 'Signal Flare',
-            iceComet: 'Ice Comet'
+            signalFlare: 'Signal Flare'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }
