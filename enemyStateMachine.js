@@ -596,6 +596,25 @@ class EnemyStateMachine {
                     this.handleStationDocking(this.getSystem());
                 }
                 break;
+
+            case AI_STATE.LEAVING_SYSTEM:
+                // Ensure leaving ships have a proper long-range target (jump zone)
+                try {
+                    const sys = this.getSystem() || this.currentSystem;
+                    if (typeof this.setLeavingSystemTarget === 'function') {
+                        this.setLeavingSystemTarget(sys);
+                    } else {
+                        // Fallback: attempt to set via direct access to jumpZoneCenter
+                        if (sys?.jumpZoneCenter) {
+                            this.patrolTargetPos = sys.jumpZoneCenter.copy();
+                        }
+                    }
+                    // Clear any station pause timers
+                    this.nearStationTimer = null;
+                } catch (e) {
+                    console.warn(`${this.shipTypeName}: onStateEntry(LEAVING_SYSTEM) failed:`, e);
+                }
+                break;
                 
             case AI_STATE.FLEEING:
                 // Show message when enemy starts fleeing

@@ -528,14 +528,15 @@ class EnemyAIBehaviors {
                      }
                 }
 
-                // --- DETAILED DEBUG LOGGING ---
-              //  console.log(`--- Hauler Leaving Check: ${this.shipTypeName} ---`);
-              //  console.log(`   Current Pos: (${this.pos.x.toFixed(1)}, ${this.pos.y.toFixed(1)})`);
-              //  console.log(`   Target Pos (Jump Zone/Edge): (${desiredMovementTargetPos.x.toFixed(1)}, ${desiredMovementTargetPos.y.toFixed(1)})`);
+                                // --- DETAILED DEBUG LOGGING ---
+                                try {
+                                        const jz = system?.jumpZoneCenter;
+                                        console.log(`[LEAVING] ${this.role} ${this.shipTypeName} pos=(${this.pos.x.toFixed(1)},${this.pos.y.toFixed(1)}) target=(${desiredMovementTargetPos.x.toFixed(1)},${desiredMovementTargetPos.y.toFixed(1)}) jumpZone=${jz ? `${jz.x.toFixed(1)},${jz.y.toFixed(1)}` : 'none'}`);
+                                } catch (e) { /* ignore logging errors */ }
 
-                // Calculate distance to target (Jump Zone/Edge)
-                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
-              //  console.log(`   Distance to Target (dE): ${dE.toFixed(1)}`);
+                                // Calculate distance to target (Jump Zone/Edge)
+                                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
+                                console.log(`[LEAVING] ${this.shipTypeName} distanceToTarget=${dE.toFixed(1)}`);
 
 
                 // ---  Exit Condition ---
@@ -567,13 +568,14 @@ class EnemyAIBehaviors {
                             this.destroyed = true;
                             HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
                         }
-                    } else {
-                        // Normal hauler/transport leaving
-                        this.inCombat = false;
-                        this.haulerCombatTimer = undefined;
-                        this.destroyed = true;
-                        HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
-                    }
+                        } else {
+                            // Normal hauler/transport leaving
+                            this.inCombat = false;
+                            this.haulerCombatTimer = undefined;
+                            console.log(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Marking destroyed.`);
+                            this.destroyed = true;
+                            HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
+                        }
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case

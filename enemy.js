@@ -714,7 +714,6 @@ if (typeof applyEnemyCombatMethods === 'function') {
 if (typeof applyEnemyAIBehaviorMethods === 'function') {
     applyEnemyAIBehaviorMethods();
 }
-
 // Apply cargo handling methods from enemyCargo.js to Enemy prototype
 if (typeof applyEnemyCargoMethods === 'function') {
     applyEnemyCargoMethods();
