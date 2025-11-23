@@ -536,6 +536,10 @@ try {
             this.mainStationPlanetIndex = randomIndex;
             console.log(`         Main station positioned near planet index ${randomIndex}`);
         }
+
+        // Spawn space objects near planets based on system economy
+        this.spaceObjects = [];
+        this.spawnSpaceObjectsForPlanets();
     } // End createRandomPlanets
 
     /**
@@ -744,11 +748,6 @@ try {
                 for (let i = 0; i < 8; i++) {
                     try { this.trySpawnAsteroid(); } catch(e) {}
                 }
-                // Spawn a couple of decorative space objects near the player for testing
-                try {
-                    this.spawnSpaceObjectsNearPlayer(2);
-                    if (STAR_SYSTEM_DEBUG) console.log('Spawned test space objects near player');
-                } catch (e) { console.error('Failed to spawn test space objects', e); }
                 
                 // Use this.player in nested setTimeout too
                 setTimeout(() => {
@@ -3232,30 +3231,73 @@ drawOptimalStarfield() {
     }
 
     /**
-     * Spawn a few decorative space objects near the player for testing.
-     * Creates a mix of satellites and telescopes at short range.
+     * Spawn space objects near planets based on system economy type.
+     * Industrial/Refinery/Mining systems always have mining platforms near planets.
+     * Other systems have random space objects.
      */
-    spawnSpaceObjectsNearPlayer(count = 2) {
-        if (!this.player || !this.player.pos) return;
+    spawnSpaceObjectsForPlanets() {
+        if (!this.planets || this.planets.length === 0) return;
         if (typeof SpaceObject === 'undefined') return;
 
-        const types = ['satellite','telescope','relay','habitat','debris','probe','beacon',
-            // newly added decorative types
-            'solarSail','engineArray','cargoCluster','researchArray','orbitalGarden',
-            'decoyBuoy','miningPlatform','ancientRelic','signalFlare'
-        ];
-        for (let i = 0; i < count; i++) {
-            const angle = random(TWO_PI);
-            const dist = random(200, 600);
-            const x = this.player.pos.x + Math.cos(angle) * dist;
-            const y = this.player.pos.y + Math.sin(angle) * dist;
-            // Pick a random type from our available space object types
-            const type = random(types);
-            try {
-                const obj = new SpaceObject(x, y, type);
-                this.spaceObjects.push(obj);
-            } catch (e) {
-                console.error('Failed to create SpaceObject', e);
+        // Define space object types by economy type
+        const typesByEconomy = {
+            'Industrial': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe'],
+            'Refinery': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe'],
+            'Mining': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe'],
+            'Agricultural': ['orbitalGarden', 'habitat', 'satellite', 'telescope', 'relay', 'probe', 'beacon'],
+            'High Tech': ['researchArray', 'solarSail', 'ancientRelic', 'satellite', 'telescope', 'beacon', 'signalFlare']
+        };
+
+        // Default types for other economies
+        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy'];
+
+        const availableTypes = typesByEconomy[this.economyType] || defaultTypes;
+
+        for (let planet of this.planets) {
+            if (['Industrial', 'Refinery', 'Mining'].includes(this.economyType)) {
+                // Always spawn at least one mining platform
+                const angle = random(TWO_PI);
+                const dist = random(planet.size * 0.2, planet.size * 0.6);
+                const x = planet.pos.x + Math.cos(angle) * dist;
+                const y = planet.pos.y + Math.sin(angle) * dist;
+                try {
+                    const obj = new SpaceObject(x, y, 'miningPlatform');
+                    this.spaceObjects.push(obj);
+                } catch (e) {
+                    console.error('Failed to create mining platform SpaceObject', e);
+                }
+
+                // Add 0-2 additional random objects
+                const extra = Math.floor(random(0, 3)); // 0, 1, or 2
+                for (let i = 0; i < extra; i++) {
+                    const type = random(availableTypes);
+                    const angle2 = random(TWO_PI);
+                    const dist2 = random(planet.size * 0.2, planet.size * 0.6);
+                    const x2 = planet.pos.x + Math.cos(angle2) * dist2;
+                    const y2 = planet.pos.y + Math.sin(angle2) * dist2;
+                    try {
+                        const obj2 = new SpaceObject(x2, y2, type);
+                        this.spaceObjects.push(obj2);
+                    } catch (e) {
+                        console.error('Failed to create additional SpaceObject', e);
+                    }
+                }
+            } else {
+                // For other systems, spawn 1-3 random objects
+                const numObjects = Math.floor(random(1, 4)); // 1 to 3
+                for (let i = 0; i < numObjects; i++) {
+                    const type = random(availableTypes);
+                    const angle = random(TWO_PI);
+                    const dist = random(planet.size * 0.2, planet.size * 0.6);
+                    const x = planet.pos.x + Math.cos(angle) * dist;
+                    const y = planet.pos.y + Math.sin(angle) * dist;
+                    try {
+                        const obj = new SpaceObject(x, y, type);
+                        this.spaceObjects.push(obj);
+                    } catch (e) {
+                        console.error('Failed to create SpaceObject', e);
+                    }
+                }
             }
         }
     }
