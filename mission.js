@@ -286,6 +286,16 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
                 }
             }
         }
+
+        // Link sabotage target SpaceObject if we have a persisted id
+        try {
+            if (!this._targetObjectRef && this.targetObjectId && currentSystem && Array.isArray(currentSystem.spaceObjects)) {
+                const so = currentSystem.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                if (so) {
+                    Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true });
+                }
+            }
+        } catch (e) { /* non-fatal */ }
     }
 
     /**
@@ -396,7 +406,9 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
          // Build the details string step-by-step
          let details = `Title: ${this.title}\n--------------------\n`;
          details += `Status: ${this.status}\n\n`; // Show current status
-         details += `${this.description}\n\n`;
+         // For sabotage missions we show the description as a labeled 'Backstory' later,
+         // so avoid printing it twice here.
+         if (this.type !== MISSION_TYPE.SABOTAGE) details += `${this.description}\n\n`;
          details += `Type: ${this.type}\n`;
          details += `Reward: ${this.rewardCredits} Credits\n`;
          details += `Origin: ${this.originStation} (${this.originSystem})\n`;

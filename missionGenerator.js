@@ -610,38 +610,83 @@ class MissionGenerator {
         if (!destinationInfo || !destinationInfo.system) return null;
         const destSystem = destinationInfo.system;
 
-        // Choose a planet if available (fallback to 'Outer Orbit')
+        // Choose a specific planet (exclude the sun at index 0) if available; fallback to 'Outer Orbit'
         let planetName = 'Outer Orbit';
         try {
-            if (Array.isArray(destSystem.planets) && destSystem.planets.length > 0) {
-                const p = destSystem.planets[Math.floor(random(0, destSystem.planets.length))];
+            if (Array.isArray(destSystem.planets) && destSystem.planets.length > 1) {
+                // pick from 1..n-1 to avoid the central star at index 0
+                const idx = Math.floor(random(1, destSystem.planets.length));
+                const p = destSystem.planets[idx];
                 if (p && p.name) planetName = p.name;
             }
         } catch (e) { /* ignore */ }
 
-        // Offering faction heuristics
+        // Offering faction heuristics: prefer station faction, fall back to system economy
+        // Leave `targetFaction` null so `Mission` can derive an appropriate opposing faction/backstory.
         let offeringFaction = originStation?.faction || originSystem?.economyType || null;
-        if (typeof offeringFaction === 'string') {
-            if (offeringFaction.toLowerCase().includes('separat')) offeringFaction = 'Separatist';
-            else if (offeringFaction.toLowerCase().includes('imper')) offeringFaction = 'Imperial';
-            else if (offeringFaction.toLowerCase().includes('milit')) offeringFaction = 'Military';
-            else offeringFaction = offeringFaction; // keep as-is
-        } else {
-            // Pick a likely offering faction if undetermined
+        if (typeof offeringFaction !== 'string') {
             const pool = ['Separatist','Imperial','Military'];
             offeringFaction = pool[Math.floor(random(0, pool.length))];
         }
 
-        // Determine a logical target faction (opposing)
-        let targetFaction = null;
-        if (offeringFaction === 'Separatist') targetFaction = 'Imperial';
-        else if (offeringFaction === 'Imperial') targetFaction = 'Separatist';
-        else if (offeringFaction === 'Military') targetFaction = 'Alien';
-        else targetFaction = 'Rival Faction';
+        // Candidate canonical sabotage types (sourced from `spaceObjects.js`).
+        // Prefer real object display names when `SpaceObject` is available.
+        const canonicalSoTypes = [
+            'satellite','telescope','relay','habitat','debris','probe','beacon','solarSail','engineArray','cargoCluster',
+            'researchArray','orbitalGarden','decoyBuoy','miningPlatform','ancientRelic','signalFlare','spaceStation','observatoryDome',
+            'hydroponicsBay','weaponPlatform','shieldGenerator','energyCollector','quantumGate','fuelDepot','commDish','solarFarm',
+            'iceCrystal','nebulaFragment','alienArtifact','wreckage','observatoryDome','asteroidMiner'
+        ];
 
-        // Choose a target object type
-        const sabotTypes = ['Communication Relay', 'Fuel Array', 'Comms Satellite', 'Sensor Platform', 'Warp Beacon', 'Data Spire', 'Drive Inhibitor', 'Supply Hub', 'Alien Monolith'];
-        const targetObjectType = sabotTypes[Math.floor(random(0, sabotTypes.length))];
+        // Attempt to bind this sabotage mission to an actual SpaceObject spawned near the chosen planet.
+        // If a real object is found, use its display name and persist its id. Otherwise fall back to a generic sabotType.
+        let targetObjectType = null;
+        let targetObjectId = null;
+        try {
+            // Ensure decorative objects exist so we can bind (safe no-op if already spawned)
+            if ((!Array.isArray(destSystem.spaceObjects) || destSystem.spaceObjects.length === 0) && typeof destSystem.spawnSpaceObjectsForPlanets === 'function') {
+                try { destSystem.spawnSpaceObjectsForPlanets(); } catch (e) { /* non-fatal */ }
+            }
+
+            if (destSystem && Array.isArray(destSystem.spaceObjects) && destSystem.spaceObjects.length > 0 && Array.isArray(destSystem.planets)) {
+                const planetObj = destSystem.planets.find(p => p && p.name === planetName);
+                if (planetObj && planetObj.pos) {
+                    let best = null;
+                    let bestDist = Infinity;
+                    const maxConsiderDist = Math.max((planetObj.size || 0) * 1.2, 600);
+                    for (let so of destSystem.spaceObjects) {
+                        if (!so || !so.pos) continue;
+                        const dx = so.pos.x - planetObj.pos.x;
+                        const dy = so.pos.y - planetObj.pos.y;
+                        const d = Math.sqrt(dx*dx + dy*dy);
+                        if (d <= maxConsiderDist && d < bestDist) {
+                            best = so; bestDist = d;
+                        }
+                    }
+                    if (best) {
+                        targetObjectId = best.id || null;
+                        try { targetObjectType = best.getDisplayName ? best.getDisplayName() : (best.type || null); } catch (e) { targetObjectType = best.type || null; }
+                    }
+                }
+            }
+        } catch (e) { console.warn('createSabotageMission: failed to bind to real space object', e); }
+
+        // Fallback to a canonical space-object name if we couldn't find a real object.
+        if (!targetObjectType) {
+            try {
+                // If the SpaceObject constructor is present, instantiate to get the human-friendly name.
+                if (typeof SpaceObject === 'function') {
+                    const namePool = canonicalSoTypes.map(t => {
+                        try { return (new SpaceObject(0,0,t)).getDisplayName(); } catch (e) { return t; }
+                    }).filter(Boolean);
+                    targetObjectType = namePool.length ? namePool[Math.floor(random(0, namePool.length))] : canonicalSoTypes[Math.floor(random(0, canonicalSoTypes.length))];
+                } else {
+                    targetObjectType = canonicalSoTypes[Math.floor(random(0, canonicalSoTypes.length))];
+                }
+            } catch (e) {
+                targetObjectType = canonicalSoTypes[Math.floor(random(0, canonicalSoTypes.length))];
+            }
+        }
 
         // Calculate reward based on jump distance (use galaxy helper if available)
         let jumpDistance = Infinity;
@@ -665,9 +710,9 @@ class MissionGenerator {
             destinationSystem: destSystem.name,
             destinationStation: null,
             targetObjectType: targetObjectType,
+            targetObjectId: targetObjectId,
             targetPlanetName: planetName,
             offeringFaction: offeringFaction,
-            targetFaction: targetFaction,
             rewardCredits: reward,
             isIllegal: true,
             progressCount: 0
