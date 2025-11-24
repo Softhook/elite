@@ -255,4 +255,26 @@ class Explosion {
                this.debris.length === 0 && 
                this.currentFrame > 10;
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            size: this.size,
+            baseColor: Array.isArray(this.baseColor) ? this.baseColor : this.baseColor,
+            duration: this.duration,
+            currentFrame: this.currentFrame,
+            // particles and debris are transient; we store a minimal fingerprint
+            particlesCount: this.particles.length,
+            debrisCount: this.debris.length
+        };
+    }
+
+    static fromJSON(data) {
+        if (!data) return null;
+        const e = new Explosion((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, data.size || 30, data.baseColor || [255,160,30]);
+        e.duration = data.duration || e.duration;
+        e.currentFrame = data.currentFrame || e.currentFrame;
+        // Do not attempt to fully reconstruct particles/debris; they will regenerate on reset as needed
+        return e;
+    }
 }

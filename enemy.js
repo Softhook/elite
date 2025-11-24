@@ -683,6 +683,109 @@ class Enemy {
     // -----------------------
     // --- Utility Methods ---
     // -----------------------
+
+    /**
+     * Serialize this Enemy to a plain object for saving.
+     */
+    toJSON() {
+        return {
+            id: this.id,
+            shipTypeName: this.shipTypeName,
+            role: this.role,
+            faction: this.faction,
+            pos: this.pos ? { x: this.pos.x, y: this.pos.y } : null,
+            vel: this.vel ? { x: this.vel.x, y: this.vel.y } : null,
+            hull: this.hull,
+            maxHull: this.maxHull,
+            shield: this.shield,
+            maxShield: this.maxShield,
+            angle: this.angle,
+            currentState: this.currentState,
+            shipDisplayName: this.displayName,
+            cargoHold: Array.isArray(this.cargoHold) ? this.cargoHold.map(c => (typeof c.toJSON === 'function' ? c.toJSON() : c)) : [],
+            weapons: Array.isArray(this.weapons) ? this.weapons.map(w => (w && w.name) ? w.name : w) : [],
+            strokeColorValue: this.strokeColorValue,
+            baseColorValue: this.baseColorValue,
+            isWanted: !!this.isWanted
+            , principalId: (this.principal && this.principal.id) ? this.principal.id : null
+        };
+    }
+
+    /**
+     * Reconstruct an Enemy from saved data.
+     * Returns an Enemy instance or null on failure.
+     */
+    static fromJSON(data) {
+        try {
+            if (!data) return null;
+            const x = data.pos?.x ?? 0;
+            const y = data.pos?.y ?? 0;
+            const shipType = data.shipTypeName || data.shipType || 'Krait';
+            const role = data.role || null;
+
+            // playerRef is not restored here; it will be set when the system calls enterSystem
+            const enemy = new Enemy(x, y, null, shipType, role);
+
+            // Basic numeric properties
+            if (data.hull !== undefined) enemy.hull = data.hull;
+            if (data.maxHull !== undefined) enemy.maxHull = data.maxHull;
+            if (data.shield !== undefined) enemy.shield = data.shield;
+            if (data.maxShield !== undefined) enemy.maxShield = data.maxShield;
+            if (data.angle !== undefined) enemy.angle = data.angle;
+
+            // Velocity
+            if (data.vel && enemy.vel) { enemy.vel.x = data.vel.x || 0; enemy.vel.y = data.vel.y || 0; }
+
+            // ID and identity
+            enemy.id = data.id || (Date.now() + '_' + Math.floor(Math.random() * 1000));
+            enemy.displayName = data.shipDisplayName || enemy.displayName;
+            enemy.faction = data.faction || enemy.faction;
+            enemy.isWanted = !!data.isWanted;
+
+            // Colors
+            if (Array.isArray(data.baseColorValue)) enemy.baseColorValue = data.baseColorValue;
+            if (Array.isArray(data.strokeColorValue)) enemy.strokeColorValue = data.strokeColorValue;
+
+            // Cargo
+            enemy.cargoHold = [];
+            if (Array.isArray(data.cargoHold)) {
+                if (typeof Cargo !== 'undefined' && typeof Cargo.fromJSON === 'function') {
+                    try { enemy.cargoHold = data.cargoHold.map(cd => Cargo.fromJSON(cd)); } catch (e) { console.error('Error restoring cargoHold', e); }
+                } else {
+                    // Minimal fallback: keep raw objects
+                    enemy.cargoHold = data.cargoHold.map(cd => cd);
+                }
+            }
+
+            // Weapons: try to re-resolve by name
+            if (Array.isArray(data.weapons) && data.weapons.length > 0 && typeof WEAPON_UPGRADES !== 'undefined') {
+                enemy.weapons = [];
+                for (const wname of data.weapons) {
+                    if (!wname) continue;
+                    const wdef = WEAPON_UPGRADES.find(w => w.name === wname);
+                    if (wdef) enemy.weapons.push(wdef);
+                }
+                enemy.currentWeapon = enemy.weapons[0] || enemy.currentWeapon;
+            }
+
+            // State restore
+            if (data.currentState !== undefined && typeof enemy.changeState === 'function') {
+                try { enemy.changeState(data.currentState); } catch (_) { enemy.currentState = data.currentState; }
+            }
+
+            // Recompute derived properties and colors (p5 must be ready for colors)
+            try { enemy.calculateRadianProperties(); } catch (_) {}
+            try { enemy.initializeColors(); } catch (_) {}
+
+            // Preserve principal reference id for guards so relinker can restore it
+            enemy._principalId = data.principalId || null;
+
+            return enemy;
+        } catch (e) {
+            console.error('Enemy.fromJSON failed:', e, data);
+            return null;
+        }
+    }
     
 /**
  * Damage System Methods

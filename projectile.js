@@ -347,4 +347,38 @@ class Projectile {
                 screenY < -margin || 
                 screenY > height + margin);
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            vel: { x: this.vel.x, y: this.vel.y },
+            size: this.size,
+            type: this.type,
+            damage: this.damage,
+            lifespan: this.lifespan,
+            initialLifespan: this.initialLifespan,
+            ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
+            hull: this.hull,
+            maxHull: this.maxHull,
+            color: this.color && this.color.levels ? this.color.levels.slice(0,3) : null,
+            _meta: {
+                turnRate: this.turnRate,
+                missileSpeed: this.missileSpeed
+            }
+        };
+    }
+
+    static fromJSON(data) {
+        if (!data) return null;
+        // Create with minimal sensible defaults. Owner/target linking should happen after full system is restored.
+        const angle = 0;
+        const speed = (data.vel && (Math.hypot(data.vel.x || 0, data.vel.y || 0))) || (data._meta && data._meta.missileSpeed) || 8;
+        const proj = new Projectile((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, angle, null, speed, data.damage || 10, data.color || null, data.type || 'projectile', null, data.lifespan || 90, (data._meta && data._meta.turnRate) || 0, (data._meta && data._meta.missileSpeed) || 0);
+        if (data.vel) proj.vel.set(data.vel.x || 0, data.vel.y || 0);
+        if (typeof data.lifespan === 'number') proj.lifespan = data.lifespan;
+        if (typeof data.hull === 'number') proj.hull = data.hull;
+        if (typeof data.maxHull === 'number') proj.maxHull = data.maxHull;
+        proj.destroyed = !!data.destroyed;
+        return proj;
+    }
 }

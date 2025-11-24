@@ -3111,6 +3111,57 @@ drawOptimalStarfield() {
             playerWantedExpiry: this.playerWantedExpiry,
             policeAlertSent: this.policeAlertSent || false,
             // ---
+            // Dynamic entities (serialized when possible)
+            enemies: Array.isArray(this.enemies) && this.enemies.length > 0
+                ? this.enemies.map(e => (typeof e.toJSON === 'function' ? e.toJSON() : {
+                    shipType: e.shipTypeName || e.shipType || null,
+                    role: e.role || null,
+                    pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
+                    vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
+                    hp: e.hp ?? e.health ?? null,
+                    angle: e.angle ?? null,
+                    state: e.currentState ?? null,
+                    id: e.id ?? null
+                }))
+                : [],
+            projectiles: Array.isArray(this.projectiles) && this.projectiles.length > 0
+                ? this.projectiles.map(p => (typeof p.toJSON === 'function' ? p.toJSON() : {
+                    type: p.type || null,
+                    pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
+                    vel: p.vel ? { x: p.vel.x, y: p.vel.y } : null,
+                    lifespan: p.lifespan ?? null,
+                    ownerId: p.owner ? (p.owner.id || p.owner.shipTypeName || null) : null
+                }))
+                : [],
+            asteroids: Array.isArray(this.asteroids) && this.asteroids.length > 0
+                ? this.asteroids.map(a => (typeof a.toJSON === 'function' ? a.toJSON() : {
+                    pos: a.pos ? { x: a.pos.x, y: a.pos.y } : null,
+                    size: a.size || null,
+                    isComet: !!a.isComet
+                }))
+                : [],
+            cargo: Array.isArray(this.cargo) && this.cargo.length > 0
+                ? this.cargo.map(c => (typeof c.toJSON === 'function' ? c.toJSON() : c))
+                : [],
+            mines: Array.isArray(this.mines) && this.mines.length > 0
+                ? this.mines.map(m => (typeof m.toJSON === 'function' ? m.toJSON() : {
+                    pos: m.pos ? { x: m.pos.x, y: m.pos.y } : null,
+                    size: m.size || null,
+                    ownerId: m.owner ? (m.owner.id || m.owner.shipTypeName || null) : null
+                }))
+                : [],
+            beams: Array.isArray(this.beams) && this.beams.length > 0
+                ? this.beams.map(b => (typeof b.toJSON === 'function' ? b.toJSON() : b))
+                : [],
+            forceWaves: Array.isArray(this.forceWaves) && this.forceWaves.length > 0
+                ? this.forceWaves.map(f => (typeof f.toJSON === 'function' ? f.toJSON() : f))
+                : [],
+            harpoons: Array.isArray(this.harpoons) && this.harpoons.length > 0
+                ? this.harpoons.map(h => (typeof h.toJSON === 'function' ? h.toJSON() : h))
+                : [],
+            explosions: Array.isArray(this.explosions) && this.explosions.length > 0
+                ? this.explosions.map(x => (typeof x.toJSON === 'function' ? x.toJSON() : x))
+                : [],
             staticElementsInitialized: this.staticElementsInitialized // Save initialization state
         };
     }
@@ -3164,6 +3215,10 @@ drawOptimalStarfield() {
                         if (soData.destroyed) obj.destroyed = true;
                         if (soData.state !== undefined) obj.state = soData.state;
                         if (soData.subtype !== undefined) obj.subtype = soData.subtype;
+                        if (soData.planetIndex !== undefined && soData.planetIndex !== null) {
+                            obj.planetIndex = soData.planetIndex;
+                            if (Array.isArray(sys.planets) && sys.planets[soData.planetIndex]) obj.planet = sys.planets[soData.planetIndex];
+                        }
                         if (soData.vel && obj.vel) { obj.vel.x = soData.vel.x || 0; obj.vel.y = soData.vel.y || 0; }
                         sys.spaceObjects.push(obj);
                     }
@@ -3211,6 +3266,297 @@ drawOptimalStarfield() {
         // on load for other reasons (like regenerating bgStars), the logic inside
         // initStaticElements needs to be adjusted to skip regeneration of loaded elements.
         // The current structure seems to load everything directly.
+
+        // --- Restore dynamic entities (enemies, projectiles, etc.) ---
+        // Enemies (ships)
+        sys.enemies = [];
+        if (Array.isArray(data.enemies)) {
+            if (typeof Enemy !== 'undefined' && typeof Enemy.fromJSON === 'function') {
+                try {
+                    sys.enemies = data.enemies.map(ed => Enemy.fromJSON(ed));
+                    for (const en of sys.enemies) { if (en) en.currentSystem = sys; }
+                } catch (e) { console.error('Error restoring enemies via Enemy.fromJSON', e); }
+            } else if (typeof Enemy !== 'undefined') {
+                for (const ed of data.enemies) {
+                    try {
+                        const px = ed?.pos?.x ?? (ed.x ?? 0);
+                        const py = ed?.pos?.y ?? (ed.y ?? 0);
+                        const shipType = ed.shipType || ed.shipTypeName || 'Krait';
+                        const role = ed.role || (typeof AI_ROLE !== 'undefined' ? AI_ROLE.HAULER : null);
+                        const enemy = new Enemy(px, py, null, shipType, role);
+                        if (ed.vel && enemy.vel) { enemy.vel.x = ed.vel.x || 0; enemy.vel.y = ed.vel.y || 0; }
+                        if (ed.hp !== undefined) { enemy.hp = ed.hp; }
+                        if (ed.angle !== undefined) { enemy.angle = ed.angle; }
+                        if (ed.state !== undefined && typeof enemy.changeState === 'function') { enemy.changeState(ed.state); }
+                        enemy.currentSystem = sys;
+                        sys.enemies.push(enemy);
+                    } catch (e) { console.error('Error restoring enemy (fallback)', e, ed); }
+                }
+            }
+        }
+
+        // Projectiles
+        sys.projectiles = [];
+        if (Array.isArray(data.projectiles)) {
+            if (typeof Projectile !== 'undefined' && typeof Projectile.fromJSON === 'function') {
+                try { sys.projectiles = data.projectiles.map(pd => Projectile.fromJSON(pd)); } catch (e) { console.error('Error restoring projectiles', e); }
+            } else {
+                console.warn('Projectile.fromJSON not available; skipping projectile restore');
+            }
+        }
+
+        // Asteroids
+        sys.asteroids = [];
+        if (Array.isArray(data.asteroids)) {
+            if (typeof Asteroid !== 'undefined' && typeof Asteroid.fromJSON === 'function') {
+                try { sys.asteroids = data.asteroids.map(ad => Asteroid.fromJSON(ad)); } catch (e) { console.error('Error restoring asteroids', e); }
+            } else {
+                console.warn('Asteroid.fromJSON not available; skipping asteroid restore');
+            }
+        }
+
+        // Cargo
+        sys.cargo = [];
+        if (Array.isArray(data.cargo)) {
+            if (typeof Cargo !== 'undefined' && typeof Cargo.fromJSON === 'function') {
+                try { sys.cargo = data.cargo.map(cd => Cargo.fromJSON(cd)); } catch (e) { console.error('Error restoring cargo', e); }
+            } else {
+                // Attempt minimal restoration
+                for (const cd of data.cargo) {
+                    try { sys.cargo.push(cd); } catch(e){}
+                }
+            }
+        }
+
+        // Mines
+        sys.mines = [];
+        if (Array.isArray(data.mines)) {
+            if (typeof Mine !== 'undefined' && typeof Mine.fromJSON === 'function') {
+                try { sys.mines = data.mines.map(md => Mine.fromJSON(md)); } catch (e) { console.error('Error restoring mines', e); }
+            } else {
+                console.warn('Mine.fromJSON not available; skipping mine restore');
+            }
+        }
+
+        // Beams
+        sys.beams = [];
+        if (Array.isArray(data.beams)) {
+            if (typeof Beam !== 'undefined' && typeof Beam.fromJSON === 'function') {
+                try { sys.beams = data.beams.map(bd => Beam.fromJSON(bd)); } catch (e) { console.error('Error restoring beams', e); }
+            } else {
+                console.warn('Beam.fromJSON not available; skipping beam restore');
+            }
+        }
+
+        // Force waves
+        sys.forceWaves = [];
+        if (Array.isArray(data.forceWaves)) {
+            if (typeof ForceWave !== 'undefined' && typeof ForceWave.fromJSON === 'function') {
+                try { sys.forceWaves = data.forceWaves.map(fd => ForceWave.fromJSON(fd)); } catch (e) { console.error('Error restoring forceWaves', e); }
+            } else {
+                console.warn('ForceWave.fromJSON not available; skipping restore');
+            }
+        }
+
+        // Harpoons
+        sys.harpoons = [];
+        if (Array.isArray(data.harpoons)) {
+            if (typeof Harpoon !== 'undefined' && typeof Harpoon.fromJSON === 'function') {
+                try { sys.harpoons = data.harpoons.map(hd => Harpoon.fromJSON(hd)); } catch (e) { console.error('Error restoring harpoons', e); }
+            } else {
+                console.warn('Harpoon.fromJSON not available; skipping harpoon restore');
+            }
+        }
+
+        // Explosions
+        sys.explosions = [];
+        if (Array.isArray(data.explosions)) {
+            if (typeof Explosion !== 'undefined' && typeof Explosion.fromJSON === 'function') {
+                try { sys.explosions = data.explosions.map(xd => Explosion.fromJSON(xd)); } catch (e) { console.error('Error restoring explosions', e); }
+            } else {
+                console.warn('Explosion.fromJSON not available; skipping explosion restore');
+            }
+        }
+
+        // --- Post-load relinking helpers ---
+        // Build id map and attempt to reconnect owner/target references
+        sys._postLoadRelink = function() {
+            const makeVector = (v) => {
+                if (!v) return null;
+                return (typeof createVector === 'function' && v && typeof v.x === 'number') ? createVector(v.x, v.y) : { x: (v.x || 0), y: (v.y || 0) };
+            };
+
+            const idMap = new Map();
+            if (Array.isArray(this.enemies)) {
+                for (const e of this.enemies) {
+                    if (e && (e.id !== undefined && e.id !== null)) idMap.set(String(e.id), e);
+                    try { e.currentSystem = this; } catch(_) {}
+                }
+            }
+            if (this.player && this.player.id !== undefined && this.player.id !== null) idMap.set(String(this.player.id), this.player);
+
+            const resolveOwnerRef = (ref) => {
+                if (!ref) return null;
+                const rid = String(ref);
+                if (idMap.has(rid)) return idMap.get(rid);
+                // fallback heuristics: match by type/name
+                for (const ent of this.enemies) {
+                    if (!ent) continue;
+                    if ((ent.shipTypeName && ent.shipTypeName === ref) || (ent.shipType && ent.shipType === ref) || (ent.displayName && ent.displayName === ref)) return ent;
+                }
+                if ((rid === 'player' || rid === 'me') && this.player) return this.player;
+                return null;
+            };
+
+            // Projectiles: restore vectors and owner references
+            if (Array.isArray(this.projectiles)) {
+                for (const p of this.projectiles) {
+                    if (!p) continue;
+                    try {
+                        if (p.pos && p.pos.x !== undefined) p.pos = makeVector(p.pos);
+                        if (p.vel && p.vel.x !== undefined) p.vel = makeVector(p.vel);
+                        const oid = p.ownerId || p._ownerId || (p.owner && (p.owner.id || p.owner.shipTypeName)) || null;
+                        if (oid) {
+                            const owner = resolveOwnerRef(oid);
+                            if (owner) {
+                                p.owner = owner;
+                                owner.activeProjectiles = owner.activeProjectiles || [];
+                                owner.activeProjectiles.push(p);
+                            }
+                        }
+                        p.system = this;
+                    } catch (e) { console.warn('projectile relink error', e); }
+                }
+            }
+
+            // Mines: restore owner and vectors
+            if (Array.isArray(this.mines)) {
+                for (const m of this.mines) {
+                    if (!m) continue;
+                    try {
+                        if (m.pos && m.pos.x !== undefined) m.pos = makeVector(m.pos);
+                        const oid = m.ownerId || m._ownerId || null;
+                        if (oid) {
+                            const owner = resolveOwnerRef(oid);
+                            if (owner) {
+                                m.owner = owner;
+                                owner.activeMines = owner.activeMines || [];
+                                owner.activeMines.push(m);
+                            }
+                        }
+                        m.system = this;
+                    } catch (e) { console.warn('mine relink error', e); }
+                }
+            }
+
+            // Harpoons: restore anchors, segments, owner and target
+            if (Array.isArray(this.harpoons)) {
+                for (const h of this.harpoons) {
+                    if (!h) continue;
+                    try {
+                        if (h.anchorA && h.anchorA.x !== undefined) h.anchorA = makeVector(h.anchorA);
+                        if (h.anchorB && h.anchorB.x !== undefined) h.anchorB = makeVector(h.anchorB);
+                        if (Array.isArray(h.segments)) {
+                            h.segments = h.segments.map(s => (s && s.x !== undefined) ? makeVector(s) : s);
+                        }
+                        const oid = h.ownerId || h._ownerId || null;
+                        const tid = h.targetId || h._targetId || null;
+                        if (oid) {
+                            const owner = resolveOwnerRef(oid);
+                            if (owner) {
+                                h.owner = owner;
+                                owner.harpoons = owner.harpoons || [];
+                                owner.harpoons.push(h);
+                            }
+                        }
+                        if (tid) {
+                            const target = resolveOwnerRef(tid);
+                            if (target) {
+                                h.target = target;
+                            }
+                        }
+                        h.system = this;
+                    } catch (e) { console.warn('harpoon relink error', e); }
+                }
+            }
+
+            // Beams & ForceWaves: assign system and attempt owner resolution
+            if (Array.isArray(this.beams)) for (const b of this.beams) {
+                if (!b) continue;
+                try { b.system = this; if (b.ownerId) b.owner = resolveOwnerRef(b.ownerId) || b.owner || null; } catch (e) { console.warn('beam relink error', e); }
+            }
+            if (Array.isArray(this.forceWaves)) for (const f of this.forceWaves) {
+                if (!f) continue;
+                try { f.system = this; } catch (e) { console.warn('forceWave relink error', e); }
+            }
+
+            // Cargo: restore positions and attached references
+            if (Array.isArray(this.cargo)) {
+                for (const c of this.cargo) {
+                    if (!c) continue;
+                    try {
+                        if (c.pos && c.pos.x !== undefined) c.pos = makeVector(c.pos);
+                        const attachedId = c.attachedById || c.attachedBy || c._attachedBy || null;
+                        if (attachedId && !c.attachedTo) {
+                            const owner = resolveOwnerRef(attachedId);
+                            if (owner) {
+                                c.attachedTo = owner;
+                                c.attached = true;
+                                owner.cargo = owner.cargo || [];
+                                owner.cargo.push(c);
+                            }
+                        }
+                    } catch (e) { console.warn('cargo relink error', e); }
+                }
+            }
+
+            // Explosions: restore positions
+            if (Array.isArray(this.explosions)) {
+                for (const ex of this.explosions) {
+                    if (!ex) continue;
+                    try { if (ex.pos && ex.pos.x !== undefined) ex.pos = makeVector(ex.pos); ex.system = this; } catch (e) { console.warn('explosion relink error', e); }
+                }
+            }
+
+            // Asteroids: restore vectors
+            if (Array.isArray(this.asteroids)) {
+                for (const a of this.asteroids) {
+                    if (!a) continue;
+                    try { if (a.pos && a.pos.x !== undefined) a.pos = makeVector(a.pos); if (a.vel && a.vel.x !== undefined) a.vel = makeVector(a.vel); } catch (e) { console.warn('asteroid relink error', e); }
+                }
+            }
+
+            // Ensure enemy targets are restored and they point to the correct system
+            if (Array.isArray(this.enemies)) {
+                for (const e of this.enemies) {
+                    if (!e) continue;
+                    try {
+                        if (e.targetId) e.target = resolveOwnerRef(e.targetId) || null;
+                        // Restore guard principal linkage if present
+                        if (e._principalId) {
+                            const principal = resolveOwnerRef(e._principalId) || null;
+                            if (principal) {
+                                e.principal = principal;
+                                // If the enemy was saved in GUARDING state, ensure entry logic runs
+                                if (e.currentState === AI_STATE.GUARDING) {
+                                    try { if (typeof e.onStateEntry === 'function') e.onStateEntry(AI_STATE.GUARDING, { principal }); } catch(_) {}
+                                } else {
+                                    try { if (typeof e.changeState === 'function') e.changeState(AI_STATE.GUARDING, { principal }); } catch(_) {}
+                                }
+                            }
+                        }
+                        e.currentSystem = this;
+                    } catch (err) { console.warn('enemy relink error', err); }
+                }
+            }
+        };
+
+        sys.relinkReferences = function(player) {
+            if (player) this.player = player;
+            if (typeof this._postLoadRelink === 'function') this._postLoadRelink();
+        };
+
+        try { sys._postLoadRelink(); } catch (e) { console.warn('StarSystem.fromJSON: post-load relink failed', e); }
 
         return sys;
     }
@@ -3315,6 +3661,7 @@ drawOptimalStarfield() {
                 const y = planet.pos.y + Math.sin(angle) * dist;
                 try {
                     const obj = new SpaceObject(x, y, 'miningPlatform');
+                        obj.planetIndex = planet.planetIndex || i;
                     this.spaceObjects.push(obj);
                 } catch (e) {
                     console.error('Failed to create mining platform SpaceObject', e);
@@ -3330,6 +3677,7 @@ drawOptimalStarfield() {
                     const y2 = planet.pos.y + Math.sin(angle2) * dist2;
                     try {
                         const obj2 = new SpaceObject(x2, y2, type);
+                        obj2.planetIndex = planet.planetIndex || i;
                         this.spaceObjects.push(obj2);
                     } catch (e) {
                         console.error('Failed to create additional SpaceObject', e);
@@ -3346,6 +3694,7 @@ drawOptimalStarfield() {
                     const y = planet.pos.y + Math.sin(angle) * dist;
                     try {
                         const obj = new SpaceObject(x, y, type);
+                        obj.planetIndex = planet.planetIndex || i;
                         this.spaceObjects.push(obj);
                     } catch (e) {
                         console.error('Failed to create SpaceObject', e);
@@ -3366,6 +3715,8 @@ drawOptimalStarfield() {
                 const y = this.jumpZoneCenter.y + Math.sin(angle) * dist;
                 try {
                     const obj = new SpaceObject(x, y, type);
+                    // Mark jump gate objects without planet index
+                    obj.planetIndex = null;
                     this.spaceObjects.push(obj);
                 } catch (e) {
                     console.error('Failed to create jump gate SpaceObject', e);

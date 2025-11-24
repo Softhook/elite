@@ -2276,6 +2276,40 @@ class SpaceObject {
         this._initTypeSpecificData();
     }
 
+    toJSON() {
+        return {
+            id: this.id,
+            type: this.type,
+            pos: this.pos ? { x: this.pos.x, y: this.pos.y } : null,
+            x: this.pos ? this.pos.x : null,
+            y: this.pos ? this.pos.y : null,
+            size: this.size,
+            destroyed: !!this.destroyed,
+            state: this.state || null,
+            subtype: this.subtype || null,
+            planetIndex: (typeof this.planetIndex !== 'undefined') ? this.planetIndex : null
+        };
+    }
+
+    static fromJSON(data) {
+        try {
+            const x = data.x ?? (data.pos && data.pos.x) ?? 0;
+            const y = data.y ?? (data.pos && data.pos.y) ?? 0;
+            const type = data.type || 'satellite';
+            const obj = new SpaceObject(x, y, type);
+            if (data.id) obj.id = data.id;
+            if (data.size !== undefined && obj.size !== undefined) obj.size = data.size;
+            if (data.destroyed) obj.destroyed = true;
+            if (data.state !== undefined) obj.state = data.state;
+            if (data.subtype !== undefined) obj.subtype = data.subtype;
+            if (data.planetIndex !== undefined && data.planetIndex !== null) obj.planetIndex = data.planetIndex;
+            return obj;
+        } catch (e) {
+            console.error('SpaceObject.fromJSON error', e, data);
+            return null;
+        }
+    }
+
     _initTypeSpecificData() {
         // Initialize type-specific data structures only when needed
         if (this.type === 'cargoCluster') {

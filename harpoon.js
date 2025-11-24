@@ -262,3 +262,41 @@ Harpoon.prototype.isDone = function() {
 
 // Export for environments that expect global constructor
 if (typeof window !== 'undefined') window.Harpoon = Harpoon;
+
+// Serialization helpers for Harpoon
+Harpoon.prototype.toJSON = function() {
+    return {
+        segmentCount: this.segmentCount,
+        restLength: this.restLength,
+        stiffness: this.stiffness,
+        breakTension: this.breakTension,
+        damping: this.damping,
+        broken: !!this.broken,
+        // owner/target stored as ids where possible; actual linking must be done after load
+        ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
+        targetId: this.target ? (this.target.id || this.target.shipTypeName || null) : null,
+        // store segment positions for visual reconstruction
+        segments: Array.isArray(this.segments) ? this.segments.map(s => ({ x: s.x, y: s.y, px: s.px, py: s.py })) : []
+    };
+};
+
+Harpoon.fromJSON = function(data) {
+    if (!data) return null;
+    // Create a minimal harpoon with null anchors; linking to real ships should occur after system is restored
+    const dummyOwner = { pos: createVector(0,0) };
+    const dummyTarget = { pos: createVector(0,0) };
+    const opts = { segmentCount: data.segmentCount || 8, restLength: data.restLength || data.restTotal || 10, stiffness: data.stiffness || 1.0, breakTension: data.breakTension || 800, damping: data.damping || 0.995 };
+    const h = new Harpoon(dummyOwner, dummyTarget, null, opts);
+    h.segmentCount = data.segmentCount || h.segmentCount;
+    h.restLength = data.restLength || h.restLength;
+    h.stiffness = data.stiffness || h.stiffness;
+    h.breakTension = data.breakTension || h.breakTension;
+    h.damping = data.damping || h.damping;
+    h.broken = !!data.broken;
+    if (Array.isArray(data.segments) && data.segments.length) {
+        h.segments = data.segments.map(s => ({ x: s.x || 0, y: s.y || 0, px: s.px || (s.x || 0), py: s.py || (s.y || 0) }));
+    }
+    h._ownerId = data.ownerId || null;
+    h._targetId = data.targetId || null;
+    return h;
+};

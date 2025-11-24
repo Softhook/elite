@@ -193,4 +193,34 @@ class Cargo {
         const baseValue = baseValues[this.type] || 50;
         return Math.floor(baseValue * this.quantity * random(0.8, 1.2));
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            vel: { x: this.vel.x, y: this.vel.y },
+            type: this.type,
+            quantity: this.quantity,
+            size: this.size,
+            rotation: this.rotation,
+            attached: !!this.attached,
+            attachedBy: this.attachedBy || null,
+            lifetime: this.lifetime,
+            collected: !!this.collected,
+            color: Array.isArray(this.color) ? this.color : (this.color && this.color.levels ? this.color.levels.slice(0,3) : null)
+        };
+    }
+
+    static fromJSON(data) {
+        if (!data) return null;
+        const c = new Cargo((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, data.type || null, data.quantity || 1);
+        if (data.vel) c.vel = createVector(data.vel.x || 0, data.vel.y || 0);
+        c.size = data.size || c.size;
+        c.rotation = data.rotation || c.rotation;
+        c.attached = !!data.attached;
+        c.attachedBy = data.attachedBy || null;
+        c.lifetime = (typeof data.lifetime === 'number') ? data.lifetime : c.lifetime;
+        c.collected = !!data.collected;
+        if (Array.isArray(data.color)) c.color = data.color;
+        return c;
+    }
 }

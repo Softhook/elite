@@ -249,4 +249,32 @@ class Mine {
         const distSq = distSqVec(this.pos, playerPos);
         return distSq > despawnRadius * despawnRadius;
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
+            damage: this.damage,
+            blastRadius: this.blastRadius,
+            triggerRadius: this.triggerRadius,
+            color: Array.isArray(this.color) ? this.color : this.color || null,
+            maxHealth: this.maxHealth,
+            health: this.health,
+            armed: !!this.armed,
+            armingTimer: this.armingTimer,
+            destroyed: !!this.destroyed
+        };
+    }
+
+    static fromJSON(data) {
+        if (!data) return null;
+        const m = new Mine((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, null, data.damage || 80, data.blastRadius || 150, data.triggerRadius || 80, data.color || [255,100,0], data.maxHealth || 30);
+        m.health = (typeof data.health === 'number') ? data.health : m.health;
+        m.armed = !!data.armed;
+        m.armingTimer = (typeof data.armingTimer === 'number') ? data.armingTimer : m.armingTimer;
+        m.destroyed = !!data.destroyed;
+        // owner should be re-linked by caller using ownerId if needed
+        m._ownerId = data.ownerId || null;
+        return m;
+    }
 }

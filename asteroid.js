@@ -159,4 +159,44 @@ class Asteroid {
         const sumRadii = targetRadius + this.maxRadius;
         return dSq < sq(sumRadii);
     }
+
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            vel: { x: this.vel.x, y: this.vel.y },
+            size: this.size,
+            health: this.health,
+            maxHealth: this.maxHealth,
+            isRich: !!this.isRich,
+            mineralMultiplier: this.mineralMultiplier,
+            isComet: !!this.isComet,
+            angle: this.angle,
+            rotationSpeed: this.rotationSpeed,
+            vertices: Array.isArray(this.vertices) ? this.vertices.map(v => ({ x: v.x, y: v.y })) : null,
+            color: this.color && this.color.levels ? this.color.levels.slice(0, 3) : null,
+            seamColor: this.seamColor && this.seamColor.levels ? this.seamColor.levels.slice(0, 4) : null,
+            destroyed: !!this.destroyed
+        };
+    }
+
+    static fromJSON(data) {
+        if (!data) return null;
+        const a = new Asteroid((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, data.size || 50);
+        a.size = data.size || a.size;
+        a.maxHealth = data.maxHealth || a.maxHealth;
+        a.health = (typeof data.health === 'number') ? data.health : a.health;
+        a.isRich = !!data.isRich;
+        a.mineralMultiplier = data.mineralMultiplier || a.mineralMultiplier;
+        a.isComet = !!data.isComet;
+        if (data.vel) a.vel = createVector(data.vel.x || 0, data.vel.y || 0);
+        a.angle = (data.angle !== undefined) ? data.angle : a.angle;
+        a.rotationSpeed = (data.rotationSpeed !== undefined) ? data.rotationSpeed : a.rotationSpeed;
+        if (Array.isArray(data.vertices)) {
+            a.vertices = data.vertices.map(v => createVector(v.x || 0, v.y || 0));
+        }
+        if (Array.isArray(data.color)) a.color = color(data.color[0], data.color[1], data.color[2]);
+        if (Array.isArray(data.seamColor)) a.seamColor = color(data.seamColor[0], data.seamColor[1], data.seamColor[2], data.seamColor[3] || 180);
+        a.destroyed = !!data.destroyed;
+        return a;
+    }
 } // End of Asteroid Class
