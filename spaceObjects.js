@@ -2003,25 +2003,67 @@ const SpaceObjectRenderers = {
     },
 
     energyCollector: function(obj, size, anim, bob) {
-        // circular energy collector with concentric coils and a pulsing core
+        // enhanced energy collector: rotating coils, pulsing core, flashing indicator lights
         noStroke();
-        // outer ring
-        fill(30, 40, 60);
-        ellipse(0, bob, size * 0.9, size * 0.36);
 
-        // collector coils
-        for (let i = 0; i < 6; i++) {
-            const a = i * (TWO_PI / 6) + obj.bobPhase * 0.0006;
-            const rx = Math.cos(a) * size * 0.36;
-            const ry = Math.sin(a) * size * 0.14 + bob;
-            fill(80, 160, 200, 160);
-            ellipse(rx, ry, size * 0.14, size * 0.08);
+        // base dish
+        fill(24, 32, 48);
+        ellipse(0, bob, size * 0.94, size * 0.36);
+
+        // rotating coil layers (two layers with different speeds)
+        const spin = (anim && typeof anim.collectorSpin === 'number') ? anim.collectorSpin : (obj.bobPhase * 0.0006);
+        for (let layer = 0; layer < 2; layer++) {
+            const layerCount = 6 + layer * 2;
+            const layerRadius = size * (0.30 + layer * 0.06);
+            const alphaBase = 120 - layer * 30;
+            for (let i = 0; i < layerCount; i++) {
+                const a = i * (TWO_PI / layerCount) + spin * (1 + layer * 0.4) + obj.bobPhase * (0.0004 + layer * 0.0002);
+                const rx = Math.cos(a) * layerRadius;
+                const ry = Math.sin(a) * (size * 0.12) + bob;
+                // coil highlight with a slight radial stretch and additive glow
+                fill(90, 200, 240, alphaBase + 40 * Math.sin(obj.bobPhase * 0.01 + i));
+                ellipse(rx, ry, size * (0.10 - layer * 0.02), size * (0.06 - layer * 0.01));
+            }
         }
 
-        // pulsing core
-        const pulse = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.012);
-        fill(120, 220, 255, 180 * pulse);
-        ellipse(0, bob - size * 0.02, size * 0.28 * (0.8 + pulse * 0.4), size * 0.16 * (0.8 + pulse * 0.4));
+        // central pulsing core with inner ring
+        const pulse = 0.65 + 0.35 * Math.sin(obj.bobPhase * 0.014);
+        push();
+        // subtle rotation for core rings
+        rotate(spin * 0.06);
+        fill(100, 230, 255, 200 * pulse);
+        ellipse(0, bob - size * 0.02, size * 0.30 * (0.85 + pulse * 0.35), size * 0.18 * (0.85 + pulse * 0.35));
+        // inner glow halo
+        fill(80, 180, 220, 60 * pulse);
+        ellipse(0, bob - size * 0.02, size * 0.54 * (0.9 + pulse * 0.2), size * 0.30 * (0.9 + pulse * 0.2));
+        pop();
+
+        // flashing indicator lights around the rim
+        if (anim && typeof anim.lightPhase === 'number') {
+            const lights = 8;
+            for (let i = 0; i < lights; i++) {
+                const a = i * (TWO_PI / lights) + obj.bobPhase * 0.0003;
+                const lx = Math.cos(a) * size * 0.46;
+                const ly = Math.sin(a) * (size * 0.14) + bob;
+                const flash = 0.5 + 0.5 * Math.sin(anim.lightPhase + i * 0.7 + obj.bobPhase * 0.003);
+                // outer LED
+                fill(180, 255, 200, 180 * flash);
+                ellipse(lx, ly, 3 + flash * 2, 3 + flash * 1.2);
+                // small halo
+                fill(140, 220, 255, 30 * flash);
+                ellipse(lx, ly, 8 + flash * 6, 4 + flash * 3);
+            }
+        }
+
+        // small drifting particles/emissions to convey energy flow
+        for (let p = 0; p < 4; p++) {
+            const angle = obj.bobPhase * 0.001 + p * 1.3;
+            const pr = size * (0.12 + 0.06 * p);
+            const px = Math.cos(angle * (0.7 + p * 0.3)) * pr * 0.9;
+            const py = Math.sin(angle * (0.9 + p * 0.2)) * pr * 0.4 + bob * 0.25;
+            fill(140, 220, 255, 30 + 40 * Math.sin(obj.bobPhase * 0.01 + p));
+            ellipse(px, py, 2 + p * 0.6, 2 + p * 0.3);
+        }
     },
 
     iceCrystal: function(obj, size, anim, bob) {
@@ -2223,6 +2265,11 @@ class SpaceObject {
             case 'shieldGenerator':
                 anim.shieldPulse = Math.random() * TWO_PI;
                 break;
+            case 'energyCollector':
+                // spinning coils and light phase for flashing LEDs
+                anim.collectorSpin = Math.random() * TWO_PI;
+                anim.lightPhase = Math.random() * TWO_PI;
+                break;
         }
         // unique id used by debris RNG and other persistent behaviors
         this.id = 'spaceobj_' + (Date.now() % 100000) + '_' + Math.floor(Math.random() * 10000);
@@ -2359,7 +2406,7 @@ class SpaceObject {
         // advance per-type animations (cache anim ref)
         if (typeof anim.panelAngle === 'number') anim.panelAngle += (anim.panelSpeed || 0) * dt;
         if (typeof anim.telescopeTilt === 'number') anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
-        if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0006 * dt;
+        if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0001 * dt;
         if (typeof anim.habitatWindowPhase === 'number') anim.habitatWindowPhase += 0.002 * dt;
         if (typeof anim.probeBlink === 'number') anim.probeBlink += 0.01 * dt;
         // Advance new-type animation phases for richer motion
@@ -2385,7 +2432,7 @@ class SpaceObject {
         if (typeof anim.stationLights === 'number') anim.stationLights += 0.004 * dt;
         if (typeof anim.dockingRing === 'number') anim.dockingRing += 0.001 * dt;
         if (typeof anim.solarArray === 'number') anim.solarArray += 0.0005 * dt;
-        if (typeof anim.commDishSweep === 'number') anim.commDishSweep += 0.0025 * dt;
+        if (typeof anim.commDishSweep === 'number') anim.commDishSweep += 0.0005 * dt;
         if (typeof anim.commDishTilt === 'number') anim.commDishTilt += 0.0012 * dt;
         if (typeof anim.shieldPulse === 'number') anim.shieldPulse += 0.0032 * dt;
         if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0008 * dt;
@@ -2394,6 +2441,9 @@ class SpaceObject {
         if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.005 * dt;
         if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.006 * dt;
         if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0045 * dt;
+        // Energy collector animated phases
+        if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0009 * dt;
+        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.008 * dt;
 
         if (this._shards && this._shards.length) {
             for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
