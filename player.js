@@ -47,6 +47,14 @@ class Player {
         this.autopilotRotationMultiplier = 0.9; // Slightly reduced rotation speed
         this.lastDamageTime = 0; // Track when player was last hit
 
+        // Autopilot cycle tracking: used so a single full cycle (H/J presses)
+        // will make the next autopilot keypress turn autopilot off.
+        this.autopilotVisitedTargets = new Set();
+        this._autopilotWillDisableOnNextToggle = false;
+        // Planet-cycle tracking for H-key autopilot
+        this._autopilotPlanetSeenIndices = new Set();
+        this._autopilotPlanetStartIndex = null;
+
 
         // --- Initialize Radian properties (calculated AFTER constructor) ---
         this.rotationSpeed = 0; // RADIANS per frame
@@ -1955,27 +1963,54 @@ handleInput() {
             console.log(`toggleAutopilot called with target: ${target}`);
             console.log(`Current autopilot state: ${this.autopilotEnabled ? 'enabled' : 'disabled'}, target: ${this.autopilotTarget || 'none'}`);
             
-            // If already headed to this target, disable autopilot
-            if (this.autopilotEnabled && this.autopilotTarget === target) {
-                console.log("Same target detected - disabling autopilot");
+            // If autopilot is not currently enabled -> enable and reset cycle tracking
+            if (!this.autopilotEnabled) {
+                this.autopilotEnabled = true;
+                this.autopilotTarget = target;
+                // Start a fresh cycle tracking set with this initial target
+                this.autopilotVisitedTargets = new Set([target]);
+                this._autopilotWillDisableOnNextToggle = false;
+
+                // Make sure current system is defined
+                if (!this.currentSystem) {
+                    console.error("Cannot enable autopilot: currentSystem is undefined");
+                    this.disableAutopilot();
+                    if (uiManager) uiManager.addMessage("Autopilot error: System data unavailable");
+                    return;
+                }
+
+                console.log(`Autopilot enabled: Flying to ${target}`);
+                if (uiManager) uiManager.addMessage(`Autopilot engaged: ${target === 'station' ? 'Station' : 'Jump Zone'}`);
+                return;
+            }
+
+            // If we've already completed a full cycle, the next press disables autopilot
+            if (this._autopilotWillDisableOnNextToggle) {
                 this.disableAutopilot();
                 return;
             }
-            
-            // Otherwise, enable autopilot to the requested target
-            this.autopilotEnabled = true;
+
+            // If pressing the same target again, disable autopilot (existing behaviour)
+            if (this.autopilotTarget === target) {
+                this.disableAutopilot();
+                return;
+            }
+
+            // Otherwise, switch target and record it as visited in the cycle
             this.autopilotTarget = target;
-            
-            // Make sure current system is defined
-            if (!this.currentSystem) {
-                console.error("Cannot enable autopilot: currentSystem is undefined");
-                this.disableAutopilot();
-                if (uiManager) uiManager.addMessage("Autopilot error: System data unavailable");
-                return;
+            try {
+                this.autopilotVisitedTargets.add(target);
+            } catch (e) {
+                this.autopilotVisitedTargets = new Set([this.autopilotTarget, target]);
             }
-            
-            console.log(`Autopilot enabled: Flying to ${target}`);
-            if (uiManager) uiManager.addMessage(`Autopilot engaged: ${target === 'station' ? 'Station' : 'Jump Zone'}`);
+
+            // If we've visited both primary autopilot targets, mark that the next press will disable
+            if (this.autopilotVisitedTargets.has('station') && this.autopilotVisitedTargets.has('jumpzone')) {
+                this._autopilotWillDisableOnNextToggle = true;
+                if (uiManager) uiManager.addMessage('Autopilot: one cycle complete — next autopilot press will disable.');
+            } else {
+                if (uiManager) uiManager.addMessage(`Autopilot: now heading to ${target}`);
+            }
         }
     
         /** Disables autopilot - Ensures NO lingering effects */
@@ -2015,20 +2050,57 @@ handleInput() {
 
         // Determine next index
         let next = 0;
-        if (this.autopilotEnabled && this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
-            const cur = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
-            next = (typeof cur === 'number' && cur >= 0) ? (cur + 1) % planets.length : 0;
+
+        // If autopilot is currently disabled: enable and start a new cycle
+        if (!this.autopilotEnabled) {
+            next = 0; // start at first planet
+            this.autopilotEnabled = true;
+            this.autopilotVisitedTargets = this.autopilotVisitedTargets || new Set();
+            // reset planet-cycle tracking
+            this._autopilotPlanetSeenIndices = new Set([next]);
+            this._autopilotPlanetStartIndex = next;
+            this._autopilotWillDisableOnNextToggle = false;
+
+            this.autopilotTarget = { type: 'planet', index: next };
+            this.autopilotPlanetIndex = next;
+
+            const p0 = planets[next];
+            const name0 = (p0 && p0.name) ? p0.name : `Planet ${next+1}`;
+            if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name0} (${next+1}/${planets.length})`);
+            PLAYER_LOG(`Autopilot planet target set to index ${next} (${name0})`);
+            return;
         }
 
-        // Enable autopilot and point at the selected planet
-        this.autopilotEnabled = true;
+        // If we've already completed a full cycle, the next press should disable autopilot
+        if (this._autopilotWillDisableOnNextToggle) {
+            this.disableAutopilot();
+            return;
+        }
+
+        // Otherwise compute the next index in the cycle
+        if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
+            const cur = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
+            next = (typeof cur === 'number' && cur >= 0) ? (cur + 1) % planets.length : 0;
+        } else {
+            next = 0;
+        }
+
+        // Set new planet target and record visit
         this.autopilotTarget = { type: 'planet', index: next };
         this.autopilotPlanetIndex = next;
+        this._autopilotPlanetSeenIndices = this._autopilotPlanetSeenIndices || new Set();
+        this._autopilotPlanetSeenIndices.add(next);
 
         const p = planets[next];
         const name = (p && p.name) ? p.name : `Planet ${next+1}`;
         if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name} (${next+1}/${planets.length})`);
         PLAYER_LOG(`Autopilot planet target set to index ${next} (${name})`);
+
+        // If we've now visited every planet once, mark that the next autopilot press will disable
+        if (this._autopilotPlanetSeenIndices.size >= planets.length) {
+            this._autopilotWillDisableOnNextToggle = true;
+            if (uiManager) uiManager.addMessage('Autopilot: completed one planet cycle — next autopilot press will disable.');
+        }
     }
     
     /**
