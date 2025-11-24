@@ -402,7 +402,9 @@ class Enemy {
     
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
-        if (this.destroyed || !system) return;
+        // Allow update to continue during jump-fade even if `destroyed` is set,
+        // so we can complete the visual fade-back phase after logical destruction.
+        if ((this.destroyed && !this._isJumpFading) || !system) return;
     
         // Always update system reference when update is called
         this.currentSystem = system;
@@ -411,17 +413,41 @@ class Enemy {
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
 
-        // If we're in the jump-fade phase, progress the timer and remove when done.
+        // If we're in the jump-fade phase, progress the timer and handle two phases:
+        //  - 'out': fade to white, then mark destroyed (logical removal)
+        //  - 'in' : fade back to transparent, then finish fade and clear flags
         if (this._isJumpFading) {
+            // Use separate durations for out/in phases for smoother timing
+            const outDur = (this._jumpFadeOutDuration && this._jumpFadeOutDuration > 0) ? this._jumpFadeOutDuration : 0.35;
+            const inDur = (this._jumpFadeInDuration && this._jumpFadeInDuration > 0) ? this._jumpFadeInDuration : 1.2;
+            if (typeof this._jumpFadeTimer !== 'number') this._jumpFadeTimer = (this._jumpFadePhase === 'in') ? inDur : outDur;
+
             this._jumpFadeTimer -= deltaSeconds;
+            if (this._jumpFadeTimer < 0) this._jumpFadeTimer = 0;
+
             // Freeze motion and actions while fading
             if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
             this.isThrusting = false;
             this.currentWeapon = null;
-            if (this._jumpFadeTimer <= 0) {
+
+            if (!this._jumpFadePhase) this._jumpFadePhase = 'out';
+
+            if (this._jumpFadePhase === 'out' && this._jumpFadeTimer <= 0) {
+                // Midpoint reached: perform logical destruction so game state can treat ship as destroyed
                 this.destroyed = true;
+
+                // Start fade-back phase using the slower in-duration
+                this._jumpFadePhase = 'in';
+                this._jumpFadeTimer = inDur;
+            } else if (this._jumpFadePhase === 'in' && this._jumpFadeTimer <= 0) {
+                // Fade-back complete: clear fading flags but keep `destroyed` true for logic
+                this._isJumpFading = false;
+                this._jumpFadePhase = undefined;
+                this._jumpFadeTimer = undefined;
+                // Note: the object remains `destroyed` so other systems can clean it up
             }
-            return; // Skip normal updates while fading out to jump
+
+            return; // Skip normal updates while performing jump-fade
         }
         
         // Update weapon cooldown

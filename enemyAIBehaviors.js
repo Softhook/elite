@@ -576,8 +576,11 @@ class EnemyAIBehaviors {
                             // Start a short fade-to-white jump effect instead of immediate explosion
                             try {
                                 this._isJumpFading = true;
-                                this._jumpFadeDuration = 0.9; // seconds
-                                this._jumpFadeTimer = this._jumpFadeDuration;
+                                // Tuned durations: quicker fade-out, slower fade-in
+                                this._jumpFadeOutDuration = 0.35; // seconds (fast)
+                                this._jumpFadeInDuration = 1.2;   // seconds (slow)
+                                this._jumpFadeTimer = this._jumpFadeOutDuration;
+                                this._jumpFadePhase = 'out'; // 'out' = fade to white, 'in' = fade back
                                 // Stop ship movement and weapons during fade
                                 if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
                                 this.isThrusting = false;

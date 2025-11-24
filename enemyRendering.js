@@ -66,7 +66,9 @@ class EnemyRendering {
 
     /** Draws the enemy ship using its specific draw function and adds UI elements. */
     draw() {
-        if (this.destroyed || isNaN(this.angle)) return;
+        // Allow rendering while jump-fading even if `destroyed` is set so the visual
+        // fade-back can complete after logical destruction.
+        if ((this.destroyed && !this._isJumpFading) || isNaN(this.angle)) return;
 
 
         // Cache current time (avoid multiple millis() calls per frame)
@@ -267,8 +269,18 @@ class EnemyRendering {
         pop(); // End Ship Drawing Block
         // --- Draw Jump Fade Overlay (when ship is leaving via jump zone) ---
         if (this._isJumpFading && this._jumpFadeTimer > 0) {
-            const dur = (this._jumpFadeDuration && this._jumpFadeDuration > 0) ? this._jumpFadeDuration : 0.9;
-            const progress = 1 - (this._jumpFadeTimer / dur); // 0..1
+            const phase = this._jumpFadePhase || 'out';
+            const dur = (phase === 'out')
+                ? ((this._jumpFadeOutDuration && this._jumpFadeOutDuration > 0) ? this._jumpFadeOutDuration : 0.35)
+                : ((this._jumpFadeInDuration && this._jumpFadeInDuration > 0) ? this._jumpFadeInDuration : 1.2);
+            let progress;
+            if (phase === 'out') {
+                // progress 0 -> 1 while fading TO white
+                progress = 1 - (this._jumpFadeTimer / dur);
+            } else {
+                // 'in' phase: progress 1 -> 0 while fading BACK to transparent
+                progress = (this._jumpFadeTimer / dur);
+            }
             const alpha = constrain(progress * 255, 0, 255);
             push();
             translate(this.pos.x, this.pos.y);
