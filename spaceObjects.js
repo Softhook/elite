@@ -12,15 +12,15 @@ const sizeMap = {
     probe: 50,
     beacon: 40,
     solarSail: 320,
-    engineArray: 184,
+    engineArray: 150,
     cargoCluster: 200,
     researchArray: 176,
     orbitalGarden: 200,
     decoyBuoy: 40,
-    miningPlatform: 220,
-    ancientRelic: 250,
+    miningPlatform: 200,
+    ancientRelic: 200,
     signalFlare: 60,
-    spaceStation: 280,
+    spaceStation: 200,
     asteroidMiner: 140,
     fuelDepot: 90,
     commDish: 70,
@@ -243,6 +243,89 @@ const SpaceObjectRenderers = {
         noStroke();
     },
 
+    commDish: function(obj, size, anim, bob) {
+        // Dedicated communication dish renderer: detailed parabolic reflector, feed horn, struts, swivel base and signal sweep
+        noStroke();
+
+        // Base pedestal
+        fill(110, 120, 130);
+        rect(0, bob + size * 0.18, size * 0.18, size * 0.12, 6);
+        // Pedestal flange
+        fill(90, 95, 100);
+        ellipse(0, bob + size * 0.25, size * 0.28, size * 0.06);
+
+        // Swivel ring (rotating base)
+        push();
+        rotate(anim ? anim.commDishSweep : 0);
+        stroke(120, 130, 140);
+        strokeWeight(1.2);
+        noFill();
+        ellipse(0, bob + size * 0.12, size * 0.22, size * 0.1);
+        noStroke();
+
+        // Parabolic reflector (slightly offset to imply depth)
+        push();
+        translate(0, bob - size * 0.06);
+        // main dish surface
+        fill(220, 230, 240);
+        arc(0, 0, size * 0.6, size * 0.6, -PI, 0, CHORD);
+        // inner segmentation lines for detail
+        stroke(180, 190, 200, 160); strokeWeight(0.6);
+        for (let s = 1; s <= 5; s++) {
+            const r = (s / 5) * (size * 0.28);
+            line(-r, Math.sqrt(Math.max(0, (size * 0.28) * (size * 0.28) - r * r)) * -0.3,
+                 r, Math.sqrt(Math.max(0, (size * 0.28) * (size * 0.28) - r * r)) * -0.3);
+        }
+        noStroke();
+
+        // Support struts to feed horn
+        stroke(140, 150, 160); strokeWeight(1.2);
+        for (let st = -1; st <= 1; st += 2) {
+            line(0, 0, st * size * 0.12, -size * 0.14);
+        }
+        noStroke();
+
+        // Feed horn / receiver (animated tilt)
+        push();
+        translate(0, -size * 0.14);
+        rotate(anim ? anim.commDishTilt : 0);
+        fill(70, 80, 90);
+        rect(0, 0, size * 0.06, size * 0.1, 2);
+        fill(200, 210, 220);
+        ellipse(0, -size * 0.06, size * 0.04, size * 0.03);
+        pop();
+
+        // Specular highlight on rim
+        fill(255, 255, 240, 50);
+        beginShape();
+        vertex(-size * 0.18, -size * 0.06);
+        vertex(-size * 0.05, -size * 0.12);
+        vertex(size * 0.05, -size * 0.12);
+        vertex(size * 0.18, -size * 0.06);
+        endShape(CLOSE);
+
+        // Translucent signal sweep cone (animated)
+        const sweep = (anim ? anim.commDishSweep : 0);
+        push();
+        rotate(sweep * 0.6);
+        noStroke();
+        fill(100, 180, 240, 28);
+        beginShape();
+        vertex(0, -size * 0.14);
+        vertex(Math.cos(-0.32) * size * 1.4, Math.sin(-0.32) * size * 1.4);
+        vertex(Math.cos(0.32) * size * 1.4, Math.sin(0.32) * size * 1.4);
+        endShape(CLOSE);
+        pop();
+
+        // Small status lights on mast
+        fill(255, 120, 120, 220);
+        ellipse(-size * 0.06, bob + size * 0.02, 3, 3);
+        fill(120, 255, 160, 220);
+        ellipse(size * 0.06, bob + size * 0.02, 3, 3);
+
+        pop(); // end swivel
+    },
+
     habitat: function(obj, size, anim, bob) {
         // Cylindrical habitat module with rounded end-caps and curved windows
         noStroke();
@@ -443,10 +526,630 @@ const SpaceObjectRenderers = {
         rect(-size * 0.05, size * 0.3 + bob, size * 0.1, size * 0.08, 2);
     },
 
+    spaceStation: function(obj, size, anim, bob) {
+        // Massive space station: central hub with multiple modules, solar arrays, antennas, docking ports, and operational details
+        noStroke();
+        // Central hub (large cylindrical core)
+        fill(180, 190, 200);
+        rect(0, bob, size * 0.15, size * 0.8, 8);
+        // Hub end caps
+        fill(160, 170, 180);
+        ellipse(0, -size * 0.4 + bob, size * 0.18, size * 0.12);
+        ellipse(0, size * 0.4 + bob, size * 0.18, size * 0.12);
+
+        // Multiple radial modules (habitation, research, cargo)
+        for (let m = 0; m < 6; m++) {
+            const ang = m * (TWO_PI / 6);
+            push();
+            rotate(ang);
+            translate(size * 0.25, bob);
+            // Module body
+            fill(170, 180, 190);
+            rect(0, 0, size * 0.2, size * 0.12, 4);
+            // Windows/lights
+            fill(255, 255, 200, 180);
+            for (let w = -1; w <= 1; w++) {
+                rect(w * (size * 0.04), 0, size * 0.02, size * 0.08, 2);
+            }
+            // Connecting corridor
+            stroke(150, 160, 170);
+            strokeWeight(2);
+            line(-size * 0.1, 0, 0, 0);
+            noStroke();
+            pop();
+        }
+
+        // Large solar arrays (extendable panels)
+        fill(50, 80, 130);
+        rect(-size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, 3);
+        rect(size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, 3);
+        rect(0, bob - size * 0.8, size * 0.08, size * 0.6, 3);
+        rect(0, bob + size * 0.8, size * 0.08, size * 0.6, 3);
+        // Panel grid lines
+        stroke(40, 60, 100, 150);
+        strokeWeight(0.8);
+        for (let g = -3; g <= 3; g++) {
+            const gx = g * (size * 0.1);
+            line(-size * 0.8 + gx, bob - size * 0.14, -size * 0.8 + gx, bob - size * 0.06);
+            line(size * 0.8 + gx, bob - size * 0.14, size * 0.8 + gx, bob - size * 0.06);
+            line(-size * 0.04, bob - size * 0.8 + gx, size * 0.04, bob - size * 0.8 + gx);
+            line(-size * 0.04, bob + size * 0.8 + gx, size * 0.04, bob + size * 0.8 + gx);
+        }
+        noStroke();
+
+        // Communication antennas and dishes
+        fill(120, 130, 140);
+        for (let a = 0; a < 4; a++) {
+            const aang = a * (TWO_PI / 4) + (anim ? anim.stationAntenna : 0);
+            const ax = Math.cos(aang) * size * 0.35;
+            const ay = Math.sin(aang) * size * 0.35 + bob;
+            ellipse(ax, ay, size * 0.08, size * 0.06);
+            // Antenna rods
+            stroke(100, 110, 120);
+            strokeWeight(1.5);
+            line(ax, ay - size * 0.03, ax, ay - size * 0.08);
+            line(ax - size * 0.02, ay - size * 0.03, ax - size * 0.02, ay - size * 0.08);
+            noStroke();
+        }
+
+        // Docking ports (extended arms with lights)
+        for (let d = 0; d < 3; d++) {
+            const dang = d * (TWO_PI / 3) + Math.PI / 6;
+            push();
+            rotate(dang);
+            translate(size * 0.4, bob);
+            // Docking arm
+            fill(140, 150, 160);
+            rect(0, 0, size * 0.15, size * 0.06, 3);
+            // Docking lights
+            fill(0, 255, 0, 200);
+            ellipse(-size * 0.05, 0, 4, 4);
+            fill(255, 0, 0, 200);
+            ellipse(size * 0.05, 0, 4, 4);
+            pop();
+        }
+
+        // Central radar/comms dome
+        fill(200, 210, 220);
+        ellipse(0, -size * 0.3 + bob, size * 0.12, size * 0.08);
+        // Dome windows
+        fill(255, 255, 255, 150);
+        ellipse(0, -size * 0.3 + bob, size * 0.08, size * 0.05);
+
+        // External cargo pods
+        for (let p = 0; p < 2; p++) {
+            const pang = p * Math.PI + (anim ? anim.stationPods : 0);
+            const px = Math.cos(pang) * size * 0.5;
+            const py = Math.sin(pang) * size * 0.3 + bob;
+            fill(120, 110, 100);
+            ellipse(px, py, size * 0.1, size * 0.08);
+        }
+
+        // Flashing navigation and status lights
+        const navFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
+        fill(255, 255, 0, 255 * navFlash);
+        ellipse(-size * 0.2, -size * 0.4 + bob, 5, 5);
+        fill(0, 255, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
+        ellipse(size * 0.2, -size * 0.4 + bob, 5, 5);
+        fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 2)));
+        ellipse(0, size * 0.5 + bob, 5, 5);
+
+        // Slow-moving rotating antenna array
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.002) * 0.3);
+        stroke(130, 140, 150);
+        strokeWeight(1.5);
+        for (let ra = 0; ra < 3; ra++) {
+            const raa = ra * (TWO_PI / 3);
+            line(0, bob - size * 0.2, Math.cos(raa) * size * 0.25, Math.sin(raa) * size * 0.25 + bob - size * 0.2);
+        }
+        noStroke();
+        fill(150, 160, 170);
+        ellipse(0, bob - size * 0.2, 6, 6);
+        pop();
+
+        // Heat radiators
+        fill(160, 170, 180, 150);
+        rect(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, 1);
+        rect(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, 1);
+    },
+
+    observatoryDome: function(obj, size, anim, bob) {
+        // Enhanced observatory dome: massive transparent dome with advanced telescope arrays, multiple observation decks, research modules, and extensive instrumentation
+        noStroke();
+
+        // Main support structure (hexagonal base with multiple levels)
+        fill(120, 130, 140);
+        beginShape();
+        for (let h = 0; h < 6; h++) {
+            const hx = Math.cos(h * TWO_PI / 6) * size * 0.5;
+            const hy = Math.sin(h * TWO_PI / 6) * size * 0.5 + bob;
+            vertex(hx, hy);
+        }
+        endShape(CLOSE);
+
+        // Secondary support rings
+        fill(100, 110, 120);
+        ellipse(0, bob, size * 0.9, size * 0.15);
+        ellipse(0, bob - size * 0.1, size * 0.8, size * 0.12);
+        ellipse(0, bob - size * 0.2, size * 0.7, size * 0.1);
+
+        // Central support pillar with elevator shaft
+        fill(140, 150, 160);
+        rect(0, bob - size * 0.25, size * 0.1, size * 0.5, 4);
+        // Elevator car
+        fill(180, 190, 200);
+        rect(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, 2);
+
+        // Massive observation dome (multi-layered transparent structure)
+        fill(220, 240, 255, 100);
+        ellipse(0, bob - size * 0.45, size * 0.8, size * 0.4);
+        // Inner dome layer
+        fill(200, 235, 250, 80);
+        ellipse(0, bob - size * 0.45, size * 0.7, size * 0.35);
+        // Dome frame (complex truss structure)
+        stroke(90, 100, 110, 180);
+        strokeWeight(2);
+        noFill();
+        ellipse(0, bob - size * 0.45, size * 0.82, size * 0.42);
+        // Internal support ribs
+        for (let r = 0; r < 8; r++) {
+            const ra = r * TWO_PI / 8;
+            const rx1 = Math.cos(ra) * size * 0.35;
+            const ry1 = Math.sin(ra) * size * 0.18 - size * 0.45 + bob;
+            const rx2 = Math.cos(ra) * size * 0.38;
+            const ry2 = Math.sin(ra) * size * 0.2 - size * 0.45 + bob;
+            line(rx1, ry1, rx2, ry2);
+        }
+        noStroke();
+
+        // Primary telescope assembly (rotating main telescope)
+        push();
+        translate(0, bob - size * 0.45);
+        rotate(anim ? anim.telescopeSweep : 0);
+        // Main telescope tube
+        fill(60, 70, 80);
+        rect(0, 0, size * 0.12, size * 0.35, 3);
+        // Telescope mirror/lens housing
+        fill(30, 40, 50);
+        ellipse(0, -size * 0.2, size * 0.08, size * 0.06);
+        // Focusing mechanism rings
+        stroke(100, 110, 120);
+        strokeWeight(1);
+        for (let f = 0; f < 3; f++) {
+            const fy = -size * 0.12 + f * size * 0.04;
+            line(-size * 0.04, fy, size * 0.04, fy);
+        }
+        noStroke();
+        // Counterweight arm
+        fill(80, 90, 100);
+        rect(size * 0.08, size * 0.1, size * 0.06, size * 0.02, 1);
+        pop();
+
+        // Secondary telescope arrays (fixed position)
+        for (let s = 0; s < 3; s++) {
+            const sa = s * TWO_PI / 3;
+            push();
+            rotate(sa);
+            translate(size * 0.25, bob - size * 0.3);
+            // Secondary telescope housing
+            fill(70, 80, 90);
+            rect(0, 0, size * 0.08, size * 0.2, 2);
+            // Lens assembly
+            fill(40, 50, 60);
+            ellipse(0, -size * 0.12, size * 0.05, size * 0.04);
+            pop();
+        }
+
+        // Research modules attached to base
+        for (let m = 0; m < 4; m++) {
+            const ma = m * TWO_PI / 4;
+            push();
+            rotate(ma);
+            translate(size * 0.4, bob - size * 0.05);
+            // Module housing
+            fill(160, 170, 180);
+            rect(0, 0, size * 0.12, size * 0.08, 3);
+            // Instrument ports
+            fill(100, 120, 140);
+            ellipse(-size * 0.03, 0, size * 0.02, size * 0.02);
+            ellipse(size * 0.03, 0, size * 0.02, size * 0.02);
+            // Data cable connections
+            stroke(120, 130, 140);
+            strokeWeight(1);
+            line(-size * 0.06, 0, -size * 0.08, -size * 0.02);
+            line(size * 0.06, 0, size * 0.08, -size * 0.02);
+            noStroke();
+            pop();
+        }
+
+        // Observation decks (multiple levels)
+        for (let d = 0; d < 2; d++) {
+            const dy = bob - size * 0.35 + d * size * 0.1;
+            fill(180, 190, 200, 150);
+            ellipse(0, dy, size * 0.5, size * 0.08);
+            // Deck railing
+            stroke(140, 150, 160);
+            strokeWeight(1);
+            noFill();
+            ellipse(0, dy, size * 0.52, size * 0.1);
+            noStroke();
+        }
+
+        // Solar power arrays (large panels)
+        fill(30, 60, 100);
+        rect(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, 2);
+        rect(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, 2);
+        // Panel details and wiring
+        stroke(20, 40, 80, 180);
+        strokeWeight(0.8);
+        for (let pd = -3; pd <= 3; pd++) {
+            const pdx = pd * (size * 0.05);
+            line(-size * 0.6 + pdx, bob + size * 0.07, -size * 0.6 + pdx, bob + size * 0.13);
+            line(size * 0.6 + pdx, bob + size * 0.07, size * 0.6 + pdx, bob + size * 0.13);
+        }
+        noStroke();
+
+        // Communication arrays and antennae
+        fill(100, 110, 120);
+        ellipse(-size * 0.3, bob - size * 0.2, size * 0.1, size * 0.06);
+        ellipse(size * 0.3, bob - size * 0.2, size * 0.1, size * 0.06);
+        // Antenna masts
+        stroke(80, 90, 100);
+        strokeWeight(1.5);
+        line(-size * 0.3, bob - size * 0.23, -size * 0.3, bob - size * 0.3);
+        line(size * 0.3, bob - size * 0.23, size * 0.3, bob - size * 0.3);
+        // Satellite dishes
+        fill(120, 130, 140);
+        ellipse(-size * 0.3, bob - size * 0.25, size * 0.04, size * 0.03);
+        ellipse(size * 0.3, bob - size * 0.25, size * 0.04, size * 0.03);
+        noStroke();
+
+        // Atmospheric sensors and weather instruments
+        for (let w = 0; w < 6; w++) {
+            const wa = w * TWO_PI / 6;
+            const wx = Math.cos(wa) * size * 0.45;
+            const wy = Math.sin(wa) * size * 0.45 + bob - size * 0.1;
+            fill(140, 150, 160);
+            ellipse(wx, wy, size * 0.03, size * 0.02);
+        }
+
+        // Cooling systems and vents
+        fill(120, 130, 140, 150);
+        rect(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, 1);
+        rect(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, 1);
+        // Heat exchanger fins
+        stroke(100, 110, 120, 120);
+        strokeWeight(0.6);
+        for (let f = 0; f < 5; f++) {
+            const fy = bob + size * 0.18 + f * size * 0.04;
+            line(-size * 0.06, fy, size * 0.06, fy);
+        }
+        noStroke();
+
+        // Advanced lighting and status indicators
+        const obsFlash1 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0));
+        const obsFlash2 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0) + 1);
+        const obsFlash3 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0) + 2);
+        fill(255, 255, 150, 255 * obsFlash1);
+        ellipse(-size * 0.2, bob - size * 0.4, 5, 5);
+        fill(150, 255, 255, 255 * obsFlash2);
+        ellipse(size * 0.2, bob - size * 0.4, 5, 5);
+        fill(255, 150, 255, 255 * obsFlash3);
+        ellipse(0, bob + size * 0.25, 5, 5);
+
+        // Research drone bay
+        fill(160, 170, 180);
+        rect(0, bob + size * 0.2, size * 0.15, size * 0.06, 3);
+        // Bay doors (animated)
+        const doorOpen = Math.sin(anim ? anim.domeRotation : 0) * 0.3;
+        fill(140, 150, 160);
+        rect(-size * 0.08 + doorOpen * size * 0.04, bob + size * 0.2, size * 0.06, size * 0.04, 1);
+        rect(size * 0.08 - doorOpen * size * 0.04, bob + size * 0.2, size * 0.06, size * 0.04, 1);
+
+        // Orbital positioning thrusters
+        for (let t = 0; t < 4; t++) {
+            const ta = t * TWO_PI / 4 + Math.PI / 4;
+            const tx = Math.cos(ta) * size * 0.55;
+            const ty = Math.sin(ta) * size * 0.55 + bob;
+            fill(100, 110, 120);
+            ellipse(tx, ty, size * 0.04, size * 0.03);
+        }
+
+        // Slow-moving calibration arm
+        push();
+        rotate(Math.sin((anim ? anim.telescopeSweep : 0) * 0.5) * 0.3);
+        stroke(120, 130, 140);
+        strokeWeight(1.5);
+        line(0, bob - size * 0.35, size * 0.25, bob - size * 0.45);
+        noStroke();
+        fill(140, 150, 160);
+        ellipse(size * 0.25, bob - size * 0.45, 6, 6);
+        pop();
+    },
+
+    weaponPlatform: function(obj, size, anim, bob) {
+        // Enhanced weapon platform: heavily armored battle station with multiple weapon systems, defense arrays, command center, and tactical systems
+        noStroke();
+
+        // Main armored hull (multi-layered defensive structure)
+        fill(60, 60, 70);
+        rect(0, bob, size * 0.8, size * 0.5, 10);
+        // Armor plating layers
+        fill(50, 50, 60);
+        rect(0, bob - size * 0.15, size * 0.7, size * 0.08, 6);
+        rect(0, bob + size * 0.15, size * 0.7, size * 0.08, 6);
+        // Reinforced corners
+        fill(40, 40, 50);
+        for (let c = 0; c < 4; c++) {
+            const cx = (c % 2 === 0 ? -1 : 1) * size * 0.35;
+            const cy = (c < 2 ? -1 : 1) * size * 0.2 + bob;
+            ellipse(cx, cy, size * 0.1, size * 0.08);
+        }
+
+        // Primary turret systems (heavy rotating cannons)
+        for (let t = 0; t < 4; t++) {
+            const tang = t * (TWO_PI / 4) + (anim ? anim.turretRotation : 0);
+            push();
+            rotate(tang);
+            translate(size * 0.3, bob);
+            // Turret base and armor
+            fill(70, 70, 80);
+            ellipse(0, 0, size * 0.15, size * 0.1);
+            // Main gun barrels (dual cannons)
+            fill(25, 25, 35);
+            rect(-size * 0.03, -size * 0.12, size * 0.06, size * 0.15, 2);
+            rect(size * 0.03, -size * 0.12, size * 0.06, size * 0.15, 2);
+            // Gun mantlet
+            fill(50, 50, 60);
+            ellipse(0, -size * 0.08, size * 0.08, size * 0.06);
+            // Targeting systems
+            fill(255, 0, 0, 180);
+            ellipse(0, -size * 0.06, size * 0.03, size * 0.03);
+            // Coaxial machine gun
+            fill(35, 35, 45);
+            rect(0, -size * 0.04, size * 0.02, size * 0.08, 1);
+            pop();
+        }
+
+        // Missile launch systems (vertical launch tubes)
+        for (let m = 0; m < 8; m++) {
+            const mang = m * (TWO_PI / 8);
+            const mx = Math.cos(mang) * size * 0.4;
+            const my = Math.sin(mang) * size * 0.4 + bob;
+            // Launch tube housing
+            fill(55, 55, 65);
+            rect(mx, my, size * 0.05, size * 0.1, 3);
+            // Missile visible in tube
+            fill(150, 30, 30);
+            ellipse(mx, my - size * 0.05, size * 0.04, size * 0.03);
+            // Launch rail details
+            stroke(40, 40, 50);
+            strokeWeight(0.8);
+            line(mx - size * 0.02, my - size * 0.05, mx - size * 0.02, my + size * 0.05);
+            line(mx + size * 0.02, my - size * 0.05, mx + size * 0.02, my + size * 0.05);
+            noStroke();
+        }
+
+        // Defense shield generators (pulsing energy domes) — enhanced visuals
+        for (let s = 0; s < 4; s++) {
+            const sang = s * (TWO_PI / 4) + Math.PI / 4;
+            const sx = Math.cos(sang) * size * 0.25;
+            const sy = Math.sin(sang) * size * 0.25 + bob - size * 0.2;
+
+            // Physical generator housing (dome + emitter)
+            fill(110, 130, 150);
+            ellipse(sx, sy, size * 0.14, size * 0.1);
+            fill(80, 95, 110);
+            ellipse(sx, sy + size * 0.02, size * 0.06, size * 0.04);
+
+            // Emitter arms
+            stroke(140, 160, 180); strokeWeight(1);
+            for (let ea = -1; ea <= 1; ea += 2) line(sx, sy + size * 0.01, sx + ea * size * 0.12, sy - size * 0.08);
+            noStroke();
+
+            // Pulsing shield visualization (concentric translucent rings)
+            const basePhase = (anim ? anim.defensePulse : obj.bobPhase * 0.006) + s * 0.9;
+            const sp = 0.6 + 0.4 * Math.sin(basePhase);
+            for (let r = 0; r < 3; r++) {
+                const rr = size * (0.16 + r * 0.06) * sp;
+                fill(100, 170, 230, 36 * (1 - r * 0.18) * (1 + 0.4 * Math.sin(basePhase + r)));
+                ellipse(sx, sy, rr, rr * 0.6);
+            }
+
+            // Generator frame and glow edge
+            stroke(120, 140, 160, 200); strokeWeight(1.2);
+            noFill();
+            ellipse(sx, sy, size * 0.16, size * 0.11);
+            stroke(160, 200, 255, 90); strokeWeight(0.8);
+            ellipse(sx, sy, size * 0.2 * sp, size * 0.12 * sp);
+            noStroke();
+        }
+
+        // Advanced radar and targeting array
+        push();
+        translate(0, bob - size * 0.25);
+        rotate(anim ? anim.weaponCharge : 0);
+        // Main radar dish
+        fill(100, 110, 120);
+        ellipse(0, 0, size * 0.2, size * 0.12);
+        // Radar emitter
+        fill(80, 90, 100);
+        ellipse(0, -size * 0.08, size * 0.08, size * 0.06);
+        // Scanning beams (animated spokes)
+        stroke(150, 200, 255, 120);
+        strokeWeight(1.2);
+        for (let r = 0; r < 12; r++) {
+            const rang = r * (TWO_PI / 12) + (anim ? anim.weaponCharge : 0) * 2;
+            const rx = Math.cos(rang) * size * 0.09;
+            const ry = Math.sin(rang) * size * 0.05;
+            line(0, 0, rx, ry);
+        }
+        noStroke();
+        pop();
+
+        // Point defense turrets (smaller anti-missile systems)
+        for (let p = 0; p < 6; p++) {
+            const pang = p * (TWO_PI / 6);
+            const px = Math.cos(pang) * size * 0.35;
+            const py = Math.sin(pang) * size * 0.35 + bob + size * 0.1;
+            fill(65, 65, 75);
+            ellipse(px, py, size * 0.06, size * 0.04);
+            // Defense gun
+            fill(30, 30, 40);
+            rect(px, py - size * 0.03, size * 0.02, size * 0.05, 1);
+        }
+
+        // Command and control center
+        fill(80, 85, 90);
+        rect(0, bob - size * 0.1, size * 0.3, size * 0.15, 4);
+        // Viewports
+        fill(150, 180, 200, 120);
+        for (let v = -1; v <= 1; v++) {
+            ellipse(v * size * 0.08, bob - size * 0.1, size * 0.04, size * 0.03);
+        }
+        // Antenna array on command center
+        fill(100, 110, 120);
+        rect(0, bob - size * 0.18, size * 0.06, size * 0.04, 2);
+
+        // External armor reinforcement plates
+        fill(70, 70, 80, 160);
+        for (let a = 0; a < 12; a++) {
+            const aang = a * (TWO_PI / 12);
+            const ax = Math.cos(aang) * size * 0.32;
+            const ay = Math.sin(aang) * size * 0.32 + bob;
+            ellipse(ax, ay, size * 0.08, size * 0.05);
+        }
+
+        // Power conduits and energy transfer systems
+        stroke(180, 120, 80, 140);
+        strokeWeight(2.5);
+        for (let c = 0; c < 4; c++) {
+            const cx = (c - 1.5) * size * 0.12;
+            line(cx, bob - size * 0.25, cx, bob + size * 0.25);
+        }
+        noStroke();
+
+        // Weapon charging capacitors (glowing when active)
+        const chargeLevel = 0.5 + 0.5 * Math.sin(anim ? anim.weaponCharge : 0);
+        for (let cap = 0; cap < 4; cap++) {
+            const ca = cap * (TWO_PI / 4) + Math.PI / 4;
+            const cax = Math.cos(ca) * size * 0.2;
+            const cay = Math.sin(ca) * size * 0.2 + bob;
+            fill(200, 150, 100, 100 + 100 * chargeLevel);
+            ellipse(cax, cay, size * 0.05 * (0.8 + 0.4 * chargeLevel), size * 0.04 * (0.8 + 0.4 * chargeLevel));
+        }
+
+        // Tactical status lights and indicators
+        const weaponFlash1 = 0.5 + 0.5 * Math.sin((anim ? anim.turretRotation : 0) * 2);
+        const weaponFlash2 = 0.5 + 0.5 * Math.sin((anim ? anim.turretRotation : 0) * 2 + 1);
+        const weaponFlash3 = 0.5 + 0.5 * Math.sin((anim ? anim.turretRotation : 0) * 2 + 2);
+        fill(255, 0, 0, 255 * weaponFlash1);
+        ellipse(-size * 0.3, bob - size * 0.22, 5, 5);
+        fill(255, 255, 0, 255 * weaponFlash2);
+        ellipse(size * 0.3, bob - size * 0.22, 5, 5);
+        fill(0, 255, 0, 255 * weaponFlash3);
+        ellipse(0, bob + size * 0.28, 5, 5);
+
+        // Maintenance and repair drones
+        for (let d = 0; d < 2; d++) {
+            const da = (anim ? anim.defensePulse : 0) + d * Math.PI;
+            const dr = size * 0.45;
+            const dx = Math.cos(da) * dr * 0.8;
+            const dy = Math.sin(da) * dr * 0.4 + bob;
+            fill(100, 100, 110);
+            ellipse(dx, dy, 10, 8);
+            // Repair arm
+            stroke(80, 80, 90, 150);
+            strokeWeight(0.8);
+            line(dx, dy, dx + Math.cos(da) * 8, dy + Math.sin(da) * 8);
+            noStroke();
+        }
+
+        // Heat dissipation systems
+        fill(130, 140, 150, 160);
+        rect(-size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, 1);
+        rect(size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, 1);
+        // Cooling fins
+        stroke(110, 120, 130, 130);
+        strokeWeight(0.6);
+        for (let f = 0; f < 6; f++) {
+            const fy = bob + size * 0.2 + f * size * 0.03;
+            line(-size * 0.04, fy, size * 0.04, fy);
+        }
+        noStroke();
+
+        // Orbital maneuvering thrusters
+        for (let t = 0; t < 8; t++) {
+            const ta = t * (TWO_PI / 8);
+            const tx = Math.cos(ta) * size * 0.42;
+            const ty = Math.sin(ta) * size * 0.42 + bob;
+            fill(90, 100, 110);
+            ellipse(tx, ty, size * 0.04, size * 0.03);
+            // Thruster glow
+            fill(150, 200, 255, 80);
+            ellipse(tx, ty + size * 0.02, size * 0.03, size * 0.02);
+        }
+
+        // Slow-moving targeting scanner arm
+        push();
+        rotate(Math.sin((anim ? anim.weaponCharge : 0) * 0.8) * 0.4);
+        stroke(110, 120, 130);
+        strokeWeight(1.5);
+        line(0, bob - size * 0.2, size * 0.28, bob - size * 0.3);
+        noStroke();
+        fill(120, 130, 140);
+        ellipse(size * 0.28, bob - size * 0.3, 6, 6);
+        pop();
+    },
+
     default: function(obj, size, anim, bob) {
         // fallback simple marker
         fill(200, 200, 200);
         ellipse(0, 0 + bob, size * 0.6, size * 0.6);
+    },
+
+    shieldGenerator: function(obj, size, anim, bob) {
+        // Standalone shield generator: visible dome, emitter pylons, pulsing energy field and protective ring
+        noStroke();
+        // Main housing
+        fill(110, 125, 140);
+        ellipse(0, bob, size * 0.36, size * 0.22);
+        fill(80, 95, 110);
+        ellipse(0, bob + size * 0.06, size * 0.16, size * 0.08);
+
+        // Emitter pylons around base
+        stroke(140, 160, 180); strokeWeight(1);
+        for (let p = 0; p < 4; p++) {
+            const pa = p * (TWO_PI / 4) + obj.bobPhase * 0.001;
+            const px = Math.cos(pa) * size * 0.28;
+            const py = Math.sin(pa) * size * 0.12 + bob;
+            line(px, py, px * 0.8, py - size * 0.12);
+            fill(130, 150, 170);
+            noStroke(); ellipse(px, py, size * 0.06, size * 0.04);
+        }
+
+        // Pulsing shield visualization (concentric faded rings)
+        const phase = (anim ? anim.shieldPulse : obj.bobPhase * 0.004);
+        const pulse = 0.6 + 0.45 * Math.sin(phase);
+        noStroke();
+        for (let r = 0; r < 4; r++) {
+            const alpha = 36 * Math.max(0, 1 - r * 0.22) * (0.6 + 0.4 * Math.sin(phase + r * 0.6));
+            fill(80, 160, 240, alpha);
+            ellipse(0, bob, size * (0.5 + r * 0.18) * pulse, size * (0.32 + r * 0.12) * pulse);
+        }
+
+        // Protective shimmer ring (subtle rotating highlight)
+        stroke(160, 200, 255, 120); strokeWeight(0.8);
+        const ringAng = Math.sin(phase * 0.8) * 0.35;
+        push(); rotate(ringAng);
+        noFill(); ellipse(0, bob, size * 0.72 * (0.9 + 0.05 * Math.sin(phase)), size * 0.48 * (0.9 + 0.05 * Math.sin(phase)));
+        pop();
+        noStroke();
+
+        // Status lights and small emitter glow
+        fill(255, 120, 140, 200); ellipse(-size * 0.18, bob - size * 0.02, 4, 3);
+        fill(120, 255, 180, 200); ellipse(size * 0.18, bob - size * 0.02, 4, 3);
     },
 
     solarSail: function(obj, size, anim, bob) {
@@ -1122,6 +1825,28 @@ class SpaceObject {
             case 'signalFlare':
                 anim.flarePhase = Math.random() * TWO_PI;
                 break;
+            case 'commDish':
+                anim.commDishSweep = Math.random() * TWO_PI;
+                anim.commDishTilt = Math.random() * 0.02 - 0.01;
+                break;
+            case 'spaceStation':
+                anim.stationLights = Math.random() * TWO_PI;
+                anim.dockingRing = Math.random() * TWO_PI;
+                anim.solarArray = Math.random() * TWO_PI;
+                break;
+            case 'observatoryDome':
+                anim.domeRotation = Math.random() * TWO_PI;
+                anim.telescopeSweep = Math.random() * TWO_PI;
+                anim.observationLights = Math.random() * TWO_PI;
+                break;
+            case 'weaponPlatform':
+                anim.turretRotation = Math.random() * TWO_PI;
+                anim.weaponCharge = Math.random() * TWO_PI;
+                anim.defensePulse = Math.random() * TWO_PI;
+                break;
+            case 'shieldGenerator':
+                anim.shieldPulse = Math.random() * TWO_PI;
+                break;
         }
         // unique id used by debris RNG and other persistent behaviors
         this.id = 'spaceobj_' + (Date.now() % 100000) + '_' + Math.floor(Math.random() * 10000);
@@ -1242,6 +1967,18 @@ class SpaceObject {
         if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.002 * dt;
         if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.00225 * dt;
         if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.003 * dt;
+        if (typeof anim.stationLights === 'number') anim.stationLights += 0.004 * dt;
+        if (typeof anim.dockingRing === 'number') anim.dockingRing += 0.001 * dt;
+        if (typeof anim.solarArray === 'number') anim.solarArray += 0.0005 * dt;
+        if (typeof anim.commDishSweep === 'number') anim.commDishSweep += 0.0025 * dt;
+        if (typeof anim.commDishTilt === 'number') anim.commDishTilt += 0.0012 * dt;
+        if (typeof anim.shieldPulse === 'number') anim.shieldPulse += 0.0032 * dt;
+        if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0008 * dt;
+        if (typeof anim.telescopeSweep === 'number') anim.telescopeSweep += 0.002 * dt;
+        if (typeof anim.observationLights === 'number') anim.observationLights += 0.0035 * dt;
+        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.005 * dt;
+        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.006 * dt;
+        if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0045 * dt;
 
         if (this._shards && this._shards.length) {
             for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
