@@ -76,7 +76,8 @@ class MissionGenerator {
         let baseBountyChance = 0.35;
         let baseIllegalDeliveryChance = 0.15;
         let baseAlienBountyChance = 0.20;
-        let baseSabotageChance = 0.06; // Small chance to offer high-risk sabotage missions
+        let baseSabotageChance = 0.6;
+        //let baseSabotageChance = 0.06; // Small chance to offer high-risk sabotage missions
         // Add placeholders for future types if needed
         // let baseMiningChance = 0.0;
         // let baseAssassinationChance = 0.0;

@@ -418,6 +418,7 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.06, bob + size * 0.02, 3, 3);
 
         pop(); // end swivel
+        pop(); // close swivel push() opened earlier
     },
 
     habitat: function(obj, size, anim, bob) {
