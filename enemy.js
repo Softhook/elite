@@ -410,6 +410,19 @@ class Enemy {
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
+
+        // If we're in the jump-fade phase, progress the timer and remove when done.
+        if (this._isJumpFading) {
+            this._jumpFadeTimer -= deltaSeconds;
+            // Freeze motion and actions while fading
+            if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
+            this.isThrusting = false;
+            this.currentWeapon = null;
+            if (this._jumpFadeTimer <= 0) {
+                this.destroyed = true;
+            }
+            return; // Skip normal updates while fading out to jump
+        }
         
         // Update weapon cooldown
         this.fireCooldown -= deltaSeconds;

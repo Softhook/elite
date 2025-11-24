@@ -573,7 +573,19 @@ class EnemyAIBehaviors {
                             this.inCombat = false;
                             this.haulerCombatTimer = undefined;
                             console.log(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Marking destroyed.`);
-                            this.destroyed = true;
+                            // Start a short fade-to-white jump effect instead of immediate explosion
+                            try {
+                                this._isJumpFading = true;
+                                this._jumpFadeDuration = 0.9; // seconds
+                                this._jumpFadeTimer = this._jumpFadeDuration;
+                                // Stop ship movement and weapons during fade
+                                if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
+                                this.isThrusting = false;
+                                this.currentWeapon = null;
+                            } catch (e) {
+                                // If anything goes wrong, fall back to immediate destroy
+                                this.destroyed = true;
+                            }
                             HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
                         }
                     shouldMove = false;

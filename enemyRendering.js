@@ -265,6 +265,19 @@ class EnemyRendering {
         // --- End Health Bar ---
 
         pop(); // End Ship Drawing Block
+        // --- Draw Jump Fade Overlay (when ship is leaving via jump zone) ---
+        if (this._isJumpFading && this._jumpFadeTimer > 0) {
+            const dur = (this._jumpFadeDuration && this._jumpFadeDuration > 0) ? this._jumpFadeDuration : 0.9;
+            const progress = 1 - (this._jumpFadeTimer / dur); // 0..1
+            const alpha = constrain(progress * 255, 0, 255);
+            push();
+            translate(this.pos.x, this.pos.y);
+            noStroke();
+            fill(255, 255, 255, alpha);
+            // Slightly larger than ship to cover shields/thrusters
+            ellipse(0, 0, this.size * 1.4, this.size * 1.4);
+            pop();
+        }
 
         // --- Draw Shield Effect (Separate transformation) ---
         if (!this.destroyed && this.shield > 0 && !this.shieldsDisabled) {
