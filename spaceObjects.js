@@ -29,7 +29,7 @@ const sizeMap = {
     nebulaFragment: 150,
     alienArtifact: 80,
     wreckage: 95,
-    observatoryDome: 85,
+    observatoryDome: 150,
     hydroponicsBay: 105,
     weaponPlatform: 200,
     shieldGenerator: 75,
@@ -86,6 +86,100 @@ const SpaceObjectRenderers = {
         fill(140, 150, 160);
         ellipse(size * 0.4, -size * 0.2 + bob, 4, 4);
         pop();
+    },
+
+    fuelDepot: function(obj, size, anim, bob) {
+        // Central fuel depot: clustered tanks, manifold glow, fueling hoses, and service drones
+        noStroke();
+
+        // platform shadow/base
+        fill(24, 28, 32);
+        ellipse(0, size * 0.18 + bob, size * 0.88, size * 0.26);
+
+        // tanks (three vertical tanks)
+        const tankW = size * 0.22;
+        const tankH = size * 0.44;
+        for (let i = -1; i <= 1; i++) {
+            push();
+            translate(i * (tankW * 1.25), -size * 0.05 + bob);
+            // tank body
+            fill(120, 130, 140);
+            rect(0, 0, tankW, tankH, 6);
+            // top and bottom caps
+            fill(150, 160, 170);
+            ellipse(0, -tankH * 0.5, tankW * 0.9, tankW * 0.45);
+            ellipse(0, tankH * 0.5, tankW * 0.9, tankW * 0.35);
+            // inspection window / gauge
+            fill(18, 100, 160, 200);
+            rect(0, -tankH * 0.08, tankW * 0.28, tankH * 0.36, 3);
+            // small status lights
+            const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + i);
+            fill(255 * (1 - flash), 255 * flash, 80, 220);
+            ellipse(-tankW * 0.25, -tankH * 0.25, 4, 4);
+            ellipse(tankW * 0.25, tankH * 0.25, 3, 3);
+            pop();
+        }
+
+        // manifold pipe connecting tanks
+        stroke(90, 90, 100);
+        strokeWeight(3);
+        line(-tankW * 1.25, -size * 0.15 + bob, 0, -size * 0.15 + bob);
+        line(tankW * 1.25, -size * 0.15 + bob, 0, -size * 0.15 + bob);
+        noStroke();
+
+        // glowing manifold indicator
+        const phase = (anim && typeof anim.fuelPulse === 'number') ? anim.fuelPulse : obj.bobPhase;
+        const glow = 0.6 + 0.4 * Math.sin(phase * 0.006);
+        fill(80, 200, 220, 80 + 80 * glow);
+        ellipse(0, -size * 0.15 + bob, size * 0.36 * (0.9 + 0.1 * glow), size * 0.12 * (0.9 + 0.1 * glow));
+
+        // fueling hoses with animated flow particles (bezier paths)
+        for (let h = -1; h <= 1; h += 2) {
+            const hx = h * (tankW * 1.05);
+            const hy = -size * 0.15 + bob;
+            const tx = hx + h * (size * 0.7);
+            const ty = hy + size * 0.18;
+            // hose curve
+            stroke(60, 120, 140, 180);
+            strokeWeight(2);
+            noFill();
+            bezier(hx, hy, hx + h * (size * 0.18), hy + size * 0.08, tx - h * (size * 0.12), ty - size * 0.06, tx, ty);
+            noStroke();
+            // animated flow dots along hose
+            const hosePhase = (anim && typeof anim.hosePhase === 'number') ? anim.hosePhase : obj.bobPhase;
+            for (let p = 0; p < 4; p++) {
+                const t = ( (hosePhase * 0.004) + p * 0.24 ) % 1;
+                const bx = bezierPoint(hx, hx + h * (size * 0.18), tx - h * (size * 0.12), tx, t);
+                const by = bezierPoint(hy, hy + size * 0.08, ty - size * 0.06, ty, t);
+                fill(80, 200, 255, 180 - p * 30);
+                ellipse(bx, by, 3, 2);
+            }
+        }
+
+        // small service drones that circle the depot
+        if (!obj._fuelDrones) {
+            obj._fuelDrones = [];
+            for (let d = 0; d < 2; d++) obj._fuelDrones.push({ ang: Math.random() * TWO_PI, dist: size * 0.5, phase: Math.random() * TWO_PI });
+        }
+        for (let d = 0; d < obj._fuelDrones.length; d++) {
+            const fd = obj._fuelDrones[d];
+            fd.ang += 0.0025;
+            const dx = Math.cos(fd.ang) * fd.dist;
+            const dy = Math.sin(fd.ang) * fd.dist * 0.38 + bob * 0.02;
+            fill(220, 200, 160);
+            ellipse(dx, dy, 6, 4);
+            stroke(200, 180, 140, 120);
+            strokeWeight(0.6);
+            line(dx, dy, dx - Math.cos(fd.ang) * 6, dy - Math.sin(fd.ang) * 4);
+            noStroke();
+        }
+
+        // landing/warning lights and small markers
+        const warn = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.28);
+        fill(255, 100, 60, 220 * warn);
+        ellipse(0, size * 0.38 + bob, 6, 4);
+        fill(255, 255, 0, 180 * warn);
+        ellipse(-size * 0.18, size * 0.36 + bob, 4, 3);
     },
 
     telescope: function(obj, size, anim, bob) {
@@ -1521,6 +1615,107 @@ const SpaceObjectRenderers = {
         pop();
     },
 
+    hydroponicsBay: function(obj, size, anim, bob) {
+        // Hydroponics Bay: rows of grow trays, overhead LED arrays, nutrient pipes and a maintenance arm
+        push();
+        noStroke();
+
+        // translucent dome/top shield
+        fill(200, 235, 250, 80);
+        ellipse(0, -size * 0.18 + bob, size * 0.9, size * 0.42);
+        fill(180, 210, 230, 60);
+        ellipse(0, -size * 0.18 + bob, size * 0.78, size * 0.36);
+
+        // platform base shadow
+        fill(20, 30, 24, 220);
+        ellipse(0, size * 0.22 + bob, size * 0.9, size * 0.22);
+
+        // grow tray rows
+        const rows = 3;
+        const trayW = size * 0.7;
+        const trayH = size * 0.12;
+        for (let r = 0; r < rows; r++) {
+            const ry = -size * 0.04 + bob + r * (trayH + 6);
+            // tray body
+            fill(40, 60, 50);
+            rect(0, ry, trayW, trayH, 4);
+            // nutrient channel
+            fill(30, 90, 110);
+            rect(-trayW * 0.36, ry + trayH * 0.18, trayW * 0.18, trayH * 0.22, 2);
+            rect(trayW * 0.36, ry + trayH * 0.18, trayW * 0.18, trayH * 0.22, 2);
+            // plants (stylized leaves) with small sway from hydroponicCycle
+            for (let p = -2; p <= 2; p++) {
+                const px = p * (trayW * 0.18);
+                const sway = Math.sin((anim ? anim.hydroponicCycle : obj.bobPhase) * 0.9 + p) * 2;
+                fill(80, 200, 120, 240);
+                ellipse(px, ry - trayH * 0.12 + sway, trayH * 0.48, trayH * 0.7);
+                fill(40, 120, 70, 200);
+                ellipse(px, ry - trayH * 0.12 + sway + 2, trayH * 0.2, trayH * 0.3);
+            }
+            // tray separators / rails
+            stroke(16, 24, 20, 160); strokeWeight(0.8);
+            line(-trayW * 0.5, ry + trayH * 0.45, trayW * 0.5, ry + trayH * 0.45);
+            noStroke();
+        }
+
+        // overhead LED grow light bars (animated intensity)
+        const lightPhase = (anim ? anim.lightPhase : obj.bobPhase * 0.5);
+        for (let l = -1; l <= 1; l++) {
+            const lx = l * (size * 0.28);
+            const ly = -size * 0.28 + bob;
+            // support rod
+            stroke(110, 120, 110); strokeWeight(1);
+            line(lx, ly - 6, lx, ly + size * 0.18);
+            noStroke();
+            // light bar with pulsing pink/blue spectrum mix
+            const intensity = 0.6 + 0.4 * Math.sin(lightPhase * (1 + l * 0.12) + l);
+            fill(220 * intensity, 120 * intensity, 200 * intensity, 160 * intensity);
+            rect(lx, ly + size * 0.06, size * 0.36, 6, 3);
+        }
+
+        // central reservoir / nutrient tank
+        fill(40, 80, 100);
+        rect(0, size * 0.36 + bob, size * 0.32, size * 0.12, 4);
+        fill(80, 180, 200, 160);
+        rect(0, size * 0.36 + bob, size * 0.24, size * 0.06, 2);
+
+        // nutrient pipes and animated flow indicators
+        stroke(90, 120, 110); strokeWeight(1.6);
+        line(-size * 0.18, size * 0.36 + bob, -size * 0.36, -size * 0.02 + bob);
+        line(size * 0.18, size * 0.36 + bob, size * 0.36, -size * 0.02 + bob);
+        noStroke();
+        // flowing droplets along pipes (cheap animation)
+        const nf = (anim ? anim.nutrientFlow : obj.bobPhase * 0.002);
+        fill(100, 200, 220, 200);
+        ellipse(-size * 0.26 + Math.sin(nf) * 6, size * 0.18 + bob, 4, 3);
+        ellipse(size * 0.26 + Math.cos(nf * 1.3) * 6, size * 0.18 + bob, 4, 3);
+
+        // maintenance arm that reaches across trays
+        push();
+        translate(-size * 0.34, -size * 0.06 + bob);
+        rotate(Math.sin(anim ? anim.armPhase : obj.bobPhase * 0.002) * 0.45);
+        stroke(140, 150, 140); strokeWeight(2);
+        line(0, 0, size * 0.5, 0);
+        noStroke();
+        fill(160, 160, 170);
+        ellipse(size * 0.5, 0, 6, 6);
+        pop();
+
+        // small status lights and indicators around bay
+        const status = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.28);
+        fill(255, 200, 80, 200 * status);
+        ellipse(-size * 0.4, -size * 0.18 + bob, 4, 3);
+        fill(120, 220, 180, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.22)));
+        ellipse(size * 0.4, -size * 0.18 + bob, 4, 3);
+
+        // small service bot docks at edges
+        fill(200, 180, 140);
+        rect(-size * 0.5, size * 0.34 + bob, 10, 6, 2);
+        rect(size * 0.5, size * 0.34 + bob, 10, 6, 2);
+
+        pop();
+    },
+
     decoyBuoy: function(obj, size, anim, bob) {
         // small, cheap decoy that pulses and emits short-lived flares
         noStroke();
@@ -1679,6 +1874,61 @@ const SpaceObjectRenderers = {
         pop();
     },
 
+    alienArtifact: function(obj, size, anim, bob) {
+        // Amorphous alien artifact blob: layered lobes, pulsing core, drifting motes and subtle glyphs
+        noStroke();
+        const phase = (typeof anim.artifactPhase === 'number') ? anim.artifactPhase : obj.bobPhase;
+        const jitter = (typeof anim.artifactJitter === 'number') ? anim.artifactJitter : 0.4;
+
+        // Base multi-layered lobes (give it an organic, shifting silhouette)
+        for (let i = 0; i < 5; i++) {
+            const lPhase = phase * (0.9 + i * 0.06) + i * 1.3;
+            const lx = Math.cos(lPhase) * size * 0.06 * (1 + i * 0.08) + Math.sin(phase * 0.7 + i) * jitter * 2;
+            const ly = Math.sin(lPhase * 1.1) * size * 0.04 * (1 + i * 0.06) + bob * (0.06 + i * 0.02);
+            const lw = size * (0.9 - i * 0.12) * (0.88 + 0.06 * Math.sin(phase * (1 + i * 0.2)));
+            const lh = size * (0.6 - i * 0.08);
+            fill(40 + i * 18, 120 + i * 18, 160 + i * 10, 140 - i * 18);
+            ellipse(lx, ly, lw, lh);
+        }
+
+        // Subtle translucent veins reaching out from the core
+        stroke(140, 210, 240, 110);
+        strokeWeight(1);
+        for (let v = 0; v < 6; v++) {
+            const a = v * (TWO_PI / 6) + phase * 0.7;
+            const vx = Math.cos(a) * size * 0.22;
+            const vy = Math.sin(a) * size * 0.14 + bob * 0.03;
+            line( Math.cos(phase * 0.2) * (size * 0.02), bob * 0.01, vx, vy );
+        }
+        noStroke();
+
+        // Pulsing inner core
+        const corePulse = 0.6 + 0.6 * Math.sin(phase * 1.6);
+        fill(200, 255, 245, 220 * corePulse);
+        ellipse(0, bob * 0.04, size * 0.28 * (0.8 + 0.2 * Math.sin(phase * 1.7)), size * 0.18 * (0.8 + 0.2 * Math.sin(phase * 1.7)));
+
+        // Drifting motes and micro-particles for atmosphere
+        for (let p = 0; p < 4; p++) {
+            const pa = phase * (0.6 + p * 0.12) + p * 1.9;
+            const pr = size * (0.38 + p * 0.06);
+            fill(120, 200, 240, 60 + p * 10);
+            ellipse(Math.cos(pa) * pr * 0.6, Math.sin(pa) * pr * 0.34 + bob * 0.12, 3 + (p % 2), 2 + (p % 2));
+        }
+
+        // Tiny rotating glyphs that subtly orbit the blob (give alien feel)
+        push();
+        rotate(phase * 0.18);
+        fill(220, 255, 230, 150);
+        for (let g = 0; g < 3; g++) {
+            const ga = g * (TWO_PI / 3);
+            const gx = Math.cos(ga) * size * 0.32;
+            const gy = Math.sin(ga) * size * 0.18 + bob * 0.02;
+            ellipse(gx, gy, 6, 4);
+            // small rotated ticks
+            push(); translate(gx, gy); rotate(phase * 0.6 + g); fill(180, 240, 255, 120); rect(0, -2, 6, 1, 1); pop();
+        }
+        pop();
+    },
     signalFlare: function(obj, size, anim, bob) {
         // calm, aesthetic signal flare: soft core, slow breathing halo, and gentle drifting motes
         noStroke();
@@ -1784,11 +2034,27 @@ class SpaceObject {
                 anim.hydroponicSpin = Math.random() * 0.0005;
                 anim.pollinatorPhase = Math.random() * TWO_PI;
                 break;
+            case 'hydroponicsBay':
+                // hydroponics bay animation seeds
+                anim.hydroponicCycle = Math.random() * TWO_PI;
+                anim.lightPhase = Math.random() * TWO_PI;
+                anim.armPhase = Math.random() * TWO_PI;
+                anim.nutrientFlow = Math.random() * TWO_PI;
+                break;
+            case 'fuelDepot':
+                // Fuel depot animation seeds for manifold glow and hose flow
+                anim.fuelPulse = Math.random() * TWO_PI;
+                anim.hosePhase = Math.random() * TWO_PI;
+                break;
             case 'decoyBuoy':
                 anim.decoyPulse = Math.random() * TWO_PI;
                 break;
             case 'miningPlatform':
                 anim.miningSpin = Math.random() * TWO_PI;
+                break;
+            case 'alienArtifact':
+                anim.artifactPhase = Math.random() * TWO_PI;
+                anim.artifactJitter = Math.random() * 0.6;
                 break;
             case 'ancientRelic':
                 anim.relicPulse = Math.random() * TWO_PI;
@@ -1933,10 +2199,15 @@ class SpaceObject {
         if (typeof anim.gardenBreeze === 'number') anim.gardenBreeze += 0.00175 * dt;
         if (typeof anim.gardenShadeAngle === 'number') anim.gardenShadeAngle += 0.00012 * dt;
         if (typeof anim.hydroponicSpin === 'number') anim.hydroponicSpin += 0.00025 * dt;
+        if (typeof anim.hydroponicCycle === 'number') anim.hydroponicCycle += 0.002 * dt;
+        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
+        if (typeof anim.armPhase === 'number') anim.armPhase += 0.003 * dt;
+        if (typeof anim.nutrientFlow === 'number') anim.nutrientFlow += 0.0025 * dt;
         if (typeof anim.pollinatorPhase === 'number') anim.pollinatorPhase += 0.0011 * dt;
         if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.006 * dt;
         if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.002 * dt;
         if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.00225 * dt;
+        if (typeof anim.artifactPhase === 'number') anim.artifactPhase += 0.0035 * dt;
         if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.003 * dt;
         if (typeof anim.stationLights === 'number') anim.stationLights += 0.004 * dt;
         if (typeof anim.dockingRing === 'number') anim.dockingRing += 0.001 * dt;
