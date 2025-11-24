@@ -42,6 +42,7 @@ class Player {
         // Autopilot properties
         this.autopilotEnabled = false;
         this.autopilotTarget = null; // 'station' or 'jumpzone'
+        this.autopilotPlanetIndex = -1; // -1 = not cycling planets
         this.autopilotThrottleMultiplier = 0.8; // Conservative speed for safety
         this.autopilotRotationMultiplier = 0.9; // Slightly reduced rotation speed
         this.lastDamageTime = 0; // Track when player was last hit
@@ -1982,7 +1983,8 @@ handleInput() {
         if (this.autopilotEnabled) {
             console.log("Autopilot disabled");
             this.autopilotEnabled = false;
-            this.autopilotTarget = null;
+                this.autopilotTarget = null;
+                this.autopilotPlanetIndex = -1;
             
             // Reset critical flags when disabling autopilot
             this.isThrusting = false;        // Ensure thrusting is stopped
@@ -1992,6 +1994,41 @@ handleInput() {
             // Only track when autopilot was disabled
             this.lastDisableTime = millis();
         }
+    }
+
+    /**
+     * Cycle autopilot to the next planet in the current system.
+     * If currently not autopiloting, or currently targeting the station,
+     * this will enable autopilot and target the first planet.
+     */
+    cycleAutopilotPlanet() {
+        if (!this.currentSystem) {
+            if (uiManager) uiManager.addMessage('Autopilot error: System data unavailable');
+            return;
+        }
+
+        const planets = this.currentSystem.planets || [];
+        if (!planets || planets.length === 0) {
+            if (uiManager) uiManager.addMessage('No planets in this system');
+            return;
+        }
+
+        // Determine next index
+        let next = 0;
+        if (this.autopilotEnabled && this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
+            const cur = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
+            next = (typeof cur === 'number' && cur >= 0) ? (cur + 1) % planets.length : 0;
+        }
+
+        // Enable autopilot and point at the selected planet
+        this.autopilotEnabled = true;
+        this.autopilotTarget = { type: 'planet', index: next };
+        this.autopilotPlanetIndex = next;
+
+        const p = planets[next];
+        const name = (p && p.name) ? p.name : `Planet ${next+1}`;
+        if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name} (${next+1}/${planets.length})`);
+        console.log(`Autopilot planet target set to index ${next} (${name})`);
     }
     
     /**
@@ -2044,6 +2081,32 @@ handleInput() {
             if (jumpZoneDistance < this.currentSystem.jumpZoneRadius * 0.8) {
                 this.disableAutopilot();
                 if (uiManager) uiManager.addMessage("Autopilot disengaged: Jump zone reached");
+                return;
+            }
+        }
+        // Planet target: object with {type:'planet', index: n}
+        else if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
+            const idx = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
+            const planets = this.currentSystem.planets || [];
+            if (!planets || planets.length === 0 || idx < 0 || idx >= planets.length) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage('Autopilot disengaged: No valid planet target');
+                return;
+            }
+            const planet = planets[idx];
+            if (!planet || !planet.pos) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage('Autopilot disengaged: Planet data unavailable');
+                return;
+            }
+            targetPos = planet.pos.copy();
+
+            // Consider autopilot finished when close enough to atmospheric radius / planet size
+            const planetDistance = p5.Vector.dist(this.pos, targetPos);
+            const approachRadius = (planet.size || 200) * 0.8;
+            if (planetDistance < approachRadius) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage(`Autopilot disengaged: Approaching ${planet.name || 'planet'}`);
                 return;
             }
         }

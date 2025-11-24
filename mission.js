@@ -8,6 +8,7 @@ const MISSION_TYPE = {
     BOUNTY_POLICE: 'Bounty',
     BOUNTY_ALIEN: 'Alien Bounty', // Add this new type
     ASSASSINATION: 'Assassination', // Named-target assassination
+    SABOTAGE: 'Sabotage' // Destroy a specific space object near a planet
     //ASSASSINATION_CLEAN: 'Official Assassination',
     //ASSASSINATION_WANTED: 'Political Assassination',
     //COURIER: 'Courier (Highspeed Delivery)',
@@ -68,6 +69,18 @@ class Mission {
         Object.defineProperty(this, '_guardRefs', { value: [], writable: true, enumerable: false, configurable: true });
         this._guardIds = data._guardIds || [];
 
+        // --- Sabotage-specific fields ---
+        // `offeringFaction`: who offers the mission (e.g., 'Separatist','Imperial','Military')
+        // `targetFaction`: faction that owns/values the object to be destroyed (derived if not provided)
+        // `targetObjectType`: human readable type of the object to destroy (e.g., 'Communication Relay', 'Fuel Array')
+        // `targetObjectId`: persisted id of the specific object if available (optional)
+        // `targetPlanetName`: the planet near which the object is located
+        this.offeringFaction = data.offeringFaction || null;
+        this.targetFaction = data.targetFaction || null;
+        this.targetObjectType = data.targetObjectType || null;
+        this.targetObjectId = data.targetObjectId || null;
+        this.targetPlanetName = data.targetPlanetName || null;
+
         // --- Tracking Properties ---
         // Initialize status and progress from saved data if present, otherwise use defaults for a new mission
         this.status = data.status || 'Available'; // 'Available', 'Active', 'Completable', 'Completed', 'Failed'
@@ -75,6 +88,21 @@ class Mission {
 
         // Optional log to trace object creation/rehydration
         console.log(`Mission object created/rehydrated: ID=${this.id.toString().slice(-5)}, Title=${this.title}, Status=${this.status}, Progress=${this.progressCount}, TargetName=${this.targetName}`);
+
+        // If this is a sabotage mission and no description provided, generate a flavored backstory
+        if (this.type === MISSION_TYPE.SABOTAGE && (!data.description || data.description === 'No description provided.')) {
+            this.description = this._generateSabotageBackstory();
+        }
+
+        // Ensure sabotage missions carry very high rewards by default
+        if (this.type === MISSION_TYPE.SABOTAGE) {
+            if (data.rewardCredits != null) {
+                this.rewardCredits = data.rewardCredits;
+            } else {
+                // Default large reward; allow later override when mission generated
+                this.rewardCredits = 100000; // 100k credits baseline
+            }
+        }
     }
 
     /** Sets the mission status to 'Active'. Called by Player.acceptMission. */
@@ -154,6 +182,42 @@ class Mission {
                 }
             }
         } catch (e) { console.error('Mission.activate (assassination) failed:', e); }
+    }
+
+    /**
+     * Generate a flavorful backstory for sabotage missions when none provided.
+     * Uses `offeringFaction`, `targetFaction`, `targetObjectType`, and `targetPlanetName` if available.
+     */
+    _generateSabotageBackstory() {
+        const offer = this.offeringFaction || 'A local faction';
+        // Derive a likely opposing faction if none provided
+        let target = this.targetFaction;
+        if (!target) {
+            if (offer && offer.toLowerCase().includes('separat')) target = 'Imperial';
+            else if (offer && offer.toLowerCase().includes('imper')) target = 'Separatist';
+            else if (offer && offer.toLowerCase().includes('milit')) target = 'Alien';
+            else target = 'a rival faction';
+        }
+        const obj = this.targetObjectType || 'strategic installation';
+        const planet = this.targetPlanetName ? `close to ${this.targetPlanetName}` : 'in orbit of a nearby planet';
+
+        let reason = '';
+        // Create faction-aware reasons
+        if (offer && offer.toLowerCase().includes('separat')) {
+            reason = `The ${offer} claim the ${obj} is a forward listening post used by ${target} forces to track convoy movements and coordinate punitive strikes. Destroying it would blind the occupiers and open a window for daring raids.`;
+        } else if (offer && offer.toLowerCase().includes('imper')) {
+            reason = `Agents of the ${offer} have surfaced intelligence that the ${obj} is a covert separatist supply hub funneling weapons through the system. Removing it would disrupt their logistics and restore order.`;
+        } else if (offer && offer.toLowerCase().includes('milit')) {
+            reason = `Military analysts suspect the ${obj} has been corrupted by alien tech — its emissions are destabilizing local navigation and threatening civilian traffic. The military wants it eliminated before it spreads.`;
+        } else {
+            reason = `Intelligence suggests the ${obj} is a critical node for ${target}. Removing it would significantly weaken their presence in the region.`;
+        }
+
+        return `Sabotage Objective: Destroy the ${obj} ${planet}.
+
+Background: ${reason}
+
+Note: This operation is highly sensitive and likely illegal. Expect strong resistance from ${target} assets in the area.`;
     }
 
     /** Per-frame update called from Player.update to monitor special mission targets. */
@@ -316,6 +380,13 @@ class Mission {
         if (this.type === MISSION_TYPE.ASSASSINATION && this.targetName) {
             return `${statusPrefix}${this.title} [Target: ${this.targetName}] - ${this.rewardCredits}cr`;
         }
+        // Summary for sabotage missions
+        if (this.type === MISSION_TYPE.SABOTAGE) {
+            const obj = this.targetObjectType || 'Strategic Object';
+            const loc = this.targetPlanetName || this.destinationSystem || 'Target System';
+            const factionInfo = this.offeringFaction ? ` (${this.offeringFaction})` : '';
+            return `${statusPrefix}${this.title} [Sabotage${factionInfo}: ${obj} near ${loc}] - ${this.rewardCredits}cr`;
+        }
         // Basic summary with status prefix
         return `${statusPrefix}${this.title}${progressInfo} - ${this.rewardCredits}cr`;
     }
@@ -364,6 +435,16 @@ class Mission {
          if (this.type === MISSION_TYPE.ASSASSINATION) {
              if (this.targetName) details += `Named Target: ${this.targetName}\n`;
              if (this.targetShipType) details += `Target Ship: ${this.targetShipType}\n`;
+         }
+
+         // Add explicit sabotage info
+         if (this.type === MISSION_TYPE.SABOTAGE) {
+             details += `\nObjective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
+             if (this.targetPlanetName) details += `Location: Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}\n`;
+             if (this.offeringFaction) details += `Offered By: ${this.offeringFaction}\n`;
+             if (this.targetFaction) details += `Target Faction: ${this.targetFaction}\n`;
+             details += `Reward (High): ${this.rewardCredits} Credits\n`;
+             details += `\nBackstory:\n${this.description}\n`;
          }
 
          return details;

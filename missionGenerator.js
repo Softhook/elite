@@ -76,6 +76,7 @@ class MissionGenerator {
         let baseBountyChance = 0.35;
         let baseIllegalDeliveryChance = 0.15;
         let baseAlienBountyChance = 0.20;
+        let baseSabotageChance = 0.06; // Small chance to offer high-risk sabotage missions
         // Add placeholders for future types if needed
         // let baseMiningChance = 0.0;
         // let baseAssassinationChance = 0.0;
@@ -86,6 +87,7 @@ class MissionGenerator {
         let adjustedBounty = baseBountyChance;
         let adjustedIllegal = baseIllegalDeliveryChance;
         let adjustedAlienBounty = baseAlienBountyChance;
+        let adjustedSabotage = baseSabotageChance;
         let adjustedOther = baseOtherChance;
 
         // Security Modifiers
@@ -152,6 +154,7 @@ class MissionGenerator {
              case 'Imperial':
                   adjustedLegal *= 1.3;  // More luxurious trade
                   adjustedBounty *= 0.8; // Less bounty hunting - stable space
+                adjustedSabotage *= 0.3; // Less likely to get sabotage offers here
                   // Could have special high-value transport missions
                   break;
         }
@@ -188,7 +191,7 @@ class MissionGenerator {
         adjustedAlienBounty = max(0, adjustedAlienBounty); 
         adjustedOther = max(0, adjustedOther); // Include any other types
 
-        let totalAdjustedChance = adjustedLegal + adjustedBounty + adjustedIllegal + adjustedOther; // Sum of all chances
+        let totalAdjustedChance = adjustedLegal + adjustedBounty + adjustedIllegal + adjustedAlienBounty + adjustedSabotage + adjustedOther; // Sum of all chances
 
         if (totalAdjustedChance <= 0) {
             console.warn("Mission Gen: Total adjusted chance is zero! Defaulting probabilities.");
@@ -206,6 +209,7 @@ class MissionGenerator {
         let normBounty = adjustedBounty / totalAdjustedChance;
         let normIllegal = adjustedIllegal / totalAdjustedChance;
         let normAlienBounty = adjustedAlienBounty / totalAdjustedChance;
+        let normSabotage = adjustedSabotage / totalAdjustedChance;
         // let normOther = adjustedOther / totalAdjustedChance; // Normalize others if added
 
         // --- Generate Missions based on Normalized Probabilities ---
@@ -220,8 +224,10 @@ class MissionGenerator {
                     mission = this.createBountyMission(currentSystem, currentStation, galaxy, player); // Pirate Bounty
                 } else if (missionTypeRoll < normLegal + normBounty + normIllegal) {
                      mission = this.createIllegalDelivery(currentSystem, currentStation, galaxy, player);
-                } else if (missionTypeRoll < normLegal + normBounty + normIllegal + normAlienBounty) { // <-- Add Alien Bounty slot
+                 } else if (missionTypeRoll < normLegal + normBounty + normIllegal + normAlienBounty) { // <-- Alien Bounty slot
                      mission = this.createAlienBountyMission(currentSystem, currentStation, galaxy, player);
+                 } else if (missionTypeRoll < normLegal + normBounty + normIllegal + normAlienBounty + normSabotage) {
+                     mission = this.createSabotageMission(currentSystem, currentStation, galaxy, player);
                 } else {
                     // Fallback / 'Other' category if roll exceeds defined types
                     // For now, maybe generate another legal delivery as fallback?
@@ -247,8 +253,21 @@ class MissionGenerator {
         } // End mission generation loop
 
         MISSION_LOG("[MissionGenerator] Missions generated:", availableMissions);
-
         MISSION_LOG(`Generated ${availableMissions.length} missions (Sec: ${systemSecurity}, Econ: ${systemEconomy}).`);
+
+        // Quick runtime summary for debugging: counts per mission type
+        try {
+            const counts = {};
+            for (let m of availableMissions) {
+                const t = m?.type || 'Unknown';
+                counts[t] = (counts[t] || 0) + 1;
+            }
+            console.log('[MissionGenerator] Mission type counts:', counts);
+            // Explicitly warn if no assassination missions were generated this call
+            if (!counts[MISSION_TYPE.ASSASSINATION]) {
+                console.log('[MissionGenerator] Note: No assassination missions generated in this pass.');
+            }
+        } catch (e) { console.warn('MissionGenerator: Failed to compute mission counts:', e); }
         return availableMissions;
     } // --- End generateMissions ---
 
@@ -578,6 +597,80 @@ class MissionGenerator {
             // Extra fields to drive guard spawning at activation (runtime-only semantics handled in Mission.activate)
             guardCount: guardCount,
             guardShipType: guardShipType
+        });
+    }
+
+    /**
+     * Creates a Sabotage Mission: travel to another system and destroy a specific space object
+     * located near a named planet. Offered by opposing factions (Separatist, Imperial, Military).
+     */
+    static createSabotageMission(originSystem, originStation, galaxy, player) {
+        // Find a destination within reasonable range but allow deeper jumps
+        let destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 6);
+        if (!destinationInfo || !destinationInfo.system) return null;
+        const destSystem = destinationInfo.system;
+
+        // Choose a planet if available (fallback to 'Outer Orbit')
+        let planetName = 'Outer Orbit';
+        try {
+            if (Array.isArray(destSystem.planets) && destSystem.planets.length > 0) {
+                const p = destSystem.planets[Math.floor(random(0, destSystem.planets.length))];
+                if (p && p.name) planetName = p.name;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Offering faction heuristics
+        let offeringFaction = originStation?.faction || originSystem?.economyType || null;
+        if (typeof offeringFaction === 'string') {
+            if (offeringFaction.toLowerCase().includes('separat')) offeringFaction = 'Separatist';
+            else if (offeringFaction.toLowerCase().includes('imper')) offeringFaction = 'Imperial';
+            else if (offeringFaction.toLowerCase().includes('milit')) offeringFaction = 'Military';
+            else offeringFaction = offeringFaction; // keep as-is
+        } else {
+            // Pick a likely offering faction if undetermined
+            const pool = ['Separatist','Imperial','Military'];
+            offeringFaction = pool[Math.floor(random(0, pool.length))];
+        }
+
+        // Determine a logical target faction (opposing)
+        let targetFaction = null;
+        if (offeringFaction === 'Separatist') targetFaction = 'Imperial';
+        else if (offeringFaction === 'Imperial') targetFaction = 'Separatist';
+        else if (offeringFaction === 'Military') targetFaction = 'Alien';
+        else targetFaction = 'Rival Faction';
+
+        // Choose a target object type
+        const sabotTypes = ['Communication Relay', 'Fuel Array', 'Comms Satellite', 'Sensor Platform', 'Warp Beacon', 'Data Spire', 'Drive Inhibitor', 'Supply Hub', 'Alien Monolith'];
+        const targetObjectType = sabotTypes[Math.floor(random(0, sabotTypes.length))];
+
+        // Calculate reward based on jump distance (use galaxy helper if available)
+        let jumpDistance = Infinity;
+        try { jumpDistance = galaxy.getJumpDistance(originSystem.systemIndex, destSystem.systemIndex); } catch (e) { jumpDistance = 3; }
+        if (!isFinite(jumpDistance) || jumpDistance <= 0) jumpDistance = 3;
+
+        const baseReward = 50000; // Very high base
+        const jumpMultiplier = 8000; // Reward per jump
+        let reward = Math.floor(baseReward + Math.floor(jumpDistance * jumpMultiplier) + Math.floor(random(10000, 50000)));
+
+        // Build a terse title; detailed backstory will be generated by Mission if description left blank
+        const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
+        const title = `Sabotage: Destroy ${targetObjectType} near ${planetName} (${jumpText})`;
+
+        return new Mission({
+            type: MISSION_TYPE.SABOTAGE,
+            title: title,
+            description: '', // Let Mission class generate full backstory using offered/target fields
+            originSystem: originSystem.name,
+            originStation: originStation.name,
+            destinationSystem: destSystem.name,
+            destinationStation: null,
+            targetObjectType: targetObjectType,
+            targetPlanetName: planetName,
+            offeringFaction: offeringFaction,
+            targetFaction: targetFaction,
+            rewardCredits: reward,
+            isIllegal: true,
+            progressCount: 0
         });
     }
 

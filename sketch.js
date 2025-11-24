@@ -369,11 +369,31 @@ function keyPressed() {
  */
 function handleAutopilotKey(autopilotKey) {
     if (autopilotKey === 'h') {
-        UI_LOG("H key detected - toggling station autopilot");
-        player.toggleAutopilot('station');
+        UI_LOG("H key detected - cycle planets autopilot");
+        // H now always cycles planets in the current system.
+        if (typeof player.cycleAutopilotPlanet === 'function') {
+            player.cycleAutopilotPlanet();
+        } else {
+            uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+        }
     } else if (autopilotKey === 'j') {
-        UI_LOG("J key detected - toggling jump zone autopilot");
-        player.toggleAutopilot('jumpzone');
+        UI_LOG("J key detected - toggle station/jumpzone autopilot");
+        // Toggle between 'station' and 'jumpzone'. If targeting a planet or disabled, default to 'station'.
+        try {
+            if (!player.autopilotEnabled) {
+                // Prefer jumpzone on first press if player isn't autopiloting
+                player.toggleAutopilot('jumpzone');
+            } else if (player.autopilotTarget === 'station') {
+                player.toggleAutopilot('jumpzone');
+            } else if (player.autopilotTarget === 'jumpzone') {
+                player.toggleAutopilot('station');
+            } else {
+                // Currently targeting a planet or unknown target -> switch to station
+                player.toggleAutopilot('station');
+            }
+        } catch (e) {
+            console.error('Autopilot toggle error:', e);
+        }
     }
 }
 

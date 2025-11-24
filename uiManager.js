@@ -520,19 +520,40 @@ class UIManager {
 
                 // Add Autopilot status indicator below weapon bar
                 if (player.autopilotEnabled) {
-                    const target = player.autopilotTarget === 'station' ? 'Station' : 'Jump Zone';
+                    // Determine human-friendly target string
+                    let targetLabel = 'Unknown';
+                    let hint = '';
+                    try {
+                        if (player.autopilotTarget === 'station') {
+                            targetLabel = 'Station';
+                            hint = '[J to toggle jump/station | H to cycle planets]';
+                        } else if (player.autopilotTarget === 'jumpzone') {
+                            targetLabel = 'Jump Zone';
+                            hint = '[J to toggle jump/station | H to cycle planets]';
+                        } else if (player.autopilotTarget && typeof player.autopilotTarget === 'object' && player.autopilotTarget.type === 'planet') {
+                            const idx = Number.isFinite(player.autopilotTarget.index) ? player.autopilotTarget.index : player.autopilotPlanetIndex;
+                            const planet = player.currentSystem?.planets?.[idx];
+                            const pname = planet?.name || (`Planet ${idx + 1}`);
+                            targetLabel = `Planet: ${pname}`;
+                            hint = '[H to cycle planets | J to toggle station/jump]';
+                        } else if (typeof player.autopilotTarget === 'object' && player.autopilotTarget?.type) {
+                            targetLabel = String(player.autopilotTarget.type);
+                        }
+                    } catch (e) {
+                        targetLabel = 'Unknown';
+                    }
+
                     const autopilotY = 45 + 24 + 5; // Position below weapon bar
-                    
                     // Draw autopilot indicator background
                     fill(40, 80, 120, 200);
                     noStroke();
                     rect(0, autopilotY, width, 20);
-                    
+
                     // Draw autopilot text
                     textAlign(CENTER, CENTER);
-                    textSize(20);
+                    textSize(18);
                     fill(255, 255, 100);
-                    text(`Autopilot Engaged: ${target} — [${player.autopilotTarget === 'station' ? 'H' : 'J'} to disable]`, width/2, autopilotY + 10);
+                    text(`Autopilot Engaged: ${targetLabel} ${hint}`, width/2, autopilotY + 10);
                 }
                 
         
@@ -1431,6 +1452,8 @@ if (isIllegalInSystem || isMissionCargo) {
                     fill(120); // greyed out
                 } else if (activeMission && activeMission.id === m.id) {
                     fill(255,0,0);
+                } else if (m && m.type === MISSION_TYPE.SABOTAGE) {
+                    fill(255, 200, 50); // Goldish for high-value sabotage
                 } else {
                     fill(220);
                 }
