@@ -138,9 +138,16 @@ class Planet {
         const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
         
         // Get root based on system name
-        let root = systemName;
+        // If the system name has multiple words (e.g. "Alpha Centauri"),
+        // only use the first token for stemming so the second part is ignored.
+        const stemName = (typeof systemName === 'string' && systemName.trim().indexOf(' ') !== -1)
+            ? systemName.trim().split(/\s+/)[0]
+            : systemName;
+        // Default root to the stem (first token). If no special root matches,
+        // this prevents falling back to the full multi-word system name.
+        let root = stemName;
         for (let key in roots) {
-            if (systemName.toLowerCase().includes(key.toLowerCase())) {
+            if (stemName.toLowerCase().includes(key.toLowerCase())) {
                 const variants = roots[key];
                 root = variants[Math.floor(this.featureRand * variants.length) % variants.length];
                 break;
