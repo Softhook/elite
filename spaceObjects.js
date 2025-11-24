@@ -2,6 +2,41 @@
 // Simple SpaceObject implementation for decorative satellites and telescopes
 // Designed to be lightweight: small update() to rotate/oscillate, and draw() using p5 primitives
 
+// Size map for each object type
+const sizeMap = {
+    satellite: 60,
+    telescope: 100,
+    relay: 120,
+    habitat: 220,
+    debris: 150,
+    probe: 50,
+    beacon: 40,
+    solarSail: 320,
+    engineArray: 184,
+    cargoCluster: 200,
+    researchArray: 176,
+    orbitalGarden: 200,
+    decoyBuoy: 40,
+    miningPlatform: 220,
+    ancientRelic: 250,
+    signalFlare: 60,
+    spaceStation: 280,
+    asteroidMiner: 140,
+    fuelDepot: 90,
+    commDish: 70,
+    solarFarm: 100,
+    iceCrystal: 120,
+    nebulaFragment: 150,
+    alienArtifact: 80,
+    wreckage: 95,
+    observatoryDome: 85,
+    hydroponicsBay: 105,
+    weaponPlatform: 115,
+    shieldGenerator: 75,
+    energyCollector: 130,
+    quantumGate: 160
+};
+
 // Static renderers for each object type to replace the monolithic draw() switch
 const SpaceObjectRenderers = {
     satellite: function(obj, size, anim, bob) {
@@ -32,9 +67,25 @@ const SpaceObjectRenderers = {
         // antenna dish
         fill(120);
         ellipse(size * 0.28, -size * 0.12 + bob, size * 0.22, size * 0.14);
-        // small nav light
-        fill(255, 90, 80);
+        // small nav light with flashing
+        const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.1);
+        fill(255, 90, 80, 255 * flash);
         ellipse(-size * 0.18, -size * 0.18 + bob, 4, 4);
+        // additional decorative flashing lights on panels
+        fill(255, 255, 100, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.08 + 1)));
+        ellipse(-size * 0.78 + size * 0.32, bob - size * 0.08, 3, 3);
+        fill(100, 255, 100, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.08 + 2)));
+        ellipse(size * 0.78 - size * 0.32, bob + size * 0.08, 3, 3);
+        // slow-moving antenna extension
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.002) * 0.1);
+        stroke(120, 130, 140);
+        strokeWeight(1);
+        line(size * 0.28, -size * 0.12 + bob, size * 0.4, -size * 0.2 + bob);
+        noStroke();
+        fill(140, 150, 160);
+        ellipse(size * 0.4, -size * 0.2 + bob, 4, 4);
+        pop();
     },
 
     telescope: function(obj, size, anim, bob) {
@@ -119,6 +170,23 @@ const SpaceObjectRenderers = {
         fill(160, 170, 180, 150);
         rect(-size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, 1);
         rect(size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, 1);
+
+        // Flashing lights: status lights on body
+        const flash1 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.12);
+        fill(255, 255, 0, 255 * flash1);
+        ellipse(-size * 0.05, -size * 0.3 + bob, 3, 3);
+        const flash2 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.12 + 1);
+        fill(0, 255, 255, 255 * flash2);
+        ellipse(size * 0.05, -size * 0.3 + bob, 3, 3);
+        // Slow-moving secondary boom
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.001) * 0.05);
+        stroke(130, 140, 150); strokeWeight(1.5);
+        line(-size * 0.08, bob, -size * 0.25, bob - size * 0.1);
+        noStroke();
+        fill(180, 190, 200);
+        ellipse(-size * 0.25, bob - size * 0.1, 5, 5);
+        pop();
     },
 
     relay: function(obj, size, anim, bob) {
@@ -150,6 +218,29 @@ const SpaceObjectRenderers = {
             fill(200, 220, 240, 200);
             ellipse(lx, ly, 4, 3);
         }
+        // Flashing status lights on hub
+        const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
+        fill(255, 255, 0, 255 * flash);
+        ellipse(-size * 0.1, -size * 0.08, 3, 3);
+        fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15 + 1)));
+        ellipse(size * 0.1, -size * 0.08, 3, 3);
+        // Slow-moving auxiliary antenna
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.003) * 0.2);
+        stroke(180, 190, 200);
+        strokeWeight(1);
+        line(0, 0, size * 0.4, -size * 0.2);
+        noStroke();
+        fill(160, 170, 180);
+        ellipse(size * 0.4, -size * 0.2, 6, 4);
+        pop();
+        // Decorative rings around hub
+        noFill();
+        stroke(150, 160, 170, 100);
+        strokeWeight(0.5);
+        ellipse(0, 0, size * 0.5, size * 0.35);
+        ellipse(0, 0, size * 0.6, size * 0.42);
+        noStroke();
     },
 
     habitat: function(obj, size, anim, bob) {
@@ -192,6 +283,27 @@ const SpaceObjectRenderers = {
             stroke(100); strokeWeight(1); line(cx - 6, cylH * 0.18 + bob, cx + 6, cylH * 0.18 + bob);
         }
         noStroke();
+        // Flashing navigation lights
+        const navFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2);
+        fill(255, 0, 0, 255 * navFlash);
+        ellipse(-size * 0.45, -size * 0.1 + bob, 4, 4);
+        fill(0, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2 + 1)));
+        ellipse(size * 0.45, -size * 0.1 + bob, 4, 4);
+        // Slow-moving solar panel extension
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.002) * 0.1);
+        fill(40, 80, 160);
+        rect(size * 0.55, bob, size * 0.2, size * 0.08, 2);
+        stroke(20, 40, 90, 150);
+        strokeWeight(0.5);
+        for (let g = 0; g < 3; g++) {
+            line(size * 0.55 + g * (size * 0.2 / 3), bob - size * 0.04, size * 0.55 + g * (size * 0.2 / 3), bob + size * 0.04);
+        }
+        noStroke();
+        pop();
+        // Decorative insignia on body
+        fill(200, 210, 220, 150);
+        ellipse(0, -size * 0.15 + bob, size * 0.1, size * 0.06);
     },
 
     debris: function(obj, size, anim, bob) {
@@ -223,6 +335,19 @@ const SpaceObjectRenderers = {
                 const da = obj.bobPhase * 0.001 + d * 2.1;
                 ellipse(Math.cos(da) * size * 0.32, Math.sin(da) * size * 0.12 + bob * 0.08, 6, 3);
             }
+            // Flashing hazard lights on larger shards
+            const hazardFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25);
+            fill(255, 0, 0, 200 * hazardFlash);
+            ellipse(0, -size * 0.1 + bob, 4, 4);
+            fill(255, 255, 0, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
+            ellipse(size * 0.1, size * 0.1 + bob, 3, 3);
+            // Slow-moving glowing particles
+            for (let p = 0; p < 2; p++) {
+                const pa = obj.bobPhase * 0.003 + p * 3.14;
+                const pr = size * 0.2;
+                fill(200, 150, 100, 100 + 50 * Math.sin(pa));
+                ellipse(Math.cos(pa) * pr, Math.sin(pa) * pr + bob * 0.05, 2, 2);
+            }
         }
     },
 
@@ -248,6 +373,30 @@ const SpaceObjectRenderers = {
         // tiny heat/engine trail (cheap translucent ellipse)
         fill(120, 180, 255, 40);
         ellipse(0, size * 0.48 + bob, size * 0.28, size * 0.08);
+        // Flashing status lights
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18);
+        fill(0, 255, 0, 255 * statusFlash);
+        ellipse(-size * 0.06, size * 0.1 + bob, 3, 3);
+        fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + 1)));
+        ellipse(size * 0.06, size * 0.1 + bob, 3, 3);
+        // Slow-moving antenna deployment
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.004) * 0.15);
+        stroke(150, 160, 170);
+        strokeWeight(1);
+        line(0, -size * 0.3 + bob, size * 0.2, -size * 0.4 + bob);
+        noStroke();
+        fill(180, 190, 200);
+        ellipse(size * 0.2, -size * 0.4 + bob, 4, 4);
+        pop();
+        // Decorative sensor bands
+        stroke(120, 130, 140, 150);
+        strokeWeight(0.5);
+        for (let b = 0; b < 3; b++) {
+            const by = -size * 0.2 + b * (size * 0.15) + bob;
+            line(-size * 0.08, by, size * 0.08, by);
+        }
+        noStroke();
     },
 
     beacon: function(obj, size, anim, bob) {
@@ -270,6 +419,28 @@ const SpaceObjectRenderers = {
         line(0, -size * 0.5 + bob, 0, -size * 0.7 + bob);
         noStroke();
         pop();
+        // Flashing auxiliary lights
+        const auxFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
+        fill(0, 255, 255, 255 * auxFlash);
+        ellipse(-size * 0.08, size * 0.1 + bob, 3, 3);
+        fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
+        ellipse(size * 0.08, size * 0.1 + bob, 3, 3);
+        // Slow-moving antenna array
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.005) * 0.3);
+        stroke(120, 130, 140);
+        strokeWeight(0.8);
+        for (let a = 0; a < 3; a++) {
+            const aa = a * (TWO_PI / 3);
+            line(0, bob, Math.cos(aa) * size * 0.15, Math.sin(aa) * size * 0.15 + bob);
+        }
+        noStroke();
+        fill(140, 150, 160);
+        ellipse(0, bob - size * 0.05, 4, 4);
+        pop();
+        // Decorative base details
+        fill(80, 80, 90);
+        rect(-size * 0.05, size * 0.3 + bob, size * 0.1, size * 0.08, 2);
     },
 
     default: function(obj, size, anim, bob) {
@@ -375,6 +546,23 @@ const SpaceObjectRenderers = {
         noStroke(); fill(220, 230, 240);
         ellipse(Math.cos(podAng) * podR * 0.9, Math.sin(podAng) * podR * 0.35 + bob * 0.12, 6, 6);
         pop();
+
+        // Flashing navigation lights on bus
+        const navFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2);
+        fill(255, 0, 0, 255 * navFlash);
+        ellipse(-size * 0.08, bob - size * 0.04, 3, 3);
+        fill(0, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2 + 1)));
+        ellipse(size * 0.08, bob - size * 0.04, 3, 3);
+        // Slow-moving secondary sensor arm
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.003) * 0.1);
+        stroke(130, 140, 150);
+        strokeWeight(1);
+        line(0, bob, -size * 0.3, bob - size * 0.1);
+        noStroke();
+        fill(200, 210, 220);
+        ellipse(-size * 0.3, bob - size * 0.1, 5, 5);
+        pop();
     },
 
     engineArray: function(obj, size, anim, bob) {
@@ -419,6 +607,19 @@ const SpaceObjectRenderers = {
         ellipse(0, size * 0.36 + bob, size * 0.9, size * 0.5);
         noStroke();
 
+        // Flashing status indicators on platform
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25);
+        fill(255, 255, 0, 255 * statusFlash);
+        ellipse(-size * 0.3, bob - size * 0.02, 3, 3);
+        fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
+        ellipse(size * 0.3, bob - size * 0.02, 3, 3);
+        // Slow-moving cooling vane rotation
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.004) * 0.2);
+        fill(120, 130, 140, 150);
+        rect(-size * 0.05, bob + size * 0.1, size * 0.1, size * 0.25, 1);
+        pop();
+
         pop();
     },
 
@@ -459,6 +660,22 @@ const SpaceObjectRenderers = {
                 noStroke();
             }
         }
+        // Flashing warning lights on containers
+        const warnFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
+        fill(255, 0, 0, 255 * warnFlash);
+        ellipse(-size * 0.2, bob - ch * 0.3, 3, 3);
+        fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
+        ellipse(size * 0.2, bob - ch * 0.3, 3, 3);
+        // Slow-moving crane arm
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.002) * 0.15);
+        stroke(100, 110, 120);
+        strokeWeight(1.5);
+        line(0, bob - ch * 0.5, size * 0.25, bob - ch * 0.7);
+        noStroke();
+        fill(120, 130, 140);
+        ellipse(size * 0.25, bob - ch * 0.7, 5, 5);
+        pop();
     },
 
     researchArray: function(obj, size, anim, bob) {
@@ -515,6 +732,19 @@ const SpaceObjectRenderers = {
         fill(100, 200, 230, 120 * pulse);
         ellipse(0, -size * 0.06 + bob, 8 * pulse, 4 * pulse);
         noStroke();
+        // Flashing status lights on platform
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35);
+        fill(255, 0, 0, 255 * statusFlash);
+        ellipse(-size * 0.15, bob + size * 0.08, 3, 3);
+        fill(0, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35 + 1)));
+        ellipse(size * 0.15, bob + size * 0.08, 3, 3);
+        // Slow-moving auxiliary dish
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.003) * 0.2);
+        fill(210, 220, 230);
+        ellipse(size * 0.25, bob - size * 0.1, size * 0.15, size * 0.1);
+        noStroke();
+        pop();
     },
 
     orbitalGarden: function(obj, size, anim, bob) {
@@ -601,6 +831,19 @@ const SpaceObjectRenderers = {
             stroke(110, 90, 70, 160); strokeWeight(0.6); line(bx - 6, by + 4, bx + 6, by + 4); noStroke();
         }
 
+        // Flashing environmental lights
+        const envFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4);
+        fill(0, 255, 255, 255 * envFlash);
+        ellipse(-size * 0.3, -size * 0.1 + bob, 3, 3);
+        fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4 + 1)));
+        ellipse(size * 0.3, -size * 0.1 + bob, 3, 3);
+        // Slow-moving external panel
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.002) * 0.1);
+        fill(50, 100, 150, 150);
+        rect(size * 0.4, bob, size * 0.15, size * 0.08, 2);
+        pop();
+
         pop();
     },
 
@@ -619,6 +862,22 @@ const SpaceObjectRenderers = {
             fill(255, 180, 120, 60 * dp);
             ellipse(Math.cos(pa) * pr, Math.sin(pa) * pr + bob - size * 0.06, 6 + p * 3 * dp, 2 + p * 1.5 * dp);
         }
+        // Flashing warning lights
+        const warnFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.5);
+        fill(255, 0, 0, 255 * warnFlash);
+        ellipse(-size * 0.15, bob + size * 0.1, 3, 3);
+        fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.5 + 1)));
+        ellipse(size * 0.15, bob + size * 0.1, 3, 3);
+        // Slow-moving antenna
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.006) * 0.3);
+        stroke(120, 130, 140);
+        strokeWeight(0.8);
+        line(0, bob, 0, bob - size * 0.2);
+        noStroke();
+        fill(160, 170, 180);
+        ellipse(0, bob - size * 0.2, 4, 4);
+        pop();
     },
 
     miningPlatform: function(obj, size, anim, bob) {
@@ -694,13 +953,22 @@ const SpaceObjectRenderers = {
         ellipse(-size * 0.08, -size * 0.28 + bob, 6, 6);
         ellipse(size * 0.08, -size * 0.28 + bob, 6, 6);
 
-        // subtle debris/sparks near drills
-        for (let p = 0; p < 3; p++) {
-            const px = Math.cos(obj.bobPhase * 0.002 + p) * (size * 0.5);
-            const py = Math.sin(obj.bobPhase * 0.002 + p * 1.7) * 6 + bob * 0.2 + size * 0.12;
-            fill(220, 180, 120, 90 + p * 20);
-            ellipse(px * 0.1, py * 0.06, 2 + p, 1 + p * 0.4);
-        }
+        // Additional flashing status lights
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45);
+        fill(0, 255, 0, 255 * statusFlash);
+        ellipse(-size * 0.25, bob + size * 0.05, 3, 3);
+        fill(0, 255, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45 + 1)));
+        ellipse(size * 0.25, bob + size * 0.05, 3, 3);
+        // Slow-moving inspection drone
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.003) * 0.2);
+        fill(180, 160, 140);
+        ellipse(size * 0.35, bob - size * 0.1, 8, 6);
+        stroke(120, 100, 80, 150);
+        strokeWeight(0.6);
+        line(size * 0.35, bob - size * 0.1, size * 0.4, bob - size * 0.15);
+        noStroke();
+        pop();
 
         pop();
     },
@@ -723,6 +991,18 @@ const SpaceObjectRenderers = {
         noFill(); stroke(60, 200, 220, 90 * relicGlow); strokeWeight(2 * relicGlow);
         ellipse(0, bob, size * (0.6 + relicGlow * 0.4), size * (0.6 + relicGlow * 0.4));
         noStroke();
+        // Flashing energy nodes
+        const nodeFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.55);
+        fill(100, 220, 255, 255 * nodeFlash);
+        ellipse(-size * 0.1, -size * 0.2 + bob, 4, 4);
+        fill(255, 100, 220, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.55 + 1)));
+        ellipse(size * 0.1, size * 0.2 + bob, 4, 4);
+        // Slow-moving orbiting particle
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.004) * 0.5);
+        fill(150, 200, 250, 150);
+        ellipse(size * 0.25, bob, 3, 3);
+        pop();
     },
 
     signalFlare: function(obj, size, anim, bob) {
@@ -750,6 +1030,22 @@ const SpaceObjectRenderers = {
             fill(255, 240, 200, 60 + 40 * Math.sin(phase * (0.6 + m * 0.2)));
             ellipse(Math.cos(ma) * mr * 0.4, Math.sin(ma) * mr * 0.18 + bob * 0.2, 3 + m, 2 + m * 0.6);
         }
+        // Flashing auxiliary beacons
+        const auxFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.6);
+        fill(255, 100, 100, 255 * auxFlash);
+        ellipse(-size * 0.15, bob + size * 0.1, 3, 3);
+        fill(100, 255, 100, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.6 + 1)));
+        ellipse(size * 0.15, bob + size * 0.1, 3, 3);
+        // Slow-moving support strut
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.005) * 0.15);
+        stroke(200, 180, 140, 120);
+        strokeWeight(0.8);
+        line(0, bob + size * 0.15, size * 0.2, bob + size * 0.25);
+        noStroke();
+        fill(220, 200, 180);
+        ellipse(size * 0.2, bob + size * 0.25, 4, 4);
+        pop();
     }
 };
 
@@ -757,28 +1053,7 @@ class SpaceObject {
     constructor(x, y, type = 'satellite') {
         this.pos = (typeof createVector === 'function') ? createVector(x, y) : { x: x, y: y };
         this.type = type; // 'satellite' | 'telescope' | 'relay' | 'habitat' | 'debris' | 'probe' | 'beacon'
-        // Larger default sizes for better visibility
-        const sizeMap = {
-            satellite: 60,
-            telescope: 100,
-            relay: 120,
-            habitat: 220,
-            // debris is now much larger for visibility and presence in systems
-            debris: 150,
-            probe: 50,
-            beacon: 40
-            ,
-            // New types
-            solarSail: 320,
-            engineArray: 184,
-            cargoCluster: 200,
-            researchArray: 176,
-            orbitalGarden: 200,
-            decoyBuoy: 40,
-            miningPlatform: 220,
-            ancientRelic: 250,
-            signalFlare: 60
-        };
+
         this.size = sizeMap[type] || 48;
         // Collision footprint: use visual radius so collision matches what is seen
         this.collisionRadius = Math.max(6, (this.size / 2));
@@ -861,8 +1136,7 @@ class SpaceObject {
             // make debris spin much slower so large chunks feel massive
             debris: 0.00004,
             probe: 0.0003,
-            beacon: 0.000125
-            ,
+            beacon: 0.000125,
             // New types rotation speeds (subtle)
             solarSail: 0.00003,
             engineArray: 0.00045,
@@ -872,7 +1146,22 @@ class SpaceObject {
             decoyBuoy: 0.00015,
             miningPlatform: 0.000045,
             ancientRelic: 0.000025,
-            signalFlare: 0.0003
+            signalFlare: 0.0003,
+            spaceStation: 0.00002,
+            asteroidMiner: 0.000035,
+            fuelDepot: 0.00005,
+            commDish: 0.00008,
+            solarFarm: 0.00004,
+            iceCrystal: 0.00006,
+            nebulaFragment: 0.00002,
+            alienArtifact: 0.00003,
+            wreckage: 0.00004,
+            observatoryDome: 0.00005,
+            hydroponicsBay: 0.00006,
+            weaponPlatform: 0.00004,
+            shieldGenerator: 0.00007,
+            energyCollector: 0.00005,
+            quantumGate: 0.00002
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -1044,7 +1333,22 @@ class SpaceObject {
             decoyBuoy: 'Decoy Buoy',
             miningPlatform: 'Mining Platform',
             ancientRelic: 'Ancient Relic',
-            signalFlare: 'Signal Flare'
+            signalFlare: 'Signal Flare',
+            spaceStation: 'Space Station',
+            asteroidMiner: 'Asteroid Miner',
+            fuelDepot: 'Fuel Depot',
+            commDish: 'Communication Dish',
+            solarFarm: 'Solar Farm',
+            iceCrystal: 'Ice Crystal',
+            nebulaFragment: 'Nebula Fragment',
+            alienArtifact: 'Alien Artifact',
+            wreckage: 'Wreckage',
+            observatoryDome: 'Observatory Dome',
+            hydroponicsBay: 'Hydroponics Bay',
+            weaponPlatform: 'Weapon Platform',
+            shieldGenerator: 'Shield Generator',
+            energyCollector: 'Energy Collector',
+            quantumGate: 'Quantum Gate'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }
