@@ -481,12 +481,22 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
 
          // Add explicit sabotage info
          if (this.type === MISSION_TYPE.SABOTAGE) {
-             details += `\nObjective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
-             if (this.targetPlanetName) details += `Location: Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}\n`;
-             if (this.offeringFaction) details += `Offered By: ${this.offeringFaction}\n`;
-             if (this.targetFaction) details += `Target Faction: ${this.targetFaction}\n`;
-             details += `Reward (High): ${this.rewardCredits} Credits\n`;
-             details += `\nBackstory:\n${this.description}\n`;
+            // Avoid repeating the objective text if the description/backstory already includes it
+            const desc = this.description || '';
+            const hasGeneratedObjective = desc.indexOf('Sabotage Objective:') !== -1 || desc.indexOf('Objective: Destroy') !== -1;
+            if (!hasGeneratedObjective) {
+                details += `\nObjective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
+            }
+            if (this.targetPlanetName) details += `Location: Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}\n`;
+            if (this.offeringFaction) details += `Offered By: ${this.offeringFaction}\n`;
+            if (this.targetFaction) details += `Target Faction: ${this.targetFaction}\n`;
+            details += `Reward (High): ${this.rewardCredits} Credits\n`;
+            // If the description already contains an objective/backstory block, print it directly; otherwise label it as Backstory.
+            if (desc && hasGeneratedObjective) {
+                details += `\n${desc}\n`;
+            } else if (desc) {
+                details += `\nBackstory:\n${desc}\n`;
+            }
          }
 
          return details;

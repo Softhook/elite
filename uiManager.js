@@ -1452,6 +1452,8 @@ if (isIllegalInSystem || isMissionCargo) {
                     fill(120); // greyed out
                 } else if (activeMission && activeMission.id === m.id) {
                     fill(255,0,0);
+                } else if (m && m.type === MISSION_TYPE.ASSASSINATION) {
+                    fill(255, 0, 0); // Red for assassination missions
                 } else if (m && m.type === MISSION_TYPE.SABOTAGE) {
                     fill(255, 200, 50); // Goldish for high-value sabotage
                 } else {
