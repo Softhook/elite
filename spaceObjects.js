@@ -32,7 +32,7 @@ const sizeMap = {
     observatoryDome: 150,
     hydroponicsBay: 105,
     weaponPlatform: 200,
-    shieldGenerator: 75,
+    shieldGenerator: 180,
     energyCollector: 130,
     quantumGate: 160
 };
