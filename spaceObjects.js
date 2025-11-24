@@ -2438,9 +2438,9 @@ class SpaceObject {
         if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0003 * dt;
         if (typeof anim.telescopeSweep === 'number') anim.telescopeSweep += 0.002 * dt;
         if (typeof anim.observationLights === 'number') anim.observationLights += 0.0035 * dt;
-        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.002 * dt;
-        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.003 * dt;
-        if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0045 * dt;
+        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.0005 * dt;
+        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.001 * dt;
+        if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0015 * dt;
         // Energy collector animated phases
         if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0003 * dt;
         if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
