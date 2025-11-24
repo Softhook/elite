@@ -238,7 +238,7 @@ class EnemyAIBehaviors {
                 }
                 
                 if (!this.hasReportedWantedPlayer) {
-                    console.log(`Police ${this.shipTypeName} responding to system-wide alert`);
+                    ENEMY_AI_LOG(`Police ${this.shipTypeName} responding to system-wide alert`);
                     this.hasReportedWantedPlayer = true;
                 }
             }
@@ -339,8 +339,8 @@ class EnemyAIBehaviors {
                 this.previousTargetPos = this.patrolTargetPos ? this.patrolTargetPos.copy() : null;
 
                 // Decide whether to fight or flee based on hull
-                if (this.hull < this.maxHull * 0.5) { // Flee if below 50% hull
-                    console.log(`Hauler ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
+                    if (this.hull < this.maxHull * 0.5) { // Flee if below 50% hull
+                    HAULER_LOG(`Hauler ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.FLEEING);
                     if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
@@ -414,8 +414,8 @@ class EnemyAIBehaviors {
             }
 
             // Check hull status - flee if heavily damaged during combat
-            if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
-                console.log(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
+                    if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
+                HAULER_LOG(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
                 this.target = this.lastAttacker || this.target; // Ensure we flee from *something*
                 this.changeState(AI_STATE.FLEEING);
                 if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
@@ -518,8 +518,8 @@ class EnemyAIBehaviors {
             case AI_STATE.LEAVING_SYSTEM:
                 this.target = null; // Ensure target is null when leaving
                 desiredMovementTargetPos = this.patrolTargetPos;
-                if (!desiredMovementTargetPos) {
-                     console.warn(`Hauler ${this.shipTypeName} in LEAVING_SYSTEM state has no patrolTargetPos! Attempting recovery.`);
+                 if (!desiredMovementTargetPos) {
+                     HAULER_LOG(`WARN: Hauler ${this.shipTypeName} in LEAVING_SYSTEM state has no patrolTargetPos! Attempting recovery.`);
                      this.setLeavingSystemTarget(system);
                      desiredMovementTargetPos = this.patrolTargetPos;
                      if (!desiredMovementTargetPos) {
@@ -530,13 +530,13 @@ class EnemyAIBehaviors {
 
                                 // --- DETAILED DEBUG LOGGING ---
                                 try {
-                                        const jz = system?.jumpZoneCenter;
-                                        console.log(`[LEAVING] ${this.role} ${this.shipTypeName} pos=(${this.pos.x.toFixed(1)},${this.pos.y.toFixed(1)}) target=(${desiredMovementTargetPos.x.toFixed(1)},${desiredMovementTargetPos.y.toFixed(1)}) jumpZone=${jz ? `${jz.x.toFixed(1)},${jz.y.toFixed(1)}` : 'none'}`);
+                                    const jz = system?.jumpZoneCenter;
+                                    HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} pos=(${this.pos.x.toFixed(1)},${this.pos.y.toFixed(1)}) target=(${desiredMovementTargetPos.x.toFixed(1)},${desiredMovementTargetPos.y.toFixed(1)}) jumpZone=${jz ? `${jz.x.toFixed(1)},${jz.y.toFixed(1)}` : 'none'}`);
                                 } catch (e) { /* ignore logging errors */ }
 
                                 // Calculate distance to target (Jump Zone/Edge)
                                 let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
-                                console.log(`[LEAVING] ${this.shipTypeName} distanceToTarget=${dE.toFixed(1)}`);
+                                HAULER_LOG(`[LEAVING] ${this.shipTypeName} distanceToTarget=${dE.toFixed(1)}`);
 
 
                 // ---  Exit Condition ---
@@ -572,7 +572,7 @@ class EnemyAIBehaviors {
                             // Normal hauler/transport leaving
                             this.inCombat = false;
                             this.haulerCombatTimer = undefined;
-                            console.log(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
+                            HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
                             // Use centralized helper so all ships use the same visual fade behavior
                             this.initiateJumpFade(0.35, 1.2);
                             HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
@@ -674,25 +674,25 @@ class EnemyAIBehaviors {
             // Move towards destination
             if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
             this.performRotationAndThrust(destination); // Use helper
-        } else {
-            // Arrival detected: apply braking.
-            this.vel.mult(0.8);
-            // If close enough AND moving very slowly, start/continue wait timer.
-            if (this.vel.mag() < slowSpeedThreshold) {
-                if (this.waitTimer === 0) {
-                    this.waitTimer = random(1500, 4000); // Wait 1.5-4s
-                    console.log(`Transporter ${this.shipTypeName} arrived. Waiting.`);
                 } else {
-                    this.waitTimer -= deltaTime;
-                    if (this.waitTimer <= 0) {
-                        // Switch destination.
-                        this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
-                        console.log(`Transporter ${this.shipTypeName} switching destination.`);
-                        this.waitTimer = 0;
-                        this.vel.set(0, 0); // Reset velocity
+                    // Arrival detected: apply braking.
+                    this.vel.mult(0.8);
+                    // If close enough AND moving very slowly, start/continue wait timer.
+                    if (this.vel.mag() < slowSpeedThreshold) {
+                        if (this.waitTimer === 0) {
+                            this.waitTimer = random(1500, 4000); // Wait 1.5-4s
+                            ENEMY_AI_LOG(`Transporter ${this.shipTypeName} arrived. Waiting.`);
+                        } else {
+                            this.waitTimer -= deltaTime;
+                            if (this.waitTimer <= 0) {
+                                // Switch destination.
+                                this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
+                                ENEMY_AI_LOG(`Transporter ${this.shipTypeName} switching destination.`);
+                                this.waitTimer = 0;
+                                this.vel.set(0, 0); // Reset velocity
+                            }
+                        }
                     }
-                }
-            }
         }
 
         // Apply physics
@@ -740,7 +740,7 @@ class EnemyAIBehaviors {
 
 
         // --- Apply Braking when close to cargo ---
-        if (distanceToCargo < brakingDistance) {
+            if (distanceToCargo < brakingDistance) {
             // Map distance to brake factor: stronger braking closer to target
             // Starts braking gently (~0.95) at brakingDistance, increases to strong braking (~0.75) near collectionRadius
             const brakeFactor = map(distanceToCargo, collectionRadius * 0.8, brakingDistance, 0.75, 0.95);
@@ -847,10 +847,10 @@ class EnemyAIBehaviors {
 
 
         // --- Check if we've reached the cargo for collection ---
-        if (distanceToCargo < collectionRadius) {
+            if (distanceToCargo < collectionRadius) {
             // Double-check cargo hasn't been collected already (race condition protection)
             if (this.cargoTarget.collected) {
-                console.warn(`${this.shipTypeName} tried to collect already-collected cargo`);
+                CARGO_LOG(`WARN: ${this.shipTypeName} tried to collect already-collected cargo`);
                 this.cargoTarget = null;
                 this.cargoCollectionCooldown = 0.5;
                 return false;

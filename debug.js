@@ -7,7 +7,8 @@
 
   // Default flags (quiet by default)
   const defaults = {
-    DEBUG_AI: true,           // AI flow/state/combat
+    DEBUG_AI: false,           // AI flow/state/combat
+    DEBUG_ENEMY_BEHAVIORS: false, // Enemy-specific AI behavior logs (enemyAIBehaviors.js)
     DEBUG_TARGETING: false,    // Target selection/scoring
     DEBUG_DAMAGE: false,       // Damage/hit/barrier
     DEBUG_ENV: false,          // Environment (nebula etc.)
@@ -34,6 +35,7 @@
 
   // Publish flags as globals (so typeof DEBUG_* checks work anywhere)
   global.DEBUG_AI = !!flags.DEBUG_AI;
+  global.DEBUG_ENEMY_BEHAVIORS = !!flags.DEBUG_ENEMY_BEHAVIORS;
   global.DEBUG_TARGETING = !!flags.DEBUG_TARGETING;
   global.DEBUG_DAMAGE = !!flags.DEBUG_DAMAGE;
   global.DEBUG_ENV = !!flags.DEBUG_ENV;
@@ -142,6 +144,14 @@
   }
   if (typeof global.CARGO_LOGF !== 'function') {
     global.CARGO_LOGF = function (builder) { if (global.DEBUG_CARGO && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
+  }
+
+  // Enemy AI specific logging helper
+  if (typeof global.ENEMY_AI_LOG !== 'function') {
+    global.ENEMY_AI_LOG = function (...args) { if (global.DEBUG_ENEMY_BEHAVIORS) console.log(...args); };
+  }
+  if (typeof global.ENEMY_AI_LOGF !== 'function') {
+    global.ENEMY_AI_LOGF = function (builder) { if (global.DEBUG_ENEMY_BEHAVIORS && typeof builder === 'function') { const out = builder(); Array.isArray(out) ? console.log(...out) : console.log(out); } };
   }
 
   // Convenience controller API
