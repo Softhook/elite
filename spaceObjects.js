@@ -1487,7 +1487,7 @@ const SpaceObjectRenderers = {
         fill(140);
         rect(0, 0, size * 0.08, size * 0.4, 3);
         // rotating ring sensor near top
-        rotate((anim ? anim.researchArraySweep : 0) * 0.5);
+        rotate((anim ? anim.researchArraySweep : 0) * 0.04);
         noFill(); stroke(120, 200, 230, 140); strokeWeight(1.2);
         ellipse(0, -size * 0.14, size * 0.26, size * 0.14);
         pop();
@@ -1782,7 +1782,7 @@ const SpaceObjectRenderers = {
             noStroke(); fill(100); ellipse(size * 0.48, size * 0.18 + bob, size * 0.08, size * 0.06);
             // drill head (rotating)
             push(); translate(size * 0.48, size * 0.18 + bob);
-            const spin = (anim ? anim.miningSpin : 0) + (obj.bobPhase * 0.002) + a * 0.8;
+            const spin = (anim ? anim.miningSpin : 0) + (obj.bobPhase * 0.002) + a * 0.2;
             rotate(spin);
             fill(80, 80, 90);
             rect(0, 0, size * 0.12, size * 0.04, 2);
@@ -2424,26 +2424,26 @@ class SpaceObject {
         if (typeof anim.armPhase === 'number') anim.armPhase += 0.003 * dt;
         if (typeof anim.nutrientFlow === 'number') anim.nutrientFlow += 0.0025 * dt;
         if (typeof anim.pollinatorPhase === 'number') anim.pollinatorPhase += 0.0011 * dt;
-        if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.006 * dt;
+        if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.002 * dt;
         if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.002 * dt;
         if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.00225 * dt;
         if (typeof anim.artifactPhase === 'number') anim.artifactPhase += 0.0035 * dt;
         if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.003 * dt;
         if (typeof anim.stationLights === 'number') anim.stationLights += 0.004 * dt;
         if (typeof anim.dockingRing === 'number') anim.dockingRing += 0.001 * dt;
-        if (typeof anim.solarArray === 'number') anim.solarArray += 0.0005 * dt;
+        if (typeof anim.solarArray === 'number') anim.solarArray += 0.0002 * dt;
         if (typeof anim.commDishSweep === 'number') anim.commDishSweep += 0.0005 * dt;
         if (typeof anim.commDishTilt === 'number') anim.commDishTilt += 0.0012 * dt;
         if (typeof anim.shieldPulse === 'number') anim.shieldPulse += 0.0032 * dt;
-        if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0008 * dt;
+        if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0003 * dt;
         if (typeof anim.telescopeSweep === 'number') anim.telescopeSweep += 0.002 * dt;
         if (typeof anim.observationLights === 'number') anim.observationLights += 0.0035 * dt;
-        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.005 * dt;
-        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.006 * dt;
+        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.002 * dt;
+        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.003 * dt;
         if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0045 * dt;
         // Energy collector animated phases
-        if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0009 * dt;
-        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.008 * dt;
+        if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0003 * dt;
+        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
 
         if (this._shards && this._shards.length) {
             for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
