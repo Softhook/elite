@@ -532,6 +532,18 @@ class Galaxy {
             // Debug: Log each system's connections
             console.log(`System ${idx} (${sys.name}) connections:`, sys.connectedSystemIndices);
         });
+
+        // Run relinking now that all systems have been constructed and connections assigned.
+        // This requires the global `player` object to exist so owner/target references can be resolved.
+        if (typeof StarSystem?.relinkAll === 'function') {
+            try {
+                StarSystem.relinkAll(this, player);
+            } catch (e) {
+                console.error('Error during StarSystem.relinkAll:', e);
+            }
+        } else {
+            console.warn('StarSystem.relinkAll not available; skipping post-load relinking.');
+        }
     }
 
     /**

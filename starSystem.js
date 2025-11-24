@@ -3106,10 +3106,11 @@ drawOptimalStarfield() {
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
             jumpZoneRadius: this.jumpZoneRadius,
             // Add wanted status properties
-            playerWanted: this.playerWanted || false,
-            playerWantedLevel: this.playerWantedLevel || 0,
-            playerWantedExpiry: this.playerWantedExpiry,
-            policeAlertSent: this.policeAlertSent || false,
+            // Store a boolean and the remaining ms until expiry (portable across sessions)
+            playerWanted: !!this.playerWanted,
+            playerWantedLevel: this.playerWantedLevel ?? 0,
+            playerWantedRemainingMs: (this.playerWantedExpiry ? Math.max(0, this.playerWantedExpiry - millis()) : null),
+            policeAlertSent: !!this.policeAlertSent,
             // ---
             // Dynamic entities (serialized when possible)
             enemies: Array.isArray(this.enemies) && this.enemies.length > 0
@@ -3234,18 +3235,23 @@ drawOptimalStarfield() {
         } else {
             sys.jumpZoneCenter = null; // Ensure it's null if not saved properly or p5 not ready
         }
-        sys.jumpZoneRadius = data.jumpZoneRadius || JUMP_ZONE_DEFAULT_RADIUS;
+        sys.jumpZoneRadius = data.jumpZoneRadius ?? JUMP_ZONE_DEFAULT_RADIUS;
         // ---
 
         // Restore wanted status
-        sys.playerWanted = data.playerWanted || false;
-        sys.playerWantedLevel = data.playerWantedLevel || 0;
-        sys.playerWantedExpiry = data.playerWantedExpiry || null;
-        sys.policeAlertSent = data.policeAlertSent || false;
+        sys.playerWanted = !!(data.playerWanted);
+        sys.playerWantedLevel = data.playerWantedLevel ?? 0;
+        // Restore expiry using remaining ms if present so saves work across sessions
+        if (data.playerWantedRemainingMs != null) {
+            sys.playerWantedExpiry = (typeof millis === 'function') ? (millis() + Number(data.playerWantedRemainingMs)) : null;
+        } else {
+            sys.playerWantedExpiry = null;
+        }
+        sys.policeAlertSent = !!data.policeAlertSent;
         
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving
-        sys.staticElementsInitialized = data.staticElementsInitialized || false;
+        sys.staticElementsInitialized = data.staticElementsInitialized ?? false;
         // If the system was saved with planets/station but space objects were not serialized,
         // ensure decorative space objects exist so missions and rendering that rely on them work.
         // We only spawn here (not run full initStaticElements) to avoid duplicating planets/station.
@@ -3560,6 +3566,20 @@ drawOptimalStarfield() {
 
         return sys;
     }
+
+        /**
+         * Helper to relink all systems after a full galaxy load.
+         * Call this once after `galaxy.systems` and `player` are instantiated.
+         */
+        static relinkAll(galaxy, player) {
+            if (!galaxy || !Array.isArray(galaxy.systems)) return;
+            for (const sys of galaxy.systems) {
+                try { if (typeof sys._postLoadRelink === 'function') sys._postLoadRelink(); } catch (e) { console.warn('StarSystem.relinkAll _postLoadRelink error', sys && sys.name, e); }
+            }
+            for (const sys of galaxy.systems) {
+                try { if (typeof sys.relinkReferences === 'function') sys.relinkReferences(player); } catch (e) { console.warn('StarSystem.relinkAll relinkReferences error', sys && sys.name, e); }
+            }
+        }
 
     // Add this method to the StarSystem class - place it after constructor
     setEconomyType(economyType) {
