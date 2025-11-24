@@ -435,7 +435,7 @@ class MissionGenerator {
     static createBountyMission(originSystem, originStation, galaxy, player) {
         let targetCount = floor(random(2, 6));
         
-        const baseBountyPerShip = 150;
+        const baseBountyPerShip = 300;
         // Reward can still be influenced by the origin system's properties, as that's where the contract is given.
         const techLevelBonus = (originSystem.techLevel || 5) * 10;
         const securityPenalty = (originSystem.securityLevel === 'High' ? -50 : (originSystem.securityLevel === 'Anarchy' ? 100 : 0));

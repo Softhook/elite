@@ -361,6 +361,18 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
             MISSION_LOG(`      -> Granting reward: ${this.rewardCredits} Credits`);
             player.addCredits(this.rewardCredits);
             this.status = 'Completed'; // Mark as completed
+            // Record completion in player's personal log when mission completes via Mission.complete()
+            try {
+                if (typeof player.recordMissionCompletion === 'function') {
+                    player.recordMissionCompletion(this);
+                }
+                if (typeof uiManager !== 'undefined' && uiManager) {
+                    uiManager.inactiveMissionIds = uiManager.inactiveMissionIds || new Set();
+                    try { uiManager.inactiveMissionIds.add(this.id); } catch(e) { /* ignore */ }
+                    uiManager.addMessage(`Mission Complete: ${this.title} | Reward: ${this.rewardCredits}cr`);
+                }
+                if (typeof saveGame === 'function') saveGame();
+            } catch(e) { MISSION_LOG('Error recording mission completion in Mission.complete():', e); }
             // Apply consequences for illegal assassinations (mark player wanted locally)
             try {
                 if (this.isIllegal) {
