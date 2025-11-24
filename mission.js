@@ -222,42 +222,72 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
 
     /** Per-frame update called from Player.update to monitor special mission targets. */
     update(currentSystem) {
-        if (this.type !== MISSION_TYPE.ASSASSINATION) return;
-        if (this.status !== 'Active') return; // Only monitor active assassination missions
+        if (this.status !== 'Active') return; // Only monitor active missions
         // Attempt to relink runtime references if possible (useful after load)
         try { this._ensureRuntimeLinked(currentSystem); } catch (e) { MISSION_LOG('Runtime relink failed:', e); }
-        // If no spawned target, nothing to monitor
-        if (!this._targetEnemyRef) return;
-        try {
-            const enemy = this._targetEnemyRef;
-            // If the enemy was destroyed -> allow completion (player may have killed them)
-            if (enemy.destroyed) {
-                // Award reward and clear mission via Player.completeMission() if player still has it
-                if (typeof player !== 'undefined' && player && player.activeMission === this) {
-                    // Increase progress so player.completeMission will succeed when invoked
-                    this.progressCount = Math.max(1, this.progressCount);
-                    // Directly complete the mission via its own complete() to grant reward
-                    if (typeof this.complete === 'function') {
+
+        // --- Assassination monitoring ---
+        if (this.type === MISSION_TYPE.ASSASSINATION) {
+            // If no spawned target, nothing to monitor
+            if (!this._targetEnemyRef) return;
+            try {
+                const enemy = this._targetEnemyRef;
+                // If the enemy was destroyed -> allow completion
+                if (enemy.destroyed) {
+                    if (typeof player !== 'undefined' && player && player.activeMission === this) {
+                        this.progressCount = Math.max(1, this.progressCount);
+                        if (typeof this.complete === 'function') {
                             this.complete(player);
-                            // Clean up runtime guards/refs after completion
                             try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after complete failed:', e); }
                             if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+                        }
                     }
+                    return;
                 }
-                return;
-            }
 
-            // If the target left the player's current system, cancel the mission
-            if (enemy.currentSystem && currentSystem && enemy.currentSystem !== currentSystem) {
-                // Cancel mission and notify
-                this.fail();
-                if (typeof uiManager !== 'undefined') uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`,[255,120,80]);
-                // Clear player's active mission if it's this one
-                // Also cleanup runtime guard links
-                try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after fail failed:', e); }
-                if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
-            }
-        } catch (e) { console.error('Mission.update (assassination) error:', e); }
+                // If the target left the player's current system, cancel the mission
+                if (enemy.currentSystem && currentSystem && enemy.currentSystem !== currentSystem) {
+                    this.fail();
+                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`,[255,120,80]);
+                    try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after fail failed:', e); }
+                    if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+                }
+            } catch (e) { console.error('Mission.update (assassination) error:', e); }
+            return;
+        }
+
+        // --- Sabotage monitoring ---
+        if (this.type === MISSION_TYPE.SABOTAGE) {
+            try {
+                // Ensure we have a runtime reference to the target space object (if possible)
+                if (!this._targetObjectRef && this.targetObjectId && currentSystem && Array.isArray(currentSystem.spaceObjects)) {
+                    const so = currentSystem.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                    if (so) Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true });
+                }
+
+                const targetObj = this._targetObjectRef;
+                // If we have a linked object and it was destroyed, award mission
+                if (targetObj && targetObj.destroyed) {
+                    if (typeof player !== 'undefined' && player && player.activeMission === this) {
+                        // Directly complete the mission via its own complete() to grant reward
+                        if (typeof this.complete === 'function') {
+                            this.complete(player);
+                            // Clear any sabotage-specific runtime refs
+                            try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = null; }
+                            // Ensure player's active mission cleared
+                            if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+                        }
+                    }
+                    return;
+                }
+
+                // If we don't have a persisted id, we can optionally try to match by proximity/name
+                // (not implemented here to avoid false-positives)
+            } catch (e) { console.error('Mission.update (sabotage) error:', e); }
+            return;
+        }
+        // Other mission types are not monitored here
+        return;
     }
 
     /**
