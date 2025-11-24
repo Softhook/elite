@@ -80,6 +80,11 @@ class Mission {
         this.targetObjectType = data.targetObjectType || null;
         this.targetObjectId = data.targetObjectId || null;
         this.targetPlanetName = data.targetPlanetName || null;
+        // Persist the system index where the target object lives (if provided)
+        // This helps resolve targets that live in other systems when the player
+        // is not currently present — we can ensure the remote system spawns
+        // its decorative objects so the persisted id remains valid.
+        this.spawnSystemIndex = (typeof data.spawnSystemIndex === 'number') ? data.spawnSystemIndex : (typeof data.systemIndex === 'number' ? data.systemIndex : null);
 
         // --- Tracking Properties ---
         // Initialize status and progress from saved data if present, otherwise use defaults for a new mission
@@ -268,17 +273,58 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
                 const targetObj = this._targetObjectRef;
                 // If we have a linked object and it was destroyed, award mission
                 if (targetObj && targetObj.destroyed) {
-                    if (typeof player !== 'undefined' && player && player.activeMission === this) {
-                        // Directly complete the mission via its own complete() to grant reward
-                        if (typeof this.complete === 'function') {
-                            this.complete(player);
+                    // Complete the mission when the linked target object is destroyed.
+                    // Don't require `player.activeMission === this` because mission
+                    // instances can become detached from the player's activeMission
+                    // reference (e.g. during save/load or temporary object moves).
+                    try {
+                        if (typeof player !== 'undefined' && player) {
+                            if (typeof this.complete === 'function') this.complete(player);
                             // Clear any sabotage-specific runtime refs
                             try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = null; }
-                            // Ensure player's active mission cleared
-                            if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
+                            // Clear player's activeMission if it still points at this mission
+                            try { if (player.activeMission === this) player.activeMission = null; } catch (e) {}
                         }
-                    }
+                    } catch (e) { console.error('Mission.update (sabotage) completion error:', e); }
                     return;
+                }
+
+                // If we don't have a linked object but we do have a persisted id, try a galaxy-wide search
+                if (!targetObj && this.targetObjectId) {
+                    let foundAny = false;
+                    try {
+                        if (typeof galaxy !== 'undefined' && Array.isArray(galaxy.systems)) {
+                            for (let si = 0; si < galaxy.systems.length; si++) {
+                                const sys = galaxy.systems[si];
+                                if (!sys || !Array.isArray(sys.spaceObjects)) continue;
+                                const so = sys.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                                if (so) {
+                                    // If found and destroyed -> complete
+                                    foundAny = true;
+                                    if (so.destroyed) {
+                                        try { if (typeof this.complete === 'function') this.complete(player); } catch (e) { console.error('Error completing mission (galaxy-found destroyed):', e); }
+                                        try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch(e){ this._targetObjectRef = null; }
+                                        try { if (player && player.activeMission === this) player.activeMission = null; } catch(e){}
+                                        return;
+                                    } else {
+                                        // Link to the live object so monitoring proceeds normally
+                                        try { Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true }); } catch(e) { this._targetObjectRef = so; }
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) { /* ignore galaxy search errors */ }
+
+                    // If we didn't find the object anywhere in the galaxy, assume it was removed/destroyed
+                    if (!foundAny) {
+                        try {
+                            if (typeof this.complete === 'function') this.complete(player);
+                            try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch(e){ this._targetObjectRef = null; }
+                            try { if (player && player.activeMission === this) player.activeMission = null; } catch(e){}
+                        } catch (e) { console.error('Mission.update (sabotage) assumed-missing completion error:', e); }
+                        return;
+                    }
                 }
 
                 // If we don't have a persisted id, we can optionally try to match by proximity/name
@@ -319,10 +365,42 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
 
         // Link sabotage target SpaceObject if we have a persisted id
         try {
-            if (!this._targetObjectRef && this.targetObjectId && currentSystem && Array.isArray(currentSystem.spaceObjects)) {
-                const so = currentSystem.spaceObjects.find(o => o && o.id === this.targetObjectId);
-                if (so) {
-                    Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true });
+            // If the mission carried a spawnSystemIndex (the system where the object was created),
+            // try to ensure that remote system has its spaceObjects spawned so the persisted id remains valid.
+            try {
+                if (!this._targetObjectRef && this.targetObjectId && (typeof galaxy !== 'undefined') && typeof this.spawnSystemIndex === 'number') {
+                    const remoteSys = (galaxy && Array.isArray(galaxy.systems)) ? galaxy.systems[this.spawnSystemIndex] : null;
+                    if (remoteSys) {
+                        if ((!Array.isArray(remoteSys.spaceObjects) || remoteSys.spaceObjects.length === 0) && typeof remoteSys.spawnSpaceObjectsForPlanets === 'function') {
+                            try { remoteSys.spawnSpaceObjectsForPlanets(); } catch (e) { /* non-fatal */ }
+                        }
+                        // Note: we do not forcibly link a remote object's runtime ref here unless
+                        // the player is actually in that system (currentSystem === remoteSys). The
+                        // main goal is to ensure the remote system populated its spaceObjects so
+                        // the persisted id can be found when the player enters that system.
+                    }
+                }
+            } catch (e) { /* ignore remote spawn attempts */ }
+
+            if (!this._targetObjectRef && this.targetObjectId) {
+                // First try current system
+                if (currentSystem && Array.isArray(currentSystem.spaceObjects)) {
+                    const so = currentSystem.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                    if (so) {
+                        Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true });
+                    }
+                }
+                // If still not found, search entire galaxy for the object (covers moved/remote cases)
+                if (!this._targetObjectRef && (typeof galaxy !== 'undefined') && Array.isArray(galaxy.systems)) {
+                    for (let si = 0; si < galaxy.systems.length; si++) {
+                        const sys = galaxy.systems[si];
+                        if (!sys || !Array.isArray(sys.spaceObjects)) continue;
+                        const found = sys.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                        if (found) {
+                            Object.defineProperty(this, '_targetObjectRef', { value: found, writable: true, enumerable: false, configurable: true });
+                            break;
+                        }
+                    }
                 }
             }
         } catch (e) { /* non-fatal */ }

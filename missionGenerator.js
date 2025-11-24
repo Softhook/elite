@@ -709,6 +709,11 @@ class MissionGenerator {
             originSystem: originSystem.name,
             originStation: originStation.name,
             destinationSystem: destSystem.name,
+            // Persist the destination system index so missions referencing a specific
+            // space object can be resolved to the correct system even when the player
+            // is not currently present in that system.
+            spawnSystemIndex: typeof destSystem.systemIndex === 'number' ? destSystem.systemIndex : null,
+            systemIndex: typeof destSystem.systemIndex === 'number' ? destSystem.systemIndex : null,
             destinationStation: null,
             targetObjectType: targetObjectType,
             targetObjectId: targetObjectId,
