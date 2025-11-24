@@ -7,7 +7,7 @@ const sizeMap = {
     satellite: 60,
     telescope: 100,
     relay: 120,
-    habitat: 220,
+    habitat: 140,
     debris: 150,
     probe: 50,
     beacon: 40,
@@ -31,7 +31,7 @@ const sizeMap = {
     wreckage: 95,
     observatoryDome: 85,
     hydroponicsBay: 105,
-    weaponPlatform: 115,
+    weaponPlatform: 200,
     shieldGenerator: 75,
     energyCollector: 130,
     quantumGate: 160
@@ -1451,101 +1451,72 @@ const SpaceObjectRenderers = {
     },
 
     orbitalGarden: function(obj, size, anim, bob) {
-        // Redesigned orbital garden: stacked domes, hydroponic towers, rotating shade, water recycler and slow pollinators
+        // Simplified orbital garden: terraced rings, central planter, rotating shade, and gentle pollinators
         push();
         noStroke();
-        // overall dome cluster: main dome + two smaller satellite domes
-        const domeW = size * 0.86;
-        const domeH = size * 0.48;
-        fill(200, 235, 245, 150);
-        ellipse(0, -size * 0.06 + bob, domeW, domeH);
-        fill(200, 230, 240, 120);
-        ellipse(-size * 0.48, size * 0.02 + bob, domeW * 0.42, domeH * 0.46);
-        ellipse(size * 0.48, size * 0.02 + bob, domeW * 0.42, domeH * 0.46);
 
-        // dome grid (cheap radial + rings)
-        stroke(170, 210, 230, 100); strokeWeight(0.8);
-        for (let r = 1; r <= 2; r++) {
-            const ry = -size * 0.06 - size * 0.01 + r * (size * 0.12);
-            ellipse(0, ry, domeW * (0.92 - r * 0.12), domeH * (0.9 - r * 0.14));
-        }
-        for (let a = 0; a < 5; a++) {
-            const ang = a * (TWO_PI / 5) + obj.bobPhase * 0.0005;
-            const lx = Math.cos(ang) * size * 0.42;
-            const ly = Math.sin(ang) * size * 0.20 - size * 0.06 + bob * 0.02;
-            line(0, -size * 0.06 + bob, lx, ly);
-        }
-        noStroke();
+        const phase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.001;
+        // base shadow / platform
+        fill(18, 28, 18, 220);
+        ellipse(0, size * 0.16 + bob, size * 0.92, size * 0.22);
 
-        // central hydroponic towers (stacked, slow rotating platforms)
-        const towerCount = 3;
-        for (let t = 0; t < towerCount; t++) {
-            const tw = size * 0.12 - t * (size * 0.01);
-            const th = size * 0.22 - t * (size * 0.02);
-            const tx = 0;
-            const ty = -size * 0.06 + bob + t * (size * 0.06);
-            push();
-            translate(tx, ty);
-            rotate((anim ? anim.hydroponicSpin : 0) * (1 + t * 0.15));
-            fill(80, 120, 80);
-            rect(0, 0, tw, th, 3);
-            // planter rings
-            noFill(); stroke(60, 100, 70); strokeWeight(0.8);
-            ellipse(0, -th * 0.06, tw * 0.88, th * 0.36);
+        // terraced planting rings (clean, readable layers)
+        const ringColors = [ [50,120,70], [60,140,80], [80,170,100] ];
+        for (let r = 0; r < 3; r++) {
+            const rScale = 0.78 - r * 0.18;
+            const ry = -size * 0.02 + bob + r * (size * 0.04);
+            fill(ringColors[r][0], ringColors[r][1], ringColors[r][2], 220 - r * 30);
+            ellipse(0, ry, size * rScale, size * (0.22 - r * 0.03));
+            // subtle ring rim
+            stroke(20, 40, 24, 120); strokeWeight(0.6);
+            noFill(); ellipse(0, ry, size * rScale * 0.98, size * (0.22 - r * 0.03) * 0.98);
             noStroke();
-            // tiny plants (few, strategically placed)
-            for (let p = -2; p <= 2; p++) {
-                const px = p * (tw * 0.18);
-                const py = -th * 0.02 + Math.sin(obj.bobPhase * 0.002 + p) * 1.6;
-                fill(90, 200 - t * 18, 110 + t * 6);
-                ellipse(px, py, 6, 8);
-            }
-            pop();
         }
 
-        // rotating shade panels above domes (driven by gardenShadeAngle)
+        // central planter and stylized tree
+        const centerY = -size * 0.06 + bob;
+        fill(90, 150, 100);
+        ellipse(0, centerY, size * 0.28, size * 0.12);
+        // trunk
+        fill(110, 68, 38);
+        rect(0, centerY - size * 0.05, size * 0.04, size * 0.10, 3);
+        // canopy
+        fill(60, 190, 90, 230);
+        ellipse(0, centerY - size * 0.18, size * 0.22, size * 0.14);
+
+        // rotating thin shade ring above garden (soft, slow)
         push();
-        translate(0, -size * 0.18 + bob);
+        translate(0, centerY - size * 0.04);
         rotate(anim ? anim.gardenShadeAngle : 0);
-        fill(40, 70, 90, 140);
-        rect(0, 0, size * 0.6, size * 0.06, 4);
-        rect(0, -size * 0.08, size * 0.38, size * 0.05, 3);
+        stroke(12, 24, 20, 160); strokeWeight(2);
+        noFill();
+        ellipse(0, 0, size * 0.72, size * 0.72);
         noStroke();
         pop();
 
-        // water recycler / light core (subtle pulsing)
-        const corePulse = 0.6 + 0.4 * Math.sin(anim ? anim.pollinatorPhase : obj.bobPhase * 0.002);
-        fill(120, 200, 220, 80 + 80 * corePulse);
-        ellipse(0, size * 0.18 + bob * 0.1, size * 0.14 * corePulse, size * 0.06 * corePulse);
-
-        // slow-moving pollinators (cheap: few ellipses orbiting)
-        for (let p = 0; p < 4; p++) {
-            const pa = (anim ? anim.pollinatorPhase : 0) + p * 1.6;
-            const pr = size * (0.28 + p * 0.06);
-            fill(255, 230, 140, 200 - p * 30);
-            ellipse(Math.cos(pa) * pr * 0.5, Math.sin(pa) * pr * 0.28 - size * 0.04 + bob * 0.08, 3 + (p % 2), 2 + (p % 2));
+        // gentle pollinators / motes orbiting in layered paths
+        for (let p = 0; p < 5; p++) {
+            const a = phase + p * 1.25;
+            const r = size * (0.28 + p * 0.06);
+            const x = Math.cos(a) * r * 0.5;
+            const y = Math.sin(a) * r * 0.26 + bob * 0.02;
+            fill(255, 220, 130, 200 - p * 30);
+            ellipse(x, y, 3 + (p % 2), 2 + (p % 2));
         }
 
-        // small service bots on rails (simple oscillation)
+        // subtle central glow layers (adds warmth without visual clutter)
+        for (let g = 0; g < 3; g++) {
+            fill(100, 200, 150, 36 - g * 8);
+            ellipse(0, centerY + size * 0.02, size * (0.38 + g * 0.18), size * (0.18 + g * 0.08));
+        }
+
+        // small service bots (simple oscillation) — minimal and tidy
         for (let b = 0; b < 2; b++) {
-            const bx = Math.sin(obj.bobPhase * 0.003 + b) * (size * 0.22);
-            const by = size * 0.26 + bob * 0.06 - b * (size * 0.04);
-            fill(200, 180, 140); rect(bx, by, 10, 6, 2);
-            stroke(110, 90, 70, 160); strokeWeight(0.6); line(bx - 6, by + 4, bx + 6, by + 4); noStroke();
+            const bx = Math.sin(obj.bobPhase * 0.003 + b) * (size * 0.18);
+            const by = size * 0.24 + bob * 0.06 - b * (size * 0.03);
+            fill(200, 180, 140);
+            rect(bx, by, 10, 6, 2);
         }
-
-        // Flashing environmental lights
-        const envFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4);
-        fill(0, 255, 255, 255 * envFlash);
-        ellipse(-size * 0.3, -size * 0.1 + bob, 3, 3);
-        fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4 + 1)));
-        ellipse(size * 0.3, -size * 0.1 + bob, 3, 3);
-        // Slow-moving external panel
-        push();
-        rotate(Math.sin(obj.bobPhase * 0.002) * 0.1);
-        fill(50, 100, 150, 150);
-        rect(size * 0.4, bob, size * 0.15, size * 0.08, 2);
-        pop();
 
         pop();
     },
