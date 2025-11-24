@@ -1970,6 +1970,144 @@ const SpaceObjectRenderers = {
         fill(220, 200, 180);
         ellipse(size * 0.2, bob + size * 0.25, 4, 4);
         pop();
+    },
+
+    asteroidMiner: function(obj, size, anim, bob) {
+        // compact asteroid miner: drill tower + ore chute and conveyor
+        push();
+        noStroke();
+        // base skid
+        fill(70, 70, 80);
+        ellipse(0, bob + size * 0.18, size * 0.8, size * 0.36);
+
+        // drill tower
+        fill(110, 110, 120);
+        rect(0, -size * 0.06 + bob, size * 0.22, size * 0.5, 4);
+
+        // rotating drill head
+        push(); translate(size * 0.48, size * 0.14 + bob);
+        rotate((anim ? anim.miningSpin : 0) + obj.bobPhase * 0.002);
+        fill(150, 130, 100);
+        rect(0, 0, size * 0.12, size * 0.04, 2);
+        pop();
+
+        // ore chute / conveyor
+        fill(50);
+        rect(0, size * 0.36 + bob, size * 0.6, size * 0.12, 3);
+        // ore sacks
+        fill(100, 70, 60);
+        ellipse(-size * 0.22, size * 0.44 + bob, size * 0.12, size * 0.14);
+        ellipse(size * 0.22, size * 0.44 + bob, size * 0.12, size * 0.14);
+        pop();
+    },
+
+    energyCollector: function(obj, size, anim, bob) {
+        // circular energy collector with concentric coils and a pulsing core
+        noStroke();
+        // outer ring
+        fill(30, 40, 60);
+        ellipse(0, bob, size * 0.9, size * 0.36);
+
+        // collector coils
+        for (let i = 0; i < 6; i++) {
+            const a = i * (TWO_PI / 6) + obj.bobPhase * 0.0006;
+            const rx = Math.cos(a) * size * 0.36;
+            const ry = Math.sin(a) * size * 0.14 + bob;
+            fill(80, 160, 200, 160);
+            ellipse(rx, ry, size * 0.14, size * 0.08);
+        }
+
+        // pulsing core
+        const pulse = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.012);
+        fill(120, 220, 255, 180 * pulse);
+        ellipse(0, bob - size * 0.02, size * 0.28 * (0.8 + pulse * 0.4), size * 0.16 * (0.8 + pulse * 0.4));
+    },
+
+    iceCrystal: function(obj, size, anim, bob) {
+        // crystalline shards with subtle translucency and drifting micro-shards
+        noStroke();
+        // main crystal cluster
+        fill(200, 235, 255, 220);
+        for (let s = 0; s < 5; s++) {
+            const ang = s * (TWO_PI / 5) + obj.bobPhase * 0.002;
+            const len = size * (0.35 + s * 0.08);
+            push(); rotate(ang);
+            beginShape();
+            vertex(0, -len * 0.6 + bob);
+            vertex(len * 0.08, -len * 0.12 + bob);
+            vertex(0, len * 0.5 + bob);
+            vertex(-len * 0.08, -len * 0.12 + bob);
+            endShape(CLOSE);
+            pop();
+        }
+
+        // tiny drifting shards
+        fill(180, 220, 255, 120);
+        for (let i = 0; i < 3; i++) ellipse(Math.cos(obj.bobPhase * 0.002 + i) * size * 0.4, Math.sin(obj.bobPhase * 0.003 + i) * size * 0.18 + bob * 0.08, 4, 3);
+    },
+
+    nebulaFragment: function(obj, size, anim, bob) {
+        // soft, translucent gas fragment that glows and drifts
+        noStroke();
+        const t = (Math.sin(obj.bobPhase * 0.008) + 1) * 0.5;
+        fill(120, 80, 200, 40 + 80 * t);
+        ellipse(0, bob, size * 0.9, size * 0.5);
+        fill(180, 120, 240, 30 + 60 * (1 - t));
+        ellipse(-size * 0.14, bob - size * 0.06, size * 0.6, size * 0.36);
+        fill(100, 180, 220, 24 + 48 * t);
+        ellipse(size * 0.16, bob + size * 0.08, size * 0.5, size * 0.3);
+    },
+
+    wreckage: function(obj, size, anim, bob) {
+        // larger broken hull plates and twisted beams
+        noStroke();
+        fill(120, 110, 100);
+        // main plate
+        rect(0, bob, size * 0.6, size * 0.28, 4);
+        // scattered panels
+        fill(90, 80, 80);
+        rect(-size * 0.22, bob - size * 0.12, size * 0.2, size * 0.08, 2);
+        rect(size * 0.28, bob + size * 0.1, size * 0.18, size * 0.06, 2);
+        // small sparks/puffs
+        fill(255, 180, 140, 120);
+        ellipse(size * 0.36, bob - size * 0.06, 6, 3);
+    },
+
+    solarFarm: function(obj, size, anim, bob) {
+        // rowed solar panels on a floating frame
+        noStroke();
+        fill(36, 44, 60);
+        rect(0, bob, size * 0.9, size * 0.22, 3);
+        // panels
+        fill(20, 60, 120);
+        for (let p = -2; p <= 2; p++) {
+            rect(p * (size * 0.18), bob - size * 0.02, size * 0.14, size * 0.08, 2);
+        }
+        // small wiring glows
+        fill(120, 200, 255, 60);
+        ellipse(0, bob + size * 0.08, 6, 3);
+    },
+
+    quantumGate: function(obj, size, anim, bob) {
+        // stylized ring/gate with inner pulse and faint energy arcs
+        noFill();
+        stroke(100, 180, 255, 160);
+        strokeWeight(2);
+        ellipse(0, bob, size * 0.9, size * 0.9);
+        stroke(160, 220, 255, 120);
+        strokeWeight(1);
+        const pulse = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.01);
+        // inner spinning arcs
+        for (let i = 0; i < 4; i++) {
+            const a = (obj.bobPhase * 0.002) + i * (TWO_PI / 4);
+            const ax = Math.cos(a) * size * 0.36;
+            const ay = Math.sin(a) * size * 0.36 + bob * 0.02;
+            line(ax * 0.8, ay * 0.8, ax, ay);
+        }
+        // core glow
+        noStroke();
+        fill(120, 200, 255, 100 * pulse);
+        ellipse(0, bob, size * 0.22 * (0.8 + pulse * 0.4), size * 0.22 * (0.8 + pulse * 0.4));
     }
 };
 
