@@ -38,7 +38,7 @@ class WeaponSystem {
         try {
             if (typeof ObjectPool !== 'undefined') {
                 if (!this.projectilePool) {
-                    console.log(`Initializing projectile pool with ${initialPoolSize} projectiles`);
+                    WEAPON_LOG(`Initializing projectile pool with ${initialPoolSize} projectiles`);
                     this.projectilePool = new ObjectPool(Projectile, initialPoolSize, 1000);
                 }
                 return true;
@@ -218,7 +218,7 @@ class WeaponSystem {
 static fireForce(owner, system) {
     if (!owner || !system) return;
     
-    console.log(`Force weapon fired by ${owner.constructor.name}`); // Debug output
+    WEAPON_LOG(`Force weapon fired by ${owner.constructor.name}`); // Debug output
     
     // Cache owner position in local variables for faster access
     const ownerX = owner.pos.x;
@@ -236,10 +236,10 @@ static fireForce(owner, system) {
     
     // Pre-populate enemies to process - THIS IS THE KEY FIX
     let entitiesToProcess;
-    if (owner === system.player) {
+        if (owner === system.player) {
         // Player attacking enemies - use concat to avoid spread operator overhead
         entitiesToProcess = system.enemies.concat(system.asteroids);
-        console.log(`Found ${entitiesToProcess.length} potential targets for force wave`);
+            WEAPON_LOG(`Found ${entitiesToProcess.length} potential targets for force wave`);
     } else if (system.player) {
         // Enemy attacking player
         entitiesToProcess = [system.player];
@@ -264,7 +264,7 @@ static fireForce(owner, system) {
         maxProcessPerFrame: 20 // INCREASED from 10 to 20
     });
     
-    console.log(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
+    WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
     
     // Store reference for drawing effects (reusing owner's lastForceWave if possible)
     if (!owner.lastForceWave) {
@@ -875,7 +875,7 @@ static fireHarpoon(owner, system, angle) {
     system.addProjectile(proj);
 
         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-            console.log('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
+            WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
         }
 
     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {

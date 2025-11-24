@@ -62,13 +62,13 @@ class CosmicStorm {
         if (!this.dissipating && this.lifetime <= 0) {
             this.dissipating = true;
             this.dissipateStart = millis();
-            console.log(`${this.type} storm beginning to dissipate`);
+            ENV_LOG(`${this.type} storm beginning to dissipate`);
         }
         if (this.dissipating) {
             const dissipateProgress = (millis() - this.dissipateStart) / this.dissipateTime;
             this.intensity = map(dissipateProgress, 0, 1, this.intensity, 0);
             if (dissipateProgress >= 1) {
-                console.log(`${this.type} storm has completely dissipated`);
+                ENV_LOG(`${this.type} storm has completely dissipated`);
                 return false;
             }
         }

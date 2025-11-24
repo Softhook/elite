@@ -2028,7 +2028,7 @@ handleInput() {
         const p = planets[next];
         const name = (p && p.name) ? p.name : `Planet ${next+1}`;
         if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name} (${next+1}/${planets.length})`);
-        console.log(`Autopilot planet target set to index ${next} (${name})`);
+        PLAYER_LOG(`Autopilot planet target set to index ${next} (${name})`);
     }
     
     /**
@@ -2039,7 +2039,7 @@ handleInput() {
         
         // Disable autopilot if player was recently damaged
         if (millis() - this.lastDamageTime < 500) {
-            console.log("Autopilot disabled: Recent damage detected");
+            PLAYER_LOG("Autopilot disabled: Recent damage detected");
             this.disableAutopilot();
             if (uiManager) uiManager.addMessage("Autopilot disengaged: Damage detected");
             return;

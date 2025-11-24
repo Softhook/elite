@@ -2333,7 +2333,7 @@ checkProjectileCollisions() {
             if (cargoItem.collected) continue;
             
             if (cargoItem.isExpired && cargoItem.isExpired()) {
-                console.log(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
+                CARGO_LOG(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
                 this._fastRemove(this.cargo, i);
                 continue;
             }
