@@ -3089,6 +3089,18 @@ drawOptimalStarfield() {
             nebulae: Array.isArray(this.nebulae) && this.nebulae.length > 0
                 ? this.nebulae.map(n => (typeof n.toJSON === 'function' ? n.toJSON() : null))
                 : [],
+            // Save decorative space objects (satellites, telescopes, etc.)
+            spaceObjects: Array.isArray(this.spaceObjects) && this.spaceObjects.length > 0
+                ? this.spaceObjects.map(so => (typeof so.toJSON === 'function' ? so.toJSON() : {
+                    type: so.type || null,
+                    x: so.pos ? (so.pos.x || 0) : null,
+                    y: so.pos ? (so.pos.y || 0) : null,
+                    size: so.size || null,
+                    destroyed: !!so.destroyed,
+                    state: so.state || null,
+                    subtype: so.subtype || null
+                }))
+                : [],
             // --- Add Jump Zone Data ---
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
@@ -3136,6 +3148,31 @@ drawOptimalStarfield() {
             sys.nebulae = data.nebulae.map(nebulaData => Nebula.fromJSON(nebulaData));
         }
 
+        // Restore Space Objects if present
+        if (data.spaceObjects && Array.isArray(data.spaceObjects)) {
+            sys.spaceObjects = [];
+            for (const soData of data.spaceObjects) {
+                try {
+                    if (typeof SpaceObject !== 'undefined' && typeof SpaceObject.fromJSON === 'function') {
+                        sys.spaceObjects.push(SpaceObject.fromJSON(soData));
+                    } else if (typeof SpaceObject !== 'undefined') {
+                        const x = soData.x ?? (soData.pos && soData.pos.x) ?? 0;
+                        const y = soData.y ?? (soData.pos && soData.pos.y) ?? 0;
+                        const type = soData.type || 'satellite';
+                        const obj = new SpaceObject(x, y, type);
+                        if (soData.size !== undefined && obj.size !== undefined) obj.size = soData.size;
+                        if (soData.destroyed) obj.destroyed = true;
+                        if (soData.state !== undefined) obj.state = soData.state;
+                        if (soData.subtype !== undefined) obj.subtype = soData.subtype;
+                        if (soData.vel && obj.vel) { obj.vel.x = soData.vel.x || 0; obj.vel.y = soData.vel.y || 0; }
+                        sys.spaceObjects.push(obj);
+                    }
+                } catch (e) {
+                    console.error('Error restoring spaceObject', e, soData);
+                }
+            }
+        }
+
         // --- Restore Jump Zone Data ---
         if (data.jumpZoneCenterX !== null && data.jumpZoneCenterY !== null && typeof createVector === 'function') {
             sys.jumpZoneCenter = createVector(data.jumpZoneCenterX, data.jumpZoneCenterY);
@@ -3154,6 +3191,19 @@ drawOptimalStarfield() {
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving
         sys.staticElementsInitialized = data.staticElementsInitialized || false;
+        // If the system was saved with planets/station but space objects were not serialized,
+        // ensure decorative space objects exist so missions and rendering that rely on them work.
+        // We only spawn here (not run full initStaticElements) to avoid duplicating planets/station.
+        try {
+            if ((!sys.spaceObjects || sys.spaceObjects.length === 0) && Array.isArray(sys.planets) && sys.planets.length > 0 && typeof sys.spawnSpaceObjectsForPlanets === 'function') {
+                sys.spaceObjects = sys.spaceObjects || [];
+                sys.spawnSpaceObjectsForPlanets();
+                // Mark static elements initialized so we don't attempt to re-run full init later
+                sys.staticElementsInitialized = true;
+            }
+        } catch (e) {
+            console.error('Error respawning space objects on load:', e);
+        }
         // ---
 
         // NOTE: We do NOT call initStaticElements here because planets/station/jumpzone
