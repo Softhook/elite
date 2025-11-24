@@ -326,6 +326,88 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
                 }
             }
         } catch (e) { /* non-fatal */ }
+
+        // Additional sabotage fallback: if this is a sabotage mission and we still
+        // don't have a runtime link, try to ensure the system has decorative objects
+        // spawned, attempt to relink by proximity/name, and as a last resort create
+        // a mission-specific `SpaceObject` so the mission has a concrete target.
+        try {
+            if (this.type === MISSION_TYPE.SABOTAGE && !this._targetObjectRef && currentSystem) {
+                // Ensure static objects are populated (no-op if already done)
+                if (typeof currentSystem.spawnSpaceObjectsForPlanets === 'function') {
+                    try { currentSystem.spawnSpaceObjectsForPlanets(); } catch (e) { /* ignore */ }
+                }
+
+                // Re-attempt linking by persisted id (in case spawn populated it)
+                try {
+                    if (this.targetObjectId && Array.isArray(currentSystem.spaceObjects)) {
+                        const so2 = currentSystem.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                        if (so2) {
+                            Object.defineProperty(this, '_targetObjectRef', { value: so2, writable: true, enumerable: false, configurable: true });
+                            return;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+
+                // Try to find a nearby object by matching display name and planet proximity
+                try {
+                    if (Array.isArray(currentSystem.spaceObjects) && this.targetObjectType && this.targetPlanetName && Array.isArray(currentSystem.planets)) {
+                        const planet = currentSystem.planets.find(p => p && p.name === this.targetPlanetName);
+                        if (planet && planet.pos) {
+                            let best = null; let bestDist = Infinity;
+                            const maxConsiderDist = Math.max((planet.size || 0) * 1.2, 600);
+                            for (let so of currentSystem.spaceObjects) {
+                                if (!so || !so.pos) continue;
+                                // Prefer objects whose display name matches the expected type
+                                let nameMatch = false;
+                                try { nameMatch = (so.getDisplayName && so.getDisplayName() === this.targetObjectType); } catch (e) { nameMatch = false; }
+                                const dx = so.pos.x - planet.pos.x;
+                                const dy = so.pos.y - planet.pos.y;
+                                const d = Math.sqrt(dx*dx + dy*dy);
+                                if (d <= maxConsiderDist && d < bestDist) {
+                                    // prefer name matches over generic proximity
+                                    if (!best || nameMatch || (!best.nameMatch && d < bestDist)) {
+                                        best = so; bestDist = d; best.nameMatch = nameMatch;
+                                    }
+                                }
+                            }
+                            if (best) {
+                                try { this.targetObjectId = best.id || this.targetObjectId; } catch (e) {}
+                                Object.defineProperty(this, '_targetObjectRef', { value: best, writable: true, enumerable: false, configurable: true });
+                                return;
+                            }
+                        }
+                    }
+                } catch (e) { /* ignore proximity match errors */ }
+
+                // Last resort: create a mission-specific SpaceObject so the mission is resolvable
+                try {
+                    if (typeof SpaceObject === 'function') {
+                        // Determine spawn position: near player if present, otherwise near the named planet if available
+                        let sx = 0, sy = 0;
+                        const planet = (Array.isArray(currentSystem.planets) && this.targetPlanetName) ? currentSystem.planets.find(p => p && p.name === this.targetPlanetName) : null;
+                        if (typeof player !== 'undefined' && player && player.pos) {
+                            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI*2);
+                            const dist = 600 + ((planet && planet.size) ? Math.max(planet.size, 200) : 800);
+                            sx = player.pos.x + (Math.cos(angle) * dist);
+                            sy = player.pos.y + (Math.sin(angle) * dist);
+                        } else if (planet && planet.pos) {
+                            sx = planet.pos.x + 800; sy = planet.pos.y + 120;
+                        } else {
+                            // Fallback to origin of system
+                            sx = 0; sy = 0;
+                        }
+                        const soNew = new SpaceObject(sx, sy, this.targetObjectType || 'satellite');
+                        soNew.isMissionSpecific = true;
+                        currentSystem.spaceObjects = currentSystem.spaceObjects || [];
+                        currentSystem.spaceObjects.push(soNew);
+                        try { this.targetObjectId = soNew.id; } catch (e) { /* ignore */ }
+                        Object.defineProperty(this, '_targetObjectRef', { value: soNew, writable: true, enumerable: false, configurable: true });
+                        if (typeof uiManager !== 'undefined' && uiManager && typeof uiManager.addMessage === 'function') uiManager.addMessage('Mission target established for sabotage operation.');
+                    }
+                } catch (e) { /* creating SpaceObject failed — non-fatal */ }
+            }
+        } catch (e) { /* non-fatal overall */ }
     }
 
     /**

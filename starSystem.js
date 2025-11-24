@@ -1225,6 +1225,23 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     try { so.update(this); } catch (e) { console.error('SpaceObject.update error', e); }
                     // If destroyed, spawn a small metals cargo and remove
                     if (so.destroyed) {
+                        // Notify active sabotage missions that are targeting this object
+                        try {
+                            if (typeof player !== 'undefined' && player && player.activeMission) {
+                                const am = player.activeMission;
+                                const isSab = (typeof MISSION_TYPE !== 'undefined' && am && am.type === MISSION_TYPE.SABOTAGE) || (am && am.type === 'Sabotage');
+                                if (am && isSab && am.targetObjectId !== undefined && am.targetObjectId === so.id) {
+                                    try {
+                                        am.progressCount = Math.max(1, am.progressCount || 0);
+                                        if (typeof am.complete === 'function') {
+                                            am.complete(player);
+                                            if (player.activeMission === am) player.activeMission = null;
+                                        }
+                                    } catch (e) { console.warn('Error completing sabotage mission on object destroy', e); }
+                                }
+                            }
+                        } catch (e) { /* non-fatal */ }
+
                         try {
                             if (random() < 0.95) {
                                 const baseQuantity = max(1, floor(map(so.size, 28, 110, 1, 6)));
