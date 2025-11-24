@@ -611,6 +611,17 @@ class EnemyStateMachine {
                     }
                     // Clear any station pause timers
                     this.nearStationTimer = null;
+                    // If we're already at the jump zone, initiate the fade immediately
+                    try {
+                        if (sys?.jumpZoneCenter) {
+                            const d = dist(this.pos.x, this.pos.y, sys.jumpZoneCenter.x, sys.jumpZoneCenter.y);
+                            if (d < 150) {
+                                if (typeof this.initiateJumpFade === 'function') {
+                                    this.initiateJumpFade(0.35, 1.2);
+                                }
+                            }
+                        }
+                    } catch (e) { /* ignore distance/fade errors */ }
                 } catch (e) {
                     console.warn(`${this.shipTypeName}: onStateEntry(LEAVING_SYSTEM) failed:`, e);
                 }

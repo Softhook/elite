@@ -564,32 +564,18 @@ class EnemyAIBehaviors {
                             this.changeState(AI_STATE.GUARDING);
                             HAULER_LOG(`${this.shipTypeName} (Guard) followed principal to ${targetSystem.name}`);
                         } else {
-                            // Can't follow, destroy
-                            this.destroyed = true;
-                            HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, destroyed`);
+                            // Can't follow, initiate jump-fade to keep visual consistency
+                            this.initiateJumpFade();
+                            HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, initiating jump fade`);
                         }
                         } else {
                             // Normal hauler/transport leaving
                             this.inCombat = false;
                             this.haulerCombatTimer = undefined;
-                            console.log(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Marking destroyed.`);
-                            // Start a short fade-to-white jump effect instead of immediate explosion
-                            try {
-                                this._isJumpFading = true;
-                                // Tuned durations: quicker fade-out, slower fade-in
-                                this._jumpFadeOutDuration = 0.35; // seconds (fast)
-                                this._jumpFadeInDuration = 1.2;   // seconds (slow)
-                                this._jumpFadeTimer = this._jumpFadeOutDuration;
-                                this._jumpFadePhase = 'out'; // 'out' = fade to white, 'in' = fade back
-                                // Stop ship movement and weapons during fade
-                                if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
-                                this.isThrusting = false;
-                                this.currentWeapon = null;
-                            } catch (e) {
-                                // If anything goes wrong, fall back to immediate destroy
-                                this.destroyed = true;
-                            }
-                            HAULER_LOG(`${this.role} ${this.shipTypeName} left the system.`);
+                            console.log(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
+                            // Use centralized helper so all ships use the same visual fade behavior
+                            this.initiateJumpFade(0.35, 1.2);
+                            HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
                         }
                     shouldMove = false;
                 }

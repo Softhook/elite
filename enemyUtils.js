@@ -149,6 +149,31 @@ class EnemyUtils {
     }
 
     /**
+     * Initiate a jump fade effect (fade out -> mark destroyed -> fade in).
+     * This centralizes the visual jump/despawn behavior so all ship roles
+     * can use the same smooth effect instead of instant destruction.
+     * @param {number} [outDuration=0.35] - Fade-to-white duration (seconds)
+     * @param {number} [inDuration=1.2] - Fade-back duration (seconds)
+     */
+    initiateJumpFade(outDuration = 0.35, inDuration = 1.2) {
+        try {
+            this._isJumpFading = true;
+            this._jumpFadeOutDuration = outDuration;
+            this._jumpFadeInDuration = inDuration;
+            this._jumpFadePhase = 'out';
+            this._jumpFadeTimer = outDuration;
+
+            // Stop motion and weapons immediately
+            if (this.vel && typeof this.vel.set === 'function') this.vel.set(0, 0);
+            this.isThrusting = false;
+            this.currentWeapon = null;
+        } catch (e) {
+            // Defensive fallback: if anything fails, mark destroyed so the ship is removed
+            this.destroyed = true;
+        }
+    }
+
+    /**
      * Applies energy tangle effect to impair movement
      * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
