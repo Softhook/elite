@@ -1790,7 +1790,44 @@ if (isIllegalInSystem || isMissionCargo) {
         const headerHeight = 45;
         const rowHeight = 28;
         const closeButtonPadding = 40;
-        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonPadding;
+
+        // --- Dynamic description sizing (compute once per opened overlay) ---
+        if (this._marketOverlayCacheIndex !== systemIndex) {
+            this._marketOverlayCacheIndex = systemIndex;
+            // Compute and cache description text & measurement so it remains static while overlay is open
+            const descText = (typeof generateSystemDescription === 'function') ? generateSystemDescription(system, { galaxy: galaxy, player: (typeof player !== 'undefined' ? player : null) }) : '';
+            const descSize = 18; // increased text size for description
+            const descPadding = 12;
+            const descW = 360 - 24; // overlayW (360) minus side padding used below
+
+            // Measure wrapped lines using textWidth to estimate height (safe in draw context)
+            let descHeight = 0;
+            if (descText && typeof textWidth === 'function') {
+                push();
+                textFont(font);
+                textSize(descSize);
+                const paras = descText.split('\n');
+                const leading = descSize * 1.35;
+                for (let p of paras) {
+                    if (!p) { descHeight += leading; continue; }
+                    const w = textWidth(p);
+                    const lines = Math.max(1, Math.ceil(w / descW));
+                    descHeight += lines * leading;
+                }
+                pop();
+                descHeight += descPadding * 2; // inner padding
+            } else {
+                // Fallback fixed size
+                descHeight = 110;
+            }
+
+            this._marketOverlayDescText = descText;
+            this._marketOverlayDescSize = descSize;
+            this._marketOverlayDescPadding = descPadding;
+            this._marketOverlayDescHeight = descHeight;
+        }
+
+        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonPadding + (this._marketOverlayDescHeight || 110);
         
         // Overlay dimensions
         const overlayW = 360;
@@ -1886,6 +1923,33 @@ if (isIllegalInSystem || isMissionCargo) {
             text(Math.floor(comm.stock || 0), col4X, yPos);
             
             yPos += rowHeight;
+        }
+
+        // --- System description / backstory box ---
+        const cachedDesc = this._marketOverlayDescText || '';
+        const cachedDescSize = this._marketOverlayDescSize || 16;
+        const cachedDescPadding = this._marketOverlayDescPadding || 12;
+        const cachedDescHeight = this._marketOverlayDescHeight || 110;
+
+        if (cachedDesc) {
+            const descX = overlayX + 12;
+            const descBoxW = overlayW - 24;
+            const descY = yPos + 12; // place below commodities table
+
+            // Background for description area sized to measured height
+            fill(15, 22, 36, 220);
+            stroke(80, 110, 160, 160);
+            strokeWeight(1);
+            rect(descX - cachedDescPadding, descY - cachedDescPadding, descBoxW + cachedDescPadding * 2, cachedDescHeight, 6);
+
+            // Draw wrapped description text with larger size
+            noStroke();
+            fill(220);
+            textFont(font);
+            textSize(cachedDescSize);
+            textLeading(cachedDescSize * 1.35);
+            textAlign(LEFT, TOP);
+            text(cachedDesc, descX, descY, descBoxW);
         }
         
         // Store overlay area for click detection

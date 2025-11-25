@@ -156,6 +156,8 @@ class StarSystem {
         this.cosmicStorms = [];
         this.spaceObjects = []; // decorative satellites/telescopes
 
+        // Cached human-readable description (can be persisted)
+        this.cachedDescription = null;
         // Cooldown to prevent spamming alien spawn sound during batch spawns
         this._lastAlienSpawnSoundTime = 0;
 
@@ -731,6 +733,15 @@ try {
         // Set system-wide police alert immediately
         this.policeAlertSent = player?.isWanted || false;
         console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
+
+        // Update cached, persisted description when player visits the system
+        try {
+            if (typeof generateSystemDescription === 'function') {
+                this.cachedDescription = generateSystemDescription(this, { galaxy: (typeof galaxy !== 'undefined' ? galaxy : null), player: this.player });
+            }
+        } catch (e) {
+            console.warn('Failed to generate cachedDescription on enterSystem:', e);
+        }
         
         // Initial system population - use this.player consistently in timers
         setTimeout(() => {
@@ -3057,9 +3068,20 @@ drawOptimalStarfield() {
 
     /** Generates or retrieves missions for the station in this system */
     getAvailableMissions(galaxy, player) {
+         // Return cached missions if already generated for this session/visit
+         if (Array.isArray(this.availableMissions) && this.availableMissions.length > 0) {
+             return this.availableMissions;
+         }
+
          if (this.station && typeof MissionGenerator?.generateMissions === 'function' && galaxy && player) {
-             try { this.availableMissions = MissionGenerator.generateMissions(this, this.station, galaxy, player); return this.availableMissions; }
-             catch(e) { console.error("Error generating missions:", e); this.availableMissions = []; return [];}
+             try {
+                 this.availableMissions = MissionGenerator.generateMissions(this, this.station, galaxy, player);
+                 return this.availableMissions;
+             } catch(e) {
+                 console.error("Error generating missions:", e);
+                 this.availableMissions = [];
+                 return [];
+             }
          }
          console.warn(`Cannot get missions for ${this.name}: Missing station, MissionGenerator, galaxy, or player.`);
          return []; // Return empty if cannot generate
@@ -3128,6 +3150,8 @@ drawOptimalStarfield() {
             playerWantedLevel: this.playerWantedLevel ?? 0,
             playerWantedRemainingMs: (this.playerWantedExpiry ? Math.max(0, this.playerWantedExpiry - millis()) : null),
             policeAlertSent: !!this.policeAlertSent,
+            // Persisted generated description (if present)
+            cachedDescription: this.cachedDescription ?? null,
             // ---
             // Dynamic entities (serialized when possible)
             enemies: Array.isArray(this.enemies) && this.enemies.length > 0
@@ -3265,6 +3289,8 @@ drawOptimalStarfield() {
             sys.playerWantedExpiry = null;
         }
         sys.policeAlertSent = !!data.policeAlertSent;
+        // Restore persisted generated description if present
+        sys.cachedDescription = (typeof data.cachedDescription === 'string') ? data.cachedDescription : null;
         
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving

@@ -506,11 +506,15 @@ this.showingInventory = false;
 
              case "VIEWING_MISSIONS":
                  // Fetch missions if not already fetched
-                 if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
-                     const currentSystem = galaxy?.getCurrentSystem();
-                     const currentStation = currentSystem?.station;
-                     this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentStation, galaxy, player);
-                 }
+                if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
+                    const currentSystem = galaxy?.getCurrentSystem();
+                    const currentStation = currentSystem?.station;
+                    if (currentSystem && typeof currentSystem.getAvailableMissions === 'function') {
+                        this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
+                    } else {
+                        this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentStation, galaxy, player);
+                    }
+                }
                  if (uiManager && currentSystem?.station && player) {
                      uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player);
                  }
@@ -886,13 +890,19 @@ this.showingInventory = false;
     /** Fetches missions for the current station and stores them for display. */
     fetchStationMissions(player) {
          const currentSystem = galaxy?.getCurrentSystem();
-         if (currentSystem?.station && galaxy && player && typeof MissionGenerator?.generateMissions === 'function') {
+         if (currentSystem?.station && galaxy && player) {
               MISSION_LOG("[GameStateManager] Fetching missions for", currentSystem?.name, currentSystem?.station?.name);
               try {
-                  this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentSystem.station, galaxy, player);
+                  if (typeof currentSystem.getAvailableMissions === 'function') {
+                      this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
+                  } else if (typeof MissionGenerator?.generateMissions === 'function') {
+                      this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentSystem.station, galaxy, player);
+                  } else {
+                      this.currentStationMissions = [];
+                  }
                   MISSION_LOG("[GameStateManager] Missions fetched:", this.currentStationMissions);
                   this.selectedMissionIndex = -1; return true;
-              } catch(e) { console.error("Error during MissionGenerator.generateMissions:", e); this.currentStationMissions = []; return false; }
+              } catch(e) { console.error("Error during Mission generation:", e); this.currentStationMissions = []; return false; }
          }
          // console.warn("Cannot fetch missions - missing required objects/generator."); // Optional log
          this.currentStationMissions = []; return false;
