@@ -1796,7 +1796,7 @@ if (isIllegalInSystem || isMissionCargo) {
             this._marketOverlayCacheIndex = systemIndex;
             // Compute and cache description text & measurement so it remains static while overlay is open
             const descText = (typeof generateSystemDescription === 'function') ? generateSystemDescription(system, { galaxy: galaxy, player: (typeof player !== 'undefined' ? player : null) }) : '';
-            const descSize = 18; // increased text size for description
+            const descSize = 15; // increased text size for description
             const descPadding = 12;
             const descW = 360 - 24; // overlayW (360) minus side padding used below
 
@@ -1859,7 +1859,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const col4X = overlayX + 320; // Stock
         
         fill(180, 200, 255);
-        textSize(16);
+        textSize(15);
         textAlign(LEFT, TOP);
         text("Commodity", col1X, tableY);
         textAlign(CENTER, TOP);
