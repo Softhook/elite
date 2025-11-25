@@ -30,8 +30,9 @@ class Planet {
 
         // Deterministic properties using random() (seeded by StarSystem)
         this.featureRand = random(10000); // Offset for noise calculations
-        this.noiseScale = random(0.8, 3.5) / this.radius; // Scale for surface noise based on size
-        this.noisePersistence = random(0.4, 0.6); // Noise detail factor
+        // Amplified noise parameters for more dramatic surface patterns
+        this.noiseScale = random(1.5, 6.0) / this.radius; // Scale for surface noise based on size
+        this.noisePersistence = random(0.55, 0.9); // Stronger persistence for bolder features
 
         this.hasAtmosphere = random() < 0.4; // Less frequent
         this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
@@ -288,7 +289,8 @@ class Planet {
         // Clear the buffer and set up
         pg.clear();
         pg.noStroke();
-        pg.noiseDetail(3, this.noisePersistence);
+        // Increase octaves/persistence for richer, more dramatic detail
+        pg.noiseDetail(6, this.noisePersistence);
         
         // Draw a solid base circle first
         pg.fill(this.baseColor);
@@ -300,7 +302,8 @@ class Planet {
         // Cache constants for inner loop
         const noiseScale = this.noiseScale;
         const featureRand = this.featureRand;
-        const noiseZ = featureRand * 0.1;
+        // Larger Z offset to separate octave layers and avoid overly smooth noise
+        const noiseZ = featureRand * 0.6;
         const paletteLen = this.palette.length;
         const paletteMaxIdx = paletteLen - 1;
         
@@ -323,7 +326,12 @@ class Planet {
                 const noiseX = cosA * scaledDist + featureRand;
                 const noiseY = sinA * scaledDist + featureRand;
                 
-                const n = pg.noise(noiseX, noiseY, noiseZ);
+                // Combine several noise octaves (simple FBM) and increase contrast
+                const n1 = pg.noise(noiseX, noiseY, noiseZ);
+                const n2 = pg.noise(noiseX * 2.0, noiseY * 2.0, noiseZ * 1.7);
+                const n3 = pg.noise(noiseX * 4.0, noiseY * 4.0, noiseZ * 3.5);
+                let n = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
+                n = Math.min(1, Math.max(0, Math.pow(n, 1.3)));
                 const nScaled = n * paletteMaxIdx;
                 const paletteIndex = Math.floor(nScaled);
                 const lerpFactor = nScaled - paletteIndex;
@@ -447,8 +455,8 @@ class Planet {
         // Clear the buffer
         pg.clear();
 
-        // Set fine noise detail for more detailed structures
-        pg.noiseDetail(5, 0.35);
+        // Set fine noise detail for more detailed structures (amplified)
+        pg.noiseDetail(7, 0.45);
 
         // Choose a civilization pattern type (0-3) based on featureRand
         const patternType = Math.floor((this.featureRand * 122.27) % 4);
@@ -508,7 +516,9 @@ class Planet {
                 const detailNoiseY = y * noiseScale * 0.07 + featureRand * 7.2;
                 const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
                 const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
-                const combinedNoise = baseNoise * 0.6 + detailNoise * 0.4;
+                let combinedNoise = baseNoise * 0.6 + detailNoise * 0.4;
+                // Increase contrast for faint textures
+                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.25)));
                 
                 // Lower density threshold and increase alpha for visibility
                 if (combinedNoise > 0.2) {
@@ -574,7 +584,9 @@ class Planet {
                 // Blend different noise patterns to create more organic distribution
                 const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
                 const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
-                const combinedNoise = (baseNoise * 0.6) + (detailNoise * 0.4);
+                let combinedNoise = (baseNoise * 0.55) + (detailNoise * 0.45);
+                // Boost and sharpen patterns for dramatic city shapes
+                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.35)));
                 
                 // Influence from city hubs (proximity increases light density)
                 let hubInfluence = 0;
