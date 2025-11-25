@@ -5,19 +5,16 @@
 
 ## Core Gameplay Enhancements
 
-Getting faction wide annoucments. If the player is part of her faction.
-Increased/decreased bounty bonus
+visit the spacebjects with station screen
 
-Harpoon weapon that attaches to another ship
+spawn depengin on which systems are close
 
-assination missions with named pilots - make sure they stay in the ststem and down unspawn making it impossible to compete the mission
+organised invasion kissions jump to another system with 10 team members
 
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 
 
 intermittent events like plague or famine or war that are creating Changes, which would display on the map 
-
-Create proper factional cooperation whereby ships from one faction don't tend to attack each other. 
 
 create faction missions where belonging to a faction gives advantages when killing enemies of another faction and provides faction specific missions. 
 
@@ -50,10 +47,7 @@ Spcial events:
 - News war prerations cost of weapons goes up
 
 
-some weapons better against sheilds than hull
 weapon range weapon speed
-
-divide ships into imperial vs. alliance
 
 
 - alien attack behaviour aim and shoot, asssasin
@@ -61,7 +55,6 @@ divide ships into imperial vs. alliance
 
 - Implement ship upgrades beyond weapons:
 - Shield generators/boosters
-- limit the amount of goods aer availbe at certain planets based on their econmy
 
 ## AI
 
@@ -99,11 +92,8 @@ Ai actively hiding behind meterorites
 - Add more varied mission types:
   - Rescue missions
   - Exploration missions - find specific named planet or hidden base ona planet
-  - Assassination contracts
   - Mining contracts
   - Salvage operations
-  - Police missions
-  - Military missions
 - Implement mission chains with storylines
 - Add NPC dialogue system
 - Implement random events while traveling
@@ -116,7 +106,6 @@ Ai actively hiding behind meterorites
 
 - Optimize rendering for large numbers of objects
 - Implement spatial partitioning for collision detection
-- Add serialization for all game objects
 
 ## Future / Advanced Features
 
