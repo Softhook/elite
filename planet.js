@@ -574,22 +574,28 @@ class Planet {
                 const distFromCenter = Math.sqrt(distSq);
                 const angle = Math.atan2(y, x);
                 
-                // Use the same noise logic as city lights, but no hub influence
-                const baseNoiseX = distFromCenter * noiseScale * 0.2 + featureRand * 3.1;
-                const baseNoiseY = angle * 2 + featureRand * 7.4;
-                const detailNoiseX = x * noiseScale * 0.01 + featureRand * 1.3;
-                const detailNoiseY = y * noiseScale * 0.07 + featureRand * 7.2;
-                const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
-                const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
-                let combinedNoise = baseNoise * 0.6 + detailNoise * 0.4;
-                // Increase contrast for faint textures
+                // Spherical sampling so the faint sprawl wraps and fades at the limb
+                const nx = x / r;
+                const ny = y / r;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
+                const bNX = nx * sampleMultiplier + featureRand * 0.001;
+                const bNY = ny * sampleMultiplier + featureRand * 0.002;
+                const bNZ = nzUnit * sampleMultiplier + featureRand * 0.003;
+
+                const baseNoise = pg.noise(bNX, bNY, bNZ);
+                const detailNoise = pg.noise(bNX * 2.5, bNY * 2.5, bNZ * 2.0);
+                let combinedNoise = baseNoise * 0.62 + detailNoise * 0.38;
                 combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.25)));
-                
-                // Lower density threshold and increase alpha for visibility
+
+                // Fade faint noise toward the limb
+                const limbFactor = Math.pow(nzUnit, 0.9);
                 if (combinedNoise > 0.2) {
-                    // Fainter, but more visible dots
+                    const faintAlpha = Math.max(8, Math.round(36 * limbFactor));
                     pg.noStroke();
-                    pg.fill(primR, primG, primB, 36);
+                    pg.fill(primR, primG, primB, faintAlpha);
                     pg.ellipse(worldX, worldY, faintDotSize, faintDotSize);
                 }
             }
@@ -640,17 +646,21 @@ class Planet {
                 const distFromCenter = Math.sqrt(distSq);
                 const angle = Math.atan2(y, x);
                 
-                // Use multiple noise layers for more varied patterns
-                const baseNoiseX = distFromCenter * noiseScale * 0.5 + featureRand * 3.1;
-                const baseNoiseY = angle * 2 + featureRand * 2.4;
-                const detailNoiseX = x * noiseScale * 0.07 + featureRand * 1.3;
-                const detailNoiseY = y * noiseScale * 0.07 + featureRand * 7.2;
-                
-                // Blend different noise patterns to create more organic distribution
-                const baseNoise = pg.noise(baseNoiseX, baseNoiseY);
-                const detailNoise = pg.noise(detailNoiseX, detailNoiseY);
-                let combinedNoise = (baseNoise * 0.55) + (detailNoise * 0.45);
-                // Boost and sharpen patterns for dramatic city shapes
+                // Spherical sampling: sample noise on unit-sphere to wrap features and compress at limb
+                const nx = x / r;
+                const ny = y / r;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
+                const sNX = nx * sampleMultiplier + featureRand * 0.001;
+                const sNY = ny * sampleMultiplier + featureRand * 0.002;
+                const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004;
+
+                // Blend different noise octaves sampled in 3D for natural wrapping
+                const baseNoise = pg.noise(sNX, sNY, sNZ);
+                const detailNoise = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.8);
+                let combinedNoise = (baseNoise * 0.56) + (detailNoise * 0.44);
                 combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.35)));
                 
                 // Influence from city hubs (proximity increases light density)
@@ -672,6 +682,10 @@ class Planet {
                 
                 // Light density threshold boosted by hub proximity
                 const densityThreshold = 1 - (densityBase + hubInfluence);
+
+                // Limb attenuation so city lights wrap with the sphere
+                const limbFactor = Math.pow(nzUnit, 0.9);
+                const brightnessMul = Math.max(0.22, limbFactor);
                 
                 // Generate various city light elements based on the noise values
                 if (combinedNoise > densityThreshold) {
@@ -679,6 +693,7 @@ class Planet {
                     const brightnessFactor = (combinedNoise + hubInfluence - densityThreshold) / (1.5 - densityThreshold);
                     const brightness = 70 + brightnessFactor * 130;
                     const isNearHub = hubInfluence > 0.2;
+                    const adjBrightness = brightness * brightnessMul;
                     
                     // Structure type based on noise and pattern type
                     const structureType = (combinedNoise * 10 + baseNoise * 5) % 1;
@@ -687,14 +702,14 @@ class Planet {
                     if (structureType < 0.25) {
                         // Small point lights (buildings)
                         pg.noStroke();
-                        pg.fill(primR, primG, primB, brightness * 0.8);
+                        pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.8)));
                         const dotSize = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
                         pg.ellipse(worldX, worldY, dotSize, dotSize);
                     } 
                     else if (structureType < 0.5) {
                         // Short line segments (roads/connections)
                         const lineAngle = (angle + baseNoise * Math.PI) % TWO_PI_CONST;
-                        pg.stroke(secR, secG, secB, brightness * 0.9);
+                        pg.stroke(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
                         pg.strokeWeight(bandHeight * 0.4);
                         const lineLength = isNearHub ? bandHeight * 2 : bandHeight * 1.2;
                         const halfLen = lineLength * 0.5;
@@ -710,7 +725,7 @@ class Planet {
                     else if (structureType < 0.7) {
                         // Urban blocks/squares
                         pg.noStroke();
-                        pg.fill(primR, primG, primB, brightness * 0.7);
+                        pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.7)));
                         const blockSize = isNearHub ? bandHeight * 1.2 : bandHeight * 0.8;
                         const halfBlock = blockSize * 0.5;
                         pg.rect(worldX - halfBlock, worldY - halfBlock, blockSize, blockSize);
@@ -719,7 +734,7 @@ class Planet {
                         if (isNearHub && random() > 0.5) {
                             const innerSize = blockSize * 0.6;
                             const innerOffset = blockSize * 0.3;
-                            pg.fill(secR, secG, secB, brightness * 0.9);
+                            pg.fill(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
                             pg.rect(worldX - innerOffset, worldY - innerOffset, innerSize, innerSize);
                         }
                     } 
@@ -733,8 +748,8 @@ class Planet {
                             const offsetY = random(-bandHeight, bandHeight);
                             const offsetDistSq = offsetX * offsetX + offsetY * offsetY;
                             const offsetDist = Math.sqrt(offsetDistSq);
-                            const scatterBrightness = brightness * (1 - 0.6 * offsetDist / maxDist);
-                            pg.fill(primR, primG, primB, scatterBrightness);
+                            const scatterBrightness = adjBrightness * (1 - 0.6 * offsetDist / maxDist);
+                            pg.fill(primR, primG, primB, Math.max(8, Math.round(scatterBrightness)));
                             pg.ellipse(worldX + offsetX, worldY + offsetY, scatterSize, scatterSize);
                         }
                     }
@@ -744,7 +759,7 @@ class Planet {
                         // Major city centers - add geometric patterns
                         const patternSize = bandHeight * random(2, 4);
                         const halfPattern = patternSize * 0.5;
-                        const brightAlpha = brightness * 0.8;
+                        const brightAlpha = Math.max(10, Math.round(adjBrightness * 0.8));
                         
                         if (patternType === 0 || patternType === 2) {
                             // Concentric circles for warm/traditional civilizations
