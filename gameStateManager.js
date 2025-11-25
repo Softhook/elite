@@ -203,7 +203,7 @@ this.jumpJustCompleted = false;
         // Process deferred planet buffer creation queue (non-blocking, small batch per frame)
         try {
             if (typeof window !== 'undefined' && Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0) {
-                const BATCH_PER_FRAME = 2; // Tune this to balance CPU/UX
+                const BATCH_PER_FRAME = 1; // Load planet buffers individually (one per frame)
                 for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
                     const task = window._planetBufferCreationQueue.shift();
                     try {
@@ -871,6 +871,18 @@ this.jumpJustCompleted = false;
                 const total = window._planetBufferCreationTotal || 1;
                 const done = window._planetBufferCreationCompleted || 0;
                 const pct = constrain(done / total, 0, 1);
+                // Draw the SaveSelectionScreen background so loading UI has a consistent backdrop
+                try {
+                    if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.drawBackground === 'function') {
+                        saveSelectionScreen.drawBackground();
+                    } else {
+                        // Fallback to a dark background if saveSelectionScreen is unavailable
+                        push(); noStroke(); fill(5,5,15); rect(0,0,width,height); pop();
+                    }
+                } catch (e) {
+                    // Non-fatal: fallback background
+                    push(); noStroke(); fill(5,5,15); rect(0,0,width,height); pop();
+                }
 
                 push();
                 noStroke();
