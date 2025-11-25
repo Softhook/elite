@@ -55,7 +55,17 @@ class Planet {
             );
         }
 
-        this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
+        // Add a third, intentionally different accent color for richer palettes
+        const f2r = red(this.featureColor2), f2g = green(this.featureColor2), f2b = blue(this.featureColor2);
+        const avgR = Math.floor((c1r + f1r + f2r) / 3);
+        const avgG = Math.floor((c1g + f1g + f2g) / 3);
+        const avgB = Math.floor((c1b + f1b + f2b) / 3);
+        // Create a contrasting third color by inverting the channel averages and adding a bias
+        const thirdR = Math.min(255, Math.max(0, Math.floor((255 - avgR) * random(0.6, 1.0) + avgG * 0.15)));
+        const thirdG = Math.min(255, Math.max(0, Math.floor((255 - avgG) * random(0.6, 1.0) + avgB * 0.15)));
+        const thirdB = Math.min(255, Math.max(0, Math.floor((255 - avgB) * random(0.6, 1.0) + avgR * 0.15)));
+        this.featureColor3 = color(thirdR, thirdG, thirdB);
+        this.palette = [this.baseColor, this.featureColor1, this.featureColor2, this.featureColor3];
 
         // Deterministic properties using random() (seeded by StarSystem)
         this.featureRand = random(10000); // Offset for noise calculations
@@ -973,6 +983,7 @@ class Planet {
             baseColor: this.baseColor ? this.baseColor.toString() : null,
             featureColor1: this.featureColor1 ? this.featureColor1.toString() : null,
             featureColor2: this.featureColor2 ? this.featureColor2.toString() : null,
+            featureColor3: this.featureColor3 ? this.featureColor3.toString() : null,
             featureRand: this.featureRand,
             noiseScale: this.noiseScale,
             noisePersistence: this.noisePersistence,
@@ -1003,6 +1014,7 @@ class Planet {
         let c2 = data.featureColor1 && typeof color === "function" ? color(data.featureColor1) : undefined;
         const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2, data.systemName || "Unknown", data.planetIndex || 0);
         p.featureColor2 = data.featureColor2 && typeof color === "function" ? color(data.featureColor2) : p.featureColor2;
+        p.featureColor3 = data.featureColor3 && typeof color === "function" ? color(data.featureColor3) : p.featureColor3;
         p.featureRand = data.featureRand;
         p.noiseScale = data.noiseScale;
         p.noisePersistence = data.noisePersistence;
