@@ -826,7 +826,12 @@ this.showingInventory = false;
                  background(0, 150); if (uiManager) { try { uiManager.drawGameOverScreen(); } catch(e) {} }
                  break;
              case "LOADING":
-                 background(0); fill(255); textAlign(CENTER, CENTER); textSize(32); text("Loading...", width / 2, height / 2);
+                 background(0);
+                 fill(255);
+                 if (typeof font !== 'undefined') textFont(font);
+                 textAlign(CENTER, CENTER);
+                 textSize(32);
+                 text("Loading...", width / 2, height / 2);
                  break;
              case "SAVE_SELECTION":
                 if (saveSelectionScreen) {
@@ -847,7 +852,7 @@ this.showingInventory = false;
 
         // Draw non-blocking planet buffer creation progress overlay if work remains
         try {
-            if (typeof window !== 'undefined' && window._planetBufferCreationTotal && (window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal) {
+            if (typeof window !== 'undefined' && window._planetBufferCreationTotal && (window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal && this.currentState !== "JUMPING") {
                 const total = window._planetBufferCreationTotal || 1;
                 const done = window._planetBufferCreationCompleted || 0;
                 const pct = constrain(done / total, 0, 1);
@@ -870,7 +875,8 @@ this.showingInventory = false;
                 fill(0, 200, 255);
                 rect(bx, by, barW * pct, barH, 6);
 
-                // Text
+                // Text (use loaded typeface if available)
+                if (typeof font !== 'undefined') textFont(font);
                 fill(255);
                 textAlign(CENTER, CENTER);
                 textSize(14);
