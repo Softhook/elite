@@ -147,15 +147,14 @@ function generateSystemDescription(system, env = {}) {
     lines.push(`${system.name || 'Unknown System'} — ${econ} economy · Security: ${sec} · Tech: ${tech}`);
     lines.push(econSentence + ' ' + secSentence);
 
-    // Combine missions and ship composition into a single grammatical sentence
+    // Combine missions and ship composition: keep ship sentence separate but on same paragraph
     if (missionSummary) {
-        let combined = missionSummary.replace(/\.$/, '');
+        const ms = missionSummary.replace(/\.$/, '') + '.';
         if (shipSummary) {
-            combined = `${combined}, ships in this area include ${shipSummary}.`;
+            lines.push(ms + ' ' + `Ships in this area include ${shipSummary}.`);
         } else {
-            combined = combined + '.';
+            lines.push(ms);
         }
-        lines.push(combined);
     } else if (shipSummary) {
         lines.push(`Ships in this area include ${shipSummary}.`);
     }
