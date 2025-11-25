@@ -1849,7 +1849,7 @@ if (isIllegalInSystem || isMissionCargo) {
         textFont(font);
         textSize(22);
         textAlign(CENTER, TOP);
-        text(`${system.name} Market`, overlayX + overlayW / 2, overlayY + 10);
+        text(`${system.name}`, overlayX + overlayW / 2, overlayY + 10);
         
         // Column headers
         const tableY = overlayY + 45;

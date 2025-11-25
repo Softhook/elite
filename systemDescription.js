@@ -144,7 +144,6 @@ function generateSystemDescription(system, env = {}) {
 
     // Assemble description
     const lines = [];
-    lines.push(`${system.name || 'Unknown System'} — ${econ} economy · Security: ${sec} · Tech: ${tech}`);
     lines.push(econSentence + ' ' + secSentence);
 
     // Combine missions and ship composition: keep ship sentence separate but on same paragraph
