@@ -197,6 +197,28 @@ this.showingInventory = false;
             currentSystem = galaxy?.getCurrentSystem();
         }
 
+        // Process deferred planet buffer creation queue (non-blocking, small batch per frame)
+        try {
+            if (typeof window !== 'undefined' && Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0) {
+                const BATCH_PER_FRAME = 2; // Tune this to balance CPU/UX
+                for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
+                    const task = window._planetBufferCreationQueue.shift();
+                    try {
+                        if (task && task.planet && typeof task.planet.createBuffers === 'function' && !task.planet.buffersCreated) {
+                            task.planet.createBuffers();
+                        }
+                    } catch (e) {
+                        console.warn('Deferred planet.createBuffers error', e);
+                    }
+                    window._planetBufferCreationCompleted = (window._planetBufferCreationCompleted || 0) + 1;
+                }
+                if (window._planetBufferCreationQueue.length === 0) {
+                    // Completed all tasks
+                    console.log('Planet buffer creation queue finished');
+                }
+            }
+        } catch (e) { console.warn('Error processing planet buffer queue:', e); }
+
         switch (this.currentState) {
             case "TITLE_SCREEN":
                 // Title screen doesn't need game updates, just UI rendering
@@ -822,6 +844,40 @@ this.showingInventory = false;
         if (this.currentState==="IN_FLIGHT" && this.showingInventory) {
   inventoryScreen.draw(player);
 }
+
+        // Draw non-blocking planet buffer creation progress overlay if work remains
+        try {
+            if (typeof window !== 'undefined' && window._planetBufferCreationTotal && (window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal) {
+                const total = window._planetBufferCreationTotal || 1;
+                const done = window._planetBufferCreationCompleted || 0;
+                const pct = constrain(done / total, 0, 1);
+
+                push();
+                // Dim background
+                fill(0, 0, 0, 160);
+                noStroke();
+                rect(0, height * 0.45, width, 80);
+
+                // Progress bar background
+                const barW = width * 0.7;
+                const barH = 18;
+                const bx = (width - barW) * 0.5;
+                const by = height * 0.5 - barH * 0.5;
+                fill(30);
+                rect(bx, by, barW, barH, 6);
+
+                // Progress fill
+                fill(0, 200, 255);
+                rect(bx, by, barW * pct, barH, 6);
+
+                // Text
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(14);
+                text(`Loading planet textures: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, height * 0.5);
+                pop();
+            }
+        } catch (e) { /* non-fatal - don't break draw */ }
     } // End of draw method
 
 

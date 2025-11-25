@@ -325,6 +325,18 @@ class Galaxy {
                 oldSystem.cleanupAmbientSounds();
             }
 
+            // Dispose planet buffers for the old system to free graphics memory
+            try {
+                if (oldSystem && Array.isArray(oldSystem.planets)) {
+                    for (let i = 0; i < oldSystem.planets.length; i++) {
+                        const p = oldSystem.planets[i];
+                        if (p && typeof p.disposeBuffers === 'function') {
+                            try { p.disposeBuffers(); } catch (e) { console.warn('Planet.disposeBuffers failed for', p, e); }
+                        }
+                    }
+                }
+            } catch (e) { console.warn('Error disposing planet buffers for old system:', e); }
+
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter
             

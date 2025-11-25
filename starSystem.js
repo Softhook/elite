@@ -489,6 +489,11 @@ try {
         } catch(e) { console.error("Error initializing ambient sounds:", e); }
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
+        // NOTE: We intentionally DO NOT enqueue planet buffer creation here. Enqueuing
+        // all system planet buffers at once causes large startup load (and the UI hang
+        // you observed). Planet buffers are queued when the player actually enters a
+        // system (`enterSystem`) so only current-system planets are prepared.
+
         randomSeed(); // Reset to non-deterministic (time-based) random
 
         // --- Set initialization flag ---
@@ -729,6 +734,35 @@ try {
         
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
+
+        // Queue planet buffer creation on enter to avoid hitches during arrival
+        try {
+            if (typeof window !== 'undefined') {
+                // Reset queue so we only process planets for the current system
+                window._planetBufferCreationQueue = [];
+                window._planetBufferCreationTotal = 0;
+                window._planetBufferCreationCompleted = 0;
+                if (Array.isArray(this.planets)) {
+                    for (let i = 0; i < this.planets.length; i++) {
+                        const pl = this.planets[i];
+                        if (pl && typeof pl.createBuffers === 'function' && !pl.buffersCreated) {
+                            window._planetBufferCreationQueue.push({ system: this, planet: pl });
+                            window._planetBufferCreationTotal++;
+                        }
+                    }
+                }
+            } else {
+                // Non-browser fallback: create synchronously
+                if (Array.isArray(this.planets)) {
+                    for (let i = 0; i < this.planets.length; i++) {
+                        const pl = this.planets[i];
+                        if (pl && typeof pl.createBuffers === 'function' && !pl.buffersCreated) {
+                            try { pl.createBuffers(); } catch (e) { console.warn('Planet.createBuffers failed on enterSystem for', pl, e); }
+                        }
+                    }
+                }
+            }
+        } catch (e) { console.warn('Error queuing planet buffers on enterSystem:', e); }
         
         // Set system-wide police alert immediately
         this.policeAlertSent = player?.isWanted || false;
