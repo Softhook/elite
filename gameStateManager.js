@@ -858,29 +858,42 @@ this.showingInventory = false;
                 const pct = constrain(done / total, 0, 1);
 
                 push();
-                // Dim background
-                fill(0, 0, 0, 160);
                 noStroke();
-                rect(0, height * 0.45, width, 80);
 
-                // Progress bar background
-                const barW = width * 0.7;
+                // Full-screen dim overlay so the world is visibly darkened
+                fill(0, 0, 0, 160);
+                rect(0, 0, width, height);
+
+                // Panel for the progress UI
+                const panelW = Math.min(900, width * 0.8);
+                const panelH = 120;
+                const px = (width - panelW) * 0.5;
+                const py = (height - panelH) * 0.5;
+
+                fill(24, 24, 28, 230);
+                rect(px, py, panelW, panelH, 10);
+
+                // Progress bar
+                const barW = panelW * 0.75;
                 const barH = 18;
-                const bx = (width - barW) * 0.5;
-                const by = height * 0.5 - barH * 0.5;
-                fill(30);
+                const bx = px + (panelW - barW) * 0.5;
+                const by = py + panelH * 0.6 - barH * 0.5;
+
+                // Background of progress bar
+                fill(45);
                 rect(bx, by, barW, barH, 6);
 
-                // Progress fill
+                // Filled portion
                 fill(0, 200, 255);
                 rect(bx, by, barW * pct, barH, 6);
 
-                // Text (use loaded typeface if available)
+                // Progress text
                 if (typeof font !== 'undefined') textFont(font);
                 fill(255);
                 textAlign(CENTER, CENTER);
-                textSize(14);
-                text(`Loading planet textures: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, height * 0.5);
+                textSize(18);
+                text(`Loading World: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
+
                 pop();
             }
         } catch (e) { /* non-fatal - don't break draw */ }
