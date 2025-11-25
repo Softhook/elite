@@ -331,9 +331,7 @@ class Planet {
         // Increase octaves/persistence for richer, more dramatic detail
         pg.noiseDetail(6, this.noisePersistence);
         
-        // Draw a solid base circle first
-        pg.fill(this.baseColor);
-        pg.ellipse(bufferCenter, bufferCenter, this.size, this.size);
+        // Skip drawing the solid base circle; the textured bands will fill the planet
         
         // Set resolution based on planet size
         const bandHeight = Math.max(2, Math.ceil(400 / this.size));
