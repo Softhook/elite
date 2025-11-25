@@ -594,9 +594,11 @@ class Planet {
                 const limbFactor = Math.pow(nzUnit, 0.9);
                 if (combinedNoise > 0.2) {
                     const faintAlpha = Math.max(8, Math.round(36 * limbFactor));
+                    const fo = Math.max(0.35, limbFactor);
+                    const fd = Math.max(1, Math.round(faintDotSize * fo));
                     pg.noStroke();
                     pg.fill(primR, primG, primB, faintAlpha);
-                    pg.ellipse(worldX, worldY, faintDotSize, faintDotSize);
+                    pg.ellipse(worldX, worldY, fd, fd);
                 }
             }
         }
@@ -700,18 +702,19 @@ class Planet {
                     
                     // Draw different structural elements based on pattern and noise
                     if (structureType < 0.25) {
-                        // Small point lights (buildings)
+                        // Small point lights (buildings) - scale by limb foreshortening
                         pg.noStroke();
                         pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.8)));
-                        const dotSize = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
+                        const rawDot = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
+                        const dotSize = Math.max(1, rawDot * brightnessMul);
                         pg.ellipse(worldX, worldY, dotSize, dotSize);
                     } 
                     else if (structureType < 0.5) {
                         // Short line segments (roads/connections)
                         const lineAngle = (angle + baseNoise * Math.PI) % TWO_PI_CONST;
                         pg.stroke(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
-                        pg.strokeWeight(bandHeight * 0.4);
-                        const lineLength = isNearHub ? bandHeight * 2 : bandHeight * 1.2;
+                        pg.strokeWeight(bandHeight * 0.4 * brightnessMul);
+                        const lineLength = (isNearHub ? bandHeight * 2 : bandHeight * 1.2) * brightnessMul;
                         const halfLen = lineLength * 0.5;
                         const cosAngle = Math.cos(lineAngle);
                         const sinAngle = Math.sin(lineAngle);
@@ -726,7 +729,8 @@ class Planet {
                         // Urban blocks/squares
                         pg.noStroke();
                         pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.7)));
-                        const blockSize = isNearHub ? bandHeight * 1.2 : bandHeight * 0.8;
+                        const rawBlock = isNearHub ? bandHeight * 1.2 : bandHeight * 0.8;
+                        const blockSize = Math.max(1, rawBlock * brightnessMul);
                         const halfBlock = blockSize * 0.5;
                         pg.rect(worldX - halfBlock, worldY - halfBlock, blockSize, blockSize);
                         
@@ -741,11 +745,11 @@ class Planet {
                     else {
                         // Scattered points (suburbs/outskirts)
                         pg.noStroke();
-                        const scatterSize = bandHeight * 0.3;
+                        const scatterSize = Math.max(1, bandHeight * 0.3 * brightnessMul);
                         const maxDist = bandHeight * 1.4;
                         for (let i = 0; i < 3; i++) {
-                            const offsetX = random(-bandHeight, bandHeight);
-                            const offsetY = random(-bandHeight, bandHeight);
+                            const offsetX = random(-bandHeight, bandHeight) * brightnessMul;
+                            const offsetY = random(-bandHeight, bandHeight) * brightnessMul;
                             const offsetDistSq = offsetX * offsetX + offsetY * offsetY;
                             const offsetDist = Math.sqrt(offsetDistSq);
                             const scatterBrightness = adjBrightness * (1 - 0.6 * offsetDist / maxDist);
@@ -757,7 +761,7 @@ class Planet {
                     // Add hub-specific detailed structures
                     if (isNearHub && hubInfluence > 0.5 && random() > 0.8) {
                         // Major city centers - add geometric patterns
-                        const patternSize = bandHeight * random(2, 4);
+                        const patternSize = Math.max(2, bandHeight * random(2, 4) * brightnessMul);
                         const halfPattern = patternSize * 0.5;
                         const brightAlpha = Math.max(10, Math.round(adjBrightness * 0.8));
                         
@@ -765,14 +769,14 @@ class Planet {
                             // Concentric circles for warm/traditional civilizations
                             pg.noFill();
                             pg.stroke(secR, secG, secB, brightAlpha);
-                            pg.strokeWeight(bandHeight * 0.3);
+                            pg.strokeWeight(bandHeight * 0.3 * brightnessMul);
                             pg.ellipse(worldX, worldY, patternSize * 0.7, patternSize * 0.7);
-                            pg.strokeWeight(bandHeight * 0.2);
+                            pg.strokeWeight(bandHeight * 0.2 * brightnessMul);
                             pg.ellipse(worldX, worldY, patternSize, patternSize);
                         } else {
                             // Grid/angular patterns for cooler/advanced civilizations
                             pg.stroke(secR, secG, secB, brightAlpha);
-                            pg.strokeWeight(bandHeight * 0.3);
+                            pg.strokeWeight(bandHeight * 0.3 * brightnessMul);
                             const x1 = worldX - halfPattern, y1 = worldY - halfPattern;
                             const x2 = worldX + halfPattern, y2 = worldY + halfPattern;
                             pg.line(x1, y1, x2, y2);
