@@ -11,27 +11,90 @@ function generateSystemDescription(system, env = {}) {
 
     // (Planet list removed — summaries focus on system type and activity)
 
-    // --- Include a short, high-level mission overview (no numbers or examples) ---
+    // --- Include a short, specific mission overview (mentions concrete types like assassination/sabotage) ---
     let missionSummary = '';
     try {
         if (typeof system.getAvailableMissions === 'function' && galaxy && player) {
             const missions = system.getAvailableMissions(galaxy, player) || [];
-            if (missions.length > 0) {
-                const cats = new Set();
-                for (const m of missions) {
-                    const t = (m.type || m.typeName || '').toString().toLowerCase();
-                    if (/assass|sabot|bounty|attack|kill/.test(t)) cats.add('combat');
-                    else if (/trade|transport|delivery|haul|cargo/.test(t)) cats.add('trade/transport');
-                    else if (/explor|survey|scan|probe|recon/.test(t)) cats.add('exploration');
-                    else if (/salvag|recover|mining|collect|harvest/.test(t)) cats.add('salvage/mining');
-                    else if (/escort|guard|protect/.test(t)) cats.add('escort');
-                    else if (/research|science|investigat/.test(t)) cats.add('research');
-                    else cats.add('miscellaneous');
-                }
-                const list = Array.from(cats).slice(0,3).join(', ');
-                missionSummary = list ? `Available missions focus on ${list}.` : 'Available missions cover varied objectives.';
-            } else {
+            if (missions.length === 0) {
                 missionSummary = 'No missions currently posted.';
+            } else {
+                const types = new Set();
+                let hasAssassination = false;
+                let hasSabotage = false;
+                let hasBounty = false;
+                let pirateBountyCount = 0;
+                let alienBountyCount = 0;
+                let otherBountyCount = 0;
+
+                for (const m of missions) {
+                    // Only consider missions that are actually available
+                    if (m && m.status && m.status !== 'Available') continue;
+
+                    const t = ((m.type || m.typeName || m.name || m.title) || '').toString().toLowerCase();
+                    const desc = ((m.description || m.details || m.notes || '') || '').toString().toLowerCase();
+
+                    // Prefer using canonical mission enum values when available to avoid false positives
+                    if (typeof MISSION_TYPE !== 'undefined') {
+                        if (m.type === MISSION_TYPE.ASSASSINATION) hasAssassination = true;
+                        if (m.type === MISSION_TYPE.SABOTAGE) hasSabotage = true;
+                        if (m.type === MISSION_TYPE.BOUNTY_PIRATE) { hasBounty = true; pirateBountyCount += 1; }
+                        if (m.type === MISSION_TYPE.BOUNTY_ALIEN) { hasBounty = true; alienBountyCount += 1; }
+                        if (m.type === MISSION_TYPE.BOUNTY_POLICE) { hasBounty = true; otherBountyCount += 1; }
+                    }
+
+                    // Fallback: textual heuristics only if enum checks didn't mark anything
+                    if (!hasAssassination && (/assass|kill/.test(t) || /assass|kill/.test(desc))) hasAssassination = true;
+                    if (!hasSabotage && (/sabot|sabotage/.test(t) || /sabot|sabotage/.test(desc))) hasSabotage = true;
+                    if (!hasBounty && (/bounty/.test(t) || /bounty/.test(desc) || /wanted/.test(desc))) hasBounty = true;
+
+                    if (/(trade|transport|delivery|haul|cargo)/.test(t)) types.add('transport/delivery');
+                    if (/escort|guard|protect/.test(t)) types.add('escort');
+                    if (/(explor|survey|scan|probe|recon)/.test(t)) types.add('exploration');
+                    if (/(salvag|recover|mining|collect|harvest)/.test(t)) types.add('salvage/mining');
+                    if (/research|science|investigat/.test(t)) types.add('research');
+                    if (/smuggl|contraband|black ?market/.test(t)) types.add('smuggling');
+                    if (/recon|intel|investigat/.test(t)) types.add('reconnaissance');
+                    if (/repair|refit|deliver|courier/.test(t)) types.add('logistics');
+
+                    // Attempt to detect bounty targets from mission fields or description
+                    if (/bounty|wanted/.test(t) || /bounty|wanted/.test(desc) || (typeof MISSION_TYPE !== 'undefined' && (m.type === MISSION_TYPE.BOUNTY_PIRATE || m.type === MISSION_TYPE.BOUNTY_ALIEN || m.type === MISSION_TYPE.BOUNTY_POLICE))) {
+                        // Prefer explicit target fields when present
+                        const targetText = ((m.targetFaction || (m.target && m.target.faction) || m.target || m.client || m.targetDesc || desc) || '').toString().toLowerCase();
+                        if (/pirat/.test(targetText) || (typeof MISSION_TYPE !== 'undefined' && m.type === MISSION_TYPE.BOUNTY_PIRATE)) pirateBountyCount += 1;
+                        else if (/(alien|xeno)/.test(targetText) || (typeof MISSION_TYPE !== 'undefined' && m.type === MISSION_TYPE.BOUNTY_ALIEN)) alienBountyCount += 1;
+                        else otherBountyCount += 1;
+                    }
+
+                    if (types.size >= 10) break;
+                }
+
+                // Build a prioritized list of mission phrases
+                const parts = [];
+                if (hasAssassination) parts.push('assassination');
+                if (hasSabotage) parts.push('sabotage');
+
+                // Add other generic types from the types set (up to two shown)
+                const others = Array.from(types).slice(0, 2);
+                for (const o of others) parts.push(o);
+
+                // Handle bounties with target specificity
+                if (hasBounty) {
+                    if (pirateBountyCount > alienBountyCount && pirateBountyCount > 0) parts.push('bounties targeting pirates');
+                    else if (alienBountyCount > pirateBountyCount && alienBountyCount > 0) parts.push('bounties targeting aliens');
+                    else parts.push('bounties');
+                }
+
+                if (parts.length > 0) {
+                    const pretty = (arr) => {
+                        if (arr.length === 1) return arr[0];
+                        if (arr.length === 2) return arr[0] + ' and ' + arr[1];
+                        return arr.slice(0, 2).join(', ') + ', and ' + (arr.length - 2) + ' others';
+                    };
+                    missionSummary = `Available missions include ${pretty(parts)}.`;
+                } else {
+                    missionSummary = 'Available missions cover varied objectives.';
+                }
             }
         }
     } catch (e) {
