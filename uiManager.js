@@ -2248,13 +2248,18 @@ if (isIllegalInSystem || isMissionCargo) {
                 ctx.rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
                 ctx.clip();
 
-                // Planet marker fill - use planet's base color if available
+                // Planet marker fill - use planet's textured surface color if available
                 noStroke();
-                if (planet.baseColor) {
+                let planetColor = planet.baseColor; // fallback
+                if (planet.palette && planet.palette.length > 1) {
+                    // Use featureColor1 (index 1) which is typically the main surface color
+                    planetColor = planet.palette[1];
+                }
+                if (planetColor) {
                     // Extract RGB from p5.Color object and use with reduced saturation for minimap
-                    const r = red(planet.baseColor);
-                    const g = green(planet.baseColor);
-                    const b = blue(planet.baseColor);
+                    const r = red(planetColor);
+                    const g = green(planetColor);
+                    const b = blue(planetColor);
                     fill(r, g, b, 200);
                 } else {
                     fill(150, 100, 50); // Fallback color
