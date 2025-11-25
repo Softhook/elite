@@ -768,9 +768,13 @@ class Enemy {
                 enemy.currentWeapon = enemy.weapons[0] || enemy.currentWeapon;
             }
 
-            // State restore
-            if (data.currentState !== undefined && typeof enemy.changeState === 'function') {
-                try { enemy.changeState(data.currentState); } catch (_) { enemy.currentState = data.currentState; }
+            // State restore: assign state directly during deserialization.
+            // Avoid calling `changeState` here because `currentSystem` may not
+            // yet be assigned by the caller (StarSystem.fromJSON). State
+            // entry logic will be invoked later during the system relink step
+            // when the enemy's `currentSystem` is available.
+            if (data.currentState !== undefined) {
+                enemy.currentState = data.currentState;
             }
 
             // Recompute derived properties and colors (p5 must be ready for colors)

@@ -3192,12 +3192,8 @@ drawOptimalStarfield() {
                     ownerId: m.owner ? (m.owner.id || m.owner.shipTypeName || null) : null
                 }))
                 : [],
-            beams: Array.isArray(this.beams) && this.beams.length > 0
-                ? this.beams.map(b => (typeof b.toJSON === 'function' ? b.toJSON() : b))
-                : [],
-            forceWaves: Array.isArray(this.forceWaves) && this.forceWaves.length > 0
-                ? this.forceWaves.map(f => (typeof f.toJSON === 'function' ? f.toJSON() : f))
-                : [],
+            beams: [], // Transient: do not persist beam objects
+            forceWaves: [], // Transient: do not persist force wave objects
             harpoons: Array.isArray(this.harpoons) && this.harpoons.length > 0
                 ? this.harpoons.map(h => (typeof h.toJSON === 'function' ? h.toJSON() : h))
                 : [],
@@ -3387,25 +3383,11 @@ drawOptimalStarfield() {
             }
         }
 
-        // Beams
+        // Beams are transient and are not restored from save data
         sys.beams = [];
-        if (Array.isArray(data.beams)) {
-            if (typeof Beam !== 'undefined' && typeof Beam.fromJSON === 'function') {
-                try { sys.beams = data.beams.map(bd => Beam.fromJSON(bd)); } catch (e) { console.error('Error restoring beams', e); }
-            } else {
-                console.warn('Beam.fromJSON not available; skipping beam restore');
-            }
-        }
 
-        // Force waves
+        // Force waves are transient and are not restored from save data
         sys.forceWaves = [];
-        if (Array.isArray(data.forceWaves)) {
-            if (typeof ForceWave !== 'undefined' && typeof ForceWave.fromJSON === 'function') {
-                try { sys.forceWaves = data.forceWaves.map(fd => ForceWave.fromJSON(fd)); } catch (e) { console.error('Error restoring forceWaves', e); }
-            } else {
-                console.warn('ForceWave.fromJSON not available; skipping restore');
-            }
-        }
 
         // Harpoons
         sys.harpoons = [];
@@ -3595,6 +3577,15 @@ drawOptimalStarfield() {
                             }
                         }
                         e.currentSystem = this;
+                        // After assigning currentSystem, run state entry logic so
+                        // states that rely on system data (e.g., LEAVING_SYSTEM)
+                        // can initialize correctly. Guard state with a principal
+                        // was handled above, so skip re-calling for GUARDING.
+                        try {
+                            if (typeof e.onStateEntry === 'function' && e.currentState !== AI_STATE.GUARDING) {
+                                try { e.onStateEntry(e.currentState, {}); } catch (_) {}
+                            }
+                        } catch (err) { /* non-fatal */ }
                     } catch (err) { console.warn('enemy relink error', err); }
                 }
             }
