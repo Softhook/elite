@@ -9,64 +9,27 @@ function generateSystemDescription(system, env = {}) {
     const sec = system.securityLevel || 'Unknown';
     const tech = Number.isFinite(system.techLevel) ? system.techLevel : '?';
 
-    // Planets list (skip sun at index 0 if present)
-    let planetNames = [];
-    if (Array.isArray(system.planets) && system.planets.length > 0) {
-        for (let i = 0; i < system.planets.length; i++) {
-            const p = system.planets[i];
-            if (!p) continue;
-            // Include name and a hint (sun marked)
-            if (p.isSun) planetNames.push(`${p.name} (Star)`);
-            else planetNames.push(p.name || `Planet ${p.planetIndex || i}`);
-        }
-    }
+    // (Planet list removed — summaries focus on system type and activity)
 
-    const planetsLine = planetNames.length > 0 ? planetNames.join(', ') : 'No known planets.';
-
-    // --- Include currently available missions if possible (higher-level analytical summary) ---
+    // --- Include a short, high-level mission overview (no numbers or examples) ---
     let missionSummary = '';
     try {
         if (typeof system.getAvailableMissions === 'function' && galaxy && player) {
             const missions = system.getAvailableMissions(galaxy, player) || [];
             if (missions.length > 0) {
-                const typeCounts = {};
-                const titles = [];
-                const commodityCounts = {};
-                let highRiskFlag = false;
-
-                for (let m of missions) {
-                    const t = (m.type || m.typeName || 'Misc').toString();
-                    typeCounts[t] = (typeCounts[t] || 0) + 1;
-                    if (titles.length < 3) titles.push(m.title || m.getSummary?.() || t);
-
-                    const c = m.commodity || m.product || (m.target && (m.target.commodity || m.target.name)) || m.payload?.commodity;
-                    if (c) commodityCounts[c] = (commodityCounts[c] || 0) + 1;
-
-                    const tl = t.toLowerCase();
-                    if (tl.includes('assass') || tl.includes('sabot') || tl.includes('bounty') || tl.includes('attack') || tl.includes('kill')) {
-                        highRiskFlag = true;
-                    }
+                const cats = new Set();
+                for (const m of missions) {
+                    const t = (m.type || m.typeName || '').toString().toLowerCase();
+                    if (/assass|sabot|bounty|attack|kill/.test(t)) cats.add('combat');
+                    else if (/trade|transport|delivery|haul|cargo/.test(t)) cats.add('trade/transport');
+                    else if (/explor|survey|scan|probe|recon/.test(t)) cats.add('exploration');
+                    else if (/salvag|recover|mining|collect|harvest/.test(t)) cats.add('salvage/mining');
+                    else if (/escort|guard|protect/.test(t)) cats.add('escort');
+                    else if (/research|science|investigat/.test(t)) cats.add('research');
+                    else cats.add('miscellaneous');
                 }
-
-                const total = missions.length;
-                const sortedTypes = Object.entries(typeCounts).sort((a,b) => b[1] - a[1]);
-                const top = sortedTypes[0];
-
-                let typePhrase = '';
-                if (top && top[1] / total >= 0.6) {
-                    typePhrase = `Primarily ${top[0]} missions (${top[1]} of ${total}).`;
-                } else if (sortedTypes.length > 0) {
-                    typePhrase = `Mixed missions: ${sortedTypes.slice(0,3).map(([k,v]) => `${v} ${k}`).join(', ')}.`;
-                }
-
-                const topCommodities = Object.entries(commodityCounts).sort((a,b) => b[1] - a[1]).slice(0,3).map(([k]) => k);
-                const commodityPhrase = topCommodities.length ? `Common targets/commodities: ${topCommodities.join(', ')}.` : '';
-
-                const riskPhrase = highRiskFlag
-                    ? 'Higher-risk jobs (assassination/sabotage) are present.'
-                    : (typePhrase.toLowerCase().includes('trade') || typePhrase.toLowerCase().includes('transport') ? 'Mostly low-risk trade/transport work.' : 'Mission risk is mixed.');
-
-                missionSummary = `${typePhrase} ${commodityPhrase} ${riskPhrase} Examples: ${titles.join('; ')}.`;
+                const list = Array.from(cats).slice(0,3).join(', ');
+                missionSummary = list ? `Available missions focus on ${list}.` : 'Available missions cover varied objectives.';
             } else {
                 missionSummary = 'No missions currently posted.';
             }
@@ -75,7 +38,7 @@ function generateSystemDescription(system, env = {}) {
         missionSummary = '';
     }
 
-    // --- Include current enemy/spawn composition (high-level summary) ---
+    // --- Focus on spawn composition (prefer system.spawn/probabilities) and produce a concise noun phrase ---
     let shipSummary = '';
     try {
         const mapRoleToLabel = (r) => {
@@ -94,56 +57,52 @@ function generateSystemDescription(system, env = {}) {
             return r.toString();
         };
 
-        if (Array.isArray(system.enemies) && system.enemies.length > 0) {
-            const counts = {};
-            const examples = {}; // collect example ship type names per label
-            for (const e of system.enemies) {
-                if (!e) continue;
-                const raw = (e.role || e.aiRole || e.shipFaction || e.faction || 'Unknown').toString();
-                const label = mapRoleToLabel(raw);
-                counts[label] = (counts[label] || 0) + 1;
-                const sname = (e.shipTypeName || e.shipType || (e.shipDefinition && e.shipDefinition.name) || null);
-                if (sname) {
-                    examples[label] = examples[label] || {};
-                    examples[label][sname] = (examples[label][sname] || 0) + 1;
-                }
-            }
-            const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
-            if (sorted.length > 0) {
-                // Primary group
-                const primary = sorted[0][0];
-                // Secondary/others
-                const others = sorted.slice(1).map(s => s[0]);
+        const labelToNoun = (lbl) => {
+            const mapping = {
+                'Separatist forces': 'separatist militias',
+                'Imperial forces': 'imperial patrols',
+                'Police': 'a police presence',
+                'Pirates': 'pirate skirmishers',
+                'Aliens': 'alien scouts',
+                'Haulers': 'freighters and haulers',
+                'Transports': 'transport vessels',
+                'Escorts/Guards': 'escort vessels',
+                'Combat vessels': 'combat patrols',
+                'Explorers': 'survey and exploration craft'
+            };
+            return mapping[lbl] || lbl.toString().toLowerCase();
+        };
 
-                // Build example lists (take up to 2 examples per group)
-                const makeExamples = (lbl) => {
-                    const eMap = examples[lbl] || {};
-                    const arr = Object.entries(eMap).sort((a,b) => b[1]-a[1]).slice(0,2).map(x=>x[0]);
-                    return arr.length ? ` e.g. ${arr.join(', ')}` : '';
-                };
-
-                if (others.length === 0) {
-                    shipSummary = `Typical spawns: ${primary}.${makeExamples(primary)}`;
-                } else {
-                    const mainStr = `Main: ${primary}${makeExamples(primary)}`;
-                    const minorStr = `Also: ${others.slice(0,4).map(lbl => lbl + makeExamples(lbl)).join(', ')}`;
-                    shipSummary = `${mainStr}; ${minorStr}.`;
-                }
-            }
-        } else if (typeof system.getEnemyRoleProbabilities === 'function') {
+        // Prefer spawn composition data when available
+        let labels = [];
+        if (typeof system.getEnemyRoleProbabilities === 'function') {
             const probs = system.getEnemyRoleProbabilities() || {};
             const agg = {};
             for (const [k, v] of Object.entries(probs)) {
                 const label = mapRoleToLabel(k);
                 agg[label] = (agg[label] || 0) + (Number(v) || 0);
             }
-            const sorted = Object.entries(agg).sort((a,b) => b[1] - a[1]);
-            if (sorted.length > 0) {
-                const primary = sorted[0][0];
-                const others = sorted.slice(1).map(s => s[0]);
-                if (others.length === 0) shipSummary = `Typical spawns: ${primary}.`;
-                else shipSummary = `Main: ${primary}; Also: ${others.slice(0,4).join(', ')}.`;
+            labels = Object.entries(agg).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+        }
+
+        // If spawn probs not available or empty, fall back to currently present enemies
+        if ((!labels || labels.length === 0) && Array.isArray(system.enemies) && system.enemies.length > 0) {
+            const counts = {};
+            for (const e of system.enemies) {
+                if (!e) continue;
+                const raw = (e.role || e.aiRole || e.shipFaction || e.faction || 'Unknown').toString();
+                const label = mapRoleToLabel(raw);
+                counts[label] = (counts[label] || 0) + 1;
             }
+            labels = Object.entries(counts).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+        }
+
+        if (labels && labels.length > 0) {
+            // Convert top labels to readable noun phrases and join succinctly
+            const phrases = labels.slice(0,3).map(l => labelToNoun(l));
+            if (phrases.length === 1) shipSummary = phrases[0];
+            else if (phrases.length === 2) shipSummary = phrases[0] + ' and ' + phrases[1];
+            else shipSummary = phrases[0] + ', ' + phrases[1] + ', and others';
         }
     } catch (e) {
         shipSummary = '';
@@ -187,9 +146,20 @@ function generateSystemDescription(system, env = {}) {
     const lines = [];
     lines.push(`${system.name || 'Unknown System'} — ${econ} economy · Security: ${sec} · Tech: ${tech}`);
     lines.push(econSentence + ' ' + secSentence);
-    lines.push(`Planets: ${planetsLine}`);
-    if (missionSummary) lines.push(missionSummary);
-    if (shipSummary) lines.push(shipSummary);
+
+    // Combine missions and ship composition into a single grammatical sentence
+    if (missionSummary) {
+        let combined = missionSummary.replace(/\.$/, '');
+        if (shipSummary) {
+            combined = `${combined}, ships in this area include ${shipSummary}.`;
+        } else {
+            combined = combined + '.';
+        }
+        lines.push(combined);
+    } else if (shipSummary) {
+        lines.push(`Ships in this area include ${shipSummary}.`);
+    }
+
     lines.push(mod);
 
     const desc = lines.join('\n\n');
