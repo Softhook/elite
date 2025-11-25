@@ -132,6 +132,54 @@ class Galaxy {
         console.log(`   Galaxy.initGalaxySystems: Finished generating system definitions. Actual count: ${this.systems.length}.`);
         if(this.systems.length !== NUM_SYSTEMS) { console.warn(`!!! Expected ${NUM_SYSTEMS} systems, but only created ${this.systems.length}.`); }
 
+        // --- Relax positions to avoid systems being too close/overlapping ---
+        // Run a few iterations pushing overlapping systems apart
+        try {
+            const RELAX_ITERATIONS = 80;
+            const MIN_DIST = MIN_SEPARATION; // use same minimum separation
+            const MIN_DIST_SQ = MIN_DIST * MIN_DIST;
+            for (let iter = 0; iter < RELAX_ITERATIONS; iter++) {
+                let moved = false;
+                for (let a = 0; a < this.systems.length; a++) {
+                    const A = this.systems[a];
+                    if (!A?.galaxyPos) continue;
+                    for (let b = a + 1; b < this.systems.length; b++) {
+                        const B = this.systems[b];
+                        if (!B?.galaxyPos) continue;
+                        let dx = B.galaxyPos.x - A.galaxyPos.x;
+                        let dy = B.galaxyPos.y - A.galaxyPos.y;
+                        let d2 = dx * dx + dy * dy;
+                        if (d2 === 0) {
+                            // jitter to avoid exact overlap
+                            dx = (random() - 0.5) * 0.01;
+                            dy = (random() - 0.5) * 0.01;
+                            d2 = dx * dx + dy * dy;
+                        }
+                        if (d2 < MIN_DIST_SQ) {
+                            const d = Math.sqrt(d2);
+                            const overlap = (MIN_DIST - d) / 2;
+                            const nx = dx / d;
+                            const ny = dy / d;
+                            // move each system away from the other
+                            A.galaxyPos.x -= nx * overlap;
+                            A.galaxyPos.y -= ny * overlap;
+                            B.galaxyPos.x += nx * overlap;
+                            B.galaxyPos.y += ny * overlap;
+                            // clamp to placement border
+                            A.galaxyPos.x = constrain(A.galaxyPos.x, PLACEMENT_BORDER, width - PLACEMENT_BORDER);
+                            A.galaxyPos.y = constrain(A.galaxyPos.y, PLACEMENT_BORDER, height - PLACEMENT_BORDER);
+                            B.galaxyPos.x = constrain(B.galaxyPos.x, PLACEMENT_BORDER, width - PLACEMENT_BORDER);
+                            B.galaxyPos.y = constrain(B.galaxyPos.y, PLACEMENT_BORDER, height - PLACEMENT_BORDER);
+                            moved = true;
+                        }
+                    }
+                }
+                if (!moved) break;
+            }
+        } catch (e) {
+            console.warn('Galaxy: relaxation pass failed:', e);
+        }
+
         // --- Generate connections ---
         if (this.systems.length >= 2) { this.generateConnections(NEAREST_NEIGHBORS_TO_CONNECT); }
         else { console.log("   Skipping connection generation (less than 2 systems created)."); }
