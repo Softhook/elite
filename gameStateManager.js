@@ -919,7 +919,7 @@ this.jumpJustCompleted = false;
                 fill(255);
                 textAlign(CENTER, CENTER);
                 textSize(18);
-                text(`Loading World: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
+                text(`Creating the Galaxy: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
 
                 pop();
             }
