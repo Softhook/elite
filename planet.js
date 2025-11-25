@@ -21,10 +21,39 @@ class Planet {
 
         // Store base colors provided by StarSystem
         this.baseColor = color1 || color(random(80, 180), random(80, 180), random(80, 180));
-        this.featureColor1 = color2 || lerpColor(this.baseColor, color(random(255)), 0.3);
-        // Generate a second feature color deterministically
+        // Choose a more contrasting feature color (prefer complementary direction)
+        if (color2) {
+            this.featureColor1 = color2;
+        } else {
+            const c1r = red(this.baseColor), c1g = green(this.baseColor), c1b = blue(this.baseColor);
+            // Build a complementary-ish accent color with slight randomness
+            const accent = color(
+                (255 - c1r + random(-40, 40) + 255) % 255,
+                (255 - c1g + random(-40, 40) + 255) % 255,
+                (255 - c1b + random(-40, 40) + 255) % 255
+            );
+            // Lerp strongly toward the accent to increase contrast
+            this.featureColor1 = lerpColor(this.baseColor, accent, random(0.6, 1.0));
+        }
+        // Generate a second feature color that is intentionally different
         const c1r = red(this.baseColor), c1g = green(this.baseColor), c1b = blue(this.baseColor);
-        this.featureColor2 = color( (c1r * 0.8 + random(50)) % 255, (c1g * 0.7 + random(60)) % 255, (c1b * 0.9 + random(40)) % 255);
+        const f1r = red(this.featureColor1), f1g = green(this.featureColor1), f1b = blue(this.featureColor1);
+        const avg = (c1r + c1g + c1b) / 3;
+        if (avg > 140) {
+            // Bright base -> make featureColor2 a much darker accent
+            this.featureColor2 = color(
+                Math.max(0, Math.floor(f1r * random(0.18, 0.45))),
+                Math.max(0, Math.floor(f1g * random(0.18, 0.45))),
+                Math.max(0, Math.floor(f1b * random(0.18, 0.45)))
+            );
+        } else {
+            // Dark base -> make featureColor2 a much lighter accent
+            this.featureColor2 = color(
+                Math.min(255, Math.floor(f1r + random(80, 160))),
+                Math.min(255, Math.floor(f1g + random(80, 160))),
+                Math.min(255, Math.floor(f1b + random(80, 160)))
+            );
+        }
 
         this.palette = [this.baseColor, this.featureColor1, this.featureColor2];
 
@@ -337,7 +366,11 @@ class Planet {
                 const lerpFactor = nScaled - paletteIndex;
                 const col1 = this.palette[paletteIndex];
                 const col2 = this.palette[Math.min(paletteIndex + 1, paletteMaxIdx)];
-                const bandColor = lerpColor(col1, col2, lerpFactor);
+                // Increase color contrast by biasing interpolation away from midtones
+                const contrastBias = 2.6; // higher bias pushes values toward palette endpoints
+                let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
+                cf = Math.min(1, Math.max(0, cf));
+                const bandColor = lerpColor(col1, col2, cf);
                 
                 pg.fill(bandColor);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
