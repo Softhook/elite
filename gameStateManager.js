@@ -411,7 +411,7 @@ this.showingInventory = false;
                     }
                 }
                 // Add WHITE_HOLD and FADE_IN states...
-                // Handle the WHITE_HOLD state - maintain full white screen for a moment
+                // Handle the WHITE_HOLD state - maintain full white screen until textures are generated
                 else if (this.jumpFadeState === "WHITE_HOLD") {
                     // Track time in the white hold state
                     if (!this.jumpWhiteHoldTimer) {
@@ -419,8 +419,14 @@ this.showingInventory = false;
                     }
                     this.jumpWhiteHoldTimer += deltaTime / 1000;
                     
-                    // Transition to fade-in after holding for the specified duration
-                    if (this.jumpWhiteHoldTimer >= this.jumpWhiteHoldTime) {
+                    // Check if planet buffer loading is complete
+                    const loadingComplete = (typeof window !== 'undefined' && 
+                        (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0)) &&
+                        (!window._planetBufferCreationTotal || 
+                         (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal);
+                    
+                    // Transition to fade-in as soon as loading is complete
+                    if (loadingComplete) {
                         this.jumpFadeState = "FADE_IN";
                         GS_LOG("Jump transition: WHITE_HOLD → FADE_IN");
                     }
