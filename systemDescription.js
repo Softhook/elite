@@ -75,27 +75,75 @@ function generateSystemDescription(system, env = {}) {
         missionSummary = '';
     }
 
-    // --- Include current enemy/spawn composition ---
+    // --- Include current enemy/spawn composition (high-level summary) ---
     let shipSummary = '';
     try {
+        const mapRoleToLabel = (r) => {
+            if (!r) return 'unknown';
+            const s = r.toString().toLowerCase();
+            if (s.includes('separat')) return 'Separatist forces';
+            if (s.includes('imperial')) return 'Imperial forces';
+            if (s.includes('police')) return 'Police';
+            if (s.includes('pirate')) return 'Pirates';
+            if (s.includes('alien') || s.includes('xeno')) return 'Aliens';
+            if (s.includes('hauler') || s.includes('cargo')) return 'Haulers';
+            if (s.includes('transport')) return 'Transports';
+            if (s.includes('guard')) return 'Escorts/Guards';
+            if (s.includes('combat') || s.includes('military')) return 'Combat vessels';
+            if (s.includes('explorer')) return 'Explorers';
+            return r.toString();
+        };
+
         if (Array.isArray(system.enemies) && system.enemies.length > 0) {
-            // Count roles and ship types from currently present enemies
-            const roleCounts = {};
-            const typeCounts = {};
+            const counts = {};
+            const examples = {}; // collect example ship type names per label
             for (const e of system.enemies) {
                 if (!e) continue;
-                const r = e.role || e.aiRole || 'Unknown';
-                roleCounts[r] = (roleCounts[r] || 0) + 1;
-                const s = e.shipTypeName || e.shipType || (e.shipDefinition && e.shipDefinition.name) || 'UnknownShip';
-                typeCounts[s] = (typeCounts[s] || 0) + 1;
+                const raw = (e.role || e.aiRole || e.shipFaction || e.faction || 'Unknown').toString();
+                const label = mapRoleToLabel(raw);
+                counts[label] = (counts[label] || 0) + 1;
+                const sname = (e.shipTypeName || e.shipType || (e.shipDefinition && e.shipDefinition.name) || null);
+                if (sname) {
+                    examples[label] = examples[label] || {};
+                    examples[label][sname] = (examples[label][sname] || 0) + 1;
+                }
             }
-            const roles = Object.entries(roleCounts).slice(0,4).map(([k,v]) => `${v} ${k}`).join(', ');
-            const types = Object.entries(typeCounts).slice(0,4).map(([k,v]) => `${v} ${k}`).join(', ');
-            shipSummary = `Active contacts: ${roles}${types ? ' — common types: ' + types : ''}.`;
+            const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+            if (sorted.length > 0) {
+                // Primary group
+                const primary = sorted[0][0];
+                // Secondary/others
+                const others = sorted.slice(1).map(s => s[0]);
+
+                // Build example lists (take up to 2 examples per group)
+                const makeExamples = (lbl) => {
+                    const eMap = examples[lbl] || {};
+                    const arr = Object.entries(eMap).sort((a,b) => b[1]-a[1]).slice(0,2).map(x=>x[0]);
+                    return arr.length ? ` e.g. ${arr.join(', ')}` : '';
+                };
+
+                if (others.length === 0) {
+                    shipSummary = `Typical spawns: ${primary}.${makeExamples(primary)}`;
+                } else {
+                    const mainStr = `Main: ${primary}${makeExamples(primary)}`;
+                    const minorStr = `Also: ${others.slice(0,4).map(lbl => lbl + makeExamples(lbl)).join(', ')}`;
+                    shipSummary = `${mainStr}; ${minorStr}.`;
+                }
+            }
         } else if (typeof system.getEnemyRoleProbabilities === 'function') {
             const probs = system.getEnemyRoleProbabilities() || {};
-            const entries = Object.entries(probs).map(([k,v]) => `${Math.round(v*100)}% ${k}`).slice(0,4);
-            shipSummary = `Typical spawns: ${entries.join(', ')}.`;
+            const agg = {};
+            for (const [k, v] of Object.entries(probs)) {
+                const label = mapRoleToLabel(k);
+                agg[label] = (agg[label] || 0) + (Number(v) || 0);
+            }
+            const sorted = Object.entries(agg).sort((a,b) => b[1] - a[1]);
+            if (sorted.length > 0) {
+                const primary = sorted[0][0];
+                const others = sorted.slice(1).map(s => s[0]);
+                if (others.length === 0) shipSummary = `Typical spawns: ${primary}.`;
+                else shipSummary = `Main: ${primary}; Also: ${others.slice(0,4).join(', ')}.`;
+            }
         }
     } catch (e) {
         shipSummary = '';
