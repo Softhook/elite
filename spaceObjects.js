@@ -1546,71 +1546,142 @@ const SpaceObjectRenderers = {
     },
 
     orbitalGarden: function(obj, size, anim, bob) {
-        // Simplified orbital garden: terraced rings, central planter, rotating shade, and gentle pollinators
+        // Refined orbital garden: layered terraces with subtle gradients, varied flora, delicate vines,
+        // soft shade ring and more subtle pollinators/motes for depth.
         push();
         noStroke();
 
         const phase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.001;
-        // base shadow / platform
-        fill(18, 28, 18, 220);
-        ellipse(0, size * 0.16 + bob, size * 0.92, size * 0.22);
 
-        // terraced planting rings (clean, readable layers)
-        const ringColors = [ [50,120,70], [60,140,80], [80,170,100] ];
+        // soft platform shadow (a few layered ellipses for depth)
+        fill(12, 22, 16, 220);
+        ellipse(0, size * 0.16 + bob, size * 0.92, size * 0.22);
+        fill(10, 18, 14, 120);
+        ellipse(0, size * 0.18 + bob, size * 0.7, size * 0.14);
+
+        // terraced planting rings with gentle radial gradients
+        const ringBase = [ {c:[46,118,68], a:200}, {c:[62,142,82], a:180}, {c:[78,170,102], a:150} ];
         for (let r = 0; r < 3; r++) {
             const rScale = 0.78 - r * 0.18;
             const ry = -size * 0.02 + bob + r * (size * 0.04);
-            fill(ringColors[r][0], ringColors[r][1], ringColors[r][2], 220 - r * 30);
-            ellipse(0, ry, size * rScale, size * (0.22 - r * 0.03));
-            // subtle ring rim
-            stroke(20, 40, 24, 120); strokeWeight(0.6);
+            // soft radial gradient via concentric ellipses
+            for (let g = 0; g < 4; g++) {
+                const t = g / 4;
+                const a = Math.floor(ringBase[r].a * (1 - t) * 0.9);
+                fill(ringBase[r].c[0], ringBase[r].c[1], ringBase[r].c[2], a);
+                ellipse(0, ry + t * 2, size * rScale * (1 - t * 0.06), size * (0.22 - r * 0.03) * (1 - t * 0.2));
+            }
+            // subtle rim highlight
+            stroke(22, 44, 26, 110); strokeWeight(0.6);
             noFill(); ellipse(0, ry, size * rScale * 0.98, size * (0.22 - r * 0.03) * 0.98);
             noStroke();
         }
 
-        // central planter and stylized tree
-        const centerY = -size * 0.06 + bob;
-        fill(90, 150, 100);
-        ellipse(0, centerY, size * 0.28, size * 0.12);
-        // trunk
-        fill(110, 68, 38);
-        rect(0, centerY - size * 0.05, size * 0.04, size * 0.10, 3);
-        // canopy
-        fill(60, 190, 90, 230);
-        ellipse(0, centerY - size * 0.18, size * 0.22, size * 0.14);
+        // initialize plant clusters if not present (lightweight randomization)
+        if (!obj._gardenPlants) {
+            obj._gardenPlants = [];
+            const seed = obj.id || Math.floor(Math.random() * 10000);
+            for (let i = 0; i < 12; i++) {
+                const ang = (i / 12) * TWO_PI + (seed % 7) * 0.13;
+                const rad = size * (0.18 + Math.random() * 0.36);
+                obj._gardenPlants.push({ ang: ang, rad: rad, sz: 4 + Math.random() * 6, sway: Math.random() * 0.6 });
+            }
+        }
 
-        // rotating thin shade ring above garden (soft, slow)
+        // central planter and stylized tree with layered canopy for subtle shading
+        const centerY = -size * 0.06 + bob;
+        fill(84, 140, 92);
+        ellipse(0, centerY, size * 0.28, size * 0.12);
+        // trunk (slimmer, add slight grain)
+        fill(112, 68, 36);
+        rect(0, centerY - size * 0.05, size * 0.03, size * 0.10, 3);
+        // layered canopy for softness
+        fill(58, 186, 90, 220); ellipse(0, centerY - size * 0.17, size * 0.24, size * 0.12);
+        fill(48, 166, 78, 200); ellipse(0, centerY - size * 0.15, size * 0.18, size * 0.1);
+        fill(76, 200, 110, 160); ellipse(0, centerY - size * 0.20, size * 0.12, size * 0.08);
+
+        // delicate vines/arcs from outer ring toward center (subtle, thin strokes)
+        for (let v = 0; v < 4; v++) {
+            const va = v * (TWO_PI / 4) + Math.sin(obj.bobPhase * 0.0008 + v) * 0.08;
+            const vx1 = Math.cos(va) * size * 0.44;
+            const vy1 = Math.sin(va) * size * 0.18 + bob * 0.02;
+            const vx2 = Math.cos(va + 0.25) * size * 0.22;
+            const vy2 = Math.sin(va + 0.25) * size * 0.12 + bob * 0.01;
+            stroke(34, 70, 38, 120); strokeWeight(0.6);
+            noFill(); bezier(vx1, vy1, vx1 * 0.6, vy1 * 0.8, vx2 * 0.9, vy2 * 0.9, vx2, vy2);
+            noStroke();
+        }
+
+        // rotating soft shade ring above garden (thin semi-translucent band)
         push();
         translate(0, centerY - size * 0.04);
-        rotate(anim ? anim.gardenShadeAngle : 0);
-        stroke(12, 24, 20, 160); strokeWeight(2);
-        noFill();
+        rotate((anim ? anim.gardenShadeAngle : 0) + Math.sin(obj.bobPhase * 0.001) * 0.02);
+        fill(8, 16, 12, 48);
         ellipse(0, 0, size * 0.72, size * 0.72);
+        // subtle rim highlight
+        stroke(18, 36, 28, 80); strokeWeight(0.8);
+        noFill(); ellipse(0, 0, size * 0.72, size * 0.72);
         noStroke();
         pop();
 
-        // gentle pollinators / motes orbiting in layered paths
-        for (let p = 0; p < 5; p++) {
-            const a = phase + p * 1.25;
-            const r = size * (0.28 + p * 0.06);
+        // plant clusters (individual leaves) — adds variety and subtle motion
+        for (let i = 0; i < obj._gardenPlants.length; i++) {
+            const p = obj._gardenPlants[i];
+            const sway = Math.sin(phase * 0.8 + p.sway) * 3;
+            const px = Math.cos(p.ang) * p.rad * 0.5;
+            const py = Math.sin(p.ang) * p.rad * 0.28 + bob * 0.02;
+            for (let l = 0; l < 3; l++) {
+                const li = l / 3;
+                fill(60 + l * 6, 150 + l * 8, 80 + l * 6, 220 - l * 30);
+                push(); translate(px + Math.sin((obj.bobPhase * 0.002) + i) * 1.5, py + l * 2);
+                rotate(Math.sin(i * 0.7 + l) * 0.6 + sway * 0.02);
+                ellipse(0, 0, p.sz * (0.9 - l * 0.28), p.sz * 0.5 * (0.9 - l * 0.28));
+                pop();
+            }
+        }
+
+        // path lights: tiny dim lights along rings for subtle guiding
+        for (let r = 0; r < 3; r++) {
+            const pts = 6 + r * 2;
+            const rScale = 0.78 - r * 0.18;
+            const ry = -size * 0.02 + bob + r * (size * 0.04);
+            for (let pi = 0; pi < pts; pi++) {
+                const a = (pi / pts) * TWO_PI + (obj.bobPhase * 0.0006 * (r + 1));
+                const lx = Math.cos(a) * size * rScale * 0.48;
+                const ly = Math.sin(a) * size * (0.22 - r * 0.03) * 0.28 + ry;
+                fill(220, 180, 140, 60);
+                ellipse(lx, ly, 2, 2);
+            }
+        }
+
+        // refined pollinators / motes: softer, layered glows with tiny trails
+        for (let p = 0; p < 6; p++) {
+            const a = phase * (0.9 + p * 0.07) + p * 1.1;
+            const r = size * (0.22 + p * 0.04);
             const x = Math.cos(a) * r * 0.5;
-            const y = Math.sin(a) * r * 0.26 + bob * 0.02;
-            fill(255, 220, 130, 200 - p * 30);
-            ellipse(x, y, 3 + (p % 2), 2 + (p % 2));
+            const y = Math.sin(a) * r * 0.26 + bob * 0.01 + Math.sin(a * 0.7) * 0.6;
+            // soft glow
+            fill(255, 230, 140, 140 - p * 12);
+            ellipse(x, y, 4 + (p % 2), 3 + (p % 2));
+            // tiny trailing mote for motion
+            fill(255, 200, 120, 60);
+            ellipse(x - Math.cos(a) * 4, y - Math.sin(a) * 2, 2, 1.2);
         }
 
         // subtle central glow layers (adds warmth without visual clutter)
         for (let g = 0; g < 3; g++) {
-            fill(100, 200, 150, 36 - g * 8);
-            ellipse(0, centerY + size * 0.02, size * (0.38 + g * 0.18), size * (0.18 + g * 0.08));
+            fill(102, 200, 150, 30 - g * 6);
+            ellipse(0, centerY + size * 0.02, size * (0.36 + g * 0.16), size * (0.16 + g * 0.06));
         }
 
-        // small service bots (simple oscillation) — minimal and tidy
+        // small service bots (tuck them in, reduce visual weight)
         for (let b = 0; b < 2; b++) {
-            const bx = Math.sin(obj.bobPhase * 0.003 + b) * (size * 0.18);
-            const by = size * 0.24 + bob * 0.06 - b * (size * 0.03);
-            fill(200, 180, 140);
-            rect(bx, by, 10, 6, 2);
+            const bx = Math.sin(obj.bobPhase * 0.003 + b * 0.7) * (size * 0.14);
+            const by = size * 0.24 + bob * 0.06 - b * (size * 0.02);
+            fill(200, 190, 160);
+            rect(bx, by, 8, 5, 1.5);
+            fill(0, 0, 0, 24);
+            ellipse(bx, by + 4, 10, 3);
         }
 
         pop();
@@ -2289,18 +2360,94 @@ const SpaceObjectRenderers = {
     },
 
     solarFarm: function(obj, size, anim, bob) {
-        // rowed solar panels on a floating frame
+        // enhanced solar farm: tilting tracker panels, central collector and maintenance drones
+        const a = anim || obj._anim || {};
         noStroke();
-        fill(36, 44, 60);
-        rect(0, bob, size * 0.9, size * 0.22, 3);
-        // panels
-        fill(20, 60, 120);
-        for (let p = -2; p <= 2; p++) {
-            rect(p * (size * 0.18), bob - size * 0.02, size * 0.14, size * 0.08, 2);
+        // floating frame / base
+        fill(32, 38, 50);
+        rect(0, bob + size * 0.02, size * 0.95, size * 0.26, 4);
+
+        // central collector tower
+        fill(120, 130, 140);
+        rect(0, bob - size * 0.06, size * 0.12, size * 0.32, 4);
+        fill(200, 220, 240, 60);
+        ellipse(0, bob - size * 0.22, size * 0.14, size * 0.08);
+
+        // panels: draw rows with small tilts and slight stagger
+        const rows = 2;
+        const cols = 5;
+        const panelW = size * 0.16;
+        const panelH = size * 0.08;
+        const tiltBase = (typeof a.panelTiltAngle === 'number') ? a.panelTiltAngle : 0;
+        const tiltSpeed = (typeof a.panelTiltSpeed === 'number') ? a.panelTiltSpeed : 0.00005;
+        // animate tracker phase a bit here too
+        const trackPhase = (typeof a.trackerPhase === 'number') ? a.trackerPhase : obj.bobPhase * 0.001;
+        for (let r = 0; r < rows; r++) {
+            const yOff = bob - size * 0.06 + r * (panelH + 6);
+            for (let c = 0; c < cols; c++) {
+                const x = (c - (cols - 1) / 2) * (panelW + 8);
+                // per-panel micro-tilt follows tracker + gentle bob
+                const per = (c / cols) + r * 0.13;
+                const tilt = tiltBase + Math.sin(trackPhase * (0.9 + per * 0.2) + per * 1.7) * (0.14 + r * 0.02);
+                push();
+                translate(x, yOff);
+                rotate(tilt);
+                // panel body
+                fill(18, 58, 130);
+                rect(0, 0, panelW, panelH, 2);
+                // grid lines
+                stroke(12, 30, 70, 160); strokeWeight(0.6);
+                for (let g = -2; g <= 2; g++) {
+                    const gx = (g / 2) * panelW * 0.9;
+                    line(-panelW * 0.46, gx, panelW * 0.46, gx);
+                }
+                noStroke();
+                // specular sheen
+                fill(255, 255, 240, 28);
+                beginShape();
+                vertex(-panelW * 0.36, -panelH * 0.2);
+                vertex(-panelW * 0.06, -panelH * 0.3);
+                vertex(panelW * 0.36, -panelH * 0.05);
+                endShape(CLOSE);
+                pop();
+            }
         }
-        // small wiring glows
-        fill(120, 200, 255, 60);
-        ellipse(0, bob + size * 0.08, 6, 3);
+
+        // wiring bus and pulse glow
+        const pulse = 0.6 + 0.4 * Math.sin((a.wiringPulse || obj.bobPhase) * 0.006);
+        fill(90, 200, 255, 80 + 80 * pulse);
+        rect(0, bob + size * 0.12, size * 0.5, size * 0.04, 2);
+        // small power node
+        fill(120, 220, 255, 160);
+        ellipse(-size * 0.18, bob + size * 0.12, 6, 4);
+        ellipse(size * 0.18, bob + size * 0.12, 5, 3);
+
+        // maintenance drones: lazy init and simple orbit
+        if (!obj._farmDrones) {
+            obj._farmDrones = [];
+            const dcount = 2 + Math.floor(size / 120);
+            for (let i = 0; i < dcount; i++) obj._farmDrones.push({ ang: Math.random() * TWO_PI, dist: size * (0.36 + Math.random() * 0.2), speed: 0.002 + Math.random() * 0.003, phase: Math.random() * TWO_PI });
+        }
+        for (let di = 0; di < obj._farmDrones.length; di++) {
+            const d = obj._farmDrones[di];
+            d.ang += d.speed;
+            const dx = Math.cos(d.ang) * d.dist;
+            const dy = Math.sin(d.ang) * d.dist * 0.36 + bob * 0.06;
+            // tether line
+            stroke(120, 140, 150, 120); strokeWeight(0.6);
+            line(0, bob - size * 0.06, dx, dy - 2);
+            noStroke();
+            // drone body
+            fill(240, 230, 200);
+            ellipse(dx, dy, 6, 4);
+            // status light
+            fill(100, 220, 160, 220);
+            ellipse(dx + 3, dy - 1, 2, 2);
+        }
+
+        // subtle shadow under the farm
+        fill(0, 0, 0, 40);
+        ellipse(0, bob + size * 0.22, size * 0.9, size * 0.18);
     },
 
     quantumGate: function(obj, size, anim, bob) {
@@ -2445,6 +2592,13 @@ class SpaceObject {
                 // New-type animation seeds
                 anim.solarSailAngle = Math.random() * 0.02 - 0.01;
                 anim.solarSailFlutter = Math.random() * 0.06;
+                break;
+            case 'solarFarm':
+                // Solar farm: gentle panel tilt, tracker phase and maintenance drone seeds
+                anim.panelTiltAngle = Math.random() * 0.02 - 0.01;
+                anim.panelTiltSpeed = 0.00006 + Math.random() * 0.00004;
+                anim.trackerPhase = Math.random() * TWO_PI;
+                anim.wiringPulse = Math.random() * TWO_PI;
                 break;
             case 'engineArray':
                 anim.engineGlow = Math.random() * 0.8;
@@ -2690,6 +2844,9 @@ class SpaceObject {
         if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.0005 * dt;
         if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.001 * dt;
         if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0015 * dt;
+        if (typeof anim.panelTiltAngle === 'number') anim.panelTiltAngle += (anim.panelTiltSpeed || 0) * dt;
+        if (typeof anim.trackerPhase === 'number') anim.trackerPhase += 0.0012 * dt;
+        if (typeof anim.wiringPulse === 'number') anim.wiringPulse += 0.0035 * dt;
         // Energy collector animated phases
         if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0003 * dt;
         if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
