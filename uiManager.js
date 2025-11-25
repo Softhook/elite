@@ -1840,7 +1840,7 @@ if (isIllegalInSystem || isMissionCargo) {
         // Background
         fill(20, 30, 50, 240);
         stroke(100, 150, 255);
-        strokeWeight(2);
+        strokeWeight(1);
         rect(overlayX, overlayY, overlayW, overlayH, 8);
         
         // Header
@@ -1936,11 +1936,7 @@ if (isIllegalInSystem || isMissionCargo) {
             const descBoxW = overlayW - 24;
             const descY = yPos + 12; // place below commodities table
 
-            // Background for description area sized to measured height
-            fill(15, 22, 36, 220);
-            stroke(80, 110, 160, 160);
-            strokeWeight(1);
-            rect(descX - cachedDescPadding, descY - cachedDescPadding, descBoxW + cachedDescPadding * 2, cachedDescHeight, 6);
+            // Description box removed — draw text directly onto the overlay
 
             // Draw wrapped description text with larger size
             noStroke();
