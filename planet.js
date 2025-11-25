@@ -361,14 +361,29 @@ class Planet {
                 const cosA = Math.cos(angle);
                 const sinA = Math.sin(angle);
                 
-                const scaledDist = distFromCenter * noiseScale;
-                const noiseX = cosA * scaledDist + featureRand;
-                const noiseY = sinA * scaledDist + featureRand;
-                
-                // Combine several noise octaves (simple FBM) and increase contrast
-                const n1 = pg.noise(noiseX, noiseY, noiseZ);
-                const n2 = pg.noise(noiseX * 2.0, noiseY * 2.0, noiseZ * 1.7);
-                const n3 = pg.noise(noiseX * 4.0, noiseY * 4.0, noiseZ * 3.5);
+                // Spherical mapping: convert local x,y to normalized sphere coordinates
+                const nx = x / r; // -1..1 across the planet surface
+                const ny = y / r;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue; // safety, skip pixels outside the disc
+
+                // z component of the unit sphere (0 at limb, 1 at center)
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+
+                // Use the unit sphere coordinates as 3D inputs to the noise function so
+                // patterns wrap naturally around the globe and naturally compress at the limb.
+                // The existing `noiseScale` was tuned earlier; invert it into a sample multiplier
+                // so larger planets still get reasonable detail. We keep a small featureRand offset
+                // to avoid visible seam artifacts.
+                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
+                const baseNX = nx * sampleMultiplier + featureRand * 0.001;
+                const baseNY = ny * sampleMultiplier + featureRand * 0.002;
+                const baseNZ = nzUnit * sampleMultiplier + noiseZ;
+
+                // Combine several noise octaves (FBM) sampled on the sphere
+                const n1 = pg.noise(baseNX, baseNY, baseNZ);
+                const n2 = pg.noise(baseNX * 2.0, baseNY * 2.0, baseNZ * 1.7);
+                const n3 = pg.noise(baseNX * 4.0, baseNY * 4.0, baseNZ * 3.5);
                 let n = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
                 n = Math.min(1, Math.max(0, Math.pow(n, 1.3)));
                 const nScaled = n * paletteMaxIdx;
@@ -380,7 +395,14 @@ class Planet {
                 const contrastBias = 2.6; // higher bias pushes values toward palette endpoints
                 let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
                 cf = Math.min(1, Math.max(0, cf));
-                const bandColor = lerpColor(col1, col2, cf);
+                let bandColor = lerpColor(col1, col2, cf);
+
+                // Apply subtle limb-based distortion/attenuation so features feel wrapped
+                // around a sphere: at the limb (nzUnit -> 0) we slightly desaturate/darken
+                // and compress contrast to simulate foreshortening.
+                const limbFactor = Math.pow(nzUnit, 0.9); // 1 at center, 0 at edge
+                const limbDarken = 0.35 * (1 - limbFactor);
+                bandColor = lerpColor(bandColor, color(0, 0, 0), limbDarken);
                 
                 pg.fill(bandColor);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
@@ -980,27 +1002,27 @@ class Planet {
         return {
             pos: { x: this.pos.x, y: this.pos.y },
             size: this.size,
-            baseColor: this.baseColor ? this.baseColor.toString() : null,
-            featureColor1: this.featureColor1 ? this.featureColor1.toString() : null,
-            featureColor2: this.featureColor2 ? this.featureColor2.toString() : null,
-            featureColor3: this.featureColor3 ? this.featureColor3.toString() : null,
+            baseColor: this.baseColor ? [red(this.baseColor), green(this.baseColor), blue(this.baseColor), alpha(this.baseColor)] : null,
+            featureColor1: this.featureColor1 ? [red(this.featureColor1), green(this.featureColor1), blue(this.featureColor1), alpha(this.featureColor1)] : null,
+            featureColor2: this.featureColor2 ? [red(this.featureColor2), green(this.featureColor2), blue(this.featureColor2), alpha(this.featureColor2)] : null,
+            featureColor3: this.featureColor3 ? [red(this.featureColor3), green(this.featureColor3), blue(this.featureColor3), alpha(this.featureColor3)] : null,
             featureRand: this.featureRand,
             noiseScale: this.noiseScale,
             noisePersistence: this.noisePersistence,
             hasAtmosphere: this.hasAtmosphere,
-            atmosphereColor: this.atmosphereColor ? this.atmosphereColor.toString() : null,
+            atmosphereColor: this.atmosphereColor ? [red(this.atmosphereColor), green(this.atmosphereColor), blue(this.atmosphereColor), alpha(this.atmosphereColor)] : null,
             hasRings: this.hasRings,
             ringAngle: this.ringAngle,
             ringPerspective: this.ringPerspective,
             ringInnerRad: this.ringInnerRad,
             ringOuterRad: this.ringOuterRad,
             numRingSegments: this.numRingSegments,
-            ringColor1: this.ringColor1 ? this.ringColor1.toString() : null,
-            ringColor2: this.ringColor2 ? this.ringColor2.toString() : null,
+            ringColor1: this.ringColor1 ? [red(this.ringColor1), green(this.ringColor1), blue(this.ringColor1), alpha(this.ringColor1)] : null,
+            ringColor2: this.ringColor2 ? [red(this.ringColor2), green(this.ringColor2), blue(this.ringColor2), alpha(this.ringColor2)] : null,
             rotationSpeed: this.rotationSpeed,
             currentRotation: this.currentRotation,
             isInhabited: this.isInhabited,
-            cityLightsColor: this.cityLightsColor ? this.cityLightsColor.toString() : null,
+            cityLightsColor: this.cityLightsColor ? [red(this.cityLightsColor), green(this.cityLightsColor), blue(this.cityLightsColor), alpha(this.cityLightsColor)] : null,
             cityLightsDensity: this.cityLightsDensity,
             name: this.name,
             systemName: this.systemName,
@@ -1009,31 +1031,48 @@ class Planet {
     }
 
     static fromJSON(data) {
-        // Use baseColor and featureColor1/2 if possible, else fallback to random
-        let c1 = data.baseColor && typeof color === "function" ? color(data.baseColor) : undefined;
-        let c2 = data.featureColor1 && typeof color === "function" ? color(data.featureColor1) : undefined;
+        // Helper to parse stored color formats (array [r,g,b,a] or string)
+        const parseColor = (val) => {
+            if (!val) return null;
+            if (Array.isArray(val)) {
+                // Expect [r,g,b,a]
+                return (typeof color === 'function') ? color(val[0], val[1], val[2], val[3]) : null;
+            }
+            // Fallback: try parsing string via p5 `color()` if available
+            return (typeof color === 'function') ? color(val) : null;
+        };
+
+        // Parse base/feature colors (supports both old string format and new RGBA arrays)
+        let c1 = parseColor(data.baseColor) || undefined;
+        let c2 = parseColor(data.featureColor1) || undefined;
         const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2, data.systemName || "Unknown", data.planetIndex || 0);
-        p.featureColor2 = data.featureColor2 && typeof color === "function" ? color(data.featureColor2) : p.featureColor2;
-        p.featureColor3 = data.featureColor3 && typeof color === "function" ? color(data.featureColor3) : p.featureColor3;
-        p.featureRand = data.featureRand;
-        p.noiseScale = data.noiseScale;
-        p.noisePersistence = data.noisePersistence;
-        p.hasAtmosphere = data.hasAtmosphere;
-        p.atmosphereColor = data.atmosphereColor && typeof color === "function" ? color(data.atmosphereColor) : null;
-        p.hasRings = data.hasRings;
-        p.ringAngle = data.ringAngle;
-        p.ringPerspective = data.ringPerspective;
-        p.ringInnerRad = data.ringInnerRad;
-        p.ringOuterRad = data.ringOuterRad;
-        p.numRingSegments = data.numRingSegments;
-        p.ringColor1 = data.ringColor1 && typeof color === "function" ? color(data.ringColor1) : null;
-        p.ringColor2 = data.ringColor2 && typeof color === "function" ? color(data.ringColor2) : null;
-        p.rotationSpeed = data.rotationSpeed;
-        p.currentRotation = data.currentRotation;
-        p.isInhabited = data.isInhabited;
-        p.cityLightsColor = data.cityLightsColor && typeof color === "function" ? color(data.cityLightsColor) : null;
-        p.cityLightsDensity = data.cityLightsDensity;
+
+        // Restore other colors and properties
+        p.featureColor2 = parseColor(data.featureColor2) || p.featureColor2;
+        p.featureColor3 = parseColor(data.featureColor3) || p.featureColor3;
+        p.featureRand = (typeof data.featureRand !== 'undefined') ? data.featureRand : p.featureRand;
+        p.noiseScale = (typeof data.noiseScale !== 'undefined') ? data.noiseScale : p.noiseScale;
+        p.noisePersistence = (typeof data.noisePersistence !== 'undefined') ? data.noisePersistence : p.noisePersistence;
+        p.hasAtmosphere = !!data.hasAtmosphere;
+        p.atmosphereColor = parseColor(data.atmosphereColor) || null;
+        p.hasRings = !!data.hasRings;
+        p.ringAngle = (typeof data.ringAngle !== 'undefined') ? data.ringAngle : p.ringAngle;
+        p.ringPerspective = (typeof data.ringPerspective !== 'undefined') ? data.ringPerspective : p.ringPerspective;
+        p.ringInnerRad = (typeof data.ringInnerRad !== 'undefined') ? data.ringInnerRad : p.ringInnerRad;
+        p.ringOuterRad = (typeof data.ringOuterRad !== 'undefined') ? data.ringOuterRad : p.ringOuterRad;
+        p.numRingSegments = (typeof data.numRingSegments !== 'undefined') ? data.numRingSegments : p.numRingSegments;
+        p.ringColor1 = parseColor(data.ringColor1) || p.ringColor1;
+        p.ringColor2 = parseColor(data.ringColor2) || p.ringColor2;
+        p.rotationSpeed = (typeof data.rotationSpeed !== 'undefined') ? data.rotationSpeed : p.rotationSpeed;
+        p.currentRotation = (typeof data.currentRotation !== 'undefined') ? data.currentRotation : p.currentRotation;
+        p.isInhabited = !!data.isInhabited;
+        p.cityLightsColor = parseColor(data.cityLightsColor) || p.cityLightsColor;
+        p.cityLightsDensity = (typeof data.cityLightsDensity !== 'undefined') ? data.cityLightsDensity : p.cityLightsDensity;
         p.name = data.name || p.name; // Use saved name if available
+
+        // Rebuild palette so rendered textures use restored feature colors
+        p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
+
         return p;
     }
 } // End of Planet Class
