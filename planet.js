@@ -402,6 +402,13 @@ class Planet {
                 const limbDarken = 0.35 * (1 - limbFactor);
                 bandColor = lerpColor(bandColor, color(0, 0, 0), limbDarken);
                 
+                // Antialiasing at the planet edge for smooth transition to background
+                const edgeWidth = 5; // pixels over which to fade alpha
+                if (distFromCenter > r - edgeWidth) {
+                    const alphaFactor = Math.max(0, (r - distFromCenter) / edgeWidth);
+                    bandColor = color(red(bandColor), green(bandColor), blue(bandColor), alpha(bandColor) * alphaFactor);
+                }
+                
                 pg.fill(bandColor);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
             }
