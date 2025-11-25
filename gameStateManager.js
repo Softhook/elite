@@ -200,7 +200,7 @@ this.showingInventory = false;
         // Process deferred planet buffer creation queue (non-blocking, small batch per frame)
         try {
             if (typeof window !== 'undefined' && Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0) {
-                const BATCH_PER_FRAME = 1; // Process one planet per frame for better responsiveness
+                const BATCH_PER_FRAME = 2; // Tune this to balance CPU/UX
                 for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
                     const task = window._planetBufferCreationQueue.shift();
                     try {
