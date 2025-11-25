@@ -325,6 +325,9 @@ class Planet {
         const r = this.radius;
         const rSq = this.radiusSq;
         
+        // Enable anti-aliasing for smoother edges
+        pg.smooth();
+        
         // Clear the buffer and set up
         pg.clear();
         pg.noStroke();
@@ -334,7 +337,7 @@ class Planet {
         // Skip drawing the solid base circle; the textured bands will fill the planet
         
         // Set resolution based on planet size
-        const bandHeight = Math.max(2, Math.ceil(400 / this.size));
+        const bandHeight = Math.max(1, Math.ceil(300 / this.size));
         
         // Cache constants for inner loop
         const noiseScale = this.noiseScale;
@@ -402,6 +405,15 @@ class Planet {
                 const limbDarken = 0.35 * (1 - limbFactor);
                 bandColor = lerpColor(bandColor, color(0, 0, 0), limbDarken);
                 
+                // Apply soft edge anti-aliasing: reduce alpha near the planet's edge
+                const edgeWidth = 8; // pixels over which to fade alpha
+                const distToEdge = this.radius - distFromCenter;
+                if (distToEdge < edgeWidth) {
+                    const alphaFade = map(distToEdge, 0, edgeWidth, 0, 1);
+                    const currentAlpha = alpha(bandColor);
+                    bandColor = color(red(bandColor), green(bandColor), blue(bandColor), currentAlpha * alphaFade);
+                }
+                
                 pg.fill(bandColor);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
             }
@@ -417,6 +429,9 @@ class Planet {
     renderRings() {
         const pg = this.ringsBuffer;
         const bufferCenter = pg.width * 0.5;
+        
+        // Enable anti-aliasing for smoother ring edges
+        pg.smooth();
         
         // Clear buffer
         pg.clear();
@@ -465,6 +480,9 @@ class Planet {
     renderAtmosphere() {
         const pg = this.atmosphereBuffer;
         const bufferCenter = pg.width * 0.5;
+        
+        // Enable anti-aliasing for smoother atmosphere edges
+        pg.smooth();
         
         // Clear buffer first
         pg.clear();
@@ -515,6 +533,9 @@ class Planet {
         const bufferCenter = pg.width * 0.5;
         const r = this.radius;
 
+        // Enable anti-aliasing for smoother city light edges
+        pg.smooth();
+        
         // Clear the buffer
         pg.clear();
 
