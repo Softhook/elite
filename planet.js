@@ -65,6 +65,13 @@ class Planet {
         const thirdG = Math.min(255, Math.max(0, Math.floor((255 - avgG) * random(0.6, 1.0) + avgB * 0.15)));
         const thirdB = Math.min(255, Math.max(0, Math.floor((255 - avgB) * random(0.6, 1.0) + avgR * 0.15)));
         this.featureColor3 = color(thirdR, thirdG, thirdB);
+        
+        // Set baseColor as average of the three feature colors
+        const avgBaseR = Math.floor((red(this.featureColor1) + red(this.featureColor2) + red(this.featureColor3)) / 3);
+        const avgBaseG = Math.floor((green(this.featureColor1) + green(this.featureColor2) + green(this.featureColor3)) / 3);
+        const avgBaseB = Math.floor((blue(this.featureColor1) + blue(this.featureColor2) + blue(this.featureColor3)) / 3);
+        this.baseColor = color(avgBaseR, avgBaseG, avgBaseB);
+        
         this.palette = [this.baseColor, this.featureColor1, this.featureColor2, this.featureColor3];
 
         // Deterministic properties using random() (seeded by StarSystem)
