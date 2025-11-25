@@ -133,6 +133,114 @@ function generateSystemDescription(system, env = {}) {
     const econSentence = econBlurb[econ] || `An economy oriented around ${econ.toLowerCase()}.`;
     const secSentence = secBlurb[sec] || `Security level: ${sec}.`;
 
+    // Attempt to derive two most attractively priced local goods and two most-sought goods
+    // "Attractively priced" is computed by comparing local buy price to a galaxy-wide average when available,
+    // otherwise falls back to local sell-buy margin.
+    const describeLocalGoods = (sys, gal) => {
+        try {
+            let market = null;
+            if (sys && sys.market) market = sys.market;
+            else if (sys && sys.localMarket) market = sys.localMarket;
+            else if (sys && sys.marketData) market = sys.marketData;
+            else if (sys && sys.station && sys.station.market) market = sys.station.market;
+            else if (Array.isArray(sys.stations)) {
+                for (const s of sys.stations) if (s && s.market) { market = s.market; break; }
+            } else if (gal && typeof gal.getMarketForSystem === 'function') market = gal.getMarketForSystem(sys) || null;
+
+            let entries = [];
+            if (market) {
+                if (Array.isArray(market.goods)) entries = market.goods;
+                else if (Array.isArray(market.prices)) entries = market.prices;
+                else if (Array.isArray(market.items)) entries = market.items;
+                else if (Array.isArray(market.listings)) entries = market.listings;
+                else if (Array.isArray(market.tradeGoods)) entries = market.tradeGoods;
+                else if (typeof market.getPrices === 'function') entries = market.getPrices() || [];
+                else if (typeof market.toArray === 'function') entries = market.toArray() || [];
+                else if (market && typeof market === 'object') entries = Object.values(market);
+            }
+
+            if ((!entries || entries.length === 0) && Array.isArray(sys.commodities)) entries = sys.commodities;
+            if ((!entries || entries.length === 0) && Array.isArray(sys.tradeGoods)) entries = sys.tradeGoods;
+
+            const parseNum = v => {
+                if (v === null || v === undefined) return NaN;
+                if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+                return parseFloat(v);
+            };
+
+            const parsed = entries.map(it => {
+                if (!it) return null;
+                let name = it.name || it.id || it.commodity || it.commodityName || (typeof it === 'string' ? it : null);
+                let buyRaw = it.buyPrice ?? it.purchasePrice ?? it.priceBuy ?? it.price ?? it.buy ?? it.b;
+                let sellRaw = it.sellPrice ?? it.priceSell ?? it.sell ?? it.s;
+                let demandRaw = it.demand ?? it.demandLevel ?? it.want ?? it.demandScore ?? it.d;
+                if (!name && it.commodity && typeof it.commodity === 'object') name = it.commodity.name || it.commodity.id;
+                const buy = parseNum(buyRaw);
+                const sell = parseNum(sellRaw);
+                const demand = parseNum(demandRaw);
+                return name ? { name, buy: Number.isFinite(buy) ? buy : null, sell: Number.isFinite(sell) ? sell : null, demand: Number.isFinite(demand) ? demand : 0 } : null;
+            }).filter(Boolean);
+
+            if (parsed.length === 0) return '';
+
+            // Build galaxy averages for comparison if galaxy provides other systems
+            const galaxyAverages = {};
+            try {
+                if (gal && Array.isArray(gal.systems)) {
+                    const collector = {};
+                    for (const s of gal.systems) {
+                        if (!s) continue;
+                        let m = null;
+                        if (s.market) m = s.market;
+                        else if (s.localMarket) m = s.localMarket;
+                        else if (s.marketData) m = s.marketData;
+                        else if (s.station && s.station.market) m = s.station.market;
+                        if (!m) continue;
+                        let ents = [];
+                        if (Array.isArray(m.goods)) ents = m.goods;
+                        else if (Array.isArray(m.prices)) ents = m.prices;
+                        else if (Array.isArray(m.items)) ents = m.items;
+                        else if (typeof m.getPrices === 'function') ents = m.getPrices() || [];
+                        else if (m && typeof m === 'object') ents = Object.values(m);
+                        for (const it of ents || []) {
+                            if (!it) continue;
+                            const nm = it.name || it.id || it.commodity || (it.commodity && it.commodity.name) || (typeof it === 'string' ? it : null);
+                            const b = parseNum(it.buyPrice ?? it.purchasePrice ?? it.priceBuy ?? it.price ?? it.buy ?? it.b);
+                            if (!nm || !Number.isFinite(b)) continue;
+                            collector[nm] = collector[nm] || { sum: 0, count: 0 };
+                            collector[nm].sum += b;
+                            collector[nm].count += 1;
+                        }
+                    }
+                    for (const [k, v] of Object.entries(collector)) galaxyAverages[k] = v.sum / v.count;
+                }
+            } catch (e) { /* ignore galaxy parse errors */ }
+
+            // Compute attractiveness: if galaxy average exists, attractiveness = avgBuy - localBuy (higher is better)
+            // fallback to local margin (sell - buy) or inverse buy price
+            const scored = parsed.map(p => {
+                let score = 0;
+                if (Number.isFinite(p.buy) && galaxyAverages[p.name]) score = (galaxyAverages[p.name] - p.buy);
+                else if (Number.isFinite(p.sell) && Number.isFinite(p.buy)) score = (p.sell - p.buy);
+                else if (Number.isFinite(p.buy)) score = (1 / p.buy);
+                else score = 0;
+                return { ...p, score };
+            });
+
+            const attractive = scored.slice().sort((a, b) => b.score - a.score).slice(0, 2).map(p => p.name);
+            const sought = parsed.slice().sort((a, b) => (b.demand - a.demand) || ((b.sell || 0) - (a.sell || 0))).slice(0, 2).map(p => p.name);
+
+            if ((attractive && attractive.length > 0) || (sought && sought.length > 0)) {
+                const attractText = attractive.length === 2 ? `${attractive[0]} and ${attractive[1]}` : (attractive[0] || 'varied goods');
+                const soughtText = sought.length === 2 ? `${sought[0]} and ${sought[1]}` : (sought[0] || 'varied items');
+                return `Locally, the most attractively priced goods are ${attractText}; the most sought-after are ${soughtText}.`;
+            }
+        } catch (e) {
+            // ignore and return nothing
+        }
+        return '';
+    };
+
     // Tone modifiers for backstory variety — expanded with more in-game telemetry flavored lines
     const toneModifiers = [
         'Commodity exchanges report a spike in palladium after a refinery fire in a neighboring system.',
@@ -211,11 +319,22 @@ function generateSystemDescription(system, env = {}) {
         'Reports indicate an uptick in forged insurance claims among small traders.',
         'A decommissioned relay was retrofitted into an illegal comm hub.'
     ];
-    const mod = toneModifiers[(system.systemIndex || 0) % toneModifiers.length];
+    const hashStr = (s) => {
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+        return h >>> 0;
+    };
+    // Rotate tone modifiers over time and vary by system so repeated calls show different lines
+    const rotationWindowMinutes = 5; // change modifier every 5 minutes
+    const rotation = Math.floor(Date.now() / (1000 * 60 * rotationWindowMinutes));
+    const seed = (system.name || '') + '|' + (system.systemIndex || 0);
+    const idx = toneModifiers.length ? (hashStr(seed) + rotation) % toneModifiers.length : 0;
+    const mod = toneModifiers[idx];
 
     // Assemble description
     const lines = [];
-    lines.push(econSentence + ' ' + secSentence);
+    const goodsSentence = describeLocalGoods(system, galaxy);
+    lines.push(econSentence + ' ' + secSentence + (goodsSentence ? ' ' + goodsSentence : ''));
 
     // Combine missions and ship composition: keep ship sentence separate but on same paragraph
     if (missionSummary) {
