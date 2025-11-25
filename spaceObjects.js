@@ -30,7 +30,7 @@ const sizeMap = {
     alienArtifact: 80,
     wreckage: 95,
     observatoryDome: 150,
-    hydroponicsBay: 105,
+    hydroponicsBay: 150,
     weaponPlatform: 200,
     shieldGenerator: 180,
     energyCollector: 130,
@@ -1931,74 +1931,246 @@ const SpaceObjectRenderers = {
         pop();
     },
     signalFlare: function(obj, size, anim, bob) {
-        // calm, aesthetic signal flare: soft core, slow breathing halo, and gentle drifting motes
+        // colourful signal flare: multi-layered glows, rotating streaks, chromatic shells and orbiting motes
         noStroke();
         const phase = (anim ? anim.flarePhase : obj.bobPhase * 0.008);
-        const calm = 0.45 + 0.35 * Math.sin(phase);
-        // soft core
-        fill(250, 230, 140, 220 * calm);
-        ellipse(0, bob, size * 0.42 * (0.9 + calm * 0.4), size * 0.32 * (0.9 + calm * 0.4));
-        // subtle inner glow layers
-        fill(255, 245, 200, 110 * (1 - calm));
-        ellipse(0, bob, size * 0.6 * (0.85 + calm * 0.25), size * 0.42 * (0.85 + calm * 0.25));
-        // slow breathing halo (thin, soft ring)
-        push();
-        stroke(255, 220, 140, 80 * (0.9 + calm * 0.4)); strokeWeight(1.4);
-        noFill();
-        const haloScale = 1.05 + calm * 0.25;
-        ellipse(0, bob, size * (0.9 * haloScale), size * (0.6 * haloScale));
-        pop();
-        // a few gentle drifting motes to add life
-        for (let m = 0; m < 3; m++) {
-            const ma = phase * 0.6 + m * 2.1;
-            const mr = size * (0.28 + m * 0.08) * (0.8 + 0.4 * Math.sin(phase + m));
-            fill(255, 240, 200, 60 + 40 * Math.sin(phase * (0.6 + m * 0.2)));
-            ellipse(Math.cos(ma) * mr * 0.4, Math.sin(ma) * mr * 0.18 + bob * 0.2, 3 + m, 2 + m * 0.6);
+
+        // Base pulse and color cycling
+        const pulse = 0.6 + 0.45 * Math.sin(phase * 1.4);
+        const hueA = 0.5 + 0.5 * Math.sin(phase * 0.9);
+        const hueB = 0.5 + 0.5 * Math.sin(phase * 1.3 + 2.1);
+        // Build two RGB blends without colorMode changes
+        const col1 = [220, Math.floor(120 + 110 * hueA), Math.floor(200 + 40 * hueB)];
+        const col2 = [Math.floor(180 + 60 * hueB), Math.floor(200 * hueA), 120];
+
+        // Central core (bright, slightly chromatic)
+        fill(col1[0], col1[1], col1[2], Math.floor(220 * pulse));
+        ellipse(0, bob, size * 0.5 * (0.9 + pulse * 0.25), size * 0.36 * (0.9 + pulse * 0.25));
+
+        // Layered colorful halos (soft additive feel)
+        for (let i = 0; i < 4; i++) {
+            const t = i / 4;
+            const s = size * (0.7 + t * 0.8) * (0.85 + pulse * 0.15);
+            const alpha = Math.floor(42 * (1 - t) * (1 + 0.6 * pulse));
+            const r = Math.floor(lerp(col1[0], col2[0], t));
+            const g = Math.floor(lerp(col1[1], col2[1], t));
+            const b = Math.floor(lerp(col1[2], col2[2], t));
+            fill(r, g, b, alpha);
+            ellipse(0, bob, s, s * 0.6);
         }
-        // Flashing auxiliary beacons
-        const auxFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.6);
-        fill(255, 100, 100, 255 * auxFlash);
-        ellipse(-size * 0.15, bob + size * 0.1, 3, 3);
-        fill(100, 255, 100, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.6 + 1)));
-        ellipse(size * 0.15, bob + size * 0.1, 3, 3);
-        // Slow-moving support strut
+
+        // Chromatic shell: slight RGB offsets to simulate shimmering edges
         push();
-        rotate(Math.sin(obj.bobPhase * 0.005) * 0.15);
-        stroke(200, 180, 140, 120);
-        strokeWeight(0.8);
-        line(0, bob + size * 0.15, size * 0.2, bob + size * 0.25);
+        translate( Math.sin(phase * 0.9) * 1.5, Math.cos(phase * 1.1) * 1.2 );
+        fill(255, 120, 160, Math.floor(48 * pulse));
+        ellipse(0, bob, size * 0.9 * (0.95 + pulse * 0.08), size * 0.58 * (0.95 + pulse * 0.08));
+        translate(-Math.sin(phase * 0.9) * 3.0, -Math.cos(phase * 1.1) * 2.4);
+        fill(120, 200, 255, Math.floor(32 * pulse));
+        ellipse(0, bob, size * 0.92 * (0.95 + pulse * 0.06), size * 0.60 * (0.95 + pulse * 0.06));
+        pop();
+
+        // Rotating streaks / petals for dynamic shape
+        push();
+        const streaks = 6;
+        for (let s = 0; s < streaks; s++) {
+            const ang = (phase * 0.8) + s * (TWO_PI / streaks);
+            const len = size * (0.9 + 0.2 * Math.sin(phase + s));
+            const w = Math.max(2, size * 0.06 * (0.6 + 0.4 * Math.cos(phase * 1.2 + s)));
+            push(); rotate(ang);
+            noStroke();
+            fill(Math.floor(lerp(col1[0], col2[0], s / streaks)), Math.floor(lerp(col1[1], col2[1], s / streaks)), Math.floor(lerp(col1[2], col2[2], s / streaks)), 60);
+            beginShape();
+            vertex(0, bob - w * 0.5);
+            vertex(len * 0.28, bob - w * 0.5);
+            vertex(len, bob);
+            vertex(len * 0.28, bob + w * 0.5);
+            vertex(0, bob + w * 0.5);
+            endShape(CLOSE);
+            pop();
+        }
+        pop();
+
+        // Orbiting colourful motes (initialize if needed)
+        if (!obj._flares) {
+            obj._flares = [];
+            const moteCount = 5 + Math.floor(size / 50);
+            for (let i = 0; i < moteCount; i++) {
+                obj._flares.push({ ang: Math.random() * TWO_PI, dist: size * (0.45 + Math.random() * 0.6), sz: 2 + Math.random() * 4, colIdx: i % 3 });
+            }
+        }
+        for (let i = 0; i < obj._flares.length; i++) {
+            const m = obj._flares[i];
+            m.ang += 0.006 + 0.002 * i;
+            const mx = Math.cos(m.ang) * m.dist * 0.6;
+            const my = Math.sin(m.ang) * m.dist * 0.28 + bob * 0.15;
+            // pick colour by index
+            let mr = 220, mg = 200, mb = 160;
+            if (m.colIdx === 1) { mr = 180; mg = 230; mb = 255; }
+            if (m.colIdx === 2) { mr = 255; mg = 150; mb = 200; }
+            fill(mr, mg, mb, 120 + Math.round(80 * Math.sin(phase * 2 + i)));
+            ellipse(mx, my, m.sz * (0.9 + 0.3 * Math.sin(phase * 3 + i)), m.sz * 0.7);
+            // small halo for glow
+            fill(mr, mg, mb, 24);
+            ellipse(mx, my, m.sz * 4, m.sz * 2);
+        }
+
+        // Small auxiliary beacons for readability
+        const auxFlash = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.9 + phase);
+        fill(255, 180, 120, 220 * auxFlash);
+        ellipse(-size * 0.15, bob + size * 0.12, 3.5, 3.5);
+        fill(120, 220, 255, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.9 + 1)));
+        ellipse(size * 0.15, bob + size * 0.12, 3.5, 3.5);
+
+        // small support pod/strut for silhouette
+        push();
+        rotate(Math.sin(obj.bobPhase * 0.005) * 0.12);
+        stroke(200, 180, 140, 120); strokeWeight(0.8);
+        line(0, bob + size * 0.15, size * 0.22, bob + size * 0.26);
         noStroke();
         fill(220, 200, 180);
-        ellipse(size * 0.2, bob + size * 0.25, 4, 4);
+        ellipse(size * 0.22, bob + size * 0.26, 4, 4);
         pop();
     },
 
     asteroidMiner: function(obj, size, anim, bob) {
-        // compact asteroid miner: drill tower + ore chute and conveyor
+        // Upgraded compact asteroid miner: articulated drills, extractor beam, moving conveyor, hazard lights and service drone
         push();
         noStroke();
-        // base skid
-        fill(70, 70, 80);
-        ellipse(0, bob + size * 0.18, size * 0.8, size * 0.36);
 
-        // drill tower
-        fill(110, 110, 120);
-        rect(0, -size * 0.06 + bob, size * 0.22, size * 0.5, 4);
+        // base skid with subtle rim and scuff marks
+        fill(50, 50, 58);
+        ellipse(0, bob + size * 0.20, size * 0.88, size * 0.38);
+        fill(30, 30, 36, 80);
+        ellipse(0, bob + size * 0.28, size * 0.6, size * 0.10);
 
-        // rotating drill head
-        push(); translate(size * 0.48, size * 0.14 + bob);
-        rotate((anim ? anim.miningSpin : 0) + obj.bobPhase * 0.002);
-        fill(150, 130, 100);
-        rect(0, 0, size * 0.12, size * 0.04, 2);
+        // main hull / tower
+        push();
+        fill(120, 118, 120);
+        rect(0, -size * 0.06 + bob, size * 0.26, size * 0.52, 5);
+        // armored plating panels
+        fill(100, 98, 100);
+        rect(0, -size * 0.06 + bob, size * 0.26, size * 0.08, 4);
+        // grated intake vents
+        fill(60, 60, 66);
+        rect(0, size * 0.12 + bob, size * 0.18, size * 0.06, 3);
         pop();
 
-        // ore chute / conveyor
-        fill(50);
-        rect(0, size * 0.36 + bob, size * 0.6, size * 0.12, 3);
-        // ore sacks
-        fill(100, 70, 60);
-        ellipse(-size * 0.22, size * 0.44 + bob, size * 0.12, size * 0.14);
-        ellipse(size * 0.22, size * 0.44 + bob, size * 0.12, size * 0.14);
+        // Drill array: three articulated arms with rotating drill heads
+        for (let a = 0; a < 3; a++) {
+            const side = a - 1; // -1,0,1
+            const baseAng = -PI / 3 + a * (PI / 3);
+            push();
+            // subtle arm sweep motion
+            rotate(baseAng + Math.sin(obj.bobPhase * 0.0015 + a) * 0.03);
+            // arm shaft
+            stroke(120); strokeWeight(3);
+            line(size * 0.14, size * 0.02 + bob, size * 0.54, size * 0.18 + bob);
+            noStroke();
+            // arm joint
+            fill(95);
+            ellipse(size * 0.54, size * 0.18 + bob, size * 0.09, size * 0.07);
+
+            // drill head assembly
+            push(); translate(size * 0.54, size * 0.18 + bob);
+            // spinning mandrel
+            const spin = (anim ? anim.miningSpin : 0) + obj.bobPhase * 0.003 + a * 0.6;
+            rotate(spin);
+            fill(120, 110, 90);
+            rect(0, 0, size * 0.14, size * 0.05, 3);
+            // drill bit layers (concentric triangles)
+            for (let d = 0; d < 3; d++) {
+                push(); rotate(d * 0.8);
+                fill(160 - d * 20, 140 - d * 18, 110 - d * 12);
+                triangle(size * (0.08 + d * 0.02), 0, size * (0.16 + d * 0.02), -size * 0.04, size * (0.16 + d * 0.02), size * 0.04);
+                pop();
+            }
+            pop();
+            pop();
+        }
+
+        // Extraction laser (animated sweeping beam) — slight glow and hit spot
+        const beamPhase = (anim && typeof anim.miningSpin === 'number') ? anim.miningSpin : obj.bobPhase * 0.002;
+        const beamAngle = Math.sin(beamPhase * 0.8) * 0.25;
+        push();
+        rotate(beamAngle);
+        // beam shaft emitter
+        stroke(200, 220, 255, 120); strokeWeight(2);
+        line(-size * 0.06, -size * 0.02 + bob, -size * 0.6, -size * 0.5 + bob);
+        noStroke();
+        // beam core glow (faint)
+        fill(100, 180, 255, 28);
+        beginShape();
+        vertex(-size * 0.06, -size * 0.02 + bob);
+        vertex(-size * 0.6, -size * 0.5 + bob - 8);
+        vertex(-size * 0.58, -size * 0.5 + bob + 8);
+        endShape(CLOSE);
+        // beam contact spark
+        fill(180, 220, 255, 180);
+        ellipse(-size * 0.6, -size * 0.5 + bob, 6, 4);
+        pop();
+
+        // Ore chute / conveyor with moving ore pieces
+        push();
+        const beltY = size * 0.36 + bob;
+        fill(40);
+        rect(0, beltY, size * 0.66, size * 0.12, 4);
+        // belt segments (visual motion)
+        stroke(28, 28, 32); strokeWeight(1);
+        const beltPhase = (anim && typeof anim.miningSpin === 'number') ? anim.miningSpin * 6 : obj.bobPhase * 0.015;
+        for (let i = -3; i <= 3; i++) {
+            const segX = i * (size * 0.12) + (Math.sin(beltPhase + i) * size * 0.02);
+            line(segX, beltY - size * 0.06, segX, beltY + size * 0.06);
+        }
+        noStroke();
+        // animated ore chunks traveling along belt
+        for (let o = 0; o < 4; o++) {
+            const t = ((obj.bobPhase * 0.01) + o * 0.25) % 1;
+            const ox = lerp(-size * 0.32, size * 0.32, t);
+            const oreHue = (o % 2 === 0) ? color(200, 140, 80) : color(180, 90, 40);
+            fill(red(oreHue), green(oreHue), blue(oreHue));
+            ellipse(ox, beltY - size * 0.02, size * 0.06, size * 0.04);
+        }
+        pop();
+
+        // hanging ore sacks and storage bins
+        for (let s = -2; s <= 2; s++) {
+            const sx = s * (size * 0.22);
+            const sy = size * 0.46 + bob;
+            fill(85, 60, 50);
+            ellipse(sx, sy, size * 0.14, size * 0.16);
+            stroke(60, 40, 30, 120); strokeWeight(1);
+            line(sx - 6, sy - 8, sx + 6, sy - 8);
+            noStroke();
+        }
+
+        // Warning & status lights — pulsing and scanning
+        const warn = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.005);
+        fill(255, 100, 80, 220 * warn);
+        ellipse(-size * 0.10, -size * 0.30 + bob, 6, 6);
+        ellipse(size * 0.10, -size * 0.30 + bob, 6, 6);
+
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35);
+        fill(0, 200, 140, 255 * statusFlash);
+        ellipse(-size * 0.28, bob + size * 0.06, 3, 3);
+        fill(0, 160, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35 + 1)));
+        ellipse(size * 0.28, bob + size * 0.06, 3, 3);
+
+        // small service drone that orbits the miner and has a moving arm
+        if (!obj._minerDrone) obj._minerDrone = { ang: Math.random() * TWO_PI, dist: size * 0.48, phase: Math.random() * TWO_PI };
+        obj._minerDrone.ang += 0.0045;
+        const ddx = Math.cos(obj._minerDrone.ang) * obj._minerDrone.dist;
+        const ddy = Math.sin(obj._minerDrone.ang) * (obj._minerDrone.dist * 0.36) + bob * 0.02;
+        // drone body
+        fill(210, 200, 170);
+        ellipse(ddx, ddy, 8, 6);
+        // drone tether/arm
+        stroke(160, 140, 120, 160); strokeWeight(0.6);
+        line(ddx, ddy, ddx - Math.cos(obj._minerDrone.ang) * 8, ddy - Math.sin(obj._minerDrone.ang) * 8);
+        noStroke();
+        // drone nav light
+        fill(255, 120, 80, 220);
+        ellipse(ddx - 4, ddy - 2, 3, 3);
+
         pop();
     },
 
@@ -2132,25 +2304,102 @@ const SpaceObjectRenderers = {
     },
 
     quantumGate: function(obj, size, anim, bob) {
-        // stylized ring/gate with inner pulse and faint energy arcs
-        noFill();
-        stroke(100, 180, 255, 160);
-        strokeWeight(2);
-        ellipse(0, bob, size * 0.9, size * 0.9);
-        stroke(160, 220, 255, 120);
-        strokeWeight(1);
-        const pulse = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.01);
-        // inner spinning arcs
-        for (let i = 0; i < 4; i++) {
-            const a = (obj.bobPhase * 0.002) + i * (TWO_PI / 4);
-            const ax = Math.cos(a) * size * 0.36;
-            const ay = Math.sin(a) * size * 0.36 + bob * 0.02;
-            line(ax * 0.8, ay * 0.8, ax, ay);
-        }
-        // core glow
+        // Enhanced quantum gate: multi-ring shimmer, rotating glyphs, teleport arcs and particle jets
+        const phase = (anim && anim.gatePhase) ? anim.gatePhase : obj.bobPhase * 0.01;
+        const spin = obj.bobPhase * 0.0025;
+        const pulse = 0.6 + 0.45 * Math.sin(phase * 1.8);
+
+        // central chromatic core (colour shifts subtly)
         noStroke();
-        fill(120, 200, 255, 100 * pulse);
-        ellipse(0, bob, size * 0.22 * (0.8 + pulse * 0.4), size * 0.22 * (0.8 + pulse * 0.4));
+        const rC = Math.floor(200 + 55 * Math.sin(phase * 1.1));
+        const gC = Math.floor(120 + 90 * Math.sin(phase * 1.5 + 1.2));
+        const bC = Math.floor(220 + 20 * Math.sin(phase * 0.9 + 2.3));
+        fill(rC, gC, bC, Math.floor(200 * pulse));
+        ellipse(0, bob, size * 0.28 * (0.8 + pulse * 0.35), size * 0.28 * (0.8 + pulse * 0.35));
+
+        // layered shimmer rings (soft strokes)
+        for (let ring = 0; ring < 3; ring++) {
+            const t = ring / 3;
+            stroke(Math.floor(lerp(rC, 120, t)), Math.floor(lerp(gC, 200, t)), Math.floor(lerp(bC, 255, t)), Math.floor(90 * (1 - t) * (1 + 0.6 * pulse)));
+            strokeWeight(1 + ring);
+            noFill();
+            const s = size * (0.6 + ring * 0.18) * (0.95 + 0.06 * Math.sin(phase * (1.2 + ring * 0.4)));
+            ellipse(0, bob, s, s);
+        }
+
+        // rotating glyphs/icons along the main ring
+        noStroke();
+        const glyphCount = 10;
+        for (let i = 0; i < glyphCount; i++) {
+            const ga = spin + i * (TWO_PI / glyphCount);
+            const gr = size * 0.48;
+            const gx = Math.cos(ga) * gr;
+            const gy = Math.sin(ga) * gr * 0.9 + bob * 0.02;
+            push();
+            translate(gx, gy);
+            rotate(ga + phase * 0.5);
+            const gw = 4 + 2 * Math.sin(phase * 2 + i);
+            fill(255, 255, 255, 180);
+            beginShape();
+            vertex(-gw, -gw * 0.6);
+            vertex(0, -gw * 1.4);
+            vertex(gw, -gw * 0.6);
+            vertex(0, gw * 1.1);
+            endShape(CLOSE);
+            pop();
+        }
+
+        // teleport arcs: curved energy strands that sweep across the gate
+        strokeWeight(1.2);
+        for (let a = 0; a < 6; a++) {
+            const startAng = spin * 0.8 + a * (TWO_PI / 6) + Math.sin(phase * (0.7 + a * 0.14)) * 0.2;
+            const arcLen = 0.8 + 0.2 * Math.sin(phase * 1.3 + a);
+            const rIn = size * 0.28;
+            const rOut = size * 0.66;
+            const steps = 10;
+            beginShape();
+            for (let s = 0; s <= steps; s++) {
+                const v = s / steps;
+                const ang = startAng + v * arcLen;
+                const rad = lerp(rIn, rOut, v);
+                const x = Math.cos(ang) * rad;
+                const y = Math.sin(ang) * rad * 0.92 + bob * 0.02 * Math.sin(phase + a);
+                const alpha = Math.floor(180 * (1 - v) * (0.6 + 0.4 * Math.sin(phase * 1.2 + a)));
+                stroke(Math.floor(lerp(rC, 180, v)), Math.floor(lerp(gC, 220, v)), Math.floor(lerp(bC, 255, v)), alpha);
+                if (s === 0) vertex(x, y); else vertex(x, y);
+            }
+            endShape();
+        }
+
+        // initialize particle jets if missing
+        if (!obj._qParticles) {
+            obj._qParticles = [];
+            const pcount = 12 + Math.floor(size / 60);
+            for (let p = 0; p < pcount; p++) {
+                obj._qParticles.push({ ang: Math.random() * TWO_PI, dist: size * (0.4 + Math.random() * 0.6), speed: 0.002 + Math.random() * 0.004, sz: 1 + Math.random() * 3, life: 80 + Math.random() * 140, age: Math.random() * 80 });
+            }
+        }
+
+        // draw and update particles (small jets and sparks)
+        noStroke();
+        for (let pi = 0; pi < obj._qParticles.length; pi++) {
+            const p = obj._qParticles[pi];
+            p.age += p.speed * 60;
+            // orbit slowly outward and wrap
+            p.ang += 0.0015 + 0.0008 * Math.sin(phase + pi);
+            p.dist += 0.02 * Math.sin(phase * 0.6 + pi * 0.3);
+            if (p.age > p.life) { p.age = 0; p.dist = size * (0.4 + Math.random() * 0.6); }
+            const px = Math.cos(p.ang) * p.dist;
+            const py = Math.sin(p.ang) * p.dist * 0.9 + bob * 0.03;
+            const fade = 1 - (p.age / p.life);
+            const pr = Math.floor(lerp(rC, 255, Math.random()));
+            const pg = Math.floor(lerp(gC, 150, Math.random()));
+            const pb = Math.floor(lerp(bC, 200, Math.random()));
+            fill(pr, pg, pb, Math.floor(160 * fade * pulse));
+            ellipse(px, py, p.sz * (0.8 + fade * 1.2), p.sz * 0.6);
+            fill(pr, pg, pb, Math.floor(30 * fade));
+            ellipse(px, py, p.sz * 4, p.sz * 2.4);
+        }
     }
 };
 
