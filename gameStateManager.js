@@ -66,6 +66,9 @@ this.jumpWhiteHoldTime = 1.0; // seconds
 
 // Add an overlay flag for the inventory screen
 this.showingInventory = false;
+
+// Add flag for jump completion message
+this.jumpJustCompleted = false;
     }
 
     /**
@@ -297,6 +300,14 @@ this.showingInventory = false;
                         // Clear the locked destination after initiating jump
                         uiManager.lockedDestinationIndex = -1;
                     }
+
+                    // Check for jump completion message
+                    if (this.jumpJustCompleted) {
+                        this.jumpJustCompleted = false;
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
+                        }
+                    }
                 } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }
                 break;
 
@@ -404,10 +415,6 @@ this.showingInventory = false;
                         this.jumpChargeTimer = 0;
                         this.isJumpCharging = false;
                         this.jumpFadeState = "WHITE_HOLD";
-                        // Notify player of jump completion
-                        if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
-                        }
                     }
                 }
                 // Add WHITE_HOLD and FADE_IN states...
@@ -441,6 +448,8 @@ this.showingInventory = false;
                         this.jumpFadeOpacity = 0;
                         this.jumpFadeState = "NONE";
                         this.setState("IN_FLIGHT");
+                        // Set flag for jump completion message
+                        this.jumpJustCompleted = true;
                         GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
                     }
                 }
@@ -964,6 +973,7 @@ this.showingInventory = false;
         this.jumpTargetSystemIndex = targetIndex;
         this.jumpChargeTimer = 0; // Reset timer
         this.isJumpCharging = true; // Set the flag
+        this.jumpJustCompleted = false; // Reset completion flag
         this.setState("JUMPING");
         if (typeof soundManager !== 'undefined') soundManager.playSound('jump'); // Start charging sound (use existing 'jump' definition)
     }
