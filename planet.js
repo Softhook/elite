@@ -867,6 +867,160 @@ class Planet {
             }
         }
         
+        // Angular high-tech grid overlay (jagged, noise-driven, sphere-aware)
+        // This creates a semi-regular angular grid that is broken/jagged by noise
+        // so it looks like advanced circuitry/transport lines wrapping the globe.
+        (function() {
+            const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + this.currentRotation * 0.12;
+            const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity, 0.25, 0.9, 0.18, 0.06)));
+            const spacing = Math.max(6, Math.round(baseSpacing));
+            const segStep = Math.max(4, Math.round(spacing * 0.35));
+            const noiseJitter = Math.max(0.5, spacing * 0.22);
+
+            pg.push();
+            pg.translate(bufferCenter, bufferCenter);
+            pg.rotate(gridAngle);
+
+            // Primary grid lines
+            pg.stroke(primR, primG, primB, 180);
+            pg.strokeWeight(Math.max(0.6, bandHeight * 0.35));
+
+            for (let gx = -r - spacing; gx <= r + spacing; gx += spacing) {
+                // Draw this line as broken segments using noise to decide visible pieces
+                let draw = false;
+                for (let yy = -r; yy <= r; yy += segStep) {
+                    // Compute world sample coordinates (undo translate/rotation by using the local coords gx,yy)
+                    const x = gx;
+                    const y = yy;
+                    const inside = (x * x + y * y) / (r * r);
+                    if (inside > 1) continue; // skip outside disc
+
+                    // Spherical sampling so grid wraps and fades at the limb
+                    const nx = x / r;
+                    const ny = y / r;
+                    const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
+                    const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
+                    const sNX = nx * sampleMultiplier + featureRand * 0.002 + 7.13;
+                    const sNY = ny * sampleMultiplier + featureRand * 0.003 + 9.71;
+                    const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004 + 1.41;
+
+                    // Noise controls visibility and jagged offset
+                    const nVal = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.6);
+                    const nDetail = pg.noise(sNX * 6.0, sNY * 6.0, sNZ * 4.2);
+                    const visibility = Math.pow(nVal * 0.7 + nDetail * 0.3, 1.25);
+
+                    // Limb fade so grid disappears at edges
+                    const limbFactor = Math.pow(nzUnit, 0.85);
+                    const threshold = 0.35 + (0.45 * (1 - this.cityLightsDensity));
+
+                    if (visibility > threshold * (0.6 + 0.4 * limbFactor)) {
+                        // Draw a curved, jagged segment as a short polyline so it follows
+                        // the sphere curvature. We sample multiple points along the
+                        // short segment and apply per-point noise jitter + a bend
+                        // that increases toward the limb.
+                        const segHalf = Math.max(1, segStep * 0.45);
+                        const steps = Math.max(3, Math.round(segStep / 2));
+                        const baseJitter = (nDetail - 0.5) * noiseJitter;
+                        const curveScale = spacing * 0.28; // how strongly the line bends toward center
+
+                        pg.noFill();
+                        pg.beginShape();
+                        for (let sI = 0; sI < steps; sI++) {
+                            const t = steps === 1 ? 0 : sI / (steps - 1);
+                            const sPos = -segHalf + t * (2 * segHalf);
+
+                            // Per-point noise to jitter the line
+                            const pNoise = pg.noise(sNX + sPos * 0.02, sNY + sPos * 0.02, sNZ + t * 0.01);
+                            const jitter = (pNoise - 0.5) * baseJitter * (1 - limbFactor);
+
+                            // Local point before curvature
+                            let px = x + jitter;
+                            let py = y + sPos;
+
+                            // Skip points outside the disc
+                            const insideP = (px * px + py * py) / (r * r);
+                            if (insideP > 1) continue;
+
+                            // Compute sphere-normal at this point and bend toward center
+                            const nxP = px / r;
+                            const nyP = py / r;
+                            const nzP = Math.sqrt(Math.max(0, 1 - (nxP * nxP + nyP * nyP)));
+                            // Apply a perpendicular inward offset that increases toward the limb
+                            // This produces a visible arc as lines approach the edge.
+                            const limbBias = Math.pow(1 - nzP, 1.8);
+                            const bendAmount = curveScale * limbBias;
+                            const side = (px === 0) ? 1 : Math.sign(px);
+                            px -= side * bendAmount;
+                            // Slightly move the point inward on Y as well to keep smooth projection
+                            py *= (1 - Math.min(0.35, bendAmount / Math.max(1, r)));
+
+                            pg.vertex(px, py);
+                        }
+                        pg.endShape();
+                    }
+                }
+            }
+
+            // Secondary angular cross-grid for a circuitry look
+            pg.stroke(secR, secG, secB, 140);
+            pg.strokeWeight(Math.max(0.35, bandHeight * 0.22));
+            const crossAngle = gridAngle + PI / 2.3;
+            pg.rotate(crossAngle - gridAngle);
+            for (let gx = -r - spacing; gx <= r + spacing; gx += Math.round(spacing * 1.4)) {
+                for (let yy = -r; yy <= r; yy += Math.max(3, Math.round(segStep * 0.9))) {
+                    const x = gx;
+                    const y = yy;
+                    const inside = (x * x + y * y) / (r * r);
+                    if (inside > 1) continue;
+
+                    const nx = x / r;
+                    const ny = y / r;
+                    const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
+                    const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
+                    const sNX = nx * sampleMultiplier + featureRand * 0.005 + 3.21;
+                    const sNY = ny * sampleMultiplier + featureRand * 0.006 + 4.19;
+                    const sNZ = nzUnit * sampleMultiplier + featureRand * 0.007 + 2.17;
+
+                    const nVal = pg.noise(sNX * 2.6, sNY * 2.6, sNZ * 1.9);
+                    const limbFactor = Math.pow(nzUnit, 0.9);
+                    if (nVal > 0.48 * (0.7 + 0.3 * limbFactor)) {
+                        const len = Math.max(1, segStep * 0.6);
+                        const steps2 = Math.max(3, Math.round(len / 1.2));
+                        const curveScale2 = spacing * 0.22;
+
+                        pg.noFill();
+                        pg.beginShape();
+                        for (let si = 0; si < steps2; si++) {
+                            const tt = steps2 === 1 ? 0 : si / (steps2 - 1);
+                            const sPos = -len + tt * (2 * len);
+                            const pNoise = pg.noise(sNX * 1.2 + sPos * 0.02, sNY * 1.2 + sPos * 0.02);
+                            const jitter = (pNoise - 0.5) * noiseJitter * 0.6 * (1 - limbFactor);
+
+                            let px = x + jitter;
+                            let py = y + sPos;
+                            const insideP = (px * px + py * py) / (r * r);
+                            if (insideP > 1) continue;
+
+                            const nxP = px / r;
+                            const nyP = py / r;
+                            const nzP = Math.sqrt(Math.max(0, 1 - (nxP * nxP + nyP * nyP)));
+                            // Perpendicular inward offset for visible curvature on cross-grid
+                            const limbBias2 = Math.pow(1 - nzP, 1.7);
+                            const bendAmount2 = curveScale2 * limbBias2;
+                            const side2 = (px === 0) ? 1 : Math.sign(px);
+                            px -= side2 * bendAmount2;
+                            py *= (1 - Math.min(0.3, bendAmount2 / Math.max(1, r)));
+
+                            pg.vertex(px, py);
+                        }
+                        pg.endShape();
+                    }
+                }
+            }
+
+            pg.pop();
+        }).call(this);
+
         // Draw connecting transport/highway lines between hubs
         pg.noFill();
         const maxHubDist = r * 0.7;
