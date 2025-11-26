@@ -2333,15 +2333,87 @@ const SpaceObjectRenderers = {
     },
 
     nebulaFragment: function(obj, size, anim, bob) {
-        // soft, translucent gas fragment that glows and drifts
+        // richer nebula fragment: layered soft glows, drifting wisps and tiny glowing motes
         noStroke();
-        const t = (Math.sin(obj.bobPhase * 0.008) + 1) * 0.5;
-        fill(120, 80, 200, 40 + 80 * t);
-        ellipse(0, bob, size * 0.9, size * 0.5);
-        fill(180, 120, 240, 30 + 60 * (1 - t));
-        ellipse(-size * 0.14, bob - size * 0.06, size * 0.6, size * 0.36);
-        fill(100, 180, 220, 24 + 48 * t);
-        ellipse(size * 0.16, bob + size * 0.08, size * 0.5, size * 0.3);
+        const phase = (anim && typeof anim.nebulaPhase === 'number') ? anim.nebulaPhase : obj.bobPhase * 0.008;
+        const t = (Math.sin(phase) + 1) * 0.5;
+
+        // core layered glow (multiple concentric ellipses for a radial gradient feel)
+        const base = { r: 110, g: 70, b: 200 };
+        const accent = { r: 210, g: 120, b: 240 };
+        const cyan = { r: 100, g: 180, b: 220 };
+        for (let i = 0; i < 4; i++) {
+            const p = i / 3;
+            const w = lerp(size * 0.36, size * 1.05, p) * (0.9 + 0.08 * Math.sin(phase * (1 + i * 0.6)));
+            const h = w * lerp(0.36, 0.62, p);
+            // color blend between base -> accent -> cyan
+            const r = Math.floor(lerp(base.r, accent.r, p));
+            const g = Math.floor(lerp(base.g, accent.g, p));
+            const b = Math.floor(lerp(base.b, accent.b, p));
+            const alpha = Math.floor(36 + (100 * (1 - p)) * (0.7 + 0.4 * t));
+            fill(r, g, b, alpha);
+            // slight offset for parallax look
+            const ox = Math.sin(phase * (0.6 + i * 0.2)) * (size * 0.02 * i);
+            const oy = Math.cos(phase * (0.7 + i * 0.18)) * (size * 0.01 * i) + bob * (0.04 * i);
+            ellipse(ox, oy, w, h);
+        }
+
+        // layered chromatic shell to give shimmering edges
+        push();
+        translate(Math.sin(phase * 0.9) * 1.2, Math.cos(phase * 1.1) * 0.8);
+        fill(accent.r, accent.g, accent.b, 36 + 48 * (0.5 + 0.5 * Math.sin(phase * 1.2)));
+        ellipse(0, bob * 0.02, size * 0.95, size * 0.55);
+        translate(-Math.sin(phase * 0.9) * 2.4, -Math.cos(phase * 1.1) * 1.6);
+        fill(cyan.r, cyan.g, cyan.b, 22 + 34 * (0.5 + 0.5 * Math.cos(phase * 1.4)));
+        ellipse(0, bob * 0.02, size * 0.98, size * 0.58);
+        pop();
+
+        // drifting wisps (soft elongated ellipses rotated around the core)
+        for (let wisp = 0; wisp < 3; wisp++) {
+            const ang = phase * 0.6 + wisp * (TWO_PI / 3);
+            push();
+            rotate(ang + Math.sin(phase * 0.4 + wisp) * 0.12);
+            const ww = size * (0.6 + wisp * 0.28) * (0.8 + 0.12 * Math.sin(phase * (0.7 + wisp * 0.3)));
+            const hh = ww * 0.22;
+            fill(120 + wisp * 30, 80 + wisp * 20, 200 + wisp * 10, 26 + 36 * (1 - wisp * 0.18));
+            ellipse(-size * 0.06, bob - size * 0.06, ww, hh);
+            pop();
+        }
+
+        // initialize small glowing motes if needed
+        if (!obj._nebulaMotes) {
+            obj._nebulaMotes = [];
+            const moteCount = 4 + Math.floor(size / 120);
+            for (let m = 0; m < moteCount; m++) {
+                obj._nebulaMotes.push({ ang: Math.random() * TWO_PI, dist: size * (0.28 + Math.random() * 0.6), speed: 0.004 + Math.random() * 0.006, sz: 1 + Math.random() * 3, col: (m % 3) });
+            }
+        }
+
+        // draw motes with soft halo
+        for (let mi = 0; mi < obj._nebulaMotes.length; mi++) {
+            const m = obj._nebulaMotes[mi];
+            m.ang += m.speed * (0.9 + Math.sin(phase * 0.6 + mi) * 0.12);
+            m.dist += Math.sin(phase * 0.3 + mi) * 0.2;
+            const mx = Math.cos(m.ang) * m.dist * 0.6;
+            const my = Math.sin(m.ang) * m.dist * 0.28 + bob * 0.12;
+            let mr = 220, mg = 190, mb = 160;
+            if (m.col === 1) { mr = 180; mg = 230; mb = 255; }
+            if (m.col === 2) { mr = 255; mg = 150; mb = 220; }
+            fill(mr, mg, mb, 120 + Math.floor(60 * Math.sin(phase * 2 + mi)));
+            ellipse(mx, my, m.sz * (0.9 + 0.6 * Math.sin(phase * 3 + mi)), m.sz * 0.8);
+            fill(mr, mg, mb, 28);
+            ellipse(mx, my, m.sz * 4, m.sz * 2);
+        }
+
+        // tiny sparkles for depth
+        for (let s = 0; s < 3; s++) {
+            const sa = phase * (0.6 + s * 0.3) + s * 1.7;
+            const sr = size * (0.18 + s * 0.14);
+            const sx = Math.cos(sa) * sr * 0.6;
+            const sy = Math.sin(sa) * sr * 0.38 + bob * 0.02;
+            fill(255, 255, 255, 140 - s * 30);
+            ellipse(sx, sy, 2.5 - s * 0.6, 2.5 - s * 0.6);
+        }
     },
 
     wreckage: function(obj, size, anim, bob) {

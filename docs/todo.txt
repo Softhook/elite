@@ -78,10 +78,7 @@ Ai actively hiding behind meterorites
 ## Graphics and UI Improvements
 - mulitple thurst ports on large ships
 - warning sound when health is low
-- generate names for all the planets
-- put the messagses in teh corner with 10 lines
 - weapon names clarify
-- Improve target information
 
 ## Economy and Progression
 
@@ -101,7 +98,6 @@ Ai actively hiding behind meterorites
   - Mining contracts
   - Salvage operations
 - Implement mission chains with storylines
-- Add NPC dialogue system
 - Implement random events while traveling
 - Add special encounters with rare ships
 - Create faction warfare with territory control
