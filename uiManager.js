@@ -51,14 +51,23 @@ class UIManager {
     }
 
     _initMinimap() {
-        this.minimapSize = 200;
+        // Sizes and toggled (expanded) state
+        this.minimapDefaultSize = 200;
+        this.minimapExpandedSize = 360; // Larger size when toggled
+        this.minimapSize = this.minimapDefaultSize;
+
+        this.minimapDefaultWorldViewRange = 5000; // default world view radius
+        this.minimapExpandedWorldViewRange = 14000; // show more world when expanded
+        this.minimapWorldViewRange = this.minimapDefaultWorldViewRange;
+
         this.minimapMargin = 15;
         this.minimapX = 0;
         this.minimapY = 0;
-        this.minimapWorldViewRange = 5000;
         this.minimapScale = 1;
         this.minimapHazardsBuffer = null;
         this._minimapHazardsBufferSize = 0;
+
+        this.minimapExpanded = false; // toggled state
     }
 
     _initShopAreas() {
@@ -2115,6 +2124,10 @@ if (isIllegalInSystem || isMissionCargo) {
     drawMinimap(player, system) {
         if (!player?.pos || !system) { return; } // Basic checks
 
+        // Toggle size/world-range depending on expanded state
+        this.minimapSize = this.minimapExpanded ? this.minimapExpandedSize : this.minimapDefaultSize;
+        this.minimapWorldViewRange = this.minimapExpanded ? this.minimapExpandedWorldViewRange : this.minimapDefaultWorldViewRange;
+
         // --- Calculate Minimap Position and Scale ---
         this.minimapX = width - this.minimapSize - this.minimapMargin;
         this.minimapY = height - this.minimapSize - this.minimapMargin;
@@ -2546,6 +2559,19 @@ if (isIllegalInSystem || isMissionCargo) {
         }
 
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
+
+        // --- Minimap toggle (click to expand/shrink) ---
+        // Compute expected minimap rect for current state (don't rely on draw order)
+        const curMinimapSize = this.minimapExpanded ? this.minimapExpandedSize : this.minimapDefaultSize;
+        const curMinimapX = width - curMinimapSize - this.minimapMargin;
+        const curMinimapY = height - curMinimapSize - this.minimapMargin;
+        if (mx >= curMinimapX && mx <= curMinimapX + curMinimapSize && my >= curMinimapY && my <= curMinimapY + curMinimapSize) {
+            this.minimapExpanded = !this.minimapExpanded;
+            if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                soundManager.playSound('click');
+            }
+            return true; // handled
+        }
 
         // --- DOCKED State (Main Station Menu) ---
         if (currentState === "DOCKED") {
