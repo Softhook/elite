@@ -71,8 +71,8 @@ const TARGET_SCORE_PIRATE_PREY_HAULER = 40; // Score for targeting haulers/trans
 const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
 const TARGET_SCORE_RETALIATION_HAULER = 40; // Score for hauler/transport retaliation
 const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
-const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 30; // Max bonus score for damaged hull
-const TARGET_SCORE_HULL_DAMAGE_MULT = 40; // Multiplier for hull damage bonus calculation
+const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20; // Max bonus score for damaged hull
+const TARGET_SCORE_HULL_DAMAGE_MULT = 20; // Multiplier for hull damage bonus calculation
 
 // -------------------------
 // --- Combat Role Targeting Scores ---
