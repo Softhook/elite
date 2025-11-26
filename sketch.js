@@ -102,6 +102,24 @@ function setup() {
 
     UI_LOG("--- Setup Complete ---"); // Keep this final confirmation log
 
+    // Resume audio on first user gesture (addresses browser autoplay policies)
+    try {
+        window.addEventListener('pointerdown', function _resumeAudioOnce() {
+            if (window._eliteAudioContext && typeof window._eliteAudioContext.resume === 'function') {
+                window._eliteAudioContext.resume().then(() => {
+                    console.log('User gesture: AudioContext resumed');
+                    try {
+                        const sys = galaxy?.getCurrentSystem && galaxy.getCurrentSystem();
+                        if (sys && typeof sys.rebuildAmbientSounds === 'function') {
+                            sys.rebuildAmbientSounds();
+                            console.log('Rebuilt ambient sounds for current system after audio unlock');
+                        }
+                    } catch (e) { console.warn('Error rebuilding ambient sounds after resume', e); }
+                }).catch(e => console.warn('AudioContext.resume() failed on user gesture', e));
+            }
+        }, { once: true });
+    } catch (e) { /* ignore if addEventListener unavailable */ }
+
 } // --- End setup() ---
 
 

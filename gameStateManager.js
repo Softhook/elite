@@ -69,6 +69,8 @@ this.showingInventory = false;
 
 // Add flag for jump completion message
 this.jumpJustCompleted = false;
+        // State to resume after blocking LOADING (used to wait for planet buffer creation)
+        this.pendingPostLoadState = null;
     }
 
     /**
@@ -78,6 +80,21 @@ this.jumpJustCompleted = false;
     setState(newState) {
         this.previousState = this.currentState;
         if (this.currentState === newState) return; // No change needed
+
+        // If we're about to enter IN_FLIGHT or DOCKED but planet buffers are still being created,
+        // delay the transition and show the LOADING state until buffers complete.
+        try {
+            if ((newState === "IN_FLIGHT" || newState === "DOCKED") && typeof window !== 'undefined') {
+                const queuePending = Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0;
+                const totalPending = window._planetBufferCreationTotal && ((window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal);
+                if (queuePending || totalPending) {
+                    GS_LOG(`Delaying transition to ${newState} until planet buffers finish`);
+                    this.pendingPostLoadState = newState;
+                    this.currentState = "LOADING";
+                    return; // Don't change to newState yet
+                }
+            }
+        } catch (e) { /* non-fatal */ }
 
         GS_LOG(`Changing state from ${this.previousState} to ${newState}`);
         this.currentState = newState; // Update the current state
@@ -221,6 +238,24 @@ this.jumpJustCompleted = false;
                 }
             }
         } catch (e) { console.warn('Error processing planet buffer queue:', e); }
+
+        // If we were delaying entering IN_FLIGHT/DOCKED to allow planet buffers to finish,
+        // resume the pending state as soon as loading is complete.
+        try {
+            if (this.pendingPostLoadState && typeof window !== 'undefined') {
+                const loadingComplete = (
+                    (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0) &&
+                    (!window._planetBufferCreationTotal || (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal)
+                );
+                if (loadingComplete) {
+                    const nextState = this.pendingPostLoadState;
+                    this.pendingPostLoadState = null;
+                    GS_LOG(`Planet buffers finished — transitioning to ${nextState}`);
+                    this.setState(nextState);
+                    return; // let the new state take effect this frame
+                }
+            }
+        } catch (e) { /* non-fatal */ }
 
         switch (this.currentState) {
             case "TITLE_SCREEN":

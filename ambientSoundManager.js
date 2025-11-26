@@ -47,7 +47,12 @@ class AmbientSoundManager {
         
         // Handle AudioContext state
         if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
+            try {
+                // Attempt resume but avoid verbose logging
+                this.audioContext.resume().catch(e => console.warn('AmbientSoundManager: resume() rejected', e));
+            } catch (e) {
+                console.warn('AmbientSoundManager: resume() rejected', e);
+            }
         } else if (this.audioContext.state === 'closed') {
             console.warn('AudioContext is closed, cannot create ambient sound');
             return null;
