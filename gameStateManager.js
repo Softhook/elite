@@ -69,6 +69,13 @@ this.showingInventory = false;
 
 // Add flag for jump completion message
 this.jumpJustCompleted = false;
+    // Post-load transition (used when waiting for planet buffers)
+    this.postLoadFadeState = "NONE"; // NONE, FADE_OUT, FADE_IN
+    this.postLoadFadeOpacity = 0;
+    this.postLoadFadeTarget = null;
+    // Fade timing (ms)
+    this.postLoadFadeOutMs = 900; // fade-out duration in ms
+    this.postLoadFadeInMs = 700;  // fade-in duration in ms
         // State to resume after blocking LOADING (used to wait for planet buffer creation)
         this.pendingPostLoadState = null;
     }
@@ -250,11 +257,40 @@ this.jumpJustCompleted = false;
                 if (loadingComplete) {
                     const nextState = this.pendingPostLoadState;
                     this.pendingPostLoadState = null;
-                    GS_LOG(`Planet buffers finished — transitioning to ${nextState}`);
-                    this.setState(nextState);
-                    return; // let the new state take effect this frame
+                    GS_LOG(`Planet buffers finished — initiating post-load transition to ${nextState}`);
+                    // Start a fade transition rather than switching immediately
+                    this.postLoadFadeTarget = nextState;
+                    this.postLoadFadeState = "FADE_OUT";
+                    this.postLoadFadeOpacity = 0;
                 }
             }
+        } catch (e) { /* non-fatal */ }
+
+        // Progress a pending post-load fade transition if active
+        try {
+                if (this.postLoadFadeState && this.postLoadFadeState !== "NONE") {
+                    if (this.postLoadFadeState === "FADE_OUT") {
+                        const inc = (deltaTime || 16) / Math.max(1, this.postLoadFadeOutMs);
+                        this.postLoadFadeOpacity = Math.min(1, this.postLoadFadeOpacity + inc);
+                        if (this.postLoadFadeOpacity >= 1) {
+                            this.postLoadFadeOpacity = 1;
+                            const target = this.postLoadFadeTarget;
+                            this.postLoadFadeTarget = null;
+                            GS_LOG(`Post-load transition: FADE_OUT -> setState(${target})`);
+                            this.setState(target);
+                            // After switching state, begin fading back in
+                            this.postLoadFadeState = "FADE_IN";
+                        }
+                    } else if (this.postLoadFadeState === "FADE_IN") {
+                        const dec = (deltaTime || 16) / Math.max(1, this.postLoadFadeInMs);
+                        this.postLoadFadeOpacity = Math.max(0, this.postLoadFadeOpacity - dec);
+                        if (this.postLoadFadeOpacity <= 0) {
+                            this.postLoadFadeOpacity = 0;
+                            this.postLoadFadeState = "NONE";
+                            GS_LOG("Post-load transition complete");
+                        }
+                    }
+                }
         } catch (e) { /* non-fatal */ }
 
         switch (this.currentState) {
@@ -904,6 +940,18 @@ this.jumpJustCompleted = false;
         if (this.currentState==="IN_FLIGHT" && this.showingInventory) {
   inventoryScreen.draw(player);
 }
+
+        // Draw post-load fade overlay (covers everything when active)
+        try {
+            if (this.postLoadFadeState && this.postLoadFadeState !== "NONE") {
+                push();
+                noStroke();
+                // Use black fade for post-load transitions
+                fill(0, 0, 0, this.postLoadFadeOpacity * 255);
+                rect(0, 0, width, height);
+                pop();
+            }
+        } catch (e) { /* non-fatal */ }
 
         // Draw non-blocking planet buffer creation progress overlay if work remains
         try {
