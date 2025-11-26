@@ -51,9 +51,6 @@ class TitleScreen {
         
         // Instructions screen - starting Y (will be adjusted responsively)
         this.instructionScrollY = height * 0.12;
-        this.bgStarsCache = []; // Cache for starfield
-        this.bgStarsCacheW = width;
-        this.bgStarsCacheH = height;
         // Track whether we've requested fullscreen from the title screen
         this.waitingForFullscreen = false;
     }
@@ -493,7 +490,11 @@ class TitleScreen {
     
     drawTitleScreen() {
         background(0);
-        this.drawStarfield();
+        if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
+            sharedStarfield.draw();
+        } else {
+            background(0);
+        }
     
         // Draw projectiles and beams behind ships
         for (const p of this.projectiles) {
@@ -571,7 +572,11 @@ class TitleScreen {
     
     drawInstructionScreen() {
         background(0);
-        this.drawStarfield();
+        if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
+            sharedStarfield.draw();
+        } else {
+            background(0);
+        }
 
         push();
         textFont(font);
@@ -662,42 +667,7 @@ class TitleScreen {
         pop();
     }
     
-    drawStarfield() {
-        push();
-        noStroke();
-        // Rebuild cache if it doesn't exist, is empty, or canvas size changed
-        const needsRebuild = !this.bgStarsCache || this.bgStarsCache.length === 0 ||
-            this.bgStarsCacheW !== width || this.bgStarsCacheH !== height;
-        if (needsRebuild) {
-            this.bgStarsCache = [];
-            // Scale number of stars with area but clamp for performance
-            const area = width * height;
-            const base = Math.min(600, Math.max(100, Math.floor(area / 2000)));
-            for (let i = 0; i < base; i++) {
-                this.bgStarsCache.push({
-                    x: random(width),
-                    y: random(height),
-                    size: random(0.8, 3.5),
-                    brightness: random(60, 220),
-                    parallax: random(0.05, 0.5)
-                });
-            }
-            this.bgStarsCacheW = width;
-            this.bgStarsCacheH = height;
-        }
-
-        // Draw stars from cache
-        for (let i = 0; i < this.bgStarsCache.length; i++) {
-            const star = this.bgStarsCache[i];
-            // Calculate scrolled position (simple horizontal scroll)
-            const scrollOffset = (millis() * 0.005 * star.parallax) % width;
-            const x = (star.x + scrollOffset + width) % width; // ensure positive
-
-            fill(star.brightness);
-            ellipse(x, star.y, star.size, star.size);
-        }
-        pop();
-    }
+    // Note: starfield rendering has been moved to `starfield.js` (sharedStarfield).
     
     handleClick() {
         if (gameStateManager.currentState === "TITLE_SCREEN") {

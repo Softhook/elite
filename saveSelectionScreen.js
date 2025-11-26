@@ -173,25 +173,27 @@ class SaveSelectionScreen {
     }
 
     drawBackground() {
-        // Dark space background
-        background(5, 5, 15);
-        
-        // Draw twinkling stars
-        push();
-        noStroke();
-        for (let star of this.bgStars) {
-            // Use this.animationOffset in the twinkle calculation for continuous animation
-            const twinkleAlpha = (sin(star.twinkle + this.animationOffset * 0.5) * 0.4 + 0.6); 
-            fill(star.brightness * twinkleAlpha);
-            ellipse(star.x, star.y, star.size);
+        // Prefer the shared starfield if available (centralized implementation)
+        if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
+            sharedStarfield.draw();
+        } else {
+            // Fallback: Dark space background and our local simple stars
+            background(5, 5, 15);
+            push();
+            noStroke();
+            for (let star of this.bgStars) {
+                const twinkleAlpha = (sin(star.twinkle + this.animationOffset * 0.5) * 0.4 + 0.6);
+                fill(star.brightness * twinkleAlpha);
+                ellipse(star.x, star.y, star.size);
+            }
+            pop();
         }
-        pop();
-        
-        // Subtle gradient overlay from top
+
+        // Subtle gradient overlay from top (keep for save screen atmosphere)
         push();
-        for (let i = 0; i < height * 0.4; i++) { // Increased gradient height
-            const alpha = map(i, 0, height * 0.4, 0, 35); // Slightly increased alpha
-            stroke(10, 15, 30, alpha); // Darker, bluer gradient
+        for (let i = 0; i < height * 0.4; i++) {
+            const alpha = map(i, 0, height * 0.4, 0, 35);
+            stroke(10, 15, 30, alpha);
             line(0, i, width, i);
         }
         pop();

@@ -876,12 +876,16 @@ this.jumpJustCompleted = false;
                  background(0, 150); if (uiManager) { try { uiManager.drawGameOverScreen(); } catch(e) {} }
                  break;
              case "LOADING":
-                 background(0);
+                 if (sharedStarfield?.draw) {
+                     sharedStarfield.draw();
+                 }
+                 push();
                  fill(255);
                  if (typeof font !== 'undefined') textFont(font);
                  textAlign(CENTER, CENTER);
                  textSize(32);
                  text("Loading...", width / 2, height / 2);
+                 pop();
                  break;
              case "SAVE_SELECTION":
                 if (saveSelectionScreen) {
