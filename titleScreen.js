@@ -49,9 +49,11 @@ class TitleScreen {
 
         this.setupDynamicScene();
         
-        // Instructions screen - fixed position
-        this.instructionScrollY = height * 0.1; 
+        // Instructions screen - starting Y (will be adjusted responsively)
+        this.instructionScrollY = height * 0.12;
         this.bgStarsCache = []; // Cache for starfield
+        this.bgStarsCacheW = width;
+        this.bgStarsCacheH = height;
     }
 
     setupDynamicScene() {
@@ -568,91 +570,118 @@ class TitleScreen {
     drawInstructionScreen() {
         background(0);
         this.drawStarfield();
-        
-        push();
-        textAlign(CENTER, TOP);
-        const startY = this.instructionScrollY;
-        
-        // Title
-        textFont(font);
-        textSize(42);
-        fill(0, 180, 255);
-        text("HOW TO PLAY", width/2, startY);
-        
-        // Game description and controls (text content unchanged)
-        textSize(20);
-        fill(200, 200, 255);
-        textAlign(LEFT, TOP);
-        let textX = width * 0.1; 
-        let textY = startY + 80;
-        const lineHeight = 30;
-        
-        // Introduction
-        text("Mashup between SubSpace and Elite: hide in an Ion Nebula and ambush that Imperial Courier", textX, textY);
-        textY += lineHeight * 2;
-        
-        // Controls section
-        textSize(30);
-        fill(0, 180, 255);
-        text("CONTROLS:", textX, textY);
-        textY += lineHeight;
-        
-        // Control instructions
-        textSize(20);
-        fill(200, 200, 255);
-        text("W or UP ARROW - Thrust forward", textX, textY); textY += lineHeight;
-        text("S or DOWN ARROW - Thrust back", textX, textY); textY += lineHeight;
-        text("Q or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
-        text("E or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
-        text("A - Skate left", textX, textY); textY += lineHeight;
-        text("D - Skate right", textX, textY); textY += lineHeight;
-        text("R - Speed Boost", textX, textY); textY += lineHeight;
-        text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
-        text("1-9 - Switch weapons", textX, textY); textY += lineHeight;
-        text("M - Galaxy map", textX, textY); textY += lineHeight;
-        text("I - Inventory while flying", textX, textY); textY += lineHeight;
-        text("H and J - AutoPilot to Station or Jump Zone", textX, textY); textY += lineHeight;
-        text("Mouse to lock missiles and direct beam weapons", textX, textY); textY += lineHeight * 2;
 
-        // Gameplay tips
-        textSize(30);
+        push();
+        textFont(font);
+
+        // Always render two-column layout
+        const startY = this.instructionScrollY;
+        const maxContentWidth = min(1000, width * 0.9);
+        const gutter = 40;
+
+        // Title
+        textAlign(CENTER, TOP);
+        textSize(48);
         fill(0, 180, 255);
-        textY = startY + 140;
-        textX = width * 0.4;
-        text("GAMEPLAY:", textX, textY);
-        textY += lineHeight;
-        
+        text("HOW TO PLAY", width / 2, startY);
+
+        // Layout columns
+        const contentTop = startY + 90;
+        const lineHeight = 32;
+
+        const colWidth = (maxContentWidth - gutter) / 2;
+        const leftX = (width - maxContentWidth) / 2 + 20;
+        const rightX = leftX + colWidth + gutter;
+
+        // Left column: Introduction + Controls
+        textAlign(LEFT, TOP);
         textSize(20);
         fill(200, 200, 255);
-        text("• Dock with stations to trade, upgrade, take missions and save game", textX, textY); textY += lineHeight;
-        text("• Jump between systems by going to the Jumpzone and use the galaxy map", textX, textY); textY += lineHeight;
-        text("• Become Elite", textX, textY); textY += lineHeight * 2;
-        
+        let y = contentTop;
+        // Intro paragraph spans the full content width (both columns)
+        text("Mashup of SubSpace and Elite. Arcade dogfights meet open-ended world trading and exploration. Explore a procedurally-generated galaxy of a dozen star systems, each with dynamic economies, trading hubs, planetary bodies and faction politics. Pilot 80+ ship types from the starter Sidewinder to heavy traders, outfit dozens of weapons and modules, take assassination missions, trade, smuggle, and fight for freedom or reputation.", leftX, y, maxContentWidth, height);
+        y += lineHeight * 3;
+
+        textSize(28);
+        fill(0, 180, 255);
+        text("CONTROLS:", leftX, y);
+        y += lineHeight;
+
+        textSize(18);
+        fill(200, 200, 255);
+        const controls = [
+            "W or UP ARROW - Thrust forward",
+            "S or DOWN ARROW - Thrust back",
+            "Q or LEFT ARROW - Rotate left",
+            "E or RIGHT ARROW - Rotate right",
+            "A - Skate left",
+            "D - Skate right",
+            "R - Speed Boost",
+            "HOLD SPACEBAR - Fire weapons",
+            "1-9 - Switch weapons",
+            "M - Galaxy map",
+            "I - Inventory while flying",
+            "H and J - AutoPilot to Station or Jump Zone",
+            "Mouse to lock missiles and direct beam weapons"
+        ];
+        for (const c of controls) {
+            text(c, leftX, y);
+            y += lineHeight;
+        }
+
+        // Right column: Gameplay tips (start aligned with Controls title)
+        let ry = contentTop + lineHeight * 3;
+        textSize(28);
+        fill(0, 180, 255);
+        textAlign(LEFT, TOP);
+        text("GAMEPLAY:", rightX, ry);
+        ry += lineHeight;
+
+        textSize(18);
+        fill(200, 200, 255);
+        const tips = [
+            "• Dock with stations to trade, upgrade, take missions and save game",
+            "• Jump between systems by going to the Jumpzone and use the galaxy map",
+            "• Join the Separatists and hide in the Ion Nebula to ambush that Imperial Courier",
+            "• Become Elite"
+        ];
+        for (const t of tips) {
+            text(t, rightX, ry);
+            ry += lineHeight;
+        }
+
         // Start prompt
-        textSize(30);
-        textAlign(CENTER); 
+        textAlign(CENTER);
+        textSize(28);
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
-        text("Press SPACE or CLICK to Begin", width/2, height * 0.85);
-        
+        text("Press SPACE or CLICK to Begin", width / 2, height * 0.85);
+
         pop();
     }
     
     drawStarfield() {
         push();
         noStroke();
-        // Initialize cache if it doesn't exist or is empty
-        if (!this.bgStarsCache || this.bgStarsCache.length === 0) {
+        // Rebuild cache if it doesn't exist, is empty, or canvas size changed
+        const needsRebuild = !this.bgStarsCache || this.bgStarsCache.length === 0 ||
+            this.bgStarsCacheW !== width || this.bgStarsCacheH !== height;
+        if (needsRebuild) {
             this.bgStarsCache = [];
-            for (let i = 0; i < 200; i++) {
+            // Scale number of stars with area but clamp for performance
+            const area = width * height;
+            const base = Math.min(600, Math.max(100, Math.floor(area / 2000)));
+            for (let i = 0; i < base; i++) {
                 this.bgStarsCache.push({
                     x: random(width),
                     y: random(height),
-                    size: random(1, 3.5),
-                    brightness: random(50, 200),
-                    parallax: random(0.1, 0.5)
+                    size: random(0.8, 3.5),
+                    brightness: random(60, 220),
+                    parallax: random(0.05, 0.5)
                 });
             }
+            this.bgStarsCacheW = width;
+            this.bgStarsCacheH = height;
         }
 
         // Draw stars from cache
@@ -660,7 +689,7 @@ class TitleScreen {
             const star = this.bgStarsCache[i];
             // Calculate scrolled position (simple horizontal scroll)
             const scrollOffset = (millis() * 0.005 * star.parallax) % width;
-            const x = (star.x + scrollOffset) % width;
+            const x = (star.x + scrollOffset + width) % width; // ensure positive
 
             fill(star.brightness);
             ellipse(x, star.y, star.size, star.size);
