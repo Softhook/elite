@@ -54,6 +54,8 @@ class TitleScreen {
         this.bgStarsCache = []; // Cache for starfield
         this.bgStarsCacheW = width;
         this.bgStarsCacheH = height;
+        // Track whether we've requested fullscreen from the title screen
+        this.waitingForFullscreen = false;
     }
 
     setupDynamicScene() {
@@ -699,11 +701,38 @@ class TitleScreen {
     
     handleClick() {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
-            // Play start sound on first interaction
-            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                soundManager.playSound('startSound');
+            // If already fullscreen, proceed as before
+            const isFullscreen = (typeof fullscreen === 'function') ? fullscreen() : (!!document.fullscreenElement);
+
+            if (isFullscreen) {
+                // Play start sound on first interaction
+                if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                    soundManager.playSound('startSound');
+                }
+                gameStateManager.setState("INSTRUCTIONS");
+                this.waitingForFullscreen = false;
+                return;
             }
-            gameStateManager.setState("INSTRUCTIONS");
+
+            // Not fullscreen yet: request fullscreen on first click and wait for user to accept.
+            // Use p5's fullscreen() if available (must be called from user gesture).
+            try {
+                if (typeof fullscreen === 'function') {
+                    fullscreen(true);
+                } else if (document.documentElement && document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                }
+                this.waitingForFullscreen = true;
+            } catch (e) {
+                // If fullscreen request fails for any reason, fallback to proceeding.
+                if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                    soundManager.playSound('startSound');
+                }
+                gameStateManager.setState("INSTRUCTIONS");
+                this.waitingForFullscreen = false;
+            }
+
+            // Do not advance to instructions on this click; wait for the user to click again once fullscreen.
         } else if (gameStateManager.currentState === "INSTRUCTIONS") {
             // Go to save selection screen instead of directly to game
             gameStateManager.setState("SAVE_SELECTION");
