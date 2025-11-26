@@ -241,11 +241,28 @@ class Planet {
 
     // Add a static method that creates the sun (at 0,0)
     static createSun(systemName = "Unknown") {
-        let sunSize = 400;  // Adjust as needed
-        let sunColor1 = color(255, 255, 100);  // Bright yellow
-        let sunColor2 = color(255, 200, 100);
+        let sunSize = 1200;  // Much larger sun size
+        let sunColor1 = color(255, 250, 200);  // Very bright white-yellow
+        let sunColor2 = color(255, 220, 100);
         let sun = new Planet(0, 0, sunSize, sunColor1, sunColor2, systemName, 0);
-        sun.isSun = true; // Mark this planet as the sun.
+        // Mark this as the sun and tune visuals for a stellar appearance
+        sun.isSun = true;
+        sun.isInhabited = false;
+        // Stronger, brighter halo
+        sun.hasAtmosphere = true;
+        sun.atmosphereColor = color(255, 210, 120, 200);
+        // Ensure the sun never has rings
+        sun.hasRings = false;
+        sun.ringsBuffer = null;
+        // Make feature colors much closer to base to reduce contrast
+        sun.featureColor1 = lerpColor(sun.baseColor, color(255, 230, 160), 0.12);
+        sun.featureColor2 = lerpColor(sun.baseColor, color(255, 210, 120), 0.08);
+        sun.featureColor3 = lerpColor(sun.baseColor, color(255, 240, 200), 0.06);
+        sun.palette = [sun.baseColor, sun.featureColor1, sun.featureColor2, sun.featureColor3];
+        // Reduce noise/detail for a smoother stellar surface
+        sun.noiseScale = 0.0005;
+        sun.noisePersistence = 0.3;
+        sun.rotationSpeed = 0.0005;
         return sun;
     }
     
@@ -265,6 +282,10 @@ class Planet {
         if (this.isInhabited) {
             // Ensure atmosphere buffer is big enough to contain the city glow (which is r * 2.1)
             atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 2.1);
+        }
+        if (this.isSun) {
+                // Reduce sun halo size: use a smaller buffer factor
+            atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 4.5);
         }
         const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * atmBufferSizeFactor) : 0;
         
@@ -335,6 +356,26 @@ class Planet {
         // Clear the buffer and set up
         pg.clear();
         pg.noStroke();
+
+        // Special-case: render a smooth radial gradient for suns (less contrasting)
+        if (this.isSun) {
+            const ctx = pg.drawingContext;
+            const cx = bufferCenter, cy = bufferCenter;
+            const innerR = 0; // ensure fully opaque center
+            const outerR = Math.max(1, r);
+            const bc = this.baseColor;
+            const fc = this.featureColor1 || bc;
+            const c0 = `rgba(${Math.round(red(bc))},${Math.round(green(bc))},${Math.round(blue(bc))},1)`;
+            const c1 = `rgba(${Math.round(red(fc))},${Math.round(green(fc))},${Math.round(blue(fc))},0.95)`;
+            const c2 = `rgba(${Math.round(red(fc))},${Math.round(green(fc))},${Math.round(blue(fc))},0)`;
+            const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+            grad.addColorStop(0, c0);
+            grad.addColorStop(0.45, c1);
+            grad.addColorStop(1, c2);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, pg.width, pg.height);
+            return;
+        }
         // Increase octaves/persistence for richer, more dramatic detail
         pg.noiseDetail(6, this.noisePersistence);
         
@@ -483,6 +524,33 @@ class Planet {
         // Clear buffer first
         pg.clear();
         pg.noStroke();
+
+        // Sun gets an additive, strong halo using canvas gradients
+        if (this.isSun) {
+            const ctx = pg.drawingContext;
+            const cx = bufferCenter, cy = bufferCenter;
+            const maxR = Math.max(pg.width, pg.height) * 0.5;
+            const a = (typeof alpha === 'function') ? alpha(this.atmosphereColor) / 255 : 0.65;
+            const sr = Math.round(red(this.atmosphereColor));
+            const sg = Math.round(green(this.atmosphereColor));
+            const sb = Math.round(blue(this.atmosphereColor));
+            const stop0 = `rgba(${sr},${sg},${sb},${Math.min(1, a)})`;
+            const stop1 = `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.5)})`;
+            const stop2 = 'rgba(0,0,0,0)';
+
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+            grad.addColorStop(0, stop0);
+            grad.addColorStop(0.3, stop1);
+            grad.addColorStop(0.75, stop2);
+
+            // Use additive blending for a bright halo
+            const prevOp = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, pg.width, pg.height);
+            ctx.globalCompositeOperation = prevOp;
+            return;
+        }
         
         // Cache color components
         const atmR = red(this.atmosphereColor);
