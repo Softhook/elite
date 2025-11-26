@@ -883,8 +883,9 @@ this.jumpJustCompleted = false;
                  fill(255);
                  if (typeof font !== 'undefined') textFont(font);
                  textAlign(CENTER, CENTER);
-                 textSize(32);
-                 text("Loading...", width / 2, height / 2);
+                // Intentionally not drawing the "Loading..." text so the scene stays visible
+                // textSize(32);
+                // text("Loading...", width / 2, height / 2);
                  pop();
                  break;
              case "SAVE_SELECTION":
@@ -926,9 +927,10 @@ this.jumpJustCompleted = false;
                 push();
                 noStroke();
 
-                // Full-screen dim overlay so the world is visibly darkened
-                fill(0, 0, 0, 160);
-                rect(0, 0, width, height);
+                // Do NOT dim the background during planet buffer creation;
+                // keep the underlying world visible while showing progress panel.
+                // (Previously dimmed with fill(0,0,0,160))
+                // No full-screen overlay is drawn here.
 
                 // Panel for the progress UI
                 const panelW = Math.min(900, width * 0.8);
