@@ -1919,38 +1919,75 @@ handleInput() {
                     const worldMx = mouseX + (this.pos.x - width / 2);
                     const worldMy = mouseY + (this.pos.y - height / 2);
     
-                    let clickedEnemy = null;
-                    for (let enemy of this.currentSystem.enemies) {
-                        if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
-                            let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
-                            if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
-                                clickedEnemy = enemy;
-                                break; 
-                            }
-                        }
-                    }
+                        let clickedEnemy = null;
+                        let clickedAsteroid = null;
+                        let clickedSpaceObject = null;
 
-                    if (clickedEnemy) { // An enemy was clicked
-                        if (this.target === clickedEnemy) { // Clicked the already targeted enemy
-                            this.target = null; // Deselect
-                            if (typeof uiManager !== 'undefined') {
-                                uiManager.addMessage(`Target unlocked.`, [255,255,0]);
-                            }
-                        } else { // Clicked a new enemy (or current target was null)
-                            this.target = clickedEnemy;
-                            if (typeof uiManager !== 'undefined') {
-                                uiManager.addMessage(`Target locked: ${clickedEnemy.shipTypeName}`, [0,255,0]);
+                        // Check enemies first (preserve existing priority)
+                        for (let enemy of this.currentSystem.enemies) {
+                            if (enemy && !enemy.destroyed && enemy.pos && enemy.size) {
+                                let d = dist(worldMx, worldMy, enemy.pos.x, enemy.pos.y);
+                                if (d < enemy.size / 2 + 10) { // Give a little buffer for clicking
+                                    clickedEnemy = enemy;
+                                    break; 
+                                }
                             }
                         }
-                    } else { // No enemy was clicked (clicked on background)
-                        if (this.target !== null) { // If there was a target, clear it
-                            this.target = null;
-                            if (typeof uiManager !== 'undefined') {
-                                uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+
+                        // If no enemy clicked, check asteroids
+                        if (!clickedEnemy && Array.isArray(this.currentSystem.asteroids)) {
+                            for (let ast of this.currentSystem.asteroids) {
+                                if (!ast || ast.destroyed || !ast.pos) continue;
+                                const d = dist(worldMx, worldMy, ast.pos.x, ast.pos.y);
+                                const radius = (typeof ast.maxRadius === 'number') ? ast.maxRadius : (ast.size ? ast.size / 2 : 0);
+                                if (d < radius + 10) {
+                                    clickedAsteroid = ast;
+                                    break;
+                                }
                             }
                         }
-                        // If no enemy clicked and no prior target, do nothing.
-                    }
+
+                        // If still nothing, check space objects
+                        if (!clickedEnemy && !clickedAsteroid && Array.isArray(this.currentSystem.spaceObjects)) {
+                            for (let so of this.currentSystem.spaceObjects) {
+                                if (!so || so.destroyed || !so.pos) continue;
+                                const d = dist(worldMx, worldMy, so.pos.x, so.pos.y);
+                                const radius = (typeof so.collisionRadius === 'number') ? so.collisionRadius : (so.size ? so.size / 2 : 0);
+                                if (d < radius + 10) {
+                                    clickedSpaceObject = so;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Determine which object was clicked (priority: enemy > asteroid > spaceObject)
+                        const clickedObj = clickedEnemy || clickedAsteroid || clickedSpaceObject;
+
+                        if (clickedObj) { // Some object was clicked
+                            if (this.target === clickedObj) { // Clicked the already targeted object
+                                this.target = null; // Deselect
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                                }
+                            } else { // Clicked a new object (or current target was null)
+                                this.target = clickedObj;
+                                if (typeof uiManager !== 'undefined') {
+                                    let label = 'Target';
+                                    if (clickedEnemy && clickedEnemy.shipTypeName) label = clickedEnemy.shipTypeName;
+                                    else if (clickedSpaceObject && typeof clickedSpaceObject.getDisplayName === 'function') label = clickedSpaceObject.getDisplayName();
+                                    else if (clickedAsteroid) label = 'Asteroid';
+                                    uiManager.addMessage(`Target locked: ${label}`, [0,255,0]);
+                                }
+                            }
+                        } else { // No object was clicked (clicked on background)
+                            if (this.target !== null) { // If there was a target, clear it
+                                this.target = null;
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage(`Target unlocked.`, [255,255,0]);
+                                }
+                            }
+                            // If no object clicked and no prior target, do nothing.
+                        }
                 }
             }
         }

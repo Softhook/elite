@@ -567,7 +567,12 @@ class UIManager {
         if (typeof target.isDestroyed === 'function' && target.isDestroyed()) { return; }
 
         const hasShipIdentity = typeof target.shipTypeName === 'string' || typeof target.shipDefinition === 'object';
-        if (!hasShipIdentity) { return; }
+
+        // Allow overlay for non-ship targets (Asteroid / SpaceObject)
+        const isAsteroid = target && (target.constructor && target.constructor.name === 'Asteroid');
+        const isSpaceObject = target && (target.constructor && target.constructor.name === 'SpaceObject');
+
+        if (!hasShipIdentity && !isAsteroid && !isSpaceObject) { return; }
 
         const panelWidth = Math.min(280, Math.max(200, width * 0.2));
         const padding = 12;
@@ -591,10 +596,19 @@ class UIManager {
             ? target.getCargoAmount()
             : this._computeCargoAmount(target.cargoHold);
         const rangeLine = this._formatRangeLine(player, target);
-        const weaponsList = this._getTargetWeapons(target);
+        // Only ships have weapons
+        const weaponsList = hasShipIdentity ? this._getTargetWeapons(target) : [];
 
         const infoLines = [];
-        infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        // For ships use ship name, otherwise try object display name for asteroids/space objects
+        if (hasShipIdentity) {
+            infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        } else if (isAsteroid) {
+            infoLines.push(`Asteroid${roleLabel ? ` (${roleLabel})` : ''}`);
+        } else if (isSpaceObject) {
+            const objName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
+            infoLines.push(`${objName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        }
         if (rangeLine) {
             infoLines.push(rangeLine);
         }
@@ -676,11 +690,20 @@ class UIManager {
 
         cursorY += sectionSpacing;
 
-        // Draw Hull and Shield status bars with color coding
-        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Shield', target.shield, target.maxShield, shieldPercent);
-        cursorY += lineHeight + 4;
-        this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Hull', target.hull, target.maxHull, hullPercent);
-        cursorY += lineHeight;
+        // Draw appropriate stat bars
+        if (hasShipIdentity) {
+            this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Shield', target.shield, target.maxShield, shieldPercent);
+            cursorY += lineHeight + 4;
+            this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Hull', target.hull, target.maxHull, hullPercent);
+            cursorY += lineHeight;
+        } else {
+            // For asteroids / space objects: show Health if available
+            const hp = (typeof target.health === 'number') ? target.health : (typeof target.hull === 'number' ? target.hull : 0);
+            const hpMax = (typeof target.maxHealth === 'number') ? target.maxHealth : (typeof target.maxHull === 'number' ? target.maxHull : 0);
+            const hpPercent = this._getStatPercent(hp, hpMax);
+            this._drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Health', hp, hpMax, hpPercent);
+            cursorY += lineHeight;
+        }
 
         cursorY += sectionSpacing;
 
@@ -830,6 +853,42 @@ class UIManager {
         
         fill(barColor[0], barColor[1], barColor[2]);
         rect(barX, y, fillWidth, barHeight, 2);
+        pop();
+    }
+
+    /**
+     * Draws the ship-style target reticle (circle + corner brackets) at the current
+     * local coordinate origin. Intended to be called while already translated to
+     * the entity's position (and rotated if desired).
+     * @param {number} baseSize - The entity's base size (diameter) to scale the reticle.
+     */
+    _drawShipStyleReticle(baseSize) {
+        if (!Number.isFinite(baseSize)) baseSize = 50;
+        push();
+        noFill();
+        stroke(0, 255, 0, 200);
+        strokeWeight(2);
+
+        // Circle slightly larger than entity (matches enemy drawing)
+        ellipse(0, 0, baseSize * 1.6, baseSize * 1.6);
+
+        // Corner brackets
+        const bracketSize = baseSize * 0.3;
+        const offset = baseSize * 0.7;
+
+        // Top-left
+        line(-offset, -offset, -offset + bracketSize, -offset);
+        line(-offset, -offset, -offset, -offset + bracketSize);
+        // Top-right
+        line(offset, -offset, offset - bracketSize, -offset);
+        line(offset, -offset, offset, -offset + bracketSize);
+        // Bottom-left
+        line(-offset, offset, -offset + bracketSize, offset);
+        line(-offset, offset, -offset, offset - bracketSize);
+        // Bottom-right
+        line(offset, offset, offset - bracketSize, offset);
+        line(offset, offset, offset, offset - bracketSize);
+
         pop();
     }
 

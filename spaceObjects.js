@@ -2888,6 +2888,33 @@ class SpaceObject {
         // Use the cached renderer for this type
         this.renderer(this, size, anim, bob);
 
+        // --- Draw Player's Target Indicator for this space object ---
+        if (typeof player !== 'undefined' && player.target === this) {
+            // Prefer using the shared UIManager helper so visuals match ships
+            if (typeof uiManager !== 'undefined' && typeof uiManager._drawShipStyleReticle === 'function') {
+                uiManager._drawShipStyleReticle(size);
+            } else {
+                // Fallback: draw similar geometry scaled from collisionRadius/size
+                push();
+                noFill();
+                stroke(0, 255, 0, 200);
+                strokeWeight(2);
+                const r = Math.max(this.collisionRadius || (size / 2), size * 0.5) * 1.2;
+                ellipse(0, 0, r * 2, r * 2);
+                const bracketSize = r * 0.35;
+                const offset = r * 0.7;
+                line(-offset, -offset, -offset + bracketSize, -offset);
+                line(-offset, -offset, -offset, -offset + bracketSize);
+                line(offset, -offset, offset - bracketSize, -offset);
+                line(offset, -offset, offset, -offset + bracketSize);
+                line(-offset, offset, -offset + bracketSize, offset);
+                line(-offset, offset, -offset, offset - bracketSize);
+                line(offset, offset, offset - bracketSize, offset);
+                line(offset, offset, offset, offset - bracketSize);
+                pop();
+            }
+        }
+
         pop();
 
         // --- Draw Health Bar (appears when damaged) ---
