@@ -25,19 +25,15 @@ class Starfield {
         this.cacheH = height;
     }
 
-    // Draw the starfield. Uses millis() for scrolling and twinkle.
+    // Draw the starfield. Static stars (no scrolling, no twinkle).
     draw() {
         this.rebuildIfNeeded();
         push();
         noStroke();
         for (let i = 0; i < this.bgStars.length; i++) {
             const star = this.bgStars[i];
-            const scrollOffset = (millis() * 0.005 * star.parallax) % width;
-            const x = (star.x + scrollOffset + width) % width;
-            const tw = star.twinkle + millis() * 0.0005 * (0.5 + star.parallax);
-            const twinkleAlpha = (sin(tw) * 0.4 + 0.6);
-            fill(star.brightness * twinkleAlpha);
-            ellipse(x, star.y, star.size, star.size);
+            fill(star.brightness);
+            ellipse(star.x, star.y, star.size, star.size);
         }
         pop();
     }
