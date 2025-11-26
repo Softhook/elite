@@ -120,6 +120,18 @@ function setup() {
         }, { once: true });
     } catch (e) { /* ignore if addEventListener unavailable */ }
 
+    // Enter fullscreen on first click when on Title or Save Selection screens
+    try {
+        window.addEventListener('pointerdown', function _enterFullscreenOnTitle() {
+            try {
+                const state = gameStateManager?.currentState;
+                if (!fullscreen() && (state === "TITLE_SCREEN" || state === "SAVE_SELECTION")) {
+                    try { fullscreen(true); } catch (e) { /* ignore fullscreen errors */ }
+                }
+            } catch (e) {}
+        }, { once: true });
+    } catch (e) { /* ignore if addEventListener unavailable */ }
+
 } // --- End setup() ---
 
 
