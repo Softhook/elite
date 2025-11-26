@@ -24,7 +24,7 @@ const sizeMap = {
     asteroidMiner: 140,
     fuelDepot: 90,
     commDish: 70,
-    solarFarm: 100,
+    solarFarm: 150,
     iceCrystal: 120,
     nebulaFragment: 150,
     alienArtifact: 80,
@@ -1546,143 +1546,160 @@ const SpaceObjectRenderers = {
     },
 
     orbitalGarden: function(obj, size, anim, bob) {
-        // Refined orbital garden: layered terraces with subtle gradients, varied flora, delicate vines,
-        // soft shade ring and more subtle pollinators/motes for depth.
+        // Polished orbital garden: add glass dome, small reflective pond, richer plant variety, soft rim lighting and layered particles
         push();
         noStroke();
 
         const phase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.001;
 
-        // soft platform shadow (a few layered ellipses for depth)
-        fill(12, 22, 16, 220);
-        ellipse(0, size * 0.16 + bob, size * 0.92, size * 0.22);
-        fill(10, 18, 14, 120);
-        ellipse(0, size * 0.18 + bob, size * 0.7, size * 0.14);
+        // Platform shadow (soft, multi-layer)
+        fill(8, 18, 12, 200);
+        ellipse(0, size * 0.18 + bob, size * 0.92, size * 0.22);
+        fill(10, 16, 12, 100);
+        ellipse(0, size * 0.20 + bob, size * 0.7, size * 0.12);
 
-        // terraced planting rings with gentle radial gradients
-        const ringBase = [ {c:[46,118,68], a:200}, {c:[62,142,82], a:180}, {c:[78,170,102], a:150} ];
-        for (let r = 0; r < 3; r++) {
+        // Terraced planting rings with smoother gradients
+        const rings = [ {c:[50,120,70]}, {c:[70,160,90]}, {c:[100,190,120]} ];
+        for (let r = 0; r < rings.length; r++) {
             const rScale = 0.78 - r * 0.18;
             const ry = -size * 0.02 + bob + r * (size * 0.04);
-            // soft radial gradient via concentric ellipses
-            for (let g = 0; g < 4; g++) {
-                const t = g / 4;
-                const a = Math.floor(ringBase[r].a * (1 - t) * 0.9);
-                fill(ringBase[r].c[0], ringBase[r].c[1], ringBase[r].c[2], a);
-                ellipse(0, ry + t * 2, size * rScale * (1 - t * 0.06), size * (0.22 - r * 0.03) * (1 - t * 0.2));
+            for (let g = 0; g < 5; g++) {
+                const t = g / 5;
+                const alpha = 180 * (1 - t) * (1 - r * 0.12);
+                fill(rings[r].c[0], rings[r].c[1], rings[r].c[2], alpha);
+                ellipse(0, ry + t * 2, size * rScale * (1 - t * 0.05), size * (0.22 - r * 0.03) * (1 - t * 0.14));
             }
-            // subtle rim highlight
-            stroke(22, 44, 26, 110); strokeWeight(0.6);
-            noFill(); ellipse(0, ry, size * rScale * 0.98, size * (0.22 - r * 0.03) * 0.98);
+            stroke(24, 46, 28, 90); strokeWeight(0.6); noFill();
+            ellipse(0, ry, size * rScale * 0.98, size * (0.22 - r * 0.03) * 0.98);
             noStroke();
         }
 
-        // initialize plant clusters if not present (lightweight randomization)
+        // plant clusters initialization (more variety) — cached per object
         if (!obj._gardenPlants) {
             obj._gardenPlants = [];
-            const seed = obj.id || Math.floor(Math.random() * 10000);
-            for (let i = 0; i < 12; i++) {
-                const ang = (i / 12) * TWO_PI + (seed % 7) * 0.13;
-                const rad = size * (0.18 + Math.random() * 0.36);
-                obj._gardenPlants.push({ ang: ang, rad: rad, sz: 4 + Math.random() * 6, sway: Math.random() * 0.6 });
+            const seed = (obj.id || Math.floor(Math.random() * 10000));
+            for (let i = 0; i < 16; i++) {
+                const ang = (i / 16) * TWO_PI + (seed % 11) * 0.09;
+                const ring = Math.floor(Math.random() * 3);
+                const rad = size * (0.16 + ring * 0.14 + Math.random() * 0.08);
+                const type = Math.floor(Math.random() * 3);
+                obj._gardenPlants.push({ ang: ang, rad: rad, sz: 4 + Math.random() * 8, sway: Math.random() * 0.9, type: type });
             }
         }
 
-        // central planter and stylized tree with layered canopy for subtle shading
+        // central pond (reflective) and small fountain ripple
         const centerY = -size * 0.06 + bob;
-        fill(84, 140, 92);
-        ellipse(0, centerY, size * 0.28, size * 0.12);
-        // trunk (slimmer, add slight grain)
-        fill(112, 68, 36);
-        rect(0, centerY - size * 0.05, size * 0.03, size * 0.10, 3);
-        // layered canopy for softness
-        fill(58, 186, 90, 220); ellipse(0, centerY - size * 0.17, size * 0.24, size * 0.12);
-        fill(48, 166, 78, 200); ellipse(0, centerY - size * 0.15, size * 0.18, size * 0.1);
-        fill(76, 200, 110, 160); ellipse(0, centerY - size * 0.20, size * 0.12, size * 0.08);
+        fill(24, 48, 58);
+        ellipse(0, centerY + size * 0.02, size * 0.18, size * 0.08);
+        fill(120, 190, 220, 20);
+        ellipse(0, centerY + size * 0.02, size * 0.12 + Math.sin(phase * 0.9) * 1.6, size * 0.05 + Math.cos(phase * 0.9) * 1.2);
 
-        // delicate vines/arcs from outer ring toward center (subtle, thin strokes)
-        for (let v = 0; v < 4; v++) {
-            const va = v * (TWO_PI / 4) + Math.sin(obj.bobPhase * 0.0008 + v) * 0.08;
-            const vx1 = Math.cos(va) * size * 0.44;
+        // sculpted tree: layered canopy with highlight
+        fill(90, 150, 96);
+        ellipse(0, centerY - size * 0.16, size * 0.26, size * 0.14);
+        fill(56, 206, 110, 220);
+        ellipse(0, centerY - size * 0.14, size * 0.18, size * 0.10);
+        fill(120, 78, 46);
+        rect(0, centerY - size * 0.05, size * 0.035, size * 0.10, 3);
+        // bright specular on canopy
+        fill(255,255,240,24);
+        ellipse(-size*0.04, centerY - size*0.17, size*0.12, size*0.05);
+
+        // delicate vines and stonework paths
+        for (let v = 0; v < 5; v++) {
+            const va = v * (TWO_PI / 5) + Math.sin(obj.bobPhase * 0.0009 + v) * 0.06;
+            const vx1 = Math.cos(va) * size * 0.42;
             const vy1 = Math.sin(va) * size * 0.18 + bob * 0.02;
-            const vx2 = Math.cos(va + 0.25) * size * 0.22;
-            const vy2 = Math.sin(va + 0.25) * size * 0.12 + bob * 0.01;
-            stroke(34, 70, 38, 120); strokeWeight(0.6);
-            noFill(); bezier(vx1, vy1, vx1 * 0.6, vy1 * 0.8, vx2 * 0.9, vy2 * 0.9, vx2, vy2);
+            const vx2 = Math.cos(va + 0.18) * size * 0.22;
+            const vy2 = Math.sin(va + 0.18) * size * 0.12 + bob * 0.01;
+            stroke(36, 80, 44, 110); strokeWeight(0.6); noFill();
+            bezier(vx1, vy1, vx1 * 0.6, vy1 * 0.8, vx2 * 0.85, vy2 * 0.85, vx2, vy2);
             noStroke();
         }
 
-        // rotating soft shade ring above garden (thin semi-translucent band)
+        // rotating shade ring (thin glass-like band) above garden
         push();
         translate(0, centerY - size * 0.04);
-        rotate((anim ? anim.gardenShadeAngle : 0) + Math.sin(obj.bobPhase * 0.001) * 0.02);
-        fill(8, 16, 12, 48);
+        rotate((anim ? anim.gardenShadeAngle : 0) + Math.sin(obj.bobPhase * 0.0012) * 0.02);
+        fill(12, 20, 14, 36);
         ellipse(0, 0, size * 0.72, size * 0.72);
-        // subtle rim highlight
-        stroke(18, 36, 28, 80); strokeWeight(0.8);
-        noFill(); ellipse(0, 0, size * 0.72, size * 0.72);
-        noStroke();
+        stroke(18, 36, 28, 60); strokeWeight(0.6); noFill(); ellipse(0, 0, size * 0.72, size * 0.72); noStroke();
         pop();
 
-        // plant clusters (individual leaves) — adds variety and subtle motion
+        // draw plants — different types for variety
         for (let i = 0; i < obj._gardenPlants.length; i++) {
             const p = obj._gardenPlants[i];
-            const sway = Math.sin(phase * 0.8 + p.sway) * 3;
-            const px = Math.cos(p.ang) * p.rad * 0.5;
+            const sway = Math.sin(phase * 0.9 + p.sway) * 2.5;
+            const px = Math.cos(p.ang) * p.rad * 0.52;
             const py = Math.sin(p.ang) * p.rad * 0.28 + bob * 0.02;
-            for (let l = 0; l < 3; l++) {
-                const li = l / 3;
-                fill(60 + l * 6, 150 + l * 8, 80 + l * 6, 220 - l * 30);
-                push(); translate(px + Math.sin((obj.bobPhase * 0.002) + i) * 1.5, py + l * 2);
-                rotate(Math.sin(i * 0.7 + l) * 0.6 + sway * 0.02);
-                ellipse(0, 0, p.sz * (0.9 - l * 0.28), p.sz * 0.5 * (0.9 - l * 0.28));
-                pop();
+            push(); translate(px + Math.sin((obj.bobPhase * 0.002) + i) * 1.2, py);
+            rotate(Math.sin(i * 0.9 + p.sway) * 0.5 + sway * 0.01);
+            if (p.type === 0) {
+                // broad leaf cluster
+                fill(60, 150, 90, 220);
+                ellipse(0, 0, p.sz * 1.0, p.sz * 0.6);
+                fill(40, 120, 70, 180); ellipse(-p.sz*0.3, -p.sz*0.15, p.sz*0.5, p.sz*0.3);
+            } else if (p.type === 1) {
+                // spire flowers
+                fill(220, 190, 110, 230); ellipse(0, -p.sz*0.4, p.sz*0.3, p.sz*0.5);
+                fill(60,160,90,200); ellipse(0, 0, p.sz*0.6, p.sz*0.4);
+            } else {
+                // fern-like fractal
+                fill(70, 170, 100, 220);
+                for (let f = 0; f < 3; f++) ellipse(-f*2 + f*2, f*2 - 2, p.sz*0.6 - f*1.8, p.sz*0.28);
             }
+            pop();
         }
 
-        // path lights: tiny dim lights along rings for subtle guiding
+        // small path lights (dim, warmer)
         for (let r = 0; r < 3; r++) {
             const pts = 6 + r * 2;
             const rScale = 0.78 - r * 0.18;
             const ry = -size * 0.02 + bob + r * (size * 0.04);
             for (let pi = 0; pi < pts; pi++) {
-                const a = (pi / pts) * TWO_PI + (obj.bobPhase * 0.0006 * (r + 1));
+                const a = (pi / pts) * TWO_PI + (obj.bobPhase * 0.0009 * (r + 1));
                 const lx = Math.cos(a) * size * rScale * 0.48;
                 const ly = Math.sin(a) * size * (0.22 - r * 0.03) * 0.28 + ry;
-                fill(220, 180, 140, 60);
-                ellipse(lx, ly, 2, 2);
+                fill(240, 200, 140, 60);
+                ellipse(lx, ly, 2.2, 2.2);
             }
         }
 
-        // refined pollinators / motes: softer, layered glows with tiny trails
-        for (let p = 0; p < 6; p++) {
-            const a = phase * (0.9 + p * 0.07) + p * 1.1;
-            const r = size * (0.22 + p * 0.04);
+        // refined pollinators / motes — layered glows and soft trails
+        for (let m = 0; m < 8; m++) {
+            const a = phase * (0.9 + m * 0.05) + m * 0.9;
+            const r = size * (0.2 + (m % 3) * 0.05);
             const x = Math.cos(a) * r * 0.5;
-            const y = Math.sin(a) * r * 0.26 + bob * 0.01 + Math.sin(a * 0.7) * 0.6;
-            // soft glow
-            fill(255, 230, 140, 140 - p * 12);
-            ellipse(x, y, 4 + (p % 2), 3 + (p % 2));
-            // tiny trailing mote for motion
-            fill(255, 200, 120, 60);
-            ellipse(x - Math.cos(a) * 4, y - Math.sin(a) * 2, 2, 1.2);
+            const y = Math.sin(a) * r * 0.26 + bob * 0.01 + Math.sin(a * 0.6) * 0.6;
+            fill(255, 230, 140, 140 - m * 10);
+            ellipse(x, y, 3 + (m % 2), 2.5 + (m % 2));
+            fill(255, 200, 120, 40);
+            ellipse(x - Math.cos(a) * 3, y - Math.sin(a) * 1.6, 1.8, 1.0);
         }
 
-        // subtle central glow layers (adds warmth without visual clutter)
+        // subtle central ambient glow layers
         for (let g = 0; g < 3; g++) {
-            fill(102, 200, 150, 30 - g * 6);
+            fill(100, 200, 150, 26 - g * 6);
             ellipse(0, centerY + size * 0.02, size * (0.36 + g * 0.16), size * (0.16 + g * 0.06));
         }
 
-        // small service bots (tuck them in, reduce visual weight)
+        // small maintenance bots (minimal visibility)
         for (let b = 0; b < 2; b++) {
-            const bx = Math.sin(obj.bobPhase * 0.003 + b * 0.7) * (size * 0.14);
+            const bx = Math.sin(obj.bobPhase * 0.003 + b * 0.9) * (size * 0.14);
             const by = size * 0.24 + bob * 0.06 - b * (size * 0.02);
             fill(200, 190, 160);
             rect(bx, by, 8, 5, 1.5);
             fill(0, 0, 0, 24);
             ellipse(bx, by + 4, 10, 3);
         }
+
+        // translucent glass dome overlay (very subtle)
+        push();
+        translate(0, centerY - size * 0.12);
+        fill(210, 235, 255, 22);
+        ellipse(0, 0, size * 0.9, size * 0.5);
+        stroke(200,225,245,30); strokeWeight(0.8); noFill(); ellipse(0, 0, size * 0.9, size * 0.5); noStroke();
+        pop();
 
         pop();
     },
