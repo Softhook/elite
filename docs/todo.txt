@@ -5,6 +5,12 @@
 
 ## Core Gameplay Enhancements
 
+allow target locks onto space objects and asteroids
+
+move desliverues to space objects not planets
+
+local deliveries actually deliver goods to planets/ space objects
+
 visit the spacebjects with station screen
 
 spawn depengin on which systems are close

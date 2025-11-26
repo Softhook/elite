@@ -124,8 +124,31 @@ class EnemyRendering {
                      targetLabel = "System Edge"; // Fallback if jump zone unknown/not targeted
                  }
             } else if (this.currentState === AI_STATE.TRANSPORTING) {
-                 // Could add logic here to identify destination type (planet/station)
-                 targetLabel = "Delivery"; // Simple label for now
+                 // Attempt to resolve the destination name (routePoints or patrolTargetPos)
+                 let destName = null;
+                 let destPos = null;
+                 if (this.routePoints && Number.isFinite(this.currentRouteIndex)) {
+                     destPos = this.routePoints[this.currentRouteIndex];
+                 } else if (this.patrolTargetPos) {
+                     destPos = this.patrolTargetPos;
+                 }
+
+                 if (destPos && this.currentSystem) {
+                     // Check station first
+                     if (this.currentSystem.station && this.currentSystem.station.pos && destPos.dist && destPos.dist(this.currentSystem.station.pos) < 60) {
+                         destName = this.currentSystem.station.name || "Station";
+                     } else if (Array.isArray(this.currentSystem.planets)) {
+                         for (let p of this.currentSystem.planets) {
+                             if (p && p.pos && destPos.dist && destPos.dist(p.pos) < 60) {
+                                 destName = p.name || "Planet";
+                                 break;
+                             }
+                         }
+                     }
+                 }
+
+                 if (destName) targetLabel = `Delivery to ${destName}`;
+                 else targetLabel = "Delivery";
             }
             // --- End State-Based Labeling ---
 
