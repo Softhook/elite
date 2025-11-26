@@ -584,7 +584,13 @@ class UIManager {
         const minimapTop = height - this.minimapSize - this.minimapMargin;
         const maxPanelHeight = Math.max(150, minimapTop - panelY - 10);
 
-        const pilotName = this._getTargetPilotName(target);
+        let pilotName = this._getTargetPilotName(target);
+        // For non-ship targets show the object type/name instead of an "Unidentified Pilot"
+        if (isAsteroid) {
+            pilotName = 'Asteroid';
+        } else if (isSpaceObject) {
+            pilotName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
+        }
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
@@ -600,23 +606,22 @@ class UIManager {
         const weaponsList = hasShipIdentity ? this._getTargetWeapons(target) : [];
 
         const infoLines = [];
-        // For ships use ship name, otherwise try object display name for asteroids/space objects
+        // For ships show the ship name in the info lines. For asteroids/space objects
+        // we already print the object type/name at the top (pilotName), so avoid
+        // repeating it here; only include additional info like range.
         if (hasShipIdentity) {
             infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
-        } else if (isAsteroid) {
-            infoLines.push(`Asteroid${roleLabel ? ` (${roleLabel})` : ''}`);
-        } else if (isSpaceObject) {
-            const objName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
-            infoLines.push(`${objName}${roleLabel ? ` (${roleLabel})` : ''}`);
         }
         if (rangeLine) {
             infoLines.push(rangeLine);
         }
 
-        const cargoEntries = this._getCargoEntries(target);
+        // Only compute cargo manifest for ships. Asteroids and generic space objects
+        // should not show a cargo manifest.
+        const cargoEntries = hasShipIdentity ? this._getCargoEntries(target) : [];
         let cargoLines = cargoEntries.length > 0
             ? cargoEntries.map(entry => `${entry.name}: ${entry.quantity}`)
-            : ['No cargo detected'];
+            : [];
 
         // Calculate heights for new sections
         const statBarsHeight = (lineHeight + 4) * 2; // Two stat bars with spacing
