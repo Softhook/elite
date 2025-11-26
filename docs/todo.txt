@@ -5,17 +5,17 @@
 
 ## Core Gameplay Enhancements
 
-allow target locks onto space objects and asteroids
+fix the sabotage missions
 
 move desliverues to space objects not planets
 
-local deliveries actually deliver goods to planets/ space objects
+local deliveries actually trade goods at planets/ space objects
 
 visit the spacebjects with station screen
 
-spawn depengin on which systems are close
+spawn ships depengin on which systems are connected
 
-organised invasion kissions jump to another system with 10 team members
+organised invasion missions that invovle jump to another system with 10 team members
 
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 
