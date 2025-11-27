@@ -2397,6 +2397,33 @@ if (isIllegalInSystem || isMissionCargo) {
             }
             // ---
 
+            // --- Map and Draw Floating Cargo Containers ---
+            // Draw small colored squares for floating cargo present in the system
+            const cargos = Array.isArray(system.cargo) ? system.cargo : [];
+            for (let i = 0, len = cargos.length; i < len; i++) {
+                const c = cargos[i];
+                if (!c || !c.pos || c.collected) continue;
+                const objX = c.pos.x;
+                const objY = c.pos.y;
+                const relX = objX - player.pos.x;
+                const relY = objY - player.pos.y;
+                const mapX = mapCenterX + relX * this.minimapScale;
+                const mapY = mapCenterY + relY * this.minimapScale;
+
+                // Quick reject if completely outside minimap bounds
+                if (mapX < mapLeft || mapX > mapRight || mapY < mapTop || mapY > mapBottom) continue;
+
+                // Draw cargo marker (small square) using cargo color if available
+                push();
+                noStroke();
+                let col = c.color || [220, 200, 80];
+                if (Array.isArray(col)) fill(col[0], col[1], col[2], 220);
+                else fill(col);
+                const size = 2; // pixel size on minimap
+                rect(mapX - size/2, mapY - size/2, size, size, 1);
+                pop();
+            }
+
             // --- Map and Draw Locked Target Indicator (Reticle) ---
             if (player.target && !player.target.isDestroyed?.() && player.target.pos) {
                 const tgt = player.target;
