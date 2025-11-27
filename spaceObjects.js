@@ -42,7 +42,7 @@ const sizeMap = {
 const ANIM_RATES = [
     ['relayPhase', 0.0001],
     ['habitatWindowPhase', 0.002],
-    ['probeBlink', 0.01],
+    ['probeBlink', 0.001],
     ['solarSailAngle', 0.00004],
     ['engineGlow', 0.0045],
     ['engineParticlePhase', 0.005],

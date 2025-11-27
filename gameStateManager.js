@@ -994,12 +994,49 @@ this.jumpJustCompleted = false;
 
                 // Panel for the progress UI
                 const panelW = Math.min(900, width * 0.8);
-                const panelH = 120;
+                const panelH = 150;
                 const px = (width - panelW) * 0.5;
                 const py = (height - panelH) * 0.5;
 
+                // Draw panel background
                 fill(24, 24, 28, 230);
                 rect(px, py, panelW, panelH, 10);
+
+                // Welcome message: show current system name, economy, tech and security inside the panel
+                try {
+                    const sys = (typeof galaxy !== 'undefined') ? (galaxy.getCurrentSystem && galaxy.getCurrentSystem()) : null;
+                    const systemName = sys?.name || (galaxy && typeof galaxy.currentSystemIndex === 'number' && galaxy.systems && galaxy.systems[galaxy.currentSystemIndex]?.name) || 'Unknown System';
+
+                    // Economy: prefer the system's single source `economyType`, fall back to station.systemType or market
+                    let economy = 'Unknown';
+                    if (sys) economy = sys.economyType || sys.economy || sys.economyName || economy;
+                    const station = sys?.station;
+                    if (economy === 'Unknown' && station) {
+                        economy = station.systemType || station.stationType || station.market?.systemType || station.market?.type || economy;
+                    }
+
+                    // Tech level: prefer system.techLevel
+                    let tech = 'N/A';
+                    if (sys && (typeof sys.techLevel !== 'undefined' || typeof sys.tech !== 'undefined')) {
+                        tech = sys.techLevel ?? sys.tech ?? tech;
+                    }
+
+                    // Security / police level: prefer system.securityLevel, fallback to system.playerWantedLevel
+                    let security = 'Unknown';
+                    if (sys) security = sys.securityLevel || (typeof sys.playerWantedLevel !== 'undefined' ? `Wanted ${sys.playerWantedLevel}` : security);
+
+                    push();
+                    if (typeof font !== 'undefined') textFont(font);
+                    textAlign(CENTER, CENTER);
+                    fill(255);
+                    textSize(18);
+                    // Place the welcome text inside the panel, above the progress bar
+                    const welcomeY = py + panelH * 0.26;
+                    text(`${systemName}   ${economy}   Tech: ${tech}   Security: ${security}`, px + panelW * 0.5, welcomeY-20);
+                    pop();
+                } catch (e) {
+                    // Non-fatal: skip welcome text if anything goes wrong
+                }
 
                 // Progress bar
                 const barW = panelW * 0.75;
@@ -1020,7 +1057,7 @@ this.jumpJustCompleted = false;
                 fill(255);
                 textAlign(CENTER, CENTER);
                 textSize(18);
-                text(`Creating the Galaxy: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
+                text(`Creating the System: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
 
                 pop();
             }

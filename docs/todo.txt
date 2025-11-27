@@ -5,7 +5,7 @@
 
 ## Core Gameplay Enhancements
 
-fix the sabotage missions
+Make space objects belong to different factions. Destroying a space object makes the player wanted. 
 
 move desliverues to space objects not planets
 
@@ -40,9 +40,6 @@ Solution: Implement more precise hitbox system using ship vertex data
 police perform scan of any ship within 500 units lookig for illegal goods
 
 planets have their own screen assocaited where it is possible to explre the planet. find things
-
-mimitary bases on planets
-mining sites on planets
 
 
 Spcial events: 
