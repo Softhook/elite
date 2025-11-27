@@ -37,6 +37,52 @@ const sizeMap = {
     quantumGate: 160
 };
 
+// Animation rate constants for efficient update loop
+// Format: [propertyName, rate] - properties with dynamic speeds use null
+const ANIM_RATES = [
+    ['relayPhase', 0.0001],
+    ['habitatWindowPhase', 0.002],
+    ['probeBlink', 0.01],
+    ['solarSailAngle', 0.00004],
+    ['engineGlow', 0.0045],
+    ['engineParticlePhase', 0.005],
+    ['cargoHatch', 0.0035],
+    ['researchArraySweep', 0.00225],
+    ['researchPing', 0.003],
+    ['gardenBreeze', 0.00175],
+    ['gardenShadeAngle', 0.00012],
+    ['hydroponicSpin', 0.00025],
+    ['hydroponicCycle', 0.002],
+    ['lightPhase', 0.004],
+    ['armPhase', 0.003],
+    ['nutrientFlow', 0.0025],
+    ['pollinatorPhase', 0.0011],
+    ['decoyPulse', 0.002],
+    ['miningSpin', 0.002],
+    ['relicPulse', 0.00225],
+    ['artifactPhase', 0.0035],
+    ['flarePhase', 0.003],
+    ['stationLights', 0.004],
+    ['dockingRing', 0.001],
+    ['solarArray', 0.0002],
+    ['commDishSweep', 0.0005],
+    ['commDishTilt', 0.0012],
+    ['shieldPulse', 0.0032],
+    ['domeRotation', 0.0003],
+    ['telescopeSweep', 0.002],
+    ['observationLights', 0.0035],
+    ['turretRotation', 0.0005],
+    ['weaponCharge', 0.001],
+    ['defensePulse', 0.0015],
+    ['trackerPhase', 0.0012],
+    ['wiringPulse', 0.0035],
+    ['collectorSpin', 0.0003],
+    ['fuelPulse', 0.003],
+    ['hosePhase', 0.004],
+    ['nebulaPhase', 0.008],
+    ['gatePhase', 0.01]
+];
+
 // Static renderers for each object type to replace the monolithic draw() switch
 const SpaceObjectRenderers = {
     satellite: function(obj, size, anim, bob) {
@@ -2893,70 +2939,48 @@ class SpaceObject {
             this.pos.y += this._drift.y;
         }
 
-        // Update animations
+        // Update animations using efficient loop over rate table
         const anim = this._anim;
-        // advance per-type animations (cache anim ref)
-        if (typeof anim.panelAngle === 'number') anim.panelAngle += (anim.panelSpeed || 0) * dt;
-        if (typeof anim.telescopeTilt === 'number') anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
-        if (typeof anim.relayPhase === 'number') anim.relayPhase += 0.0001 * dt;
-        if (typeof anim.habitatWindowPhase === 'number') anim.habitatWindowPhase += 0.002 * dt;
-        if (typeof anim.probeBlink === 'number') anim.probeBlink += 0.01 * dt;
-        // Advance new-type animation phases for richer motion
-        if (typeof anim.solarSailAngle === 'number') anim.solarSailAngle += 0.00004 * dt;
-        if (typeof anim.engineGlow === 'number') anim.engineGlow += 0.0045 * dt;
-        if (typeof anim.engineParticlePhase === 'number') anim.engineParticlePhase += 0.005 * dt;
-        if (typeof anim.cargoHatch === 'number') anim.cargoHatch += 0.0035 * dt;
-        if (typeof anim.researchArraySweep === 'number') anim.researchArraySweep += 0.00225 * dt;
-        if (typeof anim.researchPing === 'number') anim.researchPing += 0.003 * dt;
-        if (typeof anim.gardenBreeze === 'number') anim.gardenBreeze += 0.00175 * dt;
-        if (typeof anim.gardenShadeAngle === 'number') anim.gardenShadeAngle += 0.00012 * dt;
-        if (typeof anim.hydroponicSpin === 'number') anim.hydroponicSpin += 0.00025 * dt;
-        if (typeof anim.hydroponicCycle === 'number') anim.hydroponicCycle += 0.002 * dt;
-        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
-        if (typeof anim.armPhase === 'number') anim.armPhase += 0.003 * dt;
-        if (typeof anim.nutrientFlow === 'number') anim.nutrientFlow += 0.0025 * dt;
-        if (typeof anim.pollinatorPhase === 'number') anim.pollinatorPhase += 0.0011 * dt;
-        if (typeof anim.decoyPulse === 'number') anim.decoyPulse += 0.002 * dt;
-        if (typeof anim.miningSpin === 'number') anim.miningSpin += 0.002 * dt;
-        if (typeof anim.relicPulse === 'number') anim.relicPulse += 0.00225 * dt;
-        if (typeof anim.artifactPhase === 'number') anim.artifactPhase += 0.0035 * dt;
-        if (typeof anim.flarePhase === 'number') anim.flarePhase += 0.003 * dt;
-        if (typeof anim.stationLights === 'number') anim.stationLights += 0.004 * dt;
-        if (typeof anim.dockingRing === 'number') anim.dockingRing += 0.001 * dt;
-        if (typeof anim.solarArray === 'number') anim.solarArray += 0.0002 * dt;
-        if (typeof anim.commDishSweep === 'number') anim.commDishSweep += 0.0005 * dt;
-        if (typeof anim.commDishTilt === 'number') anim.commDishTilt += 0.0012 * dt;
-        if (typeof anim.shieldPulse === 'number') anim.shieldPulse += 0.0032 * dt;
-        if (typeof anim.domeRotation === 'number') anim.domeRotation += 0.0003 * dt;
-        if (typeof anim.telescopeSweep === 'number') anim.telescopeSweep += 0.002 * dt;
-        if (typeof anim.observationLights === 'number') anim.observationLights += 0.0035 * dt;
-        if (typeof anim.turretRotation === 'number') anim.turretRotation += 0.0005 * dt;
-        if (typeof anim.weaponCharge === 'number') anim.weaponCharge += 0.001 * dt;
-        if (typeof anim.defensePulse === 'number') anim.defensePulse += 0.0015 * dt;
-        if (typeof anim.panelTiltAngle === 'number') anim.panelTiltAngle += (anim.panelTiltSpeed || 0) * dt;
-        if (typeof anim.trackerPhase === 'number') anim.trackerPhase += 0.0012 * dt;
-        if (typeof anim.wiringPulse === 'number') anim.wiringPulse += 0.0035 * dt;
-        // Energy collector animated phases
-        if (typeof anim.collectorSpin === 'number') anim.collectorSpin += 0.0003 * dt;
-        if (typeof anim.lightPhase === 'number') anim.lightPhase += 0.004 * dt;
-
-        if (this._shards && this._shards.length) {
-            for (let i = 0; i < this._shards.length; i++) this._shards[i].angle += this._shards[i].spin * dt;
+        
+        // Handle dynamic-speed properties separately
+        if (anim.panelAngle !== undefined) anim.panelAngle += (anim.panelSpeed || 0) * dt;
+        if (anim.telescopeTilt !== undefined) anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
+        if (anim.panelTiltAngle !== undefined) anim.panelTiltAngle += (anim.panelTiltSpeed || 0) * dt;
+        
+        // Use rate table for fixed-rate animations (more efficient than multiple typeof checks)
+        for (let i = 0, len = ANIM_RATES.length; i < len; i++) {
+            const [prop, rate] = ANIM_RATES[i];
+            if (anim[prop] !== undefined) {
+                anim[prop] += rate * dt;
+            }
         }
-        // update cargo drones
-        if (this._drones && this._drones.length) {
-            for (let di = 0; di < this._drones.length; di++) {
-                const d = this._drones[di];
+
+        // Update debris shards
+        if (this._shards) {
+            const shards = this._shards;
+            for (let i = 0, len = shards.length; i < len; i++) {
+                shards[i].angle += shards[i].spin * dt;
+            }
+        }
+        
+        // Update cargo drones
+        if (this._drones) {
+            const drones = this._drones;
+            for (let di = 0, len = drones.length; di < len; di++) {
+                const d = drones[di];
                 d.ang += 0.00045 * dt * (1 + di * 0.05);
                 d.phase += 0.005 * dt;
             }
         }
-        // update ice trail shards positions for subtle drifting
-        if (this._trail && this._trail.length) {
-            for (let ti = 0; ti < this._trail.length; ti++) {
-                const s = this._trail[ti];
-                s.rx += Math.cos(this.bobPhase * 0.002 + s.offset) * 0.02;
-                s.ry += Math.sin(this.bobPhase * 0.003 + s.offset) * 0.03;
+        
+        // Update ice trail shards positions for subtle drifting
+        if (this._trail) {
+            const trail = this._trail;
+            const bobPhase = this.bobPhase;
+            for (let ti = 0, len = trail.length; ti < len; ti++) {
+                const s = trail[ti];
+                s.rx += Math.cos(bobPhase * 0.002 + s.offset) * 0.02;
+                s.ry += Math.sin(bobPhase * 0.003 + s.offset) * 0.03;
             }
         }
     }

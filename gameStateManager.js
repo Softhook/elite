@@ -366,10 +366,20 @@ this.jumpJustCompleted = false;
 
                     // Check for auto-jump: if player has a locked destination and is in jump zone
                     if (uiManager && uiManager.lockedDestinationIndex !== -1 && isPlayerInJumpZone(player, currentSystem)) {
-                        GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${uiManager.lockedDestinationIndex}`);
-                        this.startJump(uiManager.lockedDestinationIndex);
-                        // Clear the locked destination after initiating jump
-                        uiManager.lockedDestinationIndex = -1;
+                        const lockedIdx = uiManager.lockedDestinationIndex;
+                        // Validate that the locked destination is still a connected system
+                        const reachable = currentSystem.connectedSystemIndices || [];
+                        if (reachable.includes(lockedIdx)) {
+                            GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${lockedIdx}`);
+                            this.startJump(lockedIdx);
+                            // Clear the locked destination after initiating jump
+                            uiManager.lockedDestinationIndex = -1;
+                        } else {
+                            // Locked destination is no longer reachable (e.g., after save/load)
+                            GS_LOG(`Auto-jump aborted: Locked destination ${lockedIdx} is not reachable from current system. Clearing.`);
+                            uiManager.addMessage("Locked destination is not reachable. Cleared.", [255, 200, 100]);
+                            uiManager.lockedDestinationIndex = -1;
+                        }
                     }
 
                     // Check for jump completion message
