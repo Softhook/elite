@@ -818,6 +818,11 @@ function loadGame(slotIndex) {
                     Object.assign(uiManager.currentView, savedData.currentView);
                 }
                 
+                // 8. Clear any locked jump destination to prevent stale jump targets
+                if (uiManager) {
+                    uiManager.lockedDestinationIndex = -1;
+                }
+                
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
                 localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
                 // Mark the time of a successful load so we can suppress unintended immediate auto-saves

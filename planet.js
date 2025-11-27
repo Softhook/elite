@@ -534,14 +534,16 @@ class Planet {
             const sr = Math.round(red(this.atmosphereColor));
             const sg = Math.round(green(this.atmosphereColor));
             const sb = Math.round(blue(this.atmosphereColor));
-            const stop0 = `rgba(${sr},${sg},${sb},${Math.min(1, a)})`;
-            const stop1 = `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.5)})`;
-            const stop2 = 'rgba(0,0,0,0)';
-
+            
+            // Create a smooth multi-stop gradient for soft halo edges
             const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
-            grad.addColorStop(0, stop0);
-            grad.addColorStop(0.3, stop1);
-            grad.addColorStop(0.75, stop2);
+            grad.addColorStop(0, `rgba(${sr},${sg},${sb},${Math.min(1, a)})`);
+            grad.addColorStop(0.15, `rgba(${sr},${sg},${sb},${Math.min(1, a * 0.85)})`);
+            grad.addColorStop(0.3, `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.6)})`);
+            grad.addColorStop(0.5, `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.35)})`);
+            grad.addColorStop(0.7, `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.15)})`);
+            grad.addColorStop(0.85, `rgba(${sr},${sg},${sb},${Math.max(0, a * 0.05)})`);
+            grad.addColorStop(1.0, `rgba(${sr},${sg},${sb},0)`);
 
             // Use additive blending for a bright halo
             const prevOp = ctx.globalCompositeOperation;
