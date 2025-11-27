@@ -351,6 +351,12 @@ class Galaxy {
 
     /** Handles the jump process to a new star system. */
     jumpToSystem(targetIndex) {
+        // Early exit: prevent attempting to jump to the current system
+        if (targetIndex === this.currentSystemIndex) {
+            console.warn(`jumpToSystem: Already in system ${targetIndex}. Ignoring duplicate jump request.`);
+            return false;
+        }
+        
         // Get current system and check connections
         const currentSystemIndex = this.currentSystemIndex;
         const reachable = this.getReachableSystems();

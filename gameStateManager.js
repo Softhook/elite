@@ -480,7 +480,9 @@ this.jumpJustCompleted = false;
                 }
                 
                 // Complete jump when timer reaches duration
-                if (this.jumpChargeTimer >= this.jumpChargeDuration) {
+                // Guard: Only start FADE_OUT if we haven't already begun the fade sequence
+                // This prevents duplicate jumpToSystem calls if deltaTime spikes (e.g., tab suspension)
+                if (this.jumpChargeTimer >= this.jumpChargeDuration && this.jumpFadeState === "NONE") {
                     this.jumpFadeState = "FADE_OUT"; // Begin transition
                     // Don't actually jump yet - wait for white screen
                 }
@@ -1083,6 +1085,8 @@ this.jumpJustCompleted = false;
         GS_LOG(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
         this.jumpTargetSystemIndex = targetIndex;
         this.jumpChargeTimer = 0; // Reset timer
+        this.jumpFadeState = "NONE"; // Ensure fade state starts fresh
+        this.jumpFadeOpacity = 0; // Ensure opacity starts at 0
         this.isJumpCharging = true; // Set the flag
         this.jumpJustCompleted = false; // Reset completion flag
         this.setState("JUMPING");
