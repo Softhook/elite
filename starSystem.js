@@ -1305,9 +1305,12 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         continue;
                     }
 
-                    if (this.shouldDespawnEntity(so, 1.2)) {
-                        this._fastRemove(this.spaceObjects, i);
-                    }
+                    // Don't despawn space objects - they are persistent decorative elements
+                    // tied to planets and should remain in the system. Unlike asteroids which
+                    // are regenerated dynamically, space objects are spawned once during
+                    // system initialization and should not be removed based on player distance.
+                    // This ensures planets always have their orbital structures visible and
+                    // sabotage mission targets remain available.
                 }
             }
 
