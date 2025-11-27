@@ -1034,6 +1034,12 @@ this.jumpJustCompleted = false;
      * @param {number} targetIndex - The index of the target system in the galaxy.
      */
     startJump(targetIndex) {
+        // Prevent interrupting an ongoing jump sequence
+        if (this.currentState === "JUMPING" || this.isJumpCharging) {
+            GS_LOG("[startJump] Jump already in progress. Ignoring new jump request.");
+            return;
+        }
+        
         GS_LOG(`[startJump] Attempting jump to system index: ${targetIndex}`);
         const currentSystem = galaxy?.getCurrentSystem();
         const targetSystem = galaxy.getSystemByIndex(targetIndex);
