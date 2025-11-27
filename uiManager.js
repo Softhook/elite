@@ -2438,6 +2438,60 @@ if (isIllegalInSystem || isMissionCargo) {
             pop();
             // ---
 
+            // --- Draw Player Detection/Spawn Radius (visible white ring, clamped to minimap) ---
+            try {
+                // Use the system spawn distance calculation used when spawning NPCs:
+                // `_getDiagonalDistance()` + buffer (matches trySpawnNPC's random offset).
+                // Fall back to `despawnRadius` or a sensible default if unavailable.
+                const spawnRadius = (typeof system._getDiagonalDistance === 'function')
+                    ? (system._getDiagonalDistance() + 400) // max random offset used in trySpawnNPC
+                    : ((typeof system.despawnRadius === 'number' && system.despawnRadius > 0) ? system.despawnRadius : 5000);
+
+                if (spawnRadius > 0) {
+                    const mapRadius = max(1, spawnRadius * this.minimapScale);
+                    const maxVisibleRadius = this.minimapSize / 2 - 4; // ensure circle fits inside minimap
+
+                    if (mapRadius <= maxVisibleRadius) {
+                        // Draw a dashed, very thin white ring clipped to minimap at 50% opacity
+                        const ctx = drawingContext;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+                        ctx.clip();
+
+                        noFill();
+                        stroke(255, 255, 255, 50); // 50% opacity
+                        strokeWeight(0.5); // very thin
+                        const dashCount = 30;
+                        const dashFrac = 0.55; // fraction of arc to draw per dash
+                        for (let i = 0; i < dashCount; i++) {
+                            const a1 = (TWO_PI / dashCount) * i;
+                            const a2 = a1 + (TWO_PI / dashCount) * dashFrac;
+                            arc(mapCenterX, mapCenterY, mapRadius * 2, mapRadius * 2, a1, a2);
+                        }
+
+                        ctx.restore();
+                    } else {
+                        // Radius too large to display in full — draw dashed ring at the minimap edge
+                        const halfMap = maxVisibleRadius;
+                        noFill();
+                        stroke(255, 255, 255, 128); // 50% opacity
+                        strokeWeight(1);
+                        const dashCount = 48;
+                        const dashFrac = 0.55;
+                        for (let i = 0; i < dashCount; i++) {
+                            const a1 = (TWO_PI / dashCount) * i;
+                            const a2 = a1 + (TWO_PI / dashCount) * dashFrac;
+                            arc(mapCenterX, mapCenterY, halfMap * 2, halfMap * 2, a1, a2);
+                        }
+                        // Keep the player dot visible (already drawn)
+                    }
+                }
+            } catch (e) {
+                // Keep minimap robust: ignore drawing errors for optional overlay
+            }
+            // --- End Detection Radius ---
+
             // Hazards are now drawn via buffer above; remove per-item drawing
 
             // --- Map and Draw Jump Zone ---
