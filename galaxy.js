@@ -349,8 +349,18 @@ class Galaxy {
         return system;
     }
 
-    /** Handles the jump process to a new star system. */
+    /** 
+     * Handles the jump process to a new star system. 
+     * @param {number} targetIndex - The index of the target system in the galaxy.
+     * @returns {boolean} True if jump succeeded, false if jump was blocked or failed.
+     */
     jumpToSystem(targetIndex) {
+        // Early exit: prevent attempting to jump to the current system
+        if (targetIndex === this.currentSystemIndex) {
+            console.warn(`jumpToSystem: Already in system ${targetIndex}. Ignoring duplicate jump request.`);
+            return false;
+        }
+        
         // Get current system and check connections
         const currentSystemIndex = this.currentSystemIndex;
         const reachable = this.getReachableSystems();
@@ -416,8 +426,9 @@ class Galaxy {
                 console.log(`Player arrived in ${newSystemName} at angle ${(arrivalAngle * 180 / Math.PI).toFixed(1)} deg, dist ${arrivalDist.toFixed(0)}, final pos (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
                 player.currentSystem = newSystem;
                 newSystem.enterSystem(player); // Should be safe if newSystem is valid
-            } else { console.error(`Error during jump completion: Player (${!!player}) or New System (${!!newSystem}) object invalid!`); }
-        } else { console.error(`Invalid jump target index: ${targetIndex} or already in system.`); }
+                return true; // Jump succeeded
+            } else { console.error(`Error during jump completion: Player (${!!player}) or New System (${!!newSystem}) object invalid!`); return false; }
+        } else { console.error(`Invalid jump target index: ${targetIndex} or already in system.`); return false; }
     } // --- End jumpToSystem ---
 
 

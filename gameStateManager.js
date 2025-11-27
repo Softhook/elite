@@ -480,7 +480,9 @@ this.jumpJustCompleted = false;
                 }
                 
                 // Complete jump when timer reaches duration
-                if (this.jumpChargeTimer >= this.jumpChargeDuration) {
+                // Guard: Only start FADE_OUT if we haven't already begun the fade sequence
+                // This prevents duplicate jumpToSystem calls if deltaTime spikes (e.g., tab suspension)
+                if (this.jumpChargeTimer >= this.jumpChargeDuration && this.jumpFadeState === "NONE") {
                     this.jumpFadeState = "FADE_OUT"; // Begin transition
                     // Don't actually jump yet - wait for white screen
                 }
@@ -1032,6 +1034,12 @@ this.jumpJustCompleted = false;
      * @param {number} targetIndex - The index of the target system in the galaxy.
      */
     startJump(targetIndex) {
+        // Prevent interrupting an ongoing jump sequence
+        if (this.currentState === "JUMPING" || this.isJumpCharging) {
+            GS_LOG("[startJump] Jump already in progress. Ignoring new jump request.");
+            return;
+        }
+        
         GS_LOG(`[startJump] Attempting jump to system index: ${targetIndex}`);
         const currentSystem = galaxy?.getCurrentSystem();
         const targetSystem = galaxy.getSystemByIndex(targetIndex);
@@ -1083,6 +1091,8 @@ this.jumpJustCompleted = false;
         GS_LOG(`[startJump] Jump initiated to ${targetSystem.name} (Index: ${targetIndex})`);
         this.jumpTargetSystemIndex = targetIndex;
         this.jumpChargeTimer = 0; // Reset timer
+        this.jumpFadeState = "NONE"; // Ensure fade state starts fresh
+        this.jumpFadeOpacity = 0; // Ensure opacity starts at 0
         this.isJumpCharging = true; // Set the flag
         this.jumpJustCompleted = false; // Reset completion flag
         this.setState("JUMPING");
