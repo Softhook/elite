@@ -3739,8 +3739,11 @@ drawOptimalStarfield() {
 
         const availableTypes = typesByEconomy[this.economyType] || defaultTypes;
 
-        for (let i = 1; i < this.planets.length; i++) {
-            const planet = this.planets[i];
+        for (let planetIdx = 1; planetIdx < this.planets.length; planetIdx++) {
+            const planet = this.planets[planetIdx];
+            // Store the correct planet index for space object association
+            const correctPlanetIndex = planet.planetIndex || planetIdx;
+            
             if (['Industrial', 'Refinery', 'Mining'].includes(this.economyType)) {
                 // Always spawn at least one mining platform
                 const angle = random(TWO_PI);
@@ -3749,7 +3752,7 @@ drawOptimalStarfield() {
                 const y = planet.pos.y + Math.sin(angle) * dist;
                 try {
                     const obj = new SpaceObject(x, y, 'miningPlatform');
-                        obj.planetIndex = planet.planetIndex || i;
+                    obj.planetIndex = correctPlanetIndex;
                     this.spaceObjects.push(obj);
                 } catch (e) {
                     console.error('Failed to create mining platform SpaceObject', e);
@@ -3757,7 +3760,7 @@ drawOptimalStarfield() {
 
                 // Add 0-2 additional random objects
                 const extra = Math.floor(random(0, 3)); // 0, 1, or 2
-                for (let i = 0; i < extra; i++) {
+                for (let j = 0; j < extra; j++) {
                     const type = random(availableTypes);
                     const angle2 = random(TWO_PI);
                     const dist2 = random(planet.size * 0.2, planet.size * 0.6);
@@ -3765,7 +3768,7 @@ drawOptimalStarfield() {
                     const y2 = planet.pos.y + Math.sin(angle2) * dist2;
                     try {
                         const obj2 = new SpaceObject(x2, y2, type);
-                        obj2.planetIndex = planet.planetIndex || i;
+                        obj2.planetIndex = correctPlanetIndex;
                         this.spaceObjects.push(obj2);
                     } catch (e) {
                         console.error('Failed to create additional SpaceObject', e);
@@ -3774,7 +3777,7 @@ drawOptimalStarfield() {
             } else {
                 // For other systems, spawn 1-3 random objects
                 const numObjects = Math.floor(random(1, 4)); // 1 to 3
-                for (let i = 0; i < numObjects; i++) {
+                for (let j = 0; j < numObjects; j++) {
                     const type = random(availableTypes);
                     const angle = random(TWO_PI);
                     const dist = random(planet.size * 0.2, planet.size * 0.6);
@@ -3782,7 +3785,7 @@ drawOptimalStarfield() {
                     const y = planet.pos.y + Math.sin(angle) * dist;
                     try {
                         const obj = new SpaceObject(x, y, type);
-                        obj.planetIndex = planet.planetIndex || i;
+                        obj.planetIndex = correctPlanetIndex;
                         this.spaceObjects.push(obj);
                     } catch (e) {
                         console.error('Failed to create SpaceObject', e);
@@ -3795,7 +3798,7 @@ drawOptimalStarfield() {
         if (this.jumpZoneCenter) {
             const jumpGateTypes = ['signalFlare', 'relay', 'satellite', 'decoyBuoy', 'probe', 'beacon', 'telescope', 'commDish', 'quantumGate'];
             const numJumpObjects = Math.floor(random(1, 4)); // 1 to 3
-            for (let i = 0; i < numJumpObjects; i++) {
+            for (let j = 0; j < numJumpObjects; j++) {
                 const type = random(jumpGateTypes);
                 const angle = random(TWO_PI);
                 const dist = random(200, 600); // Fixed distance range for jump gate objects
