@@ -957,7 +957,6 @@ this.jumpJustCompleted = false;
         try {
             if (this.postLoadFadeState && this.postLoadFadeState !== "NONE") {
                 push();
-                noStroke();
                 // Use black fade for post-load transitions
                 fill(0, 0, 0, this.postLoadFadeOpacity * 255);
                 rect(0, 0, width, height);
@@ -998,9 +997,12 @@ this.jumpJustCompleted = false;
                 const px = (width - panelW) * 0.5;
                 const py = (height - panelH) * 0.5;
 
-                // Draw panel background
-                fill(24, 24, 28, 230);
-                rect(px, py, panelW, panelH, 10);
+                // Draw panel background styled like save/load slots
+                stroke(80, 80, 120, 100);
+                strokeWeight(1);
+                fill(15, 25, 45, 180);
+                rect(px, py, panelW, panelH, 8);
+                noStroke();
 
                 // Welcome message: show current system name, economy, tech and security inside the panel
                 try {
