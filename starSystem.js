@@ -2563,16 +2563,13 @@ checkProjectileCollisions() {
         
         // Draw the cached buffer if available
         if (this._starfieldBuffer) {
-            // Calculate offset based on player movement since last buffer generation
-            const offsetX = this.player.pos.x - this._starfieldLastPlayerX;
-            const offsetY = this.player.pos.y - this._starfieldLastPlayerY;
+            // The buffer was generated centered at _starfieldLastPlayerX/Y
+            // Buffer top-left corner in world space
+            const bufferWorldX = this._starfieldLastPlayerX - this._starfieldBufferSize / 2;
+            const bufferWorldY = this._starfieldLastPlayerY - this._starfieldBufferSize / 2;
             
-            // Draw the buffer centered on the player with parallax offset
-            // The buffer is centered at the last generation point, so we shift it
-            const bufferDrawX = this._starfieldLastPlayerX - this._starfieldBufferSize / 2 - offsetX;
-            const bufferDrawY = this._starfieldLastPlayerY - this._starfieldBufferSize / 2 - offsetY;
-            
-            image(this._starfieldBuffer, bufferDrawX, bufferDrawY);
+            // Draw the buffer at its world position (canvas translation handles the view offset)
+            image(this._starfieldBuffer, bufferWorldX, bufferWorldY);
         }
         
         // Draw spectacular stars (animated phenomena) - these are rare and change over time
