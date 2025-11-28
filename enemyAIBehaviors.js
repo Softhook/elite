@@ -640,59 +640,169 @@ class EnemyAIBehaviors {
         // Define routePoints if not yet set:
         // ... (existing route point setup logic) ...
         if (!this.routePoints) {
-            // ... (code to set this.routePoints, this.currentRouteIndex, this.waitTimer) ...
-             let pts = [];
-             // ... (logic to find two points, e.g., planets or station) ...
-             // Example:
-             if (system.planets && system.planets.length > 1) {
-                 pts.push(system.planets[0].pos.copy()); // Assuming planet 0 exists
-                 pts.push(system.planets[1].pos.copy()); // Assuming planet 1 exists
-             } else if (system.station) {
-                 pts.push(system.station.pos.copy());
-                 pts.push(p5.Vector.add(system.station.pos, createVector(random(-500, 500), random(-500, 500)))); // Point near station
-             } else { // Fallback
-                 pts.push(createVector(0,0)); pts.push(createVector(500,0));
-             }
-             this.routePoints = pts;
-             this.currentRouteIndex = 1; // Start moving towards the second point
-             this.waitTimer = 0;
-             AI_LOG(`Transporter ${this.shipTypeName} route set.`);
+            // Build sensible local transporter routes using SpaceObjects near planets when possible.
+            let pts = [];
+            let objs = []; // parallel array storing SpaceObject references (or null)
+
+            // Ensure space objects exist for planets if spawning helper is available
+            if ((!Array.isArray(system.spaceObjects) || system.spaceObjects.length === 0) && typeof system.spawnSpaceObjectsForPlanets === 'function') {
+                try { system.spawnSpaceObjectsForPlanets(); } catch (e) { /* non-fatal */ }
+            }
+
+            if (Array.isArray(system.spaceObjects) && system.spaceObjects.length > 0 && Array.isArray(system.planets) && system.planets.length > 0) {
+                // Prefer a simple route: Station <-> nearest SpaceObject (per a planet)
+                let chosenSO = null;
+                let chosenPlanet = null;
+
+                for (let p of system.planets) {
+                    if (!p || !p.pos) continue;
+                    let closest = null;
+                    let cd = Infinity;
+                    for (let so of system.spaceObjects) {
+                        if (!so || so.destroyed) continue;
+                        const d = dist(so.pos.x, so.pos.y, p.pos.x, p.pos.y);
+                        if (d < 900 && d < cd) { closest = so; cd = d; }
+                    }
+                    if (closest) { chosenSO = closest; chosenPlanet = p; break; }
+                }
+
+                if (chosenSO) {
+                    if (system.station && system.station.pos) {
+                        pts.push(system.station.pos.copy()); objs.push(null);
+                        pts.push(chosenSO.pos.copy()); objs.push(chosenSO);
+                    } else {
+                        pts.push(chosenPlanet.pos.copy()); objs.push(null);
+                        pts.push(chosenSO.pos.copy()); objs.push(chosenSO);
+                    }
+                }
+            }
+
+            // Fallback to previous simple behavior
+            if (pts.length === 0) {
+                if (system.station) {
+                    pts.push(system.station.pos.copy()); objs.push(null);
+                    pts.push(p5.Vector.add(system.station.pos, createVector(random(-500, 500), random(-500, 500)))); objs.push(null);
+                } else {
+                    pts.push(createVector(0,0)); objs.push(null);
+                    pts.push(createVector(500,0)); objs.push(null);
+                }
+            }
+
+            this.routePoints = pts;
+            this.routeObjects = objs;
+            this.currentRouteIndex = 1; // Start moving towards the second point
+            this.waitTimer = 0;
+            // store the displayed destination object for rendering/UI
+            this.destinationObject = this.routeObjects[this.currentRouteIndex] || null;
+            AI_LOG(`Transporter ${this.shipTypeName} route set.`);
         }
 
 
         let destination = this.routePoints[this.currentRouteIndex];
 
-        // ... (existing movement logic towards destination) ...
+        // Track corresponding space object (may be null)
+        let destObj = (Array.isArray(this.routeObjects) && this.routeObjects[this.currentRouteIndex]) ? this.routeObjects[this.currentRouteIndex] : null;
+        // If destination object has been destroyed, skip to next
+        if (destObj && destObj.destroyed) {
+            // try advance to next non-destroyed target
+            const maxTries = this.routePoints ? this.routePoints.length : 1;
+            for (let i = 0; i < maxTries; i++) {
+                this.currentRouteIndex = (this.currentRouteIndex + 1) % (this.routePoints ? this.routePoints.length : 1);
+                destObj = (Array.isArray(this.routeObjects) && this.routeObjects[this.currentRouteIndex]) ? this.routeObjects[this.currentRouteIndex] : null;
+                if (!destObj || !destObj.destroyed) break;
+            }
+        }
+        this.destinationObject = destObj || null;
+
+        // Movement vector/distance
         this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
         let distance = this.tempVector.mag();
-        // ... (rest of movement, arrival check, wait timer, destination switching) ...
 
-        // Arrival behavior:
-        const arrivalThreshold = 30; // Increased threshold slightly
+        // Determine arrival threshold: if destination is a SpaceObject, stop safely outside its collision radius
+        let arrivalThreshold = 30;
+        if (destObj && typeof destObj.collisionRadius === 'number') {
+            arrivalThreshold = Math.max(30, destObj.collisionRadius + (this.size * 0.6) + 8);
+        }
         const slowSpeedThreshold = 0.2;
+
         if (distance > arrivalThreshold) {
             // Move towards destination
             if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
             this.performRotationAndThrust(destination); // Use helper
-                } else {
-                    // Arrival detected: apply braking.
-                    this.vel.mult(0.8);
-                    // If close enough AND moving very slowly, start/continue wait timer.
-                    if (this.vel.mag() < slowSpeedThreshold) {
-                        if (this.waitTimer === 0) {
-                            this.waitTimer = random(1500, 4000); // Wait 1.5-4s
-                            ENEMY_AI_LOG(`Transporter ${this.shipTypeName} arrived. Waiting.`);
+        } else {
+            // Arrival detected: brake and conduct trade if destination is a SpaceObject
+            this.vel.mult(0.2);
+
+            // If close enough AND moving very slowly, act as 'docked' at the object
+            if (this.vel.mag() < slowSpeedThreshold) {
+                if (this.waitTimer === 0) {
+                    this.waitTimer = random(1500, 4000); // Wait 1.5-4s
+                    ENEMY_AI_LOG(`Transporter ${this.shipTypeName} arrived at destination. Waiting.`);
+
+                    // Perform trade/load when first stopping near a SpaceObject or station
+                    try {
+                        if (destObj && !destObj.destroyed) {
+                            // Use full NPC loading behavior where possible via _loadCargoFromOptions
+                            const commodityMap = {
+                                miningPlatform: ['Metals','Minerals'],
+                                asteroidMiner: ['Metals','Minerals'],
+                                cargoCluster: ['Textiles','Machinery','Metals'],
+                                hydroponicsBay: ['Food'],
+                                orbitalGarden: ['Food'],
+                                fuelDepot: ['Fuel'],
+                                researchArray: ['Adv Components','Computers'],
+                                spaceStation: ['Food','Textiles','Machinery'],
+                                solarFarm: ['Metals'],
+                                energyCollector: ['Metals']
+                            };
+                            const options = commodityMap[destObj.type] || ['Metals'];
+                            // Determine available capacity and clamp target load to avoid overfilling
+                            const availableCapacity = (typeof this.getRemainingCargoCapacity === 'function')
+                                ? this.getRemainingCargoCapacity()
+                                : Math.max(0, (this.cargoCapacity || 0) - (typeof this.getCargoAmount === 'function' ? this.getCargoAmount() : 0));
+                            const desiredLoad = Math.floor((this.cargoCapacity || 0) * random(0.2, 0.6));
+                            const targetLoad = Math.max(0, Math.min(this.cargoCapacity || 0, desiredLoad, availableCapacity));
+                            // Use existing helper to load from options (no station market available) only if capacity exists
+                            if (targetLoad > 0) {
+                                this._loadCargoFromOptions(options, targetLoad, null);
+                            } else {
+                                CARGO_LOG && CARGO_LOG(`Transporter ${this.shipTypeName} has no available cargo capacity; skipping load`);
+                            }
+                            // Inform player/ui
+                            try {
+                                const planetName = (typeof destObj.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets) && this.currentSystem.planets[destObj.planetIndex])
+                                    ? this.currentSystem.planets[destObj.planetIndex].name
+                                    : null;
+                                const displayName = (typeof destObj.getDisplayName === 'function') ? destObj.getDisplayName() : (destObj.type || 'space object');
+                                if (typeof uiManager !== 'undefined') uiManager.addMessage(`${this.shipTypeName} traded with ${displayName}${planetName ? ' @ ' + planetName : ''}`);
+                            } catch (e) { /* ignore UI message errors */ }
                         } else {
-                            this.waitTimer -= deltaTime;
-                            if (this.waitTimer <= 0) {
-                                // Switch destination.
-                                this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
-                                ENEMY_AI_LOG(`Transporter ${this.shipTypeName} switching destination.`);
-                                this.waitTimer = 0;
-                                this.vel.set(0, 0); // Reset velocity
+                            // Possibly arrived at a station point (destObj null but near station)
+                            if (system && system.station && system.station.pos && dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y) < Math.max(60, system.station.size * 1.2)) {
+                                // Use the full station docking/trade behavior used by haulers
+                                try {
+                                    if (typeof this.handleStationDocking === 'function') {
+                                        this.handleStationDocking(system);
+                                    }
+                                } catch (e) { /* ignore */ }
                             }
                         }
+                    } catch (e) {
+                        // defensive: ignore trading errors
                     }
+                } else {
+                    this.waitTimer -= deltaTime;
+                    if (this.waitTimer <= 0) {
+                        // Switch destination.
+                        this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
+                        ENEMY_AI_LOG(`Transporter ${this.shipTypeName} switching destination.`);
+                        this.waitTimer = 0;
+                        this.vel.set(0, 0); // Reset velocity
+                        // Update destinationObject for next leg
+                        this.destinationObject = (Array.isArray(this.routeObjects) && this.routeObjects[this.currentRouteIndex]) ? this.routeObjects[this.currentRouteIndex] : null;
+                    }
+                }
+            }
         }
 
         // Apply physics

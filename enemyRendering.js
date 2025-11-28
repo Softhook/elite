@@ -147,6 +147,19 @@ class EnemyRendering {
                      }
                  }
 
+                 // If the transporter has an explicit destination object (SpaceObject), prefer that display
+                 if (!destName && this.destinationObject && typeof this.destinationObject.getDisplayName === 'function') {
+                     let planetName = null;
+                     try {
+                         if (typeof this.destinationObject.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets)) {
+                             const p = this.currentSystem.planets[this.destinationObject.planetIndex];
+                             if (p) planetName = p.name;
+                         }
+                     } catch (e) { /* ignore */ }
+                     const soName = this.destinationObject.getDisplayName();
+                     destName = planetName ? `${soName} @ ${planetName}` : soName;
+                 }
+
                  if (destName) targetLabel = `Delivery to ${destName}`;
                  else targetLabel = "Delivery";
             }

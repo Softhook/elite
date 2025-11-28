@@ -5,6 +5,8 @@
 
 ## Core Gameplay Enhancements
 
+create a builder ship that errects space objects near planets
+
 Make space objects belong to different factions. Destroying a space object makes the player wanted. 
 
 move desliverues to space objects not planets
