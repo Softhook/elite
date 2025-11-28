@@ -681,7 +681,12 @@ class EnemyAIBehaviors {
 
                     // Add each spaceObject position to the route
                     for (let entry of soByPlanet) {
-                        pts.push(entry.so.pos.copy());
+                        // Add a small jitter to SO visit points so multiple transports
+                        // don't converge exactly on the same coordinates.
+                        const p = entry.so.pos.copy();
+                        const jitterAmt = 8; // pixels
+                        p.add(createVector(random(-jitterAmt, jitterAmt), random(-jitterAmt, jitterAmt)));
+                        pts.push(p);
                         objs.push(entry.so);
                     }
 
@@ -718,6 +723,33 @@ class EnemyAIBehaviors {
 
         // Track corresponding space object (may be null)
         let destObj = (Array.isArray(this.routeObjects) && this.routeObjects[this.currentRouteIndex]) ? this.routeObjects[this.currentRouteIndex] : null;
+
+        // Compute an approach target to avoid steering directly to the object's center.
+        // This places the movement target outside the SO's collision radius along
+        // the line from SO -> ship, with a small lateral jitter to reduce stacking.
+        let moveTarget = (destination && typeof destination.copy === 'function') ? destination.copy() : (destination ? createVector(destination.x, destination.y) : createVector(0,0));
+        if (destObj && destObj.pos) {
+            try {
+                const dir = p5.Vector.sub(this.pos, destObj.pos);
+                if (dir.mag() < 1e-3) dir.set(1, 0); // avoid zero-length
+                dir.normalize();
+                // Use the authoritative collision radius when available, otherwise
+                // derive an approximate radius from the object's size, falling
+                // back to 30 if neither is present.
+                const soRadius = (typeof destObj.collisionRadius === 'number')
+                    ? destObj.collisionRadius
+                    : (typeof destObj.size === 'number' ? (destObj.size * 0.5) : 30);
+                // Margin to keep ships comfortably outside the object's bounds
+                const approachMargin = 12;
+                const dockDistance = soRadius + (this.size * 0.6) + approachMargin;
+                moveTarget = p5.Vector.add(destObj.pos, p5.Vector.mult(dir, dockDistance));
+                // lateral jitter to spread ships around the object perimeter
+                const lateral = p5.Vector.fromAngle(atan2(dir.y, dir.x) + HALF_PI).mult(random(-6, 6));
+                moveTarget.add(lateral);
+            } catch (e) {
+                moveTarget = destination.copy ? destination.copy() : createVector(destination.x, destination.y);
+            }
+        }
         // If destination object has been destroyed, skip to next
         if (destObj && destObj.destroyed) {
             // try advance to next non-destroyed target
@@ -730,21 +762,25 @@ class EnemyAIBehaviors {
         }
         this.destinationObject = destObj || null;
 
-        // Movement vector/distance
-        this.tempVector.set(destination.x - this.pos.x, destination.y - this.pos.y);
+        // Movement vector/distance (use moveTarget so ships aim for an exterior point)
+        this.tempVector.set(moveTarget.x - this.pos.x, moveTarget.y - this.pos.y);
         let distance = this.tempVector.mag();
 
         // Determine arrival threshold: if destination is a SpaceObject, stop safely outside its collision radius
         let arrivalThreshold = 30;
-        if (destObj && typeof destObj.collisionRadius === 'number') {
-            arrivalThreshold = Math.max(30, destObj.collisionRadius + (this.size * 0.6) + 8);
+        if (destObj) {
+            const soRadius = (typeof destObj.collisionRadius === 'number')
+                ? destObj.collisionRadius
+                : (typeof destObj.size === 'number' ? (destObj.size * 0.5) : 30);
+            const approachMargin = 12;
+            arrivalThreshold = Math.max(30, soRadius + (this.size * 0.6) + approachMargin * 0.8);
         }
         const slowSpeedThreshold = 0.2;
 
         if (distance > arrivalThreshold) {
-            // Move towards destination
+            // Move towards the computed exterior approach target instead of the center
             if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
-            this.performRotationAndThrust(destination); // Use helper
+            this.performRotationAndThrust(moveTarget); // Use helper
         } else {
             // Arrival detected: brake and conduct trade if destination is a SpaceObject
             this.vel.mult(0.2);
