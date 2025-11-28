@@ -650,9 +650,12 @@ class EnemyAIBehaviors {
             }
 
             if (Array.isArray(system.spaceObjects) && system.spaceObjects.length > 0 && Array.isArray(system.planets) && system.planets.length > 0) {
-                // Prefer a simple route: Station <-> nearest SpaceObject (per a planet)
-                let chosenSO = null;
-                let chosenPlanet = null;
+                // Build a multi-point route that visits spaceObjects associated with planets.
+                // For each planet pick the nearest spaceObject (within threshold) and add it
+                // to the transporter's route. Include the station as an optional anchor.
+                const soByPlanet = [];
+                const seenSO = new Set();
+                const maxSoDistance = 900;
 
                 for (let p of system.planets) {
                     if (!p || !p.pos) continue;
@@ -661,18 +664,30 @@ class EnemyAIBehaviors {
                     for (let so of system.spaceObjects) {
                         if (!so || so.destroyed) continue;
                         const d = dist(so.pos.x, so.pos.y, p.pos.x, p.pos.y);
-                        if (d < 900 && d < cd) { closest = so; cd = d; }
+                        if (d < maxSoDistance && d < cd) { closest = so; cd = d; }
                     }
-                    if (closest) { chosenSO = closest; chosenPlanet = p; break; }
+                    if (closest && !seenSO.has(closest)) {
+                        soByPlanet.push({planet: p, so: closest});
+                        seenSO.add(closest);
+                    }
                 }
 
-                if (chosenSO) {
+                // If we found multiple spaceObjects, create a route that cycles through them.
+                if (soByPlanet.length > 0) {
+                    // Optionally start route at the station if it exists
                     if (system.station && system.station.pos) {
                         pts.push(system.station.pos.copy()); objs.push(null);
-                        pts.push(chosenSO.pos.copy()); objs.push(chosenSO);
-                    } else {
-                        pts.push(chosenPlanet.pos.copy()); objs.push(null);
-                        pts.push(chosenSO.pos.copy()); objs.push(chosenSO);
+                    }
+
+                    // Add each spaceObject position to the route
+                    for (let entry of soByPlanet) {
+                        pts.push(entry.so.pos.copy());
+                        objs.push(entry.so);
+                    }
+
+                    // If only one SO found and a station exists, ensure shuttle back to station
+                    if (soByPlanet.length === 1 && system.station && system.station.pos) {
+                        pts.push(system.station.pos.copy()); objs.push(null);
                     }
                 }
             }
@@ -690,7 +705,8 @@ class EnemyAIBehaviors {
 
             this.routePoints = pts;
             this.routeObjects = objs;
-            this.currentRouteIndex = 1; // Start moving towards the second point
+            // Start moving towards the second point when available, otherwise the first
+            this.currentRouteIndex = (pts.length > 1) ? 1 : 0;
             this.waitTimer = 0;
             // store the displayed destination object for rendering/UI
             this.destinationObject = this.routeObjects[this.currentRouteIndex] || null;
@@ -742,8 +758,9 @@ class EnemyAIBehaviors {
                     // Perform trade/load when first stopping near a SpaceObject or station
                     try {
                         if (destObj && !destObj.destroyed) {
-                            // Use full NPC loading behavior where possible via _loadCargoFromOptions
-                            const commodityMap = {
+                            // Prefer authoritative commodity lists provided by the SpaceObject instance
+                            // (set by `spaceObjects.js`). Fall back to an internal map if missing.
+                            const fallbackCommodityMap = {
                                 miningPlatform: ['Metals','Minerals'],
                                 asteroidMiner: ['Metals','Minerals'],
                                 cargoCluster: ['Textiles','Machinery','Metals'],
@@ -755,7 +772,10 @@ class EnemyAIBehaviors {
                                 solarFarm: ['Metals'],
                                 energyCollector: ['Metals']
                             };
-                            const options = commodityMap[destObj.type] || ['Metals'];
+
+                            const options = (destObj && Array.isArray(destObj.produces) && destObj.produces.length)
+                                ? destObj.produces
+                                : (fallbackCommodityMap[destObj?.type] || ['Metals']);
                             // Determine available capacity and clamp target load to avoid overfilling
                             const availableCapacity = (typeof this.getRemainingCargoCapacity === 'function')
                                 ? this.getRemainingCargoCapacity()

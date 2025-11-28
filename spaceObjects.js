@@ -37,6 +37,43 @@ const sizeMap = {
     quantumGate: 160
 };
 
+// Mapping of what each SpaceObject type typically produces and what it will buy
+// NOTE: Entries use canonical commodity names defined in `market.js`.
+const SPACE_OBJECT_COMMODITIES = {
+    miningPlatform: { produces: ['Metals','Minerals'], buys: ['Chemicals','Machinery'] },
+    asteroidMiner: { produces: ['Metals','Minerals'], buys: ['Chemicals'] },
+    cargoCluster: { produces: ['Textiles','Machinery','Metals'], buys: ['Food','Chemicals'] },
+    hydroponicsBay: { produces: ['Food'], buys: ['Metals','Chemicals','Machinery'] },
+    orbitalGarden: { produces: ['Food'], buys: ['Chemicals','Machinery'] },
+    fuelDepot: { produces: ['Chemicals'], buys: ['Metals','Machinery'] },
+    researchArray: { produces: ['Adv Components','Computers'], buys: ['Food','Chemicals'] },
+    spaceStation: { produces: ['Food','Textiles','Machinery','Chemicals'], buys: ['Metals','Adv Components'] },
+    solarFarm: { produces: ['Metals','Adv Components'], buys: ['Machinery'] },
+    energyCollector: { produces: ['Metals','Adv Components'], buys: ['Chemicals'] },
+    observatoryDome: { produces: ['Computers'], buys: ['Chemicals'] },
+    ancientRelic: { produces: ['Luxury Goods'], buys: [] },
+    alienArtifact: { produces: ['Luxury Goods'], buys: [] },
+    satellite: { produces: ['Computers'], buys: ['Metals'] },
+    telescope: { produces: ['Computers','Adv Components'], buys: ['Metals'] },
+    relay: { produces: ['Computers'], buys: ['Metals'] },
+    habitat: { produces: ['Textiles','Food'], buys: ['Machinery','Metals'] },
+    debris: { produces: ['Metals'], buys: [] },
+    probe: { produces: ['Computers'], buys: [] },
+    beacon: { produces: ['Metals'], buys: [] },
+    solarSail: { produces: ['Adv Components'], buys: ['Metals'] },
+    engineArray: { produces: ['Machinery'], buys: ['Metals'] },
+    decoyBuoy: { produces: ['Metals'], buys: [] },
+    signalFlare: { produces: ['Textiles'], buys: [] },
+    commDish: { produces: ['Computers'], buys: ['Metals'] },
+    iceCrystal: { produces: ['Minerals'], buys: ['Food'] },
+    nebulaFragment: { produces: ['Minerals'], buys: ['Chemicals'] },
+    wreckage: { produces: ['Metals'], buys: [] },
+    weaponPlatform: { produces: ['Weapons'], buys: ['Metals','Machinery'] },
+    shieldGenerator: { produces: ['Adv Components'], buys: ['Metals'] },
+    quantumGate: { produces: ['Adv Components','Computers'], buys: ['Metals'] },
+    default: { produces: [], buys: [] }
+};
+
 // Animation rate constants for efficient update loop
 // Format: [propertyName, rate] - properties with dynamic speeds use null
 const ANIM_RATES = [
@@ -2810,6 +2847,11 @@ class SpaceObject {
                 break;
         }
         // unique id used by debris RNG and other persistent behaviors
+        // Attach commodity lists from the centralized mapping so transports can use them
+        const _commodityInfo = (typeof SPACE_OBJECT_COMMODITIES !== 'undefined') ? (SPACE_OBJECT_COMMODITIES[this.type] || SPACE_OBJECT_COMMODITIES.default) : null;
+        this.produces = (_commodityInfo && Array.isArray(_commodityInfo.produces)) ? _commodityInfo.produces.slice() : [];
+        this.buys = (_commodityInfo && Array.isArray(_commodityInfo.buys)) ? _commodityInfo.buys.slice() : [];
+
         this.id = 'spaceobj_' + (Date.now() % 100000) + '_' + Math.floor(Math.random() * 10000);
         this.angle = 0;
         // Much slower rotation so they don't look like tiny spinning toys
