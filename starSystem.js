@@ -2589,6 +2589,9 @@ checkProjectileCollisions() {
         // No recorded player position
         if (this._starfieldLastPlayerX === null || this._starfieldLastPlayerY === null) return true;
         
+        // Safety check for player position
+        if (!this.player || !this.player.pos) return false;
+        
         // Check if player has moved beyond the threshold
         const dx = Math.abs(this.player.pos.x - this._starfieldLastPlayerX);
         const dy = Math.abs(this.player.pos.y - this._starfieldLastPlayerY);
@@ -2602,6 +2605,9 @@ checkProjectileCollisions() {
      * @private
      */
     _generateStarfieldBuffer() {
+        // Safety check for player position
+        if (!this.player || !this.player.pos) return;
+        
         const bufferSize = this._starfieldBufferSize;
         
         // Create or reuse buffer
@@ -2780,6 +2786,9 @@ checkProjectileCollisions() {
      * @private
      */
     _drawSpectacularStarsOverlay() {
+        // Safety check for player position
+        if (!this.player || !this.player.pos) return;
+        
         const currentMillis = millis();
         const padding = 100;
         const playerX = this.player.pos.x;
