@@ -78,6 +78,15 @@ const JUMP_ZONE_MAX_ALPHA = 200;
 const JUMP_ZONE_MIN_ALPHA = 20;
 // ---
 
+// --- Starfield Progressive Rendering Constants ---
+const STARFIELD_TILE_SIZE = 512;                    // Size of each tile in pixels
+const STARFIELD_MAX_TILES_PER_FRAME = 2;            // Max tiles to generate per frame
+const STARFIELD_MAX_CACHED_TILES = 64;              // Max tiles to keep in cache
+const STARFIELD_DIRECTION_BOOST = 500;              // Priority boost for tiles in travel direction
+const STARFIELD_PREDICTION_FRAMES = 30;             // Frames ahead to predict (~0.5s at 60fps)
+const STARFIELD_CLEANUP_INTERVAL_MS = 5000;         // How often to cleanup old tiles
+// ---
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -173,11 +182,11 @@ class StarSystem {
         this._starfieldRegenerationThreshold = 1000; // Regenerate buffer when player moves this far
         
         // Progressive rendering starfield system
-        this._starfieldTileSize = 512; // Size of each tile (smaller = more granular loading)
+        this._starfieldTileSize = STARFIELD_TILE_SIZE;
         this._starfieldTiles = new Map(); // Map of "x,y" -> { buffer, lastUsed }
         this._starfieldTileQueue = []; // Queue of tiles to generate
-        this._starfieldMaxTilesPerFrame = 2; // Max tiles to generate per frame
-        this._starfieldMaxCachedTiles = 64; // Max tiles to keep in cache
+        this._starfieldMaxTilesPerFrame = STARFIELD_MAX_TILES_PER_FRAME;
+        this._starfieldMaxCachedTiles = STARFIELD_MAX_CACHED_TILES;
         this._starfieldLastPlayerVelX = 0; // For predicting movement
         this._starfieldLastPlayerVelY = 0;
         this._starfieldRenderMode = 'progressive'; // 'progressive', 'buffered', 'legacy'
@@ -2671,6 +2680,9 @@ checkProjectileCollisions() {
     
     /**
      * Draws stars directly for a single tile area (fallback when tile not cached).
+     * This prevents black backgrounds by rendering stars immediately when a tile
+     * hasn't been pre-generated. The tile will be queued for background generation
+     * and cached for future frames.
      * @param {number} tx - Tile X coordinate
      * @param {number} ty - Tile Y coordinate
      * @param {number} tileSize - Size of the tile
@@ -2732,7 +2744,7 @@ checkProjectileCollisions() {
                 const velMag = Math.sqrt(velX * velX + velY * velY);
                 if (velMag > 0.1) {
                     const dotProduct = (dx * velX + dy * velY) / (dist * velMag);
-                    directionBoost = dotProduct > 0 ? dotProduct * 500 : 0;
+                    directionBoost = dotProduct > 0 ? dotProduct * STARFIELD_DIRECTION_BOOST : 0;
                 }
             }
             
@@ -2772,9 +2784,9 @@ checkProjectileCollisions() {
         const velMag = Math.sqrt(velX * velX + velY * velY);
         if (velMag < 2) return;
         
-        // Predict position 0.5 seconds ahead
-        const predictX = playerX + velX * 30; // ~0.5 seconds at 60fps
-        const predictY = playerY + velY * 30;
+        // Predict position ahead based on current velocity
+        const predictX = playerX + velX * STARFIELD_PREDICTION_FRAMES;
+        const predictY = playerY + velY * STARFIELD_PREDICTION_FRAMES;
         
         // Calculate predicted tile range
         const padding = tileSize;
@@ -3009,7 +3021,7 @@ checkProjectileCollisions() {
     _cleanupOldTiles(currentTime) {
         // Only cleanup periodically
         if (!this._lastTileCleanup) this._lastTileCleanup = 0;
-        if (currentTime - this._lastTileCleanup < 5000) return; // Check every 5 seconds
+        if (currentTime - this._lastTileCleanup < STARFIELD_CLEANUP_INTERVAL_MS) return;
         this._lastTileCleanup = currentTime;
         
         // If we're under the limit, don't cleanup
