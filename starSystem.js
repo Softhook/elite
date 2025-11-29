@@ -171,6 +171,16 @@ class StarSystem {
         this._starfieldLastPlayerX = null;
         this._starfieldLastPlayerY = null;
         this._starfieldRegenerationThreshold = 1000; // Regenerate buffer when player moves this far
+        
+        // Progressive rendering starfield system
+        this._starfieldTileSize = 512; // Size of each tile (smaller = more granular loading)
+        this._starfieldTiles = new Map(); // Map of "x,y" -> { buffer, lastUsed }
+        this._starfieldTileQueue = []; // Queue of tiles to generate
+        this._starfieldMaxTilesPerFrame = 2; // Max tiles to generate per frame
+        this._starfieldMaxCachedTiles = 64; // Max tiles to keep in cache
+        this._starfieldLastPlayerVelX = 0; // For predicting movement
+        this._starfieldLastPlayerVelY = 0;
+        this._starfieldRenderMode = 'progressive'; // 'progressive', 'buffered', 'legacy'
     }
 
     /**
@@ -865,6 +875,17 @@ try {
         this._starfieldBuffer = null;
         this._starfieldLastPlayerX = null;
         this._starfieldLastPlayerY = null;
+        
+        // Also reset progressive tile system
+        if (this._starfieldTiles) {
+            for (const tile of this._starfieldTiles.values()) {
+                if (tile && tile.buffer) {
+                    try { tile.buffer.remove(); } catch (e) {}
+                }
+            }
+            this._starfieldTiles.clear();
+        }
+        this._starfieldTileQueue = [];
     }
 
     /** Call this method when the system is discovered by the player. */
@@ -2544,9 +2565,8 @@ checkProjectileCollisions() {
     }
 
     /** 
-     * Draws background stars using off-screen buffer caching for performance.
-     * The starfield is rendered to a large buffer once, then reused across frames.
-     * Buffer is regenerated only when player moves significantly.
+     * Draws background stars using the selected rendering mode.
+     * Supports three modes: 'progressive' (default), 'buffered', and 'legacy'.
      */
     drawBackground() {
         // Clear background with dark space color
@@ -2554,6 +2574,475 @@ checkProjectileCollisions() {
         noStroke();
         rect(-width * 2, -height * 2, width * 4, height * 4);
         
+        // Route to appropriate rendering method based on mode
+        switch (this._starfieldRenderMode) {
+            case 'progressive':
+                this._drawProgressiveStarfield();
+                break;
+            case 'buffered':
+                this._drawBufferedStarfield();
+                break;
+            case 'legacy':
+                this.drawOptimalStarfield();
+                return; // Legacy mode includes spectacular stars
+        }
+        
+        // Draw spectacular stars (animated phenomena) - these are rare and change over time
+        // so they're drawn directly each frame, but only in visible area
+        this._drawSpectacularStarsOverlay();
+    }
+    
+    /**
+     * Sets the starfield rendering mode.
+     * @param {string} mode - 'progressive', 'buffered', or 'legacy'
+     */
+    setStarfieldRenderMode(mode) {
+        if (['progressive', 'buffered', 'legacy'].includes(mode)) {
+            this._starfieldRenderMode = mode;
+            // Reset caches when switching modes
+            this.resetStarfieldBuffer();
+        }
+    }
+    
+    /**
+     * Progressive starfield rendering - generates tiles incrementally over multiple frames.
+     * Never shows black background by falling back to direct rendering for uncached tiles.
+     * @private
+     */
+    _drawProgressiveStarfield() {
+        if (!this.player || !this.player.pos) return;
+        
+        const tileSize = this._starfieldTileSize;
+        const playerX = this.player.pos.x;
+        const playerY = this.player.pos.y;
+        
+        // Track player velocity for predictive loading
+        if (this.player.vel) {
+            this._starfieldLastPlayerVelX = this.player.vel.x || 0;
+            this._starfieldLastPlayerVelY = this.player.vel.y || 0;
+        }
+        
+        // Calculate visible tile range with some padding
+        const padding = tileSize; // One tile extra on each side
+        const left = playerX - width/2 - padding;
+        const right = playerX + width/2 + padding;
+        const top = playerY - height/2 - padding;
+        const bottom = playerY + height/2 + padding;
+        
+        const startTileX = Math.floor(left / tileSize);
+        const endTileX = Math.ceil(right / tileSize);
+        const startTileY = Math.floor(top / tileSize);
+        const endTileY = Math.ceil(bottom / tileSize);
+        
+        // Update tile last-used timestamps and identify missing tiles
+        const currentTime = millis();
+        const missingTiles = [];
+        
+        for (let tx = startTileX; tx <= endTileX; tx++) {
+            for (let ty = startTileY; ty <= endTileY; ty++) {
+                const key = `${tx},${ty}`;
+                const tile = this._starfieldTiles.get(key);
+                
+                if (tile) {
+                    // Update last used time
+                    tile.lastUsed = currentTime;
+                    // Draw the cached tile
+                    image(tile.buffer, tx * tileSize, ty * tileSize);
+                } else {
+                    // Tile is missing - draw directly for this frame and queue for generation
+                    this._drawStarsDirectlyForTile(tx, ty, tileSize);
+                    missingTiles.push({ tx, ty, key });
+                }
+            }
+        }
+        
+        // Add missing tiles to queue (prioritize by proximity to player and direction of travel)
+        this._queueTilesForGeneration(missingTiles, playerX, playerY);
+        
+        // Process tile generation queue (limited per frame for smoothness)
+        this._processTileQueue();
+        
+        // Predictive loading: queue tiles ahead of player movement
+        this._queuePredictiveTiles(playerX, playerY, startTileX, endTileX, startTileY, endTileY);
+        
+        // Cleanup old tiles to manage memory
+        this._cleanupOldTiles(currentTime);
+    }
+    
+    /**
+     * Draws stars directly for a single tile area (fallback when tile not cached).
+     * @param {number} tx - Tile X coordinate
+     * @param {number} ty - Tile Y coordinate
+     * @param {number} tileSize - Size of the tile
+     * @private
+     */
+    _drawStarsDirectlyForTile(tx, ty, tileSize) {
+        const left = tx * tileSize;
+        const right = left + tileSize;
+        const top = ty * tileSize;
+        const bottom = top + tileSize;
+        
+        const currentMillis = millis();
+        const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
+        const baseStarSize = Math.max(1, pixelRatio * 0.6);
+        
+        // Draw both star layers for this tile
+        this.drawStarLayer(left, right, top, bottom, {
+            gridSize: 45,
+            maxStarsPerCell: 3,
+            sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
+            brightnessRange: [80, 160],
+            colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+        }, currentMillis);
+        
+        this.drawStarLayer(left, right, top, bottom, {
+            gridSize: 200,
+            maxStarsPerCell: 1,
+            sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
+            brightnessRange: [180, 255],
+            colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+        }, currentMillis);
+    }
+    
+    /**
+     * Queues tiles for background generation, prioritizing by distance and direction.
+     * @param {Array} tiles - Array of {tx, ty, key} objects
+     * @param {number} playerX - Player X position
+     * @param {number} playerY - Player Y position
+     * @private
+     */
+    _queueTilesForGeneration(tiles, playerX, playerY) {
+        const tileSize = this._starfieldTileSize;
+        const velX = this._starfieldLastPlayerVelX;
+        const velY = this._starfieldLastPlayerVelY;
+        
+        // Calculate priority for each tile
+        const tilesWithPriority = tiles.map(t => {
+            const tileCenterX = (t.tx + 0.5) * tileSize;
+            const tileCenterY = (t.ty + 0.5) * tileSize;
+            
+            // Base priority on distance from player
+            const dx = tileCenterX - playerX;
+            const dy = tileCenterY - playerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Boost priority for tiles in direction of travel
+            let directionBoost = 0;
+            if (velX !== 0 || velY !== 0) {
+                const velMag = Math.sqrt(velX * velX + velY * velY);
+                if (velMag > 0.1) {
+                    const dotProduct = (dx * velX + dy * velY) / (dist * velMag);
+                    directionBoost = dotProduct > 0 ? dotProduct * 500 : 0;
+                }
+            }
+            
+            return {
+                ...t,
+                priority: dist - directionBoost // Lower is better
+            };
+        });
+        
+        // Sort by priority and add to queue (avoid duplicates)
+        tilesWithPriority.sort((a, b) => a.priority - b.priority);
+        
+        for (const tile of tilesWithPriority) {
+            // Check if already in queue
+            const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
+            if (!alreadyQueued && !this._starfieldTiles.has(tile.key)) {
+                this._starfieldTileQueue.push(tile);
+            }
+        }
+        
+        // Limit queue size
+        if (this._starfieldTileQueue.length > this._starfieldMaxCachedTiles * 2) {
+            this._starfieldTileQueue.length = this._starfieldMaxCachedTiles * 2;
+        }
+    }
+    
+    /**
+     * Queues tiles ahead of player movement for predictive loading.
+     * @private
+     */
+    _queuePredictiveTiles(playerX, playerY, startTileX, endTileX, startTileY, endTileY) {
+        const tileSize = this._starfieldTileSize;
+        const velX = this._starfieldLastPlayerVelX;
+        const velY = this._starfieldLastPlayerVelY;
+        
+        // Only predict if moving reasonably fast
+        const velMag = Math.sqrt(velX * velX + velY * velY);
+        if (velMag < 2) return;
+        
+        // Predict position 0.5 seconds ahead
+        const predictX = playerX + velX * 30; // ~0.5 seconds at 60fps
+        const predictY = playerY + velY * 30;
+        
+        // Calculate predicted tile range
+        const padding = tileSize;
+        const predLeft = predictX - width/2 - padding;
+        const predRight = predictX + width/2 + padding;
+        const predTop = predictY - height/2 - padding;
+        const predBottom = predictY + height/2 + padding;
+        
+        const predStartX = Math.floor(predLeft / tileSize);
+        const predEndX = Math.ceil(predRight / tileSize);
+        const predStartY = Math.floor(predTop / tileSize);
+        const predEndY = Math.ceil(predBottom / tileSize);
+        
+        // Queue tiles that are in predicted range but not in current range
+        const predictiveTiles = [];
+        for (let tx = predStartX; tx <= predEndX; tx++) {
+            for (let ty = predStartY; ty <= predEndY; ty++) {
+                // Skip if already visible
+                if (tx >= startTileX && tx <= endTileX && ty >= startTileY && ty <= endTileY) {
+                    continue;
+                }
+                
+                const key = `${tx},${ty}`;
+                if (!this._starfieldTiles.has(key)) {
+                    predictiveTiles.push({ tx, ty, key });
+                }
+            }
+        }
+        
+        // Queue predictive tiles with low priority
+        for (const tile of predictiveTiles) {
+            const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
+            if (!alreadyQueued) {
+                this._starfieldTileQueue.push({ ...tile, priority: 10000 });
+            }
+        }
+    }
+    
+    /**
+     * Processes the tile generation queue, generating a limited number per frame.
+     * @private
+     */
+    _processTileQueue() {
+        const maxPerFrame = this._starfieldMaxTilesPerFrame;
+        let generated = 0;
+        
+        while (this._starfieldTileQueue.length > 0 && generated < maxPerFrame) {
+            const tile = this._starfieldTileQueue.shift();
+            
+            // Skip if already generated
+            if (this._starfieldTiles.has(tile.key)) continue;
+            
+            // Generate the tile
+            this._generateTile(tile.tx, tile.ty);
+            generated++;
+        }
+    }
+    
+    /**
+     * Generates a single starfield tile and caches it.
+     * @param {number} tx - Tile X coordinate
+     * @param {number} ty - Tile Y coordinate
+     * @private
+     */
+    _generateTile(tx, ty) {
+        const tileSize = this._starfieldTileSize;
+        const key = `${tx},${ty}`;
+        
+        // Create buffer for this tile
+        const buffer = createGraphics(tileSize, tileSize);
+        buffer.background(0);
+        buffer.noStroke();
+        
+        // Calculate world bounds for this tile
+        const worldLeft = tx * tileSize;
+        const worldRight = worldLeft + tileSize;
+        const worldTop = ty * tileSize;
+        const worldBottom = worldTop + tileSize;
+        
+        // Resolution-independent base sizing
+        const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
+        const baseStarSize = Math.max(1, pixelRatio * 0.6);
+        
+        // Render Layer 1: Background stars
+        this._drawStarLayerToTileBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
+            gridSize: 45,
+            maxStarsPerCell: 3,
+            sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
+            brightnessRange: [80, 160],
+            colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+        });
+        
+        // Render Layer 2: Rare bright feature stars
+        this._drawStarLayerToTileBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
+            gridSize: 200,
+            maxStarsPerCell: 1,
+            sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
+            brightnessRange: [180, 255],
+            colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+        });
+        
+        // Store the tile
+        this._starfieldTiles.set(key, {
+            buffer: buffer,
+            lastUsed: millis()
+        });
+        
+        if (STAR_SYSTEM_DEBUG) {
+            console.log(`Generated starfield tile at (${tx}, ${ty})`);
+        }
+    }
+    
+    /**
+     * Draws a layer of stars to a tile buffer.
+     * @private
+     */
+    _drawStarLayerToTileBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tileX, tileY, config) {
+        const tileSize = this._starfieldTileSize;
+        const gridSize = config.gridSize;
+        const systemSeed = this.systemIndex * 1337;
+        
+        // Pre-define colors
+        const colors = {
+            white: [255, 255, 255],
+            blue: [200, 220, 255],
+            yellow: [255, 250, 200],
+            red: [255, 200, 180]
+        };
+        
+        // Integer math for grid coordinates
+        const startGX = Math.floor(worldLeft / gridSize);
+        const endGX = Math.ceil(worldRight / gridSize);
+        const startGY = Math.floor(worldTop / gridSize);
+        const endGY = Math.ceil(worldBottom / gridSize);
+        
+        // Extract config values for faster access
+        const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+        const minSize = sizeRange[0];
+        const sizeDiff = sizeRange[1] - minSize;
+        const minBright = brightnessRange[0];
+        const brightDiff = brightnessRange[1] - minBright;
+        const typesLen = colorTypes.length;
+        
+        // Calculate buffer offset
+        const bufferOffsetX = worldLeft;
+        const bufferOffsetY = worldTop;
+        
+        // Reuse variables
+        let rng, cellSeed, starCount, worldX, worldY, bufferX, bufferY;
+        let size, brightness, colorType, baseColor, r, g, b;
+        
+        for (let gx = startGX; gx <= endGX; gx++) {
+            const gxSeed = (gx * 73856093) >>> 0;
+            
+            for (let gy = startGY; gy <= endGY; gy++) {
+                cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                rng = cellSeed;
+                
+                // Skip check
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
+                
+                // Star count
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
+                
+                for (let i = 0; i < starCount; i++) {
+                    // World X
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                    
+                    // World Y
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                    
+                    // Convert world coords to buffer coords
+                    bufferX = worldX - bufferOffsetX;
+                    bufferY = worldY - bufferOffsetY;
+                    
+                    // Skip if outside tile bounds (with small margin)
+                    if (bufferX < -5 || bufferX > tileSize + 5 ||
+                        bufferY < -5 || bufferY > tileSize + 5) {
+                        continue;
+                    }
+                    
+                    // Size
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    size = minSize + (rng / 4294967296) * sizeDiff;
+                    
+                    // Brightness
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    brightness = minBright + (rng / 4294967296) * brightDiff;
+                    
+                    if (size < 2) {
+                        brightness = (brightness * 1.4 > 255) ? 255 : brightness * 1.4;
+                    }
+                    
+                    // Color
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    colorType = colorTypes[Math.floor((rng / 4294967296) * typesLen)];
+                    baseColor = colors[colorType];
+                    
+                    // Apply brightness
+                    const brightnessFactor = brightness / 255;
+                    r = baseColor[0] * brightnessFactor;
+                    g = baseColor[1] * brightnessFactor;
+                    b = baseColor[2] * brightnessFactor;
+                    
+                    buffer.fill(r, g, b);
+                    
+                    if (size <= 2) {
+                        buffer.square(bufferX, bufferY, (size < 1 ? 1 : Math.round(size)));
+                    } else {
+                        buffer.ellipse(bufferX, bufferY, size, size);
+                        
+                        // Glow effect for large bright stars
+                        if (brightness > 200 && size > 3) {
+                            buffer.fill(r, g, b, 40);
+                            buffer.ellipse(bufferX, bufferY, size * 1.5, size * 1.5);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Cleans up old tiles that haven't been used recently.
+     * @param {number} currentTime - Current timestamp
+     * @private
+     */
+    _cleanupOldTiles(currentTime) {
+        // Only cleanup periodically
+        if (!this._lastTileCleanup) this._lastTileCleanup = 0;
+        if (currentTime - this._lastTileCleanup < 5000) return; // Check every 5 seconds
+        this._lastTileCleanup = currentTime;
+        
+        // If we're under the limit, don't cleanup
+        if (this._starfieldTiles.size <= this._starfieldMaxCachedTiles) return;
+        
+        // Build list of tiles with their age
+        const tiles = [];
+        for (const [key, tile] of this._starfieldTiles.entries()) {
+            tiles.push({ key, age: currentTime - tile.lastUsed, buffer: tile.buffer });
+        }
+        
+        // Sort by age (oldest first)
+        tiles.sort((a, b) => b.age - a.age);
+        
+        // Remove oldest tiles until we're under the limit
+        const toRemove = tiles.length - this._starfieldMaxCachedTiles;
+        for (let i = 0; i < toRemove; i++) {
+            const tile = tiles[i];
+            try { tile.buffer.remove(); } catch (e) {}
+            this._starfieldTiles.delete(tile.key);
+        }
+        
+        if (STAR_SYSTEM_DEBUG && toRemove > 0) {
+            console.log(`Cleaned up ${toRemove} old starfield tiles`);
+        }
+    }
+    
+    /**
+     * Original buffered starfield rendering (single large buffer).
+     * Kept for comparison benchmarking.
+     * @private
+     */
+    _drawBufferedStarfield() {
         // Check if buffer needs to be created or regenerated
         const needsRegeneration = this._needsStarfieldRegeneration();
         
@@ -2563,18 +3052,10 @@ checkProjectileCollisions() {
         
         // Draw the cached buffer if available
         if (this._starfieldBuffer) {
-            // The buffer was generated centered at _starfieldLastPlayerX/Y
-            // Buffer top-left corner in world space
             const bufferWorldX = this._starfieldLastPlayerX - this._starfieldBufferSize / 2;
             const bufferWorldY = this._starfieldLastPlayerY - this._starfieldBufferSize / 2;
-            
-            // Draw the buffer at its world position (canvas translation handles the view offset)
             image(this._starfieldBuffer, bufferWorldX, bufferWorldY);
         }
-        
-        // Draw spectacular stars (animated phenomena) - these are rare and change over time
-        // so they're drawn directly each frame, but only in visible area
-        this._drawSpectacularStarsOverlay();
     }
     
     /**

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starfield Rendering Benchmark</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #111;
+            color: #0f0;
+        }
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+        }
+        button {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        button.active {
+            background: #0f0;
+            color: #000;
+        }
+        #results {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            min-width: 250px;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .good { color: #0f0; }
+        .ok { color: #ff0; }
+        .bad { color: #f00; }
+        #instructions {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>Starfield Benchmark</h3>
+        <div>
+            <button id="btn-progressive" class="active" onclick="setMode('progressive')">Progressive</button>
+            <button id="btn-buffered" onclick="setMode('buffered')">Buffered</button>
+            <button id="btn-legacy" onclick="setMode('legacy')">Legacy</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <button onclick="runBenchmark()">Run Full Benchmark</button>
+            <button onclick="resetBenchmark()">Reset</button>
+        </div>
+    </div>
+    
+    <div id="results">
+        <h3>Performance Metrics</h3>
+        <div class="result-row">
+            <span>Mode:</span>
+            <span id="current-mode">progressive</span>
+        </div>
+        <div class="result-row">
+            <span>FPS:</span>
+            <span id="fps">-</span>
+        </div>
+        <div class="result-row">
+            <span>Avg Frame Time:</span>
+            <span id="frame-time">-</span>
+        </div>
+        <div class="result-row">
+            <span>Min FPS:</span>
+            <span id="min-fps">-</span>
+        </div>
+        <div class="result-row">
+            <span>Max Frame Time:</span>
+            <span id="max-frame-time">-</span>
+        </div>
+        <div class="result-row">
+            <span>Jitter:</span>
+            <span id="jitter">-</span>
+        </div>
+        <hr style="border-color: #0f0;">
+        <div id="benchmark-results"></div>
+    </div>
+    
+    <div id="instructions">
+        Use WASD or Arrow Keys to move | Hold SHIFT for speed boost<br>
+        Compare smoothness between modes during fast movement
+    </div>
+
+    <script>
+        // Simplified star system for benchmark testing
+        let currentMode = 'progressive';
+        let player = { pos: null, vel: null };
+        let systemIndex = 42;
+        
+        // Performance tracking
+        let frameTimes = [];
+        let maxFrameTimes = 120;
+        let benchmarkResults = {};
+        
+        // Tile-based progressive rendering
+        const tileSize = 512;
+        const tiles = new Map();
+        const tileQueue = [];
+        const maxTilesPerFrame = 2;
+        const maxCachedTiles = 64;
+        let lastPlayerVelX = 0;
+        let lastPlayerVelY = 0;
+        
+        // Single buffer rendering
+        let starfieldBuffer = null;
+        const bufferSize = 4096;
+        let lastBufferX = null;
+        let lastBufferY = null;
+        const regenerationThreshold = 1000;
+        
+        function setup() {
+            createCanvas(windowWidth - 40, windowHeight - 40);
+            player.pos = createVector(0, 0);
+            player.vel = createVector(0, 0);
+            angleMode(RADIANS);
+        }
+        
+        function draw() {
+            // Update player movement
+            updatePlayer();
+            
+            // Time the frame
+            const frameStart = performance.now();
+            
+            // Draw background
+            background(0);
+            
+            push();
+            translate(width/2 - player.pos.x, height/2 - player.pos.y);
+            
+            // Draw stars based on mode
+            switch(currentMode) {
+                case 'progressive':
+                    drawProgressiveStarfield();
+                    break;
+                case 'buffered':
+                    drawBufferedStarfield();
+                    break;
+                case 'legacy':
+                    drawLegacyStarfield();
+                    break;
+            }
+            
+            // Draw player indicator
+            fill(0, 255, 0);
+            ellipse(player.pos.x, player.pos.y, 10, 10);
+            
+            pop();
+            
+            // Track frame time
+            const frameEnd = performance.now();
+            const frameTime = frameEnd - frameStart;
+            frameTimes.push(frameTime);
+            if (frameTimes.length > maxFrameTimes) {
+                frameTimes.shift();
+            }
+            
+            // Update UI
+            updateUI();
+        }
+        
+        function updatePlayer() {
+            const speed = keyIsDown(SHIFT) ? 25 : 8;
+            
+            if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) player.vel.x = -speed;
+            else if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) player.vel.x = speed;
+            else player.vel.x *= 0.9;
+            
+            if (keyIsDown(UP_ARROW) || keyIsDown(87)) player.vel.y = -speed;
+            else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) player.vel.y = speed;
+            else player.vel.y *= 0.9;
+            
+            player.pos.add(player.vel);
+            
+            lastPlayerVelX = player.vel.x;
+            lastPlayerVelY = player.vel.y;
+        }
+        
+        // ==================== PROGRESSIVE RENDERING ====================
+        function drawProgressiveStarfield() {
+            const playerX = player.pos.x;
+            const playerY = player.pos.y;
+            
+            const padding = tileSize;
+            const left = playerX - width/2 - padding;
+            const right = playerX + width/2 + padding;
+            const top = playerY - height/2 - padding;
+            const bottom = playerY + height/2 + padding;
+            
+            const startTileX = Math.floor(left / tileSize);
+            const endTileX = Math.ceil(right / tileSize);
+            const startTileY = Math.floor(top / tileSize);
+            const endTileY = Math.ceil(bottom / tileSize);
+            
+            const currentTime = millis();
+            const missingTiles = [];
+            
+            for (let tx = startTileX; tx <= endTileX; tx++) {
+                for (let ty = startTileY; ty <= endTileY; ty++) {
+                    const key = `${tx},${ty}`;
+                    const tile = tiles.get(key);
+                    
+                    if (tile) {
+                        tile.lastUsed = currentTime;
+                        image(tile.buffer, tx * tileSize, ty * tileSize);
+                    } else {
+                        // Draw directly as fallback
+                        drawStarsDirectlyForTile(tx, ty);
+                        missingTiles.push({ tx, ty, key });
+                    }
+                }
+            }
+            
+            // Queue missing tiles
+            queueTilesForGeneration(missingTiles, playerX, playerY);
+            processTileQueue();
+            cleanupOldTiles(currentTime);
+        }
+        
+        function drawStarsDirectlyForTile(tx, ty) {
+            const left = tx * tileSize;
+            const right = left + tileSize;
+            const top = ty * tileSize;
+            const bottom = top + tileSize;
+            
+            drawStarLayer(left, right, top, bottom, {
+                gridSize: 45, maxStarsPerCell: 3,
+                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
+                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+            });
+            
+            drawStarLayer(left, right, top, bottom, {
+                gridSize: 200, maxStarsPerCell: 1,
+                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
+                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+            });
+        }
+        
+        function queueTilesForGeneration(missingTiles, playerX, playerY) {
+            for (const t of missingTiles) {
+                const alreadyQueued = tileQueue.some(q => q.key === t.key);
+                if (!alreadyQueued && !tiles.has(t.key)) {
+                    const dx = (t.tx + 0.5) * tileSize - playerX;
+                    const dy = (t.ty + 0.5) * tileSize - playerY;
+                    t.priority = Math.sqrt(dx*dx + dy*dy);
+                    tileQueue.push(t);
+                }
+            }
+            tileQueue.sort((a, b) => a.priority - b.priority);
+            if (tileQueue.length > maxCachedTiles * 2) {
+                tileQueue.length = maxCachedTiles * 2;
+            }
+        }
+        
+        function processTileQueue() {
+            let generated = 0;
+            while (tileQueue.length > 0 && generated < maxTilesPerFrame) {
+                const tile = tileQueue.shift();
+                if (tiles.has(tile.key)) continue;
+                generateTile(tile.tx, tile.ty);
+                generated++;
+            }
+        }
+        
+        function generateTile(tx, ty) {
+            const key = `${tx},${ty}`;
+            const buffer = createGraphics(tileSize, tileSize);
+            buffer.background(0);
+            buffer.noStroke();
+            
+            const worldLeft = tx * tileSize;
+            const worldRight = worldLeft + tileSize;
+            const worldTop = ty * tileSize;
+            const worldBottom = worldTop + tileSize;
+            
+            drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
+                gridSize: 45, maxStarsPerCell: 3,
+                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
+                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+            });
+            
+            drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
+                gridSize: 200, maxStarsPerCell: 1,
+                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
+                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+            });
+            
+            tiles.set(key, { buffer, lastUsed: millis() });
+        }
+        
+        function cleanupOldTiles(currentTime) {
+            if (tiles.size <= maxCachedTiles) return;
+            
+            const tileList = [];
+            for (const [key, tile] of tiles.entries()) {
+                tileList.push({ key, age: currentTime - tile.lastUsed, buffer: tile.buffer });
+            }
+            tileList.sort((a, b) => b.age - a.age);
+            
+            const toRemove = tileList.length - maxCachedTiles;
+            for (let i = 0; i < toRemove; i++) {
+                try { tileList[i].buffer.remove(); } catch(e) {}
+                tiles.delete(tileList[i].key);
+            }
+        }
+        
+        // ==================== BUFFERED RENDERING ====================
+        function drawBufferedStarfield() {
+            const needsRegen = !starfieldBuffer || 
+                lastBufferX === null || lastBufferY === null ||
+                Math.abs(player.pos.x - lastBufferX) > regenerationThreshold ||
+                Math.abs(player.pos.y - lastBufferY) > regenerationThreshold;
+            
+            if (needsRegen) {
+                generateStarfieldBuffer();
+            }
+            
+            if (starfieldBuffer) {
+                image(starfieldBuffer, lastBufferX - bufferSize/2, lastBufferY - bufferSize/2);
+            }
+        }
+        
+        function generateStarfieldBuffer() {
+            if (!starfieldBuffer) {
+                starfieldBuffer = createGraphics(bufferSize, bufferSize);
+            }
+            
+            lastBufferX = player.pos.x;
+            lastBufferY = player.pos.y;
+            
+            starfieldBuffer.background(0);
+            starfieldBuffer.noStroke();
+            
+            const halfSize = bufferSize / 2;
+            const left = lastBufferX - halfSize;
+            const right = lastBufferX + halfSize;
+            const top = lastBufferY - halfSize;
+            const bottom = lastBufferY + halfSize;
+            
+            drawStarLayerToLargeBuffer(starfieldBuffer, left, right, top, bottom, {
+                gridSize: 45, maxStarsPerCell: 3,
+                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
+                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+            });
+            
+            drawStarLayerToLargeBuffer(starfieldBuffer, left, right, top, bottom, {
+                gridSize: 200, maxStarsPerCell: 1,
+                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
+                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+            });
+        }
+        
+        // ==================== LEGACY RENDERING ====================
+        function drawLegacyStarfield() {
+            const padding = 100;
+            const left = player.pos.x - width/2 - padding;
+            const right = player.pos.x + width/2 + padding;
+            const top = player.pos.y - height/2 - padding;
+            const bottom = player.pos.y + height/2 + padding;
+            
+            drawStarLayer(left, right, top, bottom, {
+                gridSize: 45, maxStarsPerCell: 3,
+                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
+                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+            });
+            
+            drawStarLayer(left, right, top, bottom, {
+                gridSize: 200, maxStarsPerCell: 1,
+                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
+                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+            });
+        }
+        
+        // ==================== SHARED DRAWING FUNCTIONS ====================
+        function drawStarLayer(left, right, top, bottom, config) {
+            const gridSize = config.gridSize;
+            const systemSeed = systemIndex * 1337;
+            
+            const colors = {
+                white: [255, 255, 255],
+                blue: [200, 220, 255],
+                yellow: [255, 250, 200],
+                red: [255, 200, 180]
+            };
+            
+            const startGX = Math.floor(left / gridSize);
+            const endGX = Math.ceil(right / gridSize);
+            const startGY = Math.floor(top / gridSize);
+            const endGY = Math.ceil(bottom / gridSize);
+            
+            noStroke();
+            
+            const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+            const minSize = sizeRange[0];
+            const sizeDiff = sizeRange[1] - minSize;
+            const minBright = brightnessRange[0];
+            const brightDiff = brightnessRange[1] - minBright;
+            
+            for (let gx = startGX; gx <= endGX; gx++) {
+                const gxSeed = (gx * 73856093) >>> 0;
+                
+                for (let gy = startGY; gy <= endGY; gy++) {
+                    let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                    let rng = cellSeed;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
+                    
+                    for (let i = 0; i < starCount; i++) {
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const size = minSize + (rng / 4294967296) * sizeDiff;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        let brightness = minBright + (rng / 4294967296) * brightDiff;
+                        if (size < 2) brightness = Math.min(255, brightness * 1.4);
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
+                        const baseColor = colors[colorType];
+                        
+                        const brightnessFactor = brightness / 255;
+                        fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
+                        
+                        if (size <= 2) {
+                            rect(worldX, worldY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
+                        } else {
+                            ellipse(worldX, worldY, size, size);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tileX, tileY, config) {
+            const gridSize = config.gridSize;
+            const systemSeed = systemIndex * 1337;
+            
+            const colors = {
+                white: [255, 255, 255],
+                blue: [200, 220, 255],
+                yellow: [255, 250, 200],
+                red: [255, 200, 180]
+            };
+            
+            const startGX = Math.floor(worldLeft / gridSize);
+            const endGX = Math.ceil(worldRight / gridSize);
+            const startGY = Math.floor(worldTop / gridSize);
+            const endGY = Math.ceil(worldBottom / gridSize);
+            
+            const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+            const minSize = sizeRange[0];
+            const sizeDiff = sizeRange[1] - minSize;
+            const minBright = brightnessRange[0];
+            const brightDiff = brightnessRange[1] - minBright;
+            
+            const bufferOffsetX = worldLeft;
+            const bufferOffsetY = worldTop;
+            
+            for (let gx = startGX; gx <= endGX; gx++) {
+                const gxSeed = (gx * 73856093) >>> 0;
+                
+                for (let gy = startGY; gy <= endGY; gy++) {
+                    let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                    let rng = cellSeed;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
+                    
+                    for (let i = 0; i < starCount; i++) {
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        const bufferX = worldX - bufferOffsetX;
+                        const bufferY = worldY - bufferOffsetY;
+                        
+                        if (bufferX < -5 || bufferX > tileSize + 5 || bufferY < -5 || bufferY > tileSize + 5) continue;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const size = minSize + (rng / 4294967296) * sizeDiff;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        let brightness = minBright + (rng / 4294967296) * brightDiff;
+                        if (size < 2) brightness = Math.min(255, brightness * 1.4);
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
+                        const baseColor = colors[colorType];
+                        
+                        const brightnessFactor = brightness / 255;
+                        buffer.fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
+                        
+                        if (size <= 2) {
+                            buffer.rect(bufferX, bufferY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
+                        } else {
+                            buffer.ellipse(bufferX, bufferY, size, size);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function drawStarLayerToLargeBuffer(buffer, left, right, top, bottom, config) {
+            const gridSize = config.gridSize;
+            const systemSeed = systemIndex * 1337;
+            
+            const colors = {
+                white: [255, 255, 255],
+                blue: [200, 220, 255],
+                yellow: [255, 250, 200],
+                red: [255, 200, 180]
+            };
+            
+            const startGX = Math.floor(left / gridSize);
+            const endGX = Math.ceil(right / gridSize);
+            const startGY = Math.floor(top / gridSize);
+            const endGY = Math.ceil(bottom / gridSize);
+            
+            const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+            const minSize = sizeRange[0];
+            const sizeDiff = sizeRange[1] - minSize;
+            const minBright = brightnessRange[0];
+            const brightDiff = brightnessRange[1] - minBright;
+            
+            const bufferOffsetX = lastBufferX - bufferSize / 2;
+            const bufferOffsetY = lastBufferY - bufferSize / 2;
+            
+            for (let gx = startGX; gx <= endGX; gx++) {
+                const gxSeed = (gx * 73856093) >>> 0;
+                
+                for (let gy = startGY; gy <= endGY; gy++) {
+                    let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
+                    let rng = cellSeed;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
+                    
+                    rng = (rng * 1664525 + 1013904223) >>> 0;
+                    const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
+                    
+                    for (let i = 0; i < starCount; i++) {
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
+                        
+                        const bufferX = worldX - bufferOffsetX;
+                        const bufferY = worldY - bufferOffsetY;
+                        
+                        if (bufferX < -5 || bufferX > bufferSize + 5 || bufferY < -5 || bufferY > bufferSize + 5) continue;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const size = minSize + (rng / 4294967296) * sizeDiff;
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        let brightness = minBright + (rng / 4294967296) * brightDiff;
+                        if (size < 2) brightness = Math.min(255, brightness * 1.4);
+                        
+                        rng = (rng * 1664525 + 1013904223) >>> 0;
+                        const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
+                        const baseColor = colors[colorType];
+                        
+                        const brightnessFactor = brightness / 255;
+                        buffer.fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
+                        
+                        if (size <= 2) {
+                            buffer.rect(bufferX, bufferY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
+                        } else {
+                            buffer.ellipse(bufferX, bufferY, size, size);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // ==================== UI FUNCTIONS ====================
+        function updateUI() {
+            document.getElementById('current-mode').textContent = currentMode;
+            
+            if (frameTimes.length > 0) {
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const maxFrameTime = Math.max(...frameTimes);
+                const minFrameTime = Math.min(...frameTimes);
+                const fps = 1000 / avgFrameTime;
+                const minFps = 1000 / maxFrameTime;
+                const jitter = maxFrameTime - minFrameTime;
+                
+                document.getElementById('fps').textContent = fps.toFixed(1);
+                document.getElementById('fps').className = fps >= 55 ? 'good' : (fps >= 30 ? 'ok' : 'bad');
+                
+                document.getElementById('frame-time').textContent = avgFrameTime.toFixed(2) + ' ms';
+                document.getElementById('frame-time').className = avgFrameTime <= 16 ? 'good' : (avgFrameTime <= 33 ? 'ok' : 'bad');
+                
+                document.getElementById('min-fps').textContent = minFps.toFixed(1);
+                document.getElementById('min-fps').className = minFps >= 30 ? 'good' : (minFps >= 15 ? 'ok' : 'bad');
+                
+                document.getElementById('max-frame-time').textContent = maxFrameTime.toFixed(2) + ' ms';
+                document.getElementById('max-frame-time').className = maxFrameTime <= 33 ? 'good' : (maxFrameTime <= 100 ? 'ok' : 'bad');
+                
+                document.getElementById('jitter').textContent = jitter.toFixed(2) + ' ms';
+                document.getElementById('jitter').className = jitter <= 10 ? 'good' : (jitter <= 30 ? 'ok' : 'bad');
+            }
+        }
+        
+        function setMode(mode) {
+            currentMode = mode;
+            frameTimes = [];
+            
+            // Update button states
+            document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + mode).classList.add('active');
+            
+            // Reset state
+            player.pos = createVector(0, 0);
+            player.vel = createVector(0, 0);
+            
+            // Clear caches
+            tiles.clear();
+            tileQueue.length = 0;
+            if (starfieldBuffer) {
+                starfieldBuffer.remove();
+                starfieldBuffer = null;
+            }
+            lastBufferX = null;
+            lastBufferY = null;
+        }
+        
+        function resetBenchmark() {
+            benchmarkResults = {};
+            document.getElementById('benchmark-results').innerHTML = '';
+            setMode(currentMode);
+        }
+        
+        async function runBenchmark() {
+            const modes = ['progressive', 'buffered', 'legacy'];
+            const resultsDiv = document.getElementById('benchmark-results');
+            resultsDiv.innerHTML = '<p>Running benchmark...</p>';
+            
+            benchmarkResults = {};
+            
+            for (const mode of modes) {
+                // Set mode and reset
+                setMode(mode);
+                await sleep(100);
+                
+                // Run automatic movement pattern
+                const testFrames = 180; // 3 seconds at 60fps
+                frameTimes = [];
+                
+                // Simulate fast movement
+                for (let i = 0; i < testFrames; i++) {
+                    player.vel.x = 20 * Math.sin(i * 0.1);
+                    player.vel.y = 15 * Math.cos(i * 0.08);
+                    await nextFrame();
+                }
+                
+                // Calculate results
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const maxFrameTime = Math.max(...frameTimes);
+                const minFrameTime = Math.min(...frameTimes);
+                const avgFps = 1000 / avgFrameTime;
+                const minFps = 1000 / maxFrameTime;
+                const jitter = maxFrameTime - minFrameTime;
+                
+                benchmarkResults[mode] = {
+                    avgFps: avgFps.toFixed(1),
+                    minFps: minFps.toFixed(1),
+                    avgFrameTime: avgFrameTime.toFixed(2),
+                    maxFrameTime: maxFrameTime.toFixed(2),
+                    jitter: jitter.toFixed(2)
+                };
+            }
+            
+            // Display results
+            let html = '<h4>Benchmark Results</h4>';
+            html += '<table style="width:100%; font-size: 11px;">';
+            html += '<tr><th>Mode</th><th>Avg FPS</th><th>Min FPS</th><th>Jitter</th></tr>';
+            
+            for (const [mode, data] of Object.entries(benchmarkResults)) {
+                const fpsClass = parseFloat(data.avgFps) >= 55 ? 'good' : (parseFloat(data.avgFps) >= 30 ? 'ok' : 'bad');
+                const jitterClass = parseFloat(data.jitter) <= 10 ? 'good' : (parseFloat(data.jitter) <= 30 ? 'ok' : 'bad');
+                html += `<tr>
+                    <td>${mode}</td>
+                    <td class="${fpsClass}">${data.avgFps}</td>
+                    <td>${data.minFps}</td>
+                    <td class="${jitterClass}">${data.jitter}ms</td>
+                </tr>`;
+            }
+            html += '</table>';
+            
+            resultsDiv.innerHTML = html;
+            
+            // Return to progressive mode
+            setMode('progressive');
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        function nextFrame() {
+            return new Promise(resolve => requestAnimationFrame(resolve));
+        }
+        
+        function windowResized() {
+            resizeCanvas(windowWidth - 40, windowHeight - 40);
+            setMode(currentMode);
+        }
+    </script>
+</body>
+</html>
