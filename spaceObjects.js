@@ -14,7 +14,10 @@ const DOCKABLE_SPACE_OBJECT_TYPES = [
     'fuelDepot',
     'habitat',
     'observatoryDome',
-    'weaponPlatform'
+    'weaponPlatform',
+    'prison',
+    'drugLab',
+    'labourColony'
 ];
 
 // Size map for each object type
@@ -49,7 +52,10 @@ const sizeMap = {
     weaponPlatform: 200,
     shieldGenerator: 180,
     energyCollector: 130,
-    quantumGate: 160
+    quantumGate: 160,
+    prison: 220,
+    drugLab: 160,
+    labourColony: 240
 };
 
 // Mapping of what each SpaceObject type typically produces and what it will buy
@@ -86,6 +92,9 @@ const SPACE_OBJECT_COMMODITIES = {
     weaponPlatform: { produces: ['Weapons'], buys: ['Metals','Machinery'] },
     shieldGenerator: { produces: ['Adv Components'], buys: ['Metals'] },
     quantumGate: { produces: ['Adv Components','Computers'], buys: ['Metals'] },
+    prison: { produces: [], buys: ['Food','Textiles','Machinery'] },
+    drugLab: { produces: ['Narcotics','Chemicals'], buys: ['Food','Chemicals'] },
+    labourColony: { produces: ['Metals','Minerals','Machinery'], buys: ['Food','Textiles'] },
     default: { produces: [], buys: [] }
 };
 
@@ -132,7 +141,13 @@ const ANIM_RATES = [
     ['fuelPulse', 0.003],
     ['hosePhase', 0.004],
     ['nebulaPhase', 0.008],
-    ['gatePhase', 0.01]
+    ['gatePhase', 0.01],
+    ['searchlightPhase', 0.002],
+    ['barrierPulse', 0.0025],
+    ['flowPhase', 0.003],
+    ['fanRotation', 0.004],
+    ['drillSpin', 0.005],
+    ['conveyorPhase', 0.0035]
 ];
 
 // Static renderers for each object type to replace the monolithic draw() switch
@@ -2637,6 +2652,444 @@ const SpaceObjectRenderers = {
         ellipse(0, bob + size * 0.22, size * 0.9, size * 0.18);
     },
 
+    prison: function(obj, size, anim, bob) {
+        // Prison station: fortified security compound with cell blocks, guard towers, secure perimeter and searchlights
+        noStroke();
+
+        // Base platform shadow
+        fill(12, 12, 16, 220);
+        ellipse(0, size * 0.22 + bob, size * 0.95, size * 0.28);
+
+        // Main security compound (reinforced rectangular core)
+        fill(40, 40, 45);
+        rect(0, bob, size * 0.9, size * 0.5, 8);
+        // Reinforced plating
+        fill(30, 30, 35);
+        rect(0, bob - size * 0.15, size * 0.85, size * 0.08, 4);
+        rect(0, bob + size * 0.15, size * 0.85, size * 0.08, 4);
+
+        // Cell block modules (4 wings)
+        for (let wing = 0; wing < 4; wing++) {
+            const wangle = wing * (TWO_PI / 4);
+            push();
+            rotate(wangle);
+            translate(size * 0.35, bob);
+            // Wing housing
+            fill(50, 50, 55);
+            rect(0, 0, size * 0.25, size * 0.12, 4);
+            // Small barred windows
+            fill(100, 80, 60, 150);
+            for (let w = -2; w <= 2; w++) {
+                rect(w * (size * 0.04), 0, size * 0.02, size * 0.08, 1);
+                // Window bars
+                stroke(60, 60, 65);
+                strokeWeight(0.5);
+                line(w * (size * 0.04) - size * 0.008, -size * 0.02, w * (size * 0.04) - size * 0.008, size * 0.02);
+                line(w * (size * 0.04), -size * 0.02, w * (size * 0.04), size * 0.02);
+                line(w * (size * 0.04) + size * 0.008, -size * 0.02, w * (size * 0.04) + size * 0.008, size * 0.02);
+                noStroke();
+            }
+            pop();
+        }
+
+        // Guard towers (corner positions)
+        for (let t = 0; t < 4; t++) {
+            const tangle = t * (TWO_PI / 4) + Math.PI / 4;
+            const tx = Math.cos(tangle) * size * 0.42;
+            const ty = Math.sin(tangle) * size * 0.42 + bob;
+            // Tower base
+            fill(45, 45, 50);
+            rect(tx, ty, size * 0.1, size * 0.15, 3);
+            // Tower top
+            fill(55, 55, 60);
+            rect(tx, ty - size * 0.08, size * 0.12, size * 0.04, 2);
+            // Guard light
+            fill(200, 180, 100, 180);
+            ellipse(tx, ty - size * 0.1, 4, 4);
+        }
+
+        // Rotating searchlights
+        const searchPhase = (anim && anim.searchlightPhase) ? anim.searchlightPhase : obj.bobPhase * 0.003;
+        for (let s = 0; s < 2; s++) {
+            const sangle = searchPhase + s * Math.PI;
+            push();
+            rotate(sangle);
+            // Searchlight beam (cone)
+            fill(255, 255, 200, 35);
+            beginShape();
+            vertex(0, bob - size * 0.2);
+            vertex(Math.cos(-0.3) * size * 1.2, Math.sin(-0.3) * size * 1.2 + bob);
+            vertex(Math.cos(0.3) * size * 1.2, Math.sin(0.3) * size * 1.2 + bob);
+            endShape(CLOSE);
+            // Searchlight housing
+            fill(80, 80, 90);
+            ellipse(0, bob - size * 0.2, size * 0.06, size * 0.04);
+            pop();
+        }
+
+        // Security perimeter fence (energy barrier)
+        const barrierPhase = (anim && anim.barrierPulse) ? anim.barrierPulse : obj.bobPhase * 0.004;
+        const barrierPulse = 0.5 + 0.5 * Math.sin(barrierPhase);
+        stroke(255, 100, 100, 80 + 80 * barrierPulse);
+        strokeWeight(1.5);
+        noFill();
+        rect(0, bob, size * 0.98, size * 0.58, 10);
+        // Energy nodes at corners
+        noStroke();
+        for (let n = 0; n < 4; n++) {
+            const nangle = n * (TWO_PI / 4);
+            const nx = Math.cos(nangle) * size * 0.48;
+            const ny = Math.sin(nangle) * size * 0.28 + bob;
+            fill(255, 100, 100, 200 * barrierPulse);
+            ellipse(nx, ny, 5, 5);
+        }
+
+        // Central command center
+        fill(60, 60, 70);
+        rect(0, bob - size * 0.05, size * 0.2, size * 0.15, 4);
+        // Command windows
+        fill(150, 150, 200, 120);
+        for (let w = -1; w <= 1; w++) {
+            rect(w * (size * 0.05), bob - size * 0.05, size * 0.025, size * 0.06, 1);
+        }
+
+        // Antenna array on command center
+        fill(70, 70, 80);
+        rect(0, bob - size * 0.13, size * 0.05, size * 0.03, 2);
+        stroke(80, 80, 90);
+        strokeWeight(1);
+        line(0, bob - size * 0.14, 0, bob - size * 0.2);
+        noStroke();
+
+        // Status and warning lights
+        const warnFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4);
+        fill(255, 0, 0, 255 * warnFlash);
+        ellipse(-size * 0.4, bob - size * 0.2, 5, 5);
+        fill(255, 0, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4 + 1)));
+        ellipse(size * 0.4, bob - size * 0.2, 5, 5);
+        fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.4 + 2)));
+        ellipse(0, bob + size * 0.3, 5, 5);
+
+        // Security drones patrolling
+        if (!obj._securityDrones) {
+            obj._securityDrones = [];
+            for (let d = 0; d < 3; d++) {
+                obj._securityDrones.push({ ang: d * (TWO_PI / 3), dist: size * 0.5, speed: 0.003 });
+            }
+        }
+        for (let d = 0; d < obj._securityDrones.length; d++) {
+            const drone = obj._securityDrones[d];
+            drone.ang += drone.speed;
+            const dx = Math.cos(drone.ang) * drone.dist;
+            const dy = Math.sin(drone.ang) * drone.dist * 0.5 + bob;
+            fill(80, 80, 90);
+            ellipse(dx, dy, 8, 6);
+            fill(255, 0, 0, 200);
+            ellipse(dx + 2, dy, 2, 2);
+        }
+    },
+
+    drugLab: function(obj, size, anim, bob) {
+        // Drug lab: clandestine facility with chemical tanks, distillation columns, ventilation and warning signs
+        noStroke();
+
+        // Platform shadow
+        fill(16, 20, 16, 200);
+        ellipse(0, size * 0.2 + bob, size * 0.88, size * 0.26);
+
+        // Main facility housing (darker, industrial)
+        fill(55, 60, 55);
+        rect(0, bob, size * 0.7, size * 0.45, 6);
+        // Worn paneling
+        fill(45, 50, 45);
+        rect(0, bob - size * 0.12, size * 0.65, size * 0.08, 3);
+        rect(0, bob + size * 0.12, size * 0.65, size * 0.08, 3);
+
+        // Chemical storage tanks (3 large tanks)
+        for (let t = -1; t <= 1; t++) {
+            const tx = t * (size * 0.28);
+            const ty = bob - size * 0.08;
+            // Tank body
+            fill(70, 75, 65);
+            rect(tx, ty, size * 0.18, size * 0.35, 5);
+            // Tank top
+            fill(80, 85, 75);
+            ellipse(tx, ty - size * 0.175, size * 0.16, size * 0.08);
+            // Liquid level indicator
+            fill(100, 180, 140, 120);
+            rect(tx, ty + size * 0.04, size * 0.12, size * 0.16, 2);
+            // Hazard markings
+            stroke(255, 200, 0, 180);
+            strokeWeight(2);
+            noFill();
+            rect(tx, ty, size * 0.18, size * 0.35, 5);
+            noStroke();
+        }
+
+        // Distillation columns with condenser coils
+        for (let c = 0; c < 2; c++) {
+            const cx = (c - 0.5) * (size * 0.6);
+            const cy = bob + size * 0.2;
+            // Column body
+            fill(60, 65, 60);
+            rect(cx, cy, size * 0.08, size * 0.25, 3);
+            // Coil wrapping (spiral effect with lines)
+            stroke(80, 85, 80, 120);
+            strokeWeight(1.2);
+            for (let s = 0; s < 5; s++) {
+                const sy = cy - size * 0.1 + s * (size * 0.05);
+                line(cx - size * 0.05, sy, cx + size * 0.05, sy);
+            }
+            noStroke();
+            // Outlet valve
+            fill(90, 95, 90);
+            ellipse(cx, cy + size * 0.14, size * 0.06, size * 0.04);
+        }
+
+        // Piping network with animated flow
+        stroke(65, 70, 65);
+        strokeWeight(2.5);
+        line(-size * 0.3, bob - size * 0.05, size * 0.3, bob - size * 0.05);
+        line(-size * 0.15, bob - size * 0.05, -size * 0.15, bob + size * 0.15);
+        line(size * 0.15, bob - size * 0.05, size * 0.15, bob + size * 0.15);
+        noStroke();
+        // Flow indicators (glowing particles)
+        const flowPhase = (anim && anim.flowPhase) ? anim.flowPhase : obj.bobPhase * 0.005;
+        for (let f = 0; f < 3; f++) {
+            const fx = lerp(-size * 0.3, size * 0.3, (flowPhase + f * 0.33) % 1);
+            fill(100, 200, 150, 180);
+            ellipse(fx, bob - size * 0.05, 4, 3);
+        }
+
+        // Ventilation fans (rotating)
+        const fanPhase = (anim && anim.fanRotation) ? anim.fanRotation : obj.bobPhase * 0.004;
+        for (let v = 0; v < 2; v++) {
+            const vx = (v - 0.5) * (size * 0.4);
+            const vy = bob - size * 0.25;
+            // Fan housing
+            fill(50, 55, 50);
+            ellipse(vx, vy, size * 0.12, size * 0.12);
+            // Fan blades
+            push();
+            translate(vx, vy);
+            rotate(fanPhase + v * Math.PI);
+            stroke(40, 45, 40);
+            strokeWeight(2);
+            for (let b = 0; b < 3; b++) {
+                const ba = b * (TWO_PI / 3);
+                line(0, 0, Math.cos(ba) * size * 0.05, Math.sin(ba) * size * 0.05);
+            }
+            noStroke();
+            pop();
+        }
+
+        // Toxic vapor vents with emission particles
+        for (let e = 0; e < 2; e++) {
+            const ex = (e - 0.5) * (size * 0.5);
+            const ey = bob + size * 0.25;
+            // Vent cap
+            fill(65, 70, 65);
+            rect(ex, ey, size * 0.08, size * 0.05, 2);
+            // Emissions (layered translucent ellipses)
+            for (let p = 0; p < 3; p++) {
+                const py = ey - size * 0.05 - p * size * 0.08;
+                const phase = obj.bobPhase * 0.003 + e + p * 0.5;
+                fill(120, 200, 140, 60 - p * 15);
+                ellipse(ex + Math.sin(phase) * 3, py, size * 0.1 + p * size * 0.04, size * 0.06 + p * size * 0.02);
+            }
+        }
+
+        // Hazard warning signs
+        fill(255, 200, 0, 200);
+        beginShape();
+        vertex(-size * 0.35, bob + size * 0.1 - size * 0.04);
+        vertex(-size * 0.35 - size * 0.03, bob + size * 0.1 + size * 0.04);
+        vertex(-size * 0.35 + size * 0.03, bob + size * 0.1 + size * 0.04);
+        endShape(CLOSE);
+        fill(0, 0, 0);
+        textAlign(CENTER, CENTER);
+        textSize(8);
+        text('!', -size * 0.35, bob + size * 0.1);
+
+        // Status lights (toxic green glow)
+        const toxicFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35);
+        fill(100, 255, 100, 255 * toxicFlash);
+        ellipse(-size * 0.3, bob - size * 0.2, 4, 4);
+        fill(100, 255, 100, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35 + 1)));
+        ellipse(size * 0.3, bob - size * 0.2, 4, 4);
+
+        // Small maintenance bot
+        const botX = Math.sin(obj.bobPhase * 0.002) * (size * 0.2);
+        const botY = bob + size * 0.3;
+        fill(80, 85, 80);
+        rect(botX, botY, 10, 6, 2);
+        fill(100, 200, 150, 150);
+        ellipse(botX + 3, botY, 2, 2);
+    },
+
+    labourColony: function(obj, size, anim, bob) {
+        // Labour colony: industrial complex with worker modules, mining equipment, processing facilities and transport rails
+        noStroke();
+
+        // Base platform with industrial grid
+        fill(30, 30, 35, 220);
+        ellipse(0, size * 0.25 + bob, size * 1.0, size * 0.3);
+        // Grid pattern
+        stroke(40, 40, 45, 100);
+        strokeWeight(0.8);
+        for (let g = -4; g <= 4; g++) {
+            line(g * (size * 0.12), bob + size * 0.1, g * (size * 0.12), bob + size * 0.4);
+        }
+        noStroke();
+
+        // Central processing facility (large industrial structure)
+        fill(50, 50, 55);
+        rect(0, bob, size * 0.6, size * 0.4, 8);
+        // Processing windows
+        fill(200, 150, 100, 120);
+        for (let w = -2; w <= 2; w++) {
+            rect(w * (size * 0.1), bob, size * 0.06, size * 0.25, 2);
+        }
+
+        // Worker habitation modules (rows of small units)
+        for (let row = 0; row < 2; row++) {
+            for (let col = -3; col <= 3; col++) {
+                const mx = col * (size * 0.14);
+                const my = bob - size * 0.25 + row * (size * 0.08);
+                // Module housing
+                fill(60, 60, 65);
+                rect(mx, my, size * 0.12, size * 0.06, 2);
+                // Small window
+                fill(150, 150, 180, 100);
+                rect(mx, my, size * 0.04, size * 0.04, 1);
+            }
+        }
+
+        // Mining drill rigs (2 large drilling platforms)
+        for (let d = 0; d < 2; d++) {
+            const dx = (d - 0.5) * (size * 0.7);
+            const dy = bob + size * 0.15;
+            // Drill platform
+            fill(45, 45, 50);
+            rect(dx, dy, size * 0.18, size * 0.12, 4);
+            // Drill arm
+            push();
+            translate(dx, dy - size * 0.06);
+            const drillAngle = Math.sin(obj.bobPhase * 0.002 + d) * 0.15;
+            rotate(drillAngle);
+            stroke(55, 55, 60);
+            strokeWeight(3);
+            line(0, 0, 0, size * 0.25);
+            noStroke();
+            // Drill head
+            fill(70, 70, 75);
+            ellipse(0, size * 0.25, size * 0.08, size * 0.06);
+            // Rotating drill bit
+            const drillSpin = (anim && anim.drillSpin) ? anim.drillSpin : obj.bobPhase * 0.006;
+            push();
+            translate(0, size * 0.25);
+            rotate(drillSpin + d * Math.PI);
+            fill(90, 90, 95);
+            for (let b = 0; b < 4; b++) {
+                const ba = b * (TWO_PI / 4);
+                triangle(0, 0, Math.cos(ba) * size * 0.04, Math.sin(ba) * size * 0.04,
+                         Math.cos(ba + 0.3) * size * 0.04, Math.sin(ba + 0.3) * size * 0.04);
+            }
+            pop();
+            pop();
+        }
+
+        // Ore processing conveyors with moving ore chunks
+        fill(40, 40, 45);
+        rect(-size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, 3);
+        rect(size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, 3);
+        // Moving ore on conveyors
+        const conveyorPhase = (anim && anim.conveyorPhase) ? anim.conveyorPhase : obj.bobPhase * 0.004;
+        for (let c = 0; c < 2; c++) {
+            const cx = (c - 0.5) * (size * 0.5);
+            for (let o = 0; o < 4; o++) {
+                const ox = cx + lerp(-size * 0.25, size * 0.25, (conveyorPhase + o * 0.25) % 1);
+                fill(120, 90, 70);
+                ellipse(ox, bob + size * 0.28, size * 0.05, size * 0.04);
+            }
+        }
+
+        // Transport rail system (monorail)
+        stroke(60, 60, 65);
+        strokeWeight(2);
+        line(-size * 0.5, bob - size * 0.15, size * 0.5, bob - size * 0.15);
+        noStroke();
+        // Rail support pillars
+        for (let p = -2; p <= 2; p++) {
+            const px = p * (size * 0.25);
+            fill(50, 50, 55);
+            rect(px, bob - size * 0.08, size * 0.04, size * 0.15, 1);
+        }
+        // Transport pod moving along rail
+        const podPos = Math.sin(obj.bobPhase * 0.003) * (size * 0.45);
+        fill(70, 70, 80);
+        rect(podPos, bob - size * 0.15, size * 0.15, size * 0.08, 3);
+        fill(100, 120, 140, 120);
+        rect(podPos, bob - size * 0.15, size * 0.06, size * 0.06, 1);
+
+        // Smokestacks with emissions
+        for (let s = 0; s < 3; s++) {
+            const sx = (s - 1) * (size * 0.22);
+            const sy = bob - size * 0.35;
+            // Stack structure
+            fill(55, 55, 60);
+            rect(sx, sy + size * 0.1, size * 0.06, size * 0.2, 2);
+            // Smoke particles
+            for (let p = 0; p < 3; p++) {
+                const py = sy - p * size * 0.08;
+                const phase = obj.bobPhase * 0.002 + s + p * 0.5;
+                fill(80, 80, 85, 100 - p * 25);
+                ellipse(sx + Math.sin(phase) * 5, py, size * 0.08 + p * size * 0.03, size * 0.06 + p * size * 0.02);
+            }
+        }
+
+        // Power generators (glowing energy cores)
+        for (let g = 0; g < 2; g++) {
+            const gx = (g - 0.5) * (size * 0.4);
+            const gy = bob + size * 0.05;
+            // Generator housing
+            fill(65, 65, 70);
+            rect(gx, gy, size * 0.12, size * 0.1, 3);
+            // Energy core glow
+            const glowPhase = obj.bobPhase * 0.005 + g;
+            const glow = 0.5 + 0.5 * Math.sin(glowPhase);
+            fill(200, 150, 100, 150 * glow);
+            ellipse(gx, gy, size * 0.06 * (0.8 + 0.4 * glow), size * 0.05 * (0.8 + 0.4 * glow));
+        }
+
+        // Status lights (industrial orange)
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
+        fill(255, 150, 0, 255 * statusFlash);
+        ellipse(-size * 0.45, bob - size * 0.3, 5, 5);
+        fill(255, 150, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
+        ellipse(size * 0.45, bob - size * 0.3, 5, 5);
+        fill(255, 150, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 2)));
+        ellipse(0, bob + size * 0.38, 5, 5);
+
+        // Worker transport shuttles
+        if (!obj._workerShuttles) {
+            obj._workerShuttles = [];
+            for (let w = 0; w < 2; w++) {
+                obj._workerShuttles.push({ ang: w * Math.PI, dist: size * 0.5, speed: 0.002 });
+            }
+        }
+        for (let w = 0; w < obj._workerShuttles.length; w++) {
+            const shuttle = obj._workerShuttles[w];
+            shuttle.ang += shuttle.speed;
+            const wx = Math.cos(shuttle.ang) * shuttle.dist;
+            const wy = Math.sin(shuttle.ang) * shuttle.dist * 0.4 + bob;
+            fill(90, 90, 100);
+            ellipse(wx, wy, 10, 6);
+            fill(200, 200, 220, 120);
+            ellipse(wx + 2, wy, 3, 2);
+        }
+    },
+
     quantumGate: function(obj, size, anim, bob) {
         // Enhanced quantum gate: multi-ring shimmer, rotating glyphs, teleport arcs and particle jets
         const phase = (anim && anim.gatePhase) ? anim.gatePhase : obj.bobPhase * 0.01;
@@ -2860,6 +3313,21 @@ class SpaceObject {
                 anim.collectorSpin = Math.random() * TWO_PI;
                 anim.lightPhase = Math.random() * TWO_PI;
                 break;
+            case 'prison':
+                // prison animation: searchlights and barrier pulse
+                anim.searchlightPhase = Math.random() * TWO_PI;
+                anim.barrierPulse = Math.random() * TWO_PI;
+                break;
+            case 'drugLab':
+                // drug lab animation: flow phase and fan rotation
+                anim.flowPhase = Math.random() * TWO_PI;
+                anim.fanRotation = Math.random() * TWO_PI;
+                break;
+            case 'labourColony':
+                // labour colony animation: drill spin and conveyor phase
+                anim.drillSpin = Math.random() * TWO_PI;
+                anim.conveyorPhase = Math.random() * TWO_PI;
+                break;
         }
         // unique id used by debris RNG and other persistent behaviors
         // Attach commodity lists from the centralized mapping so transports can use them
@@ -2904,7 +3372,10 @@ class SpaceObject {
             weaponPlatform: 0.00004,
             shieldGenerator: 0.00007,
             energyCollector: 0.00005,
-            quantumGate: 0.00002
+            quantumGate: 0.00002,
+            prison: 0.00003,
+            drugLab: 0.00006,
+            labourColony: 0.00004
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -3158,7 +3629,10 @@ class SpaceObject {
             weaponPlatform: 'Weapon Platform',
             shieldGenerator: 'Shield Generator',
             energyCollector: 'Energy Collector',
-            quantumGate: 'Quantum Gate'
+            quantumGate: 'Quantum Gate',
+            prison: 'Prison Station',
+            drugLab: 'Drug Laboratory',
+            labourColony: 'Labour Colony'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }
