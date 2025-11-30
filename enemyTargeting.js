@@ -7,12 +7,87 @@
  * These methods handle target selection and scoring
  */
 class EnemyTargeting {
+    // --- NEW: Docking helpers for TRANSPORT robustness ---
+    _isDockingTargetValid(target) {
+        // Basic defensive checks to ensure dockingTarget is still usable.
+        if (!target) return false;
+        if (target.isDestroyed || target.removed) return false;
+        // Prefer explicit API if provided
+        if (typeof target.canDock === 'function') {
+            try { return !!target.canDock(); } catch (e) { return false; }
+        }
+        if (typeof target.acceptsDocking !== 'undefined') {
+            return !!target.acceptsDocking;
+        }
+        // Fallback: assume valid
+        return true;
+    }
+
+    shouldSendTradeMessage() {
+        // No throttling required — always allow trade/docking messages.
+        return true;
+    }
+    // --- END NEW ---
+
     /**
      * Updates the enemy's targeting information
      * @param {Object} system - The current star system
      * @return {boolean} Whether a valid target was found
      */
     updateTargeting(system) {
+        // Prevent transporters from retargeting while actively docking/trading/approaching or already docked.
+        // Allow only emergency self-defense (lastAttacker/forced combat) so transports can finish trading/docking.
+        if (this.role === AI_ROLE.TRANSPORT) {
+            const dockingStates = [
+                AI_STATE.TRADING,
+                AI_STATE.DOCKING,
+                AI_STATE.DOCKING_APPROACH
+            ];
+            const inDockSequence =
+                dockingStates.some(s => this.currentState === s) ||
+                !!this.isDocked ||
+                !!this.dockingTarget ||
+                !!this._approachTarget;
+
+            if (inDockSequence) {
+                // Validate docking target; if invalid, abort docking and fallback to default state.
+                if (this.dockingTarget && !this._isDockingTargetValid(this.dockingTarget)) {
+                    this.dockingTarget = null;
+                    this._dockingStartTime = undefined;
+                    if (typeof this.changeState === 'function') {
+                        this.changeState(this._getDefaultStateForRole ? this._getDefaultStateForRole() : AI_STATE.IDLE);
+                    }
+                    // allow retargeting next tick
+                } else {
+                    // Track start time so transports don't get stuck forever
+                    const now = (typeof millis === 'function') ? millis() : Date.now();
+                    if (!this._dockingStartTime) this._dockingStartTime = now;
+                    const elapsed = now - this._dockingStartTime;
+                    const dockingTimeoutMs = this.dockingTimeoutMs || 20000; // default 20s
+
+                    if (elapsed > dockingTimeoutMs) {
+                        // Abort docking sequence and reset
+                        this.dockingTarget = null;
+                        this._dockingStartTime = undefined;
+                        if (typeof this.changeState === 'function') {
+                            this.changeState(this._getDefaultStateForRole ? this._getDefaultStateForRole() : AI_STATE.IDLE);
+                        }
+                        // allow retargeting next tick
+                    } else {
+                        // If attacked, defend; otherwise skip retargeting so docking/trading can complete
+                        if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                            if (this.target !== this.lastAttacker) this.target = this.lastAttacker;
+                            return true;
+                        }
+                        return this.target !== null;
+                    }
+                }
+            } else {
+                // Leaving docking sequence: clear start time
+                if (this._dockingStartTime) this._dockingStartTime = undefined;
+            }
+        }
+
         // --- BOUNTY HUNTER: Always target player ---
         if (this.role === AI_ROLE.BOUNTY_HUNTER) {
             const playerRef = system.player || this.target; // Ensure we have a reference to player
