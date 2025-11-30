@@ -1,8 +1,10 @@
 // ****** uiManager.js ******
 
-// Constants for space object trading prices
-const SPACE_OBJECT_SELL_PRICE_MULTIPLIER = 0.8;  // Player sells at 80% of base
-const SPACE_OBJECT_BUY_PRICE_MULTIPLIER = 1.2;   // Player buys at 120% of base
+// Constants for space object trading prices - relative to station prices
+// Space objects sell produced goods CHEAPER than station buy price (profitable to buy here, sell at station)
+const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.75;  // 75% of station buy price
+// Space objects buy demanded goods at HIGHER price than station sell price (profitable to buy at station, sell here)
+const SPACE_OBJECT_DEMAND_PREMIUM = 1.25;  // 125% of station sell price
 
 class UIManager {
     constructor() {
@@ -1014,160 +1016,284 @@ class UIManager {
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30, 40, 60, 220], [80, 120, 180]);
+        this.drawPanelBG([50, 20, 20, 220], [255, 100, 100]); // Match market screen colors
         
         // Get display name for the space object
         const displayName = (typeof spaceObject.getDisplayName === 'function') 
             ? spaceObject.getDisplayName() 
             : (spaceObject.type || 'Space Object');
         
-        // Draw header with space object name
+        // Get tradable commodities for this space object
+        const tradable = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
+        const producesSet = new Set(tradable.produces || []);
+        const buysSet = new Set(tradable.buys || []);
+        
+        // Get station market for price reference
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const stationMarket = station?.market;
+        
+        // Draw header similar to market screen
         textFont(font);
         textAlign(CENTER, TOP);
-        textSize(28);
+        textSize(26);
         fill(220, 220, 255);
-        text(displayName, pX + pW / 2, pY + 20);
+        text(displayName + " Trading", pX + pW / 2, pY + 15);
         
-        // Draw cargo capacity
-        textSize(16);
+        // Draw cargo and credits info
+        textSize(14);
         fill(180, 180, 200);
         const cargoUsed = player.getCargoAmount();
-        text(`Cargo: ${cargoUsed}/${player.cargoCapacity}`, pX + pW / 2, pY + 55);
+        text(`Cargo: ${cargoUsed}/${player.cargoCapacity}   |   Credits: ${player.credits.toLocaleString()}`, pX + pW / 2, pY + 45);
         
-        // Draw credits
-        fill(255, 215, 0);
-        text(`Credits: ${player.credits.toLocaleString()}`, pX + pW / 2, pY + 75);
+        // Table setup
+        let sY = pY + 80;
+        let tW = pW - 60;
+        let sX = pX + 30;
         
-        // Get tradable commodities for this space object
-        const commodities = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
+        // Row setup
+        const rowH = 28;
+        const btnW = 60;
+        const btnH = rowH * 0.8;
         
-        // Draw what this facility produces and buys
-        let infoY = pY + 110;
-        textSize(14);
-        textAlign(LEFT, TOP);
+        // Define column widths
+        const colCommodity = tW * 0.22;
+        const colStatus = tW * 0.12;
+        const colBuyPrice = tW * 0.12;
+        const colSellPrice = tW * 0.12;
+        const colCargo = tW * 0.10;
+        const colButtons = tW * 0.32;
         
-        fill(100, 200, 100);
-        text("Produces:", pX + 20, infoY);
-        fill(180, 220, 180);
-        const producesText = commodities.produces.length > 0 ? commodities.produces.join(', ') : 'Nothing';
-        text(producesText, pX + 90, infoY);
+        // Draw column headers
+        let headerY = sY - 18;
+        fill(255);
+        textSize(12);
+        textAlign(LEFT, CENTER);
+        text("Commodity", sX + 10, headerY);
+        textAlign(CENTER, CENTER);
+        text("Status", sX + colCommodity + colStatus / 2, headerY);
+        text("Buy", sX + colCommodity + colStatus + colBuyPrice / 2, headerY);
+        text("Sell", sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, headerY);
+        text("Cargo", sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo / 2, headerY);
         
-        infoY += 22;
-        fill(200, 100, 100);
-        text("Buys:", pX + 20, infoY);
-        fill(220, 180, 180);
-        const buysText = commodities.buys.length > 0 ? commodities.buys.join(', ') : 'Nothing';
-        text(buysText, pX + 90, infoY);
+        // Get all commodities from station market or use default list
+        const allCommodities = stationMarket ? stationMarket.getPrices() : this._getDefaultCommodityList();
         
-        // Draw trading area - show commodities player can trade
-        infoY += 40;
-        textAlign(CENTER, TOP);
-        textSize(18);
-        fill(180, 180, 220);
-        text("Available Trades", pX + pW / 2, infoY);
-        
-        infoY += 30;
-        
-        // Draw buy/sell buttons for each commodity
-        const btnW = pW * 0.4;
-        const btnH = 36;
-        const btnSpacing = 44;
-        const colWidth = pW * 0.48;
-        
-        // Selling section (what player can sell to this object)
-        if (commodities.buys.length > 0) {
-            let sellY = infoY;
-            textSize(14);
-            textAlign(LEFT, TOP);
-            fill(200, 150, 100);
-            text("Sell to facility:", pX + 10, sellY);
-            sellY += 24;
+        // Draw commodity rows
+        for (let i = 0; i < allCommodities.length; i++) {
+            const comm = allCommodities[i];
+            if (!comm) continue;
             
-            for (let i = 0; i < commodities.buys.length; i++) {
-                const commodityName = commodities.buys[i];
-                const playerItem = player.cargo.find(item => item && item.name === commodityName);
-                const playerQty = playerItem ? playerItem.quantity : 0;
-                
-                // Calculate sell price using constant multiplier
-                const basePrice = this._getCommodityBasePrice(commodityName);
-                const sellPrice = Math.floor(basePrice * SPACE_OBJECT_SELL_PRICE_MULTIPLIER);
-                
-                // Draw commodity info and sell button
-                textAlign(LEFT, CENTER);
-                textSize(12);
-                fill(playerQty > 0 ? [180, 220, 180] : [120, 120, 140]);
-                text(`${commodityName}: ${playerQty}`, pX + 15, sellY + btnH / 2);
-                
-                if (playerQty > 0) {
-                    const btnX = pX + pW * 0.35;
-                    const area = this._drawButton(btnX, sellY, btnW * 0.6, btnH - 4, `Sell @${sellPrice}cr`, [80, 60, 60], [180, 140, 140]);
-                    area.action = "SELL_COMMODITY";
-                    area.commodity = commodityName;
-                    area.price = sellPrice;
-                    this.spaceObjectMenuButtonAreas.push(area);
-                }
-                sellY += btnSpacing;
-            }
-            infoY = sellY + 10;
-        }
-        
-        // Buying section (what player can buy from this object)
-        if (commodities.produces.length > 0) {
-            let buyY = infoY;
-            textSize(14);
-            textAlign(LEFT, TOP);
-            fill(100, 200, 150);
-            text("Buy from facility:", pX + 10, buyY);
-            buyY += 24;
+            const commodityName = comm.name;
+            const isProduced = producesSet.has(commodityName);
+            const isBought = buysSet.has(commodityName);
+            const isAvailable = isProduced || isBought;
             
-            for (let i = 0; i < commodities.produces.length; i++) {
-                const commodityName = commodities.produces[i];
-                
-                // Calculate buy price using constant multiplier
-                const basePrice = this._getCommodityBasePrice(commodityName);
-                const buyPrice = Math.floor(basePrice * SPACE_OBJECT_BUY_PRICE_MULTIPLIER);
-                const canAfford = player.credits >= buyPrice;
-                const hasSpace = player.getCargoAmount() < player.cargoCapacity;
-                
-                // Draw commodity info and buy button
-                textAlign(LEFT, CENTER);
-                textSize(12);
-                fill(canAfford && hasSpace ? [180, 220, 180] : [120, 120, 140]);
-                text(`${commodityName}`, pX + 15, buyY + btnH / 2);
-                
-                const btnX = pX + pW * 0.35;
-                const btnColor = (canAfford && hasSpace) ? [60, 80, 60] : [60, 60, 60];
-                const textColor = (canAfford && hasSpace) ? [140, 180, 140] : [100, 100, 100];
-                const area = this._drawButton(btnX, buyY, btnW * 0.6, btnH - 4, `Buy @${buyPrice}cr`, btnColor, textColor);
-                if (canAfford && hasSpace) {
-                    area.action = "BUY_COMMODITY";
-                    area.commodity = commodityName;
-                    area.price = buyPrice;
-                    this.spaceObjectMenuButtonAreas.push(area);
-                }
-                buyY += btnSpacing;
+            let yP = sY + i * rowH;
+            let tY = yP + rowH / 2;
+            
+            // Alternating row background
+            if (i % 2 === 0) {
+                fill(0, 0, 0, 100);
+            } else {
+                fill(80, 80, 80, 100);
             }
-            infoY = buyY + 10;
+            noStroke();
+            rect(sX, yP, tW, rowH);
+            
+            // Get player cargo for this commodity
+            const playerItem = player.cargo.find(item => item && item.name === commodityName);
+            const playerQty = playerItem ? playerItem.quantity : 0;
+            
+            // Calculate prices based on station prices
+            let buyPrice = 0;  // Price to buy FROM space object
+            let sellPrice = 0; // Price to sell TO space object
+            
+            if (stationMarket) {
+                // Use getPrices() consistently for commodity data access
+                const stationPrices = stationMarket.getPrices();
+                const stationComm = stationPrices ? stationPrices.find(c => c.name === commodityName) : null;
+                if (stationComm) {
+                    // Space object sells produced goods cheaper than station buy price
+                    if (isProduced) {
+                        buyPrice = Math.floor(stationComm.buyPrice * SPACE_OBJECT_PRODUCE_DISCOUNT);
+                    }
+                    // Space object buys demanded goods at higher price than station sell price
+                    if (isBought) {
+                        sellPrice = Math.floor(stationComm.sellPrice * SPACE_OBJECT_DEMAND_PREMIUM);
+                    }
+                }
+            } else {
+                // Fallback if no station market
+                const basePrice = this._getCommodityBasePrice(commodityName);
+                if (isProduced) buyPrice = Math.floor(basePrice * 0.8);
+                if (isBought) sellPrice = Math.floor(basePrice * 1.2);
+            }
+            
+            // Draw commodity name
+            textAlign(LEFT, CENTER);
+            textSize(11);
+            fill(isAvailable ? 255 : 100);
+            text(commodityName, sX + 10, tY);
+            
+            // Draw status (Produces/Buys/-)
+            textAlign(CENTER, CENTER);
+            if (isProduced && isBought) {
+                fill(100, 255, 100);
+                text("Trade", sX + colCommodity + colStatus / 2, tY);
+            } else if (isProduced) {
+                fill(100, 200, 255);
+                text("Sells", sX + colCommodity + colStatus / 2, tY);
+            } else if (isBought) {
+                fill(255, 200, 100);
+                text("Buys", sX + colCommodity + colStatus / 2, tY);
+            } else {
+                fill(80);
+                text("-", sX + colCommodity + colStatus / 2, tY);
+            }
+            
+            // Draw buy price (from space object)
+            if (isProduced && buyPrice > 0) {
+                fill(100, 255, 100); // Green - good deal
+                text(buyPrice, sX + colCommodity + colStatus + colBuyPrice / 2, tY);
+            } else {
+                fill(80);
+                text("-", sX + colCommodity + colStatus + colBuyPrice / 2, tY);
+            }
+            
+            // Draw sell price (to space object)
+            if (isBought && sellPrice > 0) {
+                fill(100, 255, 100); // Green - good deal
+                text(sellPrice, sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, tY);
+            } else {
+                fill(80);
+                text("-", sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, tY);
+            }
+            
+            // Draw cargo amount
+            fill(playerQty > 0 ? 255 : 80);
+            text(playerQty, sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo / 2, tY);
+            
+            // Draw buttons
+            const btnStartX = sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo + 10;
+            const btnY = yP + (rowH - btnH) / 2;
+            const btnSpacing = 5;
+            
+            // Buy button (if space object produces this)
+            const canBuy = isProduced && buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
+            if (isProduced) {
+                if (canBuy) {
+                    fill(0, 150, 0);
+                    stroke(0, 200, 0);
+                    strokeWeight(1);
+                    rect(btnStartX, btnY, btnW, btnH, 3);
+                    fill(255);
+                    noStroke();
+                    textSize(10);
+                    text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
+                    this.spaceObjectMenuButtonAreas.push({
+                        x: btnStartX, y: btnY, w: btnW, h: btnH,
+                        action: "BUY_COMMODITY", commodity: commodityName, price: buyPrice
+                    });
+                } else {
+                    fill(60);
+                    stroke(80);
+                    strokeWeight(1);
+                    rect(btnStartX, btnY, btnW, btnH, 3);
+                    fill(100);
+                    noStroke();
+                    textSize(10);
+                    text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
+                }
+            } else {
+                // Grayed out - not available
+                fill(40);
+                noStroke();
+                rect(btnStartX, btnY, btnW, btnH, 3);
+                fill(60);
+                textSize(10);
+                text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
+            }
+            
+            // Sell button (if space object buys this)
+            const sellBtnX = btnStartX + btnW + btnSpacing;
+            const canSell = isBought && sellPrice > 0 && playerQty > 0;
+            if (isBought) {
+                if (canSell) {
+                    fill(150, 0, 0);
+                    stroke(200, 0, 0);
+                    strokeWeight(1);
+                    rect(sellBtnX, btnY, btnW, btnH, 3);
+                    fill(255);
+                    noStroke();
+                    textSize(10);
+                    text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+                    this.spaceObjectMenuButtonAreas.push({
+                        x: sellBtnX, y: btnY, w: btnW, h: btnH,
+                        action: "SELL_COMMODITY", commodity: commodityName, price: sellPrice
+                    });
+                } else {
+                    fill(60);
+                    stroke(80);
+                    strokeWeight(1);
+                    rect(sellBtnX, btnY, btnW, btnH, 3);
+                    fill(100);
+                    noStroke();
+                    textSize(10);
+                    text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+                }
+            } else {
+                // Grayed out - not available
+                fill(40);
+                noStroke();
+                rect(sellBtnX, btnY, btnW, btnH, 3);
+                fill(60);
+                textSize(10);
+                text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+            }
         }
         
         // Action buttons at the bottom
-        let bottomY = pY + pH - 130;
-        const actionBtnW = pW * 0.4;
-        const actionBtnH = 40;
+        let bottomY = pY + pH - 50;
+        const actionBtnW = 120;
+        const actionBtnH = 35;
+        const actionBtnSpacing = 20;
         
         // Personal Record button
-        const recordArea = this._drawButton(pX + pW / 2 - actionBtnW / 2, bottomY, actionBtnW, actionBtnH, "Personal Record", [50, 50, 90], [150, 150, 200]);
+        const recordBtnX = pX + pW / 2 - actionBtnW - actionBtnSpacing / 2;
+        const recordArea = this._drawButton(recordBtnX, bottomY, actionBtnW, actionBtnH, "Personal Record", [50, 50, 90], [150, 150, 200]);
         recordArea.action = "VIEW_RECORD";
         this.spaceObjectMenuButtonAreas.push(recordArea);
         
-        bottomY += 55;
-        
         // Undock button
-        const undockArea = this._drawButton(pX + pW / 2 - actionBtnW / 2, bottomY, actionBtnW, actionBtnH, "Undock", [90, 50, 50], [200, 150, 150]);
+        const undockBtnX = pX + pW / 2 + actionBtnSpacing / 2;
+        const undockArea = this._drawButton(undockBtnX, bottomY, actionBtnW, actionBtnH, "Undock", [90, 50, 50], [200, 150, 150]);
         undockArea.action = "UNDOCK";
         this.spaceObjectMenuButtonAreas.push(undockArea);
         
         pop();
+    }
+    
+    /**
+     * Returns a default list of commodities when station market is not available.
+     * @returns {Array} Array of commodity objects with name property
+     */
+    _getDefaultCommodityList() {
+        return [
+            { name: 'Food' },
+            { name: 'Textiles' },
+            { name: 'Machinery' },
+            { name: 'Metals' },
+            { name: 'Minerals' },
+            { name: 'Chemicals' },
+            { name: 'Computers' },
+            { name: 'Medicine' },
+            { name: 'Adv Components' },
+            { name: 'Luxury Goods' },
+            { name: 'Narcotics' },
+            { name: 'Weapons' },
+            { name: 'Slaves' }
+        ];
     }
     
     /**
