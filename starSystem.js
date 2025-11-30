@@ -243,6 +243,9 @@ class StarSystem {
 
         // Pre-allocate screenBounds to avoid creating object every frame
         this.screenBounds = { left: 0, right: 0, top: 0, bottom: 0 };
+        
+        // Pre-allocate reusable vector for distance checks (hot path optimization)
+        this._distCheckVector = null; // Lazy init in checkProjectileCollisions
 
         // Add a system-specific player wanted status
         this.playerWanted = false;
@@ -1305,24 +1308,29 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             bounds.top = -ty - 100;
             bounds.bottom = -ty + height + 100;
 
-            // Update Enemies - OPTIMIZED with fast removal
-            for (let i = this.enemies.length - 1; i >= 0; i--) {
-                const enemy = this.enemies[i];
-                if (!enemy) {
-                    this._fastRemove(this.enemies, i);
-                    continue;
-                }
-                
-                try { enemy.update(this); } catch(e) { console.error("Err updating Enemy:",e); }
-                
-                if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
-                    this._fastRemove(this.enemies, i);
+            // Update Enemies - OPTIMIZED with fast removal and cached length
+            const enemyCount = this.enemies.length;
+            if (enemyCount > 0) {
+                for (let i = enemyCount - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    if (!enemy) {
+                        this._fastRemove(this.enemies, i);
+                        continue;
+                    }
+                    
+                    try { enemy.update(this); } catch(e) { console.error("Err updating Enemy:",e); }
+                    
+                    if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
+                        this._fastRemove(this.enemies, i);
+                    }
                 }
             }
 
-            // Update Asteroids - OPTIMIZED with fast removal
-            for (let i = this.asteroids.length - 1; i >= 0; i--) {
-                const asteroid = this.asteroids[i];
+            // Update Asteroids - OPTIMIZED with fast removal and cached length
+            const asteroidCount = this.asteroids.length;
+            if (asteroidCount > 0) {
+                for (let i = asteroidCount - 1; i >= 0; i--) {
+                    const asteroid = this.asteroids[i];
                 if (!asteroid) {
                     this._fastRemove(this.asteroids, i);
                     continue;
@@ -1381,6 +1389,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
                 if (this.shouldDespawnEntity(asteroid, 1.2)) {
                     this._fastRemove(this.asteroids, i);
+                }
                 }
             }
 
@@ -1450,9 +1459,11 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
 
             // --- Update Projectiles (Ensure proj.update() is called) ---
-            for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                let proj = this.projectiles[i];
-                proj.update();
+            const projCount = this.projectiles.length;
+            if (projCount > 0) {
+                for (let i = projCount - 1; i >= 0; i--) {
+                    let proj = this.projectiles[i];
+                    proj.update();
                 
                 if (proj.lifespan <= 0) {
                     //console.log("Projectile removed: lifespan expired");
@@ -1461,6 +1472,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 else if (proj.isOffScreen()) {
                     //console.log("Projectile removed: off-screen at", proj.pos.x.toFixed(0), proj.pos.y.toFixed(0));
                     this.removeProjectile(i); // USE NEW METHOD
+                }
                 }
             }
             // --- End Projectile Loop ---
@@ -1587,7 +1599,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             }
 
             // Update explosions - OPTIMIZED with pooling and fast removal
-            for (let i = this.explosions.length - 1; i >= 0; i--) {
+            const explosionCount = this.explosions.length;
+            if (explosionCount > 0) {
+                for (let i = explosionCount - 1; i >= 0; i--) {
                 const exp = this.explosions[i];
                 exp.update();
                 if (exp.isDone()) {
@@ -1595,6 +1609,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         WeaponSystem.releaseExplosion(exp);
                     }
                     this._fastRemove(this.explosions, i);
+                }
                 }
             }
 
@@ -2043,16 +2058,21 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
 
 /** 
  * Specifically handles projectile collisions with targets.
- * OPTIMIZED: Uses squared distance checks and reusable vectors.
+ * OPTIMIZED: Uses squared distance checks, reusable vectors, and early exits.
  */
 checkProjectileCollisions() {
+    const projCount = this.projectiles.length;
+    if (projCount === 0) return; // Early exit if no projectiles
+    
     // Lazy init of reusable vector to avoid object creation in the loop
     if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
     
     const distCheckVector = this._distCheckVector;
+    const asteroidCount = this.asteroids.length;
+    const enemyCount = this.enemies.length;
     
     // Process projectiles using optimized collision detection
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+    for (let i = projCount - 1; i >= 0; i--) {
         const proj = this.projectiles[i];
         if (!proj || !proj.pos) {
             console.warn(`Invalid projectile at index ${i}, removing`);
@@ -2065,7 +2085,7 @@ checkProjectileCollisions() {
         let hit = false;
         
         // Check against asteroids using broadphase filtering
-        for (let j = this.asteroids.length - 1; j >= 0; j--) {
+        for (let j = asteroidCount - 1; j >= 0; j--) {
             const asteroid = this.asteroids[j];
             if (!asteroid || asteroid.isDestroyed()) continue;
             
@@ -2314,7 +2334,7 @@ checkProjectileCollisions() {
         // For enemy hits - use spatial partitioning approach
         if (proj.owner instanceof Player) {
             // Get only nearby enemies using pre-check with distance squared
-            for (let j = 0; j < this.enemies.length; j++) {
+            for (let j = 0; j < enemyCount; j++) {
                 const enemy = this.enemies[j];
                 const combinedRadius = enemy.size + projSize;
                 const combinedRadiusSquared = combinedRadius * combinedRadius;
@@ -2391,7 +2411,7 @@ checkProjectileCollisions() {
         
         // For enemy-to-enemy hits (friendly fire)
         if (proj.owner instanceof Enemy) {
-            for (let j = 0; j < this.enemies.length; j++) {
+            for (let j = 0; j < enemyCount; j++) {
                 const enemy = this.enemies[j];
                 // Skip if the enemy is shooting itself
                 if (enemy !== proj.owner && proj.checkCollision(enemy)) {
@@ -3436,17 +3456,22 @@ checkProjectileCollisions() {
 
         push();
         // Calculate translation based on this.player position
-        let tx = width / 2 - this.player.pos.x;
-        let ty = height / 2 - this.player.pos.y;
+        const tx = width / 2 - this.player.pos.x;
+        const ty = height / 2 - this.player.pos.y;
         translate(tx, ty);
 
-        // Calculate screen bounds once (with margin)
-        const screenBounds = {
-            left: -tx - 100,
-            right: -tx + width + 100,
-            top: -ty - 100,
-            bottom: -ty + height + 100
-        };
+        // Calculate screen bounds once (with margin) - reuse pre-allocated object
+        const screenBounds = this.screenBounds;
+        screenBounds.left = -tx - 100;
+        screenBounds.right = -tx + width + 100;
+        screenBounds.top = -ty - 100;
+        screenBounds.bottom = -ty + height + 100;
+        
+        // Cache array lengths for draw loops
+        const planetCount = this.planets.length;
+        const asteroidCount = this.asteroids.length;
+        const enemyCount = this.enemies.length;
+        const projCount = this.projectiles.length;
 
         // Draw background (always visible)
         this.drawBackground();
@@ -3486,7 +3511,7 @@ checkProjectileCollisions() {
         let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
 
         // Draw only visible planets
-        for (let i = 0; i < this.planets.length; i++) {
+        for (let i = 0; i < planetCount; i++) {
             const p = this.planets[i];
             if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 p.draw(sunPos);
@@ -3494,7 +3519,7 @@ checkProjectileCollisions() {
         }
 
         // Draw only visible asteroids
-        for (let i = 0; i < this.asteroids.length; i++) {
+        for (let i = 0; i < asteroidCount; i++) {
             const a = this.asteroids[i];
             if (this.isInView(a.pos.x, a.pos.y, a.maxRadius * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 a.draw();
@@ -3524,7 +3549,7 @@ checkProjectileCollisions() {
         }
 
         // Draw only visible enemies
-        for (let i = 0; i < this.enemies.length; i++) {
+        for (let i = 0; i < enemyCount; i++) {
             const e = this.enemies[i];
             if (this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 e.draw();
@@ -3532,7 +3557,7 @@ checkProjectileCollisions() {
         }
 
         // Draw only visible projectiles
-        for (let i = 0; i < this.projectiles.length; i++) {
+        for (let i = 0; i < projCount; i++) {
             const proj = this.projectiles[i];
             if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 proj.draw();
@@ -3570,7 +3595,8 @@ checkProjectileCollisions() {
         }
 
         // Draw only visible explosions
-        for (let i = 0; i < this.explosions.length; i++) {
+        const explosionCount = this.explosions.length;
+        for (let i = 0; i < explosionCount; i++) {
             const exp = this.explosions[i];
             if (this.isInView(exp.pos.x, exp.pos.y, exp.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 exp.draw();
