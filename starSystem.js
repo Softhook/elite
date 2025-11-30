@@ -199,12 +199,12 @@ class StarSystem {
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
         this.cargo = [];
-        this.starColor = null; // Set in initStaticElements
+        this.starColor = null; // Set in i_getDiagonalDistancenitStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
         this.bgStars = [];     // Populated in initStaticElements
 
         // --- Config (can be set here, despawnRadius updated later) ---
-        this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
+        this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 30;
         this.asteroidSpawnTimer = 0; 
         this.asteroidSpawnInterval = 3000; 
         this.maxTotalAsteroids = 45;
@@ -1135,7 +1135,8 @@ try {
 
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
-        let spawnDist = this._getDiagonalDistance() + random(150, 400);
+        let spawnDist = this._getDiagonalDistance() + random(800, 2000);
+        //let spawnDist = this._getDiagonalDistance() + random(150, 400);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
         try {

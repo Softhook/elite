@@ -124,7 +124,7 @@ class StarSystem {
         this.bgStars = [];     // Populated in initStaticElements
 
         // --- Config (can be set here, despawnRadius updated later) ---
-        this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 8;
+        this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 30;
         this.asteroidSpawnTimer = 0; 
         this.asteroidSpawnInterval = 3000; 
         this.maxTotalAsteroids = 45;
