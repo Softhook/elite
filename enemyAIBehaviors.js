@@ -794,8 +794,9 @@ class EnemyAIBehaviors {
 
             // If close enough AND moving very slowly, act as 'docked' at the object
             if (this.vel.mag() < slowSpeedThreshold) {
-                if (this.waitTimer === 0) {
+                if (this.waitTimer === 0 && !this._tradedAtCurrentStop) {
                     this.waitTimer = random(1500, 4000); // Wait 1.5-4s
+                    this._tradedAtCurrentStop = true; // Prevent duplicate trade messages
                     ENEMY_AI_LOG(`Transporter ${this.shipTypeName} arrived at destination. Waiting.`);
 
                     // Perform trade/load when first stopping near a SpaceObject or station
@@ -831,13 +832,19 @@ class EnemyAIBehaviors {
                             } else {
                                 CARGO_LOG && CARGO_LOG(`Transporter ${this.shipTypeName} has no available cargo capacity; skipping load`);
                             }
-                            // Inform player/ui
+                            // Inform player/ui - only show message if we're close enough for player to see
                             try {
-                                const planetName = (typeof destObj.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets) && this.currentSystem.planets[destObj.planetIndex])
-                                    ? this.currentSystem.planets[destObj.planetIndex].name
-                                    : null;
-                                const displayName = (typeof destObj.getDisplayName === 'function') ? destObj.getDisplayName() : (destObj.type || 'space object');
-                                if (typeof uiManager !== 'undefined') uiManager.addMessage(`${this.shipTypeName} traded with ${displayName}${planetName ? ' @ ' + planetName : ''}`);
+                                const playerRef = this.currentSystem?.player || (typeof player !== 'undefined' ? player : null);
+                                const playerDist = playerRef && playerRef.pos && this.pos ? 
+                                    dist(this.pos.x, this.pos.y, playerRef.pos.x, playerRef.pos.y) : Infinity;
+                                // Only show trade message if player is within visual range (e.g., 2000 units)
+                                if (playerDist < 2000 && typeof uiManager !== 'undefined') {
+                                    const planetName = (typeof destObj.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets) && this.currentSystem.planets[destObj.planetIndex])
+                                        ? this.currentSystem.planets[destObj.planetIndex].name
+                                        : null;
+                                    const displayName = (typeof destObj.getDisplayName === 'function') ? destObj.getDisplayName() : (destObj.type || 'space object');
+                                    uiManager.addMessage(`${this.shipTypeName} traded with ${displayName}${planetName ? ' @ ' + planetName : ''}`);
+                                }
                             } catch (e) { /* ignore UI message errors */ }
                         } else {
                             // Possibly arrived at a station point (destObj null but near station)
@@ -853,13 +860,14 @@ class EnemyAIBehaviors {
                     } catch (e) {
                         // defensive: ignore trading errors
                     }
-                } else {
+                } else if (this.waitTimer > 0) {
                     this.waitTimer -= deltaTime;
                     if (this.waitTimer <= 0) {
                         // Switch destination.
                         this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
                         ENEMY_AI_LOG(`Transporter ${this.shipTypeName} switching destination.`);
                         this.waitTimer = 0;
+                        this._tradedAtCurrentStop = false; // Reset for next stop
                         this.vel.set(0, 0); // Reset velocity
                         // Update destinationObject for next leg
                         this.destinationObject = (Array.isArray(this.routeObjects) && this.routeObjects[this.currentRouteIndex]) ? this.routeObjects[this.currentRouteIndex] : null;

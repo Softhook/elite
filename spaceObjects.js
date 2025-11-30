@@ -2,6 +2,20 @@
 // Simple SpaceObject implementation for decorative satellites and telescopes
 // Designed to be lightweight: small update() to rotate/oscillate, and draw() using p5 primitives
 
+// Define which space object types are dockable by the player
+// These are larger installations where the player can trade limited commodities
+const DOCKABLE_SPACE_OBJECT_TYPES = [
+    'miningPlatform',
+    'spaceStation',
+    'cargoCluster',
+    'hydroponicsBay',
+    'researchArray',
+    'fuelDepot',
+    'habitat',
+    'observatoryDome',
+    'weaponPlatform'
+];
+
 // Size map for each object type
 const sizeMap = {
     satellite: 60,
@@ -2900,6 +2914,11 @@ class SpaceObject {
         this.maxHealth = Math.max(30, Math.floor(this.size * 1.8));
         this.health = this.maxHealth;
 
+        // Docking properties for player interaction
+        this.isDockable = DOCKABLE_SPACE_OBJECT_TYPES.includes(type);
+        // Docking radius is larger than collision radius to make docking easier
+        this.dockingRadius = this.isDockable ? Math.max(this.size * 0.7, this.collisionRadius + 40) : 0;
+
         // Initialize type-specific data structures
         this._initTypeSpecificData();
     }
@@ -3153,6 +3172,32 @@ class SpaceObject {
         const rSum = rA + rB;
         if (rSum <= 0) return false;
         return (dx * dx + dy * dy) < (rSum * rSum);
+    }
+
+    /** 
+     * Checks if a player can dock at this space object.
+     * @param {Player} player - The player object to check.
+     * @returns {boolean} True if the player can dock.
+     */
+    canPlayerDock(player) {
+        if (!this.isDockable || this.destroyed || !player?.pos) return false;
+        const dx = player.pos.x - this.pos.x;
+        const dy = player.pos.y - this.pos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const speed = player.vel ? player.vel.mag() : 0;
+        return distance < this.dockingRadius && speed < 0.5;
+    }
+
+    /**
+     * Returns the commodities this space object trades in.
+     * Used when player docks to determine available trades.
+     * @returns {Object} Object with 'produces' and 'buys' arrays of commodity names.
+     */
+    getTradableCommodities() {
+        return {
+            produces: this.produces || [],
+            buys: this.buys || []
+        };
     }
 }
 

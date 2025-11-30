@@ -260,6 +260,7 @@ class Enemy {
             // Prepare route properties (to be assigned later)
             this.routePoints = null;         // Array of two p5.Vector points [pointA, pointB]
             this.currentRouteIndex = 0;      // Which point we're moving toward
+            this._tradedAtCurrentStop = false; // Flag to prevent duplicate trade messages
         } else if (this.role === AI_ROLE.GUARD) {
             // Guard will start in GUARDING state if a principal is assigned soon after,
             // otherwise, it might start PATROLLING or IDLE until a principal is assigned.

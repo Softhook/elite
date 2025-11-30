@@ -111,7 +111,7 @@ this.jumpJustCompleted = false;
         // Update ambient sound manager docked state
         try {
             if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"];
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT"];
                 const isDocked = stationStates.includes(newState);
                 ambientSoundManager.setDockedState(isDocked);
             }
@@ -122,8 +122,10 @@ this.jumpJustCompleted = false;
         // Play transition-specific sounds
         try {
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"];
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT"];
                 if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
+                    soundManager.playSound('dockSuccess');
+                } else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
                     soundManager.playSound('dockSuccess');
                 } else if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
                     soundManager.playSound('undock');
@@ -161,34 +163,50 @@ this.jumpJustCompleted = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD"]; // Add other station states here later
+        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT"]; // Add other station states here later
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
-                // Prefer the specific station we docked at so secret stations undock correctly
-                const dockedStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
-                const dockRadius = dockedStation?.dockingRadius ?? dockedStation?.size ?? 160; // Fallback to historic value
-
-                // Place player just outside the station docking radius plus a small margin
-                const margin = Math.max(10, player.size * 1.5);
-                const offsetDistance = dockRadius + margin;
-
-                // Use docked station position as origin (ensure we're not offsetting from a stale player.pos)
-                if (dockedStation && dockedStation.pos) {
-                    player.pos = dockedStation.pos.copy().add(createVector(0, -offsetDistance));
+                // Check if undocking from a space object
+                if (this.previousState === "DOCKED_SPACE_OBJECT" && this.currentDockedSpaceObject) {
+                    const spaceObj = this.currentDockedSpaceObject;
+                    const dockRadius = spaceObj.dockingRadius ?? spaceObj.size ?? 80;
+                    const margin = Math.max(10, player.size * 1.5);
+                    const offsetDistance = dockRadius + margin;
+                    
+                    if (spaceObj.pos) {
+                        player.pos = spaceObj.pos.copy ? spaceObj.pos.copy().add(createVector(0, -offsetDistance)) : createVector(spaceObj.pos.x, spaceObj.pos.y - offsetDistance);
+                    } else {
+                        player.pos.add(createVector(0, -offsetDistance));
+                    }
+                    player.vel.mult(0);
+                    this.currentDockedSpaceObject = null;
                 } else {
-                    // Fallback: relative offset from current player.pos
-                    player.pos.add(createVector(0, -offsetDistance));
-                }
-                player.vel.mult(0);
+                    // Prefer the specific station we docked at so secret stations undock correctly
+                    const dockedStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
+                    const dockRadius = dockedStation?.dockingRadius ?? dockedStation?.size ?? 160; // Fallback to historic value
 
-                // Spawn any hired bodyguards when undocking
-                if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
-                    console.log("Spawning bodyguards when undocking from station");
-                    player.spawnBodyguards(galaxy?.getCurrentSystem());
+                    // Place player just outside the station docking radius plus a small margin
+                    const margin = Math.max(10, player.size * 1.5);
+                    const offsetDistance = dockRadius + margin;
+
+                    // Use docked station position as origin (ensure we're not offsetting from a stale player.pos)
+                    if (dockedStation && dockedStation.pos) {
+                        player.pos = dockedStation.pos.copy().add(createVector(0, -offsetDistance));
+                    } else {
+                        // Fallback: relative offset from current player.pos
+                        player.pos.add(createVector(0, -offsetDistance));
+                    }
+                    player.vel.mult(0);
+
+                    // Spawn any hired bodyguards when undocking
+                    if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
+                        console.log("Spawning bodyguards when undocking from station");
+                        player.spawnBodyguards(galaxy?.getCurrentSystem());
+                    }
+                    // Clear recorded docked station after undocking
+                    this.currentDockedStation = null;
                 }
-                // Clear recorded docked station after undocking
-                this.currentDockedStation = null;
                 // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
             } else { console.error("Player object missing during undock offset!"); }
         }
@@ -202,10 +220,23 @@ this.jumpJustCompleted = false;
                  player.pos = dockStation.pos.copy() || player.pos; player.vel.mult(0);
              } else { console.error("Could not snap player to station - required objects missing."); }
         }
+        // Handle docking at space object
+        else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
+            GS_LOG("Entering DOCKED_SPACE_OBJECT state from IN_FLIGHT.");
+            if (player && this.currentDockedSpaceObject?.pos) {
+                player.vel.mult(0);
+                // Save game when docking at space object
+                if (typeof saveGame === 'function') {
+                    try { saveGame(); } catch (e) { console.warn("Failed to save on space object dock:", e); }
+                }
+            }
+        }
         // Ensure player stopped when entering DOCKED from sub-menus or other states
         else if (newState === "DOCKED") { if (player) { player.vel.set(0, 0); } }
         // Ensure player stopped when entering station sub-menus
         else if (newState === "VIEWING_MARKET" || newState === "VIEWING_MISSIONS") { if (player) { player.vel.set(0, 0); } }
+        // Ensure player stopped when at space object
+        else if (newState === "DOCKED_SPACE_OBJECT") { if (player) { player.vel.set(0, 0); } }
 
     } // End of setState method
 
@@ -219,7 +250,7 @@ this.jumpJustCompleted = false;
         let currentSystem = null; // Initialize to null
 
         // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT"];
         if (statesExpectingSystem.includes(this.currentState)) {
             currentSystem = galaxy?.getCurrentSystem();
         }
@@ -364,6 +395,18 @@ this.jumpJustCompleted = false;
                         }
                     }
 
+                    // Check for docking at dockable space objects (if not already docking at station)
+                    if (!dockStation && Array.isArray(currentSystem.spaceObjects)) {
+                        for (const spaceObj of currentSystem.spaceObjects) {
+                            if (!spaceObj || spaceObj.destroyed) continue;
+                            if (spaceObj.isDockable && typeof spaceObj.canPlayerDock === 'function' && spaceObj.canPlayerDock(player)) {
+                                this.currentDockedSpaceObject = spaceObj;
+                                this.setState("DOCKED_SPACE_OBJECT");
+                                break;
+                            }
+                        }
+                    }
+
                     // Check for auto-jump: if player has a locked destination and is in jump zone
                     if (uiManager && uiManager.lockedDestinationIndex !== -1 && isPlayerInJumpZone(player, currentSystem)) {
                         const lockedIdx = uiManager.lockedDestinationIndex;
@@ -394,6 +437,11 @@ this.jumpJustCompleted = false;
 
             case "DOCKED":
                 if (player) { player.vel.set(0, 0); } break;
+
+            case "DOCKED_SPACE_OBJECT":
+                // Player docked at a space object - stop velocity
+                if (player) { player.vel.set(0, 0); }
+                break;
 
             case "VIEWING_MARKET":
                 if (!currentSystem?.station) { this.setState("DOCKED"); break; } if (player) { player.vel.set(0, 0); } break;
@@ -592,7 +640,7 @@ this.jumpJustCompleted = false;
         let currentSystem = null; // Initialize to null
 
         // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT"];
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT"];
                 // If we had temporarily swapped in a secret station for docking, restore the original station now
                 try {
                     const sys = galaxy?.getCurrentSystem();
@@ -615,6 +663,33 @@ this.jumpJustCompleted = false;
                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(20,20,40); }
                 if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && currentSystem?.station && player) { try { uiManager.drawStationMainMenu(currentSystem.station, player); } catch(e) { console.error("Error drawing station main menu:", e); } }
+                break;
+
+            case "DOCKED_SPACE_OBJECT": // Draws the space object dock menu
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        // Draw the docked space object
+                        const spaceObj = this.currentDockedSpaceObject;
+                        if (spaceObj && typeof spaceObj.draw === 'function') {
+                            spaceObj.draw();
+                        }
+                        pop(); 
+                    } catch(e) {
+                        console.error("Error drawing space object background:", e);
+                    }
+                } else { 
+                    background(20,20,40); 
+                }
+                if (player) { try {player.draw();} catch(e) {}}
+                if (uiManager && this.currentDockedSpaceObject && player) { 
+                    try { 
+                        uiManager.drawSpaceObjectDockMenu(this.currentDockedSpaceObject, player); 
+                    } catch(e) { 
+                        console.error("Error drawing space object dock menu:", e); 
+                    } 
+                }
                 break;
 
              case "VIEWING_MARKET": // Draws the Market screen
