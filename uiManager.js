@@ -1,5 +1,9 @@
 // ****** uiManager.js ******
 
+// Constants for space object trading prices
+const SPACE_OBJECT_SELL_PRICE_MULTIPLIER = 0.8;  // Player sells at 80% of base
+const SPACE_OBJECT_BUY_PRICE_MULTIPLIER = 1.2;   // Player buys at 120% of base
+
 class UIManager {
     constructor() {
         // --- UI Areas ---
@@ -999,8 +1003,12 @@ class UIManager {
      */
     drawSpaceObjectDockMenu(spaceObject, player) {
         this.spaceObjectMenuButtonAreas = [];
-        if (!spaceObject || !player) { 
-            console.warn("drawSpaceObjectDockMenu missing spaceObject or player"); 
+        if (!spaceObject) { 
+            console.warn("drawSpaceObjectDockMenu: spaceObject is missing or null"); 
+            return; 
+        }
+        if (!player) { 
+            console.warn("drawSpaceObjectDockMenu: player is missing or null"); 
             return; 
         }
         
@@ -1080,9 +1088,9 @@ class UIManager {
                 const playerItem = player.cargo.find(item => item && item.name === commodityName);
                 const playerQty = playerItem ? playerItem.quantity : 0;
                 
-                // Calculate sell price (simple formula - 80% of base)
+                // Calculate sell price using constant multiplier
                 const basePrice = this._getCommodityBasePrice(commodityName);
-                const sellPrice = Math.floor(basePrice * 0.8);
+                const sellPrice = Math.floor(basePrice * SPACE_OBJECT_SELL_PRICE_MULTIPLIER);
                 
                 // Draw commodity info and sell button
                 textAlign(LEFT, CENTER);
@@ -1115,9 +1123,9 @@ class UIManager {
             for (let i = 0; i < commodities.produces.length; i++) {
                 const commodityName = commodities.produces[i];
                 
-                // Calculate buy price (simple formula - 120% of base)
+                // Calculate buy price using constant multiplier
                 const basePrice = this._getCommodityBasePrice(commodityName);
-                const buyPrice = Math.floor(basePrice * 1.2);
+                const buyPrice = Math.floor(basePrice * SPACE_OBJECT_BUY_PRICE_MULTIPLIER);
                 const canAfford = player.credits >= buyPrice;
                 const hasSpace = player.getCargoAmount() < player.cargoCapacity;
                 
