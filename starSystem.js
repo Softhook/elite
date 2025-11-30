@@ -111,10 +111,10 @@ if (STARFIELD_WORKER_ENABLED) {
             }
 
             if (data.error) {
-                // remove pending marker if present and close bitmap if provided
+                // Handle worker error - cleanup and remove tile so it can be re-generated
                 try {
                     try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
-                    // Remove tile from cache so it can be re-queued
+                    // Remove tile from cache so it can be re-queued for generation
                     sys._starfieldTiles.delete(key);
                 } catch(_) {}
                 return;
