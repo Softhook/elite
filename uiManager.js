@@ -51,14 +51,14 @@ class UIManager {
     }
 
     _initMinimap() {
-        // Sizes and toggled (expanded) state
-        this.minimapDefaultSize = 200;
-        this.minimapExpandedSize = 360; // Larger size when toggled
-        this.minimapSize = this.minimapDefaultSize;
+        // Sizes: keep minimap always the large size; clicks change zoom level (world view range)
+        this.minimapDefaultSize = 200;              // legacy/default (kept)
+        this.minimapExpandedSize = 360;             // always use this size for rendering
+        this.minimapSize = this.minimapExpandedSize; // start always large
 
-        this.minimapDefaultWorldViewRange = 5000; // default world view radius
-        this.minimapExpandedWorldViewRange = 14000; // show more world when expanded
-        this.minimapWorldViewRange = this.minimapDefaultWorldViewRange;
+        // Zoom levels (world view ranges) - clicking cycles these
+        this.minimapWorldViewRanges = [5000, 10000, 20000];
+        this.minimapZoomIndex = 2; // start at the widest view (index into minimapWorldViewRanges)
 
         this.minimapMargin = 15;
         this.minimapX = 0;
@@ -67,7 +67,8 @@ class UIManager {
         this.minimapHazardsBuffer = null;
         this._minimapHazardsBufferSize = 0;
 
-        this.minimapExpanded = false; // toggled state
+        // Keep flag for compatibility but treat the minimap as always "expanded"
+        this.minimapExpanded = true;
     }
 
     _initShopAreas() {
@@ -2124,9 +2125,10 @@ if (isIllegalInSystem || isMissionCargo) {
     drawMinimap(player, system) {
         if (!player?.pos || !system) { return; } // Basic checks
 
-        // Toggle size/world-range depending on expanded state
-        this.minimapSize = this.minimapExpanded ? this.minimapExpandedSize : this.minimapDefaultSize;
-        this.minimapWorldViewRange = this.minimapExpanded ? this.minimapExpandedWorldViewRange : this.minimapDefaultWorldViewRange;
+        // Always render at the large (expanded) size. The world-range (zoom) is controlled
+        // by the zoom index; clicking the minimap cycles the range.
+        this.minimapSize = this.minimapExpandedSize;
+        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
 
         // --- Calculate Minimap Position and Scale ---
         this.minimapX = width - this.minimapSize - this.minimapMargin;
@@ -2641,17 +2643,19 @@ if (isIllegalInSystem || isMissionCargo) {
 
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
 
-        // --- Minimap toggle (click to expand/shrink) ---
-        // Compute expected minimap rect for current state (don't rely on draw order)
-        const curMinimapSize = this.minimapExpanded ? this.minimapExpandedSize : this.minimapDefaultSize;
+        // --- Minimap click: cycle zoom level (map scale) ---
+        // Always use the expanded size for click region (minimap is always large).
+        const curMinimapSize = this.minimapExpandedSize;
         const curMinimapX = width - curMinimapSize - this.minimapMargin;
         const curMinimapY = height - curMinimapSize - this.minimapMargin;
         if (mx >= curMinimapX && mx <= curMinimapX + curMinimapSize && my >= curMinimapY && my <= curMinimapY + curMinimapSize) {
-            this.minimapExpanded = !this.minimapExpanded;
-            if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                soundManager.playSound('click');
-            }
-            return true; // handled
+            // Cycle zoom index and update the world view range (drawMinimap will recompute scale)
+            this.minimapZoomIndex = (this.minimapZoomIndex + 1) % this.minimapWorldViewRanges.length;
+            this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
+            // Optional immediate recompute of scale for any code that queries minimapScale immediately
+            this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+            if (typeof soundManager !== 'undefined' && soundManager.playSound) soundManager.playSound('click');
+            return true;
         }
 
         // --- DOCKED State (Main Station Menu) ---
