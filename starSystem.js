@@ -111,15 +111,11 @@ if (STARFIELD_WORKER_ENABLED) {
             }
 
             if (data.error) {
-                // remove pending marker if present and close bitmap if provided
+                // Handle worker error - cleanup and remove tile so it can be re-generated
                 try {
                     try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
-                    if (key === 'buffer') {
-                        if (sys._starfieldBufferPending !== undefined) sys._starfieldBufferPending = false;
-                        if (sys._starfieldBuffer !== undefined) sys._starfieldBuffer = null;
-                    } else {
-                        sys._starfieldTiles.delete(key);
-                    }
+                    // Remove tile from cache so it can be re-queued for generation
+                    sys._starfieldTiles.delete(key);
                 } catch(_) {}
                 return;
             }
@@ -130,18 +126,42 @@ if (STARFIELD_WORKER_ENABLED) {
             const parts = String(key).split(',');
             if (parts.length !== 2) {
                 try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                // Remove invalid tile from cache
+                sys._starfieldTiles.delete(key);
                 return;
             }
+            
+            // Verify we have a valid ImageBitmap
+            if (!imgBitmap) {
+                sys._starfieldTiles.delete(key);
+                return;
+            }
+            
             const [tx, ty] = parts.map(Number);
-            const buffer = createGraphics(sys._starfieldTileSize, sys._starfieldTileSize);
-            const ctx = buffer.drawingContext;
+            let buffer = null;
+            let drawSuccess = false;
+            
             try {
-                ctx.clearRect(0,0,buffer.width,buffer.height);
+                buffer = createGraphics(sys._starfieldTileSize, sys._starfieldTileSize);
+                const ctx = buffer.drawingContext;
+                ctx.clearRect(0, 0, buffer.width, buffer.height);
                 if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(imgBitmap, 0, 0, buffer.width, buffer.height);
-            } catch (err) {}
+                drawSuccess = true;
+            } catch (err) {
+                // Drawing failed - cleanup and let tile be regenerated
+                if (buffer) { try { buffer.remove(); } catch(_) {} }
+                buffer = null;
+            }
+            
             try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(e) {}
-            sys._starfieldTiles.set(key, { buffer, lastUsed: millis() });
+            
+            if (drawSuccess && buffer) {
+                sys._starfieldTiles.set(key, { buffer, lastUsed: millis() });
+            } else {
+                // Remove failed tile so it can be re-queued
+                sys._starfieldTiles.delete(key);
+            }
         };
 
         // Ensure the worker is terminated on page unload to free resources
@@ -1976,41 +1996,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
-            // Player vs SpaceObjects collision
-            const soCount = this.spaceObjects ? this.spaceObjects.length : 0;
-            for (let i = 0; i < soCount; i++) {
-                const so = this.spaceObjects[i];
-                const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
-                if (!so || !so.pos || soDestroyed) continue;
-                if (this.player.checkCollision(so)) {
-                    const collisionDamage = Math.floor(this.player.vel.mag());
-                    if (STAR_SYSTEM_DEBUG) console.log(`Player hit spaceObject! Damage: ${collisionDamage}`);
-                    this.player.takeDamage(collisionDamage, so);
-                    try { so.takeDamage(20, this.player, this); } catch (e) { try { so.takeDamage(20); } catch(_) {} }
-
-                    // Play bump sound
-                    try {
-                        if (typeof soundManager !== 'undefined') {
-                            const now = (typeof millis === 'function') ? millis() : Date.now();
-                            if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
-                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
-                                this._lastPlayerAsteroidBumpSoundTime = now;
-                            }
-                        }
-                    } catch (e) {}
-
-                    // Apply impulse to player (space objects are mostly static/lightweight)
-                    const dx = so.pos.x - this.player.pos.x;
-                    const dy = so.pos.y - this.player.pos.y;
-                    const distSq = dx * dx + dy * dy;
-                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
-                    const normalizedX = dx * invDist;
-                    const normalizedY = dy * invDist;
-                    const playerImpulseFactor = 2.0;
-                    this.player.vel.x -= normalizedX * playerImpulseFactor;
-                    this.player.vel.y -= normalizedY * playerImpulseFactor;
-                }
-            }
+            // NOTE: Player vs SpaceObjects collision removed - ships can now pass through space objects
+            // Weapons can still damage space objects (handled in checkProjectileCollisions)
             
             // Enemy vs Asteroid collisions - optimized with cached lengths
             for (let i = 0; i < enemyCount; i++) {
@@ -2044,29 +2031,8 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                         asteroid.vel.y += normalizedY * 0.5;
                     }
                 }
-                // Enemy vs SpaceObject collisions
-                if (this.spaceObjects && this.spaceObjects.length) {
-                    for (let j = 0; j < this.spaceObjects.length; j++) {
-                        const so = this.spaceObjects[j];
-                        const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
-                        if (!so || !so.pos || soDestroyed) continue;
-                        if (enemy.checkCollision(so)) {
-                            enemy.takeDamage(10);
-                            try { so.takeDamage(10); } catch (e) { try { so.takeDamage(10); } catch(_) {} }
-
-                            // Apply a small push to enemy
-                            const dx = so.pos.x - enemy.pos.x;
-                            const dy = so.pos.y - enemy.pos.y;
-                            const distSq = dx * dx + dy * dy;
-                            const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
-                            const normalizedX = dx * invDist * 2;
-                            const normalizedY = dy * invDist * 2;
-                            enemy.vel.x -= normalizedX;
-                            enemy.vel.y -= normalizedY;
-                            if (so.vel) { so.vel.x += normalizedX * 0.5; so.vel.y += normalizedY * 0.5; }
-                        }
-                    }
-                }
+                // NOTE: Enemy vs SpaceObject collisions removed - ships can now pass through space objects
+                // Weapons can still damage space objects (handled in checkProjectileCollisions)
             }
             
             
@@ -2702,6 +2668,10 @@ checkProjectileCollisions() {
                     tile.lastUsed = currentTime;
                     // Draw the cached tile
                     image(tile.buffer, tx * tileSize, ty * tileSize);
+                } else if (tile && tile.pending) {
+                    // Tile is being generated by worker - draw directly for this frame
+                    // but don't re-queue it
+                    this._drawStarsDirectlyForTile(tx, ty, tileSize);
                 } else {
                     // Tile is missing - draw directly for this frame and queue for generation
                     this._drawStarsDirectlyForTile(tx, ty, tileSize);
@@ -2803,9 +2773,11 @@ checkProjectileCollisions() {
         tilesWithPriority.sort((a, b) => a.priority - b.priority);
         
         for (const tile of tilesWithPriority) {
-            // Check if already in queue
+            // Check if already in queue or already cached (including pending tiles)
             const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
-            if (!alreadyQueued && !this._starfieldTiles.has(tile.key)) {
+            const existingTile = this._starfieldTiles.get(tile.key);
+            // Skip if already queued, already cached, or pending generation
+            if (!alreadyQueued && !existingTile) {
                 this._starfieldTileQueue.push(tile);
             }
         }

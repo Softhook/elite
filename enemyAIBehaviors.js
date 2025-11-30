@@ -651,47 +651,54 @@ class EnemyAIBehaviors {
 
             if (Array.isArray(system.spaceObjects) && system.spaceObjects.length > 0 && Array.isArray(system.planets) && system.planets.length > 0) {
                 // Build a multi-point route that visits spaceObjects associated with planets.
-                // For each planet pick the nearest spaceObject (within threshold) and add it
-                // to the transporter's route. Include the station as an optional anchor.
-                const soByPlanet = [];
-                const seenSO = new Set();
+                // Each transporter picks a random subset of available space objects
+                // to create varied routes and prevent all ships from going to the same places.
+                const availableSOs = [];
                 const maxSoDistance = 900;
 
+                // Collect all valid space objects near planets
                 for (let p of system.planets) {
                     if (!p || !p.pos) continue;
-                    let closest = null;
-                    let cd = Infinity;
                     for (let so of system.spaceObjects) {
                         if (!so || so.destroyed) continue;
                         const d = dist(so.pos.x, so.pos.y, p.pos.x, p.pos.y);
-                        if (d < maxSoDistance && d < cd) { closest = so; cd = d; }
-                    }
-                    if (closest && !seenSO.has(closest)) {
-                        soByPlanet.push({planet: p, so: closest});
-                        seenSO.add(closest);
+                        if (d < maxSoDistance && !availableSOs.includes(so)) {
+                            availableSOs.push(so);
+                        }
                     }
                 }
 
-                // If we found multiple spaceObjects, create a route that cycles through them.
-                if (soByPlanet.length > 0) {
-                    // Optionally start route at the station if it exists
-                    if (system.station && system.station.pos) {
+                // Shuffle the available space objects using Fisher-Yates
+                for (let i = availableSOs.length - 1; i > 0; i--) {
+                    const j = Math.floor(random() * (i + 1));
+                    [availableSOs[i], availableSOs[j]] = [availableSOs[j], availableSOs[i]];
+                }
+
+                // Pick a random subset of 2-4 space objects for this transporter's route
+                const numStops = Math.min(availableSOs.length, Math.floor(random(2, 5)));
+                const selectedSOs = availableSOs.slice(0, numStops);
+
+                // If we found space objects, create a route
+                if (selectedSOs.length > 0) {
+                    // Randomly decide whether to start at the station (50% chance)
+                    const startAtStation = random() < 0.5;
+                    if (startAtStation && system.station && system.station.pos) {
                         pts.push(system.station.pos.copy()); objs.push(null);
                     }
 
-                    // Add each spaceObject position to the route
-                    for (let entry of soByPlanet) {
+                    // Add each selected spaceObject position to the route
+                    for (let so of selectedSOs) {
                         // Add a small jitter to SO visit points so multiple transports
                         // don't converge exactly on the same coordinates.
-                        const p = entry.so.pos.copy();
-                        const jitterAmt = 8; // pixels
+                        const p = so.pos.copy();
+                        const jitterAmt = 15; // pixels - increased for more spread
                         p.add(createVector(random(-jitterAmt, jitterAmt), random(-jitterAmt, jitterAmt)));
                         pts.push(p);
-                        objs.push(entry.so);
+                        objs.push(so);
                     }
 
-                    // If only one SO found and a station exists, ensure shuttle back to station
-                    if (soByPlanet.length === 1 && system.station && system.station.pos) {
+                    // If we didn't start at station, add station as final stop (50% chance)
+                    if (!startAtStation && system.station && system.station.pos && random() < 0.5) {
                         pts.push(system.station.pos.copy()); objs.push(null);
                     }
                 }
@@ -710,12 +717,12 @@ class EnemyAIBehaviors {
 
             this.routePoints = pts;
             this.routeObjects = objs;
-            // Start moving towards the second point when available, otherwise the first
-            this.currentRouteIndex = (pts.length > 1) ? 1 : 0;
+            // Start at a random position in the route for varied transporter behavior
+            this.currentRouteIndex = Math.floor(random() * pts.length);
             this.waitTimer = 0;
             // store the displayed destination object for rendering/UI
             this.destinationObject = this.routeObjects[this.currentRouteIndex] || null;
-            AI_LOG(`Transporter ${this.shipTypeName} route set.`);
+            AI_LOG(`Transporter ${this.shipTypeName} route set with ${pts.length} stops, starting at index ${this.currentRouteIndex}.`);
         }
 
 
