@@ -151,6 +151,7 @@ class Player {
         this.shipsDestroyed = [];
         this.systemsVisited = [];
         this.stationsTraded = [];
+        this.currentSessionTradedLocations = new Set(); // Track locations traded at during current session
         this.factionsJoined = [];
         this.eliteStatusChanges = [];
         this.missionsCompleted = [];
@@ -1571,12 +1572,24 @@ handleInput() {
     /** Records a trade at a station in the personal record */
     recordStationTrade(stationName, systemName) {
         if (!stationName || !systemName) return;
-        // Record every trade occurrence
-        this.stationsTraded.push({
-            stationName: stationName,
-            systemName: systemName,
-            timestamp: Date.now()
-        });
+        
+        // Create a unique key for this location
+        const locationKey = `${stationName}|${systemName}`;
+        
+        // Only record if we haven't already traded at this location in this session
+        if (!this.currentSessionTradedLocations.has(locationKey)) {
+            this.currentSessionTradedLocations.add(locationKey);
+            this.stationsTraded.push({
+                stationName: stationName,
+                systemName: systemName,
+                timestamp: Date.now()
+            });
+        }
+    }
+    
+    /** Clears the session trade tracking (called when undocking) */
+    clearSessionTradeTracking() {
+        this.currentSessionTradedLocations.clear();
     }
 
     /** Records a faction join event in the personal record */
@@ -1908,6 +1921,9 @@ handleInput() {
         this.wantedStatusChanges = Array.isArray(data.wantedStatusChanges) ? data.wantedStatusChanges : [];
         this.shipsPurchased = Array.isArray(data.shipsPurchased) ? data.shipsPurchased : [];
         this.weaponsUpgraded = Array.isArray(data.weaponsUpgraded) ? data.weaponsUpgraded : [];
+        
+        // Initialize session trade tracking (not saved, always starts fresh)
+        this.currentSessionTradedLocations = new Set();
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
