@@ -23,8 +23,40 @@ class EnemyTargeting {
         return true;
     }
 
+    // Throttled trade/docking message emitter.
+    // Records the dockingTarget that has been "traded with" so we can conclude the docking sequence.
     shouldSendTradeMessage() {
-        // No throttling required — always allow trade/docking messages.
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+
+        // If we're not in trading, reset any per-dock bookkeeping so next trade is fresh.
+        if (this.currentState !== AI_STATE.TRADING) {
+            this._lastTradeMessageTime = undefined;
+            this._tradeCompletedForTarget = undefined;
+            this._tradeMessageSentTime = undefined;
+            this._pendingUndockTime = undefined;
+            return true;
+        }
+
+        const target = this.dockingTarget;
+        if (!target) return false;
+
+        const cooldown = this.tradeMessageCooldownMs || 10000; // default 10s between repeated messages
+
+        // If we've already emitted a trade message for this dockingTarget, throttle further messages
+        if (this._tradeCompletedForTarget === target) {
+            if (!this._lastTradeMessageTime || (now - this._lastTradeMessageTime) > cooldown) {
+                this._lastTradeMessageTime = now;
+                return true;
+            }
+            return false;
+        }
+
+        // First time reporting trade for this docking target: mark and allow the message,
+        // and schedule a short undock delay so trade effects can complete.
+        this._tradeCompletedForTarget = target;
+        this._lastTradeMessageTime = now;
+        this._tradeMessageSentTime = now;
+        this._pendingUndockTime = now + (this.postTradeUndockDelayMs || 1000); // ms
         return true;
     }
     // --- END NEW ---
@@ -52,8 +84,18 @@ class EnemyTargeting {
             if (inDockSequence) {
                 // Validate docking target; if invalid, abort docking and fallback to default state.
                 if (this.dockingTarget && !this._isDockingTargetValid(this.dockingTarget)) {
+                    // Clear docking bookkeeping and force undock so the transport can move again
                     this.dockingTarget = null;
                     this._dockingStartTime = undefined;
+                    this._tradeCompletedForTarget = undefined;
+                    this._tradeMessageSentTime = undefined;
+                    this._pendingUndockTime = undefined;
+                    this._approachTarget = undefined;
+                    if (typeof this.undock === 'function') {
+                        try { this.undock(); } catch (e) { /* ignore */ }
+                    } else {
+                        this.isDocked = false;
+                    }
                     if (typeof this.changeState === 'function') {
                         this.changeState(this._getDefaultStateForRole ? this._getDefaultStateForRole() : AI_STATE.IDLE);
                     }
@@ -65,10 +107,61 @@ class EnemyTargeting {
                     const elapsed = now - this._dockingStartTime;
                     const dockingTimeoutMs = this.dockingTimeoutMs || 20000; // default 20s
 
+                    // ARRIVAL: If we're close enough to dock but not marked docked, snap into TRADING/docked state
+                    if (this.dockingTarget && !this.isDocked && typeof this.distanceTo === 'function') {
+                        const distance = this.distanceTo(this.dockingTarget);
+                        const dockRadius = this.dockingRange || this.dockingTarget.dockRadius || 32;
+                        if (distance <= dockRadius) {
+                            this.isDocked = true;
+                            this.currentState = AI_STATE.TRADING;
+                            // ensure docking start is recent
+                            this._dockingStartTime = now;
+                        }
+                    }
+
+                    // If we've already emitted a trade message for this dockingTarget while in TRADING,
+                    // wait for the pending undock delay then perform undock/cleanup so the ship can resume normal behavior.
+                    if (this.currentState === AI_STATE.TRADING && this._tradeCompletedForTarget && this._tradeCompletedForTarget === this.dockingTarget) {
+                        // initialize pending undock if not set (covers cases where message flag was set externally)
+                        if (!this._pendingUndockTime) {
+                            this._pendingUndockTime = now + (this.postTradeUndockDelayMs || 1000);
+                        }
+                        // perform undock after delay
+                        if (now >= this._pendingUndockTime) {
+                            this.dockingTarget = null;
+                            this._dockingStartTime = undefined;
+                            this._tradeCompletedForTarget = undefined;
+                            this._tradeMessageSentTime = undefined;
+                            this._pendingUndockTime = undefined;
+                            this._approachTarget = undefined;
+                            if (typeof this.undock === 'function') {
+                                try { this.undock(); } catch (e) { /* ignore */ }
+                            } else {
+                                this.isDocked = false;
+                            }
+                            if (typeof this.changeState === 'function') {
+                                this.changeState(this._getDefaultStateForRole ? this._getDefaultStateForRole() : AI_STATE.IDLE);
+                            }
+                            // allow retargeting next tick
+                            return false;
+                        }
+                        // still in post-trade wait window: remain trading (prevents immediate repeated messages)
+                        return this.target !== null;
+                    }
+
                     if (elapsed > dockingTimeoutMs) {
-                        // Abort docking sequence and reset
+                        // Abort docking sequence and reset — ensure transport actually undocks/moves
                         this.dockingTarget = null;
                         this._dockingStartTime = undefined;
+                        this._tradeCompletedForTarget = undefined;
+                        this._tradeMessageSentTime = undefined;
+                        this._pendingUndockTime = undefined;
+                        this._approachTarget = undefined;
+                        if (typeof this.undock === 'function') {
+                            try { this.undock(); } catch (e) { /* ignore */ }
+                        } else {
+                            this.isDocked = false;
+                        }
                         if (typeof this.changeState === 'function') {
                             this.changeState(this._getDefaultStateForRole ? this._getDefaultStateForRole() : AI_STATE.IDLE);
                         }
@@ -83,8 +176,9 @@ class EnemyTargeting {
                     }
                 }
             } else {
-                // Leaving docking sequence: clear start time
+                // Leaving docking sequence: clear start time and any pending undock
                 if (this._dockingStartTime) this._dockingStartTime = undefined;
+                this._pendingUndockTime = undefined;
             }
         }
 
