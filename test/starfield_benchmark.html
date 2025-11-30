@@ -140,10 +140,44 @@
         const tileSize = 512;
         const tiles = new Map();
         const tileQueue = [];
-        const maxTilesPerFrame = 2;
+        const baseMaxTilesPerFrame = 2;
+        const maxDynamicTiles = 8;
         const maxCachedTiles = 64;
+        const tileGenerationTimeBudgetMs = 4; // cap generation work per frame (ms)
         let lastPlayerVelX = 0;
         let lastPlayerVelY = 0;
+        // Worker + OffscreenCanvas support
+        const workerEnabled = (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined');
+        let tileWorker = null;
+        if (workerEnabled) {
+            try {
+                tileWorker = new Worker('starfield_worker.js');
+                tileWorker.onmessage = function(e) {
+                    const data = e.data;
+                    const key = data.key;
+                    if (!key) return;
+                    // create a p5 graphics and draw the incoming ImageBitmap into it
+                    if (data.error) {
+                        tiles.delete(key);
+                        return;
+                    }
+                    const imgBitmap = data.bitmap;
+                    const [tx, ty] = key.split(',').map(Number);
+                    const buffer = createGraphics(tileSize, tileSize);
+                    const ctx = buffer.drawingContext;
+                    try {
+                        // draw the incoming bitmap to the p5 buffer, matching buffer dimensions
+                        ctx.clearRect(0,0,buffer.width,buffer.height);
+                        if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(imgBitmap, 0, 0, buffer.width, buffer.height);
+                    } catch (err) {}
+                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(e) {}
+                    tiles.set(key, { buffer, lastUsed: millis() });
+                };
+            } catch (err) {
+                tileWorker = null;
+            }
+        }
         
         // Single buffer rendering
         let starfieldBuffer = null;
@@ -244,12 +278,12 @@
                     const key = `${tx},${ty}`;
                     const tile = tiles.get(key);
                     
-                    if (tile) {
+                    if (tile && tile.buffer) {
                         tile.lastUsed = currentTime;
                         image(tile.buffer, tx * tileSize, ty * tileSize);
                     } else {
-                        // Draw directly as fallback
-                        drawStarsDirectlyForTile(tx, ty);
+                        // If a tile exists but is pending (worker/main generation), draw placeholder.
+                        drawPlaceholderTile(tx, ty);
                         missingTiles.push({ tx, ty, key });
                     }
                 }
@@ -262,22 +296,34 @@
         }
         
         function drawStarsDirectlyForTile(tx, ty) {
+            // Draw a lightweight placeholder instead of full-detail tile to avoid big frame spikes.
+            drawPlaceholderTile(tx, ty);
+        }
+
+        function drawPlaceholderTile(tx, ty) {
             const left = tx * tileSize;
-            const right = left + tileSize;
             const top = ty * tileSize;
-            const bottom = top + tileSize;
-            
-            drawStarLayer(left, right, top, bottom, {
-                gridSize: 45, maxStarsPerCell: 3,
-                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
-                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
-            });
-            
-            drawStarLayer(left, right, top, bottom, {
-                gridSize: 200, maxStarsPerCell: 1,
-                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
-                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
-            });
+            // faint background so missing tiles are not visually jarring
+            push();
+            noStroke();
+            fill(3, 3, 6, 60);
+            rect(left, top, tileSize, tileSize);
+
+            // deterministic few dots as low-detail stars
+            const seed = ((tx * 73856093) ^ (ty * 19349663) ^ (systemIndex * 83492791)) >>> 0;
+            let rng = seed;
+            const dotCount = 6;
+            for (let i = 0; i < dotCount; i++) {
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                const x = left + (rng / 4294967296) * tileSize;
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                const y = top + (rng / 4294967296) * tileSize;
+                rng = (rng * 1664525 + 1013904223) >>> 0;
+                const s = 0.8 + (rng / 4294967296) * 1.6;
+                fill(180, 180, 200, 180);
+                rect(x, y, Math.max(1, Math.round(s)), Math.max(1, Math.round(s)));
+            }
+            pop();
         }
         
         function queueTilesForGeneration(missingTiles, playerX, playerY) {
@@ -294,41 +340,85 @@
             if (tileQueue.length > maxCachedTiles * 2) {
                 tileQueue.length = maxCachedTiles * 2;
             }
+
+            // Pre-warm neighboring tiles (small radius) to reduce visible pop-in during fast movement
+            const prewarmRadius = 1;
+            for (const t of missingTiles) {
+                for (let ox = -prewarmRadius; ox <= prewarmRadius; ox++) {
+                    for (let oy = -prewarmRadius; oy <= prewarmRadius; oy++) {
+                        const nx = t.tx + ox, ny = t.ty + oy;
+                        const nkey = `${nx},${ny}`;
+                        if (!tiles.has(nkey) && !tileQueue.some(q => q.key === nkey)) {
+                            const dx = (nx + 0.5) * tileSize - playerX;
+                            const dy = (ny + 0.5) * tileSize - playerY;
+                            tileQueue.push({ tx: nx, ty: ny, key: nkey, priority: Math.sqrt(dx*dx + dy*dy) });
+                        }
+                    }
+                }
+            }
+            tileQueue.sort((a, b) => a.priority - b.priority);
         }
         
         function processTileQueue() {
+            // Adaptive generation: honor a dynamic tile count and a short time budget per frame.
+            const start = performance.now();
             let generated = 0;
-            while (tileQueue.length > 0 && generated < maxTilesPerFrame) {
+            const maxToGenerate = getMaxTilesPerFrame();
+            while (tileQueue.length > 0 && generated < maxToGenerate && (performance.now() - start) < tileGenerationTimeBudgetMs) {
                 const tile = tileQueue.shift();
                 if (tiles.has(tile.key)) continue;
                 generateTile(tile.tx, tile.ty);
                 generated++;
             }
         }
+
+        function getMaxTilesPerFrame() {
+            // scale generation with player speed to avoid missing tiles during fast movement
+            const speed = Math.sqrt(player.vel.x * player.vel.x + player.vel.y * player.vel.y);
+            const extra = Math.min(maxDynamicTiles - baseMaxTilesPerFrame, Math.round(speed / 4));
+            return Math.max(1, baseMaxTilesPerFrame + extra);
+        }
         
         function generateTile(tx, ty) {
             const key = `${tx},${ty}`;
+            // avoid duplicate generation requests
+            if (tiles.has(key) && tiles.get(key).pending) return;
+
+            // mark pending so we don't enqueue again
+            tiles.set(key, { buffer: null, lastUsed: millis(), pending: true });
+
+            // If worker is available, ask it to generate an ImageBitmap and transfer it back.
+            if (tileWorker) {
+                try {
+                    tileWorker.postMessage({ cmd: 'generateTile', tx, ty, tileSize, systemIndex }, []);
+                    return;
+                } catch (err) {
+                    // fallthrough to main-thread generation
+                }
+            }
+
+            // fallback: generate on main thread (existing logic)
             const buffer = createGraphics(tileSize, tileSize);
             buffer.background(0);
             buffer.noStroke();
-            
+
             const worldLeft = tx * tileSize;
             const worldRight = worldLeft + tileSize;
             const worldTop = ty * tileSize;
             const worldBottom = worldTop + tileSize;
-            
+
             drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
                 gridSize: 45, maxStarsPerCell: 3,
                 sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
                 colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
             });
-            
+
             drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
                 gridSize: 200, maxStarsPerCell: 1,
                 sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
                 colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
             });
-            
+
             tiles.set(key, { buffer, lastUsed: millis() });
         }
         

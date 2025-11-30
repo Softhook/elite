@@ -87,6 +87,77 @@ const STARFIELD_PREDICTION_FRAMES = 30;             // Frames ahead to predict (
 const STARFIELD_CLEANUP_INTERVAL_MS = 5000;         // How often to cleanup old tiles
 // ---
 
+// Worker + OffscreenCanvas support for tile generation
+const STARFIELD_WORKER_ENABLED = (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined');
+let STARFIELD_TILE_WORKER = null;
+if (STARFIELD_WORKER_ENABLED) {
+    try {
+        STARFIELD_TILE_WORKER = new Worker('test/starfield_worker.js');
+        STARFIELD_TILE_WORKER.onmessage = function(e) {
+            const data = e.data;
+            if (!data) return;
+            const key = data.key;
+            const sysIdx = data.systemIndex;
+            const imgBitmap = data.bitmap;
+
+            // Locate system
+            let sys = null;
+            try { if (typeof galaxy !== 'undefined' && galaxy && Array.isArray(galaxy.systems)) sys = galaxy.systems[sysIdx]; } catch(_) { sys = null; }
+
+            // If system no longer exists, close the ImageBitmap (if any) and bail
+            if (!sys) {
+                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                return;
+            }
+
+            if (data.error) {
+                // remove pending marker if present and close bitmap if provided
+                try {
+                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                    if (key === 'buffer') {
+                        if (sys._starfieldBufferPending !== undefined) sys._starfieldBufferPending = false;
+                        if (sys._starfieldBuffer !== undefined) sys._starfieldBuffer = null;
+                    } else {
+                        sys._starfieldTiles.delete(key);
+                    }
+                } catch(_) {}
+                return;
+            }
+
+            // Worker only returns tile ImageBitmaps now; buffered responses removed
+
+            // Otherwise handle tile response
+            const parts = String(key).split(',');
+            if (parts.length !== 2) {
+                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                return;
+            }
+            const [tx, ty] = parts.map(Number);
+            const buffer = createGraphics(sys._starfieldTileSize, sys._starfieldTileSize);
+            const ctx = buffer.drawingContext;
+            try {
+                ctx.clearRect(0,0,buffer.width,buffer.height);
+                if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(imgBitmap, 0, 0, buffer.width, buffer.height);
+            } catch (err) {}
+            try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(e) {}
+            sys._starfieldTiles.set(key, { buffer, lastUsed: millis() });
+        };
+
+        // Ensure the worker is terminated on page unload to free resources
+        try {
+            if (typeof window !== 'undefined' && window && STARFIELD_TILE_WORKER) {
+                const _terminateStarfieldWorker = () => {
+                    try { STARFIELD_TILE_WORKER.terminate(); } catch (e) {}
+                    STARFIELD_TILE_WORKER = null;
+                };
+                window.addEventListener('beforeunload', _terminateStarfieldWorker);
+                window.addEventListener('unload', _terminateStarfieldWorker);
+            }
+        } catch (e) {}
+    } catch (e) { STARFIELD_TILE_WORKER = null; }
+}
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
@@ -174,13 +245,7 @@ class StarSystem {
         this._lastPlayerAsteroidBumpSoundTime = 0;
         this._lastPlayerShipBumpSoundTime = 0;
 
-        // Starfield buffer caching properties (for performance optimization)
-        this._starfieldBuffer = null;
-        this._starfieldBufferSize = 4096;
-        this._starfieldLastPlayerX = null;
-        this._starfieldLastPlayerY = null;
-        this._starfieldRegenerationThreshold = 1000; // Regenerate buffer when player moves this far
-        
+        // Starfield: use progressive tile-based rendering only (legacy buffer removed)
         // Progressive rendering starfield system
         this._starfieldTileSize = STARFIELD_TILE_SIZE;
         this._starfieldTiles = new Map(); // Map of "x,y" -> { buffer, lastUsed }
@@ -873,19 +938,7 @@ try {
      * Call this when entering a new system or when the buffer needs to be refreshed.
      */
     resetStarfieldBuffer() {
-        // Remove reference to trigger garbage collection and force regeneration
-        if (this._starfieldBuffer) {
-            try {
-                this._starfieldBuffer.remove();
-            } catch (e) {
-                // Ignore errors during cleanup
-            }
-        }
-        this._starfieldBuffer = null;
-        this._starfieldLastPlayerX = null;
-        this._starfieldLastPlayerY = null;
-        
-        // Also reset progressive tile system
+        // Clear progressive tile cache and generation queue
         if (this._starfieldTiles) {
             for (const tile of this._starfieldTiles.values()) {
                 if (tile && tile.buffer) {
@@ -895,6 +948,9 @@ try {
             this._starfieldTiles.clear();
         }
         this._starfieldTileQueue = [];
+        // Clear any legacy last-player position markers (harmless if unused)
+        this._starfieldLastPlayerX = null;
+        this._starfieldLastPlayerY = null;
     }
 
     /** Call this method when the system is discovered by the player. */
@@ -2583,18 +2639,8 @@ checkProjectileCollisions() {
         noStroke();
         rect(-width * 2, -height * 2, width * 4, height * 4);
         
-        // Route to appropriate rendering method based on mode
-        switch (this._starfieldRenderMode) {
-            case 'progressive':
-                this._drawProgressiveStarfield();
-                break;
-            case 'buffered':
-                this._drawBufferedStarfield();
-                break;
-            case 'legacy':
-                this.drawOptimalStarfield();
-                return; // Legacy mode includes spectacular stars
-        }
+        // Always use progressive tile-based rendering (worker-driven)
+        this._drawProgressiveStarfield();
         
         // Draw spectacular stars (animated phenomena) - these are rare and change over time
         // so they're drawn directly each frame, but only in visible area
@@ -2606,11 +2652,9 @@ checkProjectileCollisions() {
      * @param {string} mode - 'progressive', 'buffered', or 'legacy'
      */
     setStarfieldRenderMode(mode) {
-        if (['progressive', 'buffered', 'legacy'].includes(mode)) {
-            this._starfieldRenderMode = mode;
-            // Reset caches when switching modes
-            this.resetStarfieldBuffer();
-        }
+        // Enforce progressive-only mode. Legacy/buffered modes removed.
+        this._starfieldRenderMode = 'progressive';
+        this.resetStarfieldBuffer();
     }
     
     /**
@@ -2652,7 +2696,7 @@ checkProjectileCollisions() {
                 const key = `${tx},${ty}`;
                 const tile = this._starfieldTiles.get(key);
                 
-                if (tile) {
+                if (tile && tile.buffer) {
                     // Update last used time
                     tile.lastUsed = currentTime;
                     // Draw the cached tile
@@ -2854,22 +2898,34 @@ checkProjectileCollisions() {
     _generateTile(tx, ty) {
         const tileSize = this._starfieldTileSize;
         const key = `${tx},${ty}`;
-        
-        // Create buffer for this tile
+        // Mark as pending to avoid duplicate requests
+        this._starfieldTiles.set(key, { buffer: null, lastUsed: millis(), pending: true });
+
+        // If worker available, request generation off-main-thread
+        if (STARFIELD_TILE_WORKER) {
+            try {
+                STARFIELD_TILE_WORKER.postMessage({ cmd: 'generateTile', tx, ty, tileSize, systemIndex: this.systemIndex }, []);
+                return;
+            } catch (e) {
+                // Fall through to main-thread generation on error
+            }
+        }
+
+        // Fallback: main-thread generation (existing logic)
         const buffer = createGraphics(tileSize, tileSize);
         buffer.background(0);
         buffer.noStroke();
-        
+
         // Calculate world bounds for this tile
         const worldLeft = tx * tileSize;
         const worldRight = worldLeft + tileSize;
         const worldTop = ty * tileSize;
         const worldBottom = worldTop + tileSize;
-        
+
         // Resolution-independent base sizing
         const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
         const baseStarSize = Math.max(1, pixelRatio * 0.6);
-        
+
         // Render Layer 1: Background stars
         this._drawStarLayerToTileBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
             gridSize: 45,
@@ -2878,7 +2934,7 @@ checkProjectileCollisions() {
             brightnessRange: [80, 160],
             colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
         });
-        
+
         // Render Layer 2: Rare bright feature stars
         this._drawStarLayerToTileBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tx, ty, {
             gridSize: 200,
@@ -2887,13 +2943,13 @@ checkProjectileCollisions() {
             brightnessRange: [180, 255],
             colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
         });
-        
+
         // Store the tile
         this._starfieldTiles.set(key, {
             buffer: buffer,
             lastUsed: millis()
         });
-        
+
         if (STAR_SYSTEM_DEBUG) {
             console.log(`Generated starfield tile at (${tx}, ${ty})`);
         }
@@ -3049,229 +3105,13 @@ checkProjectileCollisions() {
         }
     }
     
-    /**
-     * Original buffered starfield rendering (single large buffer).
-     * Kept for comparison benchmarking.
-     * @private
-     */
-    _drawBufferedStarfield() {
-        // Check if buffer needs to be created or regenerated
-        const needsRegeneration = this._needsStarfieldRegeneration();
-        
-        if (needsRegeneration) {
-            this._generateStarfieldBuffer();
-        }
-        
-        // Draw the cached buffer if available
-        if (this._starfieldBuffer) {
-            const bufferWorldX = this._starfieldLastPlayerX - this._starfieldBufferSize / 2;
-            const bufferWorldY = this._starfieldLastPlayerY - this._starfieldBufferSize / 2;
-            image(this._starfieldBuffer, bufferWorldX, bufferWorldY);
-        }
-    }
+    // Buffered starfield mode removed — use progressive tile-based rendering only.
     
-    /**
-     * Checks if the starfield buffer needs to be regenerated.
-     * @returns {boolean} True if buffer needs regeneration
-     * @private
-     */
-    _needsStarfieldRegeneration() {
-        // No buffer exists yet
-        if (!this._starfieldBuffer) return true;
-        
-        // No recorded player position
-        if (this._starfieldLastPlayerX === null || this._starfieldLastPlayerY === null) return true;
-        
-        // Safety check for player position
-        if (!this.player || !this.player.pos) return false;
-        
-        // Check if player has moved beyond the threshold
-        const dx = Math.abs(this.player.pos.x - this._starfieldLastPlayerX);
-        const dy = Math.abs(this.player.pos.y - this._starfieldLastPlayerY);
-        
-        return dx > this._starfieldRegenerationThreshold || dy > this._starfieldRegenerationThreshold;
-    }
+    // _needsStarfieldRegeneration removed (buffered mode deprecated)
     
-    /**
-     * Generates the starfield buffer - renders stars to off-screen graphics buffer.
-     * This is the expensive operation that we cache.
-     * @private
-     */
-    _generateStarfieldBuffer() {
-        // Safety check for player position
-        if (!this.player || !this.player.pos) return;
-        
-        const bufferSize = this._starfieldBufferSize;
-        
-        // Create or reuse buffer
-        if (!this._starfieldBuffer) {
-            this._starfieldBuffer = createGraphics(bufferSize, bufferSize);
-        }
-        
-        const buffer = this._starfieldBuffer;
-        
-        // Record the center point of this buffer generation
-        this._starfieldLastPlayerX = this.player.pos.x;
-        this._starfieldLastPlayerY = this.player.pos.y;
-        
-        // Clear buffer with space black
-        buffer.background(0);
-        buffer.noStroke();
-        
-        // Calculate world bounds that this buffer covers
-        const halfSize = bufferSize / 2;
-        const left = this._starfieldLastPlayerX - halfSize;
-        const right = this._starfieldLastPlayerX + halfSize;
-        const top = this._starfieldLastPlayerY - halfSize;
-        const bottom = this._starfieldLastPlayerY + halfSize;
-        
-        // Resolution-independent base sizing
-        const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
-        const baseStarSize = Math.max(1, pixelRatio * 0.6);
-        
-        // Render Layer 1: Background stars (many small dim stars)
-        this._drawStarLayerToBuffer(buffer, left, right, top, bottom, {
-            gridSize: 45,
-            maxStarsPerCell: 3,
-            sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
-            brightnessRange: [80, 160],
-            colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
-        });
-        
-        // Render Layer 2: Rare bright feature stars
-        this._drawStarLayerToBuffer(buffer, left, right, top, bottom, {
-            gridSize: 200,
-            maxStarsPerCell: 1,
-            sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
-            brightnessRange: [180, 255],
-            colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
-        });
-        
-        if (STAR_SYSTEM_DEBUG) {
-            console.log(`Starfield buffer regenerated at (${this._starfieldLastPlayerX.toFixed(0)}, ${this._starfieldLastPlayerY.toFixed(0)})`);
-        }
-    }
+    // _generateStarfieldBuffer removed — buffered generation deprecated
     
-    /**
-     * Draws a layer of stars to the off-screen buffer.
-     * Uses same deterministic algorithm as original but renders to buffer.
-     * @param {p5.Graphics} buffer - The off-screen graphics buffer
-     * @param {number} left - Left world coordinate
-     * @param {number} right - Right world coordinate
-     * @param {number} top - Top world coordinate
-     * @param {number} bottom - Bottom world coordinate
-     * @param {Object} config - Star layer configuration
-     * @private
-     */
-    _drawStarLayerToBuffer(buffer, left, right, top, bottom, config) {
-        const gridSize = config.gridSize;
-        const systemSeed = this.systemIndex * 1337;
-        
-        // Pre-define colors
-        const colors = {
-            white: [255, 255, 255],
-            blue: [200, 220, 255],
-            yellow: [255, 250, 200],
-            red: [255, 200, 180]
-        };
-        
-        // Integer math for grid coordinates
-        const startGX = Math.floor(left / gridSize);
-        const endGX = Math.ceil(right / gridSize);
-        const startGY = Math.floor(top / gridSize);
-        const endGY = Math.ceil(bottom / gridSize);
-        
-        // Extract config values for faster access
-        const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
-        const minSize = sizeRange[0];
-        const sizeDiff = sizeRange[1] - minSize;
-        const minBright = brightnessRange[0];
-        const brightDiff = brightnessRange[1] - minBright;
-        const typesLen = colorTypes.length;
-        
-        // Calculate buffer offset (stars are positioned in world space, buffer is centered at last player pos)
-        const bufferOffsetX = this._starfieldLastPlayerX - this._starfieldBufferSize / 2;
-        const bufferOffsetY = this._starfieldLastPlayerY - this._starfieldBufferSize / 2;
-        
-        // Reuse variables to avoid GC
-        let rng, cellSeed, starCount, worldX, worldY, bufferX, bufferY;
-        let size, brightness, colorType, baseColor, r, g, b;
-        
-        for (let gx = startGX; gx <= endGX; gx++) {
-            const gxSeed = (gx * 73856093) >>> 0;
-            
-            for (let gy = startGY; gy <= endGY; gy++) {
-                // Deterministic random seed
-                cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
-                rng = cellSeed;
-                
-                // Skip check (same as original)
-                rng = (rng * 1664525 + 1013904223) >>> 0;
-                if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                
-                // Star count
-                rng = (rng * 1664525 + 1013904223) >>> 0;
-                starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                
-                for (let i = 0; i < starCount; i++) {
-                    // World X
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
-                    // World Y
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
-                    // Convert world coords to buffer coords
-                    bufferX = worldX - bufferOffsetX;
-                    bufferY = worldY - bufferOffsetY;
-                    
-                    // Skip if outside buffer bounds (with small margin)
-                    if (bufferX < -5 || bufferX > this._starfieldBufferSize + 5 ||
-                        bufferY < -5 || bufferY > this._starfieldBufferSize + 5) {
-                        continue;
-                    }
-                    
-                    // Size
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    size = minSize + (rng / 4294967296) * sizeDiff;
-                    
-                    // Brightness
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    brightness = minBright + (rng / 4294967296) * brightDiff;
-                    
-                    if (size < 2) {
-                        brightness = (brightness * 1.4 > 255) ? 255 : brightness * 1.4;
-                    }
-                    
-                    // Color
-                    rng = (rng * 1664525 + 1013904223) >>> 0;
-                    colorType = colorTypes[Math.floor((rng / 4294967296) * typesLen)];
-                    baseColor = colors[colorType];
-                    
-                    // Apply brightness
-                    const brightnessFactor = brightness / 255;
-                    r = baseColor[0] * brightnessFactor;
-                    g = baseColor[1] * brightnessFactor;
-                    b = baseColor[2] * brightnessFactor;
-                    
-                    buffer.fill(r, g, b);
-                    
-                    if (size <= 2) {
-                        buffer.square(bufferX, bufferY, (size < 1 ? 1 : Math.round(size)));
-                    } else {
-                        buffer.ellipse(bufferX, bufferY, size, size);
-                        
-                        // Glow effect for large bright stars
-                        if (brightness > 200 && size > 3) {
-                            buffer.fill(r, g, b, 40);
-                            buffer.ellipse(bufferX, bufferY, size * 1.5, size * 1.5);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // _drawStarLayerToBuffer removed — buffer-based rendering deprecated
     
     /**
      * Draws spectacular star phenomena as an overlay.
@@ -3298,55 +3138,7 @@ checkProjectileCollisions() {
         this.drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis);
     }
     
-    /** 
-     * Legacy method kept for compatibility - draws stars directly (not cached).
-     * Use drawBackground() for the optimized cached version.
-     * @deprecated Use drawBackground() instead for better performance
-     */
-    drawOptimalStarfield() {
-        // Cache global values once per frame
-        const currentMillis = millis();
-        const _width = width;
-        const _height = height;
-        
-        // Resolution-independent base sizing
-        // Cache pixelDensity to avoid function call overhead
-        const pixelRatio = pixelDensity();
-        const baseStarSize = Math.max(1, pixelRatio * 0.6);
-        
-        // Viewport bounds
-        // Reduced padding slightly - 100 is usually sufficient for stars
-        const padding = 100;
-        const playerX = this.player.pos.x;
-        const playerY = this.player.pos.y;
-        
-        const left = playerX - _width/2 - padding;
-        const right = playerX + _width/2 + padding;
-        const top = playerY - _height/2 - padding;
-        const bottom = playerY + _height/2 + padding;
-        
-        // Optimized 3-layer approach
-        // Layer 1: Background stars
-        this.drawStarLayer(left, right, top, bottom, {
-            gridSize: 45,
-            maxStarsPerCell: 3,
-            sizeRange: [baseStarSize * 0.5, baseStarSize * 1.5],
-            brightnessRange: [80, 160],
-            colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
-        }, currentMillis);
-        
-        // Layer 2: Rare bright feature stars
-        this.drawStarLayer(left, right, top, bottom, {
-            gridSize: 200,
-            maxStarsPerCell: 1,
-            sizeRange: [baseStarSize * 2.0, baseStarSize * 4.0],
-            brightnessRange: [180, 255],
-            colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
-        }, currentMillis);
-        
-        // Layer 3: Spectacular phenomena
-        this.drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis);
-    }
+    // drawOptimalStarfield removed — legacy direct drawing deprecated
     
     drawStarLayer(left, right, top, bottom, config, currentMillis) {
         const gridSize = config.gridSize;
