@@ -4734,8 +4734,9 @@ if (isIllegalInSystem || isMissionCargo) {
         const station = system?.station;
         
         // Use appropriate header based on whether player is docked at station or space object
+        // Check _returnFromRecordState to determine if we came from a space object
         let headerHeight;
-        if (gameStateManager?.currentState === "DOCKED_SPACE_OBJECT" && gameStateManager?.currentDockedSpaceObject) {
+        if (gameStateManager?._returnFromRecordState === "DOCKED_SPACE_OBJECT" && gameStateManager?.currentDockedSpaceObject) {
             headerHeight = this.drawSpaceObjectHeader("Personal Record", gameStateManager.currentDockedSpaceObject, player, system);
         } else {
             headerHeight = this.drawStationHeader("Personal Record", station, player, system);
