@@ -57,7 +57,7 @@ class UIManager {
         this.minimapSize = this.minimapExpandedSize; // start always large
 
         // Zoom levels (world view ranges) - clicking cycles these
-        this.minimapWorldViewRanges = [5000, 10000, 20000];
+        this.minimapWorldViewRanges = [5000, 10000, 20000, 50000];
         this.minimapZoomIndex = 2; // start at the widest view (index into minimapWorldViewRanges)
 
         this.minimapMargin = 15;
