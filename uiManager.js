@@ -990,6 +990,202 @@ class UIManager {
         pop();
     } // --- End drawStationMainMenu ---
 
+    /**
+     * Draws the Space Object Dock Menu (when state is DOCKED_SPACE_OBJECT)
+     * This is a simplified menu compared to the station menu, allowing only limited trading
+     * and viewing of personal log.
+     * @param {SpaceObject} spaceObject - The space object the player is docked at
+     * @param {Player} player - The player object
+     */
+    drawSpaceObjectDockMenu(spaceObject, player) {
+        this.spaceObjectMenuButtonAreas = [];
+        if (!spaceObject || !player) { 
+            console.warn("drawSpaceObjectDockMenu missing spaceObject or player"); 
+            return; 
+        }
+        
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30, 40, 60, 220], [80, 120, 180]);
+        
+        // Get display name for the space object
+        const displayName = (typeof spaceObject.getDisplayName === 'function') 
+            ? spaceObject.getDisplayName() 
+            : (spaceObject.type || 'Space Object');
+        
+        // Draw header with space object name
+        textFont(font);
+        textAlign(CENTER, TOP);
+        textSize(28);
+        fill(220, 220, 255);
+        text(displayName, pX + pW / 2, pY + 20);
+        
+        // Draw cargo capacity
+        textSize(16);
+        fill(180, 180, 200);
+        const cargoUsed = player.getCargoAmount();
+        text(`Cargo: ${cargoUsed}/${player.cargoCapacity}`, pX + pW / 2, pY + 55);
+        
+        // Draw credits
+        fill(255, 215, 0);
+        text(`Credits: ${player.credits.toLocaleString()}`, pX + pW / 2, pY + 75);
+        
+        // Get tradable commodities for this space object
+        const commodities = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
+        
+        // Draw what this facility produces and buys
+        let infoY = pY + 110;
+        textSize(14);
+        textAlign(LEFT, TOP);
+        
+        fill(100, 200, 100);
+        text("Produces:", pX + 20, infoY);
+        fill(180, 220, 180);
+        const producesText = commodities.produces.length > 0 ? commodities.produces.join(', ') : 'Nothing';
+        text(producesText, pX + 90, infoY);
+        
+        infoY += 22;
+        fill(200, 100, 100);
+        text("Buys:", pX + 20, infoY);
+        fill(220, 180, 180);
+        const buysText = commodities.buys.length > 0 ? commodities.buys.join(', ') : 'Nothing';
+        text(buysText, pX + 90, infoY);
+        
+        // Draw trading area - show commodities player can trade
+        infoY += 40;
+        textAlign(CENTER, TOP);
+        textSize(18);
+        fill(180, 180, 220);
+        text("Available Trades", pX + pW / 2, infoY);
+        
+        infoY += 30;
+        
+        // Draw buy/sell buttons for each commodity
+        const btnW = pW * 0.4;
+        const btnH = 36;
+        const btnSpacing = 44;
+        const colWidth = pW * 0.48;
+        
+        // Selling section (what player can sell to this object)
+        if (commodities.buys.length > 0) {
+            let sellY = infoY;
+            textSize(14);
+            textAlign(LEFT, TOP);
+            fill(200, 150, 100);
+            text("Sell to facility:", pX + 10, sellY);
+            sellY += 24;
+            
+            for (let i = 0; i < commodities.buys.length; i++) {
+                const commodityName = commodities.buys[i];
+                const playerItem = player.cargo.find(item => item && item.name === commodityName);
+                const playerQty = playerItem ? playerItem.quantity : 0;
+                
+                // Calculate sell price (simple formula - 80% of base)
+                const basePrice = this._getCommodityBasePrice(commodityName);
+                const sellPrice = Math.floor(basePrice * 0.8);
+                
+                // Draw commodity info and sell button
+                textAlign(LEFT, CENTER);
+                textSize(12);
+                fill(playerQty > 0 ? [180, 220, 180] : [120, 120, 140]);
+                text(`${commodityName}: ${playerQty}`, pX + 15, sellY + btnH / 2);
+                
+                if (playerQty > 0) {
+                    const btnX = pX + pW * 0.35;
+                    const area = this._drawButton(btnX, sellY, btnW * 0.6, btnH - 4, `Sell @${sellPrice}cr`, [80, 60, 60], [180, 140, 140]);
+                    area.action = "SELL_COMMODITY";
+                    area.commodity = commodityName;
+                    area.price = sellPrice;
+                    this.spaceObjectMenuButtonAreas.push(area);
+                }
+                sellY += btnSpacing;
+            }
+            infoY = sellY + 10;
+        }
+        
+        // Buying section (what player can buy from this object)
+        if (commodities.produces.length > 0) {
+            let buyY = infoY;
+            textSize(14);
+            textAlign(LEFT, TOP);
+            fill(100, 200, 150);
+            text("Buy from facility:", pX + 10, buyY);
+            buyY += 24;
+            
+            for (let i = 0; i < commodities.produces.length; i++) {
+                const commodityName = commodities.produces[i];
+                
+                // Calculate buy price (simple formula - 120% of base)
+                const basePrice = this._getCommodityBasePrice(commodityName);
+                const buyPrice = Math.floor(basePrice * 1.2);
+                const canAfford = player.credits >= buyPrice;
+                const hasSpace = player.getCargoAmount() < player.cargoCapacity;
+                
+                // Draw commodity info and buy button
+                textAlign(LEFT, CENTER);
+                textSize(12);
+                fill(canAfford && hasSpace ? [180, 220, 180] : [120, 120, 140]);
+                text(`${commodityName}`, pX + 15, buyY + btnH / 2);
+                
+                const btnX = pX + pW * 0.35;
+                const btnColor = (canAfford && hasSpace) ? [60, 80, 60] : [60, 60, 60];
+                const textColor = (canAfford && hasSpace) ? [140, 180, 140] : [100, 100, 100];
+                const area = this._drawButton(btnX, buyY, btnW * 0.6, btnH - 4, `Buy @${buyPrice}cr`, btnColor, textColor);
+                if (canAfford && hasSpace) {
+                    area.action = "BUY_COMMODITY";
+                    area.commodity = commodityName;
+                    area.price = buyPrice;
+                    this.spaceObjectMenuButtonAreas.push(area);
+                }
+                buyY += btnSpacing;
+            }
+            infoY = buyY + 10;
+        }
+        
+        // Action buttons at the bottom
+        let bottomY = pY + pH - 130;
+        const actionBtnW = pW * 0.4;
+        const actionBtnH = 40;
+        
+        // Personal Record button
+        const recordArea = this._drawButton(pX + pW / 2 - actionBtnW / 2, bottomY, actionBtnW, actionBtnH, "Personal Record", [50, 50, 90], [150, 150, 200]);
+        recordArea.action = "VIEW_RECORD";
+        this.spaceObjectMenuButtonAreas.push(recordArea);
+        
+        bottomY += 55;
+        
+        // Undock button
+        const undockArea = this._drawButton(pX + pW / 2 - actionBtnW / 2, bottomY, actionBtnW, actionBtnH, "Undock", [90, 50, 50], [200, 150, 150]);
+        undockArea.action = "UNDOCK";
+        this.spaceObjectMenuButtonAreas.push(undockArea);
+        
+        pop();
+    }
+    
+    /**
+     * Helper function to get base price for a commodity.
+     * @param {string} commodityName - The name of the commodity
+     * @returns {number} The base price
+     */
+    _getCommodityBasePrice(commodityName) {
+        const basePrices = {
+            'Food': 10,
+            'Textiles': 15,
+            'Machinery': 100,
+            'Metals': 50,
+            'Minerals': 40,
+            'Chemicals': 70,
+            'Computers': 250,
+            'Medicine': 150,
+            'Adv Components': 400,
+            'Luxury Goods': 500,
+            'Narcotics': 800,
+            'Weapons': 1200,
+            'Slaves': 1500
+        };
+        return basePrices[commodityName] || 50;
+    }
+
     /** Draws the Repairs Menu */
     drawRepairsMenu(player) {
         this.repairsFullButtonArea = {};
@@ -2635,7 +2831,7 @@ if (isIllegalInSystem || isMissionCargo) {
             "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE","VIEWING_RECORD",
-            "GALAXY_MAP","JUMPING"
+            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT"
         ];
         if (!statesExpectingSystem.includes(currentState)) {
             return false;
@@ -2656,6 +2852,60 @@ if (isIllegalInSystem || isMissionCargo) {
             this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
             if (typeof soundManager !== 'undefined' && soundManager.playSound) soundManager.playSound('click');
             return true;
+        }
+
+        // --- DOCKED_SPACE_OBJECT State (Space Object Dock Menu) ---
+        if (currentState === "DOCKED_SPACE_OBJECT") {
+            for (const btn of (this.spaceObjectMenuButtonAreas || [])) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "UNDOCK") {
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                        if (gameStateManager) gameStateManager.setState("IN_FLIGHT");
+                        return true;
+                    } else if (btn.action === "VIEW_RECORD") {
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                        // Show personal record via popup (store state to return to)
+                        if (gameStateManager) {
+                            gameStateManager._returnFromRecordState = "DOCKED_SPACE_OBJECT";
+                            gameStateManager.setState("VIEWING_RECORD");
+                        }
+                        return true;
+                    } else if (btn.action === "SELL_COMMODITY" && btn.commodity && btn.price) {
+                        // Sell one unit of the commodity
+                        const cargoItem = player.cargo.find(item => item && item.name === btn.commodity);
+                        if (cargoItem && cargoItem.quantity > 0) {
+                            player.addCredits(btn.price);
+                            player.removeCargo(btn.commodity, 1);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
+                            this.addMessage(`Sold 1 ${btn.commodity} for ${btn.price} credits`, [100, 255, 100]);
+                            // Save game after trade
+                            if (typeof saveGame === 'function') saveGame();
+                        } else {
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                        }
+                        return true;
+                    } else if (btn.action === "BUY_COMMODITY" && btn.commodity && btn.price) {
+                        // Buy one unit of the commodity
+                        if (player.credits >= btn.price && player.getCargoAmount() < player.cargoCapacity) {
+                            player.spendCredits(btn.price);
+                            player.addCargo(btn.commodity, 1);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
+                            this.addMessage(`Bought 1 ${btn.commodity} for ${btn.price} credits`, [100, 200, 255]);
+                            // Save game after trade
+                            if (typeof saveGame === 'function') saveGame();
+                        } else {
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                            if (player.credits < btn.price) {
+                                this.addMessage("Not enough credits", [255, 100, 100]);
+                            } else {
+                                this.addMessage("Cargo hold is full", [255, 100, 100]);
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         // --- DOCKED State (Main Station Menu) ---
@@ -3127,7 +3377,10 @@ if (isIllegalInSystem || isMissionCargo) {
             for (const btn of this.recordButtonAreas) {
                 if (this.isClickInArea(mx, my, btn)) {
                     if (btn.action === "BACK") {
-                        gameStateManager.setState("DOCKED");
+                        // Check if we should return to space object dock instead of station
+                        const returnState = gameStateManager._returnFromRecordState || "DOCKED";
+                        gameStateManager._returnFromRecordState = null; // Clear it
+                        gameStateManager.setState(returnState);
                         return true;
                     }
                 }
