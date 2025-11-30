@@ -2,9 +2,9 @@
 
 // Constants for space object trading prices - relative to station prices
 // Space objects sell produced goods CHEAPER than station buy price (profitable to buy here, sell at station)
-const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.75;  // 75% of station buy price
+const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.60;  // 60% of station buy price
 // Space objects buy demanded goods at HIGHER price than station sell price (profitable to buy at station, sell here)
-const SPACE_OBJECT_DEMAND_PREMIUM = 1.25;  // 125% of station sell price
+const SPACE_OBJECT_DEMAND_PREMIUM = 1.50;  // 150% of station sell price
 
 class UIManager {
     constructor() {
