@@ -1121,30 +1121,38 @@ class UIManager {
         let tW = pW - 60;
         let sX = pX + 30;
         
-        // Row setup
+        // Row setup - match station market
         const rowH = 30;
-        const btnW = 60;
+        const btnW = 100; // Match station market button width
         const btnH = rowH * 0.8;
         
-        // Define column widths
-        const colCommodity = tW * 0.22;
-        const colStatus = tW * 0.12;
-        const colBuyPrice = tW * 0.12;
-        const colSellPrice = tW * 0.12;
-        const colCargo = tW * 0.10;
-        const colButtons = tW * 0.32;
+        // Define column widths - match station market layout
+        const numDataColumns = 4; // Commodity, Buy, Sell, Cargo (no Stock for space objects)
+        const btnSpacing = 5;
+        const totalBtnWidth = (btnW * 4) + (btnSpacing * 3); // 4 buttons with 3 gaps
+        const remainingWidth = tW - totalBtnWidth;
+        const colWidth = Math.floor(remainingWidth / numDataColumns);
+        const colCommodity = colWidth;
+        const colBuy = colWidth;
+        const colSell = colWidth;
+        const colCargo = colWidth;
+        const colButtons = totalBtnWidth;
+        
+        // Price Indicator Constants (match station market)
+        const indicatorW = 15;
+        const indicatorMaxH = rowH * 0.6;
+        const indicatorYOffset = (rowH - indicatorMaxH) / 2;
+        const maxDeviation = 0.5;
         
         // Draw column headers
         let headerY = sY - 20;
         fill(255);
-        textSize(20);
         textAlign(LEFT, CENTER);
         text("Commodity", sX + 10, headerY);
         textAlign(CENTER, CENTER);
-        text("Status", sX + colCommodity + colStatus / 2, headerY);
-        text("Buy", sX + colCommodity + colStatus + colBuyPrice / 2, headerY);
-        text("Sell", sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, headerY);
-        text("Cargo", sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo / 2, headerY);
+        text("Buy", sX + colCommodity + colBuy / 2, headerY);
+        text("Sell", sX + colCommodity + colBuy + colSell / 2, headerY);
+        text("Cargo Hold", sX + colCommodity + colBuy + colSell + colCargo / 2, headerY);
         
         // Get all commodities from station market or use default list
         const allCommodities = stationMarket ? stationMarket.getPrices() : this._getDefaultCommodityList();
@@ -1178,6 +1186,8 @@ class UIManager {
             // Calculate prices based on station prices
             let buyPrice = 0;  // Price to buy FROM space object
             let sellPrice = 0; // Price to sell TO space object
+            let baseBuy = 0;   // For price deviation indicators
+            let baseSell = 0;
             
             if (stationMarket) {
                 const stationPrices = stationMarket.getPrices();
@@ -1185,137 +1195,243 @@ class UIManager {
                 if (stationComm) {
                     if (isProduced) {
                         buyPrice = Math.floor(stationComm.buyPrice * SPACE_OBJECT_PRODUCE_DISCOUNT);
+                        baseBuy = stationComm.baseBuy || stationComm.buyPrice;
                     }
                     if (isBought) {
                         sellPrice = Math.floor(stationComm.sellPrice * SPACE_OBJECT_DEMAND_PREMIUM);
+                        baseSell = stationComm.baseSell || stationComm.sellPrice;
                     }
                 }
             } else {
                 const basePrice = this._getCommodityBasePrice(commodityName);
-                if (isProduced) buyPrice = Math.floor(basePrice * 0.8);
-                if (isBought) sellPrice = Math.floor(basePrice * 1.2);
+                if (isProduced) {
+                    buyPrice = Math.floor(basePrice * 0.8);
+                    baseBuy = basePrice;
+                }
+                if (isBought) {
+                    sellPrice = Math.floor(basePrice * 1.2);
+                    baseSell = basePrice;
+                }
             }
             
-            // Draw commodity name
+            // Commodity name (grayed out if not available)
             textAlign(LEFT, CENTER);
-            textSize(18);
             fill(isAvailable ? 255 : 100);
-            text(commodityName, sX + 10, tY);
+            text(commodityName || '?', sX + 10, tY, colCommodity - 15);
             
-            // Draw status
+            // Buy price with color coding
             textAlign(CENTER, CENTER);
-            textSize(18);
-            if (isProduced && isBought) {
-                fill(100, 255, 100);
-                text("Trade", sX + colCommodity + colStatus / 2, tY);
-            } else if (isProduced) {
-                fill(100, 200, 255);
-                text("Sells", sX + colCommodity + colStatus / 2, tY);
-            } else if (isBought) {
-                fill(255, 200, 100);
-                text("Buys", sX + colCommodity + colStatus / 2, tY);
-            } else {
-                fill(80);
-                text("-", sX + colCommodity + colStatus / 2, tY);
-            }
-            
-            // Draw buy price
-            textSize(18);
             if (isProduced && buyPrice > 0) {
-                fill(100, 255, 100);
-                text(buyPrice, sX + colCommodity + colStatus + colBuyPrice / 2, tY);
+                if (baseBuy > 0) {
+                    let buyDeviation = (buyPrice - baseBuy) / baseBuy;
+                    if (buyDeviation < -0.05) {
+                        fill(50, 255, 50); // Cheap (Green)
+                    } else if (buyDeviation > 0.05) {
+                        fill(255, 50, 50); // Expensive (Red)
+                    } else {
+                        fill(255); // Average (White)
+                    }
+                } else {
+                    fill(255);
+                }
+                text(buyPrice, sX + colCommodity + colBuy / 2, tY);
             } else {
                 fill(80);
-                text("-", sX + colCommodity + colStatus + colBuyPrice / 2, tY);
+                text("-", sX + colCommodity + colBuy / 2, tY);
             }
             
-            // Draw sell price
+            // Sell price with color coding
             if (isBought && sellPrice > 0) {
-                fill(100, 255, 100);
-                text(sellPrice, sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, tY);
+                if (baseSell > 0) {
+                    let sellDeviation = (sellPrice - baseSell) / baseSell;
+                    if (sellDeviation > 0.05) {
+                        fill(50, 255, 50); // Good Sell Price (Green)
+                    } else if (sellDeviation < -0.05) {
+                        fill(255, 50, 50); // Bad Sell Price (Red)
+                    } else {
+                        fill(255); // Average (White)
+                    }
+                } else {
+                    fill(255);
+                }
+                text(sellPrice, sX + colCommodity + colBuy + colSell / 2, tY);
             } else {
                 fill(80);
-                text("-", sX + colCommodity + colStatus + colBuyPrice + colSellPrice / 2, tY);
+                text("-", sX + colCommodity + colBuy + colSell / 2, tY);
             }
             
-            // Draw cargo amount
+            // Cargo amount
             fill(playerQty > 0 ? 255 : 80);
-            text(playerQty, sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo / 2, tY);
+            text(playerQty, sX + colCommodity + colBuy + colSell + colCargo / 2, tY);
             
-            // Draw buttons
-            const btnStartX = sX + colCommodity + colStatus + colBuyPrice + colSellPrice + colCargo + 10;
-            const btnY = yP + (rowH - btnH) / 2;
-            const btnSpacing = 5;
-            
-            // Buy button
-            const canBuy = isProduced && buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
-            if (isProduced) {
-                if (canBuy) {
-                    fill(0, 150, 0);
-                    stroke(0, 200, 0);
-                    strokeWeight(1);
-                    rect(btnStartX, btnY, btnW, btnH, 3);
-                    fill(255);
-                    noStroke();
-                    textSize(10);
-                    text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
-                    this.spaceObjectMarketButtonAreas.push({
-                        x: btnStartX, y: btnY, w: btnW, h: btnH,
-                        action: "BUY_COMMODITY", commodity: commodityName, price: buyPrice
-                    });
+            // Price Indicators (match station market)
+            noStroke();
+            // Buy Price Indicator
+            if (isProduced && baseBuy > 0 && buyPrice > 0) {
+                let buyDeviation = (buyPrice - baseBuy) / baseBuy;
+                let indicatorH = constrain(abs(buyDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
+                let indicatorX = sX + colCommodity + colBuy + 5;
+                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH);
+
+                if (buyDeviation > 0.05) {
+                    fill(255, 50, 50); // Red
+                } else if (buyDeviation < -0.05) {
+                    fill(50, 255, 50); // Green
                 } else {
-                    fill(60);
-                    stroke(80);
-                    strokeWeight(1);
-                    rect(btnStartX, btnY, btnW, btnH, 3);
-                    fill(100);
-                    noStroke();
-                    textSize(10);
-                    text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
+                    fill(120); // Grey
+                    indicatorH = 1;
+                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
                 }
-            } else {
-                fill(40);
-                noStroke();
-                rect(btnStartX, btnY, btnW, btnH, 3);
-                fill(60);
-                textSize(10);
-                text("Buy", btnStartX + btnW / 2, btnY + btnH / 2);
+                if (indicatorH > 0) {
+                    rect(indicatorX, indicatorY, 3, indicatorH);
+                }
+            }
+            // Sell Price Indicator
+            if (isBought && baseSell > 0 && sellPrice > 0) {
+                let sellDeviation = (sellPrice - baseSell) / baseSell;
+                let indicatorH = constrain(abs(sellDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
+                let indicatorX = sX + colCommodity + colBuy + colSell + 5;
+                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH);
+
+                if (sellDeviation > 0.05) {
+                    fill(50, 255, 50); // Green
+                } else if (sellDeviation < -0.05) {
+                    fill(255, 50, 50); // Red
+                } else {
+                    fill(120); // Grey
+                    indicatorH = 1;
+                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
+                }
+                if (indicatorH > 0) {
+                    rect(indicatorX, indicatorY, 3, indicatorH);
+                }
             }
             
-            // Sell button
-            const sellBtnX = btnStartX + btnW + btnSpacing;
-            const canSell = isBought && sellPrice > 0 && playerQty > 0;
-            if (isBought) {
-                if (canSell) {
-                    fill(150, 0, 0);
-                    stroke(200, 0, 0);
-                    strokeWeight(1);
-                    rect(sellBtnX, btnY, btnW, btnH, 3);
-                    fill(255);
-                    noStroke();
-                    textSize(10);
-                    text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+            // Buttons (match station market layout)
+            const rightEdge = sX + tW;
+            const totalBtnWidth = (btnW * 4) + (btnSpacing * 3);
+            let btnStartX = rightEdge - totalBtnWidth;
+            
+            // Check if this commodity is needed for the active mission
+            const isMissionCargo = player.activeMission?.cargoType === commodityName;
+            
+            // Buy 1 button
+            let buy1X = btnStartX;
+            let buy1Y = yP + (rowH - btnH) / 2;
+            
+            if (!isProduced) {
+                // Not available - grayed out
+                fill(40); noStroke();
+                rect(buy1X, buy1Y, btnW, btnH, 3);
+                fill(60); textAlign(CENTER, CENTER); textSize(20);
+                text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
+            } else {
+                const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
+                if (canBuy) {
+                    fill(0, 150, 0); stroke(0, 200, 0); strokeWeight(1);
+                    rect(buy1X, buy1Y, btnW, btnH, 3);
+                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
                     this.spaceObjectMarketButtonAreas.push({
-                        x: sellBtnX, y: btnY, w: btnW, h: btnH,
-                        action: "SELL_COMMODITY", commodity: commodityName, price: sellPrice
+                        x: buy1X, y: buy1Y, w: btnW, h: btnH,
+                        action: "BUY_COMMODITY", quantity: 1, commodity: commodityName, price: buyPrice
                     });
                 } else {
-                    fill(60);
-                    stroke(80);
-                    strokeWeight(1);
-                    rect(sellBtnX, btnY, btnW, btnH, 3);
-                    fill(100);
-                    noStroke();
-                    textSize(10);
-                    text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+                    fill(60); stroke(80); strokeWeight(1);
+                    rect(buy1X, buy1Y, btnW, btnH, 3);
+                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
                 }
+            }
+            
+            // Buy All button
+            let buyAllX = buy1X + btnW + btnSpacing;
+            let buyAllY = buy1Y;
+            
+            if (!isProduced) {
+                fill(40); noStroke();
+                rect(buyAllX, buyAllY, btnW, btnH, 3);
+                fill(60); textAlign(CENTER, CENTER); textSize(20);
+                text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
             } else {
-                fill(40);
-                noStroke();
-                rect(sellBtnX, btnY, btnW, btnH, 3);
-                fill(60);
-                textSize(10);
-                text("Sell", sellBtnX + btnW / 2, btnY + btnH / 2);
+                const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
+                if (canBuy) {
+                    fill(0, 180, 0); stroke(0, 220, 0); strokeWeight(1);
+                    rect(buyAllX, buyAllY, btnW, btnH, 3);
+                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
+                    this.spaceObjectMarketButtonAreas.push({
+                        x: buyAllX, y: buyAllY, w: btnW, h: btnH,
+                        action: "BUY_ALL_COMMODITY", commodity: commodityName, price: buyPrice
+                    });
+                } else {
+                    fill(60); stroke(80); strokeWeight(1);
+                    rect(buyAllX, buyAllY, btnW, btnH, 3);
+                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
+                }
+            }
+            
+            // Sell 1 button
+            let sell1X = buyAllX + btnW + 10; // Extra spacing before sell buttons
+            let sell1Y = buy1Y;
+            
+            if (!isBought || isMissionCargo) {
+                fill(isMissionCargo ? 100 : 40);
+                stroke(isMissionCargo ? 120 : 0);
+                if (isMissionCargo) strokeWeight(1); else noStroke();
+                rect(sell1X, sell1Y, btnW, btnH, 3);
+                fill(isMissionCargo ? 180 : 60);
+                noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                text("Sell 1", sell1X + btnW / 2, sell1Y + btnH / 2);
+            } else {
+                const canSell = sellPrice > 0 && playerQty > 0;
+                if (canSell) {
+                    fill(150, 0, 0); stroke(200, 0, 0); strokeWeight(1);
+                    rect(sell1X, sell1Y, btnW, btnH, 3);
+                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Sell 1", sell1X + btnW / 2, sell1Y + btnH / 2);
+                    this.spaceObjectMarketButtonAreas.push({
+                        x: sell1X, y: sell1Y, w: btnW, h: btnH,
+                        action: "SELL_COMMODITY", quantity: 1, commodity: commodityName, price: sellPrice
+                    });
+                } else {
+                    fill(60); stroke(80); strokeWeight(1);
+                    rect(sell1X, sell1Y, btnW, btnH, 3);
+                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Sell 1", sell1X + btnW / 2, sell1Y + btnH / 2);
+                }
+            }
+            
+            // Sell All button
+            let sellAllX = sell1X + btnW + btnSpacing;
+            let sellAllY = buy1Y;
+            
+            if (!isBought || isMissionCargo) {
+                fill(isMissionCargo ? 100 : 40);
+                stroke(isMissionCargo ? 120 : 0);
+                if (isMissionCargo) strokeWeight(1); else noStroke();
+                rect(sellAllX, sellAllY, btnW, btnH, 3);
+                fill(isMissionCargo ? 180 : 60);
+                noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+            } else {
+                const canSell = sellPrice > 0 && playerQty > 0;
+                if (canSell) {
+                    fill(180, 0, 0); stroke(220, 0, 0); strokeWeight(1);
+                    rect(sellAllX, sellAllY, btnW, btnH, 3);
+                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+                    this.spaceObjectMarketButtonAreas.push({
+                        x: sellAllX, y: sellAllY, w: btnW, h: btnH,
+                        action: "SELL_ALL_COMMODITY", commodity: commodityName, price: sellPrice
+                    });
+                } else {
+                    fill(60); stroke(80); strokeWeight(1);
+                    rect(sellAllX, sellAllY, btnW, btnH, 3);
+                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
+                    text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+                }
             }
         }
         
@@ -3074,6 +3190,7 @@ if (isIllegalInSystem || isMissionCargo) {
             // Handle commodity buttons
             for (const btn of (this.spaceObjectMarketButtonAreas || [])) {
                 if (this.isClickInArea(mx, my, btn)) {
+                    // Sell 1
                     if (btn.action === "SELL_COMMODITY" && btn.commodity && btn.price) {
                         const cargoItem = player.cargo.find(item => item && item.name === btn.commodity);
                         if (cargoItem && cargoItem.quantity > 0) {
@@ -3097,12 +3214,75 @@ if (isIllegalInSystem || isMissionCargo) {
                             if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                         }
                         return true;
-                    } else if (btn.action === "BUY_COMMODITY" && btn.commodity && btn.price) {
+                    }
+                    // Sell All
+                    else if (btn.action === "SELL_ALL_COMMODITY" && btn.commodity && btn.price) {
+                        const cargoItem = player.cargo.find(item => item && item.name === btn.commodity);
+                        if (cargoItem && cargoItem.quantity > 0) {
+                            const qty = cargoItem.quantity;
+                            const totalCredits = btn.price * qty;
+                            player.addCredits(totalCredits);
+                            player.removeCargo(btn.commodity, qty);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
+                            this.addMessage(`Sold ${qty} ${btn.commodity} for ${totalCredits} credits`, [100, 255, 100]);
+                            
+                            // Log the space object trade
+                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
+                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
+                                ? spaceObject.getDisplayName() 
+                                : (spaceObject?.type || 'Space Object');
+                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
+                            if (typeof player.recordStationTrade === 'function') {
+                                player.recordStationTrade(displayName, systemName);
+                            }
+                            
+                            if (typeof saveGame === 'function') saveGame();
+                        } else {
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                        }
+                        return true;
+                    }
+                    // Buy 1
+                    else if (btn.action === "BUY_COMMODITY" && btn.commodity && btn.price) {
                         if (player.credits >= btn.price && player.getCargoAmount() < player.cargoCapacity) {
                             player.spendCredits(btn.price);
                             player.addCargo(btn.commodity, 1);
                             if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
                             this.addMessage(`Bought 1 ${btn.commodity} for ${btn.price} credits`, [100, 200, 255]);
+                            
+                            // Log the space object trade
+                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
+                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
+                                ? spaceObject.getDisplayName() 
+                                : (spaceObject?.type || 'Space Object');
+                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
+                            if (typeof player.recordStationTrade === 'function') {
+                                player.recordStationTrade(displayName, systemName);
+                            }
+                            
+                            if (typeof saveGame === 'function') saveGame();
+                        } else {
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                            if (player.credits < btn.price) {
+                                this.addMessage("Not enough credits", [255, 100, 100]);
+                            } else {
+                                this.addMessage("Cargo hold is full", [255, 100, 100]);
+                            }
+                        }
+                        return true;
+                    }
+                    // Buy All
+                    else if (btn.action === "BUY_ALL_COMMODITY" && btn.commodity && btn.price) {
+                        const cargoSpace = player.cargoCapacity - player.getCargoAmount();
+                        const canAfford = Math.floor(player.credits / btn.price);
+                        const maxBuy = Math.min(cargoSpace, canAfford);
+                        
+                        if (maxBuy > 0) {
+                            const totalCost = btn.price * maxBuy;
+                            player.spendCredits(totalCost);
+                            player.addCargo(btn.commodity, maxBuy);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
+                            this.addMessage(`Bought ${maxBuy} ${btn.commodity} for ${totalCost} credits`, [100, 200, 255]);
                             
                             // Log the space object trade
                             const spaceObject = gameStateManager?.currentDockedSpaceObject;
@@ -4555,8 +4735,8 @@ if (isIllegalInSystem || isMissionCargo) {
         
         // Use appropriate header based on whether player is docked at station or space object
         let headerHeight;
-        if (gameStateManager?.currentState === "DOCKED_SPACE_OBJECT" && player?.dockedSpaceObject) {
-            headerHeight = this.drawSpaceObjectHeader("Personal Record", player.dockedSpaceObject, player, system);
+        if (gameStateManager?.currentState === "DOCKED_SPACE_OBJECT" && gameStateManager?.currentDockedSpaceObject) {
+            headerHeight = this.drawSpaceObjectHeader("Personal Record", gameStateManager.currentDockedSpaceObject, player, system);
         } else {
             headerHeight = this.drawStationHeader("Personal Record", station, player, system);
         }

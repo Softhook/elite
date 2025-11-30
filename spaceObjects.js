@@ -55,7 +55,7 @@ const sizeMap = {
 // Mapping of what each SpaceObject type typically produces and what it will buy
 // NOTE: Entries use canonical commodity names defined in `market.js`.
 const SPACE_OBJECT_COMMODITIES = {
-    miningPlatform: { produces: ['Metals','Minerals'], buys: ['Chemicals','Machinery'] },
+    miningPlatform: { produces: ['Metals','Minerals'], buys: ['Food','Chemicals','Machinery'] },
     asteroidMiner: { produces: ['Metals','Minerals'], buys: ['Chemicals'] },
     cargoCluster: { produces: ['Textiles','Machinery','Metals'], buys: ['Food','Chemicals'] },
     hydroponicsBay: { produces: ['Food'], buys: ['Metals','Chemicals','Machinery'] },
