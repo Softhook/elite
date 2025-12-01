@@ -89,15 +89,15 @@ const SPACE_OBJECT_COMMODITIES = {
     signalFlare: { produces: ['Textiles'], buys: [] },
     commDish: { produces: ['Computers'], buys: ['Metals'] },
     iceCrystal: { produces: ['Minerals'], buys: ['Food'] },
-    nebulaFragment: { produces: ['Minerals'], buys: ['Chemicals'] },
+    nebulaFragment: { produces: [], buys: [] },
     wreckage: { produces: ['Metals'], buys: [] },
     weaponPlatform: { produces: ['Weapons'], buys: ['Metals','Machinery'] },
     shieldGenerator: { produces: ['Adv Components'], buys: ['Metals'] },
     quantumGate: { produces: ['Adv Components','Computers'], buys: ['Metals'] },
     prison: { produces: ['Slaves'], buys: ['Food','Textiles','Machinery'] },
-    drugLab: { produces: ['Narcotics','Chemicals'], buys: ['Food','Chemicals'] },
-    labourColony: { produces: ['Slaves','Metals','Minerals','Machinery'], buys: ['Food','Textiles'] },
-    undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Slaves','Narcotics','Weapons'] },
+    drugLab: { produces: ['Narcotics','Medicine'], buys: ['Food','Chemicals'] },
+    labourColony: { produces: ['Slaves','Metals','Textiles','Machinery'], buys: ['Food'] },
+    undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Food','Luxury Goods'] },
     default: { produces: [], buys: [] }
 };
 
