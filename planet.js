@@ -19,6 +19,9 @@ class Planet {
         this.radius = size * 0.5; // Cache radius
         this.radiusSq = this.radius * this.radius; // Cache squared radius for distance checks
 
+        // Mark as sun when planetIndex === 0 to ensure consistent sun rendering
+        this.isSun = !!(planetIndex === 0);
+
         // Store base colors provided by StarSystem
         this.baseColor = color1 || color(random(80, 180), random(80, 180), random(80, 180));
         // Choose a more contrasting feature color (prefer complementary direction)
@@ -273,8 +276,9 @@ class Planet {
     createBuffers() {
         if (this.buffersCreated) return;
         
-        // Size calculations for buffers
-        const bufferSize = Math.ceil(this.size * 1.2);
+        // Increase buffer size for suns to avoid clipping and ensure gradients cover the canvas
+        const baseFactor = this.isSun ? 1.6 : 1.2;
+        const bufferSize = Math.ceil(this.size * baseFactor);
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
         
         // For inhabited planets with atmosphere, we need a larger buffer to contain the city glow
@@ -361,21 +365,27 @@ class Planet {
         if (this.isSun) {
             const ctx = pg.drawingContext;
             const cx = bufferCenter, cy = bufferCenter;
-            const innerR = 0; // ensure fully opaque center
-            const outerR = Math.max(1, r);
+            // Make outer radius large enough to reach buffer edges (avoid hard boundaries)
+            const outerR = Math.max(1, Math.max(r, Math.round(Math.max(pg.width, pg.height) * 0.5)));
             const bc = this.baseColor;
             const fc = this.featureColor1 || bc;
             const c0 = `rgba(${Math.round(red(bc))},${Math.round(green(bc))},${Math.round(blue(bc))},1)`;
             const c1 = `rgba(${Math.round(red(fc))},${Math.round(green(fc))},${Math.round(blue(fc))},0.95)`;
             const c2 = `rgba(${Math.round(red(fc))},${Math.round(green(fc))},${Math.round(blue(fc))},0)`;
-            const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR);
             grad.addColorStop(0, c0);
             grad.addColorStop(0.45, c1);
             grad.addColorStop(1, c2);
+
+            // Ensure smoothing is enabled and draw gradient to fill the buffer
+            ctx.imageSmoothingEnabled = true;
+            const prevOp = ctx.globalCompositeOperation;
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, pg.width, pg.height);
+            ctx.globalCompositeOperation = prevOp;
             return;
         }
+
         // Increase octaves/persistence for richer, more dramatic detail
         pg.noiseDetail(6, this.noisePersistence);
         
@@ -1281,7 +1291,8 @@ class Planet {
             cityLightsDensity: this.cityLightsDensity,
             name: this.name,
             systemName: this.systemName,
-            planetIndex: this.planetIndex
+            planetIndex: this.planetIndex,
+            isSun: !!this.isSun
         };
     }
 
@@ -1324,6 +1335,9 @@ class Planet {
         p.cityLightsColor = parseColor(data.cityLightsColor) || p.cityLightsColor;
         p.cityLightsDensity = (typeof data.cityLightsDensity !== 'undefined') ? data.cityLightsDensity : p.cityLightsDensity;
         p.name = data.name || p.name; // Use saved name if available
+
+        // Ensure isSun flag is respected when restoring (fall back to planetIndex===0)
+        p.isSun = (typeof data.isSun !== 'undefined') ? !!data.isSun : !!(p.planetIndex === 0);
 
         // Rebuild palette so rendered textures use restored feature colors
         p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
