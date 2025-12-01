@@ -5495,7 +5495,7 @@ if (isIllegalInSystem || isMissionCargo) {
         const enemies = system.enemies || [];
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
-            if (!enemy || !enemy.pos || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+            if (!enemy || !enemy.pos || enemy.destroyed) continue;
             const dx = enemy.pos.x - worldX;
             const dy = enemy.pos.y - worldY;
             const distSq = dx * dx + dy * dy;
@@ -5546,11 +5546,13 @@ if (isIllegalInSystem || isMissionCargo) {
                 // Lock onto new target
                 player.target = closestEntity;
                 let label = 'Target';
+                // Use shipTypeName for enemies, getDisplayName for space objects, 'Asteroid' otherwise
                 if (closestEntity.shipTypeName) {
                     label = closestEntity.shipTypeName;
                 } else if (typeof closestEntity.getDisplayName === 'function') {
                     label = closestEntity.getDisplayName();
-                } else if (closestEntity.constructor && closestEntity.constructor.name === 'Asteroid') {
+                } else if (closestEntity.maxRadius !== undefined) {
+                    // Asteroids have maxRadius property
                     label = 'Asteroid';
                 }
                 this.addMessage(`Target locked: ${label}`, [0, 255, 0]);
