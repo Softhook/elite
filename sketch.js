@@ -372,6 +372,13 @@ function keyPressed() {
                 return false;
             }
             break;
+        case '.':
+            // Cycle minimap zoom level when in flight
+            if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+                uiManager.cycleMinimapZoom();
+                return false;
+            }
+            break;
     }
     // ESC to exit map/docked state back to flight
     if (keyCode === ESCAPE) {
