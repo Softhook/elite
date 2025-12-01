@@ -6,7 +6,7 @@
 // These are larger installations where the player can trade limited commodities
 const DOCKABLE_SPACE_OBJECT_TYPES = [
     'miningPlatform',
-    'spaceStation',
+    'outpost',
     'cargoCluster',
     'hydroponicsBay',
     'orbitalGarden',
@@ -39,7 +39,7 @@ const sizeMap = {
     miningPlatform: 200,
     ancientRelic: 150,
     signalFlare: 60,
-    spaceStation: 200,
+    outpost: 200,
     asteroidMiner: 100,
     fuelDepot: 90,
     commDish: 70,
@@ -70,7 +70,7 @@ const SPACE_OBJECT_COMMODITIES = {
     orbitalGarden: { produces: ['Food'], buys: ['Chemicals','Machinery'] },
     fuelDepot: { produces: ['Chemicals'], buys: ['Metals','Machinery'] },
     researchArray: { produces: ['Adv Components','Computers'], buys: ['Food','Chemicals'] },
-    spaceStation: { produces: ['Food','Textiles','Machinery','Chemicals'], buys: ['Metals','Adv Components'] },
+    outpost: { produces: ['Food','Textiles','Machinery','Chemicals'], buys: ['Metals','Adv Components'] },
     solarFarm: { produces: ['Metals','Adv Components'], buys: ['Machinery'] },
     energyCollector: { produces: ['Metals','Adv Components'], buys: ['Chemicals'] },
     observatoryDome: { produces: ['Computers'], buys: ['Chemicals'] },
@@ -737,7 +737,7 @@ const SpaceObjectRenderers = {
         rect(-size * 0.05, size * 0.3 + bob, size * 0.1, size * 0.08, 2);
     },
 
-    spaceStation: function(obj, size, anim, bob) {
+    outpost: function(obj, size, anim, bob) {
         // Massive space station: central hub with multiple modules, solar arrays, antennas, docking ports, and operational details
         noStroke();
         // Central hub (large cylindrical core)
@@ -3343,7 +3343,7 @@ class SpaceObject {
                 anim.commDishSweep = Math.random() * TWO_PI;
                 anim.commDishTilt = Math.random() * 0.02 - 0.01;
                 break;
-            case 'spaceStation':
+            case 'outpost':
                 anim.stationLights = Math.random() * TWO_PI;
                 anim.dockingRing = Math.random() * TWO_PI;
                 anim.solarArray = Math.random() * TWO_PI;
@@ -3416,7 +3416,7 @@ class SpaceObject {
             miningPlatform: 0.000045,
             ancientRelic: 0.000025,
             signalFlare: 0.0003,
-            spaceStation: 0.00002,
+            outpost: 0.00002,
             asteroidMiner: 0.000035,
             fuelDepot: 0.00005,
             commDish: 0.00008,
@@ -3674,7 +3674,7 @@ class SpaceObject {
             miningPlatform: 'Mining Platform',
             ancientRelic: 'Ancient Relic',
             signalFlare: 'Signal Flare',
-            spaceStation: 'Space Station',
+            outpost: 'Outpost',
             asteroidMiner: 'Asteroid Miner',
             fuelDepot: 'Fuel Depot',
             commDish: 'Communication Dish',

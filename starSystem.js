@@ -4303,11 +4303,11 @@ checkProjectileCollisions() {
             'Refinery': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe', 'asteroidMiner', 'fuelDepot', 'solarFarm', 'wreckage', 'weaponPlatform', 'shieldGenerator', 'energyCollector'],
             'Mining': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe', 'asteroidMiner', 'fuelDepot', 'solarFarm', 'wreckage', 'weaponPlatform', 'shieldGenerator', 'energyCollector'],
             'Agricultural': ['orbitalGarden', 'habitat', 'satellite', 'telescope', 'relay', 'probe', 'beacon', 'observatoryDome', 'hydroponicsBay'],
-            'High Tech': ['researchArray', 'solarSail', 'ancientRelic', 'satellite', 'telescope', 'beacon', 'signalFlare', 'spaceStation', 'commDish', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'quantumGate']
+            'High Tech': ['researchArray', 'solarSail', 'ancientRelic', 'satellite', 'telescope', 'beacon', 'signalFlare', 'outpost', 'commDish', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'quantumGate']
         };
 
         // Default types for other economies
-        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'spaceStation', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'undergroundMarket', 'prison','drugLab','labourColony'];
+        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'undergroundMarket', 'prison','drugLab','labourColony'];
 
         const availableTypes = typesByEconomy[this.economyType] || defaultTypes;
 

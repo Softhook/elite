@@ -5,6 +5,10 @@
 
 ## Core Gameplay Enhancements
 
+space objects display what they buying and selling in the target overlay - if it is possible to dock there
+
+new kind of nebula and storm which slows down ship movement
+
 create a builder ship that errects space objects near planets
 
 Make space objects belong to different factions. Destroying a space object makes the player wanted. 
