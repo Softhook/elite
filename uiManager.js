@@ -3140,19 +3140,18 @@ if (isIllegalInSystem || isMissionCargo) {
 
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
 
-        // --- Minimap click: cycle zoom level (map scale) ---
+        // --- Minimap click: target locking (zoom cycling moved to '.' key) ---
         // Always use the expanded size for click region (minimap is always large).
         const curMinimapSize = this.minimapExpandedSize;
         const curMinimapX = width - curMinimapSize - this.minimapMargin;
         const curMinimapY = height - curMinimapSize - this.minimapMargin;
         if (mx >= curMinimapX && mx <= curMinimapX + curMinimapSize && my >= curMinimapY && my <= curMinimapY + curMinimapSize) {
-            // Cycle zoom index and update the world view range (drawMinimap will recompute scale)
-            this.minimapZoomIndex = (this.minimapZoomIndex + 1) % this.minimapWorldViewRanges.length;
-            this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
-            // Optional immediate recompute of scale for any code that queries minimapScale immediately
-            this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
-            if (typeof soundManager !== 'undefined' && soundManager.playSound) soundManager.playSound('click');
-            return true;
+            // Try to lock target on entity at click position
+            if (currentState === "IN_FLIGHT" && this.handleMinimapClick(mx, my, player, currentSystem)) {
+                return true;
+            }
+            // If no entity found, click does nothing (zoom cycling is now on '.' key)
+            return true; // Still consume the click to prevent other actions
         }
 
         // --- DOCKED_SPACE_OBJECT State (Space Object Main Menu) ---
@@ -5435,6 +5434,135 @@ if (isIllegalInSystem || isMissionCargo) {
                 return true;
             }
         }
+        return false;
+    }
+
+    /**
+     * Cycles the minimap zoom level through available world view ranges.
+     * Called by '.' keyboard shortcut.
+     */
+    cycleMinimapZoom() {
+        this.minimapZoomIndex = (this.minimapZoomIndex + 1) % this.minimapWorldViewRanges.length;
+        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
+        // Recompute scale immediately
+        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+        if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+            soundManager.playSound('click');
+        }
+        // Show zoom level message
+        const zoomLabel = Math.round(this.minimapWorldViewRange / 1000) + 'km';
+        this.addMessage(`Minimap Zoom: ${zoomLabel}`, [0, 200, 0], 1500);
+    }
+
+    /**
+     * Handles minimap click for target locking.
+     * Converts minimap screen coordinates to world coordinates and checks for entities.
+     * @param {number} mx - Mouse X position in screen coordinates
+     * @param {number} my - Mouse Y position in screen coordinates
+     * @param {Player} player - The player object
+     * @param {StarSystem} system - The current star system
+     * @returns {boolean} True if an entity was found and targeted, false otherwise
+     */
+    handleMinimapClick(mx, my, player, system) {
+        if (!player || !player.pos || !system) return false;
+
+        // Calculate minimap boundaries
+        const curMinimapSize = this.minimapExpandedSize;
+        const curMinimapX = width - curMinimapSize - this.minimapMargin;
+        const curMinimapY = height - curMinimapSize - this.minimapMargin;
+        const mapCenterX = curMinimapX + curMinimapSize / 2;
+        const mapCenterY = curMinimapY + curMinimapSize / 2;
+
+        // Get current world view range and scale
+        const worldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
+        const scale = curMinimapSize / worldViewRange;
+
+        // Convert click position from minimap coordinates to world coordinates
+        const relativeX = (mx - mapCenterX) / scale;
+        const relativeY = (my - mapCenterY) / scale;
+        const worldX = player.pos.x + relativeX;
+        const worldY = player.pos.y + relativeY;
+
+        // Find the closest entity to the click position within a reasonable range
+        // The click radius scales inversely with zoom (tighter at high zoom, looser at low zoom)
+        const baseClickRadius = 15; // Base radius in minimap pixels
+        const worldClickRadius = baseClickRadius / scale;
+
+        let closestEntity = null;
+        let closestDistSq = worldClickRadius * worldClickRadius;
+
+        // Check enemies
+        const enemies = system.enemies || [];
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (!enemy || !enemy.pos || enemy.destroyed) continue;
+            const dx = enemy.pos.x - worldX;
+            const dy = enemy.pos.y - worldY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
+                closestDistSq = distSq;
+                closestEntity = enemy;
+            }
+        }
+
+        // Check asteroids
+        const asteroids = system.asteroids || [];
+        for (let i = 0; i < asteroids.length; i++) {
+            const ast = asteroids[i];
+            if (!ast || !ast.pos || ast.destroyed) continue;
+            const dx = ast.pos.x - worldX;
+            const dy = ast.pos.y - worldY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
+                closestDistSq = distSq;
+                closestEntity = ast;
+            }
+        }
+
+        // Check space objects
+        const spaceObjects = system.spaceObjects || [];
+        for (let i = 0; i < spaceObjects.length; i++) {
+            const so = spaceObjects[i];
+            if (!so || !so.pos || so.destroyed) continue;
+            const dx = so.pos.x - worldX;
+            const dy = so.pos.y - worldY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
+                closestDistSq = distSq;
+                closestEntity = so;
+            }
+        }
+
+        // If an entity was found, handle target locking
+        if (closestEntity) {
+            if (player.target === closestEntity) {
+                // Clicking the same target unlocks it
+                player.target = null;
+                this.addMessage('Target unlocked.', [255, 255, 0]);
+                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                    soundManager.playSound('click');
+                }
+            } else {
+                // Lock onto new target
+                player.target = closestEntity;
+                let label = 'Target';
+                // Use shipTypeName for enemies, getDisplayName for space objects, 'Asteroid' otherwise
+                if (closestEntity.shipTypeName) {
+                    label = closestEntity.shipTypeName;
+                } else if (typeof closestEntity.getDisplayName === 'function') {
+                    label = closestEntity.getDisplayName();
+                } else if (closestEntity.maxRadius !== undefined) {
+                    // Asteroids have maxRadius property
+                    label = 'Asteroid';
+                }
+                this.addMessage(`Target locked: ${label}`, [0, 255, 0]);
+                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                    soundManager.playSound('click');
+                }
+            }
+            return true;
+        }
+
         return false;
     }
 } // End of UIManager Class
