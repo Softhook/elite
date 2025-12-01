@@ -37,7 +37,7 @@ const sizeMap = {
     orbitalGarden: 200,
     decoyBuoy: 40,
     miningPlatform: 200,
-    ancientRelic: 200,
+    ancientRelic: 150,
     signalFlare: 60,
     spaceStation: 200,
     asteroidMiner: 100,
@@ -55,9 +55,9 @@ const sizeMap = {
     energyCollector: 130,
     quantumGate: 160,
     prison: 220,
-    drugLab: 160,
+    drugLab: 200,
     labourColony: 240,
-    undergroundMarket: 160
+    undergroundMarket: 180
 };
 
 // Mapping of what each SpaceObject type typically produces and what it will buy
@@ -149,8 +149,8 @@ const ANIM_RATES = [
     ['barrierPulse', 0.0025],
     ['flowPhase', 0.003],
     ['fanRotation', 0.004],
-    ['drillSpin', 0.005],
-    ['conveyorPhase', 0.0035]
+    ['drillSpin', 0.0005],
+    ['conveyorPhase', 0.00035]
 ];
 
 // Static renderers for each object type to replace the monolithic draw() switch
