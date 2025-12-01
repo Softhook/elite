@@ -17,7 +17,8 @@ const DOCKABLE_SPACE_OBJECT_TYPES = [
     'weaponPlatform',
     'prison',
     'drugLab',
-    'labourColony'
+    'labourColony',
+    'undergroundMarket'
 ];
 
 // Size map for each object type
@@ -55,7 +56,8 @@ const sizeMap = {
     quantumGate: 160,
     prison: 220,
     drugLab: 160,
-    labourColony: 240
+    labourColony: 240,
+    undergroundMarket: 160
 };
 
 // Mapping of what each SpaceObject type typically produces and what it will buy
@@ -92,9 +94,10 @@ const SPACE_OBJECT_COMMODITIES = {
     weaponPlatform: { produces: ['Weapons'], buys: ['Metals','Machinery'] },
     shieldGenerator: { produces: ['Adv Components'], buys: ['Metals'] },
     quantumGate: { produces: ['Adv Components','Computers'], buys: ['Metals'] },
-    prison: { produces: [], buys: ['Food','Textiles','Machinery'] },
+    prison: { produces: ['Slaves'], buys: ['Food','Textiles','Machinery'] },
     drugLab: { produces: ['Narcotics','Chemicals'], buys: ['Food','Chemicals'] },
-    labourColony: { produces: ['Metals','Minerals','Machinery'], buys: ['Food','Textiles'] },
+    labourColony: { produces: ['Slaves','Metals','Minerals','Machinery'], buys: ['Food','Textiles'] },
+    undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Slaves','Narcotics','Weapons'] },
     default: { produces: [], buys: [] }
 };
 
@@ -1358,6 +1361,56 @@ const SpaceObjectRenderers = {
         // Status lights and small emitter glow
         fill(255, 120, 140, 200); ellipse(-size * 0.18, bob - size * 0.02, 4, 3);
         fill(120, 255, 180, 200); ellipse(size * 0.18, bob - size * 0.02, 4, 3);
+    },
+
+    undergroundMarket: function(obj, size, anim, bob) {
+        // Dark, low-profile black market hub with neon signage and covered cargo crates
+        noStroke();
+        // base platform shadow
+        fill(10, 12, 14);
+        ellipse(0, size * 0.2 + bob, size * 0.9, size * 0.24);
+
+        // main low-slung structure
+        fill(30, 30, 38);
+        rect(0, bob, size * 0.7, size * 0.28, 6);
+
+        // covered cargo crates / cages
+        fill(50, 40, 38);
+        for (let i = -1; i <= 1; i++) {
+            rect(i * size * 0.22, bob + size * 0.06, size * 0.24, size * 0.16, 3);
+            stroke(18, 18, 20, 120); strokeWeight(1);
+            line(i * size * 0.22 - size * 0.12, bob + size * 0.06 - size * 0.06, i * size * 0.22 + size * 0.12, bob + size * 0.06 - size * 0.06);
+            noStroke();
+        }
+
+        // neon signage strips (animated pulse)
+        const pulse = 0.6 + 0.4 * Math.sin(anim ? (anim.marketPulse || 0) : obj.bobPhase * 0.02);
+        // red 'off' neon
+        fill(160, 24, 24, 160 * pulse);
+        rect(-size * 0.18, bob - size * 0.08, size * 0.36, 6, 2);
+        // cyan accent
+        fill(24, 180, 200, 140 * (0.6 + 0.4 * Math.cos(obj.bobPhase * 0.02)));
+        rect(size * 0.18, bob - size * 0.08, size * 0.28, 4, 2);
+
+        // silhouette figures near entrances (tiny human shapes)
+        fill(12, 12, 12);
+        for (let s = -1; s <= 1; s++) {
+            const sx = s * size * 0.26;
+            const sy = bob + size * 0.14;
+            ellipse(sx, sy - 6, 6, 6);
+            rect(sx, sy - 0, 3, 6, 1);
+        }
+
+        // small security drone(s)
+        fill(90, 90, 100);
+        ellipse(size * 0.38, bob - size * 0.02, 8, 6);
+        stroke(80, 160, 200, 80); strokeWeight(0.8);
+        line(size * 0.38, bob - size * 0.02, size * 0.48, bob - size * 0.06);
+        noStroke();
+
+        // faint glow under structure for atmosphere
+        fill(24, 40, 50, 28);
+        ellipse(0, bob + size * 0.36, size * 0.8, size * 0.12);
     },
 
     solarSail: function(obj, size, anim, bob) {
@@ -3328,6 +3381,11 @@ class SpaceObject {
                 anim.drillSpin = Math.random() * TWO_PI;
                 anim.conveyorPhase = Math.random() * TWO_PI;
                 break;
+            case 'undergroundMarket':
+                // neon pulse and low-activity drones
+                anim.marketPulse = Math.random() * TWO_PI;
+                anim.lightPhase = Math.random() * TWO_PI;
+                break;
         }
         // unique id used by debris RNG and other persistent behaviors
         // Attach commodity lists from the centralized mapping so transports can use them
@@ -3375,7 +3433,8 @@ class SpaceObject {
             quantumGate: 0.00002,
             prison: 0.00003,
             drugLab: 0.00006,
-            labourColony: 0.00004
+            labourColony: 0.00004,
+            undergroundMarket: 0.000025
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -3633,6 +3692,7 @@ class SpaceObject {
             prison: 'Prison Station',
             drugLab: 'Drug Laboratory',
             labourColony: 'Labour Colony'
+            , undergroundMarket: 'Underground Market'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }
