@@ -615,27 +615,41 @@ class Planet {
         // Set fine noise detail for more detailed structures (amplified)
         pg.noiseDetail(7, 0.45);
 
-        // Choose a civilization pattern type (0-3) based on featureRand
-        const patternType = Math.floor((this.featureRand * 122.27) % 4);
+        // Choose a civilization pattern type (0-5) based on featureRand for more variety
+        const patternType = Math.floor((this.featureRand * 122.27) % 6);
 
         // Set colors based on civilization type to add variety
-        let primaryColor, secondaryColor;
+        let primaryColor, secondaryColor, accentColor;
         switch (patternType) {
-            case 0: // Warm/amber - standard
+            case 0: // Warm/amber - standard Earth-like
                 primaryColor = color(255, 240, 180, 180);
                 secondaryColor = color(255, 220, 140, 160);
+                accentColor = color(255, 200, 100, 200);
                 break;
             case 1: // Cooler/blueish - advanced tech
                 primaryColor = color(220, 240, 255, 170);
                 secondaryColor = color(180, 200, 255, 150);
+                accentColor = color(150, 180, 255, 190);
                 break;
             case 2: // Warm/reddish - older civilization
                 primaryColor = color(255, 220, 160, 180);
                 secondaryColor = color(255, 200, 130, 160);
+                accentColor = color(255, 180, 100, 200);
                 break;
-            case 3: // Greenish tint - alien/unique
+            case 3: // Greenish tint - alien/bio-tech
                 primaryColor = color(220, 255, 220, 170);
                 secondaryColor = color(180, 245, 190, 150);
+                accentColor = color(140, 255, 160, 190);
+                break;
+            case 4: // Purple/violet - exotic civilization
+                primaryColor = color(240, 200, 255, 170);
+                secondaryColor = color(200, 150, 255, 150);
+                accentColor = color(180, 120, 255, 190);
+                break;
+            case 5: // Cyan/teal - aquatic or fusion-based
+                primaryColor = color(180, 240, 255, 170);
+                secondaryColor = color(140, 220, 255, 150);
+                accentColor = color(100, 200, 255, 190);
                 break;
         }
 
@@ -644,6 +658,7 @@ class Planet {
         // Cache color components for inner loop performance
         const primR = red(primaryColor), primG = green(primaryColor), primB = blue(primaryColor);
         const secR = red(secondaryColor), secG = green(secondaryColor), secB = blue(secondaryColor);
+        const accR = red(accentColor), accG = green(accentColor), accB = blue(accentColor);
 
 
         // --- PLANET-WIDE FAINT NOISE TEXTURE ---
@@ -1070,6 +1085,334 @@ class Planet {
                     );
                     pg.endShape();
                 }
+            }
+        }
+        
+        // --- MEGA-STRUCTURES AND SPECIAL FEATURES ---
+        // These are large-scale civilization features visible from space
+        
+        // 1. ORBITAL RING / SPACE ELEVATOR (rare mega-structure)
+        if ((featureRand * 31.41) % 1 > 0.85) {
+            const ringAngle = (featureRand * 17.3) % TWO_PI_CONST;
+            const ringRadius = r * random(1.08, 1.15); // Just outside planet surface
+            const ringThickness = Math.max(1, bandHeight * 0.5);
+            const segmentCount = Math.floor(120 + random(40));
+            
+            pg.push();
+            pg.translate(bufferCenter, bufferCenter);
+            pg.rotate(ringAngle);
+            pg.noFill();
+            pg.stroke(accR, accG, accB, 160);
+            pg.strokeWeight(ringThickness);
+            
+            // Draw segmented orbital ring with gaps
+            for (let seg = 0; seg < segmentCount; seg++) {
+                const segAngle = (seg / segmentCount) * TWO_PI_CONST;
+                const nextAngle = ((seg + 0.7) / segmentCount) * TWO_PI_CONST; // 70% segment, 30% gap
+                const x1 = Math.cos(segAngle) * ringRadius;
+                const y1 = Math.sin(segAngle) * ringRadius * 0.3; // Perspective
+                const x2 = Math.cos(nextAngle) * ringRadius;
+                const y2 = Math.sin(nextAngle) * ringRadius * 0.3;
+                
+                // Only draw if segment is on the visible side
+                if (y1 < r * 0.2) {
+                    pg.line(x1, y1, x2, y2);
+                }
+            }
+            pg.pop();
+            
+            // Add connection points (space elevator tethers)
+            const tethers = Math.floor(random(3, 6));
+            for (let t = 0; t < tethers; t++) {
+                const tetherAngle = ringAngle + (t / tethers) * TWO_PI_CONST;
+                const surfaceX = Math.cos(tetherAngle) * r * 0.9;
+                const surfaceY = Math.sin(tetherAngle) * r * 0.9;
+                const orbitX = Math.cos(tetherAngle) * ringRadius;
+                const orbitY = Math.sin(tetherAngle) * ringRadius * 0.3;
+                
+                pg.stroke(primR, primG, primB, 120);
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25));
+                pg.line(bufferCenter + surfaceX, bufferCenter + surfaceY, 
+                       bufferCenter + orbitX, bufferCenter + orbitY);
+                
+                // Bright point at tether base
+                pg.noStroke();
+                pg.fill(accR, accG, accB, 200);
+                pg.ellipse(bufferCenter + surfaceX, bufferCenter + surfaceY, 
+                          bandHeight * 0.8, bandHeight * 0.8);
+            }
+        }
+        
+        // 2. AGRICULTURAL PATTERNS (visible geometric farms)
+        const numFarmRegions = Math.floor(random(2, 5));
+        for (let fr = 0; fr < numFarmRegions; fr++) {
+            const farmAngle = (featureRand * (fr + 1) * 23.7) % TWO_PI_CONST;
+            const farmDist = random(r * 0.4, r * 0.85);
+            const farmCenterX = Math.cos(farmAngle) * farmDist;
+            const farmCenterY = Math.sin(farmAngle) * farmDist;
+            
+            // Check if within planet bounds
+            const farmDistSq = farmCenterX * farmCenterX + farmCenterY * farmCenterY;
+            if (farmDistSq > r * r * 0.9) continue;
+            
+            const farmType = Math.floor((featureRand * (fr + 5) * 11.1) % 3);
+            const farmScale = random(r * 0.08, r * 0.15);
+            const farmSpacing = farmScale * 0.3;
+            
+            pg.push();
+            pg.translate(bufferCenter + farmCenterX, bufferCenter + farmCenterY);
+            
+            if (farmType === 0) {
+                // Circular irrigation patterns (center pivot)
+                const numCircles = Math.floor(random(4, 8));
+                for (let c = 0; c < numCircles; c++) {
+                    const circRad = (c + 1) * farmSpacing;
+                    pg.noFill();
+                    pg.stroke(primR, primG, primB, 25 + c * 5);
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
+                    pg.ellipse(0, 0, circRad * 2, circRad * 2);
+                    
+                    // Add small dots around circle
+                    const dotsOnCircle = Math.floor(circRad * 0.5);
+                    for (let d = 0; d < dotsOnCircle; d++) {
+                        const dotAngle = (d / dotsOnCircle) * TWO_PI_CONST;
+                        const dx = Math.cos(dotAngle) * circRad;
+                        const dy = Math.sin(dotAngle) * circRad;
+                        pg.noStroke();
+                        pg.fill(secR, secG, secB, 40);
+                        pg.ellipse(dx, dy, bandHeight * 0.2, bandHeight * 0.2);
+                    }
+                }
+            } else if (farmType === 1) {
+                // Hexagonal grid pattern
+                const hexSize = farmSpacing * 0.6;
+                const hexRows = 8;
+                const hexCols = 8;
+                pg.noFill();
+                pg.stroke(primR, primG, primB, 35);
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.12));
+                
+                for (let row = -hexRows; row < hexRows; row++) {
+                    for (let col = -hexCols; col < hexCols; col++) {
+                        const xOff = col * hexSize * 1.5;
+                        const yOff = row * hexSize * Math.sqrt(3) + (col % 2) * hexSize * Math.sqrt(3) * 0.5;
+                        
+                        // Draw hexagon
+                        pg.beginShape();
+                        for (let h = 0; h < 6; h++) {
+                            const hAngle = (h / 6) * TWO_PI_CONST;
+                            const hx = xOff + Math.cos(hAngle) * hexSize;
+                            const hy = yOff + Math.sin(hAngle) * hexSize;
+                            pg.vertex(hx, hy);
+                        }
+                        pg.endShape(CLOSE);
+                    }
+                }
+            } else {
+                // Rectangular field grid
+                const gridSize = farmSpacing * 0.8;
+                const gridCount = 10;
+                pg.stroke(primR, primG, primB, 30);
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
+                
+                for (let gx = -gridCount; gx < gridCount; gx++) {
+                    for (let gy = -gridCount; gy < gridCount; gy++) {
+                        const rx = gx * gridSize;
+                        const ry = gy * gridSize;
+                        const halfGrid = gridSize * 0.4;
+                        
+                        pg.noFill();
+                        pg.rect(rx - halfGrid, ry - halfGrid, gridSize * 0.8, gridSize * 0.8);
+                        
+                        // Small bright dot at center
+                        if ((gx + gy) % 2 === 0) {
+                            pg.noStroke();
+                            pg.fill(secR, secG, secB, 45);
+                            pg.ellipse(rx, ry, bandHeight * 0.25, bandHeight * 0.25);
+                        }
+                    }
+                }
+            }
+            pg.pop();
+        }
+        
+        // 3. RADIAL CITY PATTERNS (spoke-wheel cities)
+        const numRadialCities = Math.floor(random(1, 3));
+        for (let rc = 0; rc < numRadialCities; rc++) {
+            // Pick a hub as the center
+            if (rc >= cityHubs.length) break;
+            const hub = cityHubs[rc];
+            
+            const numSpokes = Math.floor(random(6, 12));
+            const spokeLength = hub.size * random(0.8, 1.2);
+            
+            for (let sp = 0; sp < numSpokes; sp++) {
+                const spokeAngle = (sp / numSpokes) * TWO_PI_CONST;
+                const spokeEndX = hub.x + Math.cos(spokeAngle) * spokeLength;
+                const spokeEndY = hub.y + Math.sin(spokeAngle) * spokeLength;
+                
+                // Draw main spoke
+                pg.stroke(primR, primG, primB, 140);
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.4));
+                pg.line(bufferCenter + hub.x, bufferCenter + hub.y,
+                       bufferCenter + spokeEndX, bufferCenter + spokeEndY);
+                
+                // Add development along spoke
+                const segmentsAlongSpoke = Math.floor(random(4, 8));
+                for (let seg = 1; seg < segmentsAlongSpoke; seg++) {
+                    const t = seg / segmentsAlongSpoke;
+                    const segX = hub.x + Math.cos(spokeAngle) * spokeLength * t;
+                    const segY = hub.y + Math.sin(spokeAngle) * spokeLength * t;
+                    
+                    // Perpendicular development
+                    const perpAngle = spokeAngle + PI / 2;
+                    const perpLen = bandHeight * random(1, 3);
+                    
+                    pg.stroke(secR, secG, secB, 100);
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.25));
+                    pg.line(
+                        bufferCenter + segX - Math.cos(perpAngle) * perpLen,
+                        bufferCenter + segY - Math.sin(perpAngle) * perpLen,
+                        bufferCenter + segX + Math.cos(perpAngle) * perpLen,
+                        bufferCenter + segY + Math.sin(perpAngle) * perpLen
+                    );
+                    
+                    // Bright node at intersection
+                    pg.noStroke();
+                    pg.fill(accR, accG, accB, 160);
+                    pg.ellipse(bufferCenter + segX, bufferCenter + segY, 
+                              bandHeight * 0.6, bandHeight * 0.6);
+                }
+            }
+            
+            // Ring roads around the radial city
+            const numRings = Math.floor(random(2, 4));
+            for (let ring = 1; ring <= numRings; ring++) {
+                const ringRad = (ring / numRings) * spokeLength;
+                pg.noFill();
+                pg.stroke(secR, secG, secB, 80);
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.3));
+                pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y,
+                          ringRad * 2, ringRad * 2);
+            }
+        }
+        
+        // 4. ARCOLOGIES (super-tall mega-buildings)
+        const numArcologies = Math.floor(random(1, 4));
+        for (let arc = 0; arc < numArcologies; arc++) {
+            const arcAngle = (featureRand * (arc + 7) * 19.3) % TWO_PI_CONST;
+            const arcDist = random(r * 0.3, r * 0.8);
+            const arcX = Math.cos(arcAngle) * arcDist;
+            const arcY = Math.sin(arcAngle) * arcDist;
+            
+            // Check bounds
+            if (arcX * arcX + arcY * arcY > r * r * 0.9) continue;
+            
+            // Draw bright glow for arcology
+            pg.push();
+            pg.translate(bufferCenter + arcX, bufferCenter + arcY);
+            
+            // Outer glow
+            const glowSize = bandHeight * random(2.5, 4);
+            pg.noStroke();
+            for (let g = 3; g > 0; g--) {
+                const gSize = glowSize * (g / 3);
+                const gAlpha = 60 / g;
+                pg.fill(accR, accG, accB, gAlpha);
+                pg.ellipse(0, 0, gSize, gSize);
+            }
+            
+            // Bright core
+            pg.fill(accR, accG, accB, 220);
+            pg.ellipse(0, 0, bandHeight * 1.2, bandHeight * 1.2);
+            
+            // Cross-pattern indicating structure
+            pg.stroke(255, 255, 255, 180);
+            pg.strokeWeight(Math.max(0.4, bandHeight * 0.2));
+            const crossSize = bandHeight * 1.5;
+            pg.line(-crossSize, 0, crossSize, 0);
+            pg.line(0, -crossSize, 0, crossSize);
+            
+            pg.pop();
+        }
+        
+        // 5. INDUSTRIAL ZONES (uniform bright patches)
+        const numIndustrial = Math.floor(random(2, 5));
+        for (let ind = 0; ind < numIndustrial; ind++) {
+            const indAngle = (featureRand * (ind + 13) * 27.1) % TWO_PI_CONST;
+            const indDist = random(r * 0.4, r * 0.85);
+            const indX = Math.cos(indAngle) * indDist;
+            const indY = Math.sin(indAngle) * indDist;
+            
+            if (indX * indX + indY * indY > r * r * 0.9) continue;
+            
+            const indSize = random(r * 0.04, r * 0.08);
+            const indGridSpacing = Math.max(1, bandHeight * 0.8);
+            
+            pg.push();
+            pg.translate(bufferCenter + indX, bufferCenter + indY);
+            
+            // Uniform grid of bright lights
+            const gridExtent = Math.floor(indSize / indGridSpacing);
+            for (let gx = -gridExtent; gx <= gridExtent; gx++) {
+                for (let gy = -gridExtent; gy <= gridExtent; gy++) {
+                    const px = gx * indGridSpacing;
+                    const py = gy * indGridSpacing;
+                    
+                    // Uniform brightness for industrial look
+                    pg.noStroke();
+                    pg.fill(primR, primG, primB, 150);
+                    pg.ellipse(px, py, bandHeight * 0.5, bandHeight * 0.5);
+                }
+            }
+            pg.pop();
+        }
+        
+   
+        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS (distinct geometric stations)
+        if ((featureRand * 53.7) % 1 > 0.7) {
+            const numProcessors = Math.floor(random(2, 5));
+            for (let proc = 0; proc < numProcessors; proc++) {
+                const procAngle = (proc / numProcessors) * TWO_PI_CONST + random(-0.3, 0.3);
+                const procDist = random(r * 0.6, r * 0.9);
+                const procX = Math.cos(procAngle) * procDist;
+                const procY = Math.sin(procAngle) * procDist;
+                
+                if (procX * procX + procY * procY > r * r) continue;
+                
+                pg.push();
+                pg.translate(bufferCenter + procX, bufferCenter + procY);
+                
+                // Draw processor as geometric structure
+                const procSize = bandHeight * random(2, 3);
+                
+                // Rotating square/diamond
+                pg.push();
+                pg.rotate(PI / 4);
+                pg.noFill();
+                pg.stroke(accR, accG, accB, 180);
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3));
+                pg.rect(-procSize / 2, -procSize / 2, procSize, procSize);
+                pg.pop();
+                
+                // Center bright point
+                pg.noStroke();
+                pg.fill(255, 255, 255, 200);
+                pg.ellipse(0, 0, bandHeight * 0.7, bandHeight * 0.7);
+                
+                // Energy lines radiating out
+                const numEnergyLines = 4;
+                for (let el = 0; el < numEnergyLines; el++) {
+                    const elAngle = (el / numEnergyLines) * TWO_PI_CONST;
+                    const elLen = procSize * 1.2;
+                    pg.stroke(secR, secG, secB, 140);
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.2));
+                    pg.line(0, 0,
+                           Math.cos(elAngle) * elLen,
+                           Math.sin(elAngle) * elLen);
+                }
+                
+                pg.pop();
             }
         }
         

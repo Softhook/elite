@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inhabited Planet Test</title>
+    <script src="../libraries/p5.min.js"></script>
+    <script src="../libraries/p5.sound.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border: 1px solid #444;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Inhabited Planet Features Test</h3>
+        <p>Click to generate a new inhabited planet</p>
+        <button id="newPlanet">New Planet</button>
+        <button id="toggleRotation">Toggle Rotation</button>
+        <div id="stats"></div>
+    </div>
+    
+    <script>
+        // Include Planet class inline
+        // Copy the Planet class from planet.js here
+        // For now, we'll load it via script tag
+    </script>
+    <script src="../planet.js"></script>
+    <script>
+        let testPlanet;
+        let rotationEnabled = true;
+        let currentPlanetSeed = 0;
+        
+        function setup() {
+            createCanvas(1200, 800);
+            angleMode(RADIANS);
+            generateNewPlanet();
+            
+            // Button handlers
+            document.getElementById('newPlanet').addEventListener('click', generateNewPlanet);
+            document.getElementById('toggleRotation').addEventListener('click', () => {
+                rotationEnabled = !rotationEnabled;
+            });
+        }
+        
+        function generateNewPlanet() {
+            currentPlanetSeed = Math.random() * 10000;
+            randomSeed(currentPlanetSeed);
+            noiseSeed(currentPlanetSeed);
+            
+            // Create an inhabited planet
+            const planetSize = random(200, 350);
+            const color1 = color(random(80, 180), random(80, 180), random(80, 180));
+            const color2 = color(random(80, 180), random(80, 180), random(80, 180));
+            
+            testPlanet = new Planet(width/2, height/2, planetSize, color1, color2, "Test System", 1);
+            
+            // Force it to be inhabited
+            testPlanet.isInhabited = true;
+            testPlanet.cityLightsDensity = random(0.4, 0.8);
+            
+            // Add atmosphere
+            testPlanet.hasAtmosphere = true;
+            testPlanet.atmosphereColor = color(random(150, 220), random(150, 220), random(200, 255), random(5, 15));
+            
+            // Create buffers
+            testPlanet.createBuffers();
+            
+            // Compute shadow
+            const sunPos = createVector(width/2 - 500, height/2 - 300);
+            testPlanet.computeShadowOffset(sunPos);
+            
+            // Update stats
+            const stats = document.getElementById('stats');
+            stats.innerHTML = `
+                <p>Seed: ${Math.floor(currentPlanetSeed)}</p>
+                <p>Size: ${Math.floor(planetSize)}</p>
+                <p>City Density: ${testPlanet.cityLightsDensity.toFixed(2)}</p>
+                <p>Pattern Type: ${Math.floor((testPlanet.featureRand * 122.27) % 6)}</p>
+                <p>Name: ${testPlanet.name}</p>
+            `;
+        }
+        
+        function draw() {
+            background(10, 10, 20);
+            
+            // Draw stars
+            push();
+            fill(255, 255, 255, 150);
+            noStroke();
+            for (let i = 0; i < 100; i++) {
+                const sx = (noise(i * 0.1, frameCount * 0.0001) * width * 2) % width;
+                const sy = (noise(i * 0.1 + 100, frameCount * 0.0001) * height * 2) % height;
+                ellipse(sx, sy, 1, 1);
+            }
+            pop();
+            
+            // Update and draw planet
+            if (testPlanet) {
+                if (rotationEnabled) {
+                    testPlanet.update();
+                }
+                
+                // Draw the planet directly — Planet.draw already translates to its own position
+                const sunPos = createVector(width/2 - 500, height/2 - 300);
+                testPlanet.draw(sunPos);
+            }
+            
+            // Draw sun indicator
+            push();
+            fill(255, 250, 200, 100);
+            noStroke();
+            ellipse(width/2 - 500, height/2 - 300, 30, 30);
+            fill(255, 250, 200, 200);
+            ellipse(width/2 - 500, height/2 - 300, 15, 15);
+            pop();
+            
+            // Show FPS
+            fill(100, 200, 100);
+            noStroke();
+            textSize(12);
+            textAlign(RIGHT, BOTTOM);
+            text(`FPS: ${Math.floor(frameRate())}`, width - 10, height - 10);
+        }
+    </script>
+</body>
+</html>
