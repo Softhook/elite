@@ -242,17 +242,6 @@ class Planet {
         this._shadowGradientOuter = this._shadowSize * 0.5;
     }
 
-    /**
-     * Precompute all buffers and a stable shadow offset.
-     * Call this from the system initialization when the sun position is known
-     * to avoid any shadow math or buffer creation during the frame loop.
-     * @param {p5.Vector} sunPos
-     */
-    precompute(sunPos) {
-        this.createBuffers();
-        this.computeShadowOffset(sunPos);
-    }
-
     // Add a static method that creates the sun (at 0,0)
     static createSun(systemName = "Unknown") {
         let sunSize = 1200;  // Much larger sun size
@@ -1455,11 +1444,10 @@ class Planet {
             this.createBuffers();
         }
         
-        // Shadow offset must be computed beforehand via `precompute()` or
-        // `computeShadowOffset(sunPos)` by the caller (e.g. StarSystem) so
-        // we avoid doing this math lazily inside the per-frame `draw()`.
-        // If `shadowOffset` is not set the code below will simply skip
-        // shadowed city-lights and the top shadow rendering.
+        // Compute shadow if needed
+        if (!this.shadowOffset) {
+            this.computeShadowOffset(sunPos);
+        }
         
         push();
         // Translate to planet's position in world space

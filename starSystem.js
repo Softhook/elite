@@ -868,29 +868,13 @@ try {
                         }
                     }
                 }
-                } else {
-                // Non-browser fallback: create synchronously (call precompute when available)
+            } else {
+                // Non-browser fallback: create synchronously
                 if (Array.isArray(this.planets)) {
-                    // Determine a safe sun position fallback without relying on p5 createVector
-                    const sunPos = (this.planets && this.planets[0] && this.planets[0].pos)
-                        ? (this.planets[0].pos.copy ? this.planets[0].pos.copy() : { x: this.planets[0].pos.x, y: this.planets[0].pos.y })
-                        : (typeof createVector === 'function' ? createVector(0, 0) : { x: 0, y: 0 });
-
                     for (let i = 0; i < this.planets.length; i++) {
                         const pl = this.planets[i];
-                        if (pl && !pl.buffersCreated) {
-                            try {
-                                if (typeof pl.precompute === 'function') {
-                                    pl.precompute(sunPos);
-                                } else if (typeof pl.createBuffers === 'function') {
-                                    pl.createBuffers();
-                                    if (typeof pl.computeShadowOffset === 'function') {
-                                        try { pl.computeShadowOffset(sunPos); } catch(_) {}
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn('Planet buffer creation/precompute failed on enterSystem for', pl, e);
-                            }
+                        if (pl && typeof pl.createBuffers === 'function' && !pl.buffersCreated) {
+                            try { pl.createBuffers(); } catch (e) { console.warn('Planet.createBuffers failed on enterSystem for', pl, e); }
                         }
                     }
                 }

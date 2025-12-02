@@ -270,24 +270,11 @@ this.jumpJustCompleted = false;
                 for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
                     const task = window._planetBufferCreationQueue.shift();
                     try {
-                        if (task && task.planet && !task.planet.buffersCreated) {
-                            // Prefer the new precompute API which also computes shadow offset
-                            if (typeof task.planet.precompute === 'function') {
-                                // Determine sun position (sun is at index 0, typically at 0,0)
-                                const sunPos = (task.system && task.system.planets && task.system.planets[0] && task.system.planets[0].pos)
-                                    ? (task.system.planets[0].pos.copy ? task.system.planets[0].pos.copy() : createVector(task.system.planets[0].pos.x, task.system.planets[0].pos.y))
-                                    : createVector(0, 0);
-                                task.planet.precompute(sunPos);
-                            } else if (typeof task.planet.createBuffers === 'function') {
-                                // Fallback for older planets
-                                task.planet.createBuffers();
-                                if (typeof task.planet.computeShadowOffset === 'function') {
-                                    try { task.planet.computeShadowOffset(createVector(0,0)); } catch(_) {}
-                                }
-                            }
+                        if (task && task.planet && typeof task.planet.createBuffers === 'function' && !task.planet.buffersCreated) {
+                            task.planet.createBuffers();
                         }
                     } catch (e) {
-                        console.warn('Deferred planet.precompute/createBuffers error', e);
+                        console.warn('Deferred planet.createBuffers error', e);
                     }
                     window._planetBufferCreationCompleted = (window._planetBufferCreationCompleted || 0) + 1;
                 }
