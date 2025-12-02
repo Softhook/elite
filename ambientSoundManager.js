@@ -33,7 +33,58 @@ class AmbientSoundManager {
             this.masterGain = this.audioContext.createGain();
             this.masterGain.gain.value = this.globalVolume;
             this.masterGain.connect(this.audioContext.destination);
+
+            // Create a simple convolution reverb (uses generated IR)
+            try {
+                this.reverbConvolver = this.audioContext.createConvolver();
+                this.reverbGain = this.audioContext.createGain();
+                this.reverbGain.gain.value = 0.6; // wet level for the convolver bus
+                this.reverbConvolver.buffer = this._createImpulseResponse(1.5, 2.0);
+                this.reverbConvolver.connect(this.reverbGain);
+                this.reverbGain.connect(this.masterGain);
+            } catch (e) {
+                this.reverbConvolver = null;
+            }
+
+            // Create a tempo-friendly delay / ping-pong bus
+            try {
+                this.delayNode = this.audioContext.createDelay(5.0);
+                this.delayNode.delayTime.value = 0.35; // default delay time
+                this.delayFeedback = this.audioContext.createGain();
+                this.delayFeedback.gain.value = 0.38;
+                this.delayWet = this.audioContext.createGain();
+                this.delayWet.gain.value = 0.45;
+
+                // feedback loop: delay -> feedback -> delay
+                this.delayNode.connect(this.delayFeedback);
+                this.delayFeedback.connect(this.delayNode);
+                this.delayNode.connect(this.delayWet);
+                this.delayWet.connect(this.masterGain);
+            } catch (e) {
+                this.delayNode = null;
+            }
         }
+    }
+
+    /**
+     * Generate a simple impulse response buffer for a synthetic reverb
+     * @param {number} duration Seconds
+     * @param {number} decay Decay rate
+     * @returns {AudioBuffer}
+     */
+    _createImpulseResponse(duration = 2, decay = 2) {
+        if (!this.audioContext || !this.audioContext.createBuffer) return null;
+        const sampleRate = this.audioContext.sampleRate;
+        const length = Math.floor(sampleRate * duration);
+        const impulse = this.audioContext.createBuffer(2, length, sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+            const channel = impulse.getChannelData(ch);
+            for (let i = 0; i < length; i++) {
+                // exponential decay noise
+                channel[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            }
+        }
+        return impulse;
     }
     
     /**
@@ -139,7 +190,38 @@ class AmbientSoundManager {
         
         // Connect main gain to master
         soundConfig.mainGain.gain.value = 0; // Start muted, will be updated by distance
-        soundConfig.mainGain.connect(this.masterGain);
+        // Routing: main -> panner -> master (dry)
+        try {
+            const panner = this.audioContext.createStereoPanner();
+            soundConfig.panner = panner;
+            soundConfig.mainGain.connect(panner);
+            panner.connect(this.masterGain);
+        } catch (e) {
+            // fallback: direct to master
+            soundConfig.mainGain.connect(this.masterGain);
+            soundConfig.panner = null;
+        }
+
+        // Create per-source effect send gains and hook to global buses when available
+        try {
+            const reverbSend = this.audioContext.createGain();
+            reverbSend.gain.value = (profile.reverbSend != null) ? profile.reverbSend : 0.06;
+            soundConfig.reverbSend = reverbSend;
+            soundConfig.mainGain.connect(reverbSend);
+            if (this.reverbConvolver) reverbSend.connect(this.reverbConvolver);
+        } catch (e) {
+            soundConfig.reverbSend = null;
+        }
+
+        try {
+            const delaySend = this.audioContext.createGain();
+            delaySend.gain.value = (profile.delaySend != null) ? profile.delaySend : 0.05;
+            soundConfig.delaySend = delaySend;
+            soundConfig.mainGain.connect(delaySend);
+            if (this.delayNode) delaySend.connect(this.delayNode);
+        } catch (e) {
+            soundConfig.delaySend = null;
+        }
         
         this.activeSources.set(sourceId, soundConfig);
         return soundConfig;
@@ -179,6 +261,20 @@ class AmbientSoundManager {
             } catch (e) {
                 // Already disconnected
             }
+            // Disconnect and null panner
+            try {
+                if (soundConfig.panner) {
+                    soundConfig.panner.disconnect();
+                }
+            } catch (e) {}
+
+            // Disconnect effect sends
+            try {
+                if (soundConfig.reverbSend) soundConfig.reverbSend.disconnect();
+            } catch (e) {}
+            try {
+                if (soundConfig.delaySend) soundConfig.delaySend.disconnect();
+            } catch (e) {}
             // Stop and disconnect any LFO texture nodes
             try {
                 if (soundConfig.lfoOsc) {
@@ -242,6 +338,27 @@ class AmbientSoundManager {
 
             // Smooth volume changes to avoid clicking
             this._rampGain(soundConfig.mainGain.gain, volume, 0.1);
+
+            // Update stereo panning based on relative X position
+            try {
+                if (soundConfig.panner && soundConfig.position && playerPos) {
+                    const dx = soundConfig.position.x - playerPos.x;
+                    // Normalize pan by maxDistance (clamped to -1..1)
+                    let pan = 0;
+                    if (Math.abs(dx) > 0.0001) pan = Math.max(-1, Math.min(1, (dx / this.maxDistance) * 2));
+                    const panParam = soundConfig.panner.pan;
+                    const t = this.audioContext.currentTime;
+                    try {
+                        panParam.cancelScheduledValues(t);
+                        panParam.setValueAtTime(panParam.value || 0, t);
+                        panParam.linearRampToValueAtTime(pan, t + 0.12);
+                    } catch (e) {
+                        try { panParam.value = pan; } catch (_) {}
+                    }
+                }
+            } catch (e) {
+                // ignore panning errors
+            }
         }
     }
 
