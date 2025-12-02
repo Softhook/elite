@@ -375,7 +375,13 @@ function keyPressed() {
         case '.':
             // Cycle minimap zoom level when in flight
             if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
-                uiManager.cycleMinimapZoom();
+                uiManager.cycleOutMinimapZoom();
+                return false;
+            }
+        case ',':
+            // Cycle minimap zoom level when in flight
+            if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+                uiManager.cycleInMinimapZoom();
                 return false;
             }
             break;

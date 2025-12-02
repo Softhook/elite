@@ -5441,18 +5441,26 @@ if (isIllegalInSystem || isMissionCargo) {
      * Cycles the minimap zoom level through available world view ranges.
      * Called by '.' keyboard shortcut.
      */
-    cycleMinimapZoom() {
+    cycleOutMinimapZoom() {
         this.minimapZoomIndex = (this.minimapZoomIndex + 1) % this.minimapWorldViewRanges.length;
         this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
         // Recompute scale immediately
         this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
-        if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-            soundManager.playSound('click');
-        }
-        // Show zoom level message
-        const zoomLabel = Math.round(this.minimapWorldViewRange / 1000) + 'km';
-        this.addMessage(`Minimap Zoom: ${zoomLabel}`, [0, 200, 0], 1500);
+        soundManager.playSound('click');
     }
+
+    /**
+     * Cycles the minimap zoom level through available world view ranges.
+     * Called by ',' keyboard shortcut.
+     */
+    cycleInMinimapZoom() {
+        this.minimapZoomIndex = ((this.minimapZoomIndex - 1) + this.minimapWorldViewRanges.length) % this.minimapWorldViewRanges.length;
+        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
+        // Recompute scale immediately
+        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+        soundManager.playSound('click');
+    }
+
 
     /**
      * Handles minimap click for target locking.
@@ -5502,20 +5510,6 @@ if (isIllegalInSystem || isMissionCargo) {
             if (distSq < closestDistSq) {
                 closestDistSq = distSq;
                 closestEntity = enemy;
-            }
-        }
-
-        // Check asteroids
-        const asteroids = system.asteroids || [];
-        for (let i = 0; i < asteroids.length; i++) {
-            const ast = asteroids[i];
-            if (!ast || !ast.pos || ast.destroyed) continue;
-            const dx = ast.pos.x - worldX;
-            const dy = ast.pos.y - worldY;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closestDistSq = distSq;
-                closestEntity = ast;
             }
         }
 

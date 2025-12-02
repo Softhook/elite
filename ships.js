@@ -806,9 +806,9 @@ const SHIP_DEFINITIONS = {
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
-        baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.10472,
+        baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.09963,
         baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
-        armament: ["Pulse Laser"], // Fast single weapon
+        armament: ["Twin Pulse"], 
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
         drawFunction: drawGnatInterceptor, vertexData: [ {x:1.1, y:0}, {x:-0.8, y:0.4}, {x:-1.0, y:0}, {x:-0.8, y:-0.4} ],
         fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8,
