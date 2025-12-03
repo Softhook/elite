@@ -1171,7 +1171,7 @@ class UIManager {
         const indicatorW = 15;
         const indicatorMaxH = rowH * 0.6;
         const indicatorYOffset = (rowH - indicatorMaxH) / 2;
-        const maxDeviation = 0.5;
+        const maxDeviation = 0.8; // Max price deviation for full bar height (prices can swing -50% to +80%)
         
         // Draw column headers
         let headerY = sY - 20;
@@ -1729,7 +1729,7 @@ class UIManager {
         const indicatorW = 15; // Width of the indicator bar area
         const indicatorMaxH = rowH * 0.6; // Max height of the bar
         const indicatorYOffset = (rowH - indicatorMaxH) / 2; // Center vertically
-        const maxDeviation = 0.5; // Max price deviation (e.g., 50%) for full bar height
+        const maxDeviation = 0.8; // Max price deviation for full bar height (prices can swing -50% to +80%)
 
         // Draw column headers
         let headerY = sY - 20;
@@ -3917,16 +3917,12 @@ class UIManager {
 
     
         // Draw scrollbar if needed
-        if (this.shipyardScrollMax > 0) {
-            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
-            fill(60,60,100); stroke(120,180,255); rect(barX, barY, barW, barH, 6);
-            let handleH = max(30, barH * (visibleRows /totalRows));
-            let handleY = barY + (barH-handleH) * (this.shipyardScrollOffset / this.shipyardScrollMax);
-            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
-            this.shipyardScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
-        } else {
-            this.shipyardScrollbarArea = null;
-        }
+        this.shipyardScrollbarArea = this._drawScrollbar(
+            pX + pW, startY, scrollAreaH,
+            this.shipyardScrollOffset, this.shipyardScrollMax,
+            visibleRows, totalRows,
+            [60, 60, 100], [120, 180, 255]
+        );
     
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
@@ -4044,17 +4040,12 @@ class UIManager {
         }
     
         // Draw scrollbar if needed
-        if (this.upgradeScrollMax > 0) {
-            let barX = pX + pW - 18, barY = startY, barW = 12, barH = scrollAreaH;
-            fill(60,60,100); stroke(180,100,255); rect(barX, barY, barW, barH, 6);
-            let handleH = max(30, barH * (visibleRows / totalRows));
-            let handleY = barY + (barH-handleH) * (this.upgradeScrollOffset / this.upgradeScrollMax);
-            fill(180,180,220); noStroke(); rect(barX+1, handleY, barW-2, handleH, 6);
-            // Store for click/drag if you want to implement it
-            this.upgradeScrollbarArea = {x:barX, y:barY, w:barW, h:barH, handleY, handleH};
-        } else {
-            this.upgradeScrollbarArea = null;
-        }
+        this.upgradeScrollbarArea = this._drawScrollbar(
+            pX + pW, startY, scrollAreaH,
+            this.upgradeScrollOffset, this.upgradeScrollMax,
+            visibleRows, totalRows,
+            [60, 60, 100], [180, 100, 255]
+        );
     
         // Back button
         let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
@@ -4373,7 +4364,7 @@ class UIManager {
      * @param {boolean} isSellPrice - Whether this is a sell price indicator
      * @param {number} maxDeviation - Maximum deviation for full bar height (default 0.5)
      */
-    _drawPriceIndicator(x, y, rowH, deviation, isSellPrice = false, maxDeviation = 0.5) {
+    _drawPriceIndicator(x, y, rowH, deviation, isSellPrice = false, maxDeviation = 0.8) {
         const indicatorMaxH = rowH * 0.6;
         const indicatorYOffset = (rowH - indicatorMaxH) / 2;
         const threshold = 0.05;
@@ -4482,6 +4473,39 @@ class UIManager {
         text(label, x + w / 2, y + h / 2);
         
         return { x, y, w, h };
+    }
+
+    /**
+     * Draws a scrollbar and returns the area object for click detection.
+     * @param {number} x - X position of panel right edge (scrollbar positioned relative to this)
+     * @param {number} y - Y position (top of scroll area)
+     * @param {number} h - Height of scroll area
+     * @param {number} scrollOffset - Current scroll offset
+     * @param {number} scrollMax - Maximum scroll offset
+     * @param {number} visibleItems - Number of visible items
+     * @param {number} totalItems - Total number of items
+     * @param {Array} [bgColor=[60,60,100]] - Background color
+     * @param {Array} [strokeColor=[150,150,200]] - Border color
+     * @returns {Object|null} Area object with x, y, w, h, handleY, handleH or null if no scrolling needed
+     */
+    _drawScrollbar(x, y, h, scrollOffset, scrollMax, visibleItems, totalItems, bgColor = [60, 60, 100], strokeColor = [150, 150, 200]) {
+        if (scrollMax <= 0) return null;
+        
+        const barW = 12;
+        const barX = x - 18;
+        
+        fill(...bgColor);
+        stroke(...strokeColor);
+        rect(barX, y, barW, h, 6);
+        
+        const handleH = max(30, h * (visibleItems / totalItems));
+        const handleY = y + (h - handleH) * (scrollOffset / scrollMax);
+        
+        fill(180, 180, 220);
+        noStroke();
+        rect(barX + 1, handleY, barW - 2, handleH, 6);
+        
+        return { x: barX, y, w: barW, h, handleY, handleH };
     }
 
     /**
@@ -5225,24 +5249,11 @@ class UIManager {
             }
             
             // Draw scrollbar if needed
-            if (this.recordScrollMax > 0) {
-                const scrollAreaH = contentH - 35; // Adjust for header
-                const barX = pX + pW - 18;
-                const barY = contentY + 35;
-                const barW = 12;
-                const barH = scrollAreaH;
-                
-                fill(60, 60, 100);
-                stroke(150, 150, 200);
-                rect(barX, barY, barW, barH, 6);
-                
-                const handleH = max(30, barH * (visibleLines / totalEntries));
-                const handleY = barY + (barH - handleH) * (this.recordScrollOffset / this.recordScrollMax);
-                
-                fill(180, 180, 220);
-                noStroke();
-                rect(barX + 1, handleY, barW - 2, handleH, 6);
-            }
+            this._drawScrollbar(
+                pX + pW, contentY + 35, contentH - 35,
+                this.recordScrollOffset, this.recordScrollMax,
+                visibleLines, totalEntries
+            );
         }
 
         // Back button
