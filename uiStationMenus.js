@@ -1182,6 +1182,285 @@ class UIStationMenus {
         }
         return false;
     }
+
+    /**
+     * Handles shipyard click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleShipyardClick(mx, my, player, addMessageFn) {
+        // Check shipyard list areas
+        for (const area of this.shipyardListAreas) {
+            if (!UIComponents.isClickInArea(mx, my, area)) continue;
+            
+            const finalPrice = area.price; // Can be negative for refunds
+            const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+            
+            if (finalPrice > 0) {
+                // Player needs to pay
+                if (player.credits >= finalPrice) {
+                    player.spendCredits(finalPrice);
+                    player.applyShipDefinition(area.shipTypeKey);
+                    player.recordShipPurchase(area.shipName, finalPrice, systemName);
+                    if (typeof saveGame === 'function') saveGame();
+                    addMessageFn("You bought a " + area.shipName + "!");
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                } else {
+                    const shortfall = finalPrice - player.credits;
+                    addMessageFn(`Not enough credits! Need ${shortfall} more for ${area.shipName}.`, [255, 150, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+            } else {
+                // Player gets a refund or even swap
+                player.addCredits(-finalPrice);
+                player.applyShipDefinition(area.shipTypeKey);
+                player.recordShipPurchase(area.shipName, finalPrice, systemName);
+                if (typeof saveGame === 'function') saveGame();
+                
+                if (finalPrice < 0) {
+                    addMessageFn(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
+                } else {
+                    addMessageFn(`You swapped to a ${area.shipName} at no additional cost.`);
+                }
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            }
+            return true;
+        }
+        
+        // Back button
+        if (this.shipyardDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
+            if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handles upgrades click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleUpgradesClick(mx, my, player, addMessageFn) {
+        // Check weapon slot buttons first
+        if (this.weaponSlotButtons && this.weaponSlotButtons.length > 0) {
+            for (const btn of this.weaponSlotButtons) {
+                if (UIComponents.isClickInArea(mx, my, btn)) {
+                    this.selectedWeaponSlot = btn.slotIndex;
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                    return true;
+                }
+            }
+        }
+        
+        // Check upgrade list items
+        for (const area of this.upgradeListAreas) {
+            if (!UIComponents.isClickInArea(mx, my, area)) continue;
+            
+            if (player.credits >= area.upgrade.price) {
+                // Check if ship has enough weapon slots
+                const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[player.shipTypeName] : null;
+                const availableSlots = shipDef?.armament?.length || 1;
+                
+                if (this.selectedWeaponSlot >= availableSlots) {
+                    addMessageFn("Your ship doesn't have that weapon slot!", [255, 100, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+                
+                player.spendCredits(area.upgrade.price);
+                player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
+                
+                const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+                player.recordWeaponUpgrade(
+                    area.upgrade.name,
+                    area.upgrade.type,
+                    area.upgrade.price,
+                    this.selectedWeaponSlot,
+                    systemName
+                );
+                
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                addMessageFn("You bought the " + area.upgrade.name + "!");
+                if (typeof saveGame === 'function') saveGame();
+            } else {
+                const shortfall = area.upgrade.price - player.credits;
+                addMessageFn(`Not enough credits! Need ${shortfall} more for ${area.upgrade.name}.`, [255, 150, 100]);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        
+        // Back button
+        if (this.upgradeDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
+            if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handles police menu click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @param {Function} processFinePaymentFn - Function to process fine payment
+     * @returns {boolean} - True if handled
+     */
+    handlePoliceClick(mx, my, player, addMessageFn, processFinePaymentFn) {
+        for (const area of this.policeButtonAreas) {
+            if (!UIComponents.isClickInArea(mx, my, area)) continue;
+            
+            if (area.action === 'back') {
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+                return true;
+            }
+            if (area.action === 'pay_fine' && player) {
+                processFinePaymentFn(player, area.amount);
+                return true;
+            }
+            if (area.action === 'join_police' && player) {
+                player.applyShipDefinition('ACAB');
+                addMessageFn("You have joined the Police Force!", 'lightblue');
+                player.isPolice = true;
+                player.recordFactionJoin("POLICE");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                
+                if (player.currentSystem) {
+                    player.currentSystem.playerWanted = false;
+                    player.currentSystem.policeAlertSent = false;
+                }
+                if (typeof saveGame === 'function') saveGame();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handles protection services click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleProtectionClick(mx, my, player, addMessageFn) {
+        for (const btn of this.protectionServicesButtons) {
+            if (!UIComponents.isClickInArea(mx, my, btn)) continue;
+            
+            if (btn.action === "HIRE_BODYGUARD") {
+                const hired = player.hireBodyguard(btn.shipType, btn.cost);
+                if (hired) {
+                    addMessageFn(`Hired ${btn.shipType} bodyguard for ${btn.cost} credits.`, [150, 255, 150]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                    if (player.activeBodyguards.length >= player.bodyguardLimit) {
+                        if (typeof gameStateManager !== 'undefined') gameStateManager.setState("VIEWING_PROTECTION");
+                    }
+                } else {
+                    addMessageFn("Failed to hire bodyguard.", [255, 100, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+                return true;
+            }
+            if (btn.action === "DISMISS_BODYGUARDS") {
+                player.dismissBodyguards();
+                addMessageFn("All bodyguards have been dismissed.", [255, 180, 100]);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+                if (typeof saveGame === 'function') saveGame();
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState("VIEWING_PROTECTION");
+                return true;
+            }
+            if (btn.state === "DOCKED") {
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handles storage click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Station} station - The current station
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleStorageClick(mx, my, player, station, addMessageFn) {
+        if (!Array.isArray(this.storageButtonAreas)) return false;
+        
+        const stationForStorage = station || player?.currentSystem?.station || null;
+        if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
+            stationForStorage.storage = [];
+        }
+        
+        for (const btn of this.storageButtonAreas) {
+            if (!UIComponents.isClickInArea(mx, my, btn)) continue;
+            
+            if (btn.action === "BACK") {
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+                return true;
+            }
+            if (btn.action === "DEPOSIT_STORAGE") {
+                if (!stationForStorage) {
+                    addMessageFn("No storage available here.", [255, 180, 120]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+                const item = player.cargo.find(c => c.name === btn.commodity);
+                if (item && item.quantity > 0) {
+                    const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
+                    if (storageItem) {
+                        storageItem.quantity += item.quantity;
+                    } else {
+                        stationForStorage.storage.push({name: btn.commodity, quantity: item.quantity});
+                    }
+                    player.cargo = player.cargo.filter(c => c.name !== btn.commodity);
+                    addMessageFn(`Deposited ${item.quantity}t of ${btn.commodity} into storage.`, [100, 255, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                }
+                return true;
+            }
+            if (btn.action === "RETRIEVE_STORAGE") {
+                if (!stationForStorage) {
+                    addMessageFn("No storage available here.", [255, 180, 120]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+                const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
+                if (storageItem && storageItem.quantity > 0) {
+                    const availableSpace = player.cargoCapacity - player.getCargoAmount();
+                    const retrieveAmount = Math.min(storageItem.quantity, availableSpace);
+                    
+                    if (retrieveAmount > 0) {
+                        player.addCargo(btn.commodity, retrieveAmount);
+                        storageItem.quantity -= retrieveAmount;
+                        if (storageItem.quantity <= 0) {
+                            stationForStorage.storage = stationForStorage.storage.filter(s => s.name !== btn.commodity);
+                        }
+                        addMessageFn(`Retrieved ${retrieveAmount}t of ${btn.commodity} from storage.`, [100, 255, 100]);
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                        if (typeof saveGame === 'function') saveGame();
+                    } else {
+                        addMessageFn("Not enough cargo space!", [255, 100, 100]);
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 // Export for use

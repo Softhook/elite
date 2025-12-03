@@ -753,131 +753,14 @@ class UIManager {
 
         // --- VIEWING_SHIPYARD State ---
         else if (currentState === "VIEWING_SHIPYARD") {
-            for (const area of this.shipyardListAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    const finalPrice = area.price; // Can be negative for refunds
-                    
-                    if (finalPrice > 0) {
-                        // Player needs to pay
-                        if (player.credits >= finalPrice) {
-                            player.spendCredits(finalPrice);
-                            player.applyShipDefinition(area.shipTypeKey);
-                            
-                            // Record ship purchase in player record
-                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
-                            player.recordShipPurchase(area.shipName, finalPrice, systemName);
-                            
-                            if (typeof saveGame === 'function') saveGame();
-                            this.addMessage("You bought a " + area.shipName + "!");
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                        } else {
-                            const shortfall = finalPrice - player.credits;
-                            this.addMessage(`Not enough credits! Need ${shortfall} more for ${area.shipName}.`, [255, 150, 100]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                    } else {
-                        // Player gets a refund or even swap
-                        player.addCredits(-finalPrice); // Convert negative to positive for refund
-                        player.applyShipDefinition(area.shipTypeKey);
-                        
-                        // Record ship purchase in player record
-                        const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
-                        player.recordShipPurchase(area.shipName, finalPrice, systemName);
-                        
-                        if (typeof saveGame === 'function') saveGame();
-                        
-                        if (finalPrice < 0) {
-                            this.addMessage(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
-                        } else {
-                            this.addMessage(`You swapped to a ${area.shipName} at no additional cost.`);
-                        }
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                    }
-                    return true;
-                }
-            }
-            
-            // Back button
-            if (this.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
-                gameStateManager.setState("DOCKED");
-                return true;
-            }
-            return false;
+            return this.stationMenus.handleShipyardClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
         }
         // --- VIEWING_UPGRADES State ---
         else if (currentState === "VIEWING_UPGRADES") {
-            // First check if clicking on a weapon slot button
-            if (this.weaponSlotButtons && this.weaponSlotButtons.length > 0) {
-                for (const btn of this.weaponSlotButtons) {
-                    if (this.isClickInArea(mx, my, btn)) {
-                        this.selectedWeaponSlot = btn.slotIndex;
-                        
-                        // Play click sound if available
-                        if (typeof soundManager !== 'undefined') {
-                            soundManager.playSound('click');
-                        }
-                        
-                        return true; // Handled click
-                    }
-                }
-            }
-            
-            // Then check upgrade item buttons
-            for (const area of this.upgradeListAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    if (player.credits >= area.upgrade.price) {
-                        // Check if ship has enough weapon slots
-                        const shipDef = SHIP_DEFINITIONS[player.shipTypeName];
-                        const availableSlots = shipDef?.armament?.length || 1;
-                        
-                        if (this.selectedWeaponSlot >= availableSlots) {
-                            this.addMessage("Your ship doesn't have that weapon slot!", [255, 100, 100]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            return true;
-                        }
-                        
-                        // Spend credits
-                        player.spendCredits(area.upgrade.price);
-                        
-                        // Install weapon to selected slot (instead of setWeaponByName)
-                        player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
-                        
-                        // Record weapon upgrade in player record
-                        const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown';
-                        player.recordWeaponUpgrade(
-                            area.upgrade.name,
-                            area.upgrade.type,
-                            area.upgrade.price,
-                            this.selectedWeaponSlot,
-                            systemName
-                        );
-                        
-                        // Play purchase sound if available
-                        if (typeof soundManager !== 'undefined') {
-                            soundManager.playSound('upgrade');
-                        }
-                        
-                        this.addMessage("You bought the " + area.upgrade.name + "!");
-                        
-                        // Auto-save if possible
-                        if (typeof saveGame === 'function') {
-                            if (typeof saveGame === 'function') saveGame();
-                        }
-                    } else {
-                        const shortfall = area.upgrade.price - player.credits;
-                        this.addMessage(`Not enough credits! Need ${shortfall} more for ${area.upgrade.name}.`, [255, 150, 100]);
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                    }
-                    return true;
-                }
-            }
-            
-            // Back button (unchanged)
-            if (this.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
-                gameStateManager.setState("DOCKED");
-                return true;
-            }
-            return false;
+            const result = this.stationMenus.handleUpgradesClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Sync selectedWeaponSlot back from module
+            this.selectedWeaponSlot = this.stationMenus.selectedWeaponSlot;
+            return result;
         }
 
         // --- VIEWING_REPAIRS State ---
@@ -898,86 +781,16 @@ class UIManager {
         }
         // --- VIEWING_POLICE State ---
         else if (currentState === "VIEWING_POLICE") {
-            // Handle Police menu button clicks
-            for (const area of this.policeButtonAreas) {
-                if (this.isClickInArea(mx, my, area)) {
-                    if (area.action === 'back') {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    } 
-                    else if (area.action === 'pay_fine' && player) {
-                        // Pay fine to clear wanted status (centralized handler)
-                        this._processFinePayment(player, area.amount);
-                        return true;
-                    }
-                    else if (area.action === 'join_police' && player) {
-                        // Change ship to ACAB
-                        player.applyShipDefinition('ACAB');
-                        this.addMessage("You have joined the Police Force!", 'lightblue');
-                        player.isPolice = true; // Set police status flag
-                        player.recordFactionJoin("POLICE"); // Record in personal record
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                        
-                        // Clear wanted status as a bonus
-                        if (player.currentSystem) {
-                            player.currentSystem.playerWanted = false;
-                            player.currentSystem.policeAlertSent = false;
-                        }
-
-                        // Save game after joining
-                        if (typeof saveGame === 'function') {
-                            saveGame();
-                        }
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this.stationMenus.handlePoliceClick(
+                mx, my, player,
+                (msg, col) => this.addMessage(msg, col),
+                (p, amt) => this._processFinePayment(p, amt)
+            );
         }
 
         // --- VIEWING_PROTECTION State ---
         else if (currentState === "VIEWING_PROTECTION") {
-            for (const btn of this.protectionServicesButtons) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    if (btn.action === "HIRE_BODYGUARD") {
-                        // Try to hire the bodyguard
-                        const hired = player.hireBodyguard(btn.shipType, btn.cost);
-                        if (hired) {
-                            this.addMessage(`Hired ${btn.shipType} bodyguard for ${btn.cost} credits.`, [150, 255, 150]);
-                            // Play purchase sound if available
-                            if (typeof soundManager !== 'undefined') {
-                                soundManager.playSound('upgrade');
-                            }
-                            if (typeof saveGame === 'function') saveGame();
-                            // If we reached max bodyguards, refresh the UI
-                            if (player.activeBodyguards.length >= player.bodyguardLimit) {
-                                if (gameStateManager) {
-                                    gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
-                                }
-                            }
-                        } else {
-                            this.addMessage("Failed to hire bodyguard.", [255, 100, 100]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    else if (btn.action === "DISMISS_BODYGUARDS") {
-                        player.dismissBodyguards();
-                        this.addMessage("All bodyguards have been dismissed.", [255, 180, 100]);
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
-                        if (typeof saveGame === 'function') saveGame();
-                        if (gameStateManager) {
-                            gameStateManager.setState("VIEWING_PROTECTION"); // Refresh UI
-                        }
-                        return true;
-                    }
-                    else if (btn.state === "DOCKED") {
-                        if (gameStateManager) gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this.stationMenus.handleProtectionClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
         }
 
         // --- VIEWING_IMPERIAL_RECRUITMENT, VIEWING_SEPARATIST_RECRUITMENT, VIEWING_MILITARY_RECRUITMENT States ---
@@ -989,80 +802,7 @@ class UIManager {
         
         // --- VIEWING_STORAGE State ---
         else if (currentState === "VIEWING_STORAGE") {
-            if (!Array.isArray(this.storageButtonAreas)) {
-                this.storageButtonAreas = [];
-            }
-
-            const stationForStorage = currentStation || player?.currentSystem?.station || null;
-            if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
-                stationForStorage.storage = [];
-            }
-
-            for (const btn of this.storageButtonAreas) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    if (btn.action === "BACK") {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                    else if (btn.action === "DEPOSIT_STORAGE") {
-                        // Deposit cargo into station storage
-                        if (!stationForStorage) {
-                            this.addMessage("No storage available here.", [255, 180, 120]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            return true;
-                        }
-
-                        const item = player.cargo.find(c => c.name === btn.commodity);
-                        if (item && item.quantity > 0) {
-                            // Add to station storage
-                            const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
-                            if (storageItem) {
-                                storageItem.quantity += item.quantity;
-                            } else {
-                                stationForStorage.storage.push({name: btn.commodity, quantity: item.quantity});
-                            }
-                            // Remove from player cargo
-                            player.cargo = player.cargo.filter(c => c.name !== btn.commodity);
-                            this.addMessage(`Deposited ${item.quantity}t of ${btn.commodity} into storage.`, [100, 255, 100]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                            saveGame();
-                        }
-                        return true;
-                    }
-                    else if (btn.action === "RETRIEVE_STORAGE") {
-                        // Retrieve cargo from station storage
-                        if (!stationForStorage) {
-                            this.addMessage("No storage available here.", [255, 180, 120]);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            return true;
-                        }
-
-                        const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
-                        if (storageItem && storageItem.quantity > 0) {
-                            const availableSpace = player.cargoCapacity - player.getCargoAmount();
-                            const retrieveAmount = Math.min(storageItem.quantity, availableSpace);
-                            
-                            if (retrieveAmount > 0) {
-                                // Add to player cargo
-                                player.addCargo(btn.commodity, retrieveAmount);
-                                // Remove from station storage
-                                storageItem.quantity -= retrieveAmount;
-                                if (storageItem.quantity <= 0) {
-                                    stationForStorage.storage = stationForStorage.storage.filter(s => s.name !== btn.commodity);
-                                }
-                                this.addMessage(`Retrieved ${retrieveAmount}t of ${btn.commodity} from storage.`, [100, 255, 100]);
-                                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                                if (typeof saveGame === 'function') saveGame();
-                            } else {
-                                this.addMessage("Not enough cargo space!", [255, 100, 100]);
-                                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            }
-                        }
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this.stationMenus.handleStorageClick(mx, my, player, currentStation, (msg, col) => this.addMessage(msg, col));
         }
         
         // --- VIEWING_RECORD State ---
@@ -1275,72 +1015,19 @@ class UIManager {
         this.hud.drawMessages();
     }
 
-    // Update this method to check the back button first
+    /** Handles market mouse press - delegates to market module */
     handleMarketMousePress(mx, my, market, player) {
-        // First check if clicking on the back button
-        if (this.isClickInArea(mx, my, this.marketBackButtonArea)) { 
-            if(gameStateManager) gameStateManager.setState("DOCKED"); 
-            return true; 
-        }
-        
-        // Check if clicking on a market button
-        for (const btn of this.marketButtonAreas) {
-            if (this.isClickInArea(mx, my, btn)) {
-                this.marketButtonHeld = btn;
-                this.performMarketAction(btn, market, player);
-                this.lastButtonAction = millis();
-                return true;
-            }
-        }
-        return false;
+        return this.market.handleMousePress(mx, my, market, player);
     }
 
-    // Add this new method to handle mouse release
+    /** Handles market mouse release - delegates to market module */
     handleMarketMouseRelease() {
-        this.marketButtonHeld = null;
-        return false;
+        return this.market.handleMouseRelease();
     }
 
-    // Add this new method to check for held buttons
+    /** Checks for held market buttons - delegates to market module */
     checkMarketButtonHeld(market, player) {
-        if (this.marketButtonHeld && millis() - this.lastButtonAction > this.buttonRepeatDelay) {
-            this.performMarketAction(this.marketButtonHeld, market, player);
-            this.lastButtonAction = millis();
-        }
-    }
-
-    // Add this new method to perform the market action
-    performMarketAction(btn, market, player) {
-        if (!market || !player || !btn) return;
-        
-        switch(btn.action) {
-            case 'buy':
-                market.buy(btn.commodity, 1, player);
-                break;
-            case 'buyAll':
-                // Calculate max possible purchase based on cargo space and credits
-                const item = market.getPrices().find(c => c.name === btn.commodity);
-                if (!item) return;
-                
-                const availableSpace = player.cargoCapacity - player.getCargoAmount();
-                const maxAffordable = Math.floor(player.credits / item.buyPrice);
-                const availableStock = Number.isFinite(item.stock) ? Math.max(0, Math.floor(item.stock)) : Number.POSITIVE_INFINITY;
-                const quantity = Math.min(availableSpace, maxAffordable, availableStock);
-                
-                if (quantity > 0) {
-                    market.buy(btn.commodity, quantity, player);
-                }
-                break;
-            case 'sell':
-                market.sell(btn.commodity, 1, player);
-                break;
-            case 'sellAll':
-                const cargo = player.cargo.find(c => c.name === btn.commodity);
-                if (cargo && cargo.quantity > 0) {
-                    market.sell(btn.commodity, cargo.quantity, player);
-                }
-                break;
-        }
+        this.market.checkButtonHeld(market, player);
     }
 
     /** Draws a standardized header for all station UI screens */
