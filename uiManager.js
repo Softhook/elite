@@ -6,6 +6,10 @@ const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.60;  // 60% of station buy price
 // Space objects buy demanded goods at HIGHER price than station sell price (profitable to buy at station, sell here)
 const SPACE_OBJECT_DEMAND_PREMIUM = 1.50;  // 150% of station sell price
 
+// Standard panel background color - used for all menus to ensure consistent appearance
+// The starfield background shows through uniformly regardless of which menu is open
+const STANDARD_PANEL_BG = [20, 20, 40, 220];  // Dark blue-grey, semi-transparent
+
 class UIManager {
     constructor() {
         // --- UI Areas ---
@@ -1053,7 +1057,7 @@ class UIManager {
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([20,20,50,220], [100,100,255]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100,100,255]);
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         textFont(font);
@@ -1111,7 +1115,7 @@ class UIManager {
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([20, 20, 50, 220], [100, 100, 255]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100, 100, 255]);
         
         const system = galaxy?.getCurrentSystem();
         const displayName = (typeof spaceObject.getDisplayName === 'function') 
@@ -1177,7 +1181,7 @@ class UIManager {
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([50, 20, 20, 220], [255, 100, 100]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [255, 100, 100]);
         
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawSpaceObjectHeader("Commodity Market", spaceObject, player, system);
@@ -1478,8 +1482,7 @@ class UIManager {
         }
         
         // Back button
-        let backW = 100, backH = 30, backX = pX + pW / 2 - backW / 2, backY = pY + pH - backH - 15;
-        this.spaceObjectMarketBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180, 180, 0], [220, 220, 100]);
+        this.spaceObjectMarketBackButtonArea = this._drawCenteredBackButton();
         pop();
     }
     
@@ -1575,8 +1578,7 @@ class UIManager {
             );
         }
         
-        let backW = 100, backH = 30, backX = pX + pW / 2 - backW / 2, backY = pY + pH - backH - 15;
-        const backButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180, 180, 0], [220, 220, 100]);
+        const backButtonArea = this._drawCenteredBackButton();
         
         return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
     }
@@ -1590,7 +1592,7 @@ class UIManager {
         
         if (!player) return;
         push();
-        this.drawPanelBG([60, 30, 30, 230], [255, 180, 100]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [255, 180, 100]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
@@ -1617,7 +1619,7 @@ class UIManager {
         if (!spaceObject || !player) return;
         
         push();
-        this.drawPanelBG([60, 30, 30, 230], [255, 180, 100]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [255, 180, 100]);
         
         const system = galaxy?.getCurrentSystem();
         const displayName = (typeof spaceObject.getDisplayName === 'function') 
@@ -1639,7 +1641,7 @@ class UIManager {
         if (!player) return;
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [100,100,255]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100,100,255]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
@@ -1656,10 +1658,7 @@ class UIManager {
             textSize(18);
             text("Local disputes are settled without official intervention.", pX + pW/2, messageY + 35);
 
-            const backW = 100, backH = 30, backX = pX + pW/2 - backW/2, backY = pY + pH - backH - 15;
-            this.policeButtonAreas.push(
-                this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
-            );
+            this.policeButtonAreas.push(this._drawCenteredBackButton({action:'back'}));
             pop();
             return;
         }
@@ -1726,10 +1725,7 @@ class UIManager {
             textAlign(CENTER,CENTER);
             text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
         }
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.policeButtonAreas.push(
-            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
-        );
+        this.policeButtonAreas.push(this._drawCenteredBackButton({action:'back'}));
         pop();
     }
 
@@ -1743,7 +1739,7 @@ class UIManager {
 
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([50,20,20,220], [255,100,100]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [255,100,100]);
         
         // Use the standardized header
         const system = galaxy?.getCurrentSystem();
@@ -1924,11 +1920,7 @@ class UIManager {
         }
 
         // Back button
-        let backW = 100;
-        let backH = 30;
-        let backX = pX+pW/2-backW/2;
-        let backY = pY+pH-backH-15;
-        this.marketBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
+        this.marketBackButtonArea = this._drawCenteredBackButton();
         pop();
     }
 
@@ -1955,7 +1947,7 @@ class UIManager {
 
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         push(); // Isolate drawing
-        this.drawPanelBG([20,50,20,220], [100,255,100]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100,255,100]);
         
         // Use the standardized header
         const headerHeight = this.drawStationHeader("Mission Board", currentStation, player, currentSystem);
@@ -3855,7 +3847,7 @@ class UIManager {
         this.shipyardListAreas = [];
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [220,190,90]); // Imperial gold theme
+        this.drawPanelBG(STANDARD_PANEL_BG, [220,190,90]); // Imperial gold border
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
@@ -4001,8 +3993,7 @@ class UIManager {
         );
     
         // Back button
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.shipyardDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
+        this.shipyardDetailButtons = {back: this._drawCenteredBackButton()};
         pop();
     }
 
@@ -4015,7 +4006,7 @@ class UIManager {
         this.upgradeListAreas = [];
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([40,30,60,230], [200,100,255]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [200,100,255]);
         
         // Use the standardized header
         const system = galaxy?.getCurrentSystem();
@@ -4124,30 +4115,36 @@ class UIManager {
         );
     
         // Back button
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.upgradeDetailButtons = {back: this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100])};
+        this.upgradeDetailButtons = {back: this._drawCenteredBackButton()};
         pop();
+    }
+
+    /**
+     * Handles scroll input for a specific scroll offset/max pair.
+     * @param {string} offsetKey - Property name for scroll offset
+     * @param {string} maxKey - Property name for scroll max
+     * @param {number} delta - Scroll direction (positive = down, negative = up)
+     * @returns {boolean} Whether scroll was handled
+     */
+    _handleScroll(offsetKey, maxKey, delta) {
+        if (this[maxKey] <= 0) return false;
+        if (typeof this[offsetKey] !== "number") this[offsetKey] = 0;
+        this[offsetKey] += delta > 0 ? 1 : -1;
+        this[offsetKey] = constrain(this[offsetKey], 0, this[maxKey]);
+        return true;
     }
 
     /** Handles mouse wheel events for scrolling */
     handleMouseWheel(event, currentState) {
-        if (currentState === "VIEWING_SHIPYARD" && this.shipyardScrollMax > 0) {
-            this.shipyardScrollOffset += event.deltaY > 0 ? 1 : -1;
-            this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
-            return true;
-        }
-        if (currentState === "VIEWING_UPGRADES" && this.upgradeScrollMax > 0) {
-            if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
-            this.upgradeScrollOffset += event.deltaY > 0 ? 1 : -1;
-            this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
-            return true;
-        }
-        if (currentState === "VIEWING_RECORD" && this.recordScrollMax > 0) {
-            if (typeof this.recordScrollOffset !== "number") this.recordScrollOffset = 0;
-            this.recordScrollOffset += event.deltaY > 0 ? 1 : -1;
-            if (this.recordScrollOffset < 0) this.recordScrollOffset = 0;
-            if (this.recordScrollOffset > this.recordScrollMax) this.recordScrollOffset = this.recordScrollMax;
-            return true;
+        const scrollConfigs = {
+            "VIEWING_SHIPYARD": ["shipyardScrollOffset", "shipyardScrollMax"],
+            "VIEWING_UPGRADES": ["upgradeScrollOffset", "upgradeScrollMax"],
+            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"]
+        };
+        
+        const config = scrollConfigs[currentState];
+        if (config) {
+            return this._handleScroll(config[0], config[1], event.deltaY);
         }
         return false;
     }
@@ -4408,6 +4405,20 @@ class UIManager {
         textSize(22);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
+    }
+
+    /**
+     * Draws a standard centered back button at the bottom of a panel.
+     * Uses standard back button styling (red background).
+     * @param {Object} [extra={}] - Extra properties to attach to the area object
+     * @returns {Object} Area object for the back button
+     */
+    _drawCenteredBackButton(extra = {}) {
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        const backW = 100, backH = 30;
+        const backX = pX + pW / 2 - backW / 2;
+        const backY = pY + pH - backH - 15;
+        return this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, extra);
     }
 
     /**
@@ -4778,7 +4789,7 @@ class UIManager {
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30, 30, 60, 230], themeColors[1]);
+        this.drawPanelBG(STANDARD_PANEL_BG, themeColors[1]);
         
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
@@ -4876,10 +4887,7 @@ class UIManager {
         }
         
         // Back button
-        let backW = 100, backH = 30, backX = pX + pW / 2 - backW / 2, backY = pY + pH - backH - 15;
-        this.factionRecruitmentButtonAreas.push(
-            this._drawButton(backX, backY, backW, backH, "Back", [180, 180, 0], [220, 220, 100], 5, {action: 'back'})
-        );
+        this.factionRecruitmentButtonAreas.push(this._drawCenteredBackButton({action: 'back'}));
         pop();
     }
 
@@ -4927,7 +4935,7 @@ class UIManager {
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         
         // Draw panel background
-        this.drawPanelBG([20, 30, 60, 220], [80, 120, 180]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [80, 120, 180]);
         
         // Draw header
         const system = galaxy?.getCurrentSystem();
@@ -5086,7 +5094,7 @@ class UIManager {
         this.storageButtonAreas = [];
 
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30, 40, 60, 220], [120, 140, 180]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [120, 140, 180]);
         textFont(font);
 
         if (!activeStation) {
@@ -5095,10 +5103,7 @@ class UIManager {
             textAlign(CENTER, CENTER);
             text("No storage services are available in this location.", pX + pW/2, pY + pH/2 - 20);
 
-            const backW = 100, backH = 30;
-            const backX = pX + pW/2 - backW/2;
-            const backY = pY + pH - backH - 15;
-            const backBtn = this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [220, 100, 100]);
+            const backBtn = this._drawCenteredBackButton();
             backBtn.action = "BACK";
             this.storageButtonAreas.push(backBtn);
             pop();
@@ -5236,7 +5241,7 @@ class UIManager {
         this.recordButtonAreas = [];
         
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30, 30, 50, 220], [150, 150, 200]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [150, 150, 200]);
         
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
