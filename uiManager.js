@@ -1293,47 +1293,14 @@ class UIManager {
             fill(playerQty > 0 ? 255 : 80);
             text(playerQty, sX + colCommodity + colBuy + colSell + colCargo / 2, tY);
             
-            // Price Indicators (match station market)
-            noStroke();
-            // Buy Price Indicator
+            // Price Indicators
             if (isProduced && baseBuy > 0 && buyPrice > 0) {
-                let buyDeviation = (buyPrice - baseBuy) / baseBuy;
-                let indicatorH = constrain(abs(buyDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + colCommodity + colBuy + 5;
-                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH);
-
-                if (buyDeviation > 0.05) {
-                    fill(255, 50, 50); // Red
-                } else if (buyDeviation < -0.05) {
-                    fill(50, 255, 50); // Green
-                } else {
-                    fill(120); // Grey
-                    indicatorH = 1;
-                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
-                }
-                if (indicatorH > 0) {
-                    rect(indicatorX, indicatorY, 3, indicatorH);
-                }
+                const buyDeviation = (buyPrice - baseBuy) / baseBuy;
+                this._drawPriceIndicator(sX + colCommodity + colBuy + 5, yP, rowH, buyDeviation, false, maxDeviation);
             }
-            // Sell Price Indicator
             if (isBought && baseSell > 0 && sellPrice > 0) {
-                let sellDeviation = (sellPrice - baseSell) / baseSell;
-                let indicatorH = constrain(abs(sellDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + colCommodity + colBuy + colSell + 5;
-                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH);
-
-                if (sellDeviation > 0.05) {
-                    fill(50, 255, 50); // Green
-                } else if (sellDeviation < -0.05) {
-                    fill(255, 50, 50); // Red
-                } else {
-                    fill(120); // Grey
-                    indicatorH = 1;
-                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
-                }
-                if (indicatorH > 0) {
-                    rect(indicatorX, indicatorY, 3, indicatorH);
-                }
+                const sellDeviation = (sellPrice - baseSell) / baseSell;
+                this._drawPriceIndicator(sX + colCommodity + colBuy + colSell + 5, yP, rowH, sellDeviation, true, maxDeviation);
             }
             
             // Buttons (match station market layout)
@@ -1864,49 +1831,14 @@ class UIManager {
             fill(255);
             text(comm.playerStock??'?', sX+colCommodity+colBuy+colSell+colStock+colCargo/2, tY);
 
-            // Commodity name and prices (drawn above with legal/illegal styling)
-
             // --- Price Indicators ---
-            noStroke();
-            // Buy Price Indicator
             if (comm.baseBuy > 0) {
-                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
-                let indicatorH = constrain(abs(buyDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + colCommodity + colBuy + 5; // Position indicator to the right of buy price
-                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
-
-                if (buyDeviation > 0.05) { // Expensive (Red) - allow small tolerance
-                    fill(255, 50, 50); // Red
-                } else if (buyDeviation < -0.05) { // Cheap (Green)
-                    fill(50, 255, 50); // Green
-                } else { // Average (Neutral/No bar)
-                    fill(120); // Grey or transparent
-                    indicatorH = 1; // Minimal dot or line
-                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
-                }
-                 if (indicatorH > 0) { // Only draw if there's height
-                    rect(indicatorX, indicatorY, 3, indicatorH); // Draw thin bar
-                 }
+                const buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                this._drawPriceIndicator(sX + colCommodity + colBuy + 5, yP, rowH, buyDeviation, false, maxDeviation);
             }
-            // Sell Price Indicator
             if (comm.baseSell > 0) {
-                let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
-                let indicatorH = constrain(abs(sellDeviation) / maxDeviation, 0, 1) * indicatorMaxH;
-                let indicatorX = sX + colCommodity + colBuy + colSell + 5; // Position indicator to the right of sell price
-                let indicatorY = yP + indicatorYOffset + (indicatorMaxH - indicatorH); // Bar grows upwards
-
-                if (sellDeviation > 0.05) { // Good Sell Price (Green)
-                    fill(50, 255, 50); // Green
-                } else if (sellDeviation < -0.05) { // Bad Sell Price (Red)
-                    fill(255, 50, 50); // Red
-                } else { // Average (Neutral/No bar)
-                    fill(120); // Grey or transparent
-                    indicatorH = 1; // Minimal dot or line
-                    indicatorY = yP + indicatorYOffset + indicatorMaxH - indicatorH;
-                }
-                 if (indicatorH > 0) { // Only draw if there's height
-                    rect(indicatorX, indicatorY, 3, indicatorH); // Draw thin bar
-                 }
+                const sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
+                this._drawPriceIndicator(sX + colCommodity + colBuy + colSell + 5, yP, rowH, sellDeviation, true, maxDeviation);
             }
             // --- End Price Indicators ---
 
@@ -1918,96 +1850,31 @@ class UIManager {
             const totalBtnWidth = (btnW * 4) + (btnSpacing * 3); // 4 buttons with 3 gaps
             let btnStartX = rightEdge - totalBtnWidth;
 
- // Buy 1 button
-let buy1X = btnStartX;
-let buy1Y = yP+(rowH-btnH)/2;
+            // Check if this commodity is needed for the active mission
+            const isMissionCargo = player.activeMission?.cargoType === comm.name;
+            const btnY = yP + (rowH - btnH) / 2;
 
-if (isIllegalInSystem || outOfStock) {
-    // Gray out button - not clickable for illegal goods or empty stock
-    fill(100); stroke(120); strokeWeight(1);
-    rect(buy1X, buy1Y, btnW, btnH, 3);
-    if (outOfStock) { fill(255, 150, 150); } else { fill(180); }
-    noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text(outOfStock ? "Out" : "Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
-    // No marketButtonAreas.push here - button can't be clicked
-} else {
-    // Normal button - clickable
-    fill(0,150,0); stroke(0,200,0); strokeWeight(1);
-    rect(buy1X, buy1Y, btnW, btnH, 3);
-    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-    text("Buy 1", buy1X+btnW/2, buy1Y+btnH/2);
-    this.marketButtonAreas.push({ x: buy1X, y: buy1Y, w: btnW, h: btnH, action: 'buy', quantity: 1, commodity: comm.name });
-}
+            // Buy 1 button
+            let buy1X = btnStartX;
+            const buy1Enabled = !isIllegalInSystem && !outOfStock;
+            const buy1Area = this._drawMarketButton(buy1X, btnY, btnW, btnH, "Buy 1", buy1Enabled, true, outOfStock ? "Out" : null);
+            if (buy1Area) this.marketButtonAreas.push({ ...buy1Area, action: 'buy', quantity: 1, commodity: comm.name });
 
-// Buy All button
-let buyAllX = buy1X + btnW + 5; // Position relative to previous button
-let buyAllY = buy1Y;
+            // Buy All button
+            let buyAllX = buy1X + btnW + 5;
+            const buyAllArea = this._drawMarketButton(buyAllX, btnY, btnW, btnH, "Buy All", buy1Enabled, true, outOfStock ? "Out" : null);
+            if (buyAllArea) this.marketButtonAreas.push({ ...buyAllArea, action: 'buyAll', commodity: comm.name });
 
-if (isIllegalInSystem || outOfStock) {
-    // Gray out button - not clickable for illegal goods or empty stock
-    fill(100); stroke(120); strokeWeight(1);
-    rect(buyAllX, buyAllY, btnW, btnH, 3);
-    if (outOfStock) { fill(255, 150, 150); } else { fill(180); }
-    noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text(outOfStock ? "Out" : "Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
-    // No marketButtonAreas.push here - button can't be clicked
-} else {
-    // Normal button - clickable
-    fill(0,180,0); stroke(0,220,0); strokeWeight(1);
-    rect(buyAllX, buyAllY, btnW, btnH, 3);
-    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-    text("Buy All", buyAllX+btnW/2, buyAllY+btnH/2);
-    this.marketButtonAreas.push({ x: buyAllX, y: buyAllY, w: btnW, h: btnH, action: 'buyAll', commodity: comm.name });
-}
+            // Sell 1 button
+            let sell1X = buyAllX + btnW + 10;
+            const sellEnabled = !isIllegalInSystem && !isMissionCargo;
+            const sell1Area = this._drawMarketButton(sell1X, btnY, btnW, btnH, "Sell 1", sellEnabled, false);
+            if (sell1Area) this.marketButtonAreas.push({ ...sell1Area, action: 'sell', quantity: 1, commodity: comm.name });
 
-// Sell 1 button
-let sell1X = buyAllX + btnW + 10; // Add space before sell buttons
-let sell1Y = buy1Y;
-
-// Check if this commodity is needed for the active mission
-const isMissionCargo = player.activeMission?.cargoType === comm.name;
-
-if (isIllegalInSystem || isMissionCargo) {
-    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
-    fill(100); stroke(120); strokeWeight(1);
-    rect(sell1X, sell1Y, btnW, btnH, 3);
-    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-    // No marketButtonAreas.push here - button can't be clicked
-} else {
-    // Normal button - clickable
-    fill(150,0,0); stroke(200,0,0); strokeWeight(1);
-    rect(sell1X, sell1Y, btnW, btnH, 3);
-    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-    text("Sell 1", sell1X+btnW/2, sell1Y+btnH/2);
-    this.marketButtonAreas.push({ 
-        x: sell1X, y: sell1Y, w: btnW, h: btnH, 
-        action: 'sell', quantity: 1, commodity: comm.name 
-    });
-}
-
-// Sell All button
-let sellAllX = sell1X + btnW + 5; // Position relative to previous button
-let sellAllY = buy1Y;
-
-if (isIllegalInSystem || isMissionCargo) {
-    // Gray out button - not clickable for illegal goods in non-Anarchy or mission cargo
-    fill(100); stroke(120); strokeWeight(1);
-    rect(sellAllX, sellAllY, btnW, btnH, 3);
-    fill(180); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-    // No marketButtonAreas.push here - button can't be clicked
-} else {
-    // Normal button - clickable
-    fill(180,0,0); stroke(220,0,0); strokeWeight(1);
-    rect(sellAllX, sellAllY, btnW, btnH, 3);
-    fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(20);
-    text("Sell All", sellAllX+btnW/2, sellAllY+btnH/2);
-    this.marketButtonAreas.push({ 
-        x: sellAllX, y: sellAllY, w: btnW, h: btnH, 
-        action: 'sellAll', commodity: comm.name 
-    });
-}
+            // Sell All button
+            let sellAllX = sell1X + btnW + 5;
+            const sellAllArea = this._drawMarketButton(sellAllX, btnY, btnW, btnH, "Sell All", sellEnabled, false);
+            if (sellAllArea) this.marketButtonAreas.push({ ...sellAllArea, action: 'sellAll', commodity: comm.name });
         }
 
         // Back button
@@ -2153,44 +2020,35 @@ if (isIllegalInSystem || isMissionCargo) {
 
                 // Show Complete or Abandon
                 if (canCompleteHere) {
-                    fill(0, 200, 50); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                    fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Complete", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                    this.missionDetailButtonAreas['complete'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                    this.missionDetailButtonAreas['complete'] = this._drawButton(actionBtnX, btnDetailY, btnDetailW, btnDetailH, "Complete", [0, 200, 50], [150, 255, 150], 3);
                 } else {
-                    fill(200, 50, 50); stroke(255, 150, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                    fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Abandon", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                    this.missionDetailButtonAreas['abandon'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                    this.missionDetailButtonAreas['abandon'] = this._drawButton(actionBtnX, btnDetailY, btnDetailW, btnDetailH, "Abandon", [200, 50, 50], [255, 150, 150], 3);
                 }
 
             } else if (!activeMission && missionToShowDetails) {
                 // --- The mission shown is AVAILABLE (and player has no active mission) ---
-                fill(0, 180, 0); stroke(150, 255, 150); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Accept", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                this.missionDetailButtonAreas['accept'] = { x: actionBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH };
+                this.missionDetailButtonAreas['accept'] = this._drawButton(actionBtnX, btnDetailY, btnDetailW, btnDetailH, "Accept", [0, 180, 0], [150, 255, 150], 3);
             } else {
-                // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission (selected from list)
-                // Or, somehow missionToShowDetails is set but doesn't fit the above.
-                // In this scenario, we shouldn't allow accepting. Show "Unavailable".
-                fill(50, 100, 50); stroke(100, 150, 100); rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                fill(150); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Unavailable", actionBtnX+btnDetailW/2, btnDetailY+btnDetailH/2);
-                this.missionDetailButtonAreas['accept'] = null; // Ensure accept is not clickable
+                // --- Catch-all / Edge case: Active mission exists, but we are showing details for a *different* mission
+                fill(50, 100, 50); stroke(100, 150, 100); strokeWeight(2);
+                rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                fill(150); noStroke(); textAlign(CENTER, CENTER); textSize(22);
+                text("Unavailable", actionBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+                this.missionDetailButtonAreas['accept'] = null;
                 this.missionDetailButtonAreas['complete'] = null;
                 this.missionDetailButtonAreas['abandon'] = null;
             }
 
             // Draw Back button (common if any details are shown)
-            fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-            fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
-            // Area for 'back' button already stored
+            this._drawButton(backBtnX, btnDetailY, btnDetailW, btnDetailH, "Back", [180, 0, 0], [255, 150, 150], 3);
 
         } else { // No mission active AND none selected from the list
-            fill(180); textSize(20); textAlign(CENTER, CENTER); text("Select a mission from the list for details.", detailX+(detailW-5)/2, cY+cH/2);
+            fill(180); textSize(20); textAlign(CENTER, CENTER); 
+            text("Select a mission from the list for details.", detailX + (detailW - 5) / 2, cY + cH / 2);
             // Only show a Back button, centered
-            let backBtnX = pX + pW / 2 - btnDetailW / 2; // Center the single back button
-            fill(180,0,0); stroke(255,150,150); rect(backBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-            fill(255); textSize(20); textAlign(CENTER,CENTER); noStroke(); text("Back", backBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
-            // Define button areas: only 'back' is active
-            this.missionDetailButtonAreas = { 'back': { x: backBtnX, y: btnDetailY, w: btnDetailW, h: btnDetailH }, 'accept': null, 'complete': null, 'abandon': null };
+            let backBtnX = pX + pW / 2 - btnDetailW / 2;
+            const backBtn = this._drawButton(backBtnX, btnDetailY, btnDetailW, btnDetailH, "Back", [180, 0, 0], [255, 150, 150], 3);
+            this.missionDetailButtonAreas = { 'back': backBtn, 'accept': null, 'complete': null, 'abandon': null };
         }
         // --- End Detail Section Logic ---
 
@@ -2641,26 +2499,22 @@ if (isIllegalInSystem || isMissionCargo) {
              let d = dist(mouseX, mouseY, area.x, area.y);
              if (d < area.radius) {
                  const clickedIndex = area.index;
-                 const clickedSys = galaxy.systems[clickedIndex]; // Get system object
-                 console.log(`  Node clicked: ${clickedSys?.name || 'N/A'} (Index: ${clickedIndex})`);
+                 const clickedSys = galaxy.systems[clickedIndex];
 
                  if (clickedIndex === galaxy.currentSystemIndex) {
                      // Always allow clicking the current system to deselect
-                     console.log(`    -> Clicked current system. Deselecting.`);
                      this.lockedDestinationIndex = -1;
-                     if (typeof soundManager !== 'undefined') soundManager.playSound('click_off'); // Different sound?
+                     if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                      return true;
                  }
                  // --- Selection Logic ---
                  if (reachable.includes(clickedIndex)) {
                      // If system is reachable, allow selection/locking as destination
-                     console.log(`    -> System is reachable. Locking as destination: ${clickedIndex}`);
-                     this.lockedDestinationIndex = clickedIndex; // LOCK the system as destination
+                     this.lockedDestinationIndex = clickedIndex;
                      if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                  } else {
                      // If system is NOT reachable, show error
-                     console.log(`    -> System is NOT reachable. Selection ignored.`);
-                    if (typeof uiManager !== 'undefined') this.addMessage("Route unavailable.", color(255, 150, 150));
+                     if (typeof uiManager !== 'undefined') this.addMessage("Route unavailable.", color(255, 150, 150));
                      if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                  }
                  return true; // Click was handled
@@ -2668,7 +2522,6 @@ if (isIllegalInSystem || isMissionCargo) {
         }
 
         // If click wasn't on button or any node, deselect
-        // console.log("Clicked empty space on map. Deselecting.");
         // this.lockedDestinationIndex = -1; // Optional: Deselect on empty space click?
         return false; // Click not handled by map elements
     }
@@ -3961,8 +3814,7 @@ if (isIllegalInSystem || isMissionCargo) {
         if (currentShipDef) {
             //console.log(`Found ship: ${currentShipDef.name}, price: ${currentShipDef.price}`);
         } else {
-            console.log(`Ship not found: "${currentShipType}"`);
-            //console.log("Available ships:", Object.values(SHIP_DEFINITIONS).map(s => s.name));
+            // Ship definition not found - this shouldn't happen in normal gameplay
         }
     
         const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
