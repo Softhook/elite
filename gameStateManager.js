@@ -111,7 +111,7 @@ this.jumpJustCompleted = false;
         // Update ambient sound manager docked state
         try {
             if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET"];
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
                 const isDocked = stationStates.includes(newState);
                 ambientSoundManager.setDockedState(isDocked);
             }
@@ -122,14 +122,14 @@ this.jumpJustCompleted = false;
         // Play transition-specific sounds
         try {
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET"];
+                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
                 if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
                     soundManager.playSound('dockSuccess');
                 } else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
                     soundManager.playSound('dockSuccess');
                 } else if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
                     soundManager.playSound('undock');
-                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD","VIEWING_SPACE_OBJECT_MARKET"].includes(newState)) {
+                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"].includes(newState)) {
                     soundManager.playSound('uiTransition');
                 } else if (newState === "GALAXY_MAP" && this.previousState !== "GALAXY_MAP") {
                     soundManager.playSound('mapOpen');
@@ -166,7 +166,7 @@ this.jumpJustCompleted = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET"];
+        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
@@ -258,7 +258,7 @@ this.jumpJustCompleted = false;
         let currentSystem = null; // Initialize to null
 
         // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET"];
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
         if (statesExpectingSystem.includes(this.currentState)) {
             currentSystem = galaxy?.getCurrentSystem();
         }
@@ -453,6 +453,11 @@ this.jumpJustCompleted = false;
 
             case "VIEWING_SPACE_OBJECT_MARKET":
                 // Player viewing space object market - stop velocity
+                if (player) { player.vel.set(0, 0); }
+                break;
+
+            case "VIEWING_SPACE_OBJECT_REPAIRS":
+                // Player viewing space object repairs - stop velocity
                 if (player) { player.vel.set(0, 0); }
                 break;
 
@@ -653,7 +658,7 @@ this.jumpJustCompleted = false;
         let currentSystem = null; // Initialize to null
 
         // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET"];
+        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
                 // If we had temporarily swapped in a secret station for docking, restore the original station now
                 try {
                     const sys = galaxy?.getCurrentSystem();
@@ -729,6 +734,38 @@ this.jumpJustCompleted = false;
                         uiManager.drawSpaceObjectMarket(this.currentDockedSpaceObject, player); 
                     } catch(e) { 
                         console.error("Error drawing space object market:", e); 
+                    } 
+                } else {
+                    background(10,0,0); 
+                    fill(255); 
+                    text("Error: Space object not found", width/2, height/2);
+                }
+                break;
+
+            case "VIEWING_SPACE_OBJECT_REPAIRS": // Draws the space object repairs screen
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        // Draw the docked space object
+                        const spaceObjRepairs = this.currentDockedSpaceObject;
+                        if (spaceObjRepairs && typeof spaceObjRepairs.draw === 'function') {
+                            spaceObjRepairs.draw();
+                        }
+                        pop(); 
+                    } catch(e) {
+                        console.error("Error drawing space object background:", e);
+                    }
+                } else { 
+                    background(20,20,40); 
+                }
+                if (player) { try {player.draw();} catch(e) {}}
+                if (uiManager && this.currentDockedSpaceObject && player) { 
+                    try { 
+                        uiManager.drawSpaceObjectRepairsMenu(this.currentDockedSpaceObject, player); 
+                    } catch(e) { 
+                        console.error("Error drawing space object repairs:", e); 
                     } 
                 } else {
                     background(10,0,0); 

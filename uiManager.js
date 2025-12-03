@@ -768,6 +768,35 @@ class UIManager {
             }
         }
 
+        // Show buy/sell commodities for dockable space objects
+        if (isSpaceObject && target.isDockable) {
+            const tradable = (typeof target.getTradableCommodities === 'function') 
+                ? target.getTradableCommodities() 
+                : { produces: [], buys: [] };
+            
+            // Show what the space object sells (produces)
+            if (tradable.produces && tradable.produces.length > 0) {
+                cursorY += sectionSpacing;
+                fill(100, 255, 100);
+                text('Sells:', cursorX, cursorY);
+                cursorY += lineHeight;
+                fill(210);
+                text(tradable.produces.join(', '), cursorX, cursorY);
+                cursorY += lineHeight;
+            }
+            
+            // Show what the space object buys
+            if (tradable.buys && tradable.buys.length > 0) {
+                cursorY += sectionSpacing;
+                fill(255, 200, 100);
+                text('Buys:', cursorX, cursorY);
+                cursorY += lineHeight;
+                fill(210);
+                text(tradable.buys.join(', '), cursorX, cursorY);
+                cursorY += lineHeight;
+            }
+        }
+
         ctx.restore();
         pop();
     }
@@ -1025,6 +1054,7 @@ class UIManager {
         
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_SPACE_OBJECT_MARKET" },
+            { text: "Repairs", state: "VIEWING_SPACE_OBJECT_REPAIRS" },
             { text: "Personal Record", state: "VIEWING_RECORD" },
             { text: "Undock", action: "UNDOCK" }
         ];
@@ -1487,36 +1517,33 @@ class UIManager {
         return basePrices[commodityName] || 50;
     }
 
-    /** Draws the Repairs Menu */
-    drawRepairsMenu(player) {
-        this.repairsFullButtonArea = {};
-        this.repairsHalfButtonArea = {};
-        this.repairsBackButtonArea = {};
-        this.repairsBodyguardsButtonArea = {}; // New button area for bodyguard repairs
-        
-        if (!player) return;
-        push();
+    /**
+     * Shared helper for drawing repair menu content (used by both station and space object repairs)
+     * @param {Player} player - The player object
+     * @param {number} headerHeight - Height of the header section
+     * @returns {Object} - Button areas: { full, half, bodyguards, back }
+     */
+    _drawRepairsContent(player, headerHeight) {
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([60,30,30,230], [255,180,100]);
-        const system = galaxy?.getCurrentSystem();
-        const station = system?.station;
-        const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
         
         // Player ship repair section
-        fill(220); textSize(20); textAlign(CENTER,TOP);
-        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX+pW/2, pY+headerHeight+10);
+        fill(220); textSize(20); textAlign(CENTER, TOP);
+        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX + pW / 2, pY + headerHeight + 10);
+        
         let missing = player.maxHull - player.hull;
         let fullCost = Math.floor(missing * 10);
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
-        let btnW = pW*0.5, btnH = 45, btnX = pX+pW/2-btnW/2, btnY1 = pY+headerHeight+60, btnY2 = btnY1+btnH+20;
+        let btnW = pW * 0.5, btnH = 45, btnX = pX + pW / 2 - btnW / 2;
+        let btnY1 = pY + headerHeight + 60, btnY2 = btnY1 + btnH + 20;
         
-        this.repairsFullButtonArea = this._drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0,180,0], [100,255,100]);
-        this.repairsHalfButtonArea = this._drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180,180,0], [220,220,100]);
+        const fullButtonArea = this._drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0, 180, 0], [100, 255, 100]);
+        const halfButtonArea = this._drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180, 180, 0], [220, 220, 100]);
         
         // Bodyguard repair section
         const bodyguardInfo = player.getDamagedBodyguardsInfo();
-        let btnY3 = btnY2 + btnH + 40; // Extra spacing between sections
+        let btnY3 = btnY2 + btnH + 40;
+        let bodyguardsButtonArea = {};
         
         if (bodyguardInfo.count > 0) {
             // Draw separator
@@ -1524,22 +1551,73 @@ class UIManager {
             stroke(255, 180, 100);
             line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
             
-            // Draw bodyguard repair section header
             noStroke();
             fill(220);
             textSize(20);
             textAlign(CENTER, TOP);
             
-            // Draw bodyguard repair button
-            this.repairsBodyguardsButtonArea = this._drawButton(
+            bodyguardsButtonArea = this._drawButton(
                 btnX, btnY3, btnW, btnH, 
                 `Repair All Guards (${bodyguardInfo.totalCost} cr)`, 
-                [0,120,180], [100,200,255]
+                [0, 120, 180], [100, 200, 255]
             );
         }
         
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.repairsBackButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100]);
+        let backW = 100, backH = 30, backX = pX + pW / 2 - backW / 2, backY = pY + pH - backH - 15;
+        const backButtonArea = this._drawButton(backX, backY, backW, backH, "Back", [180, 180, 0], [220, 220, 100]);
+        
+        return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
+    }
+
+    /** Draws the Repairs Menu */
+    drawRepairsMenu(player) {
+        this.repairsFullButtonArea = {};
+        this.repairsHalfButtonArea = {};
+        this.repairsBackButtonArea = {};
+        this.repairsBodyguardsButtonArea = {};
+        
+        if (!player) return;
+        push();
+        this.drawPanelBG([60, 30, 30, 230], [255, 180, 100]);
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Ship Repairs", station, player, system);
+        
+        const buttons = this._drawRepairsContent(player, headerHeight);
+        this.repairsFullButtonArea = buttons.full;
+        this.repairsHalfButtonArea = buttons.half;
+        this.repairsBodyguardsButtonArea = buttons.bodyguards;
+        this.repairsBackButtonArea = buttons.back;
+        pop();
+    }
+
+    /** 
+     * Draws the Space Object Repairs Menu (when state is VIEWING_SPACE_OBJECT_REPAIRS)
+     * @param {SpaceObject} spaceObject - The space object the player is docked at
+     * @param {Player} player - The player object
+     */
+    drawSpaceObjectRepairsMenu(spaceObject, player) {
+        this.spaceObjectRepairsFullButtonArea = {};
+        this.spaceObjectRepairsHalfButtonArea = {};
+        this.spaceObjectRepairsBackButtonArea = {};
+        this.spaceObjectRepairsBodyguardsButtonArea = {};
+        
+        if (!spaceObject || !player) return;
+        
+        push();
+        this.drawPanelBG([60, 30, 30, 230], [255, 180, 100]);
+        
+        const system = galaxy?.getCurrentSystem();
+        const displayName = (typeof spaceObject.getDisplayName === 'function') 
+            ? spaceObject.getDisplayName() 
+            : (spaceObject.type || 'Space Object');
+        const headerHeight = this.drawSpaceObjectHeader(displayName + " Repairs", spaceObject, player, system);
+        
+        const buttons = this._drawRepairsContent(player, headerHeight);
+        this.spaceObjectRepairsFullButtonArea = buttons.full;
+        this.spaceObjectRepairsHalfButtonArea = buttons.half;
+        this.spaceObjectRepairsBodyguardsButtonArea = buttons.bodyguards;
+        this.spaceObjectRepairsBackButtonArea = buttons.back;
         pop();
     }
 
@@ -3132,7 +3210,7 @@ if (isIllegalInSystem || isMissionCargo) {
             "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE","VIEWING_RECORD",
-            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET"
+            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"
         ];
         if (!statesExpectingSystem.includes(currentState)) {
             return false;
@@ -3162,7 +3240,7 @@ if (isIllegalInSystem || isMissionCargo) {
                         if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                         if (gameStateManager) gameStateManager.setState("IN_FLIGHT");
                         return true;
-                    } else if (btn.state === "VIEWING_SPACE_OBJECT_MARKET" || btn.state === "VIEWING_RECORD") {
+                    } else if (btn.state) {
                         if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                         if (gameStateManager) {
                             if (btn.state === "VIEWING_RECORD") {
@@ -3305,6 +3383,24 @@ if (isIllegalInSystem || isMissionCargo) {
                         return true;
                     }
                 }
+            }
+            return false;
+        }
+
+        // --- VIEWING_SPACE_OBJECT_REPAIRS State ---
+        if (currentState === "VIEWING_SPACE_OBJECT_REPAIRS") {
+            // Reuse repair click handling with space object button areas
+            if (this._handleRepairClick(mx, my, player, 
+                this.spaceObjectRepairsFullButtonArea, 
+                this.spaceObjectRepairsHalfButtonArea, 
+                this.spaceObjectRepairsBodyguardsButtonArea)) {
+                return true;
+            }
+            // Back button
+            if (this.spaceObjectRepairsBackButtonArea && this.isClickInArea(mx, my, this.spaceObjectRepairsBackButtonArea)) {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                if (gameStateManager) gameStateManager.setState("DOCKED_SPACE_OBJECT");
+                return true;
             }
             return false;
         }
@@ -3526,67 +3622,11 @@ if (isIllegalInSystem || isMissionCargo) {
 
         // --- VIEWING_REPAIRS State ---
         else if (currentState === "VIEWING_REPAIRS") {
-            // Full repair
-            if (this.isClickInArea(mx, my, this.repairsFullButtonArea)) {
-                let missing = player.maxHull - player.hull;
-                let cost = missing * 10;
-                if (missing <= 0) {
-                    this.addMessage("Your ship is already fully repaired!");
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                } else if (player.credits >= cost) {
-                    player.spendCredits(cost);
-                    player.hull = player.maxHull;
-                    this.addMessage(`Ship fully repaired for ${cost} credits.`);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                    if (typeof saveGame === 'function') saveGame();
-                } else {
-                    this.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                }
-                return true;
-            }
-            // 50% repair
-            if (this.isClickInArea(mx, my, this.repairsHalfButtonArea)) {
-                let missing = player.maxHull - player.hull;
-                let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
-                let cost = repairAmt * 7;
-                if (missing <= 0) {
-                    this.addMessage("Your ship is already fully repaired!");
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                } else if (player.credits >= cost) {
-                    player.spendCredits(cost);
-                    player.hull += repairAmt;
-                    if (player.hull > player.maxHull) player.hull = player.maxHull;
-                    this.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                    if (typeof saveGame === 'function') saveGame();
-                } else {
-                    this.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                }
-                return true;
-            }
-            // Bodyguard repairs
-            if (this.isClickInArea(mx, my, this.repairsBodyguardsButtonArea)) {
-                const bodyguardInfo = player.getDamagedBodyguardsInfo();
-                if (bodyguardInfo.count <= 0) {
-                    this.addMessage("No damaged bodyguards to repair.");
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                } else if (player.credits >= bodyguardInfo.totalCost) {
-                    // Use the new repair method
-                    if (player.repairBodyguards(bodyguardInfo.totalCost)) {
-                        this.addMessage(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
-                        
-                        // Play repair sound if available
-                        if (typeof soundManager !== 'undefined') {
-                            soundManager.playSound('upgrade');
-                        }
-                        if (typeof saveGame === 'function') saveGame();
-                    }
-                } else {
-                    this.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                }
+            // Reuse repair click handling with station button areas
+            if (this._handleRepairClick(mx, my, player, 
+                this.repairsFullButtonArea, 
+                this.repairsHalfButtonArea, 
+                this.repairsBodyguardsButtonArea)) {
                 return true;
             }
             // Back button
@@ -3811,6 +3851,78 @@ if (isIllegalInSystem || isMissionCargo) {
     /** Helper to check if mouse coords are within a button area object {x,y,w,h} */
     isClickInArea(mx, my, area) {
         return area && area.w > 0 && area.h > 0 && mx > area.x && mx < area.x + area.w && my > area.y && my < area.y + area.h;
+    }
+
+    /**
+     * Shared helper for handling repair button clicks (used by both station and space object repairs)
+     * @param {number} mx - Mouse X coordinate
+     * @param {number} my - Mouse Y coordinate
+     * @param {Player} player - The player object
+     * @param {Object} fullButtonArea - Button area for full repair
+     * @param {Object} halfButtonArea - Button area for 50% repair
+     * @param {Object} bodyguardsButtonArea - Button area for bodyguard repairs
+     * @returns {boolean} - True if a repair action was handled
+     */
+    _handleRepairClick(mx, my, player, fullButtonArea, halfButtonArea, bodyguardsButtonArea) {
+        // Full repair
+        if (fullButtonArea && this.isClickInArea(mx, my, fullButtonArea)) {
+            let missing = player.maxHull - player.hull;
+            let cost = Math.floor(missing * 10);
+            if (missing <= 0) {
+                this.addMessage("Your ship is already fully repaired!");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= cost) {
+                player.spendCredits(cost);
+                player.hull = player.maxHull;
+                this.addMessage(`Ship fully repaired for ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                if (typeof saveGame === 'function') saveGame();
+            } else {
+                this.addMessage(`Not enough credits! Full repair costs ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        // 50% repair
+        if (halfButtonArea && this.isClickInArea(mx, my, halfButtonArea)) {
+            let missing = player.maxHull - player.hull;
+            let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
+            let cost = Math.floor(repairAmt * 7);
+            if (missing <= 0) {
+                this.addMessage("Your ship is already fully repaired!");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= cost) {
+                player.spendCredits(cost);
+                player.hull += repairAmt;
+                if (player.hull > player.maxHull) player.hull = player.maxHull;
+                this.addMessage(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                if (typeof saveGame === 'function') saveGame();
+            } else {
+                this.addMessage(`Not enough credits! 50% repair costs ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        // Bodyguard repairs
+        if (bodyguardsButtonArea && this.isClickInArea(mx, my, bodyguardsButtonArea)) {
+            const bodyguardInfo = player.getDamagedBodyguardsInfo();
+            if (bodyguardInfo.count <= 0) {
+                this.addMessage("No damaged bodyguards to repair.");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= bodyguardInfo.totalCost) {
+                if (player.repairBodyguards(bodyguardInfo.totalCost)) {
+                    this.addMessage(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                }
+            } else {
+                this.addMessage(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        return false;
     }
 
     /** Draws the Shipyard Menu (when state is VIEWING_SHIPYARD) */
