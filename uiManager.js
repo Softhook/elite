@@ -3474,7 +3474,8 @@ class UIManager {
                             this.addMessage("You bought a " + area.shipName + "!");
                             if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                         } else {
-                            this.addMessage("Not enough credits!");
+                            const shortfall = finalPrice - player.credits;
+                            this.addMessage(`Not enough credits! Need ${shortfall} more for ${area.shipName}.`, [255, 150, 100]);
                             if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                         }
                     } else {
@@ -3566,7 +3567,8 @@ class UIManager {
                             if (typeof saveGame === 'function') saveGame();
                         }
                     } else {
-                        this.addMessage("Not enough credits!");
+                        const shortfall = area.upgrade.price - player.credits;
+                        this.addMessage(`Not enough credits! Need ${shortfall} more for ${area.upgrade.name}.`, [255, 150, 100]);
                         if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     }
                     return true;
@@ -4140,7 +4142,7 @@ class UIManager {
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(20);
+        textSize(18);
         for (let i = firstRow; i < lastRow; i++) {
              let [shipKey, ship] = availableShips[i]; // 'shipKey' is the correct key for the current ship
             let y = startY + (i-firstRow)*rowH;
@@ -4148,49 +4150,63 @@ class UIManager {
             const isCurrentShip = ship.name === currentShipType || 
                                 (currentShipDef && ship.name === currentShipDef.name);
             
+            const originalPrice = ship.price;
+            const finalPrice = originalPrice - currentShipValue;
+            const canAfford = finalPrice <= 0 || player.credits >= finalPrice;
+            
+            // Background
             if (isCurrentShip) {
                 fill(40, 40, 80); 
+            } else if (!canAfford) {
+                fill(40, 40, 40); // Darker for unaffordable
             } else {
                 fill(60, 60, 100);
             }
             
-            stroke(120, 180, 255);
+            stroke(canAfford ? 120 : 80, canAfford ? 180 : 100, canAfford ? 255 : 120);
             rect(pX+20, y, pW-40, rowH-6, 5);
             
-            fill(255);
             noStroke();
-            textAlign(LEFT, CENTER);
-            
-            const originalPrice = ship.price;
-            const finalPrice = originalPrice - currentShipValue;
             
             if (isCurrentShip) {
-                text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}     CURRENT SHIP`, pX+30, y+rowH/2);
-            } else {
+                // Current ship - highlight in center
+                fill(100, 150, 255);
                 textAlign(LEFT, CENTER);
-                text(`${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}    Price: ${originalPrice}cr`, pX+30, y+rowH/2);
-                
+                textSize(18);
+                text(`${ship.name}`, pX+30, y+rowH/2);
                 textAlign(RIGHT, CENTER);
-                
+                textSize(16);
+                fill(150, 180, 255);
+                text(`CURRENT SHIP`, pX+pW-30, y+rowH/2);
+            } else {
+                // Single-line: name + stats inline
+                textAlign(LEFT, CENTER);
+                textSize(16);
+                fill(canAfford ? 255 : 120);
+                const leftText = `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
+                text(leftText, pX+30, y+rowH/2);
+
+                // Price on right
+                textAlign(RIGHT, CENTER);
+                textSize(16);
                 if (finalPrice > 0) {
-                    fill(255, 220, 100); 
-                    text(`Final Cost: ${finalPrice}cr`, pX+pW-40, y+rowH/2);
+                    fill(canAfford ? 255 : 120, canAfford ? 220 : 100, canAfford ? 100 : 50);
+                    text(`${finalPrice} cr`, pX+pW-30, y+rowH/2);
                 } else if (finalPrice < 0) {
-                    fill(100, 255, 150); 
-                    text(`Refund: ${-finalPrice}cr`, pX+pW-40, y+rowH/2);
+                    fill(100, 255, 150);
+                    text(`+${-finalPrice} cr`, pX+pW-30, y+rowH/2);
                 } else {
-                    fill(255, 255, 255); 
-                    text(`Even Swap`, pX+pW-40, y+rowH/2);
+                    fill(150, 255, 150);
+                    text(`EVEN SWAP`, pX+pW-30, y+rowH/2);
                 }
-                
-                fill(255);
-                
+
                 this.shipyardListAreas.push({
                     x: pX+20, y: y, w: pW-40, h: rowH-6,
-                    shipTypeKey: shipKey, // <<< USE THE CORRECT shipKey HERE
+                    shipTypeKey: shipKey,
                     shipName: ship.name,
                     price: finalPrice, 
-                    originalPrice: originalPrice
+                    originalPrice: originalPrice,
+                    canAfford: canAfford
                 });
             }
         }
@@ -4305,17 +4321,41 @@ class UIManager {
         // Draw visible upgrades
         let firstRow = this.upgradeScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(20);
+        textSize(18);
         for (let i = firstRow; i < lastRow; i++) {
             let upg = availableWeapons[i];
             let y = startY + (i-firstRow)*rowH;
-            fill(80,60,120); stroke(180,100,255); rect(pX+20, y, pW-40, rowH-6, 5);
-            fill(255); noStroke(); textAlign(LEFT,CENTER);
-            text(
-                `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}  |  Price: ${upg.price}cr       ${upg.desc}`,
-                pX+30, y+rowH/2
-            );
-            this.upgradeListAreas.push({x:pX+20, y:y, w:pW-40, h:rowH-6, upgrade:upg});
+            
+            const canAfford = player.credits >= upg.price;
+            
+            // Background
+            fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
+            stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
+            rect(pX+20, y, pW-40, rowH-6, 5);
+            
+            noStroke();
+            
+            // Single-line: name + stats inline
+            textAlign(LEFT, CENTER);
+            textSize(16);
+            fill(canAfford ? 255 : 120);
+            const upgLeft = `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}`;
+            text(upgLeft, pX+30, y+rowH/2);
+
+            // Price on right
+            textAlign(RIGHT, CENTER);
+            textSize(16);
+            fill(canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120);
+            text(`${upg.price} cr`, pX+pW-30, y+rowH/2);
+            
+            this.upgradeListAreas.push({
+                x: pX+20,
+                y: y,
+                w: pW-40,
+                h: rowH-6,
+                upgrade: upg,
+                canAfford: canAfford
+            });
         }
     
         // Draw scrollbar if needed
