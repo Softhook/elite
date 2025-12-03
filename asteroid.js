@@ -109,29 +109,31 @@ class Asteroid {
         }
         // --- Draw Player's Target Indicator for this asteroid ---
         if (typeof player !== 'undefined' && player.target === this) {
-            // Use UIManager helper to draw the same ship-style reticle
-            if (typeof uiManager !== 'undefined' && typeof uiManager._drawShipStyleReticle === 'function') {
-                uiManager._drawShipStyleReticle(this.size);
-            } else {
-                // Fallback: draw a simple green circle/brackets scaled from maxRadius
-                push();
-                noFill();
-                stroke(0, 255, 0, 200);
-                strokeWeight(2);
-                const r = (this.maxRadius || (this.size/2)) * 1.4;
-                ellipse(0, 0, r * 2, r * 2);
-                const bracketSize = r * 0.35;
-                const offset = r * 0.7;
-                line(-offset, -offset, -offset + bracketSize, -offset);
-                line(-offset, -offset, -offset, -offset + bracketSize);
-                line(offset, -offset, offset - bracketSize, -offset);
-                line(offset, -offset, offset, -offset + bracketSize);
-                line(-offset, offset, -offset + bracketSize, offset);
-                line(-offset, offset, -offset, offset - bracketSize);
-                line(offset, offset, offset - bracketSize, offset);
-                line(offset, offset, offset, offset - bracketSize);
-                pop();
-            }
+            // Draw ship-style reticle (matching enemyRendering.js)
+            push();
+            noFill();
+            stroke(0, 255, 0, 200); // Bright green, semi-transparent
+            strokeWeight(2);
+
+            // Circle around the asteroid (using size like ships do)
+            ellipse(0, 0, this.size * 1.6, this.size * 1.6);
+
+            // Corner brackets (matching ship style)
+            const bracketSize = this.size * 0.3;
+            const offset = this.size * 0.7;
+            // Top-left
+            line(-offset, -offset, -offset + bracketSize, -offset);
+            line(-offset, -offset, -offset, -offset + bracketSize);
+            // Top-right
+            line(offset, -offset, offset - bracketSize, -offset);
+            line(offset, -offset, offset, -offset + bracketSize);
+            // Bottom-left
+            line(-offset, offset, -offset + bracketSize, offset);
+            line(-offset, offset, -offset, offset - bracketSize);
+            // Bottom-right
+            line(offset, offset, offset - bracketSize, offset);
+            line(offset, offset, offset, offset - bracketSize);
+            pop();
         }
         
         pop();
