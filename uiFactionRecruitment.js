@@ -139,10 +139,7 @@ class UIFactionRecruitment {
         }
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        const backBtn = UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, {action: 'back'});
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: 'back'});
         this.factionRecruitmentButtonAreas.push(backBtn);
     }
 

@@ -94,10 +94,7 @@ class UIStationMenus {
             );
         }
         
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        const backButtonArea = UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150]);
+        const backButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
         
         return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
     }
@@ -193,14 +190,10 @@ class UIStationMenus {
             UIComponents.setTextStyle({ fill: 220, size: 22, alignH: CENTER, alignV: TOP });
             const messageY = pY + headerHeight + 20;
             text("This anarchy system has no formal police presence.", pX + pW/2, messageY);
-            fill(180, 200, 255);
-            textSize(18);
+            UIComponents.setTextStyle({ fill: [180, 200, 255], size: 18 });
             text("Local disputes are settled without official intervention.", pX + pW/2, messageY + 35);
             
-            const backW = 100, backH = 30;
-            const backX = pX + pW / 2 - backW / 2;
-            const backY = pY + pH - backH - 15;
-            this.policeButtonAreas.push(UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, {action:'back'}));
+            this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action:'back'}));
             
             // Sync to UIManager for backward compatibility
             uiManager.policeButtonAreas = this.policeButtonAreas;
@@ -265,10 +258,7 @@ class UIStationMenus {
             text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
         }
         
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        this.policeButtonAreas.push(UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, {action:'back'}));
+        this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action:'back'}));
         
         // Sync to UIManager for backward compatibility
         uiManager.policeButtonAreas = this.policeButtonAreas;
@@ -414,10 +404,7 @@ class UIStationMenus {
         );
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        this.shipyardDetailButtons = {back: UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150])};
+        this.shipyardDetailButtons = {back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH)};
     }
 
     /**
@@ -537,10 +524,7 @@ class UIStationMenus {
         );
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        this.upgradeDetailButtons = {back: UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150])};
+        this.upgradeDetailButtons = {back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH)};
     }
 
     /**
@@ -686,11 +670,7 @@ class UIStationMenus {
             UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", pX + pW/2, pY + pH/2 - 20);
             
-            const backW = 100, backH = 30;
-            const backX = pX + pW / 2 - backW / 2;
-            const backY = pY + pH - backH - 15;
-            const backBtn = UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150]);
-            backBtn.action = "BACK";
+            const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
             this.storageButtonAreas.push(backBtn);
             return;
         }
@@ -793,11 +773,7 @@ class UIStationMenus {
         }
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        const backBtn = UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150]);
-        backBtn.action = "BACK";
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
         this.storageButtonAreas.push(backBtn);
     }
 
@@ -963,16 +939,12 @@ class UIStationMenus {
         }
         
         let currentY = contentY;
-        fill(255, 200, 200);
-        textSize(24);
-        textAlign(LEFT, TOP);
+        UIComponents.setTextStyle({ fill: [255, 200, 200], size: 24, align: [LEFT, TOP] });
         text(`Personal Log: ${totalEntries} entries`, pX + 30, currentY);
         currentY += 35;
         
         if (totalEntries === 0) {
-            fill(180);
-            textSize(16);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
             text("No activity recorded yet.", pX + pW/2, currentY + (contentH - 35) / 2);
         } else {
             const startIndex = this.recordScrollOffset;
@@ -999,9 +971,7 @@ class UIStationMenus {
             
             const hasEarlier = startIndex > 0;
             if (hasEarlier && rowsRemaining > 0) {
-                fill(160);
-                textSize(14);
-                textAlign(LEFT, TOP);
+                UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
                 text("↑ Earlier entries", pX + 50, currentY);
                 currentY += lineHeight;
                 rowsRemaining--;
@@ -1011,9 +981,7 @@ class UIStationMenus {
                 const evt = events[i];
                 const col = typeColors[evt.type] || [200, 200, 200];
                 
-                fill(col);
-                textSize(14);
-                textAlign(LEFT, TOP);
+                UIComponents.setTextStyle({ fill: col, size: 14, align: [LEFT, TOP] });
                 
                 const timeStr = formatLogTime(evt.timestamp);
                 const line = `[${timeStr}] ${evt.description}`;
@@ -1025,19 +993,13 @@ class UIStationMenus {
             
             const hasMore = startIndex + visibleLines < totalEntries;
             if (hasMore && rowsRemaining > 0) {
-                fill(160);
-                textSize(14);
-                textAlign(LEFT, TOP);
+                UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
                 text("↓ More entries", pX + 50, currentY);
             }
         }
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        const backBtn = UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150]);
-        backBtn.action = "BACK";
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
         this.recordButtonAreas.push(backBtn);
     }
 

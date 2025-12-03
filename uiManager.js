@@ -946,53 +946,6 @@ class UIManager {
     }
 
     /**
-     * Helper to setup common menu screen structure: push, panelRect, panelBG, system refs
-     * @param {Object} config - Configuration object
-     * @param {Array} config.borderColor - RGB array for panel border
-     * @param {string} [config.headerTitle] - Optional header title
-     * @param {Object} [config.station] - Optional station for header
-     * @param {Object} [config.spaceObject] - Optional space object for header
-     * @param {Object} config.player - Player object for header
-     * @returns {Object} {pX, pY, pW, pH, system, headerHeight}
-     */
-    _setupStandardMenu(config) {
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(STANDARD_PANEL_BG, config.borderColor);
-        const system = galaxy?.getCurrentSystem();
-        
-        let headerHeight = 0;
-        if (config.headerTitle && config.station) {
-            headerHeight = this.drawStationHeader(config.headerTitle, config.station, config.player, system);
-        } else if (config.headerTitle && config.spaceObject) {
-            headerHeight = this.drawSpaceObjectHeader(config.headerTitle, config.spaceObject, config.player, system);
-        }
-        
-        return {pX, pY, pW, pH, system, headerHeight};
-    }
-
-    /**
-     * Draws alternating row background for table-like displays - delegates to UIComponents.
-     */
-    _drawAlternatingRow(index, x, y, w, h) {
-        UIComponents.drawAlternatingRow(index, x, y, w, h);
-    }
-
-    /**
-     * Draws button label text with standard centered styling - delegates to UIComponents.
-     */
-    _drawButtonLabel(label, x, y, w, h, fillColor = 255, size = 20) {
-        UIComponents.drawButtonLabel(label, x, y, w, h, fillColor, size);
-    }
-
-    /**
-     * Gets the fill color for stock quantity based on availability - delegates to UIComponents.
-     */
-    _getStockColor(stockQty, outOfStock = false) {
-        return UIComponents.getStockColor(stockQty, outOfStock);
-    }
-
-    /**
      * Draws a standard centered back button at the bottom of a panel.
      * Uses standard back button styling (blue background) - delegates to UIComponents.
      * @param {Object} [extra={}] - Extra properties to attach to the area object
@@ -1001,29 +954,6 @@ class UIManager {
     _drawCenteredBackButton(extra = {}) {
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         return UIComponents.drawCenteredBackButton(pX, pY, pW, pH, extra);
-    }
-
-    /**
-     * Returns the appropriate fill color for a price deviation - delegates to UIComponents.
-     */
-    _getPriceDeviationColor(deviation, isSellPrice = false) {
-        return UIComponents.getPriceDeviationColor(deviation, isSellPrice);
-    }
-
-    /**
-     * Draws a price indicator bar for market displays - delegates to UIComponents.
-     */
-    _drawPriceIndicator(x, y, rowH, deviation, isSellPrice = false, maxDeviation = 0.8) {
-        UIComponents.drawPriceIndicator(x, y, rowH, deviation, isSellPrice, maxDeviation);
-    }
-
-    /**
-     * Draws a single commodity row for market screens - delegates to UIComponents.
-     * @param {Object} config - Row configuration (see UIComponents.drawMarketRow)
-     * @returns {Array} Array of button area objects for this row
-     */
-    _drawMarketRow(config) {
-        return UIComponents.drawMarketRow(config);
     }
 
     /**
@@ -1043,101 +973,6 @@ class UIManager {
             title, locationName, systemName, economyType, techLevel, securityLevel, player,
             panelX: pX, panelY: pY, panelW: pW
         });
-    }
-
-    /**
-     * Draws a market button (Buy/Sell) with proper styling - delegates to UIComponents.
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} w - Width
-     * @param {number} h - Height
-     * @param {string} label - Button text
-     * @param {boolean} enabled - Whether button is clickable
-     * @param {boolean} isBuy - True for buy buttons, false for sell
-     * @param {string} [disabledReason] - Reason shown if disabled (e.g., "Out")
-     * @returns {Object|null} Button area object if enabled, null if disabled
-     */
-    _drawMarketButton(x, y, w, h, label, enabled, isBuy, disabledReason = null) {
-        return UIComponents.drawMarketButton(x, y, w, h, label, enabled, isBuy, disabledReason);
-    }
-
-    /**
-     * Draws a scrollbar - delegates to UIComponents.
-     * @param {number} x - X position of panel right edge
-     * @param {number} y - Y position
-     * @param {number} h - Height
-     * @param {number} scrollOffset - Current scroll offset
-     * @param {number} scrollMax - Maximum scroll offset
-     * @param {number} visibleItems - Number of visible items
-     * @param {number} totalItems - Total number of items
-     * @param {Array} [bgColor] - Background color
-     * @param {Array} [strokeColor] - Border color
-     * @returns {Object|null} Area object or null
-     */
-    _drawScrollbar(x, y, h, scrollOffset, scrollMax, visibleItems, totalItems, bgColor = [60, 60, 100], strokeColor = [150, 150, 200]) {
-        return UIComponents.drawScrollbar(x, y, h, scrollOffset, scrollMax, visibleItems, totalItems, bgColor, strokeColor);
-    }
-
-    /**
-     * Computes scroll parameters for a list and clamps the offset.
-     * @param {string} scrollOffsetKey - Property name for scroll offset on this object
-     * @param {string} scrollMaxKey - Property name for scroll max on this object  
-     * @param {number} totalItems - Total number of items in the list
-     * @param {number} visibleItems - Number of items that fit in view
-     * @returns {Object} { firstRow, lastRow, scrollOffset, scrollMax }
-     */
-    _computeScrollParams(scrollOffsetKey, scrollMaxKey, totalItems, visibleItems) {
-        const scrollMax = Math.max(0, totalItems - visibleItems);
-        this[scrollMaxKey] = scrollMax;
-        
-        if (typeof this[scrollOffsetKey] !== 'number') this[scrollOffsetKey] = 0;
-        this[scrollOffsetKey] = constrain(this[scrollOffsetKey], 0, scrollMax);
-        
-        const firstRow = this[scrollOffsetKey];
-        const lastRow = Math.min(firstRow + visibleItems, totalItems);
-        
-        return { firstRow, lastRow, scrollOffset: this[scrollOffsetKey], scrollMax };
-    }
-
-    /**
-     * Draws a scrollable list panel with consistent styling.
-     * @param {Object} config - Configuration object
-     * @param {number} config.startY - Y position to start drawing rows
-     * @param {number} config.rowHeight - Height of each row
-     * @param {number} config.availableHeight - Total height available for rows
-     * @param {Array} config.items - Array of items to display
-     * @param {Function} config.renderRow - Function(item, index, y, rowH, pX, pW) to render each row
-     * @param {string} config.scrollOffsetKey - Property name for scroll offset
-     * @param {string} config.scrollMaxKey - Property name for scroll max
-     * @param {Array} [config.scrollbarColors] - [bgColor, strokeColor] for scrollbar
-     * @returns {Object} { firstRow, lastRow, scrollbarArea }
-     */
-    _drawScrollableList(config) {
-        const { startY, rowHeight, availableHeight, items, renderRow, scrollOffsetKey, scrollMaxKey } = config;
-        const scrollbarColors = config.scrollbarColors || [[60, 60, 100], [150, 150, 200]];
-        const {x: pX, w: pW} = this.getPanelRect();
-        
-        const visibleRows = Math.floor(availableHeight / rowHeight);
-        const { firstRow, lastRow, scrollOffset, scrollMax } = this._computeScrollParams(
-            scrollOffsetKey, scrollMaxKey, items.length, visibleRows
-        );
-        
-        // Render visible rows
-        for (let i = firstRow; i < lastRow; i++) {
-            const y = startY + (i - firstRow) * rowHeight;
-            renderRow(items[i], i, y, rowHeight, pX, pW);
-        }
-        
-        // Draw scrollbar if needed
-        const scrollAreaH = visibleRows * rowHeight;
-        const scrollbarArea = this._drawScrollbar(
-            pX + pW, startY, scrollAreaH,
-            scrollOffset, scrollMax,
-            visibleRows, items.length,
-            scrollbarColors[0], scrollbarColors[1]
-        );
-        
-        return { firstRow, lastRow, scrollbarArea };
     }
 
     /** Draws the Protection Services menu - delegated to stationMenus module */
@@ -1171,9 +1006,7 @@ class UIManager {
         
         if (!activeStation) {
             textFont(font);
-            fill(220);
-            textSize(22);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", panelRect.x + panelRect.w/2, panelRect.y + panelRect.h/2 - 20);
             const backBtn = this._drawCenteredBackButton();
             backBtn.action = "BACK";

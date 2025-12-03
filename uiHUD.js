@@ -463,12 +463,27 @@ class UIHUD {
             ? cargoEntries.map(entry => `${entry.name}: ${entry.quantity}`)
             : [];
 
+        // Calculate tradable commodities height for dockable space objects
+        let tradableCommoditiesHeight = 0;
+        let tradable = null;
+        if (isSpaceObject && target.isDockable) {
+            tradable = (typeof target.getTradableCommodities === 'function') 
+                ? target.getTradableCommodities() 
+                : { produces: [], buys: [] };
+            if (tradable.produces && tradable.produces.length > 0) {
+                tradableCommoditiesHeight += sectionSpacing + lineHeight + lineHeight; // heading + items
+            }
+            if (tradable.buys && tradable.buys.length > 0) {
+                tradableCommoditiesHeight += sectionSpacing + lineHeight + lineHeight; // heading + items
+            }
+        }
+
         const statBarsHeight = (lineHeight + 4) * 2;
         const weaponsHeight = (weaponsList && weaponsList.length > 0) 
             ? (sectionSpacing + lineHeight + weaponsList.length * lineHeight + sectionSpacing)
             : 0;
 
-        const baseHeightWithoutCargo = padding * 2 + lineHeight + lineHeight + sectionSpacing + statBarsHeight + sectionSpacing + weaponsHeight + infoLines.length * lineHeight;
+        const baseHeightWithoutCargo = padding * 2 + lineHeight + lineHeight + sectionSpacing + statBarsHeight + sectionSpacing + weaponsHeight + infoLines.length * lineHeight + tradableCommoditiesHeight;
         let showCargoSection = cargoLines.length > 0;
         let renderedCargoLines = cargoLines.slice();
         const cargoHeadingHeight = lineHeight;
@@ -587,11 +602,7 @@ class UIHUD {
         }
 
         // Space object trade info
-        if (isSpaceObject && target.isDockable) {
-            const tradable = (typeof target.getTradableCommodities === 'function') 
-                ? target.getTradableCommodities() 
-                : { produces: [], buys: [] };
-            
+        if (isSpaceObject && target.isDockable && tradable) {
             if (tradable.produces && tradable.produces.length > 0) {
                 cursorY += sectionSpacing;
                 fill(100, 255, 100);

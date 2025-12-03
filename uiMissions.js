@@ -224,7 +224,7 @@ class UIMissions {
             // Back button always available
             this.missionDetailButtonAreas['back'] = UIComponents.drawButton(
                 backBtnX, btnDetailY, btnDetailW, btnDetailH,
-                "Back", [180, 0, 0], [255, 150, 150], 3
+                "Back", [0, 80, 180], [100, 150, 255], 3
             );
             
             if (activeMission && missionToShowDetails.id === activeMission.id) {
@@ -275,7 +275,7 @@ class UIMissions {
             // Only show Back button centered
             let backBtnX = pX + pW / 2 - btnDetailW / 2;
             this.missionDetailButtonAreas = {
-                'back': UIComponents.drawButton(backBtnX, btnDetailY, btnDetailW, btnDetailH, "Back", [180, 0, 0], [255, 150, 150], 3),
+                'back': UIComponents.drawButton(backBtnX, btnDetailY, btnDetailW, btnDetailH, "Back", [0, 80, 180], [100, 150, 255], 3),
                 'accept': null,
                 'complete': null,
                 'abandon': null
