@@ -1582,6 +1582,11 @@ class Planet {
         const cosA = Math.cos(this.ringAngle);
         const sinA = Math.sin(this.ringAngle);
         
+        // Use a slightly smaller clip radius to account for anti-aliasing at the planet edge.
+        // The planet texture fades out over ~5 pixels (edgeWidth in renderPlanetTexture),
+        // so we extend the ring underneath by using a smaller exclusion radius.
+        const clipRadius = this.radius - 4;
+        
         // --- Step 1: Draw the back portion of the rings (clipped to exclude front) ---
         ctx.save();
         
@@ -1593,7 +1598,8 @@ class Planet {
         ctx.rect(-ringsSize, -ringsSize, ringsSize * 2, ringsSize * 2);
         
         // Then cut out the planet circle using counter-clockwise winding (creates a hole)
-        ctx.arc(0, 0, this.radius, 0, TWO_PI, true);
+        // Use clipRadius (slightly smaller) so rings extend under the anti-aliased edge
+        ctx.arc(0, 0, clipRadius, 0, TWO_PI, true);
         
         ctx.clip('evenodd');
         
