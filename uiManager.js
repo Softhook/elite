@@ -5225,7 +5225,7 @@ class UIManager {
         this.storageButtonAreas = [];
 
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(STANDARD_PANEL_BG, [120, 140, 180]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
         textFont(font);
 
         if (!activeStation) {
@@ -5369,7 +5369,7 @@ class UIManager {
         this.recordButtonAreas = [];
         
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(STANDARD_PANEL_BG, [150, 150, 200]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
         
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
