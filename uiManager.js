@@ -247,6 +247,86 @@ class UIManager {
         }
     }
 
+    /**
+     * Draws a semi-transparent section background box.
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} w - Width
+     * @param {number} h - Height
+     * @param {Array|number} [fillColor=[0,0,0,100]] - Fill color
+     * @param {number} [radius=0] - Corner radius
+     * @private
+     */
+    _drawSectionBG(x, y, w, h, fillColor = [0, 0, 0, 100], radius = 0) {
+        if (Array.isArray(fillColor)) {
+            fill(...fillColor);
+        } else {
+            fill(fillColor);
+        }
+        noStroke();
+        if (radius > 0) {
+            rect(x, y, w, h, radius);
+        } else {
+            rect(x, y, w, h);
+        }
+    }
+
+    /**
+     * Draws centered informational text (e.g., "No items available").
+     * @param {string} message - The message to display
+     * @param {number} x - Center X position
+     * @param {number} y - Center Y position
+     * @param {Object} [style={}] - Text styling options
+     * @private
+     */
+    _drawCenteredInfo(message, x, y, style = {}) {
+        const defaultStyle = { fill: 180, size: 20, alignH: CENTER, alignV: CENTER };
+        this._setTextStyle({ ...defaultStyle, ...style });
+        text(message, x, y);
+    }
+
+    /**
+     * Draws a mission button with appropriate styling based on state.
+     * @param {Object} config - Button configuration
+     * @returns {Object|null} Button area if active, null otherwise
+     * @private
+     */
+    _drawMissionButton(config) {
+        const { x, y, w, h, isInactive, isSelected, isActive, missionType, text: btnText } = config;
+        
+        // Background
+        if (isInactive) {
+            fill(60, 60, 60, 180);
+            noStroke();
+        } else if (isSelected) {
+            fill(80, 100, 80, 200);
+            stroke(150, 255, 150);
+            strokeWeight(1);
+        } else {
+            fill(40, 60, 40, 180);
+            noStroke();
+        }
+        rect(x, y, w, h, 3);
+        
+        // Text color
+        if (isInactive) {
+            fill(120);
+        } else if (isActive) {
+            fill(255, 0, 0);
+        } else if (missionType === MISSION_TYPE?.ASSASSINATION) {
+            fill(255, 0, 0);
+        } else if (missionType === MISSION_TYPE?.SABOTAGE) {
+            fill(255, 200, 50);
+        } else {
+            fill(220);
+        }
+        
+        this._setTextStyle({ size: 20, alignH: LEFT, alignV: CENTER, noStroke: true });
+        text(btnText, x + 10, y + h / 2, w - 20);
+        
+        return isInactive ? null : { x, y, w, h };
+    }
+
     /** Returns standardized panel geometry */
     getPanelRect() {
         return {
@@ -1281,9 +1361,10 @@ class UIManager {
     drawStationMainMenu(station, player) {
         this._initButtonAreas(['stationMenuButtonAreas']);
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
+        
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(STANDARD_PANEL_BG, [100,100,255]);
+        this.drawPanelBG(STANDARD_PANEL_BG, [100, 100, 255]);
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         textFont(font);
@@ -1476,13 +1557,7 @@ class UIManager {
             let tY = yP + rowH / 2;
             
             // Alternating row background
-            if (i % 2 === 0) {
-                fill(0, 0, 0, 100);
-            } else {
-                fill(80, 80, 80, 100);
-            }
-            noStroke();
-            rect(sX, yP, tW, rowH);
+            this._drawAlternatingRow(i, sX, yP, tW, rowH);
             
             // Get player cargo for this commodity
             const playerItem = player.cargo.find(item => item && item.name === commodityName);
@@ -1529,13 +1604,7 @@ class UIManager {
             if (isProduced && buyPrice > 0) {
                 if (baseBuy > 0) {
                     let buyDeviation = (buyPrice - baseBuy) / baseBuy;
-                    if (buyDeviation < -0.05) {
-                        fill(50, 255, 50); // Cheap (Green)
-                    } else if (buyDeviation > 0.05) {
-                        fill(255, 50, 50); // Expensive (Red)
-                    } else {
-                        fill(255); // Average (White)
-                    }
+                    fill(...this._getPriceDeviationColor(buyDeviation, false));
                 } else {
                     fill(255);
                 }
@@ -1549,13 +1618,7 @@ class UIManager {
             if (isBought && sellPrice > 0) {
                 if (baseSell > 0) {
                     let sellDeviation = (sellPrice - baseSell) / baseSell;
-                    if (sellDeviation > 0.05) {
-                        fill(50, 255, 50); // Good Sell Price (Green)
-                    } else if (sellDeviation < -0.05) {
-                        fill(255, 50, 50); // Bad Sell Price (Red)
-                    } else {
-                        fill(255); // Average (White)
-                    }
+                    fill(...this._getPriceDeviationColor(sellDeviation, true));
                 } else {
                     fill(255);
                 }
@@ -1595,15 +1658,13 @@ class UIManager {
                 // Not available - grayed out
                 fill(40); noStroke();
                 rect(buy1X, buy1Y, btnW, btnH, 3);
-                fill(60); textAlign(CENTER, CENTER); textSize(20);
-                text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
+                this._drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 60);
             } else {
                 const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
                 if (canBuy) {
                     fill(0, 150, 0); stroke(0, 200, 0); strokeWeight(1);
                     rect(buy1X, buy1Y, btnW, btnH, 3);
-                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
+                    this._drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 255);
                     this.spaceObjectMarketButtonAreas.push({
                         x: buy1X, y: buy1Y, w: btnW, h: btnH,
                         action: "BUY_COMMODITY", quantity: 1, commodity: commodityName, price: buyPrice
@@ -1611,8 +1672,7 @@ class UIManager {
                 } else {
                     fill(60); stroke(80); strokeWeight(1);
                     rect(buy1X, buy1Y, btnW, btnH, 3);
-                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Buy 1", buy1X + btnW / 2, buy1Y + btnH / 2);
+                    this._drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 100);
                 }
             }
             
@@ -1623,15 +1683,13 @@ class UIManager {
             if (!isProduced) {
                 fill(40); noStroke();
                 rect(buyAllX, buyAllY, btnW, btnH, 3);
-                fill(60); textAlign(CENTER, CENTER); textSize(20);
-                text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
+                this._drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 60);
             } else {
                 const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
                 if (canBuy) {
                     fill(0, 180, 0); stroke(0, 220, 0); strokeWeight(1);
                     rect(buyAllX, buyAllY, btnW, btnH, 3);
-                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
+                    this._drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 255);
                     this.spaceObjectMarketButtonAreas.push({
                         x: buyAllX, y: buyAllY, w: btnW, h: btnH,
                         action: "BUY_ALL_COMMODITY", commodity: commodityName, price: buyPrice
@@ -1639,8 +1697,7 @@ class UIManager {
                 } else {
                     fill(60); stroke(80); strokeWeight(1);
                     rect(buyAllX, buyAllY, btnW, btnH, 3);
-                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Buy All", buyAllX + btnW / 2, buyAllY + btnH / 2);
+                    this._drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 100);
                 }
             }
             
@@ -1661,8 +1718,7 @@ class UIManager {
                 if (canSell) {
                     fill(150, 0, 0); stroke(200, 0, 0); strokeWeight(1);
                     rect(sell1X, sell1Y, btnW, btnH, 3);
-                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Sell 1", sell1X + btnW / 2, sell1Y + btnH / 2);
+                    this._drawButtonLabel("Sell 1", sell1X, sell1Y, btnW, btnH, 255);
                     this.spaceObjectMarketButtonAreas.push({
                         x: sell1X, y: sell1Y, w: btnW, h: btnH,
                         action: "SELL_COMMODITY", quantity: 1, commodity: commodityName, price: sellPrice
@@ -1670,8 +1726,7 @@ class UIManager {
                 } else {
                     fill(60); stroke(80); strokeWeight(1);
                     rect(sell1X, sell1Y, btnW, btnH, 3);
-                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Sell 1", sell1X + btnW / 2, sell1Y + btnH / 2);
+                    this._drawButtonLabel("Sell 1", sell1X, sell1Y, btnW, btnH, 100);
                 }
             }
             
@@ -1684,16 +1739,13 @@ class UIManager {
                 stroke(isMissionCargo ? 120 : 0);
                 if (isMissionCargo) strokeWeight(1); else noStroke();
                 rect(sellAllX, sellAllY, btnW, btnH, 3);
-                fill(isMissionCargo ? 180 : 60);
-                noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+                this._drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, isMissionCargo ? 180 : 60);
             } else {
                 const canSell = sellPrice > 0 && playerQty > 0;
                 if (canSell) {
                     fill(180, 0, 0); stroke(220, 0, 0); strokeWeight(1);
                     rect(sellAllX, sellAllY, btnW, btnH, 3);
-                    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+                    this._drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, 255);
                     this.spaceObjectMarketButtonAreas.push({
                         x: sellAllX, y: sellAllY, w: btnW, h: btnH,
                         action: "SELL_ALL_COMMODITY", commodity: commodityName, price: sellPrice
@@ -1701,8 +1753,7 @@ class UIManager {
                 } else {
                     fill(60); stroke(80); strokeWeight(1);
                     rect(sellAllX, sellAllY, btnW, btnH, 3);
-                    fill(100); noStroke(); textAlign(CENTER, CENTER); textSize(20);
-                    text("Sell All", sellAllX + btnW / 2, sellAllY + btnH / 2);
+                    this._drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, 100);
                 }
             }
         }
@@ -2006,13 +2057,7 @@ class UIManager {
             let tY = yP+rowH/2;
 
             // --- Alternating Row Background ---
-            if (i % 2 === 0) {
-                fill(0, 0, 0, 100); // Increased alpha
-            } else {
-                fill(80, 80, 80, 100); // Increased alpha and brightness difference
-            }
-            noStroke();
-            rect(sX, yP, tW, rowH); // Draw background for the data part of the row
+            this._drawAlternatingRow(i, sX, yP, tW, rowH);
             // --- End Alternating Background ---
 
             // Check if this is an illegal good in a non-Anarchy system
@@ -2044,13 +2089,7 @@ class UIManager {
             // Buy price with color coding
             if (comm.baseBuy > 0) {
                 let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
-                if (buyDeviation < -0.05) { // Cheap (Green)
-                    fill(50, 255, 50);
-                } else if (buyDeviation > 0.05) { // Expensive (Red)
-                    fill(255, 50, 50);
-                } else { // Average (White)
-                    fill(255);
-                }
+                fill(...this._getPriceDeviationColor(buyDeviation, false));
             } else {
                 fill(255);
             }
@@ -2059,28 +2098,14 @@ class UIManager {
             // Sell price with color coding
             if (comm.baseSell > 0) {
                 let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
-                if (sellDeviation > 0.05) { // Good Sell Price (Green)
-                    fill(50, 255, 50);
-                } else if (sellDeviation < -0.05) { // Bad Sell Price (Red)
-                    fill(255, 50, 50);
-                } else { // Average (White)
-                    fill(255);
-                }
+                fill(...this._getPriceDeviationColor(sellDeviation, true));
             } else {
                 fill(255);
             }
             text(comm.sellPrice??'?', sX+colCommodity+colBuy+colSell/2, tY);
 
             // Stock display - single number with color coding
-            if (outOfStock) {
-                fill(255, 120, 120);
-            } else if (stockQty < 50) {
-                fill(255, 180, 120);
-            } else if (stockQty > 200) {
-                fill(120, 200, 255);
-            } else {
-                fill(220);
-            }
+            fill(...this._getStockColor(stockQty, outOfStock));
             text(stockQty, sX+colCommodity+colBuy+colSell+colStock/2, tY);
 
             fill(255);
@@ -2140,8 +2165,8 @@ class UIManager {
     /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
     drawMissionBoard(missions, selectedIndex, player) {
         if (!player) { console.warn("drawMissionBoard missing player"); return; }
-        this.missionListButtonAreas = []; 
-        this.missionDetailButtonAreas = {}; // Clear areas
+        this._initButtonAreas(['missionListButtonAreas']);
+        this._initButtonAreas(['missionDetailButtonAreas'], false);
 
         // --- Get Context ---
         const currentSystem = galaxy?.getCurrentSystem();
@@ -2172,11 +2197,10 @@ class UIManager {
 
 
         // --- List Section (always shows available missions) ---
-        fill(0,0,0,100); noStroke(); rect(pX+5, cY, listW-10, cH); // List BG
+        this._drawSectionBG(pX + 5, cY, listW - 10, cH);
 
         if (!Array.isArray(missions) || missions.length === 0) {
-            fill(180); textSize(20); textAlign(CENTER,CENTER); 
-            text("No missions available.", pX+listW/2, cY+cH/2);
+            this._drawCenteredInfo("No missions available.", pX + listW / 2, cY + cH / 2);
         } else {
             this.missionListButtonAreas = []; // Reset clickable areas
             let currentY = cY + 10; // Starting Y position
@@ -2203,40 +2227,21 @@ class UIManager {
                 // Skip if would extend beyond panel
                 if (currentY + buttonHeight > cY + cH) break;
                 
-                // Background
-                if (isInactive) {
-                    fill(60,60,60,180); noStroke();
-                } else if (i === selectedIndex) {
-                    fill(80,100,80,200); stroke(150,255,150); strokeWeight(1);
-                } else {
-                    fill(40,60,40,180); noStroke();
-                }
-                rect(pX+10, currentY, listW-20, buttonHeight, 3);
+                const buttonArea = this._drawMissionButton({
+                    x: pX + 10,
+                    y: currentY,
+                    w: listW - 20,
+                    h: buttonHeight,
+                    isInactive: isInactive,
+                    isSelected: i === selectedIndex,
+                    isActive: activeMission && activeMission.id === m.id,
+                    missionType: m.type,
+                    text: m.getSummary()
+                });
                 
-                // Text
-                if (isInactive) {
-                    fill(120); // greyed out
-                } else if (activeMission && activeMission.id === m.id) {
-                    fill(255,0,0);
-                } else if (m && m.type === MISSION_TYPE.ASSASSINATION) {
-                    fill(255, 0, 0); // Red for assassination missions
-                } else if (m && m.type === MISSION_TYPE.SABOTAGE) {
-                    fill(255, 200, 50); // Goldish for high-value sabotage
-                } else {
-                    fill(220);
-                }
-                textSize(20); textAlign(LEFT, CENTER); noStroke();
-                text(m.getSummary(), pX+20, currentY + buttonHeight/2, listW-40);
-                
-                // only allow clicking active entries
-                if (!isInactive) {
-                    this.missionListButtonAreas.push({
-                        x: pX+10,
-                        y: currentY,
-                        w: listW-20,
-                        h: buttonHeight,
-                        index: i
-                    });
+                // Only add clickable area if not inactive
+                if (buttonArea) {
+                    this.missionListButtonAreas.push({ ...buttonArea, index: i });
                 }
                 // Move to next position
                 currentY += buttonHeight + spacing;
@@ -2246,7 +2251,7 @@ class UIManager {
 
 
         // --- Detail Section ---
-        fill(0,0,0,100); noStroke(); rect(detailX, cY, detailW-5, cH); // Detail BG
+        this._drawSectionBG(detailX, cY, detailW - 5, cH);
 
         if (missionToShowDetails) { // If we determined a mission to show details for...
             // Draw the mission text details
@@ -2663,13 +2668,7 @@ class UIManager {
             // Sell price with color coding
             if (comm.baseSell > 0) {
                 let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
-                if (sellDeviation > 0.05) {
-                    fill(100, 255, 100); // Good sell - green
-                } else if (sellDeviation < -0.05) {
-                    fill(255, 100, 100); // Bad sell - red
-                } else {
-                    fill(255); // Average - white
-                }
+                fill(...this._getPriceDeviationColor(sellDeviation, true));
             } else {
                 fill(255);
             }
@@ -4057,7 +4056,7 @@ class UIManager {
     /** Draws the Shipyard Menu (when state is VIEWING_SHIPYARD) */
     drawShipyardMenu(player) {
         if (!player) return;
-        this.shipyardListAreas = [];
+        this._initButtonAreas(['shipyardListAreas']);
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [220,190,90]); // Imperial gold border
@@ -4216,7 +4215,7 @@ class UIManager {
     /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
     drawUpgradesMenu(player) {
         if (!player) return;
-        this.upgradeListAreas = [];
+        this._initButtonAreas(['upgradeListAreas']);
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [200,100,255]);
@@ -4618,6 +4617,85 @@ class UIManager {
         textSize(22);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
+    }
+
+    /**
+     * Helper to setup common menu screen structure: push, panelRect, panelBG, system refs
+     * @param {Object} config - Configuration object
+     * @param {Array} config.borderColor - RGB array for panel border
+     * @param {string} [config.headerTitle] - Optional header title
+     * @param {Object} [config.station] - Optional station for header
+     * @param {Object} [config.spaceObject] - Optional space object for header
+     * @param {Object} config.player - Player object for header
+     * @returns {Object} {pX, pY, pW, pH, system, headerHeight}
+     */
+    _setupStandardMenu(config) {
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, config.borderColor);
+        const system = galaxy?.getCurrentSystem();
+        
+        let headerHeight = 0;
+        if (config.headerTitle && config.station) {
+            headerHeight = this.drawStationHeader(config.headerTitle, config.station, config.player, system);
+        } else if (config.headerTitle && config.spaceObject) {
+            headerHeight = this.drawSpaceObjectHeader(config.headerTitle, config.spaceObject, config.player, system);
+        }
+        
+        return {pX, pY, pW, pH, system, headerHeight};
+    }
+
+    /**
+     * Draws alternating row background for table-like displays
+     * @param {number} index - Row index
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} w - Width
+     * @param {number} h - Height
+     */
+    _drawAlternatingRow(index, x, y, w, h) {
+        noStroke();
+        if (index % 2 === 0) {
+            fill(0, 0, 0, 100);
+        } else {
+            fill(80, 80, 80, 100);
+        }
+        rect(x, y, w, h);
+    }
+
+    /**
+     * Draws button label text with standard centered styling
+     * @param {string} label - Button text
+     * @param {number} x - Button X
+     * @param {number} y - Button Y
+     * @param {number} w - Button width
+     * @param {number} h - Button height
+     * @param {number|Array} fillColor - Fill color (number or [r,g,b])
+     * @param {number} size - Text size (default 20)
+     */
+    _drawButtonLabel(label, x, y, w, h, fillColor = 255, size = 20) {
+        if (Array.isArray(fillColor)) {
+            fill(...fillColor);
+        } else {
+            fill(fillColor);
+        }
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(size);
+        text(label, x + w / 2, y + h / 2);
+    }
+
+    /**
+     * Gets the fill color for stock quantity based on availability
+     * @param {number} stockQty - Stock quantity
+     * @param {boolean} outOfStock - Whether item is out of stock
+     * @returns {Array} RGB color array [r, g, b]
+     */
+    _getStockColor(stockQty, outOfStock = false) {
+        if (outOfStock) return [255, 120, 120];
+        if (stockQty < 50) return [255, 180, 120];
+        if (stockQty > 200) return [120, 200, 255];
+        return [220, 220, 220];
     }
 
     /**
@@ -5188,10 +5266,12 @@ class UIManager {
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
             
             if (affordableGuards.length === 0) {
-                textSize(20);
-                fill(255, 150, 150);
-                textAlign(CENTER, TOP);
-                text("You don't have enough credits to hire any guards.", pX + pW/2, statusY + 80);
+                this._drawCenteredInfo(
+                    "You don't have enough credits to hire any guards.",
+                    pX + pW / 2,
+                    statusY + 80,
+                    { fill: [255, 150, 150], size: 20 }
+                );
             } else {
                 // Draw available guards
                 let guardY = statusY + 80;
@@ -5248,10 +5328,12 @@ class UIManager {
             }
         } else {
             // Max bodyguards reached
-            textSize(20);
-            fill(255, 200, 100);
-            textAlign(CENTER, TOP);
-            text("Maximum number of bodyguards hired.", pX + pW/2, statusY + 80);
+            this._drawCenteredInfo(
+                "Maximum number of bodyguards hired.",
+                pX + pW / 2,
+                statusY + 80,
+                { fill: [255, 200, 100], size: 20 }
+            );
         }
         
         // Position the back button consistently with other screens
@@ -5342,10 +5424,7 @@ class UIManager {
         let storageY = infoY + 70;
 
         if (storage.length === 0) {
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, TOP);
-            text("Storage is empty", pX + pW/2, storageY);
+            this._drawCenteredInfo("Storage is empty", pX + pW / 2, storageY, { size: 18 });
         } else {
             textAlign(LEFT, TOP);
             textSize(20);
@@ -5391,10 +5470,7 @@ class UIManager {
         let cargoY = cargoSectionY + 35;
 
         if (playerCargo.length === 0) {
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, TOP);
-            text("No cargo in hold", pX + pW/2, cargoY);
+            this._drawCenteredInfo("No cargo in hold", pX + pW / 2, cargoY, { size: 18 });
         } else {
             textAlign(LEFT, TOP);
             textSize(20);
