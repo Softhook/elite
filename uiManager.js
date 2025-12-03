@@ -165,6 +165,60 @@ class UIManager {
     }
 
     /**
+     * Initializes a menu panel with background and optional header.
+     * Clears specified button area arrays and returns panel dimensions.
+     * @param {Array} fillCol - Background fill color [r,g,b,a]
+     * @param {Array} strokeCol - Border stroke color [r,g,b]
+     * @param {Array<string>} [buttonAreaKeys=[]] - Property names of button area arrays to clear
+     * @returns {Object} { pX, pY, pW, pH } panel dimensions
+     */
+    _initMenuPanel(fillCol, strokeCol, buttonAreaKeys = []) {
+        // Clear button areas
+        for (const key of buttonAreaKeys) {
+            if (Array.isArray(this[key])) {
+                this[key] = [];
+            } else {
+                this[key] = {};
+            }
+        }
+        
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG(fillCol, strokeCol);
+        textFont(font);
+        
+        return { pX, pY, pW, pH };
+    }
+
+    /**
+     * Draws a vertical list of menu buttons and returns button areas.
+     * @param {Array} options - Array of { text, state?, action? } objects
+     * @param {number} startY - Y position to start drawing
+     * @param {number} btnW - Button width
+     * @param {number} btnH - Button height
+     * @param {number} btnSpacing - Spacing between buttons
+     * @param {Array} fillCol - Button fill color [r,g,b]
+     * @param {Array} strokeCol - Button stroke color [r,g,b]
+     * @returns {Array} Array of button area objects with {x, y, w, h, state?, action?}
+     */
+    _drawMenuButtonList(options, startY, btnW, btnH, btnSpacing, fillCol, strokeCol) {
+        const {x: pX, w: pW} = this.getPanelRect();
+        const btnX = pX + pW / 2 - btnW / 2;
+        const areas = [];
+        
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const btnY = startY + i * btnSpacing;
+            const area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, fillCol, strokeCol);
+            if (opt.state) area.state = opt.state;
+            if (opt.action) area.action = opt.action;
+            areas.push(area);
+        }
+        
+        return areas;
+    }
+
+    /**
      * Tracks a combat sound event that might be off-screen.
      * Called by SoundManager.
      * @param {number} x - World X coordinate of the sound event.
@@ -1003,7 +1057,7 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         textFont(font);
-        let btnW=pW*0.6, btnH=45, btnX=pX+pW/2-btnW/2, btnSY=pY+headerHeight, btnSp=btnH+15;
+        
         // Determine faction recruitment option based on system economy type
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
         let factionOption = null;
@@ -1033,14 +1087,11 @@ class UIManager {
             menuOpts.push(factionOption);
         }
         menuOpts.push({ text: "Undock", action: "UNDOCK" });
-        for (let i = 0, len = menuOpts.length; i < len; i++) {
-            const opt = menuOpts[i];
-            let btnY=btnSY+i*btnSp;
-            let area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50,50,90], [150,150,200]);
-            if(opt.state) area.state=opt.state;
-            if(opt.action) area.action=opt.action;
-            this.stationMenuButtonAreas.push(area);
-        }
+        
+        const btnW = pW * 0.6, btnH = 45, btnSpacing = btnH + 15;
+        this.stationMenuButtonAreas = this._drawMenuButtonList(
+            menuOpts, pY + headerHeight, btnW, btnH, btnSpacing, [50, 50, 90], [150, 150, 200]
+        );
         pop();
     } // --- End drawStationMainMenu ---
 
@@ -1069,7 +1120,6 @@ class UIManager {
         const headerHeight = this.drawSpaceObjectHeader(displayName + " Services", spaceObject, player, system);
         
         textFont(font);
-        let btnW = pW * 0.6, btnH = 45, btnX = pX + pW / 2 - btnW / 2, btnSY = pY + headerHeight, btnSp = btnH + 15;
         
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_SPACE_OBJECT_MARKET" },
@@ -1078,14 +1128,10 @@ class UIManager {
             { text: "Undock", action: "UNDOCK" }
         ];
         
-        for (let i = 0, len = menuOpts.length; i < len; i++) {
-            const opt = menuOpts[i];
-            let btnY = btnSY + i * btnSp;
-            let area = this._drawButton(btnX, btnY, btnW, btnH, opt.text, [50, 50, 90], [150, 150, 200]);
-            if (opt.state) area.state = opt.state;
-            if (opt.action) area.action = opt.action;
-            this.spaceObjectMenuButtonAreas.push(area);
-        }
+        const btnW = pW * 0.6, btnH = 45, btnSpacing = btnH + 15;
+        this.spaceObjectMenuButtonAreas = this._drawMenuButtonList(
+            menuOpts, pY + headerHeight, btnW, btnH, btnSpacing, [50, 50, 90], [150, 150, 200]
+        );
         pop();
     }
 
@@ -3082,23 +3128,12 @@ class UIManager {
 
         // --- DOCKED_SPACE_OBJECT State (Space Object Main Menu) ---
         if (currentState === "DOCKED_SPACE_OBJECT") {
-            for (const btn of (this.spaceObjectMenuButtonAreas || [])) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    if (btn.action === "UNDOCK") {
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                        if (gameStateManager) gameStateManager.setState("IN_FLIGHT");
-                        return true;
-                    } else if (btn.state) {
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                        if (gameStateManager) {
-                            if (btn.state === "VIEWING_RECORD") {
-                                gameStateManager._returnFromRecordState = "DOCKED_SPACE_OBJECT";
-                            }
-                            gameStateManager.setState(btn.state);
-                        }
-                        return true;
-                    }
-                }
+            const btn = this._findClickedButton(mx, my, this.spaceObjectMenuButtonAreas);
+            if (btn) {
+                return this._handleStandardMenuClick(btn, { 
+                    backState: 'IN_FLIGHT', 
+                    recordReturnState: 'DOCKED_SPACE_OBJECT' 
+                });
             }
             return false;
         }
@@ -3113,124 +3148,18 @@ class UIManager {
             }
             
             // Handle commodity buttons
-            for (const btn of (this.spaceObjectMarketButtonAreas || [])) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    // Sell 1
-                    if (btn.action === "SELL_COMMODITY" && btn.commodity && btn.price) {
-                        const cargoItem = player.cargo.find(item => item && item.name === btn.commodity);
-                        if (cargoItem && cargoItem.quantity > 0) {
-                            player.addCredits(btn.price);
-                            player.removeCargo(btn.commodity, 1);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
-                            this.addMessage(`Sold 1 ${btn.commodity} for ${btn.price} credits`, [100, 255, 100]);
-                            
-                            // Log the space object trade
-                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
-                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
-                                ? spaceObject.getDisplayName() 
-                                : (spaceObject?.type || 'Space Object');
-                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
-                            if (typeof player.recordStationTrade === 'function') {
-                                player.recordStationTrade(displayName, systemName);
-                            }
-                            
-                            if (typeof saveGame === 'function') saveGame();
-                        } else {
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    // Sell All
-                    else if (btn.action === "SELL_ALL_COMMODITY" && btn.commodity && btn.price) {
-                        const cargoItem = player.cargo.find(item => item && item.name === btn.commodity);
-                        if (cargoItem && cargoItem.quantity > 0) {
-                            const qty = cargoItem.quantity;
-                            const totalCredits = btn.price * qty;
-                            player.addCredits(totalCredits);
-                            player.removeCargo(btn.commodity, qty);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
-                            this.addMessage(`Sold ${qty} ${btn.commodity} for ${totalCredits} credits`, [100, 255, 100]);
-                            
-                            // Log the space object trade
-                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
-                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
-                                ? spaceObject.getDisplayName() 
-                                : (spaceObject?.type || 'Space Object');
-                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
-                            if (typeof player.recordStationTrade === 'function') {
-                                player.recordStationTrade(displayName, systemName);
-                            }
-                            
-                            if (typeof saveGame === 'function') saveGame();
-                        } else {
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        }
-                        return true;
-                    }
-                    // Buy 1
-                    else if (btn.action === "BUY_COMMODITY" && btn.commodity && btn.price) {
-                        if (player.credits >= btn.price && player.getCargoAmount() < player.cargoCapacity) {
-                            player.spendCredits(btn.price);
-                            player.addCargo(btn.commodity, 1);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
-                            this.addMessage(`Bought 1 ${btn.commodity} for ${btn.price} credits`, [100, 200, 255]);
-                            
-                            // Log the space object trade
-                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
-                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
-                                ? spaceObject.getDisplayName() 
-                                : (spaceObject?.type || 'Space Object');
-                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
-                            if (typeof player.recordStationTrade === 'function') {
-                                player.recordStationTrade(displayName, systemName);
-                            }
-                            
-                            if (typeof saveGame === 'function') saveGame();
-                        } else {
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            if (player.credits < btn.price) {
-                                this.addMessage("Not enough credits", [255, 100, 100]);
-                            } else {
-                                this.addMessage("Cargo hold is full", [255, 100, 100]);
-                            }
-                        }
-                        return true;
-                    }
-                    // Buy All
-                    else if (btn.action === "BUY_ALL_COMMODITY" && btn.commodity && btn.price) {
-                        const cargoSpace = player.cargoCapacity - player.getCargoAmount();
-                        const canAfford = Math.floor(player.credits / btn.price);
-                        const maxBuy = Math.min(cargoSpace, canAfford);
-                        
-                        if (maxBuy > 0) {
-                            const totalCost = btn.price * maxBuy;
-                            player.spendCredits(totalCost);
-                            player.addCargo(btn.commodity, maxBuy);
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
-                            this.addMessage(`Bought ${maxBuy} ${btn.commodity} for ${totalCost} credits`, [100, 200, 255]);
-                            
-                            // Log the space object trade
-                            const spaceObject = gameStateManager?.currentDockedSpaceObject;
-                            const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
-                                ? spaceObject.getDisplayName() 
-                                : (spaceObject?.type || 'Space Object');
-                            const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
-                            if (typeof player.recordStationTrade === 'function') {
-                                player.recordStationTrade(displayName, systemName);
-                            }
-                            
-                            if (typeof saveGame === 'function') saveGame();
-                        } else {
-                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                            if (player.credits < btn.price) {
-                                this.addMessage("Not enough credits", [255, 100, 100]);
-                            } else {
-                                this.addMessage("Cargo hold is full", [255, 100, 100]);
-                            }
-                        }
-                        return true;
-                    }
-                }
+            const btn = this._findClickedButton(mx, my, this.spaceObjectMarketButtonAreas);
+            if (btn) {
+                const spaceObject = gameStateManager?.currentDockedSpaceObject;
+                const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
+                    ? spaceObject.getDisplayName() 
+                    : (spaceObject?.type || 'Space Object');
+                const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
+                
+                return this._handleMarketTradeClick(btn, player, null, {
+                    locationName: displayName,
+                    systemName: systemName
+                });
             }
             return false;
         }
@@ -3255,29 +3184,9 @@ class UIManager {
 
         // --- DOCKED State (Main Station Menu) ---
         if (currentState === "DOCKED") {
-            for (const btn of this.stationMenuButtonAreas) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    if (btn.action === "UNDOCK") {
-                        // Audio: click feedback, undock sound is handled by GameStateManager during transition
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                        if(gameStateManager)gameStateManager.setState("IN_FLIGHT");
-                        return true;
-                    } else if (btn.state === "VIEWING_MARKET" || btn.state === "VIEWING_MISSIONS" ||
-                               btn.state === "VIEWING_SHIPYARD" || btn.state === "VIEWING_UPGRADES" ||
-                               btn.state === "VIEWING_REPAIRS" || btn.state === "VIEWING_POLICE" ||
-                               btn.state === "VIEWING_PROTECTION" || btn.state === "VIEWING_IMPERIAL_RECRUITMENT" ||
-                               btn.state === "VIEWING_SEPARATIST_RECRUITMENT" || btn.state === "VIEWING_MILITARY_RECRUITMENT" ||
-                               btn.state === "VIEWING_STORAGE" || btn.state === "VIEWING_RECORD") {
-                        // Audio: click feedback when opening a station submenu (transition sound handled in GameStateManager)
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                        if(gameStateManager)gameStateManager.setState(btn.state);
-                        return true;
-                    } else if (btn.state) {
-                        console.warn(`State ${btn.state} not handled.`);
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                        return true;
-                    }
-                }
+            const btn = this._findClickedButton(mx, my, this.stationMenuButtonAreas);
+            if (btn) {
+                return this._handleStandardMenuClick(btn, { backState: 'IN_FLIGHT' });
             }
             return false;
         }
@@ -3568,18 +3477,10 @@ class UIManager {
             return false;
         }
 
-        // --- VIEWING_IMPERIAL_RECRUITMENT State ---
-        else if (currentState === "VIEWING_IMPERIAL_RECRUITMENT") {
-            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
-        }
-
-        // --- VIEWING_SEPARATIST_RECRUITMENT State ---
-        else if (currentState === "VIEWING_SEPARATIST_RECRUITMENT") {
-            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
-        }
-
-        // --- VIEWING_MILITARY_RECRUITMENT State ---
-        else if (currentState === "VIEWING_MILITARY_RECRUITMENT") {
+        // --- VIEWING_IMPERIAL_RECRUITMENT, VIEWING_SEPARATIST_RECRUITMENT, VIEWING_MILITARY_RECRUITMENT States ---
+        else if (currentState === "VIEWING_IMPERIAL_RECRUITMENT" ||
+                 currentState === "VIEWING_SEPARATIST_RECRUITMENT" ||
+                 currentState === "VIEWING_MILITARY_RECRUITMENT") {
             return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
         
@@ -3699,6 +3600,181 @@ class UIManager {
     /** Helper to check if mouse coords are within a button area object {x,y,w,h} */
     isClickInArea(mx, my, area) {
         return area && area.w > 0 && area.h > 0 && mx > area.x && mx < area.x + area.w && my > area.y && my < area.y + area.h;
+    }
+
+    /**
+     * Finds the first clicked button in an array and returns it.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Array} buttonAreas - Array of button area objects
+     * @returns {Object|null} The clicked button area or null
+     */
+    _findClickedButton(mx, my, buttonAreas) {
+        if (!Array.isArray(buttonAreas)) return null;
+        for (const btn of buttonAreas) {
+            if (this.isClickInArea(mx, my, btn)) {
+                return btn;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handles standard menu button click patterns (state transitions, undock, back).
+     * @param {Object} btn - The clicked button area object
+     * @param {Object} options - Configuration options
+     * @param {string} options.backState - State to return to for "back" action
+     * @param {string} options.recordReturnState - State to set for _returnFromRecordState when going to VIEWING_RECORD
+     * @returns {boolean} True if the click was handled
+     */
+    _handleStandardMenuClick(btn, options = {}) {
+        if (!btn) return false;
+        
+        const { backState = 'DOCKED', recordReturnState = null } = options;
+        
+        if (btn.action === 'UNDOCK') {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            if (gameStateManager) gameStateManager.setState('IN_FLIGHT');
+            return true;
+        }
+        
+        if (btn.action === 'back' || btn.action === 'BACK') {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            if (gameStateManager) gameStateManager.setState(backState);
+            return true;
+        }
+        
+        if (btn.state) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            if (gameStateManager) {
+                // Set return state for record screen if applicable
+                if (btn.state === 'VIEWING_RECORD' && recordReturnState) {
+                    gameStateManager._returnFromRecordState = recordReturnState;
+                }
+                gameStateManager.setState(btn.state);
+            }
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Handles commodity buy/sell click for both station and space object markets.
+     * @param {Object} btn - The clicked button area with action, commodity, price/quantity
+     * @param {Player} player - The player object
+     * @param {Object} market - Optional market object (for station trading)
+     * @param {Object} tradeInfo - Info for logging: { locationName, systemName }
+     * @returns {boolean} True if the click was handled
+     */
+    _handleMarketTradeClick(btn, player, market, tradeInfo = {}) {
+        if (!btn || !player) return false;
+        
+        const { locationName = 'Unknown', systemName = 'Unknown' } = tradeInfo;
+        
+        // If we have a market object (station), use its buy/sell methods
+        if (market && typeof market.buy === 'function') {
+            switch (btn.action) {
+                case 'buy':
+                    market.buy(btn.commodity, 1, player);
+                    return true;
+                case 'buyAll': {
+                    const item = market.getPrices()?.find(c => c.name === btn.commodity);
+                    if (!item) return true;
+                    const space = player.cargoCapacity - player.getCargoAmount();
+                    const afford = Math.floor(player.credits / item.buyPrice);
+                    const stock = Number.isFinite(item.stock) ? Math.max(0, Math.floor(item.stock)) : Infinity;
+                    const qty = Math.min(space, afford, stock);
+                    if (qty > 0) market.buy(btn.commodity, qty, player);
+                    return true;
+                }
+                case 'sell':
+                    market.sell(btn.commodity, 1, player);
+                    return true;
+                case 'sellAll': {
+                    const cargo = player.cargo.find(c => c.name === btn.commodity);
+                    if (cargo?.quantity > 0) market.sell(btn.commodity, cargo.quantity, player);
+                    return true;
+                }
+            }
+        }
+        
+        // Direct buy/sell for space objects (no market object)
+        const logTrade = () => {
+            if (typeof player.recordStationTrade === 'function') {
+                player.recordStationTrade(locationName, systemName);
+            }
+            if (typeof saveGame === 'function') saveGame();
+        };
+        
+        switch (btn.action) {
+            case 'BUY_COMMODITY':
+            case 'buy': {
+                const price = btn.price || 0;
+                if (player.credits >= price && player.getCargoAmount() < player.cargoCapacity) {
+                    player.spendCredits(price);
+                    player.addCargo(btn.commodity, 1);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
+                    this.addMessage(`Bought 1 ${btn.commodity} for ${price} credits`, [100, 200, 255]);
+                    logTrade();
+                } else {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    this.addMessage(player.credits < price ? "Not enough credits" : "Cargo hold is full", [255, 100, 100]);
+                }
+                return true;
+            }
+            case 'BUY_ALL_COMMODITY': {
+                const price = btn.price || 0;
+                const space = player.cargoCapacity - player.getCargoAmount();
+                const afford = Math.floor(player.credits / price);
+                const qty = Math.min(space, afford);
+                if (qty > 0) {
+                    const totalCost = price * qty;
+                    player.spendCredits(totalCost);
+                    player.addCargo(btn.commodity, qty);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('buyConfirm');
+                    this.addMessage(`Bought ${qty} ${btn.commodity} for ${totalCost} credits`, [100, 200, 255]);
+                    logTrade();
+                } else {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    this.addMessage(player.credits < price ? "Not enough credits" : "Cargo hold is full", [255, 100, 100]);
+                }
+                return true;
+            }
+            case 'SELL_COMMODITY':
+            case 'sell': {
+                const price = btn.price || 0;
+                const cargo = player.cargo.find(c => c.name === btn.commodity);
+                if (cargo?.quantity > 0) {
+                    player.addCredits(price);
+                    player.removeCargo(btn.commodity, 1);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
+                    this.addMessage(`Sold 1 ${btn.commodity} for ${price} credits`, [100, 255, 100]);
+                    logTrade();
+                } else {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+                return true;
+            }
+            case 'SELL_ALL_COMMODITY': {
+                const price = btn.price || 0;
+                const cargo = player.cargo.find(c => c.name === btn.commodity);
+                if (cargo?.quantity > 0) {
+                    const qty = cargo.quantity;
+                    const total = price * qty;
+                    player.addCredits(total);
+                    player.removeCargo(btn.commodity, qty);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('sellConfirm');
+                    this.addMessage(`Sold ${qty} ${btn.commodity} for ${total} credits`, [100, 255, 100]);
+                    logTrade();
+                } else {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -4390,6 +4466,123 @@ class UIManager {
     }
 
     /**
+     * Draws a single commodity row for market screens (station or space object).
+     * @param {Object} config - Row configuration
+     * @param {string} config.name - Commodity name
+     * @param {number} config.buyPrice - Price to buy (0 if not available)
+     * @param {number} config.sellPrice - Price to sell (0 if not available)
+     * @param {number} config.baseBuy - Base buy price for deviation calculation
+     * @param {number} config.baseSell - Base sell price for deviation calculation
+     * @param {number} config.stock - Available stock (-1 for unlimited/hidden)
+     * @param {number} config.playerQty - Quantity in player cargo
+     * @param {boolean} config.isAvailable - Whether commodity is tradeable here
+     * @param {boolean} config.isMissionCargo - Whether this is mission cargo (can't sell)
+     * @param {number} config.rowIndex - Row index for alternating colors
+     * @param {number} config.x - X position
+     * @param {number} config.y - Y position
+     * @param {number} config.rowH - Row height
+     * @param {Object} config.columns - Column positions { commodity, buy, sell, stock, cargo, buttonsStart }
+     * @param {number} config.btnW - Button width
+     * @param {number} config.btnH - Button height
+     * @param {boolean} [config.showStock=true] - Whether to show stock column
+     * @param {number} [config.maxDeviation=0.8] - Max deviation for price indicators
+     * @returns {Array} Array of button area objects for this row
+     */
+    _drawMarketRow(config) {
+        const { name, buyPrice, sellPrice, baseBuy, baseSell, stock, playerQty, 
+                isAvailable, isMissionCargo, rowIndex, x, y, rowH, columns, btnW, btnH,
+                showStock = true, maxDeviation = 0.8 } = config;
+        
+        const buttonAreas = [];
+        const tY = y + rowH / 2;
+        const btnY = y + (rowH - btnH) / 2;
+        const btnSpacing = 5;
+        
+        // Alternating row background
+        fill(rowIndex % 2 === 0 ? color(0, 0, 0, 100) : color(80, 80, 80, 100));
+        noStroke();
+        rect(x, y, columns.totalWidth, rowH);
+        
+        // Commodity name
+        textAlign(LEFT, CENTER);
+        fill(isAvailable ? 255 : 100);
+        text(name || '?', x + 10, tY);
+        
+        // Buy price with color coding
+        textAlign(CENTER, CENTER);
+        if (buyPrice > 0) {
+            fill(this._getPriceDeviationColor((buyPrice - baseBuy) / baseBuy, false));
+            text(buyPrice, columns.buy, tY);
+        } else {
+            fill(80);
+            text("-", columns.buy, tY);
+        }
+        
+        // Sell price with color coding  
+        if (sellPrice > 0) {
+            fill(this._getPriceDeviationColor((sellPrice - baseSell) / baseSell, true));
+            text(sellPrice, columns.sell, tY);
+        } else {
+            fill(80);
+            text("-", columns.sell, tY);
+        }
+        
+        // Stock column (optional)
+        if (showStock && stock >= 0) {
+            if (stock <= 0) {
+                fill(255, 120, 120);
+            } else if (stock < 50) {
+                fill(255, 180, 120);
+            } else if (stock > 200) {
+                fill(120, 200, 255);
+            } else {
+                fill(220);
+            }
+            text(Math.floor(stock), columns.stock, tY);
+        }
+        
+        // Cargo amount
+        fill(playerQty > 0 ? 255 : 80);
+        text(playerQty, columns.cargo, tY);
+        
+        // Price indicators
+        if (baseBuy > 0 && buyPrice > 0) {
+            const buyDeviation = (buyPrice - baseBuy) / baseBuy;
+            this._drawPriceIndicator(columns.buy + 40, y, rowH, buyDeviation, false, maxDeviation);
+        }
+        if (baseSell > 0 && sellPrice > 0) {
+            const sellDeviation = (sellPrice - baseSell) / baseSell;
+            this._drawPriceIndicator(columns.sell + 40, y, rowH, sellDeviation, true, maxDeviation);
+        }
+        
+        // Buttons
+        let btnX = columns.buttonsStart;
+        
+        // Buy 1
+        const canBuy = buyPrice > 0 && isAvailable;
+        const buy1Area = this._drawMarketButton(btnX, btnY, btnW, btnH, "Buy 1", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
+        if (buy1Area) buttonAreas.push({ ...buy1Area, action: 'buy', quantity: 1, commodity: name });
+        btnX += btnW + btnSpacing;
+        
+        // Buy All
+        const buyAllArea = this._drawMarketButton(btnX, btnY, btnW, btnH, "Buy All", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
+        if (buyAllArea) buttonAreas.push({ ...buyAllArea, action: 'buyAll', commodity: name });
+        btnX += btnW + 10; // Extra spacing before sell
+        
+        // Sell 1
+        const canSell = sellPrice > 0 && isAvailable && !isMissionCargo;
+        const sell1Area = this._drawMarketButton(btnX, btnY, btnW, btnH, "Sell 1", canSell, false);
+        if (sell1Area) buttonAreas.push({ ...sell1Area, action: 'sell', quantity: 1, commodity: name });
+        btnX += btnW + btnSpacing;
+        
+        // Sell All
+        const sellAllArea = this._drawMarketButton(btnX, btnY, btnW, btnH, "Sell All", canSell, false);
+        if (sellAllArea) buttonAreas.push({ ...sellAllArea, action: 'sellAll', commodity: name });
+        
+        return buttonAreas;
+    }
+
+    /**
      * Draws a standardized header for both station and space object screens.
      * @param {string} title - Screen title
      * @param {string} locationName - Station or space object name
@@ -4506,6 +4699,68 @@ class UIManager {
         rect(barX + 1, handleY, barW - 2, handleH, 6);
         
         return { x: barX, y, w: barW, h, handleY, handleH };
+    }
+
+    /**
+     * Computes scroll parameters for a list and clamps the offset.
+     * @param {string} scrollOffsetKey - Property name for scroll offset on this object
+     * @param {string} scrollMaxKey - Property name for scroll max on this object  
+     * @param {number} totalItems - Total number of items in the list
+     * @param {number} visibleItems - Number of items that fit in view
+     * @returns {Object} { firstRow, lastRow, scrollOffset, scrollMax }
+     */
+    _computeScrollParams(scrollOffsetKey, scrollMaxKey, totalItems, visibleItems) {
+        const scrollMax = Math.max(0, totalItems - visibleItems);
+        this[scrollMaxKey] = scrollMax;
+        
+        if (typeof this[scrollOffsetKey] !== 'number') this[scrollOffsetKey] = 0;
+        this[scrollOffsetKey] = constrain(this[scrollOffsetKey], 0, scrollMax);
+        
+        const firstRow = this[scrollOffsetKey];
+        const lastRow = Math.min(firstRow + visibleItems, totalItems);
+        
+        return { firstRow, lastRow, scrollOffset: this[scrollOffsetKey], scrollMax };
+    }
+
+    /**
+     * Draws a scrollable list panel with consistent styling.
+     * @param {Object} config - Configuration object
+     * @param {number} config.startY - Y position to start drawing rows
+     * @param {number} config.rowHeight - Height of each row
+     * @param {number} config.availableHeight - Total height available for rows
+     * @param {Array} config.items - Array of items to display
+     * @param {Function} config.renderRow - Function(item, index, y, rowH, pX, pW) to render each row
+     * @param {string} config.scrollOffsetKey - Property name for scroll offset
+     * @param {string} config.scrollMaxKey - Property name for scroll max
+     * @param {Array} [config.scrollbarColors] - [bgColor, strokeColor] for scrollbar
+     * @returns {Object} { firstRow, lastRow, scrollbarArea }
+     */
+    _drawScrollableList(config) {
+        const { startY, rowHeight, availableHeight, items, renderRow, scrollOffsetKey, scrollMaxKey } = config;
+        const scrollbarColors = config.scrollbarColors || [[60, 60, 100], [150, 150, 200]];
+        const {x: pX, w: pW} = this.getPanelRect();
+        
+        const visibleRows = Math.floor(availableHeight / rowHeight);
+        const { firstRow, lastRow, scrollOffset, scrollMax } = this._computeScrollParams(
+            scrollOffsetKey, scrollMaxKey, items.length, visibleRows
+        );
+        
+        // Render visible rows
+        for (let i = firstRow; i < lastRow; i++) {
+            const y = startY + (i - firstRow) * rowHeight;
+            renderRow(items[i], i, y, rowHeight, pX, pW);
+        }
+        
+        // Draw scrollbar if needed
+        const scrollAreaH = visibleRows * rowHeight;
+        const scrollbarArea = this._drawScrollbar(
+            pX + pW, startY, scrollAreaH,
+            scrollOffset, scrollMax,
+            visibleRows, items.length,
+            scrollbarColors[0], scrollbarColors[1]
+        );
+        
+        return { firstRow, lastRow, scrollbarArea };
     }
 
     /**
