@@ -929,34 +929,6 @@ class UIManager {
     }
 
     /**
-     * Draws a standardized button and returns its clickable area object.
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} w - Width
-     * @param {number} h - Height
-     * @param {string} label - Button text
-     * @param {Array} fillCol - Fill color [r,g,b]
-     * @param {Array} strokeCol - Stroke color [r,g,b]
-     * @param {number} [radius=5] - Corner radius
-     * @param {Object} [extra={}] - Extra properties to attach to the area object
-     * @returns {Object} Area object with x, y, w, h, and any extra properties
-     */
-    _drawButton(x, y, w, h, label, fillCol, strokeCol, radius = 5, extra = {}) {
-        return UIComponents.drawButton(x, y, w, h, label, fillCol, strokeCol, radius, extra);
-    }
-
-    /**
-     * Draws a standard centered back button at the bottom of a panel.
-     * Uses standard back button styling (blue background) - delegates to UIComponents.
-     * @param {Object} [extra={}] - Extra properties to attach to the area object
-     * @returns {Object} Area object for the back button
-     */
-    _drawCenteredBackButton(extra = {}) {
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        return UIComponents.drawCenteredBackButton(pX, pY, pW, pH, extra);
-    }
-
-    /**
      * Draws a standardized header for both station and space object screens.
      * @param {string} title - Screen title
      * @param {string} locationName - Station or space object name
@@ -1008,8 +980,7 @@ class UIManager {
             textFont(font);
             UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", panelRect.x + panelRect.w/2, panelRect.y + panelRect.h/2 - 20);
-            const backBtn = this._drawCenteredBackButton();
-            backBtn.action = "BACK";
+            const backBtn = UIComponents.drawCenteredBackButton(panelRect.x, panelRect.y, panelRect.w, panelRect.h, {action: "BACK"});
             this.storageButtonAreas = [backBtn];
             pop();
             return;
