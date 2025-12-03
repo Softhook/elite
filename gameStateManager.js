@@ -482,30 +482,8 @@ this.jumpJustCompleted = false;
                 break;
 
             case "VIEWING_POLICE":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(20,20,40); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawPoliceMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing police menu:", e); 
-                    }
-                }
+                // No update logic needed for police menu
+                if (player) { player.vel.set(0, 0); }
                 break;
 
 
@@ -678,7 +656,7 @@ this.jumpJustCompleted = false;
                 break;
 
             case "DOCKED": // Draws the main station menu
-                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(20,20,40); }
+                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
                 if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && currentSystem?.station && player) { try { uiManager.drawStationMainMenu(currentSystem.station, player); } catch(e) { console.error("Error drawing station main menu:", e); } }
                 break;
@@ -698,7 +676,7 @@ this.jumpJustCompleted = false;
                         console.error("Error drawing space object background:", e);
                     }
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && this.currentDockedSpaceObject && player) { 
@@ -726,7 +704,7 @@ this.jumpJustCompleted = false;
                         console.error("Error drawing space object background:", e);
                     }
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && this.currentDockedSpaceObject && player) { 
@@ -758,7 +736,7 @@ this.jumpJustCompleted = false;
                         console.error("Error drawing space object background:", e);
                     }
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && this.currentDockedSpaceObject && player) { 
@@ -775,7 +753,7 @@ this.jumpJustCompleted = false;
                 break;
 
              case "VIEWING_MARKET": // Draws the Market screen
-                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(20,20,40); }
+                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
                  if (player) { try {player.draw();} catch(e) {}}
                  if (uiManager && currentSystem?.station?.market && player) { try { uiManager.drawMarketScreen(currentSystem.station.getMarket(), player); } catch(e) { console.error("Error drawing market screen:", e); } }
                  else { /* Draw error if market missing */ background(10,0,0); fill(255); text("Error: Market data unavailable", width/2, height/2); }
@@ -792,20 +770,28 @@ this.jumpJustCompleted = false;
                         this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentStation, galaxy, player);
                     }
                 }
+                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
+                 if (player) { try {player.draw();} catch(e) {}}
                  if (uiManager && currentSystem?.station && player) {
                      uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player);
                  }
                  break;
 
             case "VIEWING_SHIPYARD":
+                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
+                if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && player) uiManager.drawShipyardMenu(player);
                 break;
 
             case "VIEWING_UPGRADES":
+                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
+                if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && player) uiManager.drawUpgradesMenu(player);
                 break;
 
             case "VIEWING_REPAIRS":
+                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
+                if (player) { try {player.draw();} catch(e) {}}
                 if (uiManager && player) uiManager.drawRepairsMenu(player);
                 break;
                 
@@ -818,7 +804,7 @@ this.jumpJustCompleted = false;
                         pop(); 
                     } catch(e) {}
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 
                 if (player) { 
@@ -845,7 +831,7 @@ this.jumpJustCompleted = false;
                         pop(); 
                     } catch(e) {}
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 
                 if (player) { 
@@ -864,7 +850,16 @@ this.jumpJustCompleted = false;
                 break;
 
             case "VIEWING_IMPERIAL_RECRUITMENT":
-                background(20,20,40); 
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(0); 
+                }
                 
                 if (player) { 
                     try {
@@ -882,7 +877,16 @@ this.jumpJustCompleted = false;
                 break;
 
             case "VIEWING_SEPARATIST_RECRUITMENT":
-                background(20,20,40); 
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(0); 
+                }
                 
                 if (player) { 
                     try {
@@ -900,7 +904,16 @@ this.jumpJustCompleted = false;
                 break;
 
             case "VIEWING_MILITARY_RECRUITMENT":
-                background(20,20,40); 
+                if (currentSystem) { 
+                    try { 
+                        push(); 
+                        currentSystem.drawBackground(); 
+                        if(currentSystem.station) currentSystem.station.draw(); 
+                        pop(); 
+                    } catch(e) {}
+                } else { 
+                    background(0); 
+                }
                 
                 if (player) { 
                     try {
@@ -926,7 +939,7 @@ this.jumpJustCompleted = false;
                         pop(); 
                     } catch(e) {}
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 
                 if (player) { 
@@ -953,7 +966,7 @@ this.jumpJustCompleted = false;
                         pop(); 
                     } catch(e) {}
                 } else { 
-                    background(20,20,40); 
+                    background(0); 
                 }
                 
                 if (player) { 
