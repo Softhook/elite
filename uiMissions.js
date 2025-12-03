@@ -84,6 +84,9 @@ class UIMissions {
                 case MISSION_TYPE.BOUNTY:
                     typeColor = [255, 200, 100];
                     break;
+                case MISSION_TYPE.SABOTAGE:
+                    typeColor = [255, 255, 100];
+                    break;
                 case MISSION_TYPE.PATROL:
                     typeColor = [100, 150, 255];
                     break;
