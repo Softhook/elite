@@ -1566,44 +1566,77 @@ class Planet {
     }
     
     /**
-     * Draw a planet with rings using the correct layering technique
+     * Draw a planet with rings using canvas clipping for proper layering.
+     * The back portion of the ring (behind the planet) is clipped out,
+     * then the full planet is drawn on top.
      */
     drawRingedPlanet() {
+        const ctx = drawingContext;
         const bufferW = this.planetBuffer.width;
-        const bufferH = this.planetBuffer.height;
         const halfW = bufferW * 0.5;
-        const halfH = bufferH * 0.5;
-        const destX = -halfW;
-        const destY = -halfH;
-        
-        // 1. Draw the back half of the planet
-        const bottomHalf = bufferH * 0.55;
-        const bottomY = destY + bufferH * 0.45;
-        image(
-            this.planetBuffer, 
-            destX, bottomY,           // Destination position
-            bufferW, bottomHalf,      // Destination size
-            0, bufferH * 0.45,        // Source position
-            bufferW, bottomHalf       // Source size
-        );
-        
-        // 2. Draw the rings on top
         const ringsSize = this.ringsBuffer.width;
         const halfRings = ringsSize * 0.5;
+        
+        // Calculate the ring ellipse parameters for clipping
+        // The ring is drawn rotated by ringAngle with perspective squashing
+        const cosA = Math.cos(this.ringAngle);
+        const sinA = Math.sin(this.ringAngle);
+        
+        // --- Step 1: Draw the back portion of the rings (clipped to exclude front) ---
+        ctx.save();
+        
+        // Create a clipping path that excludes the planet circle
+        // We draw the back half of the ring area, then subtract the planet
+        ctx.beginPath();
+        
+        // First, draw a large rectangle covering everything
+        ctx.rect(-ringsSize, -ringsSize, ringsSize * 2, ringsSize * 2);
+        
+        // Then cut out the planet circle using counter-clockwise winding (creates a hole)
+        ctx.arc(0, 0, this.radius, 0, TWO_PI, true);
+        
+        ctx.clip('evenodd');
+        
+        // Now draw the back portion of the rings (bottom half in rotated space)
+        // We need another clip to only show the back half
+        ctx.save();
+        ctx.beginPath();
+        
+        // Create a half-plane clip for the back of the ring
+        // The ring is tilted by ringAngle, so "back" is below the tilt axis
+        // We rotate our clip region to match the ring's tilt
+        ctx.rotate(this.ringAngle);
+        // Clip to only the bottom half (y > 0 in rotated space = back of ring)
+        ctx.rect(-ringsSize, 0, ringsSize * 2, ringsSize);
+        ctx.clip();
+        
+        // Undo the rotation to draw the ring buffer normally
+        ctx.rotate(-this.ringAngle);
+        
+        // Draw the rings (only the back portion will show due to clipping)
         image(this.ringsBuffer, -halfRings, -halfRings);
         
-        // 3. Draw the top portion of the planet on top of the rings
-        const topHeight = halfH;
-        image(
-            this.planetBuffer,
-            destX, destY,             // Destination position
-            bufferW, topHeight,       // Destination size
-            0, 0,                     // Source position
-            bufferW, topHeight        // Source size
-        );
+        ctx.restore();
+        ctx.restore();
         
-        // City lights are drawn separately after rotation is reset in the main draw method
-        // This method only handles the planet textures and rings
+        // --- Step 2: Draw the full planet on top ---
+        image(this.planetBuffer, -halfW, -halfW);
+        
+        // --- Step 3: Draw the front portion of the rings on top of the planet ---
+        ctx.save();
+        
+        // Clip to only the front half of the ring (top half in rotated space)
+        ctx.beginPath();
+        ctx.rotate(this.ringAngle);
+        // Clip to only the top half (y < 0 in rotated space = front of ring)
+        ctx.rect(-ringsSize, -ringsSize, ringsSize * 2, ringsSize);
+        ctx.clip();
+        ctx.rotate(-this.ringAngle);
+        
+        // Draw the rings (only the front portion will show)
+        image(this.ringsBuffer, -halfRings, -halfRings);
+        
+        ctx.restore();
     }
 
     toJSON() {
