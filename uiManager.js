@@ -1483,16 +1483,12 @@ class UIManager {
     }
 
     /**
-     * Draws the Space Object Market screen - delegates to market module
+     * Draws the Space Object Market screen
      * @param {SpaceObject} spaceObject - The space object the player is trading with
      * @param {Player} player - The player object
      */
     drawSpaceObjectMarket(spaceObject, player) {
-        if (this.market) {
-            this.market.drawSpaceObjectMarket(spaceObject, player, this);
-            return;
-        }
-        // Fallback - original implementation
+        // Market module integration pending - using built-in implementation
         if (!spaceObject || !player) { 
             console.warn("drawSpaceObjectMarket missing spaceObject or player"); 
             return; 
@@ -1869,13 +1865,9 @@ class UIManager {
         return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
     }
 
-    /** Draws the Repairs Menu - delegates to station menus module */
+    /** Draws the Repairs Menu */
     drawRepairsMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawRepairsMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         this._initButtonAreas(['repairsFullButtonArea', 'repairsHalfButtonArea', 'repairsBackButtonArea', 'repairsBodyguardsButtonArea'], false);
         
         if (!player) return;
@@ -1894,16 +1886,12 @@ class UIManager {
     }
 
     /** 
-     * Draws the Space Object Repairs Menu - delegates to station menus module
+     * Draws the Space Object Repairs Menu
      * @param {SpaceObject} spaceObject - The space object the player is docked at
      * @param {Player} player - The player object
      */
     drawSpaceObjectRepairsMenu(spaceObject, player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawSpaceObjectRepairsMenu(spaceObject, player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         this._initButtonAreas(['spaceObjectRepairsFullButtonArea', 'spaceObjectRepairsHalfButtonArea', 'spaceObjectRepairsBackButtonArea', 'spaceObjectRepairsBodyguardsButtonArea'], false);
         
         if (!spaceObject || !player) return;;
@@ -1925,13 +1913,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Police Menu - delegates to station menus module */
+    /** Draws the Police Menu */
     drawPoliceMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawPoliceMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         this._initButtonAreas(['policeButtonAreas']);
         if (!player) return;
         push();
@@ -2020,13 +2004,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Commodity Market screen - delegates to market module */
+    /** Draws the Commodity Market screen */
     drawMarketScreen(market, player) {
-        if (this.market) {
-            this.market.drawStationMarket(market, player, this);
-            return;
-        }
-        // Fallback - original implementation
+        // Market module integration pending - using built-in implementation
         if (!market || !player || typeof market.getPrices !== 'function') return;
         market.updatePlayerCargo(player.cargo);
         const commodities = market.getPrices();
@@ -2191,13 +2171,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Mission Board screen - delegates to missions module */
+    /** Draws the Mission Board screen */
     drawMissionBoard(missions, selectedIndex, player) {
-        if (this.missions) {
-            this.missions.drawMissionBoard(missions, selectedIndex, player, this);
-            return;
-        }
-        // Fallback
+        // Missions module integration pending - using built-in implementation
         if (!player) { console.warn("drawMissionBoard missing player"); return; }
         this._initButtonAreas(['missionListButtonAreas']);
         this._initButtonAreas(['missionDetailButtonAreas'], false);
@@ -2347,13 +2323,9 @@ class UIManager {
         pop(); // Restore drawing styles
     } // --- END drawMissionBoard ---
 
-    /** Draws the Galaxy Map screen - delegates to galaxy map module */
+    /** Draws the Galaxy Map screen */
     drawGalaxyMap(galaxy, player) {
-        if (this.galaxyMap) {
-            this.galaxyMap.drawGalaxyMap(galaxy, player, this);
-            return;
-        }
-        // Fallback
+        // Galaxy map module integration pending - using built-in implementation
         if (!galaxy || !player) { console.warn("drawGalaxyMap missing galaxy or player"); return; }
 
         this.galaxyMapNodeAreas = [];
@@ -2572,13 +2544,9 @@ class UIManager {
         pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
 
-    /** Draws a compact market overlay showing commodity prices for a system - delegates to galaxy map module */
+    /** Draws a compact market overlay showing commodity prices for a system */
     drawMarketOverlay(galaxy, systemIndex) {
-        if (this.galaxyMap) {
-            this.galaxyMap._drawMarketOverlay(galaxy, systemIndex, this);
-            return;
-        }
-        // Fallback
+        // Galaxy map module integration pending - using built-in implementation
         const system = galaxy.systems[systemIndex];
         if (!system || !system.station || !system.station.market) {
             return;
@@ -3302,17 +3270,12 @@ class UIManager {
     
     /** Draws the current framerate in the bottom left corner with averaging - delegates to HUD module */
     drawFramerate() {
-        if (this.hud) {
-            this.hud.drawFramerate();
-            return;
-        }
-        // Fallback
+        // Update FPS tracking
         const currentFps = frameRate();
         this.fpsValues.push(currentFps);
         while (this.fpsValues.length > this.fpsMaxSamples) {
             this.fpsValues.shift();
         }
-        
         this.fpsFrameCount++;
         if (this.fpsFrameCount >= this.fpsUpdateInterval) {
             const sum = this.fpsValues.reduce((total, fps) => total + fps, 0);
@@ -3320,6 +3283,11 @@ class UIManager {
             this.fpsFrameCount = 0;
         }
         
+        if (this.hud) {
+            this.hud.drawFramerate(this.fpsAverage);
+            return;
+        }
+        // Fallback - draw directly
         push();
         noStroke();
         textAlign(LEFT, BOTTOM);
@@ -4093,13 +4061,9 @@ class UIManager {
         return false;
     }
 
-    /** Draws the Shipyard Menu - delegates to station menus module */
+    /** Draws the Shipyard Menu */
     drawShipyardMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawShipyardMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         if (!player) return;
         this._initButtonAreas(['shipyardListAreas']);
         push();
@@ -4268,13 +4232,9 @@ class UIManager {
 
 
 
-    /** Draws the Upgrades Menu - delegates to station menus module */
+    /** Draws the Upgrades Menu */
     drawUpgradesMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawUpgradesMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         if (!player) return;
         this._initButtonAreas(['upgradeListAreas']);
         push();
@@ -5309,13 +5269,9 @@ class UIManager {
         return messages[factionKey] || "You are a faction member";
     }
 
-    /** Draws the Protection Services menu - delegates to station menus module */
+    /** Draws the Protection Services menu */
     drawProtectionServicesMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawProtectionServicesMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         if (!player) return;
         this._initButtonAreas(['protectionServicesButtons']);
         
@@ -5472,13 +5428,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Storage Locker menu - delegates to station menus module */
+    /** Draws the Storage Locker menu */
     drawStorageMenu(station, player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawStorageMenu(station, player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         if (!player) return;
         this._initButtonAreas(['storageButtonAreas']);
 
@@ -5617,13 +5569,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Personal Record menu - delegates to station menus module */
+    /** Draws the Personal Record menu */
     drawPersonalRecordMenu(player) {
-        if (this.stationMenus) {
-            this.stationMenus.drawPersonalRecordMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Station menus module integration pending - using built-in implementation
         if (!player) return;
         this._initButtonAreas(['recordButtonAreas']);
         
@@ -5913,13 +5861,9 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Imperial Navy Recruitment Menu - delegates to faction recruitment module */
+    /** Draws the Imperial Navy Recruitment Menu */
     drawImperialRecruitmentMenu(player) {
-        if (this.factionRecruitment) {
-            this.factionRecruitment.drawImperialRecruitmentMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Faction recruitment module integration pending - using built-in implementation
         this._drawFactionRecruitmentMenu(
             player,
             "Imperial Navy",
@@ -5930,13 +5874,9 @@ class UIManager {
         );
     }
 
-    /** Draws the Separatist Forces Recruitment Menu - delegates to faction recruitment module */
+    /** Draws the Separatist Forces Recruitment Menu */
     drawSeparatistRecruitmentMenu(player) {
-        if (this.factionRecruitment) {
-            this.factionRecruitment.drawSeparatistRecruitmentMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Faction recruitment module integration pending - using built-in implementation
         this._drawFactionRecruitmentMenu(
             player,
             "Separatist Forces",
@@ -5947,13 +5887,9 @@ class UIManager {
         );
     }
 
-    /** Draws the Military Academy Recruitment Menu - delegates to faction recruitment module */
+    /** Draws the Military Academy Recruitment Menu */
     drawMilitaryRecruitmentMenu(player) {
-        if (this.factionRecruitment) {
-            this.factionRecruitment.drawMilitaryRecruitmentMenu(player, this);
-            return;
-        }
-        // Fallback
+        // Faction recruitment module integration pending - using built-in implementation
         this._drawFactionRecruitmentMenu(
             player,
             "Military Forces",

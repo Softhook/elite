@@ -1,10 +1,7 @@
 // ****** uiMarket.js ******
 // Market screen rendering and trading logic.
 // This file must be loaded BEFORE uiManager.js
-
-// Constants for space object trading prices
-const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.60;
-const SPACE_OBJECT_DEMAND_PREMIUM = 1.50;
+// Note: SPACE_OBJECT_PRODUCE_DISCOUNT and SPACE_OBJECT_DEMAND_PREMIUM are defined in uiManager.js
 
 /**
  * UIMarket - Handles all market-related UI rendering and trading.

@@ -40,7 +40,7 @@ class UIMissions {
      * @returns {Object|null} Button area for click detection
      */
     _drawMissionButton(config) {
-        const { x, y, w, h, isInactive, isSelected, isActive, missionType, text } = config;
+        const { x, y, w, h, isInactive, isSelected, isActive, missionType, label } = config;
         
         push();
         
@@ -104,7 +104,7 @@ class UIMissions {
         noStroke();
         textAlign(LEFT, CENTER);
         textSize(16);
-        text(text, x + 15, y + h / 2, w - 25);
+        text(label, x + 15, y + h / 2, w - 25);
         
         pop();
         
@@ -193,7 +193,7 @@ class UIMissions {
                     isSelected: i === selectedIndex,
                     isActive: activeMission && activeMission.id === m.id,
                     missionType: m.type,
-                    text: missionText
+                    label: missionText
                 });
                 
                 if (buttonArea) {
