@@ -166,6 +166,137 @@ class UIManager {
     drawPanelBG(fillCol, strokeCol) {
         const {x, y, w, h} = this.getPanelRect();
         fill(...fillCol); stroke(...strokeCol); rect(x, y, w, h, 10);
+        
+        // Draw docked station or space object in the background
+        this._drawDockedObjectBackground(x, y, w, h);
+    }
+
+    /**
+     * Draws the currently docked station or space object as a large background element.
+     * The object is drawn scaled up and centered in the panel with low opacity.
+     * @param {number} panelX - Panel X position
+     * @param {number} panelY - Panel Y position  
+     * @param {number} panelW - Panel width
+     * @param {number} panelH - Panel height
+     * @private
+     */
+    _drawDockedObjectBackground(panelX, panelY, panelW, panelH) {
+        // Determine what we're docked at
+        const currentState = gameStateManager?.currentState;
+        if (!currentState) return;
+        
+        // Only draw for docked states
+        const dockedStates = [
+            'DOCKED', 'VIEWING_MARKET', 'VIEWING_MISSIONS', 'VIEWING_SHIPYARD',
+            'VIEWING_UPGRADES', 'VIEWING_REPAIRS', 'VIEWING_PROTECTION', 'VIEWING_POLICE',
+            'VIEWING_IMPERIAL_RECRUITMENT', 'VIEWING_SEPARATIST_RECRUITMENT', 'VIEWING_MILITARY_RECRUITMENT',
+            'VIEWING_STORAGE', 'VIEWING_RECORD',
+            'DOCKED_SPACE_OBJECT', 'VIEWING_SPACE_OBJECT_MARKET', 'VIEWING_SPACE_OBJECT_REPAIRS'
+        ];
+        
+        if (!dockedStates.includes(currentState)) return;
+        
+        const centerX = panelX + panelW / 2;
+        const centerY = panelY + panelH / 2;
+        
+        push();
+        // Clip to panel area
+        const ctx = drawingContext;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 10);
+        ctx.clip();
+        
+        // Set low opacity for background effect
+        drawingContext.globalAlpha = 0.15;
+        
+        // Determine if we should show space object or station
+        // Check for space object states, OR if VIEWING_RECORD was accessed from space object dock
+        const isSpaceObjectState = currentState.includes('SPACE_OBJECT') || 
+            currentState === 'DOCKED_SPACE_OBJECT' ||
+            (currentState === 'VIEWING_RECORD' && gameStateManager?._returnFromRecordState === 'DOCKED_SPACE_OBJECT');
+        
+        if (isSpaceObjectState && gameStateManager?.currentDockedSpaceObject) {
+            const spaceObject = gameStateManager.currentDockedSpaceObject;
+            if (spaceObject && typeof spaceObject.draw === 'function') {
+                // Save space object state to prevent background draw from affecting game animation
+                const origX = spaceObject.pos.x;
+                const origY = spaceObject.pos.y;
+                const origAngle = spaceObject.angle;
+                const origBobPhase = spaceObject.bobPhase;
+                
+                // Draw space object scaled large with consistent slow rotation
+                push();
+                translate(centerX, centerY);
+                // Scale up significantly so it's visible
+                const targetSize = Math.min(panelW, panelH) * 0.7;
+                const currentSize = spaceObject.size || 48;
+                const scaleFactor = targetSize / currentSize;
+                scale(scaleFactor);
+                
+                // Use consistent, slow rotation for background display (based on millis)
+                // This ensures all screens rotate at the same speed regardless of frame rate
+                const backgroundRotation = (typeof millis === 'function' ? millis() : 0) * 0.0001;
+                rotate(backgroundRotation);
+                
+                // Temporarily set object to origin for drawing
+                spaceObject.pos.x = 0;
+                spaceObject.pos.y = 0;
+                spaceObject.angle = 0; // Reset angle since we applied our own rotation
+                
+                spaceObject.draw();
+                
+                // Restore original state
+                spaceObject.pos.x = origX;
+                spaceObject.pos.y = origY;
+                spaceObject.angle = origAngle;
+                spaceObject.bobPhase = origBobPhase;
+                pop();
+            }
+        } else {
+            // Docked at station
+            const system = galaxy?.getCurrentSystem();
+            const station = system?.station;
+            if (station && typeof station.draw === 'function') {
+                // Save station state to prevent background draw from affecting game animation
+                const origX = station.pos.x;
+                const origY = station.pos.y;
+                const origAngle = station.angle;
+                const origLightTimer = station.lightTimer;
+                
+                // Draw station scaled large with consistent slow rotation
+                push();
+                translate(centerX, centerY);
+                const extraScale = 1.5;
+                const targetSize = Math.min(panelW, panelH) * 0.85 * extraScale;
+                const currentSize = station.size || 600;
+                const scaleFactor = targetSize / currentSize;
+                scale(scaleFactor);
+                
+                // Use consistent, slow rotation for background display (based on millis)
+                // This ensures all screens rotate at the same speed regardless of frame rate
+                const backgroundRotation = (typeof millis === 'function' ? millis() : 0) * 0.0001;
+                rotate(backgroundRotation);
+                
+                // Temporarily set station to origin and reset rotation state
+                station.pos.x = 0;
+                station.pos.y = 0;
+                station.angle = 0; // Reset angle since we applied our own rotation
+                
+                station.draw();
+                
+                // Restore original state
+                station.pos.x = origX;
+                station.pos.y = origY;
+                station.angle = origAngle;
+                station.lightTimer = origLightTimer;
+                pop();
+            }
+        }
+        
+        drawingContext.globalAlpha = 1.0;
+        ctx.restore();
+        pop();
     }
 
     /**
@@ -4390,10 +4521,10 @@ class UIManager {
      * @returns {Object} Area object with x, y, w, h, and any extra properties
      */
     _drawButton(x, y, w, h, label, fillCol, strokeCol, radius = 5, extra = {}) {
-        // If this is a back button, force a consistent red background
+        // If this is a back button, force a consistent blue background
         if (typeof label === 'string' && label.trim().toLowerCase() === 'back') {
-            fillCol = [180, 0, 0];
-            strokeCol = [255, 150, 150];
+            fillCol = [0, 80, 180];
+            strokeCol = [100, 150, 255];
         }
         fill(...fillCol);
         stroke(...strokeCol);
@@ -4409,7 +4540,7 @@ class UIManager {
 
     /**
      * Draws a standard centered back button at the bottom of a panel.
-     * Uses standard back button styling (red background).
+     * Uses standard back button styling (blue background).
      * @param {Object} [extra={}] - Extra properties to attach to the area object
      * @returns {Object} Area object for the back button
      */
@@ -4418,7 +4549,7 @@ class UIManager {
         const backW = 100, backH = 30;
         const backX = pX + pW / 2 - backW / 2;
         const backY = pY + pH - backH - 15;
-        return this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, extra);
+        return this._drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255], 5, extra);
     }
 
     /**
@@ -5222,11 +5353,8 @@ class UIManager {
             }
         }
 
-        // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW/2 - backW/2;
-        const backY = pY + pH - backH - 15;
-        const backBtn = this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [220, 100, 100]);
+        // Back button - use the standardized centered back button
+        const backBtn = this._drawCenteredBackButton();
         backBtn.action = "BACK";
         this.storageButtonAreas.push(backBtn);
 
@@ -5516,11 +5644,8 @@ class UIManager {
             );
         }
 
-        // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW/2 - backW/2;
-        const backY = pY + pH - backH - 15;
-        const backBtn = this._drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [220, 100, 100]);
+        // Back button - use the standardized centered back button
+        const backBtn = this._drawCenteredBackButton();
         backBtn.action = "BACK";
         this.recordButtonAreas.push(backBtn);
         
