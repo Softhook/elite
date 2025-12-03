@@ -152,6 +152,101 @@ class UIManager {
         this.panelH = () => height * 0.8;
     }
 
+    /**
+     * Initializes button area arrays/objects to empty state.
+     * @param {Array<string>} areaKeys - Array of property names to initialize
+     * @param {boolean} [asArray=true] - If true, initialize as [], otherwise as {}
+     * @private
+     */
+    _initButtonAreas(areaKeys, asArray = true) {
+        for (const key of areaKeys) {
+            this[key] = asArray ? [] : {};
+        }
+    }
+
+    /**
+     * Sets common text styling properties in one call.
+     * @param {Object} options - Styling options
+     * @param {Array|number} [options.fill] - Fill color (array or single value)
+     * @param {number} [options.size] - Text size
+     * @param {string} [options.alignH] - Horizontal alignment (LEFT, CENTER, RIGHT)
+     * @param {string} [options.alignV] - Vertical alignment (TOP, CENTER, BOTTOM)
+     * @param {boolean} [options.noStroke=false] - If true, disable stroke
+     * @private
+     */
+    _setTextStyle(options = {}) {
+        if (options.fill !== undefined) {
+            if (Array.isArray(options.fill)) {
+                fill(...options.fill);
+            } else {
+                fill(options.fill);
+            }
+        }
+        if (options.size !== undefined) {
+            textSize(options.size);
+        }
+        if (options.alignH !== undefined || options.alignV !== undefined) {
+            const h = options.alignH || LEFT;
+            const v = options.alignV || TOP;
+            textAlign(h, v);
+        }
+        if (options.noStroke) {
+            noStroke();
+        }
+    }
+
+    /**
+     * Draws a commodity action button (buy or sell) with consistent styling.
+     * @param {Object} config - Button configuration
+     * @param {number} config.x - X position
+     * @param {number} config.y - Y position
+     * @param {number} config.w - Width
+     * @param {number} config.h - Height
+     * @param {string} config.label - Button label
+     * @param {boolean} config.enabled - Whether button is enabled
+     * @param {boolean} config.available - Whether commodity is available
+     * @param {string} [config.action] - Action name (e.g., 'BUY_COMMODITY')
+     * @param {Object} [config.data] - Additional data to attach to button area
+     * @returns {Object|null} Button area object if enabled, null otherwise
+     * @private
+     */
+    _drawCommodityButton(config) {
+        const { x, y, w, h, label, enabled, available, action, data = {} } = config;
+        
+        if (!available) {
+            // Not available - grayed out
+            fill(40);
+            noStroke();
+            rect(x, y, w, h, 3);
+            this._setTextStyle({ fill: 60, size: 20, alignH: CENTER, alignV: CENTER });
+            text(label, x + w / 2, y + h / 2);
+            return null;
+        }
+        
+        if (enabled) {
+            // Enabled button - use brighter colors
+            const isBuyAll = label.includes('All');
+            const baseGreen = isBuyAll ? 180 : 150;
+            const strokeGreen = isBuyAll ? 220 : 200;
+            fill(0, baseGreen, 0);
+            stroke(0, strokeGreen, 0);
+            strokeWeight(1);
+            rect(x, y, w, h, 3);
+            this._setTextStyle({ fill: 255, size: 20, alignH: CENTER, alignV: CENTER, noStroke: true });
+            text(label, x + w / 2, y + h / 2);
+            return { x, y, w, h, action, ...data };
+        } else {
+            // Disabled button
+            fill(60);
+            stroke(80);
+            strokeWeight(1);
+            rect(x, y, w, h, 3);
+            this._setTextStyle({ fill: 100, size: 20, alignH: CENTER, alignV: CENTER, noStroke: true });
+            text(label, x + w / 2, y + h / 2);
+            return null;
+        }
+    }
+
     /** Returns standardized panel geometry */
     getPanelRect() {
         return {
@@ -1184,7 +1279,7 @@ class UIManager {
 
     /** Draws the Main Station Menu (when state is DOCKED) */
     drawStationMainMenu(station, player) {
-        this.stationMenuButtonAreas = [];
+        this._initButtonAreas(['stationMenuButtonAreas']);
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
@@ -1238,7 +1333,7 @@ class UIManager {
      * @param {Player} player - The player object
      */
     drawSpaceObjectDockMenu(spaceObject, player) {
-        this.spaceObjectMenuButtonAreas = [];
+        this._initButtonAreas(['spaceObjectMenuButtonAreas']);
         if (!spaceObject || !player) { 
             console.warn("drawSpaceObjectDockMenu missing spaceObject or player"); 
             return; 
@@ -1307,8 +1402,8 @@ class UIManager {
             return; 
         }
         
-        this.spaceObjectMarketButtonAreas = [];
-        this.spaceObjectMarketBackButtonArea = {};
+        this._initButtonAreas(['spaceObjectMarketButtonAreas']);
+        this._initButtonAreas(['spaceObjectMarketBackButtonArea'], false);
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
@@ -1673,7 +1768,7 @@ class UIManager {
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         
         // Player ship repair section
-        fill(220); textSize(20); textAlign(CENTER, TOP);
+        this._setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP });
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX + pW / 2, pY + headerHeight + 10);
         
         let missing = player.maxHull - player.hull;
@@ -1697,10 +1792,7 @@ class UIManager {
             stroke(255, 180, 100);
             line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
             
-            noStroke();
-            fill(220);
-            textSize(20);
-            textAlign(CENTER, TOP);
+            this._setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP, noStroke: true });
             
             bodyguardsButtonArea = this._drawButton(
                 btnX, btnY3, btnW, btnH, 
@@ -1716,10 +1808,7 @@ class UIManager {
 
     /** Draws the Repairs Menu */
     drawRepairsMenu(player) {
-        this.repairsFullButtonArea = {};
-        this.repairsHalfButtonArea = {};
-        this.repairsBackButtonArea = {};
-        this.repairsBodyguardsButtonArea = {};
+        this._initButtonAreas(['repairsFullButtonArea', 'repairsHalfButtonArea', 'repairsBackButtonArea', 'repairsBodyguardsButtonArea'], false);
         
         if (!player) return;
         push();
@@ -1742,10 +1831,7 @@ class UIManager {
      * @param {Player} player - The player object
      */
     drawSpaceObjectRepairsMenu(spaceObject, player) {
-        this.spaceObjectRepairsFullButtonArea = {};
-        this.spaceObjectRepairsHalfButtonArea = {};
-        this.spaceObjectRepairsBackButtonArea = {};
-        this.spaceObjectRepairsBodyguardsButtonArea = {};
+        this._initButtonAreas(['spaceObjectRepairsFullButtonArea', 'spaceObjectRepairsHalfButtonArea', 'spaceObjectRepairsBackButtonArea', 'spaceObjectRepairsBodyguardsButtonArea'], false);
         
         if (!spaceObject || !player) return;
         
@@ -1768,7 +1854,7 @@ class UIManager {
 
     /** Draws the Police Menu */
     drawPoliceMenu(player) {
-        this.policeButtonAreas = [];
+        this._initButtonAreas(['policeButtonAreas']);
         if (!player) return;
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
@@ -1780,9 +1866,7 @@ class UIManager {
         if (isAnarchySystem) {
             const headerHeight = this.drawStationHeader("No Local Authority", station, player, system);
             textFont(font);
-            fill(220);
-            textSize(22);
-            textAlign(CENTER, TOP);
+            this._setTextStyle({ fill: 220, size: 22, alignH: CENTER, alignV: TOP });
             const messageY = pY + headerHeight + 20;
             text("This anarchy system has no formal police presence.", pX + pW/2, messageY);
             fill(180, 200, 255);
@@ -1795,9 +1879,7 @@ class UIManager {
         }
 
         const headerHeight = this.drawStationHeader("Police Station", station, player, system);
-        fill(255); 
-        textSize(20); 
-        textAlign(CENTER, TOP);
+        this._setTextStyle({ fill: 255, size: 20, alignH: CENTER, alignV: TOP });
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
@@ -4915,7 +4997,7 @@ class UIManager {
      * @param {string} bountyDescription - Description of faction bounties
      */
     _drawFactionRecruitmentMenu(player, factionName, factionKey, themeColors, tagline, bountyDescription) {
-        this.factionRecruitmentButtonAreas = [];
+        this._initButtonAreas(['factionRecruitmentButtonAreas']);
         if (!player) return;
         
         push();
@@ -5057,12 +5139,9 @@ class UIManager {
     /** Draws the Protection Services menu (when state is VIEWING_PROTECTION) */
     drawProtectionServicesMenu(player) {
         if (!player) return;
+        this._initButtonAreas(['protectionServicesButtons']);
+        
         push();
-        
-        // Initialize button areas
-        this.protectionServicesButtons = [];
-        
-        // Get panel dimensions
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         
         // Draw panel background
@@ -5075,9 +5154,7 @@ class UIManager {
         
         // Draw description
         textFont(font);
-        fill(220);
-        textSize(24);
-        textAlign(CENTER, TOP);
+        this._setTextStyle({ fill: 220, size: 24, alignH: CENTER, alignV: TOP });
         let descY = pY + headerHeight + 20;
         text("Hire professional security guards to protect you during your travels.", pX + pW/2, descY);
         
@@ -5218,11 +5295,11 @@ class UIManager {
     /** Draws the Storage Locker menu (when state is VIEWING_STORAGE) */
     drawStorageMenu(station, player) {
         if (!player) return;
+        this._initButtonAreas(['storageButtonAreas']);
 
         const activeStation = station || player?.currentSystem?.station || null;
 
         push();
-        this.storageButtonAreas = [];
 
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
@@ -5364,9 +5441,9 @@ class UIManager {
     /** Draws the Personal Record menu (when state is VIEWING_RECORD) */
     drawPersonalRecordMenu(player) {
         if (!player) return;
+        this._initButtonAreas(['recordButtonAreas']);
         
         push();
-        this.recordButtonAreas = [];
         
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
@@ -5757,15 +5834,23 @@ class UIManager {
     }
 
     /**
+     * Cycles the minimap zoom level.
+     * @param {number} direction - 1 for zoom out, -1 for zoom in
+     */
+    _cycleMinimapZoom(direction) {
+        const delta = direction > 0 ? 1 : -1;
+        this.minimapZoomIndex = (this.minimapZoomIndex + delta + this.minimapWorldViewRanges.length) % this.minimapWorldViewRanges.length;
+        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
+        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+        soundManager.playSound('click');
+    }
+
+    /**
      * Cycles the minimap zoom level through available world view ranges.
      * Called by '.' keyboard shortcut.
      */
     cycleOutMinimapZoom() {
-        this.minimapZoomIndex = (this.minimapZoomIndex + 1) % this.minimapWorldViewRanges.length;
-        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
-        // Recompute scale immediately
-        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
-        soundManager.playSound('click');
+        this._cycleMinimapZoom(1);
     }
 
     /**
@@ -5773,11 +5858,7 @@ class UIManager {
      * Called by ',' keyboard shortcut.
      */
     cycleInMinimapZoom() {
-        this.minimapZoomIndex = ((this.minimapZoomIndex - 1) + this.minimapWorldViewRanges.length) % this.minimapWorldViewRanges.length;
-        this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
-        // Recompute scale immediately
-        this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
-        soundManager.playSound('click');
+        this._cycleMinimapZoom(-1);
     }
 
 
@@ -5818,33 +5899,24 @@ class UIManager {
         let closestEntity = null;
         let closestDistSq = worldClickRadius * worldClickRadius;
 
-        // Check enemies
-        const enemies = system.enemies || [];
-        for (let i = 0; i < enemies.length; i++) {
-            const enemy = enemies[i];
-            if (!enemy || !enemy.pos || enemy.destroyed) continue;
-            const dx = enemy.pos.x - worldX;
-            const dy = enemy.pos.y - worldY;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closestDistSq = distSq;
-                closestEntity = enemy;
+        // Helper to check entity list
+        const checkEntities = (entities) => {
+            for (let i = 0; i < entities.length; i++) {
+                const entity = entities[i];
+                if (!entity || !entity.pos || entity.destroyed) continue;
+                const dx = entity.pos.x - worldX;
+                const dy = entity.pos.y - worldY;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < closestDistSq) {
+                    closestDistSq = distSq;
+                    closestEntity = entity;
+                }
             }
-        }
+        };
 
-        // Check space objects
-        const spaceObjects = system.spaceObjects || [];
-        for (let i = 0; i < spaceObjects.length; i++) {
-            const so = spaceObjects[i];
-            if (!so || !so.pos || so.destroyed) continue;
-            const dx = so.pos.x - worldX;
-            const dy = so.pos.y - worldY;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closestDistSq = distSq;
-                closestEntity = so;
-            }
-        }
+        // Check enemies and space objects
+        checkEntities(system.enemies || []);
+        checkEntities(system.spaceObjects || []);
 
         // If an entity was found, handle target locking
         if (closestEntity) {
@@ -5858,16 +5930,7 @@ class UIManager {
             } else {
                 // Lock onto new target
                 player.target = closestEntity;
-                let label = 'Target';
-                // Use shipTypeName for enemies, getDisplayName for space objects, 'Asteroid' otherwise
-                if (closestEntity.shipTypeName) {
-                    label = closestEntity.shipTypeName;
-                } else if (typeof closestEntity.getDisplayName === 'function') {
-                    label = closestEntity.getDisplayName();
-                } else if (closestEntity.maxRadius !== undefined) {
-                    // Asteroids have maxRadius property
-                    label = 'Asteroid';
-                }
+                const label = this._getEntityLabel(closestEntity);
                 this.addMessage(`Target locked: ${label}`, [0, 255, 0]);
                 if (typeof soundManager !== 'undefined' && soundManager.playSound) {
                     soundManager.playSound('click');
@@ -5877,5 +5940,18 @@ class UIManager {
         }
 
         return false;
+    }
+
+    /**
+     * Gets a display label for an entity (for targeting messages)
+     * @param {Object} entity - The entity to get a label for
+     * @returns {string} Display label
+     */
+    _getEntityLabel(entity) {
+        if (!entity) return 'Target';
+        if (entity.shipTypeName) return entity.shipTypeName;
+        if (typeof entity.getDisplayName === 'function') return entity.getDisplayName();
+        if (entity.maxRadius !== undefined) return 'Asteroid';
+        return 'Target';
     }
 } // End of UIManager Class
