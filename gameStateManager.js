@@ -40,6 +40,26 @@ function isPlayerInJumpZone(playerObj, systemObj) {
     return isInZone;
 }
 
+const STATION_STATES = [
+    "DOCKED", 
+    "VIEWING_MARKET", 
+    "VIEWING_MISSIONS", 
+    "VIEWING_SHIPYARD", 
+    "VIEWING_UPGRADES", 
+    "VIEWING_REPAIRS", 
+    "VIEWING_SERVICES", 
+    "VIEWING_PROTECTION", 
+    "VIEWING_POLICE", 
+    "VIEWING_IMPERIAL_RECRUITMENT", 
+    "VIEWING_SEPARATIST_RECRUITMENT", 
+    "VIEWING_MILITARY_RECRUITMENT", 
+    "VIEWING_STORAGE", 
+    "VIEWING_RECORD", 
+    "DOCKED_SPACE_OBJECT", 
+    "VIEWING_SPACE_OBJECT_MARKET", 
+    "VIEWING_SPACE_OBJECT_REPAIRS"
+];
+
 class GameStateManager {
     /**
      * Manages the overall game state and transitions.
@@ -111,7 +131,7 @@ this.jumpJustCompleted = false;
         // Update ambient sound manager docked state
         try {
             if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
+                const stationStates = STATION_STATES;
                 const isDocked = stationStates.includes(newState);
                 ambientSoundManager.setDockedState(isDocked);
             }
@@ -122,7 +142,7 @@ this.jumpJustCompleted = false;
         // Play transition-specific sounds
         try {
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
+                const stationStates = STATION_STATES;
                 if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
                     soundManager.playSound('dockSuccess');
                 } else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
@@ -166,7 +186,7 @@ this.jumpJustCompleted = false;
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
 
         // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = ["DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_SERVICES", "VIEWING_PROTECTION", "VIEWING_POLICE", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "VIEWING_STORAGE", "VIEWING_RECORD", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
+        const stationStates = STATION_STATES;
         if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
             GS_LOG("Undocking! Applying position offset.");
             if (player) {
