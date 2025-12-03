@@ -54,6 +54,25 @@ class UIManager {
         this.recordButtonAreas = [];
         this.recordScrollOffset = 0;
         this.recordScrollMax = 0;
+        // Space object dock/market button areas
+        this.spaceObjectMenuButtonAreas = [];
+        this.spaceObjectMarketButtonAreas = [];
+        this.spaceObjectMarketBackButtonArea = {};
+        this.spaceObjectRepairsFullButtonArea = {};
+        this.spaceObjectRepairsHalfButtonArea = {};
+        this.spaceObjectRepairsBackButtonArea = {};
+        this.spaceObjectRepairsBodyguardsButtonArea = {};
+        // Protection services button areas
+        this.protectionServicesButtons = [];
+        // Faction recruitment button areas
+        this.factionRecruitmentButtonAreas = [];
+        // Market overlay tracking
+        this.marketOverlayArea = null;
+        this._marketOverlayCacheIndex = -1;
+        this._marketOverlayDescText = '';
+        this._marketOverlayDescSize = 16;
+        this._marketOverlayDescPadding = 12;
+        this._marketOverlayDescHeight = 110;
     }
 
     _initMinimap() {
@@ -1081,39 +1100,19 @@ class UIManager {
     drawSpaceObjectHeader(title, spaceObject, player, system) {
         if (!spaceObject || !player) return 0;
         
-        const {x: pX, y: pY, w: pW} = this.getPanelRect();
-        const headerHeight = 100;
-        
-        // Title
-        fill(255); 
-        noStroke();
-        textFont(font);
-        textSize(30); 
-        textAlign(CENTER, TOP);
-        text(title, pX + pW / 2, pY + 20);
-        
-        // Space object name and system (left aligned)
-        textSize(20); 
-        textAlign(LEFT, TOP);
         const displayName = (typeof spaceObject.getDisplayName === 'function') 
             ? spaceObject.getDisplayName() 
             : (spaceObject.type || 'Space Object');
-        const systemName = system?.name || "Unknown System";
-        text(`${displayName} - ${systemName}`, pX + 20, pY + 20);
         
-        // System info (left aligned)
-        const econType = system?.economyType || "Unknown";
-        const tech = system?.techLevel || "?";
-        const security = system?.securityLevel || "Unknown";
-        textSize(20);
-        text(`${econType}   |   Tech: ${tech}   |   Security: ${security}`, pX + 20, pY + 45);
-        
-        // Credits (right-aligned)
-        textAlign(RIGHT, TOP);
-        text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
-        text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, pX + pW - 30, pY + 45);
-
-        return headerHeight;
+        return this._drawGenericHeader(
+            title,
+            displayName,
+            system?.name || "Unknown System",
+            system?.economyType || "Unknown",
+            system?.techLevel || "?",
+            system?.securityLevel || "Unknown",
+            player
+        );
     }
 
     /**
@@ -2615,10 +2614,6 @@ if (isIllegalInSystem || isMissionCargo) {
         const currentSystem = galaxy?.getCurrentSystem();
         const canJump = isPlayerInJumpZone(player, currentSystem); // Check jump zone status
         const reachable = galaxy.getReachableSystems(); // Get reachable systems for click logic
-
-        // --- Debug Logging ---
-        console.log(`[handleGalaxyMapClicks] 'canJump' evaluated as: ${canJump}`);
-        // ---
 
         // Check if any market button is clicked
         for (const btn of this.galaxyMapMarketButtonAreas) {
@@ -4454,37 +4449,15 @@ if (isIllegalInSystem || isMissionCargo) {
     drawStationHeader(title, station, player, system) {
         if (!station || !player) return 0;
         
-        const {x: pX, y: pY, w: pW} = this.getPanelRect();
-        const headerHeight = 100; // Standard header height
-        
-        // Title (specific to each screen)
-        fill(255); 
-        noStroke();
-        textFont(font);
-        textSize(30); 
-        textAlign(CENTER, TOP);
-        text(title, pX + pW/2, pY + 20);
-        
-        // Station name, economy type and security level (left aligned)
-        textSize(20); 
-        textAlign(LEFT, TOP);
-        const stationName = station.name || "Unknown Station";
-        const systemName = system?.name || "Unknown System";
-        text(`${stationName} - ${systemName}`, pX+20, pY + 20);
-        
-        // Economy, Security, and Tech Level (left aligned)
-        const econ = system?.securityLevel || "Unknown";
-        const tech = system?.techLevel || "?"; // Get tech level
-        const econType = system?.economyType || "Unknown"; // Economy type
-        textSize(20);
-        text(`${econType}   |   Tech: ${tech}   |   Security:  ${econ}`, pX +20, pY + 45);
-        
-        // Credits (right-aligned)
-        textAlign(RIGHT, TOP);
-        text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
-        text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, pX + pW - 30, pY + 45);
-
-        return headerHeight; // Return the height used by header
+        return this._drawGenericHeader(
+            title,
+            station.name || "Unknown Station",
+            system?.name || "Unknown System",
+            system?.economyType || "Unknown",
+            system?.techLevel || "?",
+            system?.securityLevel || "Unknown",
+            player
+        );
     }
 
     /**
@@ -4516,6 +4489,299 @@ if (isIllegalInSystem || isMissionCargo) {
         textSize(22);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
+    }
+
+    /**
+     * Returns the appropriate fill color for a price deviation.
+     * Positive deviation = red (expensive), negative = green (cheap), neutral = white.
+     * @param {number} deviation - The price deviation ratio (e.g., 0.1 for 10% above base)
+     * @param {boolean} isSellPrice - If true, inverts logic (positive = good for selling)
+     * @returns {Array} RGB color array [r, g, b]
+     */
+    _getPriceDeviationColor(deviation, isSellPrice = false) {
+        const threshold = 0.05;
+        if (isSellPrice) {
+            // For sell prices: positive deviation is good (green), negative is bad (red)
+            if (deviation > threshold) return [50, 255, 50];
+            if (deviation < -threshold) return [255, 50, 50];
+        } else {
+            // For buy prices: negative deviation is good (green), positive is bad (red)
+            if (deviation < -threshold) return [50, 255, 50];
+            if (deviation > threshold) return [255, 50, 50];
+        }
+        return [255, 255, 255]; // Neutral
+    }
+
+    /**
+     * Draws a price indicator bar for market displays.
+     * @param {number} x - X position
+     * @param {number} y - Y position (top of row)
+     * @param {number} rowH - Row height
+     * @param {number} deviation - Price deviation ratio
+     * @param {boolean} isSellPrice - Whether this is a sell price indicator
+     * @param {number} maxDeviation - Maximum deviation for full bar height (default 0.5)
+     */
+    _drawPriceIndicator(x, y, rowH, deviation, isSellPrice = false, maxDeviation = 0.5) {
+        const indicatorMaxH = rowH * 0.6;
+        const indicatorYOffset = (rowH - indicatorMaxH) / 2;
+        const threshold = 0.05;
+        
+        let indicatorH = constrain(abs(deviation) / maxDeviation, 0, 1) * indicatorMaxH;
+        let indicatorY = y + indicatorYOffset + (indicatorMaxH - indicatorH);
+        
+        const col = this._getPriceDeviationColor(deviation, isSellPrice);
+        
+        // For near-neutral prices, show minimal indicator
+        if (abs(deviation) <= threshold) {
+            fill(120);
+            indicatorH = 1;
+            indicatorY = y + indicatorYOffset + indicatorMaxH - indicatorH;
+        } else {
+            fill(col[0], col[1], col[2]);
+        }
+        
+        if (indicatorH > 0) {
+            noStroke();
+            rect(x, indicatorY, 3, indicatorH);
+        }
+    }
+
+    /**
+     * Draws a standardized header for both station and space object screens.
+     * @param {string} title - Screen title
+     * @param {string} locationName - Station or space object name
+     * @param {string} systemName - System name
+     * @param {string} economyType - Economy type
+     * @param {number} techLevel - Tech level
+     * @param {string} securityLevel - Security level
+     * @param {Player} player - Player object for credits/cargo display
+     * @returns {number} Height of the header
+     */
+    _drawGenericHeader(title, locationName, systemName, economyType, techLevel, securityLevel, player) {
+        const {x: pX, y: pY, w: pW} = this.getPanelRect();
+        const headerHeight = 100;
+        
+        // Title (centered)
+        fill(255);
+        noStroke();
+        textFont(font);
+        textSize(30);
+        textAlign(CENTER, TOP);
+        text(title, pX + pW / 2, pY + 20);
+        
+        // Location and system (left aligned)
+        textSize(20);
+        textAlign(LEFT, TOP);
+        text(`${locationName} - ${systemName}`, pX + 20, pY + 20);
+        
+        // Economy, tech, security (left aligned)
+        text(`${economyType}   |   Tech: ${techLevel}   |   Security: ${securityLevel}`, pX + 20, pY + 45);
+        
+        // Credits and cargo (right aligned)
+        if (player) {
+            textAlign(RIGHT, TOP);
+            text(`Credits: ${Math.floor(player.credits)}`, pX + pW - 30, pY + 20);
+            text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, pX + pW - 30, pY + 45);
+        }
+        
+        return headerHeight;
+    }
+
+    /**
+     * Draws a market button (Buy/Sell) with proper styling.
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} w - Width
+     * @param {number} h - Height
+     * @param {string} label - Button text
+     * @param {boolean} enabled - Whether button is clickable
+     * @param {boolean} isBuy - True for buy buttons, false for sell
+     * @param {string} [disabledReason] - Reason shown if disabled (e.g., "Out")
+     * @returns {Object|null} Button area object if enabled, null if disabled
+     */
+    _drawMarketButton(x, y, w, h, label, enabled, isBuy, disabledReason = null) {
+        if (!enabled) {
+            fill(disabledReason ? 100 : 40);
+            stroke(disabledReason ? 120 : 0);
+            if (disabledReason) strokeWeight(1); else noStroke();
+            rect(x, y, w, h, 3);
+            fill(disabledReason ? (isBuy ? [255, 150, 150] : 180) : 60);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(20);
+            text(disabledReason || label, x + w / 2, y + h / 2);
+            return null;
+        }
+        
+        // Enabled button
+        if (isBuy) {
+            fill(label.includes('All') ? 0 : 0, label.includes('All') ? 180 : 150, 0);
+            stroke(0, label.includes('All') ? 220 : 200, 0);
+        } else {
+            fill(label.includes('All') ? 180 : 150, 0, 0);
+            stroke(label.includes('All') ? 220 : 200, 0, 0);
+        }
+        strokeWeight(1);
+        rect(x, y, w, h, 3);
+        fill(255);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(20);
+        text(label, x + w / 2, y + h / 2);
+        
+        return { x, y, w, h };
+    }
+
+    /**
+     * Draws a faction recruitment menu with consistent styling.
+     * @param {Player} player - The player object
+     * @param {string} factionName - Display name of the faction
+     * @param {string} factionKey - Key used for faction logic (e.g., 'IMPERIAL')
+     * @param {Array} themeColors - [fillColor, strokeColor] for panel
+     * @param {string} tagline - Faction tagline/slogan
+     * @param {string} bountyDescription - Description of faction bounties
+     */
+    _drawFactionRecruitmentMenu(player, factionName, factionKey, themeColors, tagline, bountyDescription) {
+        this.factionRecruitmentButtonAreas = [];
+        if (!player) return;
+        
+        push();
+        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        this.drawPanelBG([30, 30, 60, 230], themeColors[1]);
+        
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader(`${factionName} Recruitment`, station, player, system);
+        
+        fill(255);
+        textSize(20);
+        textAlign(CENTER, TOP);
+        const contentY = pY + headerHeight + 10;
+        
+        const isWanted = system?.isPlayerWanted();
+        const canJoin = player.canJoinFaction(factionKey);
+        
+        // Display faction info
+        fill(themeColors[1]);
+        textSize(24);
+        text(`${factionName} Recruitment Office`, pX + pW / 2, contentY);
+        
+        fill(255);
+        textSize(18);
+        text(tagline, pX + pW / 2, contentY + 40);
+        
+        // Show legal status
+        fill(255);
+        textSize(20);
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY + 80);
+        const statusText = isWanted ? "WANTED" : "CLEAN";
+        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
+        fill(statusColor);
+        textSize(24);
+        text(statusText, pX + pW / 2, contentY + 110);
+        
+        // Show current faction status
+        if (player.playerFaction) {
+            fill(255, 200, 100);
+            textSize(18);
+            text(`Current Faction: ${player.playerFaction}`, pX + pW / 2, contentY + 140);
+        }
+        
+        // Display bounty information if member
+        if (player.playerFaction === factionKey) {
+            fill(100, 255, 100);
+            textSize(18);
+            text(bountyDescription, pX + pW / 2, contentY + (player.playerFaction ? 170 : 150));
+        }
+        
+        // Show faction kill progress
+        try {
+            const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
+            if (progress) {
+                fill(themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9);
+                textSize(16);
+                textAlign(CENTER, TOP);
+                if (progress.nextThreshold) {
+                    text(`${factionKey} Kills: ${progress.kills} — ${progress.killsToNext} to ${progress.nextRank}`, pX + pW / 2, contentY + 240);
+                } else {
+                    text(`${factionKey} Kills: ${progress.kills} — Max Rank`, pX + pW / 2, contentY + 240);
+                }
+            }
+        } catch (e) { /* fail silently */ }
+        
+        let btnW = pW * 0.5, btnH = 45;
+        let btnX = pX + pW / 2 - btnW / 2;
+        let btnY1 = contentY + (player.playerFaction === factionKey ? 200 : (player.playerFaction ? 170 : 150));
+        
+        // Fine payment if wanted
+        if (isWanted) {
+            let fineAmount = this._getFactionFineAmount(factionKey, system?.securityLevel);
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, {action: 'pay_fine', amount: fineAmount, faction: factionKey})
+            );
+            btnY1 += btnH + 20;
+        }
+        
+        // Join faction button or status message
+        if (canJoin && !isWanted) {
+            this.factionRecruitmentButtonAreas.push(
+                this._drawButton(btnX, btnY1, btnW, btnH, `Join ${factionName}`, themeColors[0], themeColors[1], 5, {action: 'join_faction', faction: factionKey})
+            );
+        } else if (player.playerFaction === factionKey) {
+            fill(255);
+            textSize(18);
+            textAlign(CENTER, CENTER);
+            text(this._getFactionMemberMessage(factionKey), pX + pW / 2, btnY1 + btnH / 2);
+        } else if (player.playerFaction && player.playerFaction !== factionKey) {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER, CENTER);
+            text("You must leave your current faction first", pX + pW / 2, btnY1 + btnH / 2);
+        } else if (isWanted) {
+            fill(255, 150, 150);
+            textSize(16);
+            textAlign(CENTER, CENTER);
+            text("Clear your legal status to join", pX + pW / 2, btnY1 + btnH / 2);
+        }
+        
+        // Back button
+        let backW = 100, backH = 30, backX = pX + pW / 2 - backW / 2, backY = pY + pH - backH - 15;
+        this.factionRecruitmentButtonAreas.push(
+            this._drawButton(backX, backY, backW, backH, "Back", [180, 180, 0], [220, 220, 100], 5, {action: 'back'})
+        );
+        pop();
+    }
+
+    /**
+     * Returns the fine amount for a faction based on security level.
+     * @param {string} factionKey - Faction identifier
+     * @param {string} securityLevel - System security level
+     * @returns {number} Fine amount in credits
+     */
+    _getFactionFineAmount(factionKey, securityLevel) {
+        const baseFines = {
+            IMPERIAL: { base: 500, High: 1200, Medium: 800 },
+            SEPARATIST: { base: 400, High: 1000, Medium: 650 },
+            MILITARY: { base: 600, High: 1500, Medium: 900 },
+            POLICE: { base: 300, High: 1000, Medium: 500 }
+        };
+        const fineData = baseFines[factionKey] || baseFines.POLICE;
+        return fineData[securityLevel] || fineData.base;
+    }
+
+    /**
+     * Returns a faction-specific "you are a member" message.
+     * @param {string} factionKey - Faction identifier
+     * @returns {string} Member status message
+     */
+    _getFactionMemberMessage(factionKey) {
+        const messages = {
+            IMPERIAL: "You serve the Empire with honor",
+            SEPARATIST: "You fight for freedom and independence",
+            MILITARY: "You serve with honor and distinction",
+            POLICE: "You are a member of the Police Force"
+        };
+        return messages[factionKey] || "You are a faction member";
     }
 
     /** Draws the Protection Services menu (when state is VIEWING_PROTECTION) */
@@ -5140,345 +5406,38 @@ if (isIllegalInSystem || isMissionCargo) {
 
     /** Draws the Imperial Navy Recruitment Menu */
     drawImperialRecruitmentMenu(player) {
-        this.factionRecruitmentButtonAreas = [];
-        if (!player) return;
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [220,190,90]); // Imperial gold theme
-        const system = galaxy?.getCurrentSystem();
-        const station = system?.station;
-        const headerHeight = this.drawStationHeader("Imperial Navy Recruitment", station, player, system);
-        
-        fill(255); 
-        textSize(20); 
-        textAlign(CENTER, TOP);
-        const contentY = pY + headerHeight + 10;
-        
-        // Check current faction status
-        const isWanted = system?.isPlayerWanted();
-        const canJoin = player.canJoinFaction("IMPERIAL");
-        
-        // Display faction info
-        fill(220, 190, 90);
-        textSize(24);
-        text("Imperial Navy Recruitment Office", pX+pW/2, contentY);
-        
-        fill(255);
-        textSize(18);
-        text("Serve the Empire. Restore order to the galaxy.", pX+pW/2, contentY + 40);
-        
-        // Show legal status
-        fill(255);
-        textSize(20);
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
-        const statusText = isWanted ? "WANTED" : "CLEAN";
-        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        fill(statusColor);
-        textSize(24);
-        text(statusText, pX+pW/2, contentY + 110);
-        
-        // Show current faction status
-        if (player.playerFaction) {
-            fill(255, 200, 100);
-            textSize(18);
-            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
-        }
-        
-        // Display Imperial bounty information
-        if (player.playerFaction === 'IMPERIAL') {
-            fill(100, 255, 100);
-            textSize(18);
-            text("Active Bounty: 2,000 cr per Separatist killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
-        }
-
-        // Show Imperial faction kill progress
-        try {
-            const ip = player.getFactionKillsProgress && player.getFactionKillsProgress('IMPERIAL');
-            if (ip) {
-                fill(230,220,180);
-                textSize(16);
-                textAlign(CENTER, TOP);
-                if (ip.nextThreshold) {
-                    text(`Imperial Kills: ${ip.kills} — ${ip.killsToNext} to ${ip.nextRank}`, pX + pW/2, contentY + 240);
-                } else {
-                    text(`Imperial Kills: ${ip.kills} — Max Rank`, pX + pW/2, contentY + 240);
-                }
-            }
-        } catch (e) { }
-        
-        let btnW = pW*0.5, btnH = 45;
-        let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction === 'IMPERIAL' ? 200 : (player.playerFaction ? 170 : 150));
-        
-        // Fine payment if wanted
-        if (isWanted) {
-            let fineAmount = 500;
-            if (system?.securityLevel === 'High') fineAmount = 1200;
-            else if (system?.securityLevel === 'Medium') fineAmount = 800;
-            
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'IMPERIAL'})
-            );
-            btnY1 += btnH + 20;
-        }
-        
-        // Join faction button
-        if (canJoin && !isWanted) {
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, "Join Imperial Navy", [120,100,50], [220,190,90], 5, {action:'join_faction', faction:'IMPERIAL'})
-            );
-        } else if (player.playerFaction === 'IMPERIAL') {
-            fill(255);
-            textSize(18);
-            textAlign(CENTER,CENTER);
-            text("You serve the Empire with honor", pX+pW/2, btnY1+btnH/2);
-        } else if (player.playerFaction && player.playerFaction !== 'IMPERIAL') {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
-        } else if (isWanted) {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
-        }
-        
-        // Back button
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.factionRecruitmentButtonAreas.push(
-            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        this._drawFactionRecruitmentMenu(
+            player,
+            "Imperial Navy",
+            "IMPERIAL",
+            [[120, 100, 50], [220, 190, 90]],
+            "Serve the Empire. Restore order to the galaxy.",
+            "Active Bounty: 2,000 cr per Separatist killed"
         );
-        pop();
     }
 
     /** Draws the Separatist Forces Recruitment Menu */
     drawSeparatistRecruitmentMenu(player) {
-        this.factionRecruitmentButtonAreas = [];
-        if (!player) return;
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [200,100,0]); // Separatist orange theme
-        const system = galaxy?.getCurrentSystem();
-        const station = system?.station;
-        const headerHeight = this.drawStationHeader("Separatist Forces Recruitment", station, player, system);
-        
-        fill(255); 
-        textSize(20); 
-        textAlign(CENTER, TOP);
-        const contentY = pY + headerHeight + 10;
-        
-        // Check current faction status
-        const isWanted = system?.isPlayerWanted();
-        const canJoin = player.canJoinFaction("SEPARATIST");
-        
-        // Display faction info
-        fill(200, 100, 0);
-        textSize(24);
-        text("Separatist Forces Recruitment", pX+pW/2, contentY);
-        
-        fill(255);
-        textSize(18);
-        text("Fight for freedom. Break the chains of tyranny.", pX+pW/2, contentY + 40);
-        
-        // Show legal status
-        fill(255);
-        textSize(20);
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
-        const statusText = isWanted ? "WANTED" : "CLEAN";
-        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        fill(statusColor);
-        textSize(24);
-        text(statusText, pX+pW/2, contentY + 110);
-        
-        // Show current faction status
-        if (player.playerFaction) {
-            fill(255, 200, 100);
-            textSize(18);
-            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
-        }
-        
-        // Display Separatist bounty information
-        if (player.playerFaction === 'SEPARATIST') {
-            fill(100, 255, 100);
-            textSize(18);
-            text("Active Bounty: 2,000 cr per Imperial killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
-        }
-
-        // Show Separatist faction kill progress
-        try {
-            const sp = player.getFactionKillsProgress && player.getFactionKillsProgress('SEPARATIST');
-            if (sp) {
-                fill(255,210,160);
-                textSize(16);
-                textAlign(CENTER, TOP);
-                if (sp.nextThreshold) {
-                    text(`Separatist Kills: ${sp.kills} — ${sp.killsToNext} to ${sp.nextRank}`, pX + pW/2, contentY + 240);
-                } else {
-                    text(`Separatist Kills: ${sp.kills} — Max Rank`, pX + pW/2, contentY + 240);
-                }
-            }
-        } catch (e) { }
-        
-        let btnW = pW*0.5, btnH = 45;
-        let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction === 'SEPARATIST' ? 200 : (player.playerFaction ? 170 : 150));
-        
-        // Fine payment if wanted
-        if (isWanted) {
-            let fineAmount = 400; // Separatists are more lenient
-            if (system?.securityLevel === 'High') fineAmount = 1000;
-            else if (system?.securityLevel === 'Medium') fineAmount = 650;
-            
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'SEPARATIST'})
-            );
-            btnY1 += btnH + 20;
-        }
-        
-        // Join faction button
-        if (canJoin && !isWanted) {
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, "Join Separatist Forces", [100,50,0], [200,100,0], 5, {action:'join_faction', faction:'SEPARATIST'})
-            );
-        } else if (player.playerFaction === 'SEPARATIST') {
-            fill(255);
-            textSize(18);
-            textAlign(CENTER,CENTER);
-            text("You fight for freedom and independence", pX+pW/2, btnY1+btnH/2);
-        } else if (player.playerFaction && player.playerFaction !== 'SEPARATIST') {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
-        } else if (isWanted) {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
-        }
-        
-        // Back button
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.factionRecruitmentButtonAreas.push(
-            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        this._drawFactionRecruitmentMenu(
+            player,
+            "Separatist Forces",
+            "SEPARATIST",
+            [[100, 50, 0], [200, 100, 0]],
+            "Fight for freedom. Break the chains of tyranny.",
+            "Active Bounty: 2,000 cr per Imperial killed"
         );
-        pop();
     }
 
     /** Draws the Military Academy Recruitment Menu */
     drawMilitaryRecruitmentMenu(player) {
-        this.factionRecruitmentButtonAreas = [];
-        if (!player) return;
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG([30,30,60,230], [100,120,140]); // Military grey-blue theme
-        const system = galaxy?.getCurrentSystem();
-        const station = system?.station;
-        const headerHeight = this.drawStationHeader("Military Academy Recruitment", station, player, system);
-        
-        fill(255); 
-        textSize(20); 
-        textAlign(CENTER, TOP);
-        const contentY = pY + headerHeight + 10;
-        
-        // Check current faction status
-        const isWanted = system?.isPlayerWanted();
-        const canJoin = player.canJoinFaction("MILITARY");
-        
-        // Display faction info
-        fill(100, 120, 140);
-        textSize(24);
-        text("Military Academy Recruitment", pX+pW/2, contentY);
-        
-        fill(255);
-        textSize(18);
-        text("Honor, duty, excellence. Defend the frontier.", pX+pW/2, contentY + 40);
-        
-        // Show legal status
-        fill(255);
-        textSize(20);
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY + 80);
-        const statusText = isWanted ? "WANTED" : "CLEAN";
-        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        fill(statusColor);
-        textSize(24);
-        text(statusText, pX+pW/2, contentY + 110);
-        
-        // Show current faction status
-        if (player.playerFaction) {
-            fill(255, 200, 100);
-            textSize(18);
-            text(`Current Faction: ${player.playerFaction}`, pX + pW/2, contentY + 140);
-        }
-        
-        // Display Military bounty information
-        if (player.playerFaction === 'MILITARY') {
-            fill(100, 255, 100);
-            textSize(18);
-            text("Active Bounty: 4,000 cr per Alien killed", pX+pW/2, contentY + (player.playerFaction ? 170 : 150));
-            text("Active Bounty: 1,000 cr per Pirate killed", pX+pW/2, contentY + (player.playerFaction ? 190 : 170));
-        }
-
-        // Show Military faction kill progress
-        try {
-            const mp = player.getFactionKillsProgress && player.getFactionKillsProgress('MILITARY');
-            if (mp) {
-                fill(220,230,240);
-                textSize(16);
-                textAlign(CENTER, TOP);
-                if (mp.nextThreshold) {
-                    text(`Military Kills: ${mp.kills} — ${mp.killsToNext} to ${mp.nextRank}`, pX + pW/2, contentY + 240);
-                } else {
-                    text(`Military Kills: ${mp.kills} — Max Rank`, pX + pW/2, contentY + 240);
-                }
-            }
-        } catch (e) { }
-        
-        let btnW = pW*0.5, btnH = 45;
-        let btnX = pX+pW/2-btnW/2;
-        let btnY1 = contentY + (player.playerFaction === 'MILITARY' ? 200 : (player.playerFaction ? 170 : 150));
-        
-        // Fine payment if wanted
-        if (isWanted) {
-            let fineAmount = 600; // Military is strict but fair
-            if (system?.securityLevel === 'High') fineAmount = 1500;
-            else if (system?.securityLevel === 'Medium') fineAmount = 900;
-            
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount, faction:'MILITARY'})
-            );
-            btnY1 += btnH + 20;
-        }
-        
-        // Join faction button
-        if (canJoin && !isWanted) {
-            this.factionRecruitmentButtonAreas.push(
-                this._drawButton(btnX, btnY1, btnW, btnH, "Join Military Forces", [50,60,70], [100,120,140], 5, {action:'join_faction', faction:'MILITARY'})
-            );
-        } else if (player.playerFaction === 'MILITARY') {
-            fill(255);
-            textSize(18);
-            textAlign(CENTER,CENTER);
-            text("You serve with honor and distinction", pX+pW/2, btnY1+btnH/2);
-        } else if (player.playerFaction && player.playerFaction !== 'MILITARY') {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("You must leave your current faction first", pX+pW/2, btnY1+btnH/2);
-        } else if (isWanted) {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER,CENTER);
-            text("Clear your legal status to join", pX+pW/2, btnY1+btnH/2);
-        }
-        
-        // Back button
-        let backW=100, backH=30, backX=pX+pW/2-backW/2, backY=pY+pH-backH-15;
-        this.factionRecruitmentButtonAreas.push(
-            this._drawButton(backX, backY, backW, backH, "Back", [180,180,0], [220,220,100], 5, {action:'back'})
+        this._drawFactionRecruitmentMenu(
+            player,
+            "Military Forces",
+            "MILITARY",
+            [[50, 60, 70], [100, 120, 140]],
+            "Honor, duty, excellence. Defend the frontier.",
+            "Active Bounty: 4,000 cr per Alien killed, 1,000 cr per Pirate killed"
         );
-        pop();
     }
     
     /** Centralized fine payment handling used by Police and Recruitment screens */
