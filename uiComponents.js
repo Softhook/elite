@@ -2,6 +2,9 @@
 // Shared UI drawing primitives and helpers used across all UI modules.
 // This file must be loaded BEFORE uiManager.js
 
+// Standard panel background color - used for all menus to ensure consistent appearance
+const STANDARD_PANEL_BG = [20, 20, 40, 220];
+
 /**
  * UIComponents - Static utility class providing common UI drawing operations.
  * All methods are static to allow easy use throughout the UI system without
@@ -356,6 +359,338 @@ class UIComponents {
             }
         }
         return null;
+    }
+
+    /**
+     * Draws panel background with optional border.
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} w - Width
+     * @param {number} h - Height
+     * @param {Array} [fillCol=STANDARD_PANEL_BG] - Fill color
+     * @param {Array} [strokeCol=[100,100,255]] - Stroke color
+     * @param {number} [radius=10] - Corner radius
+     */
+    static drawPanelBG(x, y, w, h, fillCol = STANDARD_PANEL_BG, strokeCol = [100, 100, 255], radius = 10) {
+        fill(...fillCol);
+        stroke(...strokeCol);
+        rect(x, y, w, h, radius);
+    }
+
+    /**
+     * Draws a centered back button at the bottom of a panel.
+     * Uses standard back button styling (blue background).
+     * @param {number} panelX - Panel X position
+     * @param {number} panelY - Panel Y position
+     * @param {number} panelW - Panel width
+     * @param {number} panelH - Panel height
+     * @param {Object} [extra={}] - Extra properties to attach to the area object
+     * @returns {Object} Area object for the back button
+     */
+    static drawCenteredBackButton(panelX, panelY, panelW, panelH, extra = {}) {
+        const backW = 100, backH = 30;
+        const backX = panelX + panelW / 2 - backW / 2;
+        const backY = panelY + panelH - backH - 15;
+        return UIComponents.drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255], 5, extra);
+    }
+
+    /**
+     * Draws the currently docked station or space object as a large background element.
+     * The object is drawn scaled up and centered in the panel with low opacity.
+     * @param {number} panelX - Panel X position
+     * @param {number} panelY - Panel Y position
+     * @param {number} panelW - Panel width
+     * @param {number} panelH - Panel height
+     * @param {Object} options - Options object
+     * @param {Object} options.station - Station object (optional)
+     * @param {Object} options.spaceObject - Space object (optional)
+     * @param {string} options.currentState - Current game state
+     * @param {string} options.returnFromRecordState - Return state for record screen (optional)
+     */
+    static drawDockedObjectBackground(panelX, panelY, panelW, panelH, options = {}) {
+        const { station, spaceObject, currentState, returnFromRecordState } = options;
+        if (!currentState) return;
+        
+        // Only draw for docked states
+        const dockedStates = [
+            'DOCKED', 'VIEWING_MARKET', 'VIEWING_MISSIONS', 'VIEWING_SHIPYARD',
+            'VIEWING_UPGRADES', 'VIEWING_REPAIRS', 'VIEWING_PROTECTION', 'VIEWING_POLICE',
+            'VIEWING_IMPERIAL_RECRUITMENT', 'VIEWING_SEPARATIST_RECRUITMENT', 'VIEWING_MILITARY_RECRUITMENT',
+            'VIEWING_STORAGE', 'VIEWING_RECORD',
+            'DOCKED_SPACE_OBJECT', 'VIEWING_SPACE_OBJECT_MARKET', 'VIEWING_SPACE_OBJECT_REPAIRS'
+        ];
+        
+        if (!dockedStates.includes(currentState)) return;
+        
+        const centerX = panelX + panelW / 2;
+        const centerY = panelY + panelH / 2;
+        
+        push();
+        // Clip to panel area
+        const ctx = drawingContext;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 10);
+        ctx.clip();
+        
+        // Set low opacity for background effect
+        drawingContext.globalAlpha = 0.15;
+        
+        // Determine if we should show space object or station
+        const isSpaceObjectState = currentState.includes('SPACE_OBJECT') || 
+            currentState === 'DOCKED_SPACE_OBJECT' ||
+            (currentState === 'VIEWING_RECORD' && returnFromRecordState === 'DOCKED_SPACE_OBJECT');
+        
+        if (isSpaceObjectState && spaceObject) {
+            UIComponents._drawScaledObject(spaceObject, centerX, centerY, panelW, panelH, 0.7);
+        } else if (station) {
+            UIComponents._drawScaledObject(station, centerX, centerY, panelW, panelH, 0.85, 1.5);
+        }
+        
+        drawingContext.globalAlpha = 1.0;
+        ctx.restore();
+        pop();
+    }
+
+    /**
+     * Helper to draw a scaled and rotated object for background display.
+     * @private
+     */
+    static _drawScaledObject(obj, centerX, centerY, panelW, panelH, sizeRatio, extraScale = 1) {
+        if (!obj || typeof obj.draw !== 'function') return;
+        
+        // Save object state
+        const origX = obj.pos.x;
+        const origY = obj.pos.y;
+        const origAngle = obj.angle;
+        const origBobPhase = obj.bobPhase;
+        const origLightTimer = obj.lightTimer;
+        
+        push();
+        translate(centerX, centerY);
+        
+        const targetSize = Math.min(panelW, panelH) * sizeRatio * extraScale;
+        const currentSize = obj.size || 48;
+        const scaleFactor = targetSize / currentSize;
+        scale(scaleFactor);
+        
+        // Use consistent, slow rotation based on millis()
+        const backgroundRotation = (typeof millis === 'function' ? millis() : 0) * 0.0001;
+        rotate(backgroundRotation);
+        
+        // Temporarily set object to origin for drawing
+        obj.pos.x = 0;
+        obj.pos.y = 0;
+        obj.angle = 0;
+        
+        obj.draw();
+        
+        // Restore original state
+        obj.pos.x = origX;
+        obj.pos.y = origY;
+        obj.angle = origAngle;
+        if (origBobPhase !== undefined) obj.bobPhase = origBobPhase;
+        if (origLightTimer !== undefined) obj.lightTimer = origLightTimer;
+        pop();
+    }
+
+    /**
+     * Draws a standardized header for station/space object screens.
+     * @param {Object} config - Header configuration
+     * @param {string} config.title - Screen title (centered)
+     * @param {string} config.locationName - Station or space object name
+     * @param {string} config.systemName - System name
+     * @param {string} config.economyType - Economy type
+     * @param {number|string} config.techLevel - Tech level
+     * @param {string} config.securityLevel - Security level
+     * @param {Object} config.player - Player object for credits/cargo display
+     * @param {number} config.panelX - Panel X position
+     * @param {number} config.panelY - Panel Y position
+     * @param {number} config.panelW - Panel width
+     * @returns {number} Height of the header
+     */
+    static drawStandardHeader(config) {
+        const { title, locationName, systemName, economyType, techLevel, securityLevel, player, panelX, panelY, panelW } = config;
+        const headerHeight = 100;
+        
+        // Title (centered)
+        fill(255);
+        noStroke();
+        if (typeof font !== 'undefined') textFont(font);
+        textSize(30);
+        textAlign(CENTER, TOP);
+        text(title, panelX + panelW / 2, panelY + 20);
+        
+        // Location and system (left aligned)
+        textSize(20);
+        textAlign(LEFT, TOP);
+        text(`${locationName} - ${systemName}`, panelX + 20, panelY + 20);
+        
+        // Economy, tech, security (left aligned)
+        text(`${economyType}   |   Tech: ${techLevel}   |   Security: ${securityLevel}`, panelX + 20, panelY + 45);
+        
+        // Credits and cargo (right aligned)
+        if (player) {
+            textAlign(RIGHT, TOP);
+            text(`Credits: ${Math.floor(player.credits)}`, panelX + panelW - 30, panelY + 20);
+            text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, panelX + panelW - 30, panelY + 45);
+        }
+        
+        return headerHeight;
+    }
+
+    /**
+     * Draws a vertical list of menu buttons and returns button areas.
+     * @param {Array} options - Array of { text, state?, action? } objects
+     * @param {number} startY - Y position to start drawing
+     * @param {number} panelX - Panel X position
+     * @param {number} panelW - Panel width
+     * @param {number} btnW - Button width
+     * @param {number} btnH - Button height
+     * @param {number} btnSpacing - Spacing between buttons
+     * @param {Array} fillCol - Button fill color [r,g,b]
+     * @param {Array} strokeCol - Button stroke color [r,g,b]
+     * @returns {Array} Array of button area objects
+     */
+    static drawMenuButtonList(options, startY, panelX, panelW, btnW, btnH, btnSpacing, fillCol, strokeCol) {
+        const btnX = panelX + panelW / 2 - btnW / 2;
+        const areas = [];
+        
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const btnY = startY + i * btnSpacing;
+            const area = UIComponents.drawButton(btnX, btnY, btnW, btnH, opt.text, fillCol, strokeCol);
+            if (opt.state) area.state = opt.state;
+            if (opt.action) area.action = opt.action;
+            areas.push(area);
+        }
+        
+        return areas;
+    }
+
+    /**
+     * Computes scroll parameters for a list and clamps the offset.
+     * @param {number} currentOffset - Current scroll offset
+     * @param {number} totalItems - Total number of items in the list
+     * @param {number} visibleItems - Number of items that fit in view
+     * @returns {Object} { firstRow, lastRow, scrollOffset, scrollMax }
+     */
+    static computeScrollParams(currentOffset, totalItems, visibleItems) {
+        const scrollMax = Math.max(0, totalItems - visibleItems);
+        const scrollOffset = constrain(currentOffset || 0, 0, scrollMax);
+        const firstRow = scrollOffset;
+        const lastRow = Math.min(firstRow + visibleItems, totalItems);
+        
+        return { firstRow, lastRow, scrollOffset, scrollMax };
+    }
+
+    /**
+     * Draws a single commodity row for market screens (station or space object).
+     * @param {Object} config - Row configuration
+     * @param {string} config.name - Commodity name
+     * @param {number} config.buyPrice - Price to buy (0 if not available)
+     * @param {number} config.sellPrice - Price to sell (0 if not available)
+     * @param {number} config.baseBuy - Base buy price for deviation calculation
+     * @param {number} config.baseSell - Base sell price for deviation calculation
+     * @param {number} config.stock - Available stock (-1 for unlimited/hidden)
+     * @param {number} config.playerQty - Quantity in player cargo
+     * @param {boolean} config.isAvailable - Whether commodity is tradeable here
+     * @param {boolean} config.isMissionCargo - Whether this is mission cargo (can't sell)
+     * @param {number} config.rowIndex - Row index for alternating colors
+     * @param {number} config.x - X position
+     * @param {number} config.y - Y position
+     * @param {number} config.rowH - Row height
+     * @param {Object} config.columns - Column positions { commodity, buy, sell, stock, cargo, buttonsStart, totalWidth }
+     * @param {number} config.btnW - Button width
+     * @param {number} config.btnH - Button height
+     * @param {boolean} [config.showStock=true] - Whether to show stock column
+     * @param {number} [config.maxDeviation=0.8] - Max deviation for price indicators
+     * @returns {Array} Array of button area objects for this row
+     */
+    static drawMarketRow(config) {
+        const { name, buyPrice, sellPrice, baseBuy, baseSell, stock, playerQty, 
+                isAvailable, isMissionCargo, rowIndex, x, y, rowH, columns, btnW, btnH,
+                showStock = true, maxDeviation = 0.8 } = config;
+        
+        const buttonAreas = [];
+        const tY = y + rowH / 2;
+        const btnY = y + (rowH - btnH) / 2;
+        const btnSpacing = 5;
+        
+        // Alternating row background
+        fill(rowIndex % 2 === 0 ? color(0, 0, 0, 100) : color(80, 80, 80, 100));
+        noStroke();
+        rect(x, y, columns.totalWidth, rowH);
+        
+        // Commodity name
+        textAlign(LEFT, CENTER);
+        fill(isAvailable ? 255 : 100);
+        text(name || '?', x + 10, tY);
+        
+        // Buy price with color coding
+        textAlign(CENTER, CENTER);
+        if (buyPrice > 0) {
+            fill(UIComponents.getPriceDeviationColor((buyPrice - baseBuy) / baseBuy, false));
+            text(buyPrice, columns.buy, tY);
+        } else {
+            fill(80);
+            text("-", columns.buy, tY);
+        }
+        
+        // Sell price with color coding  
+        if (sellPrice > 0) {
+            fill(UIComponents.getPriceDeviationColor((sellPrice - baseSell) / baseSell, true));
+            text(sellPrice, columns.sell, tY);
+        } else {
+            fill(80);
+            text("-", columns.sell, tY);
+        }
+        
+        // Stock column (optional)
+        if (showStock && stock >= 0) {
+            fill(UIComponents.getStockColor(stock, stock <= 0));
+            text(Math.floor(stock), columns.stock, tY);
+        }
+        
+        // Cargo amount
+        fill(playerQty > 0 ? 255 : 80);
+        text(playerQty, columns.cargo, tY);
+        
+        // Price indicators
+        if (baseBuy > 0 && buyPrice > 0) {
+            const buyDeviation = (buyPrice - baseBuy) / baseBuy;
+            UIComponents.drawPriceIndicator(columns.buy + 40, y, rowH, buyDeviation, false, maxDeviation);
+        }
+        if (baseSell > 0 && sellPrice > 0) {
+            const sellDeviation = (sellPrice - baseSell) / baseSell;
+            UIComponents.drawPriceIndicator(columns.sell + 40, y, rowH, sellDeviation, true, maxDeviation);
+        }
+        
+        // Buttons
+        let btnX = columns.buttonsStart;
+        
+        // Buy 1
+        const canBuy = buyPrice > 0 && isAvailable;
+        const buy1Area = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Buy 1", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
+        if (buy1Area) buttonAreas.push({ ...buy1Area, action: 'buy', quantity: 1, commodity: name });
+        btnX += btnW + btnSpacing;
+        
+        // Buy All
+        const buyAllArea = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Buy All", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
+        if (buyAllArea) buttonAreas.push({ ...buyAllArea, action: 'buyAll', commodity: name });
+        btnX += btnW + 10; // Extra spacing before sell
+        
+        // Sell 1
+        const canSell = sellPrice > 0 && isAvailable && !isMissionCargo;
+        const sell1Area = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Sell 1", canSell, false);
+        if (sell1Area) buttonAreas.push({ ...sell1Area, action: 'sell', quantity: 1, commodity: name });
+        btnX += btnW + btnSpacing;
+        
+        // Sell All
+        const sellAllArea = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Sell All", canSell, false);
+        if (sellAllArea) buttonAreas.push({ ...sellAllArea, action: 'sellAll', commodity: name });
+        
+        return buttonAreas;
     }
 }
 

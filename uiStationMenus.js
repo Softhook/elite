@@ -179,6 +179,13 @@ class UIStationMenus {
         this.policeButtonAreas = [];
         if (!player) return;
         
+        push();
+        uiManager.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 200]);
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = uiManager.drawStationHeader("Police Station", station, player, system);
+        const panelRect = uiManager.getPanelRect();
+        
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
         
@@ -194,6 +201,10 @@ class UIStationMenus {
             const backX = pX + pW / 2 - backW / 2;
             const backY = pY + pH - backH - 15;
             this.policeButtonAreas.push(UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, {action:'back'}));
+            
+            // Sync to UIManager for backward compatibility
+            uiManager.policeButtonAreas = this.policeButtonAreas;
+            pop();
             return;
         }
         
@@ -265,6 +276,10 @@ class UIStationMenus {
         const backX = pX + pW / 2 - backW / 2;
         const backY = pY + pH - backH - 15;
         this.policeButtonAreas.push(UIComponents.drawButton(backX, backY, backW, backH, "Back", [180, 0, 0], [255, 150, 150], 5, {action:'back'}));
+        
+        // Sync to UIManager for backward compatibility
+        uiManager.policeButtonAreas = this.policeButtonAreas;
+        pop();
     }
 
     /**
@@ -1091,6 +1106,79 @@ class UIStationMenus {
         const config = scrollConfigs[currentState];
         if (config) {
             return this.handleScroll(config[0], config[1], event.deltaY);
+        }
+        return false;
+    }
+
+    /**
+     * Handles repair button clicks for both station and space object repairs.
+     * @param {number} mx - Mouse X coordinate
+     * @param {number} my - Mouse Y coordinate
+     * @param {Player} player - The player object
+     * @param {Object} fullButtonArea - Button area for full repair
+     * @param {Object} halfButtonArea - Button area for 50% repair
+     * @param {Object} bodyguardsButtonArea - Button area for bodyguard repairs
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if a repair action was handled
+     */
+    handleRepairClick(mx, my, player, fullButtonArea, halfButtonArea, bodyguardsButtonArea, addMessageFn) {
+        // Full repair
+        if (fullButtonArea && UIComponents.isClickInArea(mx, my, fullButtonArea)) {
+            let missing = player.maxHull - player.hull;
+            let cost = Math.floor(missing * 10);
+            if (missing <= 0) {
+                addMessageFn("Your ship is already fully repaired!");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= cost) {
+                player.spendCredits(cost);
+                player.hull = player.maxHull;
+                addMessageFn(`Ship fully repaired for ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                if (typeof saveGame === 'function') saveGame();
+            } else {
+                addMessageFn(`Not enough credits! Full repair costs ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        // 50% repair
+        if (halfButtonArea && UIComponents.isClickInArea(mx, my, halfButtonArea)) {
+            let missing = player.maxHull - player.hull;
+            let repairAmt = Math.min(missing, Math.ceil(player.maxHull / 2));
+            let cost = Math.floor(repairAmt * 7);
+            if (missing <= 0) {
+                addMessageFn("Your ship is already fully repaired!");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= cost) {
+                player.spendCredits(cost);
+                player.hull += repairAmt;
+                if (player.hull > player.maxHull) player.hull = player.maxHull;
+                addMessageFn(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                if (typeof saveGame === 'function') saveGame();
+            } else {
+                addMessageFn(`Not enough credits! 50% repair costs ${cost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+        // Bodyguard repairs
+        if (bodyguardsButtonArea && UIComponents.isClickInArea(mx, my, bodyguardsButtonArea)) {
+            const bodyguardInfo = player.getDamagedBodyguardsInfo();
+            if (bodyguardInfo.count <= 0) {
+                addMessageFn("No damaged bodyguards to repair.");
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else if (player.credits >= bodyguardInfo.totalCost) {
+                if (player.repairBodyguards(bodyguardInfo.totalCost)) {
+                    addMessageFn(`${bodyguardInfo.count} bodyguard${bodyguardInfo.count > 1 ? 's' : ''} repaired for ${bodyguardInfo.totalCost} credits.`);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                }
+            } else {
+                addMessageFn(`Not enough credits! Bodyguard repairs cost ${bodyguardInfo.totalCost} credits.`);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
         }
         return false;
     }

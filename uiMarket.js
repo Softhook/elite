@@ -82,9 +82,8 @@ class UIMarket {
         this.buttonAreas = [];
         this.backButtonArea = {};
         
-        // Sync button areas to UIManager for backward compatibility
+        // Sync button areas array to UIManager (arrays sync by reference)
         uiManager.marketButtonAreas = this.buttonAreas;
-        uiManager.marketBackButtonArea = this.backButtonArea;
 
         const panelRect = uiManager.getPanelRect();
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
@@ -234,6 +233,9 @@ class UIMarket {
         const backX = pX + pW / 2 - backW / 2;
         const backY = pY + pH - backH - 15;
         this.backButtonArea = UIComponents.drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255]);
+        
+        // Sync back button area to UIManager AFTER it's drawn
+        uiManager.marketBackButtonArea = this.backButtonArea;
     }
 
     /**
@@ -248,9 +250,8 @@ class UIMarket {
         this.spaceObjectButtonAreas = [];
         this.spaceObjectBackButtonArea = {};
         
-        // Sync button areas to UIManager for backward compatibility
+        // Sync button areas array to UIManager (arrays sync by reference)
         uiManager.spaceObjectMarketButtonAreas = this.spaceObjectButtonAreas;
-        uiManager.spaceObjectMarketBackButtonArea = this.spaceObjectBackButtonArea;
         
         const panelRect = uiManager.getPanelRect();
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
@@ -518,6 +519,9 @@ class UIMarket {
         const backX = pX + pW / 2 - backW / 2;
         const backY = pY + pH - backH - 15;
         this.spaceObjectBackButtonArea = UIComponents.drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255]);
+        
+        // Sync back button area to UIManager AFTER it's drawn
+        uiManager.spaceObjectMarketBackButtonArea = this.spaceObjectBackButtonArea;
     }
 
     /**

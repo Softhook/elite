@@ -677,8 +677,8 @@ class UIHUD {
         const hold = Array.isArray(target.cargoHold) ? target.cargoHold : null;
         if (!hold || hold.length === 0) return [];
         const entries = hold
-            .filter(entry => entry && entry.quantity > 0)
-            .map(entry => ({ name: entry.name || 'Unknown', quantity: entry.quantity }));
+            .filter(entry => entry && entry.quantity > 0 && entry.name && typeof entry.name === 'string' && entry.name.trim().length > 0)
+            .map(entry => ({ name: entry.name.trim(), quantity: entry.quantity }));
         entries.sort((a, b) => b.quantity - a.quantity);
         return entries;
     }
