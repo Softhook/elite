@@ -233,9 +233,7 @@ class UIGalaxyMap {
         }
         
         // Instructions
-        fill(255);
-        textAlign(CENTER, BOTTOM);
-        textSize(18);
+        UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, BOTTOM] });
         if (this.lockedDestinationIndex !== -1) {
             text("Destination locked. Enter jump zone to auto-jump.", width / 2, height - 70);
         } else {
@@ -317,11 +315,8 @@ class UIGalaxyMap {
         rect(overlayX, overlayY, overlayW, overlayH, 8);
         
         // Header
-        fill(255);
-        noStroke();
+        UIComponents.setTextStyle({ fill: 255, size: 22, align: [CENTER, TOP] });
         if (typeof font !== 'undefined') textFont(font);
-        textSize(22);
-        textAlign(CENTER, TOP);
         text(`${system.name}`, overlayX + overlayW / 2, overlayY + 10);
         
         // Column headers
@@ -331,9 +326,7 @@ class UIGalaxyMap {
         const col3X = overlayX + 240;
         const col4X = overlayX + 320;
         
-        fill(180, 200, 255);
-        textSize(15);
-        textAlign(LEFT, TOP);
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 15, align: [LEFT, TOP] });
         text("Commodity", col1X, tableY);
         textAlign(CENTER, TOP);
         text("Buy", col2X, tableY);
@@ -348,29 +341,18 @@ class UIGalaxyMap {
             if (!comm) continue;
             
             // Alternate row background
-            if (i % 2 === 0) {
-                fill(0, 0, 0, 60);
-                noStroke();
-                rect(overlayX + 5, yPos - 2, overlayW - 10, rowHeight - 2);
-            }
+            UIComponents.drawAlternatingRow(i, overlayX + 5, yPos - 2, overlayW - 10, rowHeight - 2);
             
             // Commodity name
-            fill(255);
-            textSize(15);
-            textAlign(LEFT, TOP);
+            UIComponents.setTextStyle({ fill: 255, size: 15, align: [LEFT, TOP] });
             text(comm.name, col1X, yPos);
             
             // Buy price with color coding
             textAlign(CENTER, TOP);
             if (comm.baseBuy > 0) {
-                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
-                if (buyDeviation < -0.05) {
-                    fill(100, 255, 100);
-                } else if (buyDeviation > 0.05) {
-                    fill(255, 100, 100);
-                } else {
-                    fill(255);
-                }
+                const buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                // For buying, lower prices are better (green = good deal)
+                fill(...UIComponents.getPriceDeviationColor(buyDeviation, false));
             } else {
                 fill(255);
             }
@@ -401,12 +383,9 @@ class UIGalaxyMap {
             const descBoxW = overlayW - 24;
             const descY = yPos + 12;
             
-            noStroke();
-            fill(220);
+            UIComponents.setTextStyle({ fill: 220, size: cachedDescSize, align: [LEFT, TOP] });
             if (typeof font !== 'undefined') textFont(font);
-            textSize(cachedDescSize);
             textLeading(cachedDescSize * 1.35);
-            textAlign(LEFT, TOP);
             text(cachedDesc, descX, descY, descBoxW);
         }
         

@@ -36,15 +36,6 @@ class UIManager {
         this.weaponSlotButtons = [];
         // --- Panel Defaults ---
         this.setPanelDefaults();
-        // --- Minimap Color Mapping ---
-        this.roleMinimapColors = {};
-        this.roleMinimapColors[AI_ROLE.POLICE] = [0, 120, 255];    // Blue for police
-        this.roleMinimapColors[AI_ROLE.TRANSPORT] = [255, 140, 0]; // Orange for transporters
-        this.roleMinimapColors[AI_ROLE.HAULER] = [255, 200, 0];    // Yellow for haulers
-        this.roleMinimapColors[AI_ROLE.GUARD] = this.roleMinimapColors[AI_ROLE.HAULER]; // Guards same as haulers
-        this.roleMinimapColors[AI_ROLE.PIRATE] = [255, 0, 0];      // Red for pirates
-        this.roleMinimapColors[AI_ROLE.ALIEN] = [0, 200, 0];       // Green for aliens
-        this.roleMinimapColors[AI_ROLE.COMBAT] = [128, 0, 128];    // Purple for combat ships
     }
 
     // --- Initialization Helpers ---
@@ -160,88 +151,6 @@ class UIManager {
         }
     }
 
-    /**
-     * Sets common text styling properties in one call.
-     * @param {Object} options - Styling options
-     * @param {Array|number} [options.fill] - Fill color (array or single value)
-     * @param {number} [options.size] - Text size
-     * @param {string} [options.alignH] - Horizontal alignment (LEFT, CENTER, RIGHT)
-     * @param {string} [options.alignV] - Vertical alignment (TOP, CENTER, BOTTOM)
-     * @param {boolean} [options.noStroke=false] - If true, disable stroke
-     * @private
-     */
-    _setTextStyle(options = {}) {
-        UIComponents.setTextStyle(options);
-    }
-
-    /**
-     * Draws a commodity action button (buy or sell) with consistent styling.
-     * @param {Object} config - Button configuration
-     * @param {number} config.x - X position
-     * @param {number} config.y - Y position
-     * @param {number} config.w - Width
-     * @param {number} config.h - Height
-     * @param {string} config.label - Button label
-     * @param {boolean} config.enabled - Whether button is enabled
-     * @param {boolean} config.available - Whether commodity is available
-     * @param {string} [config.action] - Action name (e.g., 'BUY_COMMODITY')
-     * @param {Object} [config.data] - Additional data to attach to button area
-     * @returns {Object|null} Button area object if enabled, null otherwise
-     * @private
-     */
-    _drawCommodityButton(config) {
-        const { x, y, w, h, label, enabled, available, action, data = {} } = config;
-        
-        if (!available) {
-            // Not available - grayed out
-            fill(40);
-            noStroke();
-            rect(x, y, w, h, 3);
-            this._setTextStyle({ fill: 60, size: 20, alignH: CENTER, alignV: CENTER });
-            text(label, x + w / 2, y + h / 2);
-            return null;
-        }
-        
-        if (enabled) {
-            // Enabled button - use brighter colors
-            const isBuyAll = label.includes('All');
-            const baseGreen = isBuyAll ? 180 : 150;
-            const strokeGreen = isBuyAll ? 220 : 200;
-            fill(0, baseGreen, 0);
-            stroke(0, strokeGreen, 0);
-            strokeWeight(1);
-            rect(x, y, w, h, 3);
-            this._setTextStyle({ fill: 255, size: 20, alignH: CENTER, alignV: CENTER, noStroke: true });
-            text(label, x + w / 2, y + h / 2);
-            return { x, y, w, h, action, ...data };
-        } else {
-            // Disabled button
-            fill(60);
-            stroke(80);
-            strokeWeight(1);
-            rect(x, y, w, h, 3);
-            this._setTextStyle({ fill: 100, size: 20, alignH: CENTER, alignV: CENTER, noStroke: true });
-            text(label, x + w / 2, y + h / 2);
-            return null;
-        }
-    }
-
-    /**
-     * Draws a semi-transparent section background box - delegates to UIComponents.
-     * @private
-     */
-    _drawSectionBG(x, y, w, h, fillColor = [0, 0, 0, 100], radius = 0) {
-        UIComponents.drawSectionBG(x, y, w, h, fillColor, radius);
-    }
-
-    /**
-     * Draws centered informational text - delegates to UIComponents.
-     * @private
-     */
-    _drawCenteredInfo(message, x, y, style = {}) {
-        UIComponents.drawCenteredInfo(message, x, y, style);
-    }
-
     /** Returns standardized panel geometry */
     getPanelRect() {
         return {
@@ -265,32 +174,6 @@ class UIManager {
             currentState: gameStateManager?.currentState,
             returnFromRecordState: gameStateManager?._returnFromRecordState
         });
-    }
-
-    /**
-     * Initializes a menu panel with background and optional header.
-     * Clears specified button area arrays and returns panel dimensions.
-     * @param {Array} fillCol - Background fill color [r,g,b,a]
-     * @param {Array} strokeCol - Border stroke color [r,g,b]
-     * @param {Array<string>} [buttonAreaKeys=[]] - Property names of button area arrays to clear
-     * @returns {Object} { pX, pY, pW, pH } panel dimensions
-     */
-    _initMenuPanel(fillCol, strokeCol, buttonAreaKeys = []) {
-        // Clear button areas
-        for (const key of buttonAreaKeys) {
-            if (Array.isArray(this[key])) {
-                this[key] = [];
-            } else {
-                this[key] = {};
-            }
-        }
-        
-        push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(fillCol, strokeCol);
-        textFont(font);
-        
-        return { pX, pY, pW, pH };
     }
 
     /**

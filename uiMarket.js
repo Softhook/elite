@@ -23,6 +23,73 @@ class UIMarket {
     }
 
     /**
+     * Calculates column positions for market table layout.
+     * @param {number} tableWidth - Total table width
+     * @param {number} startX - Starting X position
+     * @param {number} btnW - Button width
+     * @param {boolean} [includeStock=true] - Whether to include stock column
+     * @returns {Object} Column positions and widths
+     * @private
+     */
+    _calculateMarketColumns(tableWidth, startX, btnW, includeStock = true) {
+        const btnSpacing = 5;
+        const totalBtnWidth = (btnW * 4) + (btnSpacing * 3);
+        const remainingWidth = tableWidth - totalBtnWidth;
+        const numDataColumns = includeStock ? 5 : 4;
+        const colWidth = Math.floor(remainingWidth / numDataColumns);
+        
+        if (includeStock) {
+            return {
+                commodityX: startX,
+                commodityW: colWidth,
+                buyX: startX + colWidth + colWidth / 2,
+                sellX: startX + colWidth * 2 + colWidth / 2,
+                stockX: startX + colWidth * 3 + colWidth / 2,
+                cargoX: startX + colWidth * 4 + colWidth / 2,
+                buttonsStart: startX + tableWidth - totalBtnWidth,
+                totalWidth: tableWidth,
+                colWidth: colWidth,
+                totalBtnWidth: totalBtnWidth,
+                btnSpacing: btnSpacing
+            };
+        } else {
+            return {
+                commodityX: startX,
+                commodityW: colWidth,
+                buyX: startX + colWidth + colWidth / 2,
+                sellX: startX + colWidth * 2 + colWidth / 2,
+                cargoX: startX + colWidth * 3 + colWidth / 2,
+                buttonsStart: startX + tableWidth - totalBtnWidth,
+                totalWidth: tableWidth,
+                colWidth: colWidth,
+                totalBtnWidth: totalBtnWidth,
+                btnSpacing: btnSpacing
+            };
+        }
+    }
+
+    /**
+     * Draws market column headers.
+     * @param {number} sX - Start X position
+     * @param {number} headerY - Y position for headers
+     * @param {Object} columns - Column positions from _calculateMarketColumns
+     * @param {boolean} [showStock=true] - Whether to show stock column
+     * @private
+     */
+    _drawMarketHeaders(sX, headerY, columns, showStock = true) {
+        fill(255);
+        textAlign(LEFT, CENTER);
+        text("Commodity", sX + 10, headerY);
+        textAlign(CENTER, CENTER);
+        text("Buy", columns.buyX, headerY);
+        text("Sell", columns.sellX, headerY);
+        if (showStock && columns.stockX) {
+            text("Stock", columns.stockX, headerY);
+        }
+        text("Cargo Hold", columns.cargoX, headerY);
+    }
+
+    /**
      * Returns a default list of commodities when station market is not available.
      * @returns {Array}
      */
@@ -96,46 +163,28 @@ class UIMarket {
         const headerHeight = uiManager.drawStationHeader("Commodity Market", station, player, system);
         
         // Table setup
-        let sY = pY + headerHeight + 40;
-        let tW = pW - 60;
-        let sX = pX + 30;
-        
+        const sY = pY + headerHeight + 40;
+        const tW = pW - 60;
+        const sX = pX + 30;
         const rowH = 30;
         const btnW = 100;
         const btnH = rowH * 0.8;
-        
-        // Column layout
-        const numDataColumns = 5;
-        const btnSpacing = 5;
-        const totalBtnWidth = (btnW * 4) + (btnSpacing * 3);
-        const remainingWidth = tW - totalBtnWidth;
-        const colWidth = Math.floor(remainingWidth / numDataColumns);
-        const colCommodity = colWidth;
-        const colBuy = colWidth;
-        const colSell = colWidth;
-        const colStock = colWidth;
-        const colCargo = colWidth;
-
         const maxDeviation = 0.8;
+        
+        // Column layout using helper
+        const columns = this._calculateMarketColumns(tW, sX, btnW);
 
         // Draw column headers
-        let headerY = sY - 20;
-        fill(255);
-        textAlign(LEFT, CENTER);
-        text("Commodity", sX + 10, headerY);
-        textAlign(CENTER, CENTER);
-        text("Buy", sX + colCommodity + colBuy / 2, headerY);
-        text("Sell", sX + colCommodity + colBuy + colSell / 2, headerY);
-        text("Stock", sX + colCommodity + colBuy + colSell + colStock / 2, headerY);
-        text("Cargo Hold", sX + colCommodity + colBuy + colSell + colStock + colCargo / 2, headerY);
+        const headerY = sY - 20;
+        this._drawMarketHeaders(sX, headerY, columns, true);
 
         // Draw commodity rows
         const commoditiesLen = commodities ? commodities.length : 0;
         for (let i = 0; i < commoditiesLen; i++) {
             const comm = commodities[i];
             if (!comm) continue;
-            let yP = sY + i * rowH;
-            let tY = yP + rowH / 2;
+            const yP = sY + i * rowH;
+            const tY = yP + rowH / 2;
 
             // Alternating row background
             UIComponents.drawAlternatingRow(i, sX, yP, tW, rowH);
@@ -145,97 +194,87 @@ class UIMarket {
             const outOfStock = stockQty <= 0;
             
             // Commodity name
-            if (isIllegalInSystem) {
-                fill(120);
-            } else {
-                fill(255);
-            }
-            
+            fill(isIllegalInSystem ? 120 : 255);
             textAlign(LEFT, CENTER);
-            text(comm.name || '?', sX + 10, tY, colCommodity - 15);
+            text(comm.name || '?', sX + 10, tY, columns.commodityW - 15);
             
-            if (!comm.isLegal) {
-                if (isIllegalInSystem) {
-                    textAlign(LEFT, CENTER);
-                    fill(255, 0, 0);
-                    text("ILLEGAL", sX + 10 + textWidth(comm.name || '?') + 15, tY);
-                } 
+            if (!comm.isLegal && isIllegalInSystem) {
+                fill(255, 0, 0);
+                text("ILLEGAL", sX + 10 + textWidth(comm.name || '?') + 15, tY);
             }
             
             textAlign(CENTER, CENTER);
             
             // Buy price with color coding
             if (comm.baseBuy > 0) {
-                let buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
+                const buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
                 fill(...UIComponents.getPriceDeviationColor(buyDeviation, false));
             } else {
                 fill(255);
             }
-            text(comm.buyPrice ?? '?', sX + colCommodity + colBuy / 2, tY);
+            text(comm.buyPrice ?? '?', columns.buyX, tY);
             
             // Sell price with color coding
             if (comm.baseSell > 0) {
-                let sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
+                const sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
                 fill(...UIComponents.getPriceDeviationColor(sellDeviation, true));
             } else {
                 fill(255);
             }
-            text(comm.sellPrice ?? '?', sX + colCommodity + colBuy + colSell / 2, tY);
+            text(comm.sellPrice ?? '?', columns.sellX, tY);
 
             // Stock display
             fill(...UIComponents.getStockColor(stockQty, outOfStock));
-            text(stockQty, sX + colCommodity + colBuy + colSell + colStock / 2, tY);
+            text(stockQty, columns.stockX, tY);
 
+            // Cargo display
             fill(255);
-            text(comm.playerStock ?? '?', sX + colCommodity + colBuy + colSell + colStock + colCargo / 2, tY);
+            text(comm.playerStock ?? '?', columns.cargoX, tY);
 
             // Price indicators
             if (comm.baseBuy > 0) {
                 const buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
-                UIComponents.drawPriceIndicator(sX + colCommodity + colBuy + 5, yP, rowH, buyDeviation, false, maxDeviation);
+                UIComponents.drawPriceIndicator(columns.buyX + columns.colWidth / 2, yP, rowH, buyDeviation, false, maxDeviation);
             }
             if (comm.baseSell > 0) {
                 const sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
-                UIComponents.drawPriceIndicator(sX + colCommodity + colBuy + colSell + 5, yP, rowH, sellDeviation, true, maxDeviation);
+                UIComponents.drawPriceIndicator(columns.sellX + columns.colWidth / 2, yP, rowH, sellDeviation, true, maxDeviation);
             }
 
             // Buttons
-            const rightEdge = sX + tW;
-            let btnStartX = rightEdge - totalBtnWidth;
             const isMissionCargo = player.activeMission?.cargoType === comm.name;
             const btnY = yP + (rowH - btnH) / 2;
+            const buy1Enabled = !isIllegalInSystem && !outOfStock;
+            const sellEnabled = !isIllegalInSystem && !isMissionCargo;
 
             // Buy 1 button
-            let buy1X = btnStartX;
-            const buy1Enabled = !isIllegalInSystem && !outOfStock;
+            const buy1X = columns.buttonsStart;
             const buy1Area = UIComponents.drawMarketButton(buy1X, btnY, btnW, btnH, "Buy 1", buy1Enabled, true, outOfStock ? "Out" : null);
             if (buy1Area) this.buttonAreas.push({ ...buy1Area, action: 'buy', quantity: 1, commodity: comm.name });
 
             // Buy All button
-            let buyAllX = buy1X + btnW + 5;
+            const buyAllX = buy1X + btnW + columns.btnSpacing;
             const buyAllArea = UIComponents.drawMarketButton(buyAllX, btnY, btnW, btnH, "Buy All", buy1Enabled, true, outOfStock ? "Out" : null);
             if (buyAllArea) this.buttonAreas.push({ ...buyAllArea, action: 'buyAll', commodity: comm.name });
 
             // Sell 1 button
-            let sell1X = buyAllX + btnW + 10;
-            const sellEnabled = !isIllegalInSystem && !isMissionCargo;
+            const sell1X = buyAllX + btnW + 10;
             const sell1Area = UIComponents.drawMarketButton(sell1X, btnY, btnW, btnH, "Sell 1", sellEnabled, false);
             if (sell1Area) this.buttonAreas.push({ ...sell1Area, action: 'sell', quantity: 1, commodity: comm.name });
 
             // Sell All button
-            let sellAllX = sell1X + btnW + 5;
+            const sellAllX = sell1X + btnW + columns.btnSpacing;
             const sellAllArea = UIComponents.drawMarketButton(sellAllX, btnY, btnW, btnH, "Sell All", sellEnabled, false);
             if (sellAllArea) this.buttonAreas.push({ ...sellAllArea, action: 'sellAll', commodity: comm.name });
         }
 
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        this.backButtonArea = UIComponents.drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255]);
+        this.backButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
         
         // Sync back button area to UIManager AFTER it's drawn
         uiManager.marketBackButtonArea = this.backButtonArea;
+        
+        pop();
     }
 
     /**
@@ -272,35 +311,20 @@ class UIMarket {
         const stationMarket = station?.market;
         
         // Table setup
-        let sY = pY + headerHeight + 40;
-        let tW = pW - 60;
-        let sX = pX + 30;
-        
+        const sY = pY + headerHeight + 40;
+        const tW = pW - 60;
+        const sX = pX + 30;
         const rowH = 30;
         const btnW = 100;
         const btnH = rowH * 0.8;
-        
-        const numDataColumns = 4;
-        const btnSpacing = 5;
-        const totalBtnWidth = (btnW * 4) + (btnSpacing * 3);
-        const remainingWidth = tW - totalBtnWidth;
-        const colWidth = Math.floor(remainingWidth / numDataColumns);
-        const colCommodity = colWidth;
-        const colBuy = colWidth;
-        const colSell = colWidth;
-        const colCargo = colWidth;
-        
         const maxDeviation = 0.8;
         
+        // Column layout (no stock column for space objects)
+        const columns = this._calculateMarketColumns(tW, sX, btnW, false);
+        
         // Draw column headers
-        let headerY = sY - 20;
-        fill(255);
-        textAlign(LEFT, CENTER);
-        text("Commodity", sX + 10, headerY);
-        textAlign(CENTER, CENTER);
-        text("Buy", sX + colCommodity + colBuy / 2, headerY);
-        text("Sell", sX + colCommodity + colBuy + colSell / 2, headerY);
-        text("Cargo Hold", sX + colCommodity + colBuy + colSell + colCargo / 2, headerY);
+        const headerY = sY - 20;
+        this._drawMarketHeaders(sX, headerY, columns, false);
         
         // Get all commodities
         const allCommodities = stationMarket ? stationMarket.getPrices() : this.getDefaultCommodityList();
@@ -315,8 +339,8 @@ class UIMarket {
             const isBought = buysSet.has(commodityName);
             const isAvailable = isProduced || isBought;
             
-            let yP = sY + i * rowH;
-            let tY = yP + rowH / 2;
+            const yP = sY + i * rowH;
+            const tY = yP + rowH / 2;
             
             // Alternating row background
             UIComponents.drawAlternatingRow(i, sX, yP, tW, rowH);
@@ -326,10 +350,7 @@ class UIMarket {
             const playerQty = playerItem ? playerItem.quantity : 0;
             
             // Calculate prices
-            let buyPrice = 0;
-            let sellPrice = 0;
-            let baseBuy = 0;
-            let baseSell = 0;
+            let buyPrice = 0, sellPrice = 0, baseBuy = 0, baseSell = 0;
             
             if (stationMarket) {
                 const stationPrices = stationMarket.getPrices();
@@ -359,169 +380,93 @@ class UIMarket {
             // Commodity name
             textAlign(LEFT, CENTER);
             fill(isAvailable ? 255 : 100);
-            text(commodityName || '?', sX + 10, tY, colCommodity - 15);
+            text(commodityName || '?', sX + 10, tY, columns.commodityW - 15);
             
             // Buy price
             textAlign(CENTER, CENTER);
             if (isProduced && buyPrice > 0) {
-                if (baseBuy > 0) {
-                    let buyDeviation = (buyPrice - baseBuy) / baseBuy;
-                    fill(...UIComponents.getPriceDeviationColor(buyDeviation, false));
-                } else {
-                    fill(255);
-                }
-                text(buyPrice, sX + colCommodity + colBuy / 2, tY);
+                const buyDeviation = baseBuy > 0 ? (buyPrice - baseBuy) / baseBuy : 0;
+                fill(...UIComponents.getPriceDeviationColor(buyDeviation, false));
+                text(buyPrice, columns.buyX, tY);
             } else {
                 fill(80);
-                text("-", sX + colCommodity + colBuy / 2, tY);
+                text("-", columns.buyX, tY);
             }
             
             // Sell price
             if (isBought && sellPrice > 0) {
-                if (baseSell > 0) {
-                    let sellDeviation = (sellPrice - baseSell) / baseSell;
-                    fill(...UIComponents.getPriceDeviationColor(sellDeviation, true));
-                } else {
-                    fill(255);
-                }
-                text(sellPrice, sX + colCommodity + colBuy + colSell / 2, tY);
+                const sellDeviation = baseSell > 0 ? (sellPrice - baseSell) / baseSell : 0;
+                fill(...UIComponents.getPriceDeviationColor(sellDeviation, true));
+                text(sellPrice, columns.sellX, tY);
             } else {
                 fill(80);
-                text("-", sX + colCommodity + colBuy + colSell / 2, tY);
+                text("-", columns.sellX, tY);
             }
             
             // Cargo amount
             fill(playerQty > 0 ? 255 : 80);
-            text(playerQty, sX + colCommodity + colBuy + colSell + colCargo / 2, tY);
+            text(playerQty, columns.cargoX, tY);
             
             // Price indicators
             if (isProduced && baseBuy > 0 && buyPrice > 0) {
                 const buyDeviation = (buyPrice - baseBuy) / baseBuy;
-                UIComponents.drawPriceIndicator(sX + colCommodity + colBuy + 5, yP, rowH, buyDeviation, false, maxDeviation);
+                UIComponents.drawPriceIndicator(columns.buyX + columns.colWidth / 2, yP, rowH, buyDeviation, false, maxDeviation);
             }
             if (isBought && baseSell > 0 && sellPrice > 0) {
                 const sellDeviation = (sellPrice - baseSell) / baseSell;
-                UIComponents.drawPriceIndicator(sX + colCommodity + colBuy + colSell + 5, yP, rowH, sellDeviation, true, maxDeviation);
+                UIComponents.drawPriceIndicator(columns.sellX + columns.colWidth / 2, yP, rowH, sellDeviation, true, maxDeviation);
             }
             
             // Buttons
-            const rightEdge = sX + tW;
-            let btnStartX = rightEdge - totalBtnWidth;
             const isMissionCargo = player.activeMission?.cargoType === commodityName;
+            const btnY = yP + (rowH - btnH) / 2;
             
             // Buy 1 button
-            let buy1X = btnStartX;
-            let buy1Y = yP + (rowH - btnH) / 2;
-            
-            if (!isProduced) {
-                fill(40); noStroke();
-                rect(buy1X, buy1Y, btnW, btnH, 3);
-                UIComponents.drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 60);
-            } else {
-                const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
-                if (canBuy) {
-                    fill(0, 150, 0); stroke(0, 200, 0); strokeWeight(1);
-                    rect(buy1X, buy1Y, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 255);
-                    this.spaceObjectButtonAreas.push({
-                        x: buy1X, y: buy1Y, w: btnW, h: btnH,
-                        action: "BUY_COMMODITY", quantity: 1, commodity: commodityName, price: buyPrice
-                    });
-                } else {
-                    fill(60); stroke(80); strokeWeight(1);
-                    rect(buy1X, buy1Y, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Buy 1", buy1X, buy1Y, btnW, btnH, 100);
-                }
+            const buy1X = columns.buttonsStart;
+            const canBuyOne = isProduced && buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
+            const buy1Area = UIComponents.drawMarketButton(buy1X, btnY, btnW, btnH, "Buy 1", canBuyOne, true, !isProduced ? null : null);
+            if (buy1Area) {
+                this.spaceObjectButtonAreas.push({
+                    ...buy1Area, action: "BUY_COMMODITY", quantity: 1, commodity: commodityName, price: buyPrice
+                });
             }
-            
+
             // Buy All button
-            let buyAllX = buy1X + btnW + btnSpacing;
-            let buyAllY = buy1Y;
-            
-            if (!isProduced) {
-                fill(40); noStroke();
-                rect(buyAllX, buyAllY, btnW, btnH, 3);
-                UIComponents.drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 60);
-            } else {
-                const canBuy = buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
-                if (canBuy) {
-                    fill(0, 180, 0); stroke(0, 220, 0); strokeWeight(1);
-                    rect(buyAllX, buyAllY, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 255);
-                    this.spaceObjectButtonAreas.push({
-                        x: buyAllX, y: buyAllY, w: btnW, h: btnH,
-                        action: "BUY_ALL_COMMODITY", commodity: commodityName, price: buyPrice
-                    });
-                } else {
-                    fill(60); stroke(80); strokeWeight(1);
-                    rect(buyAllX, buyAllY, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Buy All", buyAllX, buyAllY, btnW, btnH, 100);
-                }
+            const buyAllX = buy1X + btnW + columns.btnSpacing;
+            const buyAllArea = UIComponents.drawMarketButton(buyAllX, btnY, btnW, btnH, "Buy All", canBuyOne, true);
+            if (buyAllArea) {
+                this.spaceObjectButtonAreas.push({
+                    ...buyAllArea, action: "BUY_ALL_COMMODITY", commodity: commodityName, price: buyPrice
+                });
             }
-            
+
             // Sell 1 button
-            let sell1X = buyAllX + btnW + 10;
-            let sell1Y = buy1Y;
-            
-            if (!isBought || isMissionCargo) {
-                fill(isMissionCargo ? 100 : 40);
-                stroke(isMissionCargo ? 120 : 0);
-                if (isMissionCargo) strokeWeight(1); else noStroke();
-                rect(sell1X, sell1Y, btnW, btnH, 3);
-                UIComponents.drawButtonLabel("Sell 1", sell1X, sell1Y, btnW, btnH, isMissionCargo ? 180 : 60);
-            } else {
-                const canSell = sellPrice > 0 && playerQty > 0;
-                if (canSell) {
-                    fill(150, 0, 0); stroke(200, 0, 0); strokeWeight(1);
-                    rect(sell1X, sell1Y, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Sell 1", sell1X, sell1Y, btnW, btnH, 255);
-                    this.spaceObjectButtonAreas.push({
-                        x: sell1X, y: sell1Y, w: btnW, h: btnH,
-                        action: "SELL_COMMODITY", quantity: 1, commodity: commodityName, price: sellPrice
-                    });
-                } else {
-                    fill(60); stroke(80); strokeWeight(1);
-                    rect(sell1X, sell1Y, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Sell 1", sell1X, sell1Y, btnW, btnH, 100);
-                }
+            const sell1X = buyAllX + btnW + 10;
+            const canSellOne = isBought && !isMissionCargo && sellPrice > 0 && playerQty > 0;
+            const sell1Area = UIComponents.drawMarketButton(sell1X, btnY, btnW, btnH, "Sell 1", canSellOne, false);
+            if (sell1Area) {
+                this.spaceObjectButtonAreas.push({
+                    ...sell1Area, action: "SELL_COMMODITY", quantity: 1, commodity: commodityName, price: sellPrice
+                });
             }
-            
+
             // Sell All button
-            let sellAllX = sell1X + btnW + btnSpacing;
-            let sellAllY = buy1Y;
-            
-            if (!isBought || isMissionCargo) {
-                fill(isMissionCargo ? 100 : 40);
-                stroke(isMissionCargo ? 120 : 0);
-                if (isMissionCargo) strokeWeight(1); else noStroke();
-                rect(sellAllX, sellAllY, btnW, btnH, 3);
-                UIComponents.drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, isMissionCargo ? 180 : 60);
-            } else {
-                const canSell = sellPrice > 0 && playerQty > 0;
-                if (canSell) {
-                    fill(180, 0, 0); stroke(220, 0, 0); strokeWeight(1);
-                    rect(sellAllX, sellAllY, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, 255);
-                    this.spaceObjectButtonAreas.push({
-                        x: sellAllX, y: sellAllY, w: btnW, h: btnH,
-                        action: "SELL_ALL_COMMODITY", commodity: commodityName, price: sellPrice
-                    });
-                } else {
-                    fill(60); stroke(80); strokeWeight(1);
-                    rect(sellAllX, sellAllY, btnW, btnH, 3);
-                    UIComponents.drawButtonLabel("Sell All", sellAllX, sellAllY, btnW, btnH, 100);
-                }
+            const sellAllX = sell1X + btnW + columns.btnSpacing;
+            const sellAllArea = UIComponents.drawMarketButton(sellAllX, btnY, btnW, btnH, "Sell All", canSellOne, false);
+            if (sellAllArea) {
+                this.spaceObjectButtonAreas.push({
+                    ...sellAllArea, action: "SELL_ALL_COMMODITY", commodity: commodityName, price: sellPrice
+                });
             }
         }
         
         // Back button
-        const backW = 100, backH = 30;
-        const backX = pX + pW / 2 - backW / 2;
-        const backY = pY + pH - backH - 15;
-        this.spaceObjectBackButtonArea = UIComponents.drawButton(backX, backY, backW, backH, "Back", [0, 80, 180], [100, 150, 255]);
+        this.spaceObjectBackButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
         
         // Sync back button area to UIManager AFTER it's drawn
         uiManager.spaceObjectMarketBackButtonArea = this.spaceObjectBackButtonArea;
+        
+        pop();
     }
 
     /**

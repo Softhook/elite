@@ -208,20 +208,18 @@ class UIStationMenus {
             return;
         }
         
-        UIComponents.setTextStyle({ fill: 255, size: 20, alignH: CENTER, alignV: TOP });
+        UIComponents.setTextStyle({ fill: 255, size: 20, align: [CENTER, TOP] });
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
         const contentY = pY + headerHeight + 10;
         text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
-        fill(statusColor);
-        textSize(24);
+        UIComponents.setTextStyle({ fill: statusColor, size: 24 });
         text(statusText, pX+pW/2, contentY+30);
         
         // Display police bounty information
         if (player.isPolice) {
-            fill(100, 255, 100);
-            textSize(18);
+            UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
             text("Active Bounty: 1,000 cr per Pirate or Alien killed", pX+pW/2, contentY+65);
         }
         
@@ -229,9 +227,7 @@ class UIStationMenus {
         try {
             const pk = player.getFactionKillsProgress && player.getFactionKillsProgress('POLICE');
             if (pk) {
-                fill(200);
-                textSize(16);
-                textAlign(CENTER, TOP);
+                UIComponents.setTextStyle({ fill: [200], size: 16, align: [CENTER, TOP] });
                 if (pk.nextThreshold) {
                     text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW/2, contentY + 95);
                 } else {
@@ -245,8 +241,7 @@ class UIStationMenus {
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
         if (player.hasBeenPolice) {
             fineAmount *= 3;
-            fill(255, 200, 100);
-            textSize(16);
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 16 });
             text("Fines tripled for former police officer", pX + pW/2, contentY + 95);
         }
         
@@ -266,9 +261,7 @@ class UIStationMenus {
                 UIComponents.drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50,50,180], [100,100,255], 5, {action:'join_police'})
             );
         } else {
-            fill(255);
-            textSize(18);
-            textAlign(CENTER,CENTER);
+            UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
             text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
         }
         
@@ -318,9 +311,7 @@ class UIStationMenus {
         const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
         
         // Show trade-in info at top
-        fill(180, 220, 255);
-        textSize(20);
-        textAlign(LEFT, TOP);
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [LEFT, TOP] });
         text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX+20, pY+headerHeight);
         
         // FILTER SHIPS based on system properties
@@ -449,9 +440,7 @@ class UIStationMenus {
         fill(40, 40, 70);
         rect(pX + 10, slotPanelY, pW - 20, slotPanelH, 5);
         
-        fill(255);
-        textAlign(CENTER, TOP);
-        textSize(16);
+        UIComponents.setTextStyle({ fill: 255, size: 16, align: [CENTER, TOP] });
         text("Select Weapon Slot", pX + pW/2, slotPanelY + 5);
         
         // Get available slots from ship's armament array
@@ -475,9 +464,7 @@ class UIStationMenus {
             rect(slotX, slotY, slotBtnW, slotBtnH, 4);
             
             noStroke();
-            textSize(20);
-            fill(230);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 230, size: 20, align: [CENTER, CENTER] });
             text(`Slot ${i+1}`, slotX + slotBtnW/2, slotY + 10);
             textSize(12);
             text((i < player.weapons.length) ? player.weapons[i]?.name : "Empty", slotX + slotBtnW/2, slotY + 25);
@@ -569,13 +556,12 @@ class UIStationMenus {
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
         
         // Draw description
-        UIComponents.setTextStyle({ fill: 220, size: 24, alignH: CENTER, alignV: TOP });
+        UIComponents.setTextStyle({ fill: 220, size: 24, align: [CENTER, TOP] });
         let descY = pY + headerHeight + 20;
         text("Hire professional security guards to protect you during your travels.", pX + pW/2, descY);
         
         // Show current bodyguard status
-        textSize(20);
-        fill(180, 220, 255);
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20 });
         let statusY = descY + 40;
         
         const activeGuardsCount = player.getActiveGuardsCount ? player.getActiveGuardsCount() : 0;
@@ -583,9 +569,7 @@ class UIStationMenus {
         text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW/2, statusY);
         
         if (activeGuardsCount < bodyguardLimit) {
-            fill(230);
-            textSize(22);
-            textAlign(LEFT, TOP);
+            UIComponents.setTextStyle({ fill: 230, size: 22, align: [LEFT, TOP] });
             text("Available Guards for Hire:", pX + 40, statusY + 40);
             
             const guardOptions = [
@@ -598,9 +582,7 @@ class UIStationMenus {
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
             
             if (affordableGuards.length === 0) {
-                fill(255, 150, 150);
-                textSize(20);
-                textAlign(CENTER, CENTER);
+                UIComponents.setTextStyle({ fill: [255, 150, 150], size: 20, align: [CENTER, CENTER] });
                 text("You don't have enough credits to hire any guards.", pX + pW / 2, statusY + 80);
             } else {
                 let guardY = statusY + 80;
@@ -649,9 +631,7 @@ class UIStationMenus {
                 });
             }
         } else {
-            fill(255, 200, 100);
-            textSize(20);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 20, align: [CENTER, CENTER] });
             text("Maximum number of bodyguards hired.", pX + pW / 2, statusY + 80);
         }
         
@@ -703,9 +683,7 @@ class UIStationMenus {
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
         
         if (!activeStation) {
-            fill(220);
-            textSize(22);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", pX + pW/2, pY + pH/2 - 20);
             
             const backW = 100, backH = 30;
@@ -722,29 +700,22 @@ class UIStationMenus {
             activeStation.storage = [];
         }
         
-        fill(220);
-        textSize(20);
-        textAlign(CENTER, TOP);
+        UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, TOP] });
         const infoY = pY + headerHeight + 10;
         text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW/2, infoY);
         
         // Station storage contents
-        fill(180, 200, 255);
-        textSize(22);
-        textAlign(LEFT, TOP);
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
         text("Station Storage:", pX + 40, infoY + 40);
         
         const storage = activeStation.storage;
         let storageY = infoY + 70;
         
         if (storage.length === 0) {
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
             text("Storage is empty", pX + pW / 2, storageY);
         } else {
-            textAlign(LEFT, TOP);
-            textSize(20);
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: 20 });
             for (let i = 0; i < storage.length; i++) {
                 const item = storage[i];
                 const itemY = storageY + i * 40;
@@ -778,22 +749,17 @@ class UIStationMenus {
         
         // Player cargo section for depositing
         const cargoSectionY = storageY + Math.max(storage.length * 40, 60) + 30;
-        fill(180, 200, 255);
-        textSize(22);
-        textAlign(LEFT, TOP);
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
         text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
         
         const playerCargo = Array.isArray(player.cargo) ? player.cargo : [];
         let cargoY = cargoSectionY + 35;
         
         if (playerCargo.length === 0) {
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
             text("No cargo in hold", pX + pW / 2, cargoY);
         } else {
-            textAlign(LEFT, TOP);
-            textSize(20);
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: 20 });
             for (let i = 0; i < playerCargo.length; i++) {
                 const item = playerCargo[i];
                 const itemY = cargoY + i * 40;

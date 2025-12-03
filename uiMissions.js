@@ -103,10 +103,7 @@ class UIMissions {
         rect(x + 3, y + 5, 4, h - 10, 2);
         
         // Draw mission text
-        fill(...textColor);
-        noStroke();
-        textAlign(LEFT, CENTER);
-        textSize(16);
+        UIComponents.setTextStyle({ fill: textColor, size: 16, align: [LEFT, CENTER] });
         text(label, x + 15, y + h / 2, w - 25);
         
         pop();
@@ -154,15 +151,14 @@ class UIMissions {
         let btnDetailW = 120, btnDetailH = 30, btnDetailY = pY + pH - btnDetailH - 15;
         
         // List Section background
-        fill(30, 40, 50, 200);
+        UIComponents.drawSectionBG(pX + 5, cY, listW - 10, cH, [30, 40, 50, 200], 5);
         stroke(80, 100, 120);
         strokeWeight(1);
+        noFill();
         rect(pX + 5, cY, listW - 10, cH, 5);
         
         if (!Array.isArray(missions) || missions.length === 0) {
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: [180], size: 18, align: [CENTER, CENTER] });
             text("No missions available.", pX + listW / 2, cY + cH / 2);
         } else {
             let currentY = cY + 10;
@@ -208,16 +204,15 @@ class UIMissions {
         }
         
         // Detail Section background
-        fill(30, 40, 50, 200);
+        UIComponents.drawSectionBG(detailX, cY, detailW - 5, cH, [30, 40, 50, 200], 5);
         stroke(80, 100, 120);
         strokeWeight(1);
+        noFill();
         rect(detailX, cY, detailW - 5, cH, 5);
         
         if (missionToShowDetails) {
             // Draw mission details
-            fill(230);
-            textSize(18);
-            textAlign(LEFT, TOP);
+            UIComponents.setTextStyle({ fill: [230], size: 18, align: [LEFT, TOP] });
             textLeading(24);
             const details = missionToShowDetails.getDetails ? missionToShowDetails.getDetails() : "No details available.";
             text(details, detailX + 15, cY + 15, detailW - 30);
@@ -269,17 +264,12 @@ class UIMissions {
                 stroke(100, 150, 100);
                 strokeWeight(2);
                 rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
-                fill(150);
-                noStroke();
-                textAlign(CENTER, CENTER);
-                textSize(16);
+                UIComponents.setTextStyle({ fill: [150], size: 16, align: [CENTER, CENTER] });
                 text("Unavailable", actionBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
             }
         } else {
             // No mission selected
-            fill(180);
-            textSize(18);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: [180], size: 18, align: [CENTER, CENTER] });
             text("Select a mission from the list for details.", detailX + (detailW - 5) / 2, cY + cH / 2);
             
             // Only show Back button centered
@@ -297,12 +287,9 @@ class UIMissions {
             fill(0, 0, 0, 180);
             stroke(255, 150, 0);
             strokeWeight(1);
-            let ay = pY + pH + 5, ah = 30;
+            const ay = pY + pH + 5, ah = 30;
             rect(pX, ay, pW, ah);
-            fill(255, 180, 0);
-            noStroke();
-            textSize(14);
-            textAlign(LEFT, CENTER);
+            UIComponents.setTextStyle({ fill: [255, 180, 0], size: 14, align: [LEFT, CENTER] });
             text(`Active: ${player.activeMission.title}`, pX + 15, ay + ah / 2, pW - 30);
         }
     }

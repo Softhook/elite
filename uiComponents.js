@@ -16,6 +16,7 @@ class UIComponents {
      * @param {Object} options - Styling options
      * @param {Array|number} [options.fill] - Fill color (array or single value)
      * @param {number} [options.size] - Text size
+     * @param {Array} [options.align] - Alignment as [horizontal, vertical] array
      * @param {string} [options.alignH] - Horizontal alignment (LEFT, CENTER, RIGHT)
      * @param {string} [options.alignV] - Vertical alignment (TOP, CENTER, BOTTOM)
      * @param {boolean} [options.noStroke=false] - If true, disable stroke
@@ -31,7 +32,10 @@ class UIComponents {
         if (options.size !== undefined) {
             textSize(options.size);
         }
-        if (options.alignH !== undefined || options.alignV !== undefined) {
+        // Support both align: [H, V] array format and alignH/alignV separate properties
+        if (options.align !== undefined && Array.isArray(options.align)) {
+            textAlign(options.align[0] || LEFT, options.align[1] || TOP);
+        } else if (options.alignH !== undefined || options.alignV !== undefined) {
             const h = options.alignH || LEFT;
             const v = options.alignV || TOP;
             textAlign(h, v);

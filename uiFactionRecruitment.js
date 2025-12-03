@@ -60,45 +60,35 @@ class UIFactionRecruitment {
         if (!player) return;
         
         const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
-        fill(255);
-        textSize(20);
-        textAlign(CENTER, TOP);
         const contentY = pY + headerHeight + 10;
         
         const isWanted = system?.isPlayerWanted ? system.isPlayerWanted() : false;
         const canJoin = player.canJoinFaction ? player.canJoinFaction(factionKey) : false;
         
         // Display faction info
-        fill(themeColors[1]);
-        textSize(24);
+        UIComponents.setTextStyle({ fill: themeColors[1], size: 24, align: [CENTER, TOP] });
         text(`${factionName} Recruitment Office`, pX + pW / 2, contentY);
         
-        fill(255);
-        textSize(18);
+        UIComponents.setTextStyle({ fill: 255, size: 18 });
         text(tagline, pX + pW / 2, contentY + 40);
         
         // Show legal status
-        fill(255);
-        textSize(20);
+        UIComponents.setTextStyle({ fill: 255, size: 20 });
         text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY + 80);
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        fill(statusColor);
-        textSize(24);
+        UIComponents.setTextStyle({ fill: statusColor, size: 24 });
         text(statusText, pX + pW / 2, contentY + 110);
         
         // Show current faction status
         if (player.playerFaction) {
-            fill(255, 200, 100);
-            textSize(18);
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 18 });
             text(`Current Faction: ${player.playerFaction}`, pX + pW / 2, contentY + 140);
         }
         
         // Display bounty information if member
         if (player.playerFaction === factionKey) {
-            fill(100, 255, 100);
-            textSize(18);
+            UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
             text(bountyDescription, pX + pW / 2, contentY + (player.playerFaction ? 170 : 150));
         }
         
@@ -106,9 +96,11 @@ class UIFactionRecruitment {
         try {
             const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
             if (progress) {
-                fill(themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9);
-                textSize(16);
-                textAlign(CENTER, TOP);
+                UIComponents.setTextStyle({ 
+                    fill: [themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9], 
+                    size: 16, 
+                    align: [CENTER, TOP] 
+                });
                 if (progress.nextThreshold) {
                     text(`${factionKey} Kills: ${progress.kills} — ${progress.killsToNext} to ${progress.nextRank}`, pX + pW / 2, contentY + 240);
                 } else {
@@ -136,19 +128,13 @@ class UIFactionRecruitment {
                 UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Join ${factionName}`, themeColors[0], themeColors[1], 5, {action: 'join_faction', faction: factionKey})
             );
         } else if (player.playerFaction === factionKey) {
-            fill(255);
-            textSize(18);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
             text(this.getFactionMemberMessage(factionKey), pX + pW / 2, btnY1 + btnH / 2);
         } else if (player.playerFaction && player.playerFaction !== factionKey) {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
             text("You must leave your current faction first", pX + pW / 2, btnY1 + btnH / 2);
         } else if (isWanted) {
-            fill(255, 150, 150);
-            textSize(16);
-            textAlign(CENTER, CENTER);
+            UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
             text("Clear your legal status to join", pX + pW / 2, btnY1 + btnH / 2);
         }
         

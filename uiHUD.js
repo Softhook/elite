@@ -523,8 +523,7 @@ class UIHUD {
         let cursorX = panelX + padding;
         let cursorY = panelY + padding;
 
-        fill(255);
-        textSize(18);
+        UIComponents.setTextStyle({ fill: 255, size: 18 });
         text(pilotName, cursorX, cursorY);
         if (wantedLabel) {
             fill(255, 0, 0);
@@ -549,8 +548,7 @@ class UIHUD {
 
         cursorY += sectionSpacing;
 
-        fill(210);
-        textSize(18);
+        UIComponents.setTextStyle({ fill: 210, size: 18 });
         for (let i = 0; i < infoLines.length; i++) {
             text(infoLines[i], cursorX, cursorY);
             cursorY += lineHeight;
@@ -858,8 +856,7 @@ class UIHUD {
         textSize(100);
         text("GAME OVER", width / 2, height / 2 - 80);
 
-        fill(255);
-        textSize(30);
+        UIComponents.setTextStyle({ fill: 255, size: 30 });
         text("Click anywhere or press any key to start again", width / 2, height / 2 + 20);
 
         pop();
