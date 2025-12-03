@@ -74,7 +74,17 @@
     <!-- Small utilities used by UI -->
     <script src="systemDescription.js"></script>
 
-    <!-- Load UI LAST (Depends on most others) -->
+    <!-- Load UI Modules (must load BEFORE uiManager.js) -->
+    <script src="uiComponents.js"></script>
+    <script src="uiHUD.js"></script>
+    <script src="uiMinimap.js"></script>
+    <script src="uiMarket.js"></script>
+    <script src="uiStationMenus.js"></script>
+    <script src="uiMissions.js"></script>
+    <script src="uiGalaxyMap.js"></script>
+    <script src="uiFactionRecruitment.js"></script>
+
+    <!-- Load Main UI Manager (orchestrates modules) -->
     <script src="uiManager.js"></script>
 
     <!-- Load Main Sketch Entry Point -->

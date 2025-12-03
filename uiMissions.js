@@ -1,0 +1,341 @@
+// ****** uiMissions.js ******
+// Mission board rendering and mission management UI.
+// This file must be loaded BEFORE uiManager.js
+
+/**
+ * UIMissions - Handles mission board rendering and mission details display.
+ */
+class UIMissions {
+    constructor() {
+        // Mission list button areas
+        this.missionListButtonAreas = [];
+        
+        // Mission detail button areas
+        this.missionDetailButtonAreas = {};
+        
+        // Track inactive mission IDs (completed or expired)
+        this.inactiveMissionIds = new Set();
+    }
+
+    /**
+     * Clears inactive mission IDs.
+     */
+    clearInactiveMissions() {
+        this.inactiveMissionIds.clear();
+    }
+
+    /**
+     * Marks a mission as inactive.
+     * @param {string} missionId
+     */
+    markMissionInactive(missionId) {
+        if (missionId) {
+            this.inactiveMissionIds.add(missionId);
+        }
+    }
+
+    /**
+     * Draws a single mission button in the list.
+     * @param {Object} config - Button configuration
+     * @returns {Object|null} Button area for click detection
+     */
+    _drawMissionButton(config) {
+        const { x, y, w, h, isInactive, isSelected, isActive, missionType, text } = config;
+        
+        push();
+        
+        // Determine background color based on state
+        let bgColor, strokeColor, textColor;
+        
+        if (isInactive) {
+            bgColor = [40, 40, 40];
+            strokeColor = [80, 80, 80];
+            textColor = [100, 100, 100];
+        } else if (isActive) {
+            bgColor = [60, 100, 60];
+            strokeColor = [100, 200, 100];
+            textColor = [255, 255, 200];
+        } else if (isSelected) {
+            bgColor = [60, 80, 120];
+            strokeColor = [100, 150, 255];
+            textColor = [255, 255, 255];
+        } else {
+            bgColor = [50, 60, 80];
+            strokeColor = [100, 120, 160];
+            textColor = [220, 220, 220];
+        }
+        
+        // Draw button background
+        fill(...bgColor);
+        stroke(...strokeColor);
+        strokeWeight(1);
+        rect(x, y, w, h, 4);
+        
+        // Draw mission type indicator
+        let typeColor;
+        if (typeof MISSION_TYPE !== 'undefined') {
+            switch (missionType) {
+                case MISSION_TYPE.DELIVERY_LEGAL:
+                    typeColor = [100, 200, 100];
+                    break;
+                case MISSION_TYPE.DELIVERY_ILLEGAL:
+                    typeColor = [255, 100, 100];
+                    break;
+                case MISSION_TYPE.BOUNTY:
+                    typeColor = [255, 200, 100];
+                    break;
+                case MISSION_TYPE.PATROL:
+                    typeColor = [100, 150, 255];
+                    break;
+                default:
+                    typeColor = [180, 180, 180];
+            }
+        } else {
+            typeColor = [180, 180, 180];
+        }
+        
+        // Draw small type indicator bar on left
+        noStroke();
+        fill(...typeColor);
+        rect(x + 3, y + 5, 4, h - 10, 2);
+        
+        // Draw mission text
+        fill(...textColor);
+        noStroke();
+        textAlign(LEFT, CENTER);
+        textSize(16);
+        text(text, x + 15, y + h / 2, w - 25);
+        
+        pop();
+        
+        // Return clickable area only if not inactive
+        if (!isInactive) {
+            return { x, y, w, h };
+        }
+        return null;
+    }
+
+    /**
+     * Draws the Mission Board screen.
+     * @param {Array} missions - Available missions
+     * @param {number} selectedIndex - Currently selected mission index
+     * @param {Player} player
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     * @param {StarSystem} currentSystem
+     * @param {Station} currentStation
+     */
+    drawMissionBoard(missions, selectedIndex, player, panelRect, headerHeight, currentSystem, currentStation) {
+        if (!player) return;
+        
+        this.missionListButtonAreas = [];
+        this.missionDetailButtonAreas = {};
+        
+        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+        
+        // Get context
+        const activeMission = player.activeMission;
+        const selectedMissionFromList = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
+        
+        // Determine which mission's details to display
+        let missionToShowDetails = null;
+        if (activeMission) {
+            missionToShowDetails = activeMission;
+        } else if (selectedMissionFromList) {
+            missionToShowDetails = selectedMissionFromList;
+        }
+        
+        // Layout
+        let listW = pW * 0.4, detailX = pX + listW + 10, detailW = pW - listW - 20;
+        let cY = pY + headerHeight, cH = pH - headerHeight - 50;
+        let btnDetailW = 120, btnDetailH = 30, btnDetailY = pY + pH - btnDetailH - 15;
+        
+        // List Section background
+        fill(30, 40, 50, 200);
+        stroke(80, 100, 120);
+        strokeWeight(1);
+        rect(pX + 5, cY, listW - 10, cH, 5);
+        
+        if (!Array.isArray(missions) || missions.length === 0) {
+            fill(180);
+            textSize(18);
+            textAlign(CENTER, CENTER);
+            text("No missions available.", pX + listW / 2, cY + cH / 2);
+        } else {
+            let currentY = cY + 10;
+            const spacing = 5;
+            
+            for (let i = 0; i < missions.length; i++) {
+                const m = missions[i];
+                const isInactive = this.inactiveMissionIds.has(m.id) || 
+                                   m.status === 'Completed' || 
+                                   m.status === 'Failed';
+                
+                // Calculate button height based on text
+                const missionText = m.getSummary ? m.getSummary() : 'Unknown mission';
+                textSize(16);
+                const availableWidth = listW - 40;
+                const approxCharsPerLine = 30;
+                const textLines = Math.ceil(missionText.length / approxCharsPerLine);
+                const minHeight = 35;
+                const heightPerLine = 18;
+                const buttonHeight = Math.max(minHeight, textLines * heightPerLine);
+                
+                // Skip if would extend beyond panel
+                if (currentY + buttonHeight > cY + cH) break;
+                
+                const buttonArea = this._drawMissionButton({
+                    x: pX + 10,
+                    y: currentY,
+                    w: listW - 20,
+                    h: buttonHeight,
+                    isInactive: isInactive,
+                    isSelected: i === selectedIndex,
+                    isActive: activeMission && activeMission.id === m.id,
+                    missionType: m.type,
+                    text: missionText
+                });
+                
+                if (buttonArea) {
+                    this.missionListButtonAreas.push({ ...buttonArea, index: i });
+                }
+                
+                currentY += buttonHeight + spacing;
+            }
+        }
+        
+        // Detail Section background
+        fill(30, 40, 50, 200);
+        stroke(80, 100, 120);
+        strokeWeight(1);
+        rect(detailX, cY, detailW - 5, cH, 5);
+        
+        if (missionToShowDetails) {
+            // Draw mission details
+            fill(230);
+            textSize(18);
+            textAlign(LEFT, TOP);
+            textLeading(24);
+            const details = missionToShowDetails.getDetails ? missionToShowDetails.getDetails() : "No details available.";
+            text(details, detailX + 15, cY + 15, detailW - 30);
+            
+            // Determine buttons
+            let actionBtnX = detailX + detailW / 2 - btnDetailW - 10;
+            let backBtnX = detailX + detailW / 2 + 10;
+            
+            // Back button always available
+            this.missionDetailButtonAreas['back'] = UIComponents.drawButton(
+                backBtnX, btnDetailY, btnDetailW, btnDetailH,
+                "Back", [180, 0, 0], [255, 150, 150], 3
+            );
+            
+            if (activeMission && missionToShowDetails.id === activeMission.id) {
+                // Active mission - show Complete or Abandon
+                let canCompleteHere = false;
+                
+                // Check delivery completion conditions
+                if (typeof MISSION_TYPE !== 'undefined' &&
+                    (activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
+                    currentSystem && currentStation && 
+                    activeMission.destinationSystem === currentSystem.name &&
+                    activeMission.destinationStation === currentStation.name &&
+                    player.hasCargo && player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity)) {
+                    canCompleteHere = true;
+                }
+                
+                if (canCompleteHere) {
+                    this.missionDetailButtonAreas['complete'] = UIComponents.drawButton(
+                        actionBtnX, btnDetailY, btnDetailW, btnDetailH,
+                        "Complete", [0, 200, 50], [150, 255, 150], 3
+                    );
+                } else {
+                    this.missionDetailButtonAreas['abandon'] = UIComponents.drawButton(
+                        actionBtnX, btnDetailY, btnDetailW, btnDetailH,
+                        "Abandon", [200, 50, 50], [255, 150, 150], 3
+                    );
+                }
+            } else if (!activeMission && missionToShowDetails) {
+                // Available mission - show Accept
+                this.missionDetailButtonAreas['accept'] = UIComponents.drawButton(
+                    actionBtnX, btnDetailY, btnDetailW, btnDetailH,
+                    "Accept", [0, 180, 0], [150, 255, 150], 3
+                );
+            } else {
+                // Edge case: active mission exists but showing different mission details
+                fill(50, 100, 50);
+                stroke(100, 150, 100);
+                strokeWeight(2);
+                rect(actionBtnX, btnDetailY, btnDetailW, btnDetailH, 3);
+                fill(150);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(16);
+                text("Unavailable", actionBtnX + btnDetailW/2, btnDetailY + btnDetailH/2);
+            }
+        } else {
+            // No mission selected
+            fill(180);
+            textSize(18);
+            textAlign(CENTER, CENTER);
+            text("Select a mission from the list for details.", detailX + (detailW - 5) / 2, cY + cH / 2);
+            
+            // Only show Back button centered
+            let backBtnX = pX + pW / 2 - btnDetailW / 2;
+            this.missionDetailButtonAreas = {
+                'back': UIComponents.drawButton(backBtnX, btnDetailY, btnDetailW, btnDetailH, "Back", [180, 0, 0], [255, 150, 150], 3),
+                'accept': null,
+                'complete': null,
+                'abandon': null
+            };
+        }
+        
+        // Active mission info bar at bottom
+        if (player.activeMission?.title) {
+            fill(0, 0, 0, 180);
+            stroke(255, 150, 0);
+            strokeWeight(1);
+            let ay = pY + pH + 5, ah = 30;
+            rect(pX, ay, pW, ah);
+            fill(255, 180, 0);
+            noStroke();
+            textSize(14);
+            textAlign(LEFT, CENTER);
+            text(`Active: ${player.activeMission.title}`, pX + 15, ay + ah / 2, pW - 30);
+        }
+    }
+
+    /**
+     * Handles click on mission list.
+     * @param {number} mx
+     * @param {number} my
+     * @returns {number|null} Index of clicked mission or null
+     */
+    handleMissionListClick(mx, my) {
+        for (const btn of this.missionListButtonAreas) {
+            if (UIComponents.isClickInArea(mx, my, btn)) {
+                return btn.index;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handles click on mission detail buttons.
+     * @param {number} mx
+     * @param {number} my
+     * @returns {string|null} Action name or null
+     */
+    handleMissionDetailClick(mx, my) {
+        for (const [action, area] of Object.entries(this.missionDetailButtonAreas)) {
+            if (area && UIComponents.isClickInArea(mx, my, area)) {
+                return action;
+            }
+        }
+        return null;
+    }
+}
+
+// Export for use
+if (typeof window !== 'undefined') {
+    window.UIMissions = UIMissions;
+}

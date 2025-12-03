@@ -12,6 +12,15 @@ const STANDARD_PANEL_BG = [20, 20, 40, 220];  // Dark blue-grey, semi-transparen
 
 class UIManager {
     constructor() {
+        // --- Instantiate UI Modules ---
+        this.hud = new UIHUD();
+        this.minimap = new UIMinimap();
+        this.market = new UIMarket();
+        this.stationMenus = new UIStationMenus();
+        this.missions = new UIMissions();
+        this.galaxyMap = new UIGalaxyMap();
+        this.factionRecruitment = new UIFactionRecruitment();
+        
         // --- UI Areas ---
         this._initUIAreas();
         // --- UI State ---
@@ -536,33 +545,34 @@ class UIManager {
      * @param {string} soundType - The type/name of the sound (e.g., "laser", "explosion").
      */
     trackCombatSound(x, y, soundType) {
-
-        // Optional: Filter for specific combat-related sound types if needed
-        const combatSounds = ['laser', 'explosion', 'hit', 'shield', 'missileLaunch', 'beam', 'turret'];
-        if (!combatSounds.includes(soundType)) {
-            // console.log(`UIManager: Sound '${soundType}' is not in combatSounds list for indicator.`); // DEBUG if filter active
-            // return; // Uncomment if you only want specific sounds to trigger indicators
+        if (this.hud) {
+            this.hud.trackCombatSound(x, y, soundType);
+        } else {
+            // Fallback for backward compatibility
+            const combatSounds = ['laser', 'explosion', 'hit', 'shield', 'missileLaunch', 'beam', 'turret'];
+            if (!combatSounds.includes(soundType)) return;
+            this.battleIndicators.push({
+                x: x,
+                y: y,
+                timestamp: millis(),
+                type: soundType
+            });
+            this.cleanupBattleIndicators();
         }
-
-        this.battleIndicators.push({
-            x: x, // World X
-            y: y, // World Y
-            timestamp: millis(),
-            type: soundType
-        });
-        //console.log(`UIManager: Indicator pushed. Total indicators: ${this.battleIndicators.length}`); // DEBUG
-
-        this.cleanupBattleIndicators();
     }
 
     /**
      * Removes battle indicators that have exceeded their duration.
      */
     cleanupBattleIndicators() {
-        const now = millis();
-        this.battleIndicators = this.battleIndicators.filter(indicator =>
-            now - indicator.timestamp < this.battleIndicatorDuration
-        );
+        if (this.hud) {
+            this.hud.cleanupBattleIndicators();
+        } else {
+            const now = millis();
+            this.battleIndicators = this.battleIndicators.filter(indicator =>
+                now - indicator.timestamp < this.battleIndicatorDuration
+            );
+        }
     }
 
     /**
@@ -1473,11 +1483,16 @@ class UIManager {
     }
 
     /**
-     * Draws the Space Object Market screen (when state is VIEWING_SPACE_OBJECT_MARKET)
+     * Draws the Space Object Market screen - delegates to market module
      * @param {SpaceObject} spaceObject - The space object the player is trading with
      * @param {Player} player - The player object
      */
     drawSpaceObjectMarket(spaceObject, player) {
+        if (this.market) {
+            this.market.drawSpaceObjectMarket(spaceObject, player, this);
+            return;
+        }
+        // Fallback - original implementation
         if (!spaceObject || !player) { 
             console.warn("drawSpaceObjectMarket missing spaceObject or player"); 
             return; 
@@ -1493,16 +1508,13 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawSpaceObjectHeader("Commodity Market", spaceObject, player, system);
         
-        // Get tradable commodities for this space object
         const tradable = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
         const producesSet = new Set(tradable.produces || []);
         const buysSet = new Set(tradable.buys || []);
         
-        // Get station market for price reference
         const station = system?.station;
         const stationMarket = station?.market;
         
-        // Table setup
         let sY = pY + headerHeight + 40;
         let tW = pW - 60;
         let sX = pX + 30;
@@ -1857,8 +1869,13 @@ class UIManager {
         return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
     }
 
-    /** Draws the Repairs Menu */
+    /** Draws the Repairs Menu - delegates to station menus module */
     drawRepairsMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawRepairsMenu(player, this);
+            return;
+        }
+        // Fallback
         this._initButtonAreas(['repairsFullButtonArea', 'repairsHalfButtonArea', 'repairsBackButtonArea', 'repairsBodyguardsButtonArea'], false);
         
         if (!player) return;
@@ -1877,14 +1894,19 @@ class UIManager {
     }
 
     /** 
-     * Draws the Space Object Repairs Menu (when state is VIEWING_SPACE_OBJECT_REPAIRS)
+     * Draws the Space Object Repairs Menu - delegates to station menus module
      * @param {SpaceObject} spaceObject - The space object the player is docked at
      * @param {Player} player - The player object
      */
     drawSpaceObjectRepairsMenu(spaceObject, player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawSpaceObjectRepairsMenu(spaceObject, player, this);
+            return;
+        }
+        // Fallback
         this._initButtonAreas(['spaceObjectRepairsFullButtonArea', 'spaceObjectRepairsHalfButtonArea', 'spaceObjectRepairsBackButtonArea', 'spaceObjectRepairsBodyguardsButtonArea'], false);
         
-        if (!spaceObject || !player) return;
+        if (!spaceObject || !player) return;;
         
         push();
         this.drawPanelBG(STANDARD_PANEL_BG, [255, 180, 100]);
@@ -1903,8 +1925,13 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Police Menu */
+    /** Draws the Police Menu - delegates to station menus module */
     drawPoliceMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawPoliceMenu(player, this);
+            return;
+        }
+        // Fallback
         this._initButtonAreas(['policeButtonAreas']);
         if (!player) return;
         push();
@@ -1993,29 +2020,31 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Commodity Market screen (when state is VIEWING_MARKET) */
+    /** Draws the Commodity Market screen - delegates to market module */
     drawMarketScreen(market, player) {
-        if (!market || !player || typeof market.getPrices !== 'function') { /* Draw error */ return; }
+        if (this.market) {
+            this.market.drawStationMarket(market, player, this);
+            return;
+        }
+        // Fallback - original implementation
+        if (!market || !player || typeof market.getPrices !== 'function') return;
         market.updatePlayerCargo(player.cargo);
         const commodities = market.getPrices();
         this.marketButtonAreas = [];
-        this.marketBackButtonArea = {}; // Clear areas
+        this.marketBackButtonArea = {};
 
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [255,100,100]);
         
-        // Use the standardized header
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Commodity Market", station, player, system);
         
-        // Table setup - adjusted Y position
         let sY = pY+headerHeight+40, tW = pW-60, sX = pX+30;
         
-        // Row setup - define button dimensions first
         const rowH = 30;
-        const btnW = 100; // Fixed button width same as before
+        const btnW = 100;
         const btnH = rowH*0.8;
         
         // Define column widths - evenly distributed across the screen, accounting for buttons
@@ -2162,29 +2191,31 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Mission Board screen (when state is VIEWING_MISSIONS) */
+    /** Draws the Mission Board screen - delegates to missions module */
     drawMissionBoard(missions, selectedIndex, player) {
+        if (this.missions) {
+            this.missions.drawMissionBoard(missions, selectedIndex, player, this);
+            return;
+        }
+        // Fallback
         if (!player) { console.warn("drawMissionBoard missing player"); return; }
         this._initButtonAreas(['missionListButtonAreas']);
         this._initButtonAreas(['missionDetailButtonAreas'], false);
 
-        // --- Get Context ---
         const currentSystem = galaxy?.getCurrentSystem();
         const currentStation = currentSystem?.station;
-        const activeMission = player.activeMission; // Get the active mission directly
+        const activeMission = player.activeMission;
         const selectedMissionFromList = (selectedIndex >= 0 && selectedIndex < missions?.length) ? missions[selectedIndex] : null;
 
-        // Determine which mission's details to display in the right panel
         let missionToShowDetails = null;
         if (activeMission) {
-            missionToShowDetails = activeMission; // Always prioritize showing the active mission
+            missionToShowDetails = activeMission;
         } else if (selectedMissionFromList) {
-            missionToShowDetails = selectedMissionFromList; // Show selected available mission if no active one
+            missionToShowDetails = selectedMissionFromList;
         }
-        // --- End Context ---
 
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        push(); // Isolate drawing
+        push();
         this.drawPanelBG(STANDARD_PANEL_BG, [100,255,100]);
         
         // Use the standardized header
@@ -2316,23 +2347,26 @@ class UIManager {
         pop(); // Restore drawing styles
     } // --- END drawMissionBoard ---
 
-    /** Draws the Galaxy Map screen */
+    /** Draws the Galaxy Map screen - delegates to galaxy map module */
     drawGalaxyMap(galaxy, player) {
+        if (this.galaxyMap) {
+            this.galaxyMap.drawGalaxyMap(galaxy, player, this);
+            return;
+        }
+        // Fallback
         if (!galaxy || !player) { console.warn("drawGalaxyMap missing galaxy or player"); return; }
 
-        this.galaxyMapNodeAreas = []; // Clear clickable areas for nodes
-        this.galaxyMapMarketButtonAreas = []; // Clear market button areas
-        const systems = galaxy.getSystemDataForMap(); // Gets { name, x, y, type, visited, index }
+        this.galaxyMapNodeAreas = [];
+        this.galaxyMapMarketButtonAreas = [];
+        const systems = galaxy.getSystemDataForMap();
         const currentIdx = galaxy.currentSystemIndex;
-        const reachable = galaxy.getReachableSystems(); // Now gets indices based on actual connections
+        const reachable = galaxy.getReachableSystems();
 
         const currentSystem = galaxy?.getCurrentSystem();
-        const canJump = isPlayerInJumpZone(player, currentSystem); // Use the helper function
+        const canJump = isPlayerInJumpZone(player, currentSystem);
 
-        push(); // Isolate map drawing
-       // background(10, 0, 20); // Dark space background
+        push();
 
-        // --- Compute bounding box and transformation ---
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (let sys of systems) {
             minX = min(minX, sys.x);
@@ -2343,7 +2377,7 @@ class UIManager {
         const margin = 100;
         const mapWidth = maxX - minX;
         const mapHeight = maxY - minY;
-        if (mapWidth === 0 || mapHeight === 0) return; // avoid division by zero
+        if (mapWidth === 0 || mapHeight === 0) return;
         const scaleX = (width - 2 * margin) / mapWidth;
         const scaleY = (height - 2 * margin) / mapHeight;
         const scale = min(scaleX, scaleY);
@@ -2538,31 +2572,32 @@ class UIManager {
         pop(); // Restore drawing settings
     } // --- End drawGalaxyMap ---
 
-    /** Draws a compact market overlay showing commodity prices for a system */
+    /** Draws a compact market overlay showing commodity prices for a system - delegates to galaxy map module */
     drawMarketOverlay(galaxy, systemIndex) {
+        if (this.galaxyMap) {
+            this.galaxyMap._drawMarketOverlay(galaxy, systemIndex, this);
+            return;
+        }
+        // Fallback
         const system = galaxy.systems[systemIndex];
         if (!system || !system.station || !system.station.market) {
-            return; // No market data available
+            return;
         }
 
         const market = system.station.market;
         const commodities = market.getPrices();
         
-        // Calculate dynamic height based on content
         const headerHeight = 45;
         const rowHeight = 28;
         const closeButtonPadding = 40;
 
-        // --- Dynamic description sizing (compute once per opened overlay) ---
         if (this._marketOverlayCacheIndex !== systemIndex) {
             this._marketOverlayCacheIndex = systemIndex;
-            // Compute and cache description text & measurement so it remains static while overlay is open
             const descText = (typeof generateSystemDescription === 'function') ? generateSystemDescription(system, { galaxy: galaxy, player: (typeof player !== 'undefined' ? player : null) }) : '';
-            const descSize = 15; // increased text size for description
+            const descSize = 15;
             const descPadding = 12;
-            const descW = 360 - 24; // overlayW (360) minus side padding used below
+            const descW = 360 - 24;
 
-            // Measure wrapped lines using textWidth to estimate height (safe in draw context)
             let descHeight = 0;
             if (descText && typeof textWidth === 'function') {
                 push();
@@ -2776,10 +2811,15 @@ class UIManager {
         return false; // Click not handled by map elements
     }
 
-    /** Draws the Game Over overlay screen */
+    /** Draws the Game Over overlay screen - delegates to HUD module */
     drawGameOverScreen() {
+        if (this.hud) {
+            this.hud.drawGameOverScreen();
+            return;
+        }
+        // Fallback
         push();
-        fill(0, 0, 0, 220); // Semi-transparent black overlay
+        fill(0, 0, 0, 220);
         rect(0, 0, width, height);
 
         fill(255, 60, 60);
@@ -2796,10 +2836,13 @@ class UIManager {
     } // --- End drawGameOverScreen ---
 
     drawMinimap(player, system) {
-        if (!player?.pos || !system) { return; } // Basic checks
+        if (this.minimap) {
+            this.minimap.draw(player, system, this);
+            return;
+        }
+        // Fallback - original implementation
+        if (!player?.pos || !system) { return; }
 
-        // Always render at the large (expanded) size. The world-range (zoom) is controlled
-        // by the zoom index; clicking the minimap cycles the range.
         this.minimapSize = this.minimapExpandedSize;
         this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
 
@@ -3257,43 +3300,38 @@ class UIManager {
         }
     } // End drawMinimap
     
-    /** Draws the current framerate in the bottom left corner with averaging */
+    /** Draws the current framerate in the bottom left corner with averaging - delegates to HUD module */
     drawFramerate() {
-        // Sample current framerate
+        if (this.hud) {
+            this.hud.drawFramerate();
+            return;
+        }
+        // Fallback
         const currentFps = frameRate();
-        
-        // Store the sample
         this.fpsValues.push(currentFps);
-        
-        // Keep the samples array at desired length
         while (this.fpsValues.length > this.fpsMaxSamples) {
-            this.fpsValues.shift(); // Remove oldest sample
+            this.fpsValues.shift();
         }
         
-        // Only update the display periodically
         this.fpsFrameCount++;
         if (this.fpsFrameCount >= this.fpsUpdateInterval) {
-            // Calculate average FPS
             const sum = this.fpsValues.reduce((total, fps) => total + fps, 0);
             this.fpsAverage = Math.round(sum / this.fpsValues.length);
-            this.fpsFrameCount = 0; // Reset counter
+            this.fpsFrameCount = 0;
         }
         
-        // Draw the display
         push();
-        // Set up text style
         noStroke();
         textAlign(LEFT, BOTTOM);
         textFont(font);
         textSize(10);
         
-        // Color changes based on performance
         if (this.fpsAverage >= 50) {
-            fill(0, 255, 0); // Green for good framerate
+            fill(0, 255, 0);
         } else if (this.fpsAverage >= 30) {
-            fill(255, 255, 0); // Yellow for acceptable framerate
+            fill(255, 255, 0);
         } else {
-            fill(255, 0, 0); // Red for poor framerate
+            fill(255, 0, 0);
         }
         
         text(`FPS: ${this.fpsAverage}`, 10, height - 10);
@@ -4055,22 +4093,24 @@ class UIManager {
         return false;
     }
 
-    /** Draws the Shipyard Menu (when state is VIEWING_SHIPYARD) */
+    /** Draws the Shipyard Menu - delegates to station menus module */
     drawShipyardMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawShipyardMenu(player, this);
+            return;
+        }
+        // Fallback
         if (!player) return;
         this._initButtonAreas(['shipyardListAreas']);
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
-        this.drawPanelBG(STANDARD_PANEL_BG, [220,190,90]); // Imperial gold border
+        this.drawPanelBG(STANDARD_PANEL_BG, [220,190,90]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
         
-        // Calculate trade-in value (70% of current ship's value)
-        const currentShipType = player.shipTypeName || "Vulture"; // This could be name or key
-        //console.log(`Looking up ship: "${currentShipType}"`);
+        const currentShipType = player.shipTypeName || "Vulture";
     
-        // IMPROVED LOOKUP LOGIC - Try multiple methods to find the ship
         let currentShipDef = null;
         
         // Method 1: Try direct lookup by object key
@@ -4228,20 +4268,23 @@ class UIManager {
 
 
 
-    /** Draws the Upgrades Menu (when state is VIEWING_UPGRADES) */
+    /** Draws the Upgrades Menu - delegates to station menus module */
     drawUpgradesMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawUpgradesMenu(player, this);
+            return;
+        }
+        // Fallback
         if (!player) return;
         this._initButtonAreas(['upgradeListAreas']);
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [200,100,255]);
         
-        // Use the standardized header
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Upgrades", station, player, system);
         
-        // ===== NEW CODE: Add weapon slot selection UI at the top =====
         const slotPanelY = pY + headerHeight + 15;
         const slotPanelH = 80;
         
@@ -4401,34 +4444,47 @@ class UIManager {
         return false;
     }
 
-    // Add a message to the queue
-    addMessage(msg, color = [200, 200, 200], duration = this.messageDisplayTime) { // Added color and duration parameters with defaults
-        this.messages.push({ 
-            text: msg, 
-            time: millis(),
-            color: color,      // Store the color
-            duration: duration // Store the duration
-        });
-        // Keep only the last 10 messages (optional)
-        if (this.messages.length > 10) this.messages.shift();
-    }
-
-    addCommunicationMessage(msg, color = [255, 190, 140], duration = this.communicationDisplayTime) {
-        this.communicationMessages.push({
-            text: msg,
-            time: millis(),
-            color: color,
-            duration: duration
-        });
-        if (this.communicationMessages.length > this.communicationQueueLimit) {
-            this.communicationMessages.shift();
+    // Add a message to the queue - delegates to HUD module
+    addMessage(msg, color = [200, 200, 200], duration = this.messageDisplayTime) {
+        if (this.hud) {
+            this.hud.addMessage(msg, color, duration);
+        } else {
+            // Fallback for backward compatibility
+            this.messages.push({ 
+                text: msg, 
+                time: millis(),
+                color: color,
+                duration: duration
+            });
+            if (this.messages.length > 10) this.messages.shift();
         }
     }
 
-    // Draw messages at the bottom of the screen
+    addCommunicationMessage(msg, color = [255, 190, 140], duration = this.communicationDisplayTime) {
+        if (this.hud) {
+            this.hud.addCommunicationMessage(msg, color, duration);
+        } else {
+            // Fallback for backward compatibility
+            this.communicationMessages.push({
+                text: msg,
+                time: millis(),
+                color: color,
+                duration: duration
+            });
+            if (this.communicationMessages.length > this.communicationQueueLimit) {
+                this.communicationMessages.shift();
+            }
+        }
+    }
+
+    // Draw messages at the bottom of the screen - delegates to HUD module
     drawMessages() {
+        if (this.hud) {
+            this.hud.drawMessages();
+            return;
+        }
+        // Fallback for backward compatibility
         const now = millis();
-        // Filter messages based on their individual duration
         const recent = this.messages.filter(m => now - m.time < (m.duration || this.messageDisplayTime));
         const toShow = recent.slice(-this.maxMessagesToShow);
         this._lastMessageBlockHeight = 0;
@@ -4440,22 +4496,18 @@ class UIManager {
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
             const messageItem = toShow[i];
-            // Use the message's specific color, or default if not set
             const messageColor = messageItem.color || [200, 200, 200]; 
             
-            // Convert color string (like "orange") to array if needed, or handle p5.color object
             if (typeof messageColor === 'string') {
-                // Basic string to p5.color conversion (can be expanded)
                 try {
-                    fill(color(messageColor)); // p5.js color() function
+                    fill(color(messageColor));
                 } catch (e) {
-                    fill(200, 200, 200); // Fallback if string is not a valid color
-                    console.warn(`UIManager: Invalid color string '${messageColor}' for message. Using default.`);
+                    fill(200, 200, 200);
                 }
             } else if (Array.isArray(messageColor)) {
-                fill(...messageColor); // Spread array for fill(r,g,b,a)
+                fill(...messageColor);
             } else {
-                 fill(messageColor); // Assume it's a p5.Color object or similar
+                 fill(messageColor);
             }
 
             text(
@@ -4467,13 +4519,17 @@ class UIManager {
         pop();
 
         if (toShow.length > 0) {
-            this._lastMessageBlockHeight = toShow.length * 22 + 20; // include margin offset and text baseline
+            this._lastMessageBlockHeight = toShow.length * 22 + 20;
         }
 
         this._drawCommunicationMessages();
     }
 
     _drawCommunicationMessages() {
+        if (this.hud) {
+            // Let HUD module handle communication messages
+            return;
+        }
         if (!this.communicationMessages || this.communicationMessages.length === 0) {
             return;
         }
@@ -4483,16 +4539,16 @@ class UIManager {
         const toShow = recent.slice(-this.maxCommunicationMessagesToShow);
 
         if (toShow.length === 0) {
-            this.communicationMessages = recent; // prune expired entries
+            this.communicationMessages = recent;
             return;
         }
 
         const boxPadding = 6;
         const lineHeight = 26;
         const boxWidth = Math.min(360, Math.max(300, width - 40));
-        const baseX = 20; // left margin
+        const baseX = 20;
         const autopilotOffset = (typeof player !== 'undefined' && player?.autopilotEnabled) ? 35 : 0;
-        const baseY = 80 + autopilotOffset; // align with target/market overlay Y
+        const baseY = 80 + autopilotOffset;
 
         push();
         textAlign(LEFT, TOP);
@@ -4505,7 +4561,7 @@ class UIManager {
             const effectiveDuration = msg.duration || this.communicationDisplayTime;
             const fade = constrain(age / effectiveDuration, 0, 1);
             const easedFade = Math.pow(fade, 1.5);
-            const alpha = 255 - (easedFade * 210); // slow, eased fade preserves legibility
+            const alpha = 255 - (easedFade * 210);
 
             this._applyMessageFill(msg.color, alpha, [255, 190, 140, 255]);
 
@@ -4514,7 +4570,7 @@ class UIManager {
         }
         pop();
 
-        this.communicationMessages = recent; // remove expired entries
+        this.communicationMessages = recent;
     }
 
     _applyMessageFill(colorValue, alpha, fallback) {
@@ -4544,7 +4600,6 @@ class UIManager {
             fill(r, g, b, Math.min(a, targetAlpha));
         }
     }
-
     // Update this method to check the back button first
     handleMarketMousePress(mx, my, market, player) {
         // First check if clicking on the back button
@@ -5254,18 +5309,21 @@ class UIManager {
         return messages[factionKey] || "You are a faction member";
     }
 
-    /** Draws the Protection Services menu (when state is VIEWING_PROTECTION) */
+    /** Draws the Protection Services menu - delegates to station menus module */
     drawProtectionServicesMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawProtectionServicesMenu(player, this);
+            return;
+        }
+        // Fallback
         if (!player) return;
         this._initButtonAreas(['protectionServicesButtons']);
         
         push();
         const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
         
-        // Draw panel background
         this.drawPanelBG(STANDARD_PANEL_BG, [80, 120, 180]);
         
-        // Draw header
         const system = galaxy?.getCurrentSystem();
         const station = system?.station; // Direct property access instead of getStation() method
         const headerHeight = this.drawStationHeader("Protection Services", station, player, system);
@@ -5414,8 +5472,13 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Storage Locker menu (when state is VIEWING_STORAGE) */
+    /** Draws the Storage Locker menu - delegates to station menus module */
     drawStorageMenu(station, player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawStorageMenu(station, player, this);
+            return;
+        }
+        // Fallback
         if (!player) return;
         this._initButtonAreas(['storageButtonAreas']);
 
@@ -5554,8 +5617,13 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Personal Record menu (when state is VIEWING_RECORD) */
+    /** Draws the Personal Record menu - delegates to station menus module */
     drawPersonalRecordMenu(player) {
+        if (this.stationMenus) {
+            this.stationMenus.drawPersonalRecordMenu(player, this);
+            return;
+        }
+        // Fallback
         if (!player) return;
         this._initButtonAreas(['recordButtonAreas']);
         
@@ -5845,8 +5913,13 @@ class UIManager {
         pop();
     }
 
-    /** Draws the Imperial Navy Recruitment Menu */
+    /** Draws the Imperial Navy Recruitment Menu - delegates to faction recruitment module */
     drawImperialRecruitmentMenu(player) {
+        if (this.factionRecruitment) {
+            this.factionRecruitment.drawImperialRecruitmentMenu(player, this);
+            return;
+        }
+        // Fallback
         this._drawFactionRecruitmentMenu(
             player,
             "Imperial Navy",
@@ -5857,8 +5930,13 @@ class UIManager {
         );
     }
 
-    /** Draws the Separatist Forces Recruitment Menu */
+    /** Draws the Separatist Forces Recruitment Menu - delegates to faction recruitment module */
     drawSeparatistRecruitmentMenu(player) {
+        if (this.factionRecruitment) {
+            this.factionRecruitment.drawSeparatistRecruitmentMenu(player, this);
+            return;
+        }
+        // Fallback
         this._drawFactionRecruitmentMenu(
             player,
             "Separatist Forces",
@@ -5869,8 +5947,13 @@ class UIManager {
         );
     }
 
-    /** Draws the Military Academy Recruitment Menu */
+    /** Draws the Military Academy Recruitment Menu - delegates to faction recruitment module */
     drawMilitaryRecruitmentMenu(player) {
+        if (this.factionRecruitment) {
+            this.factionRecruitment.drawMilitaryRecruitmentMenu(player, this);
+            return;
+        }
+        // Fallback
         this._drawFactionRecruitmentMenu(
             player,
             "Military Forces",
@@ -5950,10 +6033,19 @@ class UIManager {
     }
 
     /**
-     * Cycles the minimap zoom level.
+     * Cycles the minimap zoom level - delegates to minimap module.
      * @param {number} direction - 1 for zoom out, -1 for zoom in
      */
     _cycleMinimapZoom(direction) {
+        if (this.minimap) {
+            this.minimap.cycleZoom(direction);
+            // Sync back to UIManager for backward compatibility
+            this.minimapZoomIndex = this.minimap.zoomIndex;
+            this.minimapWorldViewRange = this.minimap.worldViewRange;
+            this.minimapScale = this.minimapSize / this.minimapWorldViewRange;
+            return;
+        }
+        // Fallback
         const delta = direction > 0 ? 1 : -1;
         this.minimapZoomIndex = (this.minimapZoomIndex + delta + this.minimapWorldViewRanges.length) % this.minimapWorldViewRanges.length;
         this.minimapWorldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
@@ -5979,8 +6071,7 @@ class UIManager {
 
 
     /**
-     * Handles minimap click for target locking.
-     * Converts minimap screen coordinates to world coordinates and checks for entities.
+     * Handles minimap click for target locking - delegates to minimap module.
      * @param {number} mx - Mouse X position in screen coordinates
      * @param {number} my - Mouse Y position in screen coordinates
      * @param {Player} player - The player object
@@ -5988,34 +6079,32 @@ class UIManager {
      * @returns {boolean} True if an entity was found and targeted, false otherwise
      */
     handleMinimapClick(mx, my, player, system) {
+        if (this.minimap) {
+            return this.minimap.handleClick(mx, my, player, system, this.hud);
+        }
+        // Fallback - original implementation
         if (!player || !player.pos || !system) return false;
 
-        // Calculate minimap boundaries
         const curMinimapSize = this.minimapExpandedSize;
         const curMinimapX = width - curMinimapSize - this.minimapMargin;
         const curMinimapY = height - curMinimapSize - this.minimapMargin;
         const mapCenterX = curMinimapX + curMinimapSize / 2;
         const mapCenterY = curMinimapY + curMinimapSize / 2;
 
-        // Get current world view range and scale
         const worldViewRange = this.minimapWorldViewRanges[this.minimapZoomIndex];
         const scale = curMinimapSize / worldViewRange;
 
-        // Convert click position from minimap coordinates to world coordinates
         const relativeX = (mx - mapCenterX) / scale;
         const relativeY = (my - mapCenterY) / scale;
         const worldX = player.pos.x + relativeX;
         const worldY = player.pos.y + relativeY;
 
-        // Find the closest entity to the click position within a reasonable range
-        // The click radius scales inversely with zoom (tighter at high zoom, looser at low zoom)
-        const baseClickRadius = 15; // Base radius in minimap pixels
+        const baseClickRadius = 15;
         const worldClickRadius = baseClickRadius / scale;
 
         let closestEntity = null;
         let closestDistSq = worldClickRadius * worldClickRadius;
 
-        // Helper to check entity list
         const checkEntities = (entities) => {
             for (let i = 0; i < entities.length; i++) {
                 const entity = entities[i];
@@ -6030,21 +6119,17 @@ class UIManager {
             }
         };
 
-        // Check enemies and space objects
         checkEntities(system.enemies || []);
         checkEntities(system.spaceObjects || []);
 
-        // If an entity was found, handle target locking
         if (closestEntity) {
             if (player.target === closestEntity) {
-                // Clicking the same target unlocks it
                 player.target = null;
                 this.addMessage('Target unlocked.', [255, 255, 0]);
                 if (typeof soundManager !== 'undefined' && soundManager.playSound) {
                     soundManager.playSound('click');
                 }
             } else {
-                // Lock onto new target
                 player.target = closestEntity;
                 const label = this._getEntityLabel(closestEntity);
                 this.addMessage(`Target locked: ${label}`, [0, 255, 0]);
@@ -6057,7 +6142,6 @@ class UIManager {
 
         return false;
     }
-
     /**
      * Gets a display label for an entity (for targeting messages)
      * @param {Object} entity - The entity to get a label for
