@@ -1,65 +1,120 @@
 // ****** sketch.js ******
-
-// --- Ship Definitions and Drawing Functions are loaded from ships.js ---
-// Ensure ships.js is included BEFORE this file in index.html
+// Main entry point for Elite p5.js game
 
 // --- Global Constants ---
-const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1; // Volume multiplier for off-screen sounds
-const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0; // Global multiplier for shield recharge speed
+const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1;
+const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0;
 
-// --- Global Variables ---
-let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager, titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
+// --- Global Game State ---
+const GameGlobals = {
+    player: null,
+    galaxy: null,
+    uiManager: null,
+    gameStateManager: null,
+    soundManager: null,
+    ambientSoundManager: null,
+    titleScreen: null,
+    saveSelectionScreen: null,
+    inventoryScreen: null,
+    eventManager: null,
+    communicationSystem: null,
+    font: null,
+    loadGameWasSuccessful: false,
+    globalSessionSeed: null
+};
+
+// Maintain backward compatibility with existing code
+let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager, 
+    titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
 let loadGameWasSuccessful = false;
-window.activeSaveSlotIndex = 0; // Default to slot 0, will be updated by SaveSelectionScreen
-let globalSessionSeed; // Declaration for the session seed
-// --- End Global Variables ---
+let globalSessionSeed;
+
+window.activeSaveSlotIndex = 0;
 
 // --- p5.js Preload Function ---
-// Runs before setup to load assets
 function preload() {
-    font = loadFont('libraries/Frontier.ttf');
+    try {
+        font = loadFont('libraries/Frontier.ttf');
+        GameGlobals.font = font;
+    } catch (error) {
+        console.error('Failed to load font:', error);
+        font = null;
+    }
 }
 
 // --- p5.js Setup Function ---
-// Runs once at the beginning when the sketch starts.
 function setup() {
+    try {
+        initializeCanvas();
+        initializeManagers();
+        initializeWeaponSystem();
+        validateShipDefinitions();
+        initializeGameObjects();
+        configurePlayerShip();
+        setInitialGameState();
+        setupAudioGestures();
+        setupFullscreenBehavior();
+        
+        UI_LOG("--- Setup Complete ---");
+    } catch (error) {
+        handleCriticalSetupError(error);
+    }
+}
 
-    soundManager = new SoundManager(); // Create the manager
-    ambientSoundManager = new AmbientSoundManager(); // Create ambient sound manager
-
-    // Initialize EventManager - references will be set in newGame/loadGame
-    eventManager = new EventManager(); 
-
-    // Create the canvas to fill the browser window
+/**
+ * Initialize the p5.js canvas and rendering settings
+ */
+function initializeCanvas() {
     createCanvas(windowWidth, windowHeight);
-    // Set angle mode to RADIANS for p5.js rotation functions (like rotate())
-    // Note: Internal angle calculations in classes mostly use RADIANS now.
     angleMode(RADIANS);
-    // Default text alignment and size
     textAlign(CENTER, CENTER);
     textSize(14);
-    UI_LOG("Setting up Elite MVP..."); // Log startup
+    UI_LOG("Setting up Elite MVP...");
+}
 
-    // Initialize object pools after p5.js is ready
+/**
+ * Initialize core game managers
+ */
+function initializeManagers() {
+    soundManager = new SoundManager();
+    ambientSoundManager = new AmbientSoundManager();
+    eventManager = new EventManager();
+    
+    Object.assign(GameGlobals, {
+        soundManager,
+        ambientSoundManager,
+        eventManager
+    });
+}
+
+/**
+ * Initialize weapon system pools
+ */
+function initializeWeaponSystem() {
     if (typeof WeaponSystem !== 'undefined' && typeof ObjectPool !== 'undefined') {
         UI_LOG("Initializing weapon system pool in p5.js setup()");
         WeaponSystem.init(100);
+    } else {
+        console.warn("WeaponSystem or ObjectPool not available during setup");
     }
+}
 
-    // --- Check if Ship Definitions Loaded ---
+/**
+ * Validate that ship definitions loaded correctly
+ * @throws {Error} If ship definitions are missing
+ */
+function validateShipDefinitions() {
     if (typeof SHIP_DEFINITIONS === 'undefined') {
-        console.error("FATAL ERROR: SHIP_DEFINITIONS not loaded from ships.js! Check file inclusion order in index.html.");
-        // Display error on screen and stop execution
-        background(0); fill(255,0,0); textSize(20);
-        text("ERROR: Failed to load ship definitions!\nCheck index.html", width/2, height/2);
-        noLoop(); // Stop the draw loop
-        return;
+        throw new Error("FATAL ERROR: SHIP_DEFINITIONS not loaded from ships.js! Check file inclusion order in index.html.");
     }
+}
 
-    // --- Instantiate Core Game Objects ---
-    // Create managers and the galaxy first
+/**
+ * Initialize main game objects
+ */
+function initializeGameObjects() {
     gameStateManager = new GameStateManager();
-    galaxy = new Galaxy(); // Creates Galaxy object (systems array is initially empty)
+    galaxy = new Galaxy();
     player = new Player();
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
@@ -67,176 +122,285 @@ function setup() {
     saveSelectionScreen = new SaveSelectionScreen();
     communicationSystem = new CommunicationSystem();
     communicationSystem.initialize({ uiManager, player });
+    
+    Object.assign(GameGlobals, {
+        gameStateManager,
+        galaxy,
+        player,
+        uiManager,
+        titleScreen,
+        inventoryScreen,
+        saveSelectionScreen,
+        communicationSystem
+    });
+}
 
-    // --- Calculate Player Radian Properties ---
-    // Now that p5 is ready, calculate radian speed based on degree definition
+/**
+ * Apply ship definition properties to player
+ */
+function configurePlayerShip() {
     if (player && typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
     } else {
-         console.error("FATAL ERROR: Player object or applyShipDefinition method missing!");
-         noLoop(); return;
+        throw new Error("FATAL ERROR: Player object or applyShipDefinition method missing!");
     }
+}
 
-    // --- Don't auto-load game data - let save selection screen handle it ---
-    UI_LOG("Game initialization complete. Waiting for user save selection...");
-    loadGameWasSuccessful = false; // We'll handle loading in the save selection screen
-
-    // --- Don't initialize Galaxy Systems automatically ---
-    // The save selection screen will handle new game or load game logic
-
-    // --- System linking will be handled by save selection screen ---
-    // We don't link the player to a system yet since no galaxy is initialized
-
-    // --- Set Initial Game State ---
-    // If everything above succeeded and state is still LOADING, transition to IN_FLIGHT
-    if (gameStateManager && gameStateManager.currentState === "LOADING") {
-         gameStateManager.setState("TITLE_SCREEN"); // Changed to start on title screen
-    } else if (gameStateManager) {
-         UI_LOG(`Setup complete, game state already set to: ${gameStateManager.currentState}.`);
+/**
+ * Set the initial game state
+ */
+function setInitialGameState() {
+    loadGameWasSuccessful = false;
+    GameGlobals.loadGameWasSuccessful = false;
+    
+    if (gameStateManager) {
+        if (gameStateManager.currentState === "LOADING") {
+            gameStateManager.setState("TITLE_SCREEN");
+        }
+        UI_LOG(`Setup complete, game state: ${gameStateManager.currentState}`);
     } else {
-         console.error("Cannot set initial state - gameStateManager missing!");
-         // Draw error as setup failed
-         background(0); fill(255,0,0); textSize(20); text("ERROR: GameStateManager missing!", width/2, height/2);
-         noLoop(); return;
+        throw new Error("Cannot set initial state - gameStateManager missing!");
     }
+}
 
-    UI_LOG("--- Setup Complete ---"); // Keep this final confirmation log
-
-    // Resume audio on first user gesture (addresses browser autoplay policies)
+/**
+ * Setup audio context resume on user gesture
+ */
+function setupAudioGestures() {
     try {
         window.addEventListener('pointerdown', function _resumeAudioOnce() {
             if (window._eliteAudioContext && typeof window._eliteAudioContext.resume === 'function') {
                 window._eliteAudioContext.resume().then(() => {
                     console.log('User gesture: AudioContext resumed');
-                    try {
-                        const sys = galaxy?.getCurrentSystem && galaxy.getCurrentSystem();
-                        if (sys && typeof sys.rebuildAmbientSounds === 'function') {
-                            sys.rebuildAmbientSounds();
-                            console.log('Rebuilt ambient sounds for current system after audio unlock');
-                        }
-                    } catch (e) { console.warn('Error rebuilding ambient sounds after resume', e); }
+                    rebuildAmbientSounds();
                 }).catch(e => console.warn('AudioContext.resume() failed on user gesture', e));
             }
         }, { once: true });
-    } catch (e) { /* ignore if addEventListener unavailable */ }
+    } catch (e) {
+        console.warn('Failed to setup audio gesture handler:', e);
+    }
+}
 
-    // Enter fullscreen on first click when on Title or Save Selection screens
+/**
+ * Rebuild ambient sounds for current system
+ */
+function rebuildAmbientSounds() {
+    try {
+        const sys = galaxy?.getCurrentSystem?.();
+        if (sys && typeof sys.rebuildAmbientSounds === 'function') {
+            sys.rebuildAmbientSounds();
+            console.log('Rebuilt ambient sounds for current system after audio unlock');
+        }
+    } catch (e) {
+        console.warn('Error rebuilding ambient sounds after resume', e);
+    }
+}
+
+/**
+ * Setup fullscreen behavior on title/save selection screens
+ */
+function setupFullscreenBehavior() {
     try {
         window.addEventListener('pointerdown', function _enterFullscreenOnTitle() {
             try {
                 const state = gameStateManager?.currentState;
                 if (!fullscreen() && (state === "TITLE_SCREEN" || state === "SAVE_SELECTION")) {
-                    try { fullscreen(true); } catch (e) { /* ignore fullscreen errors */ }
-                }
-            } catch (e) {}
-        }, { once: true });
-    } catch (e) { /* ignore if addEventListener unavailable */ }
-
-} // --- End setup() ---
-
-
-// --- p5.js Draw Function ---
-// Runs continuously after setup() completes.
-function draw() {
-    background(0); // Clear the canvas each frame
-    const currentState = gameStateManager?.currentState;
-
-    // Title/instructions/save selection screen animation
-    if (currentState === "TITLE_SCREEN" || currentState === "INSTRUCTIONS") {
-        titleScreen.update(deltaTime);
-    } else if (currentState === "SAVE_SELECTION") {
-        saveSelectionScreen.update(deltaTime);
-    }
-
-    // Main game state update and draw
-    if (gameStateManager && player) {
-        try {
-            gameStateManager.update(player); // This calls update methods of current screen/state
-
-            // EventManager logic - only if in relevant game states
-            const activeGameStatesForEventManager = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP"];
-            if (activeGameStatesForEventManager.includes(currentState)) {
-                const currentSystemForEventManager = galaxy?.getCurrentSystem(); // Call is now conditional
-
-                if (currentSystemForEventManager) { // Only proceed if a system actually exists
-                    if (eventManager && player && uiManager) {
-                        // Initialize/Re-initialize EventManager if system/player changed or if it's not pointing to the current one.
-                        // Assuming EventManager has 'starSystem' and 'player' properties to check against.
-                        // And that initializeReferences is safe to call.
-                        if (typeof eventManager.initializeReferences === 'function' && 
-                            (eventManager.starSystem !== currentSystemForEventManager || eventManager.player !== player /* || add other relevant checks if EventManager stores them */)) {
-                            eventManager.initializeReferences(currentSystemForEventManager, player, uiManager);
-                        }
-
-                        // Update EventManager only when IN_FLIGHT and if it seems initialized (has a starSystem reference)
-                        if (currentState === "IN_FLIGHT" && eventManager.starSystem && typeof eventManager.update === 'function') {
-                            eventManager.update();
-                        }
+                    try {
+                        fullscreen(true);
+                    } catch (e) {
+                        console.warn('Fullscreen request failed:', e);
                     }
                 }
+            } catch (e) {
+                console.warn('Error in fullscreen handler:', e);
             }
-
-            // Periodic cleanup of communication system to prevent memory leaks
-            // Run every ~60 seconds (60000ms / 16.67ms per frame ≈ 3600 frames at 60 FPS)
-            if (communicationSystem && typeof communicationSystem.performPeriodicCleanup === 'function' && frameCount % 3600 === 0) {
-                communicationSystem.performPeriodicCleanup();
-            }
-
-            // Periodic faction motivation messages
-            // Run every ~2 minutes (120000ms / 16.67ms per frame ≈ 7200 frames at 60 FPS)
-            if (communicationSystem && typeof communicationSystem.sendFactionMotivationMessage === 'function' && frameCount % 7200 === 0) {
-                communicationSystem.sendFactionMotivationMessage();
-            }
-
-            // Continuous firing logic
-            if (currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
-                player.handleFireInput();
-            }
-            // Draw visuals based on current state
-            gameStateManager.draw(player);
-            // Check for held market buttons
-            if (currentState === "VIEWING_MARKET" && uiManager) {
-                uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
-            }
-        } catch (e) {
-            // Catch any unexpected errors during the main loop
-            showCriticalError(`ERROR in Update/Draw Loop!\nCheck Console.\n${e.message}`);
-            console.error("!!! ERROR during gameStateManager update/draw:", e);
-            noLoop();
-        }
-    } else {
-        showCriticalError("Error: Game State Manager or Player missing!");
-        console.error("CRITICAL ERROR: gameStateManager or Player missing in draw()!");
-        noLoop();
-        return;
+        }, { once: true });
+    } catch (e) {
+        console.warn('Failed to setup fullscreen handler:', e);
     }
-    // --- UI Drawing ---
-    uiManager.drawFramerate();
-    uiManager.drawMessages();
-
-    // Optional Debug Line (Screen Coords)
-    // if (gameStateManager?.currentState === "IN_FLIGHT" && player) {
-    //     push(); stroke(255, 255, 0, 100); strokeWeight(1);
-    //     line(width / 2, height / 2, mouseX, mouseY); pop(); // Line from screen center to mouse
-    // }
-
 }
 
 /**
- * Displays a critical error message on the screen in red and large font.
- * @param {string} msg - The error message to display.
+ * Handle critical setup errors
+ * @param {Error} error - The error that occurred
  */
-function showCriticalError(msg) {
-    fill(255, 0, 0); textSize(20); textAlign(CENTER, CENTER); noStroke();
-    text(msg, width / 2, height / 2);
+function handleCriticalSetupError(error) {
+    console.error("Critical setup error:", error);
+    background(0);
+    fill(255, 0, 0);
+    textSize(20);
+    text("ERROR: Failed to load game!\nCheck console.", width / 2, height / 2);
+    noLoop();
 }
 
 
+// --- p5.js Draw Function ---
+function draw() {
+    background(0);
+    
+    if (!validateGameState()) {
+        return;
+    }
+    
+    const currentState = gameStateManager.currentState;
+    
+    updateTitleScreens(currentState);
+    updateGameState();
+    handleContinuousFiring();
+    renderGameState();
+    renderUI();
+}
+
+/**
+ * Validate that core game objects exist
+ * @returns {boolean} True if valid, false otherwise
+ */
+function validateGameState() {
+    if (!gameStateManager || !player) {
+        showCriticalError("Error: Game State Manager or Player missing!");
+        console.error("CRITICAL ERROR: gameStateManager or Player missing in draw()!");
+        noLoop();
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Update title screen animations
+ * @param {string} currentState - Current game state
+ */
+function updateTitleScreens(currentState) {
+    if (currentState === "TITLE_SCREEN" || currentState === "INSTRUCTIONS") {
+        titleScreen?.update(deltaTime);
+    } else if (currentState === "SAVE_SELECTION") {
+        saveSelectionScreen?.update(deltaTime);
+    }
+}
+
+/**
+ * Update game state logic
+ */
+function updateGameState() {
+    try {
+        gameStateManager.update(player);
+        updateEventManager();
+        performPeriodicTasks();
+    } catch (e) {
+        showCriticalError(`ERROR in Update/Draw Loop!\nCheck Console.\n${e.message}`);
+        console.error("!!! ERROR during gameStateManager update/draw:", e);
+        noLoop();
+    }
+}
+
+/**
+ * Update event manager for active game states
+ */
+function updateEventManager() {
+    const currentState = gameStateManager.currentState;
+    const activeGameStates = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP"];
+    
+    if (!activeGameStates.includes(currentState) || !eventManager) {
+        return;
+    }
+    
+    const currentSystem = galaxy?.getCurrentSystem();
+    if (!currentSystem) return;
+    
+    // Initialize event manager references if needed
+    if (eventManager.starSystem !== currentSystem || eventManager.player !== player) {
+        eventManager.initializeReferences(currentSystem, player, uiManager);
+    }
+    
+    // Update event manager only during active flight
+    if (currentState === "IN_FLIGHT" && eventManager.starSystem) {
+        eventManager.update();
+    }
+}
+
+/**
+ * Perform periodic background tasks
+ */
+function performPeriodicTasks() {
+    // Communication system cleanup every ~60 seconds
+    if (frameCount % 3600 === 0 && communicationSystem) {
+        communicationSystem.performPeriodicCleanup?.();
+    }
+    
+    // Faction motivation messages every ~2 minutes
+    if (frameCount % 7200 === 0 && communicationSystem) {
+        communicationSystem.sendFactionMotivationMessage?.();
+    }
+}
+
+/**
+ * Handle continuous firing when space is held
+ */
+function handleContinuousFiring() {
+    if (gameStateManager.currentState === "IN_FLIGHT" && 
+        !player.destroyed && 
+        keyIsDown(32)) {
+        player.handleFireInput();
+    }
+}
+
+/**
+ * Render current game state visuals
+ */
+function renderGameState() {
+    try {
+        gameStateManager.draw(player);
+    } catch (e) {
+        console.error("Error rendering game state:", e);
+    }
+}
+
+/**
+ * Render UI elements
+ */
+function renderUI() {
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
+    }
+    
+    uiManager?.drawFramerate();
+    uiManager?.drawMessages();
+}
+
+/**
+ * Displays a critical error message on the screen
+ * @param {string} msg - The error message to display
+ */
+function showCriticalError(msg) {
+    fill(255, 0, 0);
+    textSize(20);
+    textAlign(CENTER, CENTER);
+    noStroke();
+    text(msg, width / 2, height / 2);
+}
+
 // --- Input Handling Functions ---
 
+/**
+ * Main keyboard input handler
+ */
 function keyPressed() {
-    // Handle GAME_OVER state first - any key press resets the game
-    if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
+    if (handleGameOverInput()) return false;
+    if (handleInstructionsInput()) return;
+    if (handleSaveSelectionInput()) return;
+    if (handleSpacebarFiring()) return false;
+    if (handleWeaponSwitching()) return false;
+    if (handleSingleKeyActions()) return;
+    if (handleEscapeKey()) return;
+}
+
+/**
+ * Handle GAME_OVER state input
+ * @returns {boolean} True if handled
+ */
+function handleGameOverInput() {
+    if (gameStateManager?.currentState !== "GAME_OVER") return false;
+    
+    if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
         // Verify player is actually dead before allowing reset
         if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
             if (typeof resetGame === 'function') {
@@ -254,321 +418,465 @@ function keyPressed() {
     // Toggle inventory with “I”
     if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
         const opening = !gameStateManager.showingInventory;
-        gameStateManager.showingInventory = !gameStateManager.showingInventory;
-        // Audio: use mapOpen/mapClose to mirror other UI overlays
-        try {
-            if (typeof soundManager !== 'undefined') {
-                soundManager.playSound(opening ? 'mapOpen' : 'mapClose');
-            }
-        } catch(e) { /* ignore audio errors */ }
-        return false;
+        gameStateManager.showingInventory = opening;
+        soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
+        return true;
     }
-    // Instructions screen keyboard input
-    if (gameStateManager.currentState === "INSTRUCTIONS") {
-        titleScreen.handleKeyPress(keyCode);
-        return;
-    }
-    // Save Selection screen keyboard input
-    if (gameStateManager.currentState === "SAVE_SELECTION") {
-        if (saveSelectionScreen && typeof saveSelectionScreen.handleKeyPressed === 'function') {
-            saveSelectionScreen.handleKeyPressed(key, keyCode);
-        }
-        return; // Explicitly return to prevent further processing in this state
-    }
-    // Spacebar triggers initial shot
-    if ((key === ' ' || keyCode === 32) && gameStateManager.currentState === "IN_FLIGHT" && player) {
-        player.handleFireInput();
-        return false;
-    }
-    if (!gameStateManager) return;
-    // Weapon switching 1-9
-        if (gameStateManager.currentState === "IN_FLIGHT" && player) {
-        const numKey = parseInt(key);
-        if (!isNaN(numKey) && numKey >= 1 && numKey <= 9) {
-            const weaponIndex = numKey - 1;
-            // Defensive: only attempt switch if the player actually has that slot
-            if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
-                if (player.switchToWeapon(weaponIndex)) {
-                    WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
-                }
-            }
-            return false;
-        }
-    }
-    // Single-key actions (map, wanted, autopilot, etc.)
-    switch (key.toLowerCase()) {
-        case 'm':
-            if (gameStateManager.currentState === "IN_FLIGHT") gameStateManager.setState("GALAXY_MAP");
-            else if (gameStateManager.currentState === "GALAXY_MAP") gameStateManager.setState("IN_FLIGHT");
-            return;
-        case 'b':
-            // Toggle secret base navigation when in flight
-            if (gameStateManager.currentState === "IN_FLIGHT" && player) {
-                const wasActive = player.showSecretBaseNavigation;
-                player.showSecretBaseNavigation = !wasActive;
-                
-                if (player.showSecretBaseNavigation) {
-                    // Only show message if there's actually a secret base in the system
-                    if (player.currentSystem && player.currentSystem.secretStations && 
-                        player.currentSystem.secretStations.length > 0) {
-                        
-                        // Find closest secret station and determine if it's discovered
-                        let anyDiscovered = false;
-                        for (const station of player.currentSystem.secretStations) {
-                            if (station.discovered) {
-                                anyDiscovered = true;
-                                break;
-                            }
-                        }
-                        
-                        // Initialize cache immediately to avoid delay
-                        player._cachedNavigation = null; // Clear any old cache
-                        
-                        if (anyDiscovered) {
-                            uiManager.addMessage("Secret Base Navigation: ACTIVATED", [0, 255, 255]);
-                        } else {
-                            uiManager.addMessage("Secret Base Detector: ACTIVATED - Base detected but not yet discovered", [0, 200, 200]);
-                        }
-                    } else {
-                        uiManager.addMessage("No Secret Base detected in this system", [255, 100, 100]);
-                        // Turn off if there's no secret base
-                        player.showSecretBaseNavigation = false;
-                    }
-                } else {
-                    // Clear cache when deactivating to free memory
-                    player._cachedNavigation = null;
-                    uiManager.addMessage("Secret Base Navigation: DEACTIVATED", [150, 150, 150]);
-                }
-                return false;
-            }
-            break;
-        case 'l':
-            if (player && player.currentSystem) {
-                const currentSystem = player.currentSystem;
-                const isCurrentlyWanted = currentSystem.playerWanted || false;
-                const securityLevel = typeof currentSystem.securityLevel === 'string' ? currentSystem.securityLevel.toLowerCase() : '';
-                if (!isCurrentlyWanted && securityLevel === 'anarchy') {
-                    uiManager?.addMessage(`No legal authority operates in ${currentSystem.name}.`, 'lightblue');
-                    GS_LOG(`Wanted status toggle skipped in ${currentSystem.name}: Anarchy system.`);
-                    return false;
-                }
-                currentSystem.playerWanted = !isCurrentlyWanted;
-                currentSystem.policeAlertSent = !isCurrentlyWanted;
-                GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
-                if (!isCurrentlyWanted) {
-                    uiManager.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
-                    GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
-                } else {
-                    uiManager.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
-                    GS_LOG(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
-                }
-                return false;
-            }
-            break;
-        case 'h':
-        case 'j':
-            if (gameStateManager.currentState === "IN_FLIGHT" && player && !player.destroyed) {
-                handleAutopilotKey(key.toLowerCase());
-                return false;
-            }
-            break;
-        case '.':
-            // Cycle minimap zoom level when in flight
-            if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
-                uiManager.cycleOutMinimapZoom();
-                return false;
-            }
-        case ',':
-            // Cycle minimap zoom level when in flight
-            if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
-                uiManager.cycleInMinimapZoom();
-                return false;
-            }
-            break;
-    }
-    // ESC to exit map/docked state back to flight
-    if (keyCode === ESCAPE) {
-        if (gameStateManager.currentState === "GALAXY_MAP" || gameStateManager.currentState === "DOCKED") {
-            gameStateManager.setState("IN_FLIGHT");
-        }
-    }
-  // DEBUG: Clear Save Data (Shift + C key)
-  // if (key === 'c' || key === 'C') {
-  //     if (keyIsDown(SHIFT)) {
-  //         if (confirm("Clear saved game data and reload?")) {
-  //             console.log("Clearing saved game data...");
-  //             try { localStorage.removeItem(SAVE_KEY); console.log("Save data cleared."); alert("Save data cleared. Reloading now..."); window.location.reload(); }
-  //             catch (e) { console.error("Error clearing saved data:", e); alert("Error clearing save data."); }
-  //         }
-  //     }
-  // }
-
-  // return false; // Uncomment to prevent default browser key actions (like scrolling with arrows)
+    return false;
 }
 
 /**
- * Handles autopilot key logic for 'h' (station) and 'j' (jump zone).
- * @param {string} autopilotKey - The pressed key, already lowercased.
+ * Handle instructions screen input
+ * @returns {boolean} True if handled
  */
-function handleAutopilotKey(autopilotKey) {
+function handleInstructionsInput() {
+    if (gameStateManager.currentState === "INSTRUCTIONS") {
+        titleScreen?.handleKeyPress(keyCode);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle save selection screen input
+ * @returns {boolean} True if handled
+ */
+function handleSaveSelectionInput() {
+    if (gameStateManager.currentState === "SAVE_SELECTION") {
+        saveSelectionScreen?.handleKeyPressed(key, keyCode);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle spacebar firing
+ * @returns {boolean} True if handled
+ */
+function handleSpacebarFiring() {
+    if ((key === ' ' || keyCode === 32) && 
+        gameStateManager.currentState === "IN_FLIGHT" && player) {
+        player.handleFireInput();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle weapon switching with number keys (1-9)
+ * @returns {boolean} True if handled
+ */
+function handleWeaponSwitching() {
+    if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
+    
+    const numKey = parseInt(key);
+    if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
+    
+    const weaponIndex = numKey - 1;
+    if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
+        if (player.switchToWeapon(weaponIndex)) {
+            WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
+        }
+    }
+    return true;
+}
+
+/**
+ * Handle single-key action shortcuts
+ * @returns {boolean} True if handled
+ */
+function handleSingleKeyActions() {
+    const keyLower = key.toLowerCase();
+    
+    switch (keyLower) {
+        case 'i':
+            return handleInventoryToggle();
+        case 'm':
+            return handleMapToggle();
+        case 'b':
+            return handleSecretBaseNavigation();
+        case 'l':
+            return handleWantedToggle();
+        case 'h':
+        case 'j':
+            return handleAutopilot(keyLower);
+        case '.':
+            return handleMinimapZoomOut();
+        case ',':
+            return handleMinimapZoomIn();
+    }
+    return false;
+}
+
+/**
+ * Toggle inventory screen
+ */
+function handleInventoryToggle() {
+    if (gameStateManager.currentState === "IN_FLIGHT") {
+        const opening = !gameStateManager.showingInventory;
+        gameStateManager.showingInventory = opening;
+        soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Toggle inventory screen
+ */
+function handleInventoryToggle() {
+    if (gameStateManager.currentState === "IN_FLIGHT") {
+        const opening = !gameStateManager.showingInventory;
+        gameStateManager.showingInventory = opening;
+        soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Toggle galaxy map
+ */
+function handleMapToggle() {
+    if (gameStateManager.currentState === "IN_FLIGHT") {
+        gameStateManager.setState("GALAXY_MAP");
+    } else if (gameStateManager.currentState === "GALAXY_MAP") {
+        gameStateManager.setState("IN_FLIGHT");
+    }
+    return true;
+}
+
+/**
+ * Toggle secret base navigation
+ */
+function handleSecretBaseNavigation() {
+    if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
+    
+    const wasActive = player.showSecretBaseNavigation;
+    player.showSecretBaseNavigation = !wasActive;
+    
+    if (player.showSecretBaseNavigation) {
+        showSecretBaseStatus();
+    } else {
+        player._cachedNavigation = null;
+        uiManager?.addMessage("Secret Base Navigation: DEACTIVATED", [150, 150, 150]);
+    }
+    return true;
+}
+
+/**
+ * Show secret base detection status
+ */
+function showSecretBaseStatus() {
+    if (!player.currentSystem?.secretStations?.length) {
+        uiManager?.addMessage("No Secret Base detected in this system", [255, 100, 100]);
+        player.showSecretBaseNavigation = false;
+        return;
+    }
+    
+    const anyDiscovered = player.currentSystem.secretStations.some(s => s.discovered);
+    player._cachedNavigation = null;
+    
+    if (anyDiscovered) {
+        uiManager?.addMessage("Secret Base Navigation: ACTIVATED", [0, 255, 255]);
+    } else {
+        uiManager?.addMessage("Secret Base Detector: ACTIVATED - Base detected but not yet discovered", [0, 200, 200]);
+    }
+}
+
+/**
+ * Toggle wanted status
+ */
+function handleWantedToggle() {
+    if (!player?.currentSystem) return false;
+    
+    const currentSystem = player.currentSystem;
+    const isCurrentlyWanted = currentSystem.playerWanted || false;
+    const securityLevel = typeof currentSystem.securityLevel === 'string' 
+        ? currentSystem.securityLevel.toLowerCase() 
+        : '';
+    
+    if (!isCurrentlyWanted && securityLevel === 'anarchy') {
+        uiManager?.addMessage(`No legal authority operates in ${currentSystem.name}.`, 'lightblue');
+        GS_LOG(`Wanted status toggle skipped in ${currentSystem.name}: Anarchy system.`);
+        return true;
+    }
+    
+    currentSystem.playerWanted = !isCurrentlyWanted;
+    currentSystem.policeAlertSent = !isCurrentlyWanted;
+    GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
+    
+    if (!isCurrentlyWanted) {
+        uiManager?.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
+        GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
+    } else {
+        uiManager?.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
+        GS_LOG(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
+    }
+    return true;
+}
+
+/**
+ * Handle autopilot key logic for 'h' (station) and 'j' (jump zone)
+ * @param {string} autopilotKey - The pressed key, already lowercased
+ */
+function handleAutopilot(autopilotKey) {
+    if (gameStateManager.currentState !== "IN_FLIGHT" || !player || player.destroyed) {
+        return false;
+    }
+    
     if (autopilotKey === 'h') {
         UI_LOG("H key detected - cycle planets autopilot");
-        // H now always cycles planets in the current system.
-        if (typeof player.cycleAutopilotPlanet === 'function') {
-            player.cycleAutopilotPlanet();
-        } else {
-            uiManager?.addMessage("No planet autopilot available", [255,150,100]);
-        }
+        player.cycleAutopilotPlanet?.() || uiManager?.addMessage("No planet autopilot available", [255,150,100]);
     } else if (autopilotKey === 'j') {
         UI_LOG("J key detected - toggle station/jumpzone autopilot");
-        // Toggle between 'station' and 'jumpzone'. If targeting a planet or disabled, default to 'station'.
         try {
             if (!player.autopilotEnabled) {
-                // Prefer jumpzone on first press if player isn't autopiloting
                 player.toggleAutopilot('jumpzone');
             } else if (player.autopilotTarget === 'station') {
                 player.toggleAutopilot('jumpzone');
             } else if (player.autopilotTarget === 'jumpzone') {
                 player.toggleAutopilot('station');
             } else {
-                // Currently targeting a planet or unknown target -> switch to station
                 player.toggleAutopilot('station');
             }
         } catch (e) {
             console.error('Autopilot toggle error:', e);
         }
     }
-}
-
-function keyReleased() {
-  // We'll leave this empty or handle other keys
-  return true; // Allow default for other keys
-}
-
-
-function mousePressed() {
-    // Handle GAME_OVER click-to-reset
-    if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
-        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
-            if (typeof resetGame === 'function') {
-                resetGame();
-            } else {
-                console.error("resetGame function not found, falling back to reload");
-                window.location.reload();
-            }
-        } else {
-            console.warn("Reset blocked: Player is not actually dead");
-        }
-        return;
-    }
-    // Handle title screen clicks
-    if (gameStateManager.currentState === "TITLE_SCREEN" || 
-        gameStateManager.currentState === "INSTRUCTIONS") {
-        titleScreen.handleClick();
-        return;
-    }
-
-    // Handle Save Selection screen clicks
-    if (gameStateManager.currentState === "SAVE_SELECTION") {
-        if (saveSelectionScreen && typeof saveSelectionScreen.handleClick === 'function') {
-            saveSelectionScreen.handleClick(mouseX, mouseY);
-        }
-        return; // Explicitly return to prevent further processing in this state
-    }
-
-    // --- Fullscreen ON only once, on first click inside canvas ---
-    if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-        fullscreen(true);
-    }
-
-    // Handle market button presses specifically 
-    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
-        if (uiManager.handleMarketMousePress(
-            mouseX, mouseY, 
-            player.currentSystem?.station?.getMarket(), 
-            player
-        )) return; // Click was handled by market UI
-    }
-
-    // Handle inventory clicks
-    if (gameStateManager.showingInventory && gameStateManager.currentState === "IN_FLIGHT") {
-        const res = inventoryScreen.handleClick(mouseX, mouseY, player);
-        if (res === 'close') {
-            gameStateManager.showingInventory = false;
-            // Audio: closing overlay
-            if (typeof soundManager !== 'undefined') soundManager.playSound('mapClose');
-            return;
-        }
-        if (res?.action === 'jettison') {
-            // Audio: click feedback on pressing jettison
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-            handleJettisonFromInventory(res.idx);
-            return;
-        }
-    }
-
-    // Defensive: Ensure all core objects exist
-    if (!gameStateManager || !player || !uiManager || !galaxy) return;
-
-    // Check if general UI handled the click (e.g., map, station services)
-    if (uiManager.handleMouseClicks(
-        mouseX, mouseY, gameStateManager.currentState, player, player.currentSystem?.station?.getMarket(), galaxy
-    )) return;
-
-    // If UI did NOT handle the click AND we are in flight:
-    if (gameStateManager.currentState === "IN_FLIGHT") {
-        player.handleMousePressedForTargeting();
-    }
+    return true;
 }
 
 /**
- * Handles the logic for jettisoning an item from the inventory.
- * Extracted for clarity and maintainability.
- * @param {number} idx - The index of the item in the player's cargo.
+ * Handle minimap zoom out ('.' key)
+ */
+function handleMinimapZoomOut() {
+    if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+        uiManager.cycleOutMinimapZoom();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle minimap zoom in (',' key)
+ */
+function handleMinimapZoomIn() {
+    if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+        uiManager.cycleInMinimapZoom();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle ESC key to exit map/docked state
+ */
+function handleEscapeKey() {
+    if (keyCode !== ESCAPE) return false;
+    
+    if (gameStateManager.currentState === "GALAXY_MAP" || 
+        gameStateManager.currentState === "DOCKED") {
+        gameStateManager.setState("IN_FLIGHT");
+    }
+    return true;
+}
+
+function keyReleased() {
+    return true;
+}
+
+// --- Mouse Input Handling ---
+
+/**
+ * Main mouse press handler
+ */
+function mousePressed() {
+    if (handleGameOverClick()) return;
+    if (handleTitleScreenClick()) return;
+    if (handleSaveSelectionClick()) return;
+    if (handleFullscreenEntry()) return;
+    if (handleMarketButtonPress()) return;
+    if (handleInventoryClick()) return;
+    if (handleGeneralUIClick()) return;
+    if (handleInFlightTargeting()) return;
+}
+
+/**
+ * Handle GAME_OVER click-to-reset
+ * @returns {boolean} True if handled
+ */
+function handleGameOverClick() {
+    if (gameStateManager?.currentState !== "GAME_OVER") return false;
+    
+    console.log("Game over screen clicked, resetting game...");
+    // Always allow reset when in GAME_OVER state, regardless of player state
+    if (typeof resetGame === 'function') {
+        resetGame();
+    } else {
+        console.error("resetGame function not found, reloading page");
+        window.location.reload();
+    }
+    return true;
+}
+
+/**
+ * Handle title screen clicks
+ * @returns {boolean} True if handled
+ */
+function handleTitleScreenClick() {
+    const state = gameStateManager.currentState;
+    if (state === "TITLE_SCREEN" || state === "INSTRUCTIONS") {
+        titleScreen?.handleClick();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle save selection screen clicks
+ * @returns {boolean} True if handled
+ */
+function handleSaveSelectionClick() {
+    if (gameStateManager.currentState === "SAVE_SELECTION") {
+        saveSelectionScreen?.handleClick(mouseX, mouseY);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle fullscreen entry on first click
+ * @returns {boolean} True if handled
+ */
+function handleFullscreenEntry() {
+    if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+        try {
+            fullscreen(true);
+        } catch (e) {
+            console.warn('Fullscreen request failed:', e);
+        }
+        return false; // Don't block other handlers
+    }
+    return false;
+}
+
+/**
+ * Handle market button presses
+ * @returns {boolean} True if handled
+ */
+function handleMarketButtonPress() {
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        return uiManager.handleMarketMousePress(
+            mouseX, mouseY,
+            player.currentSystem?.station?.getMarket(),
+            player
+        );
+    }
+    return false;
+}
+
+/**
+ * Handle inventory clicks
+ * @returns {boolean} True if handled
+ */
+function handleInventoryClick() {
+    if (!gameStateManager.showingInventory || gameStateManager.currentState !== "IN_FLIGHT") {
+        return false;
+    }
+    
+    const res = inventoryScreen.handleClick(mouseX, mouseY, player);
+    if (res === 'close') {
+        gameStateManager.showingInventory = false;
+        soundManager?.playSound('mapClose');
+        return true;
+    }
+    if (res?.action === 'jettison') {
+        soundManager?.playSound('click');
+        handleJettisonFromInventory(res.idx);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle general UI clicks (map, station services, etc.)
+ * @returns {boolean} True if handled
+ */
+function handleGeneralUIClick() {
+    if (!gameStateManager || !player || !uiManager || !galaxy) return false;
+    
+    return uiManager.handleMouseClicks(
+        mouseX, mouseY,
+        gameStateManager.currentState,
+        player,
+        player.currentSystem?.station?.getMarket(),
+        galaxy
+    );
+}
+
+/**
+ * Handle in-flight targeting
+ * @returns {boolean} True if handled
+ */
+function handleInFlightTargeting() {
+    if (gameStateManager.currentState === "IN_FLIGHT") {
+        player?.handleMousePressedForTargeting();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handles the logic for jettisoning an item from the inventory
+ * @param {number} idx - The index of the item in the player's cargo
  */
 function handleJettisonFromInventory(idx) {
     const item = player.cargo[idx];
-    if (item && player.removeCargo(item.name, 1)) {
-        uiManager.addMessage(`Jettisoned 1 ${item.name}`);
+    if (!item) return;
+    
+    if (player.removeCargo(item.name, 1)) {
+        uiManager?.addMessage(`Jettisoned 1 ${item.name}`);
+        
         const dir = p5.Vector.fromAngle(player.angle + PI);
         const pos = p5.Vector.add(player.pos, dir.copy().mult(player.size * 2.6));
         const cargo = new Cargo(pos.x, pos.y, item.name, 1);
         cargo.vel = dir.mult(1.5);
-        player.currentSystem.addCargo(cargo);
-        // Audio: subtle confirmation
-        if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+        player.currentSystem?.addCargo(cargo);
+        soundManager?.playSound('click_off');
     } else {
-        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+        soundManager?.playSound('error');
     }
 }
-  
 
 function mouseReleased() {
-  // Handle market button releases
-  if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
-      uiManager.handleMarketMouseRelease();
-  }
-  return false;
+    if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
+        uiManager.handleMarketMouseRelease();
+    }
+    return false;
 }
 
 function mouseWheel(event) {
-  if (uiManager && gameStateManager) {
-      if (uiManager.handleMouseWheel(event, gameStateManager.currentState)) {
-          return false; // prevent default
-      }
-  }
+    if (uiManager && gameStateManager) {
+        if (uiManager.handleMouseWheel(event, gameStateManager.currentState)) {
+            return false;
+        }
+    }
 }
-// --- End Input Handling ---
-
 
 // --- Save/Load Functionality ---
-// --- Save system hardening helpers ---
+
+/** Debounce timer for save operations */
 let __saveDebounceTimer = null;
 
+/**
+ * Validates save payload structure and data integrity
+ * @param {Object} payload - The save data payload to validate
+ * @returns {{ok: boolean, reason?: string}} Validation result
+ */
 function __validatePayload(payload) {
     try {
         if (!payload) return { ok: false, reason: 'missing payload' };
-        // Minimal schema checks
         if (!payload.galaxyData) return { ok: false, reason: 'missing galaxyData' };
         if (payload.currentSystemIndex === undefined || payload.currentSystemIndex === null) return { ok: false, reason: 'missing currentSystemIndex' };
         if (!payload.playerData) return { ok: false, reason: 'missing playerData' };

@@ -476,7 +476,9 @@ class StarSystem {
         // Check if p5 functions are available before using them
         if (typeof randomSeed !== 'function' || typeof random !== 'function' || typeof color !== 'function' || typeof max !== 'function' || typeof floor !== 'function' || typeof width === 'undefined' || typeof height === 'undefined') {
             console.error(`      !!! CRITICAL ERROR in ${this.name}.initStaticElements: p5 functions or globals not available! Aborting static init.`);
+            console.error(`      !!! Available: randomSeed=${typeof randomSeed}, random=${typeof random}, color=${typeof color}, width=${typeof width}, height=${typeof height}`);
             if (typeof randomSeed === 'function') randomSeed(); // Attempt to reset seed anyway
+            // DO NOT set staticElementsInitialized = true here, allow retry later
             return; // Cannot proceed without p5 functions
         }
 
@@ -571,10 +573,11 @@ class StarSystem {
         // --- End Secret Station Generation ---
 
         // --- Calculate Jump Zone Position (AFTER station position is set in createRandomPlanets) ---
+        // This MUST happen before spawnSpaceObjectsForPlanets because some objects spawn near the jump zone
         if (this.jumpZoneCenter === null) { // Check if not already loaded from save data
             if (this.station && this.station.pos) {
-                const maxJumpDist = this.despawnRadius * JUMP_ZONE_MAX_DIST_FACTOR;
-                const distFromStation = random(JUMP_ZONE_MIN_DIST_FROM_STATION, maxJumpDist);
+                const maxJumpDist = this.despawnRadius * JUMP_ZONE_CONFIG.MAX_DIST_FACTOR;
+                const distFromStation = random(JUMP_ZONE_CONFIG.MIN_DIST_FROM_STATION, maxJumpDist);
                 const angleFromStation = random(TWO_PI); // Random direction from station
 
                 this.jumpZoneCenter = p5.Vector.add(
@@ -901,7 +904,7 @@ try {
         if (!this.jumpZoneCenter || this.jumpZoneRadius <= 0) return;
 
         // Only draw if player is relatively close
-        const maxDrawDist = this.jumpZoneRadius * JUMP_ZONE_DRAW_RANGE_FACTOR;
+        const maxDrawDist = this.jumpZoneRadius * JUMP_ZONE_CONFIG.DRAW_RANGE_FACTOR;
         const maxDrawDistSq = maxDrawDist * maxDrawDist;
         const dx = playerPos.x - this.jumpZoneCenter.x;
         const dy = playerPos.y - this.jumpZoneCenter.y;
@@ -915,8 +918,8 @@ try {
             strokeWeight(3); // Make it reasonably thick
 
             // Fade out as player gets further away
-            let alpha = map(distToPlayer, this.jumpZoneRadius, maxDrawDist, JUMP_ZONE_MAX_ALPHA, JUMP_ZONE_MIN_ALPHA);
-            alpha = constrain(alpha, JUMP_ZONE_MIN_ALPHA, JUMP_ZONE_MAX_ALPHA);
+            let alpha = map(distToPlayer, this.jumpZoneRadius, maxDrawDist, JUMP_ZONE_CONFIG.MAX_ALPHA, JUMP_ZONE_CONFIG.MIN_ALPHA);
+            alpha = constrain(alpha, JUMP_ZONE_CONFIG.MIN_ALPHA, JUMP_ZONE_CONFIG.MAX_ALPHA);
             stroke(255, 255, 0, alpha); // Yellow, semi-transparent
 
             // Draw the circle representing the zone boundary
@@ -950,6 +953,9 @@ try {
         this.discover();
         this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
+        
+        // Note: Do NOT clear spaceObjects array - these are static decorative elements
+        // that should persist across visits and are created during initStaticElements
         
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
@@ -3827,13 +3833,25 @@ checkProjectileCollisions() {
         // Draw decorative space objects (satellites, telescopes)
         if (this.spaceObjects && this.spaceObjects.length > 0) {
             const spaceObjCount = this.spaceObjects.length;
+            let drawnCount = 0;
             for (let i = 0; i < spaceObjCount; i++) {
                 const so = this.spaceObjects[i];
                 if (!so || !so.pos) continue;
                 if (this.isInView(so.pos.x, so.pos.y, so.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
-                    try { so.draw(); } catch(e) { console.error('SpaceObject.draw error', e); }
+                    try { 
+                        so.draw(); 
+                        drawnCount++;
+                    } catch(e) { console.error('SpaceObject.draw error', e); }
                 }
             }
+            // Log once per second to avoid spam
+            if (!this._lastSpaceObjLogTime || (millis() - this._lastSpaceObjLogTime > 1000)) {
+                console.log(`Drawing ${drawnCount}/${spaceObjCount} visible space objects`);
+                this._lastSpaceObjLogTime = millis();
+            }
+        } else if (!this._warnedNoSpaceObjects) {
+            console.warn(`No space objects to draw in ${this.name}`);
+            this._warnedNoSpaceObjects = true;
         }
 
         // Draw only visible cargo
@@ -4090,7 +4108,8 @@ checkProjectileCollisions() {
                 size: so.size || null,
                 destroyed: !!so.destroyed,
                 state: so.state || null,
-                subtype: so.subtype || null
+                subtype: so.subtype || null,
+                planetIndex: so.planetIndex !== undefined ? so.planetIndex : null
             })),
             
             // Jump Zone Data
@@ -4236,7 +4255,7 @@ checkProjectileCollisions() {
         } else {
             sys.jumpZoneCenter = null; // Ensure it's null if not saved properly or p5 not ready
         }
-        sys.jumpZoneRadius = data.jumpZoneRadius ?? JUMP_ZONE_DEFAULT_RADIUS;
+        sys.jumpZoneRadius = data.jumpZoneRadius ?? JUMP_ZONE_CONFIG.DEFAULT_RADIUS;
         // ---
 
         // Restore wanted status
@@ -4585,8 +4604,26 @@ checkProjectileCollisions() {
      * Other systems have random space objects.
      */
     spawnSpaceObjectsForPlanets() {
-        if (!this.planets || this.planets.length === 0) return;
-        if (typeof SpaceObject === 'undefined') return;
+        console.log(`         >>> spawnSpaceObjectsForPlanets START for ${this.name}`);
+        
+        // GUARD: If space objects already exist, don't spawn more
+        // This prevents on-demand spawning with non-deterministic seeds during gameplay
+        if (this.spaceObjects && this.spaceObjects.length > 0) {
+            console.log(`         >>> Space objects already exist (${this.spaceObjects.length}), skipping spawn`);
+            return;
+        }
+        
+        if (!this.planets || this.planets.length === 0) {
+            console.warn(`         >>> No planets found in ${this.name}, skipping space objects`);
+            return;
+        }
+        if (typeof SpaceObject === 'undefined') {
+            console.error(`         >>> SpaceObject class not defined, skipping space objects`);
+            return;
+        }
+        
+        const initialCount = this.spaceObjects.length;
+        console.log(`         >>> Initial spaceObjects count: ${initialCount}`);
 
         // Define space object types by economy type
         const typesByEconomy = {
@@ -4677,6 +4714,10 @@ checkProjectileCollisions() {
                 }
             }
         }
+        
+        const finalCount = this.spaceObjects.length;
+        const spawned = finalCount - initialCount;
+        console.log(`         >>> spawnSpaceObjectsForPlanets END: spawned ${spawned} objects (total now ${finalCount})`);
     }
     
     /**

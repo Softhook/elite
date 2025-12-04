@@ -124,7 +124,7 @@ class EnemyAIBehaviors {
             const newState = (this.currentState === AI_STATE.REPOSITIONING) 
                 ? AI_STATE.APPROACHING 
                 : AI_STATE.ATTACK_PASS;
-            const targetName = this.target?.shipTypeName || (this.target === system?.player ? 'Player' : 'Unknown');
+            const targetName = this.target?.shipTypeName || (this.target === this.currentSystem?.player ? 'Player' : 'Unknown');
             
             AI_LOG(`⚠️ RANGE STALL: ${this.shipTypeName} vs ${targetName} - stalled for ${this._rangeStallTimer.toFixed(1)}s at range ${distanceToTarget.toFixed(0)} -> forcing ${AI_STATE_NAME[newState]}`);
             

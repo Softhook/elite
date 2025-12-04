@@ -1,45 +1,38 @@
 // ****** gameStateManager.js ******
 
-// ... (Import statements or existing global variables like uiManager, soundManager, player, galaxy) ...
-
 /**
  * Checks if the player is within the designated jump zone of the given system.
- * @param {Player} playerObj - The player object.
- * @param {StarSystem} systemObj - The system object.
- * @returns {boolean} True if the player is in the jump zone, false otherwise.
+ * Uses distance squared for performance optimization.
+ * @param {Player} playerObj - The player object
+ * @param {StarSystem} systemObj - The system object
+ * @returns {boolean} True if the player is in the jump zone, false otherwise
  */
 function isPlayerInJumpZone(playerObj, systemObj) {
-    // --- Debug Logging ---
-    const funcCaller = (new Error()).stack.split('\n')[2].trim().split(' ')[1]; // Get caller function name
-    //console.log(`[isPlayerInJumpZone called by ${funcCaller}]`);
-    // ---
-
     if (!playerObj?.pos) {
-        console.log("  Check Failed: Invalid playerObj.pos");
+        console.log("Jump zone check failed: Invalid player position");
         return false;
     }
     if (!systemObj?.jumpZoneCenter) {
-        console.log("  Check Failed: Invalid systemObj.jumpZoneCenter");
+        console.log("Jump zone check failed: Invalid jump zone center");
         return false;
     }
-    if (!(systemObj.jumpZoneRadius > 0)) { // Check radius is positive number
-        console.log(`  Check Failed: Invalid systemObj.jumpZoneRadius: ${systemObj.jumpZoneRadius}`);
+    if (!(systemObj.jumpZoneRadius > 0)) {
+        console.log(`Jump zone check failed: Invalid radius: ${systemObj.jumpZoneRadius}`);
         return false;
     }
 
-    const pX = playerObj.pos.x;
-    const pY = playerObj.pos.y;
-    const zX = systemObj.jumpZoneCenter.x;
-    const zY = systemObj.jumpZoneCenter.y;
-    const radius = systemObj.jumpZoneRadius;
-
-    const distanceSq = (pX - zX) ** 2 + (pY - zY) ** 2;
-    const radiusSq = radius ** 2;
-    const isInZone = distanceSq <= radiusSq;
-
-    return isInZone;
+    const distanceSq = (playerObj.pos.x - systemObj.jumpZoneCenter.x) ** 2 + 
+                       (playerObj.pos.y - systemObj.jumpZoneCenter.y) ** 2;
+    const radiusSq = systemObj.jumpZoneRadius ** 2;
+    
+    return distanceSq <= radiusSq;
 }
 
+/**
+ * List of game states where the player is at a station or in station menus.
+ * Used for transition logic and state validation.
+ * @constant {string[]}
+ */
 const STATION_STATES = [
     "DOCKED", 
     "VIEWING_MARKET", 
@@ -66,1201 +59,1399 @@ class GameStateManager {
      * Handles fetching/caching missions for the UI.
      */
     constructor() {
-        // Start with title screen instead of LOADING
+        // State tracking
         this.currentState = "TITLE_SCREEN"; 
-        this.previousState = null;     // Track previous state for transition logic
-        // Jump state variables
+        this.previousState = null;
+        
+        // Jump mechanics
         this.jumpTargetSystemIndex = -1;
-        
-        // Modify jump charge duration (increase from 1.5 seconds to 4 seconds)
-        this.jumpChargeDuration = 4.0; // seconds (was 1.5)
+        this.jumpChargeDuration = 4.0; // seconds (increased from 1.5 for better gameplay)
         this.jumpChargeTimer = 0;
-        
-        // Add property to track jumping animation
         this.isJumpCharging = false;
-
-        // Add to constructor
-this.jumpFadeState = "NONE"; // NONE, FADE_OUT, WHITE_HOLD, FADE_IN
-this.jumpFadeOpacity = 0;
-this.jumpWhiteHoldTime = 1.0; // seconds
-
-// Add an overlay flag for the inventory screen
-this.showingInventory = false;
-
-// Add flag for jump completion message
-this.jumpJustCompleted = false;
-    // Post-load transition (used when waiting for planet buffers)
-    this.postLoadFadeState = "NONE"; // NONE, FADE_OUT, FADE_IN
-    this.postLoadFadeOpacity = 0;
-    this.postLoadFadeTarget = null;
-    // Fade timing (ms)
-    this.postLoadFadeOutMs = 900; // fade-out duration in ms
-    this.postLoadFadeInMs = 700;  // fade-in duration in ms
-        // State to resume after blocking LOADING (used to wait for planet buffer creation)
+        this.jumpFadeState = "NONE"; // NONE, FADE_OUT, WHITE_HOLD, FADE_IN
+        this.jumpFadeOpacity = 0;
+        this.jumpWhiteHoldTime = 1.0; // seconds
+        this.jumpJustCompleted = false;
+        
+        // UI flags
+        this.showingInventory = false;
+        
+        // Post-load transition (used when waiting for planet buffers)
+        this.postLoadFadeState = "NONE"; // NONE, FADE_OUT, FADE_IN
+        this.postLoadFadeOpacity = 0;
+        this.postLoadFadeTarget = null;
+        this.postLoadFadeOutMs = 900; // fade-out duration in ms
+        this.postLoadFadeInMs = 700;  // fade-in duration in ms
         this.pendingPostLoadState = null;
     }
-
+    
     /**
-     * Changes the current game state and handles specific transition logic.
-     * @param {string} newState - The target state to transition to (e.g., "IN_FLIGHT", "DOCKED", "VIEWING_MISSIONS").
+     * Updates ambient sound manager docked state based on current game state
+     * @param {string} newState - The new game state
+     * @private
      */
-    setState(newState) {
-        this.previousState = this.currentState;
-        if (this.currentState === newState) return; // No change needed
-
-        // If we're about to enter IN_FLIGHT or DOCKED but planet buffers are still being created,
-        // delay the transition and show the LOADING state until buffers complete.
-        try {
-            if ((newState === "IN_FLIGHT" || newState === "DOCKED") && typeof window !== 'undefined') {
-                const queuePending = Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0;
-                const totalPending = window._planetBufferCreationTotal && ((window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal);
-                if (queuePending || totalPending) {
-                    GS_LOG(`Delaying transition to ${newState} until planet buffers finish`);
-                    this.pendingPostLoadState = newState;
-                    this.currentState = "LOADING";
-                    return; // Don't change to newState yet
-                }
-            }
-        } catch (e) { /* non-fatal */ }
-
-        GS_LOG(`Changing state from ${this.previousState} to ${newState}`);
-        this.currentState = newState; // Update the current state
-
-        // --- Handle Logic Specific to State Transitions ---
-        
-        // Update ambient sound manager docked state
+    _updateAmbientSoundState(newState) {
         try {
             if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                const stationStates = STATION_STATES;
-                const isDocked = stationStates.includes(newState);
+                const isDocked = STATION_STATES.includes(newState);
                 ambientSoundManager.setDockedState(isDocked);
             }
         } catch (e) {
             console.warn('Error updating ambient sound docked state:', e);
         }
-
-        // Play transition-specific sounds
+    }
+    
+    /**
+     * Plays transition-specific sound effects when changing states
+     * @param {string} newState - The new game state
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _playTransitionSound(newState, prevState) {
         try {
-            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-                const stationStates = STATION_STATES;
-                if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
-                    soundManager.playSound('dockSuccess');
-                } else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
-                    soundManager.playSound('dockSuccess');
-                } else if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
-                    soundManager.playSound('undock');
-                } else if (["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD","VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE","VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"].includes(newState)) {
-                    soundManager.playSound('uiTransition');
-                } else if (newState === "GALAXY_MAP" && this.previousState !== "GALAXY_MAP") {
-                    soundManager.playSound('mapOpen');
-                } else if (this.previousState === "GALAXY_MAP" && newState !== "GALAXY_MAP") {
-                    soundManager.playSound('mapClose');
-                } else if (newState === "DOCKED" && stationStates.includes(this.previousState)) {
-                    // Back from sub-menu to docked
-                    soundManager.playSound('uiTransition');
-                } else if (newState === "DOCKED_SPACE_OBJECT" && stationStates.includes(this.previousState)) {
-                    // Back from sub-menu to docked space object
-                    soundManager.playSound('uiTransition');
-                } else if (newState === "GAME_OVER") {
-                    soundManager.playSound('gameOver');
-                }
+            if (typeof soundManager === 'undefined' || typeof soundManager.playSound !== 'function') {
+                return;
             }
-        } catch (e) { /* ignore audio errors */ }
-
-        // Refresh save game preview when entering save selection screen
-        if (newState === "SAVE_SELECTION") {
-            if (saveSelectionScreen && typeof saveSelectionScreen.loadSavedGamePreview === 'function') {
-                saveSelectionScreen.loadSavedGamePreview();
-                // If "Continue" was selected but save data is now gone, reset to "New Game"
-                if (saveSelectionScreen.savedGameData === null && saveSelectionScreen.selectedSlot === 1) {
-                    saveSelectionScreen.selectedSlot = 0;
+            
+            const isStationState = (state) => STATION_STATES.includes(state);
+            const isMenuState = (state) => ["VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD",
+                "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
+                "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT",
+                "VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD",
+                "VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"].includes(state);
+            
+            // Docking transitions
+            if (newState === "DOCKED" && prevState === "IN_FLIGHT") {
+                soundManager.playSound('dockSuccess');
+            } else if (newState === "DOCKED_SPACE_OBJECT" && prevState === "IN_FLIGHT") {
+                soundManager.playSound('dockSuccess');
+            }
+            // Undocking transitions
+            else if (newState === "IN_FLIGHT" && isStationState(prevState)) {
+                soundManager.playSound('undock');
+            }
+            // Menu navigation
+            else if (isMenuState(newState)) {
+                soundManager.playSound('uiTransition');
+            }
+            // Galaxy map
+            else if (newState === "GALAXY_MAP" && prevState !== "GALAXY_MAP") {
+                soundManager.playSound('mapOpen');
+            } else if (prevState === "GALAXY_MAP" && newState !== "GALAXY_MAP") {
+                soundManager.playSound('mapClose');
+            }
+            // Station menu navigation
+            else if ((newState === "DOCKED" || newState === "DOCKED_SPACE_OBJECT") && isStationState(prevState)) {
+                soundManager.playSound('uiTransition');
+            }
+            // Game over
+            else if (newState === "GAME_OVER") {
+                soundManager.playSound('gameOver');
+            }
+        } catch (e) {
+            // Ignore audio errors - non-critical
+        }
+    }
+    
+    /**
+     * Handles undocking position offset and related cleanup
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _handleUndocking(prevState) {
+        GS_LOG("Undocking! Applying position offset.");
+        
+        if (!player) {
+            console.error("Player object missing during undock offset!");
+            return;
+        }
+        
+        // Check if undocking from a space object
+        if (prevState === "DOCKED_SPACE_OBJECT" && this.currentDockedSpaceObject) {
+            this._undockFromSpaceObject();
+        } else {
+            this._undockFromStation();
+        }
+        
+        // Clear session trade tracking when undocking
+        if (typeof player.clearSessionTradeTracking === 'function') {
+            player.clearSessionTradeTracking();
+        }
+    }
+    
+    /**
+     * Handles undocking from a space object
+     * @private
+     */
+    _undockFromSpaceObject() {
+        const spaceObj = this.currentDockedSpaceObject;
+        const dockRadius = spaceObj.dockingRadius ?? spaceObj.size ?? 80;
+        const margin = Math.max(10, player.size * 1.5);
+        const offsetDistance = dockRadius + margin;
+        
+        if (spaceObj.pos) {
+            player.pos = spaceObj.pos.copy 
+                ? spaceObj.pos.copy().add(createVector(0, -offsetDistance)) 
+                : createVector(spaceObj.pos.x, spaceObj.pos.y - offsetDistance);
+        } else {
+            player.pos.add(createVector(0, -offsetDistance));
+        }
+        
+        player.vel.mult(0);
+        this.currentDockedSpaceObject = null;
+    }
+    
+    /**
+     * Handles undocking from a station
+     * @private
+     */
+    _undockFromStation() {
+        const dockedStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
+        const dockRadius = dockedStation?.dockingRadius ?? dockedStation?.size ?? 160;
+        const margin = Math.max(10, player.size * 1.5);
+        const offsetDistance = dockRadius + margin;
+        
+        // Use docked station position as origin
+        if (dockedStation && dockedStation.pos) {
+            player.pos = dockedStation.pos.copy().add(createVector(0, -offsetDistance));
+        } else {
+            // Fallback: relative offset from current player.pos
+            player.pos.add(createVector(0, -offsetDistance));
+        }
+        
+        player.vel.mult(0);
+        
+        // Spawn any hired bodyguards when undocking
+        if (player.activeBodyguards?.length > 0 && galaxy?.getCurrentSystem()) {
+            console.log("Spawning bodyguards when undocking from station");
+            player.spawnBodyguards(galaxy.getCurrentSystem());
+        }
+        
+        // Clear recorded docked station after undocking
+        this.currentDockedStation = null;
+    }
+    
+    /**
+     * Handles docking at a station
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _handleDocking(prevState) {
+        if (prevState !== "IN_FLIGHT") return;
+        
+        GS_LOG("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
+        const dockStation = galaxy?.getCurrentSystem()?.station;
+        this.currentDockedStation = dockStation || null;
+        
+        if (player && dockStation?.pos) {
+            player.pos = dockStation.pos.copy() || player.pos;
+            player.vel.mult(0);
+        } else {
+            console.error("Could not snap player to station - required objects missing.");
+        }
+    }
+    
+    /**
+     * Handles docking at a space object
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _handleSpaceObjectDocking(prevState) {
+        if (prevState !== "IN_FLIGHT") return;
+        
+        GS_LOG("Entering DOCKED_SPACE_OBJECT state from IN_FLIGHT.");
+        if (player && this.currentDockedSpaceObject?.pos) {
+            player.vel.mult(0);
+            // Save game when docking at space object
+            if (typeof saveGame === 'function') {
+                try { 
+                    saveGame(); 
+                } catch (e) { 
+                    console.warn("Failed to save on space object dock:", e); 
                 }
             }
         }
+    }
 
-        // Reset jump state
-        if (newState !== "JUMPING" && newState !== "GALAXY_MAP") { this.jumpTargetSystemIndex = -1; this.jumpChargeTimer = 0; }
+    /**
+     * Changes the current game state and handles specific transition logic.
+     * @param {string} newState - The target state to transition to
+     */
+    setState(newState) {
+        this.previousState = this.currentState;
+        if (this.currentState === newState) return;
+
+        // Check if planet buffers need to load before transitioning
+        if (this._shouldDelayForPlanetBuffers(newState)) {
+            return;
+        }
+
+        GS_LOG(`Changing state from ${this.previousState} to ${newState}`);
+        this.currentState = newState;
+
+        // Execute transition handlers
+        this._updateAmbientSoundState(newState);
+        this._playTransitionSound(newState, this.previousState);
+        this._handleSaveSelectionTransition(newState);
+        this._resetStateSpecificData(newState);
+        this._handlePositionTransitions(newState, this.previousState);
+    }
+    
+    /**
+     * Checks if state transition should be delayed for planet buffer loading
+     * @param {string} newState - The target state
+     * @returns {boolean} True if transition was delayed
+     * @private
+     */
+    _shouldDelayForPlanetBuffers(newState) {
+        try {
+            if ((newState === "IN_FLIGHT" || newState === "DOCKED") && typeof window !== 'undefined') {
+                const queuePending = Array.isArray(window._planetBufferCreationQueue) && 
+                                   window._planetBufferCreationQueue.length > 0;
+                const totalPending = window._planetBufferCreationTotal && 
+                                   ((window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal);
+                                   
+                if (queuePending || totalPending) {
+                    GS_LOG(`Delaying transition to ${newState} until planet buffers finish`);
+                    this.pendingPostLoadState = newState;
+                    this.currentState = "LOADING";
+                    return true;
+                }
+            }
+        } catch (e) { /* non-fatal */ }
+        return false;
+    }
+    
+    /**
+     * Handles save selection screen transitions
+     * @param {string} newState - The new game state
+     * @private
+     */
+    _handleSaveSelectionTransition(newState) {
+        if (newState !== "SAVE_SELECTION") return;
+        
+        if (saveSelectionScreen && typeof saveSelectionScreen.loadSavedGamePreview === 'function') {
+            saveSelectionScreen.loadSavedGamePreview();
+            // Reset to "New Game" if save data is gone
+            if (saveSelectionScreen.savedGameData === null && saveSelectionScreen.selectedSlot === 1) {
+                saveSelectionScreen.selectedSlot = 0;
+            }
+        }
+    }
+    
+    /**
+     * Resets state-specific data during transitions
+     * @param {string} newState - The new game state
+     * @private
+     */
+    _resetStateSpecificData(newState) {
+        // Reset jump state when leaving jump/map states
+        if (newState !== "JUMPING" && newState !== "GALAXY_MAP") {
+            this.jumpTargetSystemIndex = -1;
+            this.jumpChargeTimer = 0;
+        }
+        
         // Reset mission board selection
-        if (newState !== "VIEWING_MISSIONS" && this.previousState === "VIEWING_MISSIONS") { this.selectedMissionIndex = -1; }
-        // Reset market selection (if added later)
-        if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") { this.selectedMarketItemIndex = -1; }
-
-        // Apply Undock Offset - Check if transitioning TO flight FROM ANY docked/station menu state
-        const stationStates = STATION_STATES;
-        if (newState === "IN_FLIGHT" && stationStates.includes(this.previousState)) {
-            GS_LOG("Undocking! Applying position offset.");
+        if (newState !== "VIEWING_MISSIONS" && this.previousState === "VIEWING_MISSIONS") {
+            this.selectedMissionIndex = -1;
+        }
+        
+        // Reset market selection
+        if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") {
+            this.selectedMarketItemIndex = -1;
+        }
+    }
+    
+    /**
+     * Handles player position changes during state transitions
+     * @param {string} newState - The new game state
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _handlePositionTransitions(newState, prevState) {
+        const isUndocking = newState === "IN_FLIGHT" && STATION_STATES.includes(prevState);
+        const isDocking = newState === "DOCKED" && prevState === "IN_FLIGHT";
+        const isSpaceObjectDocking = newState === "DOCKED_SPACE_OBJECT" && prevState === "IN_FLIGHT";
+        const isInStation = newState === "DOCKED" || newState === "DOCKED_SPACE_OBJECT";
+        const isInMenu = ["VIEWING_MARKET", "VIEWING_MISSIONS"].includes(newState);
+        
+        if (isUndocking) {
+            this._handleUndocking(prevState);
+        } else if (isDocking) {
+            this._handleDocking(prevState);
+        } else if (isSpaceObjectDocking) {
+            this._handleSpaceObjectDocking(prevState);
+        } else if (isInStation || isInMenu) {
+            // Ensure player is stopped in these states
             if (player) {
-                // Check if undocking from a space object
-                if (this.previousState === "DOCKED_SPACE_OBJECT" && this.currentDockedSpaceObject) {
-                    const spaceObj = this.currentDockedSpaceObject;
-                    const dockRadius = spaceObj.dockingRadius ?? spaceObj.size ?? 80;
-                    const margin = Math.max(10, player.size * 1.5);
-                    const offsetDistance = dockRadius + margin;
-                    
-                    if (spaceObj.pos) {
-                        player.pos = spaceObj.pos.copy ? spaceObj.pos.copy().add(createVector(0, -offsetDistance)) : createVector(spaceObj.pos.x, spaceObj.pos.y - offsetDistance);
-                    } else {
-                        player.pos.add(createVector(0, -offsetDistance));
-                    }
-                    player.vel.mult(0);
-                    this.currentDockedSpaceObject = null;
-                } else {
-                    // Prefer the specific station we docked at so secret stations undock correctly
-                    const dockedStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
-                    const dockRadius = dockedStation?.dockingRadius ?? dockedStation?.size ?? 160; // Fallback to historic value
-
-                    // Place player just outside the station docking radius plus a small margin
-                    const margin = Math.max(10, player.size * 1.5);
-                    const offsetDistance = dockRadius + margin;
-
-                    // Use docked station position as origin (ensure we're not offsetting from a stale player.pos)
-                    if (dockedStation && dockedStation.pos) {
-                        player.pos = dockedStation.pos.copy().add(createVector(0, -offsetDistance));
-                    } else {
-                        // Fallback: relative offset from current player.pos
-                        player.pos.add(createVector(0, -offsetDistance));
-                    }
-                    player.vel.mult(0);
-
-                    // Spawn any hired bodyguards when undocking
-                    if (player.activeBodyguards && player.activeBodyguards.length > 0 && galaxy?.getCurrentSystem()) {
-                        console.log("Spawning bodyguards when undocking from station");
-                        player.spawnBodyguards(galaxy?.getCurrentSystem());
-                    }
-                    // Clear recorded docked station after undocking
-                    this.currentDockedStation = null;
-                }
-                
-                // Clear session trade tracking when undocking
-                if (typeof player.clearSessionTradeTracking === 'function') {
-                    player.clearSessionTradeTracking();
-                }
-                // console.log(`Player position offset applied. New Pos: (${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)})`); // Optional log
-            } else { console.error("Player object missing during undock offset!"); }
-        }
-        // Snap position ONLY when docking occurs FROM IN_FLIGHT
-        else if (newState === "DOCKED" && this.previousState === "IN_FLIGHT") {
-             GS_LOG("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
-             const dockStation = galaxy?.getCurrentSystem()?.station;
-             // Record the exact station we docked at so undocking can reference it later
-             this.currentDockedStation = dockStation || null;
-             if (player && dockStation?.pos) { // Safe access
-                 player.pos = dockStation.pos.copy() || player.pos; player.vel.mult(0);
-             } else { console.error("Could not snap player to station - required objects missing."); }
-        }
-        // Handle docking at space object
-        else if (newState === "DOCKED_SPACE_OBJECT" && this.previousState === "IN_FLIGHT") {
-            GS_LOG("Entering DOCKED_SPACE_OBJECT state from IN_FLIGHT.");
-            if (player && this.currentDockedSpaceObject?.pos) {
-                player.vel.mult(0);
-                // Save game when docking at space object
-                if (typeof saveGame === 'function') {
-                    try { saveGame(); } catch (e) { console.warn("Failed to save on space object dock:", e); }
-                }
+                player.vel.set(0, 0);
             }
         }
-        // Ensure player stopped when entering DOCKED from sub-menus or other states
-        else if (newState === "DOCKED") { if (player) { player.vel.set(0, 0); } }
-        // Ensure player stopped when entering station sub-menus
-        else if (newState === "VIEWING_MARKET" || newState === "VIEWING_MISSIONS") { if (player) { player.vel.set(0, 0); } }
-        // Ensure player stopped when at space object
-        else if (newState === "DOCKED_SPACE_OBJECT") { if (player) { player.vel.set(0, 0); } }
-
-    } // End of setState method
+    }
 
 
     /**
      * Updates game logic based on the current state. Called every frame.
-     * @param {Player} player - Reference to the player object.
+     * @param {Player} player - Reference to the player object
      */
     update(player) {
-        // const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system // MOVED
-        let currentSystem = null; // Initialize to null
-
-        // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
-        if (statesExpectingSystem.includes(this.currentState)) {
-            currentSystem = galaxy?.getCurrentSystem();
+        const currentSystem = this._getCurrentSystemIfNeeded();
+        
+        this._processPlanetBufferQueue();
+        this._handlePendingPostLoadState();
+        this._updatePostLoadFade();
+        
+        this._updateStateLogic(player, currentSystem);
+    }
+    
+    /**
+     * Gets current system only if the current state requires it
+     * @returns {StarSystem|null} The current system or null
+     * @private
+     */
+    _getCurrentSystemIfNeeded() {
+        const statesExpectingSystem = [
+            "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", 
+            "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", 
+            "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING",
+            "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", 
+            "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", 
+            "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"
+        ];
+        
+        return statesExpectingSystem.includes(this.currentState) 
+            ? galaxy?.getCurrentSystem() 
+            : null;
+    }
+    
+    /**
+     * Processes deferred planet buffer creation queue
+     * @private
+     */
+    _processPlanetBufferQueue() {
+        try {
+            if (typeof window === 'undefined' || 
+                !Array.isArray(window._planetBufferCreationQueue) || 
+                window._planetBufferCreationQueue.length === 0) {
+                return;
+            }
+            
+            const BATCH_PER_FRAME = 1; // Load one planet buffer per frame
+            for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
+                const task = window._planetBufferCreationQueue.shift();
+                try {
+                    if (task?.planet && 
+                        typeof task.planet.createBuffers === 'function' && 
+                        !task.planet.buffersCreated) {
+                        task.planet.createBuffers();
+                    }
+                } catch (e) {
+                    console.warn('Deferred planet.createBuffers error', e);
+                }
+                window._planetBufferCreationCompleted = (window._planetBufferCreationCompleted || 0) + 1;
+            }
+            
+            if (window._planetBufferCreationQueue.length === 0) {
+                console.log('Planet buffer creation queue finished');
+            }
+        } catch (e) {
+            console.warn('Error processing planet buffer queue:', e);
         }
-
-        // Process deferred planet buffer creation queue (non-blocking, small batch per frame)
+    }
+    
+    /**
+     * Handles pending post-load state transitions
+     * @private
+     */
+    _handlePendingPostLoadState() {
         try {
-            if (typeof window !== 'undefined' && Array.isArray(window._planetBufferCreationQueue) && window._planetBufferCreationQueue.length > 0) {
-                const BATCH_PER_FRAME = 1; // Load planet buffers individually (one per frame)
-                for (let i = 0; i < BATCH_PER_FRAME && window._planetBufferCreationQueue.length > 0; i++) {
-                    const task = window._planetBufferCreationQueue.shift();
-                    try {
-                        if (task && task.planet && typeof task.planet.createBuffers === 'function' && !task.planet.buffersCreated) {
-                            task.planet.createBuffers();
-                        }
-                    } catch (e) {
-                        console.warn('Deferred planet.createBuffers error', e);
-                    }
-                    window._planetBufferCreationCompleted = (window._planetBufferCreationCompleted || 0) + 1;
-                }
-                if (window._planetBufferCreationQueue.length === 0) {
-                    // Completed all tasks
-                    console.log('Planet buffer creation queue finished');
-                }
+            if (!this.pendingPostLoadState || typeof window === 'undefined') return;
+            
+            const loadingComplete = (
+                (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0) &&
+                (!window._planetBufferCreationTotal || 
+                 (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal)
+            );
+            
+            if (loadingComplete) {
+                const nextState = this.pendingPostLoadState;
+                this.pendingPostLoadState = null;
+                GS_LOG(`Planet buffers finished — initiating post-load transition to ${nextState}`);
+                this.postLoadFadeTarget = nextState;
+                this.postLoadFadeState = "FADE_OUT";
+                this.postLoadFadeOpacity = 0;
             }
-        } catch (e) { console.warn('Error processing planet buffer queue:', e); }
-
-        // If we were delaying entering IN_FLIGHT/DOCKED to allow planet buffers to finish,
-        // resume the pending state as soon as loading is complete.
+        } catch (e) { /* non-fatal */ }
+    }
+    
+    /**
+     * Updates post-load fade transition effects
+     * @private
+     */
+    _updatePostLoadFade() {
         try {
-            if (this.pendingPostLoadState && typeof window !== 'undefined') {
-                const loadingComplete = (
-                    (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0) &&
-                    (!window._planetBufferCreationTotal || (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal)
-                );
-                if (loadingComplete) {
-                    const nextState = this.pendingPostLoadState;
-                    this.pendingPostLoadState = null;
-                    GS_LOG(`Planet buffers finished — initiating post-load transition to ${nextState}`);
-                    // Start a fade transition rather than switching immediately
-                    this.postLoadFadeTarget = nextState;
-                    this.postLoadFadeState = "FADE_OUT";
+            if (!this.postLoadFadeState || this.postLoadFadeState === "NONE") return;
+            
+            if (this.postLoadFadeState === "FADE_OUT") {
+                const inc = (deltaTime || 16) / Math.max(1, this.postLoadFadeOutMs);
+                this.postLoadFadeOpacity = Math.min(1, this.postLoadFadeOpacity + inc);
+                
+                if (this.postLoadFadeOpacity >= 1) {
+                    this.postLoadFadeOpacity = 1;
+                    const target = this.postLoadFadeTarget;
+                    this.postLoadFadeTarget = null;
+                    GS_LOG(`Post-load transition: FADE_OUT -> setState(${target})`);
+                    this.setState(target);
+                    this.postLoadFadeState = "FADE_IN";
+                }
+            } else if (this.postLoadFadeState === "FADE_IN") {
+                const dec = (deltaTime || 16) / Math.max(1, this.postLoadFadeInMs);
+                this.postLoadFadeOpacity = Math.max(0, this.postLoadFadeOpacity - dec);
+                
+                if (this.postLoadFadeOpacity <= 0) {
                     this.postLoadFadeOpacity = 0;
+                    this.postLoadFadeState = "NONE";
+                    GS_LOG("Post-load transition complete");
                 }
             }
         } catch (e) { /* non-fatal */ }
-
-        // Progress a pending post-load fade transition if active
-        try {
-                if (this.postLoadFadeState && this.postLoadFadeState !== "NONE") {
-                    if (this.postLoadFadeState === "FADE_OUT") {
-                        const inc = (deltaTime || 16) / Math.max(1, this.postLoadFadeOutMs);
-                        this.postLoadFadeOpacity = Math.min(1, this.postLoadFadeOpacity + inc);
-                        if (this.postLoadFadeOpacity >= 1) {
-                            this.postLoadFadeOpacity = 1;
-                            const target = this.postLoadFadeTarget;
-                            this.postLoadFadeTarget = null;
-                            GS_LOG(`Post-load transition: FADE_OUT -> setState(${target})`);
-                            this.setState(target);
-                            // After switching state, begin fading back in
-                            this.postLoadFadeState = "FADE_IN";
-                        }
-                    } else if (this.postLoadFadeState === "FADE_IN") {
-                        const dec = (deltaTime || 16) / Math.max(1, this.postLoadFadeInMs);
-                        this.postLoadFadeOpacity = Math.max(0, this.postLoadFadeOpacity - dec);
-                        if (this.postLoadFadeOpacity <= 0) {
-                            this.postLoadFadeOpacity = 0;
-                            this.postLoadFadeState = "NONE";
-                            GS_LOG("Post-load transition complete");
-                        }
-                    }
-                }
-        } catch (e) { /* non-fatal */ }
-
+    }
+    
+    /**
+     * Dispatches update logic based on current state
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _updateStateLogic(player, currentSystem) {
         switch (this.currentState) {
             case "TITLE_SCREEN":
-                // Title screen doesn't need game updates, just UI rendering
-                if (titleScreen) {
-                    titleScreen.update(deltaTime);
-                }
-                break;
-
             case "INSTRUCTIONS":
-                // Instructions screen also just needs UI updates
-                if (titleScreen) {
-                    titleScreen.update(deltaTime);
-                }
+                if (titleScreen) titleScreen.update(deltaTime);
                 break;
-
+                
             case "IN_FLIGHT":
-                if (!player || !currentSystem) { break; } // Need player and system
-                // If player is dying/destroyed: keep the world updating but block player interactions
-                if (player.isDying || player.destroyed) {
-                    try {
-                        // No input when dying, but allow physics/particles to update
-                        player.update();
-                        currentSystem.update(player);
-                    } catch (e) { console.error("ERROR during IN_FLIGHT update (dying):", e); }
-                    break;
-                }
-                try { // Wrap core updates
-                    player.handleInput();
-                    player.update();
-                    currentSystem.update(player); // Update everything
-                    const station = currentSystem.station; // Check docking
-                    // Primary station docking check
-                    let dockStation = null;
-                    if (station && player.canDock(station)) {
-                        dockStation = station;
-                    } else if (currentSystem.secretStations && currentSystem.secretStations.length > 0) {
-                        // Allow docking at a discovered secret station
-                        for (const s of currentSystem.secretStations) {
-                            if (!s) continue;
-                            if (!s.discovered) continue; // Only allow docking if discovered
-                            try {
-                                if (player.canDock(s)) { dockStation = s; break; }
-                            } catch (e) { /* ignore errors from malformed station */ }
-                        }
-                        // If we're docking to a secret station, temporarily replace system.station
-                        if (dockStation && dockStation !== currentSystem.station) {
-                            currentSystem._previousStation = currentSystem.station;
-                            currentSystem.station = dockStation;
-                        }
-                    }
-
-                    if (dockStation) {
-                        this.setState("DOCKED");
-                        // Suppress the immediate auto-save triggered by docking if we just loaded a game
-                        // This prevents the slot's savedAt from updating merely due to load-side docking snap
-                        try {
-                            const suppressWindowMs = 2000; // 2s window after load where auto-dock save is suppressed
-                            const lastLoad = (typeof window !== 'undefined') ? (window.__lastLoadTime || 0) : 0;
-                            const justLoaded = lastLoad && (Date.now() - lastLoad < suppressWindowMs);
-                            if (!justLoaded) {
-                                saveGame();
-                            } else {
-                                // Clear the marker so subsequent intentional saves aren't blocked
-                                if (typeof window !== 'undefined') window.__lastLoadTime = 0;
-                            }
-                        } catch (e) {
-                            // On any error, fall back to saving to preserve progress
-                            try { saveGame(); } catch(_) {}
-                        }
-                    }
-
-                    // Check for docking at dockable space objects (if not already docking at station)
-                    if (!dockStation && Array.isArray(currentSystem.spaceObjects)) {
-                        for (const spaceObj of currentSystem.spaceObjects) {
-                            if (!spaceObj || spaceObj.destroyed) continue;
-                            if (spaceObj.isDockable && typeof spaceObj.canPlayerDock === 'function' && spaceObj.canPlayerDock(player)) {
-                                this.currentDockedSpaceObject = spaceObj;
-                                this.setState("DOCKED_SPACE_OBJECT");
-                                break;
-                            }
-                        }
-                    }
-
-                    // Check for auto-jump: if player has a locked destination and is in jump zone
-                    if (uiManager && uiManager.lockedDestinationIndex !== -1 && isPlayerInJumpZone(player, currentSystem)) {
-                        const lockedIdx = uiManager.lockedDestinationIndex;
-                        // Validate that the locked destination is still a connected system
-                        const reachable = currentSystem.connectedSystemIndices || [];
-                        if (reachable.includes(lockedIdx)) {
-                            GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${lockedIdx}`);
-                            this.startJump(lockedIdx);
-                            // Clear the locked destination after initiating jump
-                            uiManager.lockedDestinationIndex = -1;
-                        } else {
-                            // Locked destination is no longer reachable (e.g., after save/load)
-                            GS_LOG(`Auto-jump aborted: Locked destination ${lockedIdx} is not reachable from current system. Clearing.`);
-                            uiManager.addMessage("Locked destination is not reachable. Cleared.", [255, 200, 100]);
-                            uiManager.lockedDestinationIndex = -1;
-                        }
-                    }
-
-                    // Check for jump completion message
-                    if (this.jumpJustCompleted) {
-                        this.jumpJustCompleted = false;
-                        if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
-                        }
-                    }
-                } catch (e) { console.error(`ERROR during IN_FLIGHT update:`, e); }
+                this._updateInFlight(player, currentSystem);
                 break;
-
+                
+            case "GALAXY_MAP":
+                this._updateGalaxyMap(player, currentSystem);
+                break;
+                
+            case "JUMPING":
+                this._updateJumping(player, currentSystem);
+                break;
+                
+            case "SAVE_SELECTION":
+                if (saveSelectionScreen) saveSelectionScreen.update(deltaTime);
+                break;
+                
             case "DOCKED":
-                if (player) { player.vel.set(0, 0); } break;
-
             case "DOCKED_SPACE_OBJECT":
-                // Player docked at a space object - stop velocity
-                if (player) { player.vel.set(0, 0); }
-                break;
-
             case "VIEWING_SPACE_OBJECT_MARKET":
-                // Player viewing space object market - stop velocity
-                if (player) { player.vel.set(0, 0); }
-                break;
-
             case "VIEWING_SPACE_OBJECT_REPAIRS":
-                // Player viewing space object repairs - stop velocity
-                if (player) { player.vel.set(0, 0); }
-                break;
-
             case "VIEWING_MARKET":
-                if (!currentSystem?.station) { this.setState("DOCKED"); break; } if (player) { player.vel.set(0, 0); } break;
-
             case "VIEWING_MISSIONS":
-                if (!currentSystem?.station) { this.setState("DOCKED"); break; } if (player) { player.vel.set(0, 0); } break;
-
+            case "VIEWING_PROTECTION":
+            case "VIEWING_POLICE":
+            case "VIEWING_IMPERIAL_RECRUITMENT":
+            case "VIEWING_SEPARATIST_RECRUITMENT":
+            case "VIEWING_MILITARY_RECRUITMENT":
+            case "VIEWING_STORAGE":
+            case "VIEWING_RECORD":
+                if (player) player.vel.set(0, 0);
+                break;
+                
             case "VIEWING_SHIPYARD":
             case "VIEWING_UPGRADES":
-                // No update logic needed, just wait for UI clicks
-                break;
-
             case "VIEWING_REPAIRS":
-                // No update logic needed for repairs menu
+            case "GAME_OVER":
+            case "LOADING":
+                // No update logic needed for these states
                 break;
                 
-            case "VIEWING_PROTECTION":
-                // No update logic needed for protection services menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-
-            case "VIEWING_POLICE":
-                // No update logic needed for police menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-
-
-            // In GameStateManager.draw(), modify the GALAXY_MAP case:
-
-            case "GALAXY_MAP":
-                // Continue updating game world while viewing galaxy map
-                if (player && currentSystem) {
-                    try {
-                        // Update player position (but without input processing)
-                        player.update();
-                        
-                        // Update system - keeps enemies moving, projectiles flying, etc.
-                        currentSystem.update(player);
-                    } catch (e) {
-                        console.error("Error updating game during galaxy map view:", e);
-                    }
-                }
-                break;
-
-            case "JUMPING":
-                if (!galaxy || this.jumpTargetSystemIndex < 0 || this.jumpTargetSystemIndex >= galaxy.systems.length) {
-                    this.setState("IN_FLIGHT");
-                    return;
-                }
-                
-                // Update jump charge timer
-                this.jumpChargeTimer += deltaTime / 1000;
-                
-                // KEY CHANGE: Continue updating the player and system during jump charge
-                if (player && currentSystem) {
-                    // Let the player still control the ship while charging
-                    player.handleInput();
-                    player.update();
-                    
-                    // Update system entities but prevent new spawns during jump
-                    currentSystem.update(player);
-                }
-                
-                // Complete jump when timer reaches duration
-                // Guard: Only start FADE_OUT if we haven't already begun the fade sequence
-                // This prevents duplicate jumpToSystem calls if deltaTime spikes (e.g., tab suspension)
-                if (this.jumpChargeTimer >= this.jumpChargeDuration && this.jumpFadeState === "NONE") {
-                    this.jumpFadeState = "FADE_OUT"; // Begin transition
-                    // Don't actually jump yet - wait for white screen
-                }
-
-                // Add fade state handling
-                if (this.jumpFadeState === "FADE_OUT") {
-                    this.jumpFadeOpacity += 0.03;
-                    if (this.jumpFadeOpacity >= 1) {
-                        // Execute jump during full white
-                        galaxy.jumpToSystem(this.jumpTargetSystemIndex);
-                        player.currentSystem = galaxy?.getCurrentSystem();
-                        player.vel.mult(0.3); // Reduce velocity after jump
-                        this.jumpChargeTimer = 0;
-                        this.isJumpCharging = false;
-                        this.jumpFadeState = "WHITE_HOLD";
-                    }
-                }
-                // Add WHITE_HOLD and FADE_IN states...
-                // Handle the WHITE_HOLD state - maintain full white screen until textures are generated
-                else if (this.jumpFadeState === "WHITE_HOLD") {
-                    // Track time in the white hold state
-                    if (!this.jumpWhiteHoldTimer) {
-                        this.jumpWhiteHoldTimer = 0;
-                    }
-                    this.jumpWhiteHoldTimer += deltaTime / 1000;
-                    
-                    // Check if planet buffer loading is complete
-                    const loadingComplete = (typeof window !== 'undefined' && 
-                        (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0)) &&
-                        (!window._planetBufferCreationTotal || 
-                         (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal);
-                    
-                    // Transition to fade-in as soon as loading is complete
-                    if (loadingComplete) {
-                        this.jumpFadeState = "FADE_IN";
-                        GS_LOG("Jump transition: WHITE_HOLD → FADE_IN");
-                    }
-                }
-                // Handle the FADE_IN state - gradually decrease opacity back to normal
-                else if (this.jumpFadeState === "FADE_IN") {
-                    // Gradually decrease opacity (fade back from white)
-                    this.jumpFadeOpacity -= 0.02 * (deltaTime / 16);
-                    
-                    // Transition back to normal gameplay when fully faded in
-                    if (this.jumpFadeOpacity <= 0) {
-                        this.jumpFadeOpacity = 0;
-                        this.jumpFadeState = "NONE";
-                        this.setState("IN_FLIGHT");
-                        // Set flag for jump completion message
-                        this.jumpJustCompleted = true;
-                        GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
-                    }
-                }
-
-                break;
-
-            case "VIEWING_IMPERIAL_RECRUITMENT":
-                // No update logic needed for Imperial recruitment menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-
-            case "VIEWING_SEPARATIST_RECRUITMENT":
-                // No update logic needed for Separatist recruitment menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-
-            case "VIEWING_MILITARY_RECRUITMENT":
-                // No update logic needed for Military recruitment menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-                
-            case "VIEWING_STORAGE":
-                // No update logic needed for storage menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-                
-            case "VIEWING_RECORD":
-                // No update logic needed for personal record menu
-                if (player) { player.vel.set(0, 0); }
-                break;
-
-             case "GAME_OVER":
-             case "LOADING":
-                break;
-
-            case "SAVE_SELECTION":
-                // Save selection screen updates
-                if (saveSelectionScreen) {
-                    saveSelectionScreen.update(deltaTime);
-                }
-                break;
-
             default:
                 console.warn(`Unknown game state in update(): ${this.currentState}`);
                 this.setState("IN_FLIGHT");
                 break;
         }
-    } // End of update method
+    }
+    
+    /**
+     * Updates IN_FLIGHT state logic
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _updateInFlight(player, currentSystem) {
+        if (!player || !currentSystem) return;
+        
+        // If player is dying/destroyed: keep world updating but block player interactions
+        if (player.isDying || player.destroyed) {
+            try {
+                player.update();
+                currentSystem.update(player);
+            } catch (e) {
+                console.error("ERROR during IN_FLIGHT update (dying):", e);
+            }
+            return;
+        }
+        
+        try {
+            player.handleInput();
+            player.update();
+            currentSystem.update(player);
+            
+            this._checkDocking(player, currentSystem);
+            this._checkAutoJump(player, currentSystem);
+            this._checkJumpCompletion();
+        } catch (e) {
+            console.error(`ERROR during IN_FLIGHT update:`, e);
+        }
+    }
+    
+    /**
+     * Checks for docking opportunities
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _checkDocking(player, currentSystem) {
+        const station = currentSystem.station;
+        let dockStation = null;
+        
+        // Check primary station
+        if (station && player.canDock(station)) {
+            dockStation = station;
+        } 
+        // Check secret stations
+        else if (currentSystem.secretStations?.length > 0) {
+            for (const s of currentSystem.secretStations) {
+                if (!s || !s.discovered) continue;
+                try {
+                    if (player.canDock(s)) {
+                        dockStation = s;
+                        break;
+                    }
+                } catch (e) { /* ignore malformed station */ }
+            }
+            
+            // Temporarily replace system.station with secret station
+            if (dockStation && dockStation !== currentSystem.station) {
+                currentSystem._previousStation = currentSystem.station;
+                currentSystem.station = dockStation;
+            }
+        }
+        
+        if (dockStation) {
+            this.setState("DOCKED");
+            this._savegameOnDocking();
+            return;
+        }
+        
+        // Check dockable space objects
+        if (Array.isArray(currentSystem.spaceObjects)) {
+            for (const spaceObj of currentSystem.spaceObjects) {
+                if (!spaceObj || spaceObj.destroyed) continue;
+                if (spaceObj.isDockable && 
+                    typeof spaceObj.canPlayerDock === 'function' && 
+                    spaceObj.canPlayerDock(player)) {
+                    this.currentDockedSpaceObject = spaceObj;
+                    this.setState("DOCKED_SPACE_OBJECT");
+                    break;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handles save game on docking with load suppression
+     * @private
+     */
+    _savegameOnDocking() {
+        try {
+            const suppressWindowMs = 2000; // 2s window after load
+            const lastLoad = (typeof window !== 'undefined') ? (window.__lastLoadTime || 0) : 0;
+            const justLoaded = lastLoad && (Date.now() - lastLoad < suppressWindowMs);
+            
+            if (!justLoaded) {
+                saveGame();
+            } else {
+                // Clear marker so subsequent saves aren't blocked
+                if (typeof window !== 'undefined') window.__lastLoadTime = 0;
+            }
+        } catch (e) {
+            // Fall back to saving on error
+            try { saveGame(); } catch(_) {}
+        }
+    }
+    
+    /**
+     * Checks for auto-jump trigger conditions
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _checkAutoJump(player, currentSystem) {
+        if (!uiManager || uiManager.lockedDestinationIndex === -1) return;
+        if (!isPlayerInJumpZone(player, currentSystem)) return;
+        
+        const lockedIdx = uiManager.lockedDestinationIndex;
+        const reachable = currentSystem.connectedSystemIndices || [];
+        
+        if (reachable.includes(lockedIdx)) {
+            GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${lockedIdx}`);
+            this.startJump(lockedIdx);
+            uiManager.lockedDestinationIndex = -1;
+        } else {
+            GS_LOG(`Auto-jump aborted: Locked destination ${lockedIdx} not reachable. Clearing.`);
+            uiManager.addMessage("Locked destination is not reachable. Cleared.", [255, 200, 100]);
+            uiManager.lockedDestinationIndex = -1;
+        }
+    }
+    
+    /**
+     * Shows jump completion message if flag is set
+     * @private
+     */
+    _checkJumpCompletion() {
+        if (!this.jumpJustCompleted) return;
+        
+        this.jumpJustCompleted = false;
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage(`Jump complete. Welcome to ${player.currentSystem.name}`, [0, 200, 255]);
+        }
+    }
+    
+    /**
+     * Updates GALAXY_MAP state logic
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _updateGalaxyMap(player, currentSystem) {
+        if (!player || !currentSystem) return;
+        
+        try {
+            player.update(); // Update position without input
+            currentSystem.update(player); // Keep world updating
+        } catch (e) {
+            console.error("Error updating game during galaxy map view:", e);
+        }
+    }
+    
+    /**
+     * Updates JUMPING state logic
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _updateJumping(player, currentSystem) {
+        if (!galaxy || 
+            this.jumpTargetSystemIndex < 0 || 
+            this.jumpTargetSystemIndex >= galaxy.systems.length) {
+            this.setState("IN_FLIGHT");
+            return;
+        }
+        
+        // Update jump charge timer
+        this.jumpChargeTimer += deltaTime / 1000;
+        
+        // Continue updating player and system during jump charge
+        if (player && currentSystem) {
+            player.handleInput();
+            player.update();
+            currentSystem.update(player);
+        }
+        
+        // Start fade sequence when charge completes
+        if (this.jumpChargeTimer >= this.jumpChargeDuration && this.jumpFadeState === "NONE") {
+            this.jumpFadeState = "FADE_OUT";
+        }
+        
+        this._updateJumpFade();
+    }
+    
+    /**
+     * Updates jump fade state machine
+     * @private
+     */
+    _updateJumpFade() {
+        if (this.jumpFadeState === "FADE_OUT") {
+            this.jumpFadeOpacity += 0.03;
+            if (this.jumpFadeOpacity >= 1) {
+                // Execute jump during full white
+                galaxy.jumpToSystem(this.jumpTargetSystemIndex);
+                player.currentSystem = galaxy?.getCurrentSystem();
+                player.vel.mult(0.3);
+                this.jumpChargeTimer = 0;
+                this.isJumpCharging = false;
+                this.jumpFadeState = "WHITE_HOLD";
+            }
+        } 
+        else if (this.jumpFadeState === "WHITE_HOLD") {
+            if (!this.jumpWhiteHoldTimer) this.jumpWhiteHoldTimer = 0;
+            this.jumpWhiteHoldTimer += deltaTime / 1000;
+            
+            const loadingComplete = (
+                typeof window !== 'undefined' && 
+                (!window._planetBufferCreationQueue || window._planetBufferCreationQueue.length === 0) &&
+                (!window._planetBufferCreationTotal || 
+                 (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal)
+            );
+            
+            if (loadingComplete) {
+                this.jumpFadeState = "FADE_IN";
+                GS_LOG("Jump transition: WHITE_HOLD → FADE_IN");
+            }
+        } 
+        else if (this.jumpFadeState === "FADE_IN") {
+            this.jumpFadeOpacity -= 0.02 * (deltaTime / 16);
+            
+            if (this.jumpFadeOpacity <= 0) {
+                this.jumpFadeOpacity = 0;
+                this.jumpFadeState = "NONE";
+                this.setState("IN_FLIGHT");
+                this.jumpJustCompleted = true;
+                GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
+            }
+        }
+    }
 
 
     /**
      * Draws game visuals based on the current state. Called every frame.
      * @param {Player} player - Reference to the player object.
      */
+    /**
+     * Draws game visuals based on the current state. Called every frame.
+     * @param {Player} player - Reference to the player object
+     */
     draw(player) {
-        // const currentSystem = galaxy?.getCurrentSystem(); // Safely get current system // MOVED
-        let currentSystem = null; // Initialize to null
-
-        // Only get currentSystem if in a state where it's expected to exist
-        const statesExpectingSystem = ["IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING", "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"];
-                // If we had temporarily swapped in a secret station for docking, restore the original station now
-                try {
-                    const sys = galaxy?.getCurrentSystem();
-                    if (sys && sys._previousStation) {
-                        sys.station = sys._previousStation;
-                        delete sys._previousStation;
-                    }
-                } catch (e) { /* ignore restore errors */ }
-        if (statesExpectingSystem.includes(this.currentState)) {
-            currentSystem = galaxy?.getCurrentSystem();
-        }
-
+        const currentSystem = this._getCurrentSystemIfNeeded();
+        
+        // Restore temporarily swapped secret station
+        this._restoreSecretStation();
+        
+        this._drawStateVisuals(player, currentSystem);
+        this._drawInventoryOverlay(player);
+        this._drawPostLoadFade();
+        this._drawPlanetBufferProgress();
+    }
+    
+    /**
+     * Restores temporarily swapped secret station
+     * @private
+     */
+    _restoreSecretStation() {
+        try {
+            const sys = galaxy?.getCurrentSystem();
+            if (sys?._previousStation) {
+                sys.station = sys._previousStation;
+                delete sys._previousStation;
+            }
+        } catch (e) { /* ignore restore errors */ }
+    }
+    
+    /**
+     * Dispatches draw logic based on current state
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _drawStateVisuals(player, currentSystem) {
         switch (this.currentState) {
             case "IN_FLIGHT":
-                if (currentSystem && player) { try { currentSystem.draw(player); } catch(e) {console.error("Err drawing system:", e)} } else { /* Draw error bg */ }
-                if (uiManager && player) { try { uiManager.drawHUD(player); } catch(e) {} if (currentSystem) { try { uiManager.drawMinimap(player, currentSystem); } catch(e) {} } }
+                this._drawInFlight(player, currentSystem);
                 break;
-
-            case "DOCKED": // Draws the main station menu
-                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && currentSystem?.station && player) { try { uiManager.drawStationMainMenu(currentSystem.station, player); } catch(e) { console.error("Error drawing station main menu:", e); } }
+                
+            case "DOCKED":
+                this._drawDocked(player, currentSystem);
                 break;
-
-            case "DOCKED_SPACE_OBJECT": // Draws the space object dock menu
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        // Draw the docked space object
-                        const spaceObj = this.currentDockedSpaceObject;
-                        if (spaceObj && typeof spaceObj.draw === 'function') {
-                            spaceObj.draw();
-                        }
-                        pop(); 
-                    } catch(e) {
-                        console.error("Error drawing space object background:", e);
-                    }
-                } else { 
-                    background(0); 
-                }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && this.currentDockedSpaceObject && player) { 
-                    try { 
-                        uiManager.drawSpaceObjectDockMenu(this.currentDockedSpaceObject, player); 
-                    } catch(e) { 
-                        console.error("Error drawing space object dock menu:", e); 
-                    } 
-                }
+                
+            case "DOCKED_SPACE_OBJECT":
+                this._drawDockedSpaceObject(player, currentSystem);
                 break;
-
-            case "VIEWING_SPACE_OBJECT_MARKET": // Draws the space object market screen
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        // Draw the docked space object
-                        const spaceObj = this.currentDockedSpaceObject;
-                        if (spaceObj && typeof spaceObj.draw === 'function') {
-                            spaceObj.draw();
-                        }
-                        pop(); 
-                    } catch(e) {
-                        console.error("Error drawing space object background:", e);
-                    }
-                } else { 
-                    background(0); 
-                }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && this.currentDockedSpaceObject && player) { 
-                    try { 
-                        uiManager.drawSpaceObjectMarket(this.currentDockedSpaceObject, player); 
-                    } catch(e) { 
-                        console.error("Error drawing space object market:", e); 
-                    } 
-                } else {
-                    background(10,0,0); 
-                    fill(255); 
-                    text("Error: Space object not found", width/2, height/2);
-                }
+                
+            case "VIEWING_SPACE_OBJECT_MARKET":
+                this._drawSpaceObjectMarket(player, currentSystem);
                 break;
-
-            case "VIEWING_SPACE_OBJECT_REPAIRS": // Draws the space object repairs screen
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        // Draw the docked space object
-                        const spaceObjRepairs = this.currentDockedSpaceObject;
-                        if (spaceObjRepairs && typeof spaceObjRepairs.draw === 'function') {
-                            spaceObjRepairs.draw();
-                        }
-                        pop(); 
-                    } catch(e) {
-                        console.error("Error drawing space object background:", e);
-                    }
-                } else { 
-                    background(0); 
-                }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && this.currentDockedSpaceObject && player) { 
-                    try { 
-                        uiManager.drawSpaceObjectRepairsMenu(this.currentDockedSpaceObject, player); 
-                    } catch(e) { 
-                        console.error("Error drawing space object repairs:", e); 
-                    } 
-                } else {
-                    background(10,0,0); 
-                    fill(255); 
-                    text("Error: Space object not found", width/2, height/2);
-                }
+                
+            case "VIEWING_SPACE_OBJECT_REPAIRS":
+                this._drawSpaceObjectRepairs(player, currentSystem);
                 break;
-
-             case "VIEWING_MARKET": // Draws the Market screen
-                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                 if (player) { try {player.draw();} catch(e) {}}
-                 if (uiManager && currentSystem?.station?.market && player) { try { uiManager.drawMarketScreen(currentSystem.station.getMarket(), player); } catch(e) { console.error("Error drawing market screen:", e); } }
-                 else { /* Draw error if market missing */ background(10,0,0); fill(255); text("Error: Market data unavailable", width/2, height/2); }
-                 break;
-
-             case "VIEWING_MISSIONS":
-                 // Fetch missions if not already fetched
-                if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
-                    const currentSystem = galaxy?.getCurrentSystem();
-                    const currentStation = currentSystem?.station;
-                    if (currentSystem && typeof currentSystem.getAvailableMissions === 'function') {
-                        this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
-                    } else {
-                        this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentStation, galaxy, player);
-                    }
-                }
-                 if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                 if (player) { try {player.draw();} catch(e) {}}
-                 if (uiManager && currentSystem?.station && player) {
-                     uiManager.drawMissionBoard(this.currentStationMissions, this.selectedMissionIndex, player);
-                 }
-                 break;
-
+                
+            case "VIEWING_MARKET":
+                this._drawMarket(player, currentSystem);
+                break;
+                
+            case "VIEWING_MISSIONS":
+                this._drawMissions(player, currentSystem);
+                break;
+                
             case "VIEWING_SHIPYARD":
-                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && player) uiManager.drawShipyardMenu(player);
-                break;
-
             case "VIEWING_UPGRADES":
-                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && player) uiManager.drawUpgradesMenu(player);
-                break;
-
             case "VIEWING_REPAIRS":
-                if (currentSystem) { try { push(); currentSystem.drawBackground(); if(currentSystem.station) currentSystem.station.draw(); pop(); } catch(e) {}} else { background(0); }
-                if (player) { try {player.draw();} catch(e) {}}
-                if (uiManager && player) uiManager.drawRepairsMenu(player);
-                break;
-                
             case "VIEWING_PROTECTION":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawProtectionServicesMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing protection services menu:", e); 
-                    }
-                }
-                break;
-
             case "VIEWING_POLICE":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawPoliceMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing police menu:", e); 
-                    }
-                }
-                break;
-
             case "VIEWING_IMPERIAL_RECRUITMENT":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawImperialRecruitmentMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing Imperial recruitment menu:", e); 
-                    }
-                }
-                break;
-
             case "VIEWING_SEPARATIST_RECRUITMENT":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawSeparatistRecruitmentMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing Separatist recruitment menu:", e); 
-                    }
-                }
-                break;
-
             case "VIEWING_MILITARY_RECRUITMENT":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawMilitaryRecruitmentMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing Military recruitment menu:", e); 
-                    }
-                }
-                break;
-                
             case "VIEWING_STORAGE":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawStorageMenu(currentSystem?.station || null, player);
-                    } catch(e) { 
-                        console.error("Error drawing storage menu:", e); 
-                    }
-                }
-                break;
-                
             case "VIEWING_RECORD":
-                if (currentSystem) { 
-                    try { 
-                        push(); 
-                        currentSystem.drawBackground(); 
-                        if(currentSystem.station) currentSystem.station.draw(); 
-                        pop(); 
-                    } catch(e) {}
-                } else { 
-                    background(0); 
-                }
-                
-                if (player) { 
-                    try {
-                        player.draw();
-                    } catch(e) {}
-                }
-                
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawPersonalRecordMenu(player);
-                    } catch(e) { 
-                        console.error("Error drawing personal record menu:", e); 
-                    }
-                }
+                this._drawStationMenu(player, currentSystem);
                 break;
-
+                
             case "GALAXY_MAP":
-                // First draw the regular game view behind the map
-                if (currentSystem && player) {
-                    try { 
-                        currentSystem.draw(player); 
-                    } catch(e) { 
-                        console.error("Error drawing system behind galaxy map:", e); 
-                    }
-                }
+                this._drawGalaxyMapView(player, currentSystem);
+                break;
                 
-                // Draw semi-transparent overlay
-                push();
-                fill(10, 0, 20, 180); // Dark space background with 180/255 opacity
-                noStroke();
-                rect(0, 0, width, height);
-                pop();
-                
-                // Then draw the galaxy map UI elements
-                if (uiManager && galaxy && player) {
-                    try { 
-                        uiManager.drawGalaxyMap(galaxy, player); 
-                    } catch(e) { 
-                        console.error("Error drawing galaxy map:", e); 
-                    }
-                }
-                
-                // Draw HUD on top
-                if (uiManager && player) {
-                    try {
-                        uiManager.drawHUD(player, currentSystem, true);
-                    } catch(e) {
-                        console.error("Error drawing HUD during galaxy map:", e);
-                    }
-                }
-                break; 
-
-            // --- CORRECTED JUMPING DRAWING CASE ---
             case "JUMPING":
-                 // Draw flight view as background
-                 if (currentSystem && player) {
-                     try { currentSystem.draw(player); } catch(e) { console.error("ERROR in currentSystem.draw (Jumping):", e); }
-                 } else { background(0); } // Fallback background
-
-                 // --- MODIFICATION: Only draw charge UI if fade hasn't started ---
-                 if (this.jumpFadeState === "NONE" && uiManager && player) {
-                 // --- END MODIFICATION ---
-                     try { // Wrap jump UI drawing
-                         // Draw jump charge indicator (Progress Bar)
-                         fill(0, 150, 255, 150); // Set fill before drawing
-                         noStroke();             // No outline for bar
-                         let chargePercent = constrain(this.jumpChargeTimer / this.jumpChargeDuration, 0, 1); // Calculate percentage 0-1
-                         rect(0, height-35, width * chargePercent, 35); // Draw the bar
-
-                         // Determine Target Name Safely
-                         let targetName = "Unknown"; // Default value
-                         if (galaxy &&                              // Check galaxy exists
-                             this.jumpTargetSystemIndex >= 0 &&     // Check index is valid lower bound
-                             this.jumpTargetSystemIndex < galaxy.systems.length && // Check index is valid upper bound
-                             galaxy.systems[this.jumpTargetSystemIndex] // Check system object itself exists at index
-                            ) {
-                              // If all checks pass, try to get the name, otherwise use "Invalid Target"
-                              targetName = galaxy.systems[this.jumpTargetSystemIndex].name || "Invalid Target";
-                         }
-
-                         // Draw Jump Status Text
-                         textFont(font);             // Use the global font
-                         fill(255);
-                         textAlign(LEFT, BOTTOM);    // Align text to the LEFT
-                         textSize(20);              // Set size
-                         // Ensure text function call has correct parentheses
-                         text(`Charging Hyperdrive... Target: ${targetName}`, 50, height - 5);
-
-                         // Optionally draw minimap during jump:
-                         // if (currentSystem) uiManager.drawMinimap(player, currentSystem);
-
-                     } catch (e) {
-                         console.error("Error drawing jump UI:", e);
-                     }
-                 // --- MODIFICATION: Close the conditional block ---
-                 }
-                 // --- END MODIFICATION ---
-
-
-                 // Draw fade overlay (This should still happen during fades)
-                 if (this.jumpFadeState !== "NONE") {
-                     push();
-                     fill(255, 255, 255, this.jumpFadeOpacity * 255);
-                     noStroke();
-                     rect(0, 0, width, height);
-                     pop();
-                 }
-                 break; // End JUMPING case
-            // --- END CORRECTION ---
-
+                this._drawJumping(player, currentSystem);
+                break;
+                
             case "TITLE_SCREEN":
-                if (titleScreen) {
-                    titleScreen.drawTitleScreen();
-                }
+                if (titleScreen) titleScreen.drawTitleScreen();
                 break;
-
+                
             case "INSTRUCTIONS":
-                if (titleScreen) {
-                    titleScreen.drawInstructionScreen();
+                if (titleScreen) titleScreen.drawInstructionScreen();
+                break;
+                
+            case "GAME_OVER":
+                background(0, 150);
+                if (uiManager) {
+                    try { uiManager.drawGameOverScreen(); } catch(e) {}
                 }
                 break;
-
-             case "GAME_OVER":
-                 background(0, 150); if (uiManager) { try { uiManager.drawGameOverScreen(); } catch(e) {} }
-                 break;
-             case "LOADING":
-                 if (sharedStarfield?.draw) {
-                     sharedStarfield.draw();
-                 }
-                 push();
-                 fill(255);
-                 if (typeof font !== 'undefined') textFont(font);
-                 textAlign(CENTER, CENTER);
-                // Intentionally not drawing the "Loading..." text so the scene stays visible
-                // textSize(32);
-                // text("Loading...", width / 2, height / 2);
-                 pop();
-                 break;
-             case "SAVE_SELECTION":
-                if (saveSelectionScreen) {
-                    saveSelectionScreen.draw();
-                }
+                
+            case "LOADING":
+                this._drawLoading();
                 break;
-
-             default:
-                 console.error(`Unknown game state encountered in draw(): ${this.currentState}`);
-                 background(255,0,0); fill(0); textAlign(CENTER,CENTER); textSize(20); text(`Error: Unknown game state "${this.currentState}"`, width/2, height/2);
-                 break;
+                
+            case "SAVE_SELECTION":
+                if (saveSelectionScreen) saveSelectionScreen.draw();
+                break;
+                
+            default:
+                console.error(`Unknown game state in draw(): ${this.currentState}`);
+                background(255,0,0);
+                fill(0);
+                textAlign(CENTER,CENTER);
+                textSize(20);
+                text(`Error: Unknown game state "${this.currentState}"`, width/2, height/2);
+                break;
         }
-
-        // Draw inventory screen on top if it's showing (during IN_FLIGHT)
-        if (this.currentState==="IN_FLIGHT" && this.showingInventory) {
-  inventoryScreen.draw(player);
-}
-
-        // Draw post-load fade overlay (covers everything when active)
-        try {
-            if (this.postLoadFadeState && this.postLoadFadeState !== "NONE") {
+    }
+    
+    /**
+     * Draws background and entities for station-based states
+     * @param {Player} player - The player object
+     * @param {StarSystem} currentSystem - The current star system
+     * @private
+     */
+    _drawStationBackground(player, currentSystem) {
+        if (currentSystem) {
+            try {
                 push();
-                // Use black fade for post-load transitions
-                fill(0, 0, 0, this.postLoadFadeOpacity * 255);
-                rect(0, 0, width, height);
+                currentSystem.drawBackground();
+                if (currentSystem.station) currentSystem.station.draw();
                 pop();
+            } catch(e) {
+                console.error("Error drawing station background:", e);
             }
-        } catch (e) { /* non-fatal */ }
-
-        // Draw non-blocking planet buffer creation progress overlay if work remains
-        try {
-            if (typeof window !== 'undefined' && window._planetBufferCreationTotal && (window._planetBufferCreationCompleted || 0) < window._planetBufferCreationTotal && this.currentState !== "JUMPING") {
-                const total = window._planetBufferCreationTotal || 1;
-                const done = window._planetBufferCreationCompleted || 0;
-                const pct = constrain(done / total, 0, 1);
-                // Draw the SaveSelectionScreen background so loading UI has a consistent backdrop
-                try {
-                    if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.drawBackground === 'function') {
-                        saveSelectionScreen.drawBackground();
-                    } else {
-                        // Fallback to a dark background if saveSelectionScreen is unavailable
-                        push(); noStroke(); fill(5,5,15); rect(0,0,width,height); pop();
-                    }
-                } catch (e) {
-                    // Non-fatal: fallback background
-                    push(); noStroke(); fill(5,5,15); rect(0,0,width,height); pop();
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try {
+                player.draw();
+            } catch(e) {}
+        }
+    }
+    
+    /**
+     * Draws IN_FLIGHT state
+     * @private
+     */
+    _drawInFlight(player, currentSystem) {
+        if (currentSystem && player) {
+            try {
+                currentSystem.draw(player);
+            } catch(e) {
+                console.error("Error drawing system:", e);
+            }
+        }
+        
+        if (uiManager && player) {
+            try {
+                uiManager.drawHUD(player);
+                if (currentSystem) {
+                    uiManager.drawMinimap(player, currentSystem);
                 }
-
+            } catch(e) {}
+        }
+    }
+    
+    /**
+     * Draws DOCKED state
+     * @private
+     */
+    _drawDocked(player, currentSystem) {
+        this._drawStationBackground(player, currentSystem);
+        
+        if (uiManager && currentSystem?.station && player) {
+            try {
+                uiManager.drawStationMainMenu(currentSystem.station, player);
+            } catch(e) {
+                console.error("Error drawing station main menu:", e);
+            }
+        }
+    }
+    
+    /**
+     * Draws DOCKED_SPACE_OBJECT state
+     * @private
+     */
+    _drawDockedSpaceObject(player, currentSystem) {
+        if (currentSystem) {
+            try {
                 push();
-                noStroke();
-
-                // Do NOT dim the background during planet buffer creation;
-                // keep the underlying world visible while showing progress panel.
-                // (Previously dimmed with fill(0,0,0,160))
-                // No full-screen overlay is drawn here.
-
-                // Panel for the progress UI
-                const panelW = Math.min(900, width * 0.8);
-                const panelH = 150;
-                const px = (width - panelW) * 0.5;
-                const py = (height - panelH) * 0.5;
-
-                // Draw panel background styled like save/load slots
-                stroke(80, 80, 120, 100);
-                strokeWeight(1);
-                fill(15, 25, 45, 180);
-                rect(px, py, panelW, panelH, 8);
-                noStroke();
-
-                // Welcome message: show current system name, economy, tech and security inside the panel
-                try {
-                    const sys = (typeof galaxy !== 'undefined') ? (galaxy.getCurrentSystem && galaxy.getCurrentSystem()) : null;
-                    const systemName = sys?.name || (galaxy && typeof galaxy.currentSystemIndex === 'number' && galaxy.systems && galaxy.systems[galaxy.currentSystemIndex]?.name) || 'Unknown System';
-
-                    // Economy: prefer the system's single source `economyType`, fall back to station.systemType or market
-                    let economy = 'Unknown';
-                    if (sys) economy = sys.economyType || sys.economy || sys.economyName || economy;
-                    const station = sys?.station;
-                    if (economy === 'Unknown' && station) {
-                        economy = station.systemType || station.stationType || station.market?.systemType || station.market?.type || economy;
-                    }
-
-                    // Tech level: prefer system.techLevel
-                    let tech = 'N/A';
-                    if (sys && (typeof sys.techLevel !== 'undefined' || typeof sys.tech !== 'undefined')) {
-                        tech = sys.techLevel ?? sys.tech ?? tech;
-                    }
-
-                    // Security / police level: prefer system.securityLevel, fallback to system.playerWantedLevel
-                    let security = 'Unknown';
-                    if (sys) security = sys.securityLevel || (typeof sys.playerWantedLevel !== 'undefined' ? `Wanted ${sys.playerWantedLevel}` : security);
-
-                    push();
-                    if (typeof font !== 'undefined') textFont(font);
-                    textAlign(CENTER, CENTER);
-                    fill(255);
-                    textSize(18);
-                    // Place the welcome text inside the panel, above the progress bar
-                    const welcomeY = py + panelH * 0.26;
-                    text(`${systemName}   ${economy}   Tech: ${tech}   Security: ${security}`, px + panelW * 0.5, welcomeY-20);
-                    pop();
-                } catch (e) {
-                    // Non-fatal: skip welcome text if anything goes wrong
+                currentSystem.drawBackground();
+                if (this.currentDockedSpaceObject && 
+                    typeof this.currentDockedSpaceObject.draw === 'function') {
+                    this.currentDockedSpaceObject.draw();
                 }
-
+                pop();
+            } catch(e) {
+                console.error("Error drawing space object background:", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try { player.draw(); } catch(e) {}
+        }
+        
+        if (uiManager && this.currentDockedSpaceObject && player) {
+            try {
+                uiManager.drawSpaceObjectDockMenu(this.currentDockedSpaceObject, player);
+            } catch(e) {
+                console.error("Error drawing space object dock menu:", e);
+            }
+        }
+    }
+    
+    /**
+     * Draws VIEWING_SPACE_OBJECT_MARKET state
+     * @private
+     */
+    _drawSpaceObjectMarket(player, currentSystem) {
+        if (currentSystem) {
+            try {
+                push();
+                currentSystem.drawBackground();
+                if (currentSystem.station) currentSystem.station.draw();
+                if (this.currentDockedSpaceObject && 
+                    typeof this.currentDockedSpaceObject.draw === 'function') {
+                    this.currentDockedSpaceObject.draw();
+                }
+                pop();
+            } catch(e) {
+                console.error("Error drawing space object background:", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try { player.draw(); } catch(e) {}
+        }
+        
+        if (uiManager && this.currentDockedSpaceObject && player) {
+            try {
+                uiManager.drawSpaceObjectMarket(this.currentDockedSpaceObject, player);
+            } catch(e) {
+                console.error("Error drawing space object market:", e);
+            }
+        } else {
+            background(10,0,0);
+            fill(255);
+            text("Error: Space object not found", width/2, height/2);
+        }
+    }
+    
+    /**
+     * Draws VIEWING_SPACE_OBJECT_REPAIRS state
+     * @private
+     */
+    _drawSpaceObjectRepairs(player, currentSystem) {
+        if (currentSystem) {
+            try {
+                push();
+                currentSystem.drawBackground();
+                if (currentSystem.station) currentSystem.station.draw();
+                if (this.currentDockedSpaceObject && 
+                    typeof this.currentDockedSpaceObject.draw === 'function') {
+                    this.currentDockedSpaceObject.draw();
+                }
+                pop();
+            } catch(e) {
+                console.error("Error drawing space object background:", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try { player.draw(); } catch(e) {}
+        }
+        
+        if (uiManager && this.currentDockedSpaceObject && player) {
+            try {
+                uiManager.drawSpaceObjectRepairsMenu(this.currentDockedSpaceObject, player);
+            } catch(e) {
+                console.error("Error drawing space object repairs:", e);
+            }
+        } else {
+            background(10,0,0);
+            fill(255);
+            text("Error: Space object not found", width/2, height/2);
+        }
+    }
+    
+    /**
+     * Draws VIEWING_MARKET state
+     * @private
+     */
+    _drawMarket(player, currentSystem) {
+        this._drawStationBackground(player, currentSystem);
+        
+        if (uiManager && currentSystem?.station?.market && player) {
+            try {
+                uiManager.drawMarketScreen(currentSystem.station.getMarket(), player);
+            } catch(e) {
+                console.error("Error drawing market screen:", e);
+            }
+        } else {
+            background(10,0,0);
+            fill(255);
+            text("Error: Market data unavailable", width/2, height/2);
+        }
+    }
+    
+    /**
+     * Draws VIEWING_MISSIONS state
+     * @private
+     */
+    _drawMissions(player, currentSystem) {
+        // Fetch missions if not already fetched
+        if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
+            const currentStation = currentSystem?.station;
+            if (currentSystem && typeof currentSystem.getAvailableMissions === 'function') {
+                this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
+            } else {
+                this.currentStationMissions = MissionGenerator.generateMissions(
+                    currentSystem, currentStation, galaxy, player
+                );
+            }
+        }
+        
+        this._drawStationBackground(player, currentSystem);
+        
+        if (uiManager && currentSystem?.station && player) {
+            uiManager.drawMissionBoard(
+                this.currentStationMissions, 
+                this.selectedMissionIndex, 
+                player
+            );
+        }
+    }
+    
+    /**
+     * Draws station menu states (shipyard, upgrades, repairs, protection, etc.)
+     * @private
+     */
+    _drawStationMenu(player, currentSystem) {
+        this._drawStationBackground(player, currentSystem);
+        
+        if (!uiManager || !player) return;
+        
+        try {
+            switch (this.currentState) {
+                case "VIEWING_SHIPYARD":
+                    uiManager.drawShipyardMenu(player);
+                    break;
+                case "VIEWING_UPGRADES":
+                    uiManager.drawUpgradesMenu(player);
+                    break;
+                case "VIEWING_REPAIRS":
+                    uiManager.drawRepairsMenu(player);
+                    break;
+                case "VIEWING_PROTECTION":
+                    uiManager.drawProtectionServicesMenu(player);
+                    break;
+                case "VIEWING_POLICE":
+                    uiManager.drawPoliceMenu(player);
+                    break;
+                case "VIEWING_IMPERIAL_RECRUITMENT":
+                    uiManager.drawImperialRecruitmentMenu(player);
+                    break;
+                case "VIEWING_SEPARATIST_RECRUITMENT":
+                    uiManager.drawSeparatistRecruitmentMenu(player);
+                    break;
+                case "VIEWING_MILITARY_RECRUITMENT":
+                    uiManager.drawMilitaryRecruitmentMenu(player);
+                    break;
+                case "VIEWING_STORAGE":
+                    uiManager.drawStorageMenu(currentSystem?.station || null, player);
+                    break;
+                case "VIEWING_RECORD":
+                    uiManager.drawPersonalRecordMenu(player);
+                    break;
+            }
+        } catch(e) {
+            console.error(`Error drawing ${this.currentState} menu:`, e);
+        }
+    }
+    
+    /**
+     * Draws GALAXY_MAP state
+     * @private
+     */
+    _drawGalaxyMapView(player, currentSystem) {
+        // Draw regular game view behind the map
+        if (currentSystem && player) {
+            try {
+                currentSystem.draw(player);
+            } catch(e) {
+                console.error("Error drawing system behind galaxy map:", e);
+            }
+        }
+        
+        // Draw semi-transparent overlay
+        push();
+        fill(10, 0, 20, 180);
+        noStroke();
+        rect(0, 0, width, height);
+        pop();
+        
+        // Draw galaxy map UI
+        if (uiManager && galaxy && player) {
+            try {
+                uiManager.drawGalaxyMap(galaxy, player);
+            } catch(e) {
+                console.error("Error drawing galaxy map:", e);
+            }
+        }
+        
+        // Draw HUD on top
+        if (uiManager && player) {
+            try {
+                uiManager.drawHUD(player, currentSystem, true);
+            } catch(e) {
+                console.error("Error drawing HUD during galaxy map:", e);
+            }
+        }
+    }
+    
+    /**
+     * Draws JUMPING state
+     * @private
+     */
+    _drawJumping(player, currentSystem) {
+        // Draw flight view as background
+        if (currentSystem && player) {
+            try {
+                currentSystem.draw(player);
+            } catch(e) {
+                console.error("ERROR in currentSystem.draw (Jumping):", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        // Draw jump charge UI (only if fade hasn't started)
+        if (this.jumpFadeState === "NONE" && uiManager && player) {
+            try {
                 // Progress bar
-                const barW = panelW * 0.75;
-                const barH = 18;
-                const bx = px + (panelW - barW) * 0.5;
-                const by = py + panelH * 0.6 - barH * 0.5;
-
-                // Background of progress bar
-                fill(45);
-                rect(bx, by, barW, barH, 6);
-
-                // Filled portion
-                fill(0, 200, 255);
-                rect(bx, by, barW * pct, barH, 6);
-
-                // Progress text
-                if (typeof font !== 'undefined') textFont(font);
+                fill(0, 150, 255, 150);
+                noStroke();
+                const chargePercent = constrain(this.jumpChargeTimer / this.jumpChargeDuration, 0, 1);
+                rect(0, height-35, width * chargePercent, 35);
+                
+                // Determine target name
+                let targetName = "Unknown";
+                if (galaxy && 
+                    this.jumpTargetSystemIndex >= 0 && 
+                    this.jumpTargetSystemIndex < galaxy.systems.length && 
+                    galaxy.systems[this.jumpTargetSystemIndex]) {
+                    targetName = galaxy.systems[this.jumpTargetSystemIndex].name || "Invalid Target";
+                }
+                
+                // Jump status text
+                textFont(font);
                 fill(255);
-                textAlign(CENTER, CENTER);
-                textSize(18);
-                text(`Creating the System: ${Math.round(pct * 100)}% (${done}/${total})`, width * 0.5, py + panelH * 0.32);
-
+                textAlign(LEFT, BOTTOM);
+                textSize(20);
+                text(`Charging Hyperdrive... Target: ${targetName}`, 50, height - 5);
+            } catch (e) {
+                console.error("Error drawing jump UI:", e);
+            }
+        }
+        
+        // Draw fade overlay
+        if (this.jumpFadeState !== "NONE") {
+            push();
+            fill(255, 255, 255, this.jumpFadeOpacity * 255);
+            noStroke();
+            rect(0, 0, width, height);
+            pop();
+        }
+    }
+    
+    /**
+     * Draws LOADING state
+     * @private
+     */
+    _drawLoading() {
+        if (sharedStarfield?.draw) {
+            sharedStarfield.draw();
+        }
+        push();
+        fill(255);
+        if (typeof font !== 'undefined') textFont(font);
+        textAlign(CENTER, CENTER);
+        pop();
+    }
+    
+    /**
+     * Draws inventory overlay if showing
+     * @private
+     */
+    _drawInventoryOverlay(player) {
+        if (this.currentState === "IN_FLIGHT" && this.showingInventory) {
+            inventoryScreen.draw(player);
+        }
+    }
+    
+    /**
+     * Draws post-load fade overlay
+     * @private
+     */
+    _drawPostLoadFade() {
+        try {
+            if (!this.postLoadFadeState || this.postLoadFadeState === "NONE") return;
+            
+            push();
+            fill(0, 0, 0, this.postLoadFadeOpacity * 255);
+            rect(0, 0, width, height);
+            pop();
+        } catch (e) { /* non-fatal */ }
+    }
+    
+    /**
+     * Draws planet buffer creation progress overlay
+     * @private
+     */
+    _drawPlanetBufferProgress() {
+        try {
+            if (typeof window === 'undefined' || 
+                !window._planetBufferCreationTotal || 
+                (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal ||
+                this.currentState === "JUMPING") {
+                return;
+            }
+            
+            const total = window._planetBufferCreationTotal || 1;
+            const done = window._planetBufferCreationCompleted || 0;
+            const pct = constrain(done / total, 0, 1);
+            
+            // Draw background
+            try {
+                if (typeof saveSelectionScreen !== 'undefined' && 
+                    saveSelectionScreen && 
+                    typeof saveSelectionScreen.drawBackground === 'function') {
+                    saveSelectionScreen.drawBackground();
+                } else {
+                    push();
+                    noStroke();
+                    fill(5,5,15);
+                    rect(0,0,width,height);
+                    pop();
+                }
+            } catch (e) {
+                push();
+                noStroke();
+                fill(5,5,15);
+                rect(0,0,width,height);
                 pop();
             }
-        } catch (e) { /* non-fatal - don't break draw */ }
-    } // End of draw method
+            
+            push();
+            noStroke();
+            
+            // Panel
+            const panelW = Math.min(900, width * 0.8);
+            const panelH = 150;
+            const px = (width - panelW) * 0.5;
+            const py = (height - panelH) * 0.5;
+            
+            stroke(80, 80, 120, 100);
+            strokeWeight(1);
+            fill(15, 25, 45, 180);
+            rect(px, py, panelW, panelH, 8);
+            noStroke();
+            
+            // System info
+            try {
+                const sys = galaxy?.getCurrentSystem();
+                const systemName = sys?.name || 'Unknown System';
+                let economy = sys?.economyType || sys?.economy || 'Unknown';
+                let tech = sys?.techLevel ?? sys?.tech ?? 'N/A';
+                let security = sys?.securityLevel || 'Unknown';
+                
+                push();
+                if (typeof font !== 'undefined') textFont(font);
+                textAlign(CENTER, CENTER);
+                fill(255);
+                textSize(18);
+                const welcomeY = py + panelH * 0.26;
+                text(`${systemName}   ${economy}   Tech: ${tech}   Security: ${security}`, 
+                     px + panelW * 0.5, welcomeY-20);
+                pop();
+            } catch (e) { /* skip welcome text */ }
+            
+            // Progress bar
+            const barW = panelW * 0.75;
+            const barH = 18;
+            const bx = px + (panelW - barW) * 0.5;
+            const by = py + panelH * 0.6 - barH * 0.5;
+            
+            fill(45);
+            rect(bx, by, barW, barH, 6);
+            fill(0, 200, 255);
+            rect(bx, by, barW * pct, barH, 6);
+            
+            // Progress text
+            if (typeof font !== 'undefined') textFont(font);
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(18);
+            text(`Creating the System: ${Math.round(pct * 100)}% (${done}/${total})`, 
+                 width * 0.5, py + panelH * 0.32);
+            
+            pop();
+        } catch (e) { /* non-fatal */ }
+    }
 
 
     /**
      * Initiates the jump sequence to a target system index.
-     * Now checks if the player is in the jump zone first.
-     * @param {number} targetIndex - The index of the target system in the galaxy.
+     * Checks if the player is in the jump zone first.
+     * @param {number} targetIndex - The index of the target system in the galaxy
      */
     startJump(targetIndex) {
         // Prevent interrupting an ongoing jump sequence
