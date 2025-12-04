@@ -157,41 +157,95 @@ const ANIM_RATES = [
 const SpaceObjectRenderers = {
     satellite: function(obj, size, anim, bob) {
         noStroke();
-        // central bus (vertical bob only — remove sideways shift)
-        fill(190, 190, 210);
-        rect(0, bob, size * 0.6, size * 0.42, 4);
-        // subtle underside shadow
-        fill(0, 0, 0, 30);
-        ellipse(0, size * 0.28 + bob, size * 0.5, size * 0.12);
-        // solar panels
+        
+        // 3D layered solar panels with perspective depth
+        // Left panel (back layer - darker, smaller)
+        push();
+        translate(-size * 0.78, bob);
+        // Back layer (darker/further)
+        fill(20, 60, 120);
+        rect(-size * 0.02, size * 0.02, size * 0.64, size * 0.22, 3);
+        // Front layer
         fill(30, 80, 160);
-        rect(-size * 0.78, bob, size * 0.64, size * 0.22, 3);
-        rect(size * 0.78, bob, size * 0.64, size * 0.22, 3);
-        // solar panel grid lines
+        rect(0, 0, size * 0.64, size * 0.22, 3);
+        // Panel cell grid with depth shading
         stroke(20, 40, 90, 180);
         strokeWeight(1);
         for (let g = -2; g <= 2; g++) {
             const gx = g * (size * 0.64 / 6);
-            line(-size * 0.78 - size * 0.32, gx + bob, -size * 0.78 + size * 0.32, gx + bob);
-            line(size * 0.78 - size * 0.32, gx + bob, size * 0.78 + size * 0.32, gx + bob);
+            line(-size * 0.32, gx, size * 0.32, gx);
         }
+        // Highlight edge for 3D effect
+        stroke(50, 120, 200, 150);
+        strokeWeight(1.5);
+        line(-size * 0.32, -size * 0.11, size * 0.32, -size * 0.11);
         noStroke();
+        pop();
+        
+        // Right panel (symmetric)
+        push();
+        translate(size * 0.78, bob);
+        fill(20, 60, 120);
+        rect(size * 0.02, size * 0.02, size * 0.64, size * 0.22, 3);
+        fill(30, 80, 160);
+        rect(0, 0, size * 0.64, size * 0.22, 3);
+        stroke(20, 40, 90, 180);
+        strokeWeight(1);
+        for (let g = -2; g <= 2; g++) {
+            const gx = g * (size * 0.64 / 6);
+            line(-size * 0.32, gx, size * 0.32, gx);
+        }
+        stroke(50, 120, 200, 150);
+        strokeWeight(1.5);
+        line(-size * 0.32, -size * 0.11, size * 0.32, -size * 0.11);
+        noStroke();
+        pop();
+        
+        // central bus with 3D depth shading
+        // Shadow layer (back face)
+        fill(150, 150, 170);
+        rect(size * 0.02, bob + size * 0.02, size * 0.6, size * 0.42, 4);
+        // Main face
+        fill(190, 190, 210);
+        rect(0, bob, size * 0.6, size * 0.42, 4);
+        // Top edge highlight
+        fill(220, 220, 230);
+        rect(0, bob - size * 0.19, size * 0.58, size * 0.04, 2);
+        
+        // subtle underside shadow
+        fill(0, 0, 0, 30);
+        ellipse(0, size * 0.28 + bob, size * 0.5, size * 0.12);
+        
         // small rivets/fasteners along bus edge (decorative)
         fill(160, 170, 180);
         for (let r = -2; r <= 2; r++) ellipse(-size * 0.18 + r * 8, -size * 0.06 + bob, 3, 3);
         noStroke();
-        // antenna dish
+        
+        // antenna dish with 3D perspective
+        // Dish shadow
+        fill(90, 90, 100);
+        ellipse(size * 0.28 + size * 0.01, -size * 0.12 + bob + size * 0.01, size * 0.22, size * 0.14);
+        // Main dish
         fill(120);
         ellipse(size * 0.28, -size * 0.12 + bob, size * 0.22, size * 0.14);
+        // Dish highlight
+        fill(160, 160, 170);
+        ellipse(size * 0.28 - size * 0.04, -size * 0.12 + bob - size * 0.02, size * 0.08, size * 0.05);
+        
         // small nav light with flashing
         const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.1);
         fill(255, 90, 80, 255 * flash);
         ellipse(-size * 0.18, -size * 0.18 + bob, 4, 4);
+        // glow around nav light
+        fill(255, 120, 100, 80 * flash);
+        ellipse(-size * 0.18, -size * 0.18 + bob, 8, 8);
+        
         // additional decorative flashing lights on panels
         fill(255, 255, 100, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.08 + 1)));
         ellipse(-size * 0.78 + size * 0.32, bob - size * 0.08, 3, 3);
         fill(100, 255, 100, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.08 + 2)));
         ellipse(size * 0.78 - size * 0.32, bob + size * 0.08, 3, 3);
+        
         // slow-moving antenna extension
         push();
         rotate(Math.sin(obj.bobPhase * 0.002) * 0.1);
@@ -400,55 +454,107 @@ const SpaceObjectRenderers = {
     },
 
     relay: function(obj, size, anim, bob) {
-        // cluster of antennae on a small hub
-        noFill();
-        stroke(200);
-        strokeWeight(1.5);
+        // Enhanced relay with 3D antenna array and depth perspective
+        const relayPhase = (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06;
+        
+        // Draw antennae with depth layers (back ones darker/smaller)
         for (let i = 0; i < 5; i++) {
-            const a = (i / 5) * TWO_PI + (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06 * (i%2?1:-1);
+            const a = (i / 5) * TWO_PI + relayPhase * (i%2?1:-1);
             const lx = Math.cos(a) * (size * 0.6);
             const ly = Math.sin(a) * (size * 0.3);
+            
+            // Determine depth layer (back vs front)
+            const depth = Math.sin(a + relayPhase * 0.5);
+            const isBack = depth < 0;
+            
+            // Antenna arm with depth
+            stroke(isBack ? 160 : 200);
+            strokeWeight(isBack ? 1 : 1.5);
             line(0, 0, lx, ly);
-            fill(200);
             noStroke();
+            
+            // Dish with depth shading
+            // Shadow layer
+            if (!isBack) {
+                fill(160, 160, 170);
+                ellipse(lx + size * 0.005, ly + size * 0.005, size * 0.12, size * 0.08);
+            }
+            // Main dish
+            fill(isBack ? 180 : 200);
             ellipse(lx, ly, size * 0.12, size * 0.08);
+            // Dish highlight
+            if (!isBack) {
+                fill(230, 230, 240);
+                ellipse(lx - size * 0.02, ly - size * 0.01, size * 0.04, size * 0.03);
+            }
         }
-        // hub with small panel decals
+        
+        // hub with depth layers and small panel decals
+        // Shadow
+        fill(140, 140, 150);
+        ellipse(size * 0.01, size * 0.01, size * 0.36, size * 0.26);
+        // Main hub
         fill(170);
-        noStroke();
         ellipse(0, 0, size * 0.36, size * 0.26);
+        // Top highlight
+        fill(200, 200, 210);
+        ellipse(-size * 0.04, -size * 0.04, size * 0.18, size * 0.13);
+        
+        // Panel decals with depth
+        fill(80, 100, 130);
+        rect(-size * 0.06 + size * 0.005, size * 0.005, size * 0.08, size * 0.04, 2);
         fill(100, 120, 150);
         rect(-size * 0.06, 0, size * 0.08, size * 0.04, 2);
+        fill(80, 100, 130);
+        rect(size * 0.06 + size * 0.005, size * 0.005, size * 0.08, size * 0.04, 2);
+        fill(100, 120, 150);
         rect(size * 0.06, 0, size * 0.08, size * 0.04, 2);
-        // rotating decorative pips (low-cost visual motion)
+        
+        // rotating decorative pips with depth (low-cost visual motion)
         for (let p = 0; p < 4; p++) {
-            const a = anim ? anim.relayPhase + p * (TWO_PI / 4) : p * (TWO_PI / 4);
+            const a = relayPhase + p * (TWO_PI / 4);
             const lx = Math.cos(a) * (size * 0.46);
             const ly = Math.sin(a) * (size * 0.14);
-            fill(200, 220, 240, 200);
-            ellipse(lx, ly, 4, 3);
+            const depth = Math.sin(a);
+            const isBack = depth < 0;
+            fill(isBack ? 180 : 200, isBack ? 200 : 220, isBack ? 220 : 240, isBack ? 150 : 200);
+            ellipse(lx, ly, isBack ? 3 : 4, isBack ? 2 : 3);
         }
-        // Flashing status lights on hub
+        
+        // Flashing status lights with glows
         const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
+        fill(255, 255, 0, 80 * flash);
+        ellipse(-size * 0.1, -size * 0.08, 6, 6);
         fill(255, 255, 0, 255 * flash);
         ellipse(-size * 0.1, -size * 0.08, 3, 3);
+        fill(255, 0, 255, 80 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15 + 1)));
+        ellipse(size * 0.1, -size * 0.08, 6, 6);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15 + 1)));
         ellipse(size * 0.1, -size * 0.08, 3, 3);
-        // Slow-moving auxiliary antenna
+        
+        // Slow-moving auxiliary antenna with depth
         push();
         rotate(Math.sin(obj.bobPhase * 0.003) * 0.2);
-        stroke(180, 190, 200);
-        strokeWeight(1);
+        stroke(160, 170, 180);
+        strokeWeight(1.5);
         line(0, 0, size * 0.4, -size * 0.2);
+        stroke(200, 210, 220);
+        strokeWeight(1);
+        line(0, 0, size * 0.38, -size * 0.19);
         noStroke();
+        fill(140, 150, 160);
+        ellipse(size * 0.4 + 1, -size * 0.2 + 1, 6, 4);
         fill(160, 170, 180);
         ellipse(size * 0.4, -size * 0.2, 6, 4);
         pop();
-        // Decorative rings around hub
+        
+        // Decorative concentric rings with perspective
         noFill();
-        stroke(150, 160, 170, 100);
-        strokeWeight(0.5);
+        stroke(130, 140, 150, 80);
+        strokeWeight(0.8);
         ellipse(0, 0, size * 0.5, size * 0.35);
+        stroke(140, 150, 160, 60);
+        strokeWeight(0.5);
         ellipse(0, 0, size * 0.6, size * 0.42);
         noStroke();
     },
@@ -601,15 +707,22 @@ const SpaceObjectRenderers = {
     },
 
     debris: function(obj, size, anim, bob) {
-        // irregular scrap - draw persistent shards (each has own rotation)
+        // Enhanced 3D debris with tumbling motion and depth
         noStroke();
-        fill(140, 120, 110);
         if (obj._shards && obj._shards.length) {
             for (let i = 0; i < obj._shards.length; i++) {
                 const sh = obj._shards[i];
                 push();
                 translate(sh.rx, sh.ry);
-                rotate(sh.angle + Math.sin(obj.bobPhase * 0.002) * 0.03);
+                
+                // 3D tumbling rotation (combine slow rotation with bobPhase)
+                const tumbleAngle = sh.angle + Math.sin(obj.bobPhase * 0.002) * 0.03;
+                rotate(tumbleAngle);
+                
+                // Draw shadow layer (back face - darker and offset)
+                fill(100, 90, 80);
+                push();
+                translate(size * 0.01, size * 0.01);
                 beginShape();
                 for (let v = 0; v < sh.verts; v++) {
                     const a = v * (TWO_PI / sh.verts) + (v % 2 ? 0.2 : -0.15);
@@ -617,62 +730,140 @@ const SpaceObjectRenderers = {
                     vertex(Math.cos(a) * rr, Math.sin(a) * rr);
                 }
                 endShape(CLOSE);
-                // edge scratch
-                stroke(180, 160, 140, 200); strokeWeight(0.6);
+                pop();
+                
+                // Main shard body
+                fill(140, 120, 110);
+                beginShape();
+                for (let v = 0; v < sh.verts; v++) {
+                    const a = v * (TWO_PI / sh.verts) + (v % 2 ? 0.2 : -0.15);
+                    const rr = sh.rrScale * (size * 0.12) * (0.6 + (v % 3) * 0.15);
+                    vertex(Math.cos(a) * rr, Math.sin(a) * rr);
+                }
+                endShape(CLOSE);
+                
+                // Highlight edge for 3D depth
+                fill(180, 160, 140);
+                beginShape();
+                for (let v = 0; v < sh.verts; v++) {
+                    const a = v * (TWO_PI / sh.verts) + (v % 2 ? 0.2 : -0.15);
+                    const rr = sh.rrScale * (size * 0.08) * (0.5 + (v % 3) * 0.12);
+                    vertex(Math.cos(a) * rr, Math.sin(a) * rr);
+                }
+                endShape(CLOSE);
+                
+                // edge scratch with depth
+                stroke(200, 180, 160, 150);
+                strokeWeight(1);
                 line(-size * 0.12, -size * 0.06, size * 0.12, size * 0.06);
+                stroke(140, 120, 100, 100);
+                strokeWeight(0.6);
+                line(-size * 0.12 + 1, -size * 0.06 + 1, size * 0.12 + 1, size * 0.06 + 1);
                 noStroke();
                 pop();
             }
-            // subtle drifting dust puffs (low cost — only few ellipses)
-            fill(180, 160, 140, 60);
+            
+            // Enhanced drifting dust puffs with depth layers
             for (let d = 0; d < 3; d++) {
                 const da = obj.bobPhase * 0.001 + d * 2.1;
-                ellipse(Math.cos(da) * size * 0.32, Math.sin(da) * size * 0.12 + bob * 0.08, 6, 3);
+                const dx = Math.cos(da) * size * 0.32;
+                const dy = Math.sin(da) * size * 0.12 + bob * 0.08;
+                // Back layer
+                fill(160, 140, 120, 40);
+                ellipse(dx + 2, dy + 1, 8, 4);
+                // Front layer
+                fill(180, 160, 140, 60);
+                ellipse(dx, dy, 6, 3);
             }
-            // Flashing hazard lights on larger shards
+            
+            // Flashing hazard lights with glows
             const hazardFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25);
+            fill(255, 0, 0, 80 * hazardFlash);
+            ellipse(0, -size * 0.1 + bob, 8, 8);
             fill(255, 0, 0, 200 * hazardFlash);
             ellipse(0, -size * 0.1 + bob, 4, 4);
+            fill(255, 255, 0, 80 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
+            ellipse(size * 0.1, size * 0.1 + bob, 6, 6);
             fill(255, 255, 0, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
             ellipse(size * 0.1, size * 0.1 + bob, 3, 3);
-            // Slow-moving glowing particles
+            
+            // Slow-moving glowing particles with motion trails
             for (let p = 0; p < 2; p++) {
                 const pa = obj.bobPhase * 0.003 + p * 3.14;
                 const pr = size * 0.2;
-                fill(200, 150, 100, 100 + 50 * Math.sin(pa));
-                ellipse(Math.cos(pa) * pr, Math.sin(pa) * pr + bob * 0.05, 2, 2);
+                const px = Math.cos(pa) * pr;
+                const py = Math.sin(pa) * pr + bob * 0.05;
+                // Trail
+                fill(200, 150, 100, 50 + 30 * Math.sin(pa));
+                for (let t = 1; t <= 3; t++) {
+                    const tx = Math.cos(pa - t * 0.1) * pr;
+                    const ty = Math.sin(pa - t * 0.1) * pr + bob * 0.05;
+                    ellipse(tx, ty, 3 - t * 0.5, 3 - t * 0.5);
+                }
+                // Particle
+                fill(220, 170, 120, 120 + 80 * Math.sin(pa));
+                ellipse(px, py, 2.5, 2.5);
             }
         }
     },
 
     probe: function(obj, size, anim, bob) {
-        // small slender probe with a pointed front and tiny solar stub
+        // Enhanced probe with 3D depth layers
         noStroke();
+        
+        // Body with depth shading (back face darker)
+        fill(180, 180, 200);
+        rect(size * 0.01, bob + size * 0.01, size * 0.18, size * 0.9, 3);
+        // Front face
         fill(200, 200, 220);
-        // body
-        rect(0, 0 + bob, size * 0.18, size * 0.9, 3);
-        // nose cone
-        fill(170);
+        rect(0, bob, size * 0.18, size * 0.9, 3);
+        // Top highlight edge for 3D feel
+        fill(230, 230, 250);
+        rect(0, bob - size * 0.44, size * 0.16, size * 0.04, 2);
+        
+        // nose cone with depth gradient
+        fill(150, 150, 170);
         triangle(0 - size * 0.09, -size * 0.45 + bob, 0 + size * 0.09, -size * 0.45 + bob, 0, -size * 0.62 + bob);
-        // small solar panel with grid
+        fill(190, 190, 210);
+        triangle(0 - size * 0.06, -size * 0.45 + bob, 0 + size * 0.06, -size * 0.45 + bob, 0, -size * 0.58 + bob);
+        
+        // small solar panel with depth layers
+        // Back layer
+        fill(20, 60, 120);
+        rect(size * 0.01, size * 0.28 + bob + size * 0.01, size * 0.36, size * 0.08, 2);
+        // Front layer
         fill(30, 80, 160);
         rect(0, size * 0.28 + bob, size * 0.36, size * 0.08, 2);
         stroke(20,40,90,160); strokeWeight(0.6);
         for (let l = -1; l <= 1; l++) line(-size*0.16, size * 0.28 + bob + l * 3, size*0.16, size * 0.28 + bob + l * 3);
         noStroke();
-        // small blinking nav light
+        
+        // small blinking nav light with volumetric glow
         const blink = 0.5 + 0.5 * Math.sin(anim ? anim.probeBlink : obj.bobPhase * 0.1);
+        fill(255, 140, 80, 80 * blink);
+        ellipse(0, -size * 0.42 + bob, 12 * (1 + blink * 0.5), 12 * (1 + blink * 0.5));
         fill(255, 140, 80, 220 * blink);
         ellipse(0, -size * 0.42 + bob, 5 * (1 + blink), 5 * (1 + blink));
-        // tiny heat/engine trail (cheap translucent ellipse)
-        fill(120, 180, 255, 40);
+        
+        // Enhanced engine trail with perspective cone
+        fill(100, 160, 235, 30);
+        ellipse(0, size * 0.52 + bob, size * 0.36, size * 0.12);
+        fill(120, 180, 255, 50);
         ellipse(0, size * 0.48 + bob, size * 0.28, size * 0.08);
-        // Flashing status lights
+        fill(140, 200, 255, 70);
+        ellipse(0, size * 0.45 + bob, size * 0.20, size * 0.05);
+        
+        // Flashing status lights with glows
         const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18);
+        fill(0, 255, 0, 60 * statusFlash);
+        ellipse(-size * 0.06, size * 0.1 + bob, 6, 6);
         fill(0, 255, 0, 255 * statusFlash);
         ellipse(-size * 0.06, size * 0.1 + bob, 3, 3);
+        fill(255, 0, 255, 60 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + 1)));
+        ellipse(size * 0.06, size * 0.1 + bob, 6, 6);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + 1)));
         ellipse(size * 0.06, size * 0.1 + bob, 3, 3);
+        
         // Slow-moving antenna deployment
         push();
         rotate(Math.sin(obj.bobPhase * 0.004) * 0.15);
@@ -683,56 +874,116 @@ const SpaceObjectRenderers = {
         fill(180, 190, 200);
         ellipse(size * 0.2, -size * 0.4 + bob, 4, 4);
         pop();
-        // Decorative sensor bands
+        
+        // Decorative sensor bands with depth
         stroke(120, 130, 140, 150);
         strokeWeight(0.5);
         for (let b = 0; b < 3; b++) {
             const by = -size * 0.2 + b * (size * 0.15) + bob;
             line(-size * 0.08, by, size * 0.08, by);
         }
+        // Highlight on left side
+        stroke(160, 170, 180, 100);
+        for (let b = 0; b < 3; b++) {
+            const by = -size * 0.2 + b * (size * 0.15) + bob - 1;
+            line(-size * 0.08, by, size * 0.08, by);
+        }
         noStroke();
     },
 
     beacon: function(obj, size, anim, bob) {
-        // small floating beacon with pulsing light
+        // Enhanced beacon with volumetric 3D light cone and depth
         noStroke();
-        fill(100);
+        
+        // Body with depth layers
+        fill(80, 80, 90);
+        rect(size * 0.01, 6 + bob + size * 0.01, size * 0.18, size * 0.5, 3);
+        fill(100, 100, 110);
         rect(0, 6 + bob, size * 0.18, size * 0.5, 3);
-        // light (stronger pulse)
+        // Top highlight
+        fill(130, 130, 140);
+        rect(0, -size * 0.18 + bob, size * 0.16, size * 0.04, 2);
+        
+        // Volumetric light cone with multiple layers
         const pulse = (Math.sin(obj.bobPhase * 1.6) + 1) * 0.5;
         const glow = 0.5 + 0.5 * pulse;
-        noStroke();
-        fill(255, 220, 60, 160 * glow);
+        
+        // Outer glow layers (fade out with distance)
+        for (let i = 3; i >= 0; i--) {
+            const layerSize = size * (0.6 + i * 0.3) * (0.9 + 0.4 * pulse);
+            fill(255, 220, 60, (40 - i * 8) * glow);
+            ellipse(0, -size * 0.12 + bob, layerSize, layerSize * 0.7);
+        }
+        
+        // Core light
+        fill(255, 240, 100, 220 * glow);
         ellipse(0, -size * 0.12 + bob, size * 0.42 * (0.9 + 0.4 * pulse));
-        // small ring / halo
-        stroke(200, 200, 80, 90); strokeWeight(1.2); noFill(); ellipse(0, 0 + bob, size * (0.8 + pulse * 0.6), size * (0.6 + pulse * 0.4)); noStroke();
-        // rotating indicator (low cost)
+        fill(255, 255, 180, 255 * glow);
+        ellipse(0, -size * 0.12 + bob, size * 0.2 * (0.9 + 0.4 * pulse));
+        
+        // Rotating light beam cone (3D perspective)
         push();
         rotate(obj.bobPhase * 0.002);
-        stroke(255, 220, 60, 120); strokeWeight(1);
-        line(0, -size * 0.5 + bob, 0, -size * 0.7 + bob);
+        // Beam cone with gradient
+        fill(255, 220, 60, 50 * glow);
+        beginShape();
+        vertex(0, -size * 0.12 + bob);
+        vertex(-size * 0.15, -size * 0.7 + bob);
+        vertex(size * 0.15, -size * 0.7 + bob);
+        endShape(CLOSE);
+        // Beam core line
+        stroke(255, 240, 120, 180 * glow);
+        strokeWeight(2);
+        line(0, -size * 0.12 + bob, 0, -size * 0.7 + bob);
         noStroke();
         pop();
-        // Flashing auxiliary lights
+        
+        // Rotating halo rings
+        noFill();
+        stroke(220, 200, 80, 70 * glow);
+        strokeWeight(1.5);
+        ellipse(0, 0 + bob, size * (0.9 + pulse * 0.6), size * (0.65 + pulse * 0.4));
+        stroke(200, 180, 60, 50 * glow);
+        strokeWeight(1);
+        ellipse(0, 0 + bob, size * (1.1 + pulse * 0.8), size * (0.8 + pulse * 0.5));
+        noStroke();
+        
+        // Flashing auxiliary lights with glows
         const auxFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
+        fill(0, 255, 255, 80 * auxFlash);
+        ellipse(-size * 0.08, size * 0.1 + bob, 6, 6);
         fill(0, 255, 255, 255 * auxFlash);
         ellipse(-size * 0.08, size * 0.1 + bob, 3, 3);
+        fill(255, 0, 255, 80 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
+        ellipse(size * 0.08, size * 0.1 + bob, 6, 6);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
         ellipse(size * 0.08, size * 0.1 + bob, 3, 3);
-        // Slow-moving antenna array
+        
+        // Slow-moving antenna array with depth
         push();
         rotate(Math.sin(obj.bobPhase * 0.005) * 0.3);
-        stroke(120, 130, 140);
-        strokeWeight(0.8);
+        stroke(100, 110, 120);
+        strokeWeight(1.2);
         for (let a = 0; a < 3; a++) {
             const aa = a * (TWO_PI / 3);
             line(0, bob, Math.cos(aa) * size * 0.15, Math.sin(aa) * size * 0.15 + bob);
         }
+        stroke(140, 150, 160);
+        strokeWeight(0.8);
+        for (let a = 0; a < 3; a++) {
+            const aa = a * (TWO_PI / 3);
+            line(0, bob - size * 0.02, Math.cos(aa) * size * 0.12, Math.sin(aa) * size * 0.12 + bob - size * 0.02);
+        }
         noStroke();
+        fill(160, 170, 180);
+        ellipse(0, bob - size * 0.05, 5, 5);
         fill(140, 150, 160);
-        ellipse(0, bob - size * 0.05, 4, 4);
+        ellipse(0, bob - size * 0.03, 3, 3);
         pop();
-        // Decorative base details
+        
+        // Decorative base with depth
+        fill(60, 60, 70);
+        rect(-size * 0.05 + size * 0.005, size * 0.3 + bob + size * 0.005, size * 0.1, size * 0.08, 2);
         fill(80, 80, 90);
         rect(-size * 0.05, size * 0.3 + bob, size * 0.1, size * 0.08, 2);
     },

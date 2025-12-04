@@ -495,6 +495,12 @@ class UIComponents {
         obj.pos.y = 0;
         obj.angle = 0;
         
+        // Animate bobPhase for space objects to keep them moving
+        // Use millis() to ensure continuous animation independent of game loop
+        if (obj.bobPhase !== undefined) {
+            obj.bobPhase = (typeof millis === 'function' ? millis() : 0) * 0.0015;
+        }
+        
         obj.draw();
         
         // Restore original state
