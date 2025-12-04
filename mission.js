@@ -649,27 +649,35 @@ class Mission {
         details += `Type: ${this.type}\n`;
         details += `Origin: ${this.originStation} (${this.originSystem})\n`;
 
-        // Location / Destination (type-aware)
-        if (this.type === MISSION_TYPE.SABOTAGE) {
-            if (this.targetPlanetName) details += `Location: Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}\n`;
-        } else if (this.destinationSystem) {
-            details += `Destination: ${this.destinationStation || 'System Wide'} (${this.destinationSystem})\n`;
-        } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) {
-            details += `Target Location: Any System\n`;
-        }
-
-        // Objective summary
+        // Determine a single, consistent Location field for all mission types
         const desc = this.description || '';
-        const hasGeneratedObjective = desc.indexOf('Sabotage Objective:') !== -1 || desc.indexOf('Objective: Destroy') !== -1;
+        let locationStr = 'N/A';
+        if (this.type === MISSION_TYPE.SABOTAGE) {
+            if (this.targetPlanetName) locationStr = `Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}`;
+            else if (this.destinationSystem) locationStr = `${this.destinationSystem}`;
+        } else if (this.destinationSystem) {
+            locationStr = `${this.destinationStation || 'System Wide'} (${this.destinationSystem})`;
+        } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) {
+            locationStr = 'Any System';
+        } else if (this.type === MISSION_TYPE.ASSASSINATION && this.destinationSystem) {
+            locationStr = `${this.destinationStation || 'System Wide'} (${this.destinationSystem})`;
+        }
+        details += `Location: ${locationStr}\n`;
+
+        // Objective summary (single, consistent label)
         if (this.type === MISSION_TYPE.DELIVERY_LEGAL || this.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
             if (this.cargoType) details += `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
         } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) {
             if (this.targetDesc) details += `Objective: ${this.targetDesc}\n`;
+        } else if (this.type === MISSION_TYPE.ASSASSINATION) {
+            if (this.targetName) details += `Objective: Eliminate ${this.targetName}\n`;
+            else details += `Objective: Eliminate designated target\n`;
         } else if (this.type === MISSION_TYPE.SABOTAGE) {
-            if (!hasGeneratedObjective) details += `Objective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
+            const hasGeneratedObjective = desc.indexOf('Sabotage Objective:') !== -1 || desc.indexOf('Objective: Destroy') !== -1 || desc.toLowerCase().includes('destroy');
+            if (!hasGeneratedObjective) details += `Objective: Destroy ${this.targetObjectType || 'Strategic Object'}\n`;
         }
 
-        // Reward
+        // Reward (single line)
         if (this.type === MISSION_TYPE.SABOTAGE) details += `Reward (High): ${this.rewardCredits} Credits\n`;
         else details += `Reward: ${this.rewardCredits} Credits\n`;
 
