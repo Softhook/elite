@@ -198,26 +198,12 @@ function rebuildAmbientSounds() {
 
 /**
  * Setup fullscreen behavior on title/save selection screens
+ * Note: Fullscreen is now handled by the TitleScreen class when user clicks START.
+ * This function is kept for potential future use.
  */
 function setupFullscreenBehavior() {
-    try {
-        window.addEventListener('pointerdown', function _enterFullscreenOnTitle() {
-            try {
-                const state = gameStateManager?.currentState;
-                if (!fullscreen() && (state === "TITLE_SCREEN" || state === "SAVE_SELECTION")) {
-                    try {
-                        fullscreen(true);
-                    } catch (e) {
-                        console.warn('Fullscreen request failed:', e);
-                    }
-                }
-            } catch (e) {
-                console.warn('Error in fullscreen handler:', e);
-            }
-        }, { once: true });
-    } catch (e) {
-        console.warn('Failed to setup fullscreen handler:', e);
-    }
+    // No automatic fullscreen attempts - let the title screen handle it on user interaction
+    // This prevents "API can only be initiated by a user gesture" errors
 }
 
 /**
@@ -695,7 +681,6 @@ function mousePressed() {
     if (handleGameOverClick()) return;
     if (handleTitleScreenClick()) return;
     if (handleSaveSelectionClick()) return;
-    if (handleFullscreenEntry()) return;
     if (handleMarketButtonPress()) return;
     if (handleInventoryClick()) return;
     if (handleGeneralUIClick()) return;
@@ -741,22 +726,6 @@ function handleSaveSelectionClick() {
     if (gameStateManager.currentState === "SAVE_SELECTION") {
         saveSelectionScreen?.handleClick(mouseX, mouseY);
         return true;
-    }
-    return false;
-}
-
-/**
- * Handle fullscreen entry on first click
- * @returns {boolean} True if handled
- */
-function handleFullscreenEntry() {
-    if (!fullscreen() && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-        try {
-            fullscreen(true);
-        } catch (e) {
-            console.warn('Fullscreen request failed:', e);
-        }
-        return false; // Don't block other handlers
     }
     return false;
 }
