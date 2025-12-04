@@ -172,7 +172,7 @@ class UIManager {
         this.communicationQueueLimit = config.COMMUNICATION_QUEUE_LIMIT;
         this.marketButtonHeld = null;
         this.lastButtonAction = 0;
-        this.buttonRepeatDelay = 150;
+        this.buttonRepeatDelay = config.BUTTON_REPEAT_DELAY;
         this._lastMessageBlockHeight = 0;
     }
 
