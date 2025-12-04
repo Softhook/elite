@@ -2439,44 +2439,66 @@ handleInput() {
         if (killTarget) {
             this.recordShipDestruction(killTarget);
 
-            // Police increment when killing pirates (by role, not faction)
-            if (this.isPolice && killTarget.role === AI_ROLE.PIRATE) {
-                // Police get bounty for killing pirates
-                this.addCredits(1000);
-                PLAYER_LOG(`Police bounty: +1000 credits for killing pirate`);
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage("Police bounty: 1,000 cr", [100, 255, 100]);
-                }
-                
-                if (this.factionKills && this.factionKills['POLICE'] !== undefined) {
-                    const oldFactionRank = this.getFactionRank('POLICE');
-                    this.factionKills['POLICE']++;
-                    const newFactionRank = this.getFactionRank('POLICE');
+            // Determine player's faction key (POLICE tracked by `isPolice`)
+            const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
+            
+            let factionKillEligible = false;
+            let bountyAmount = 0;
+            let bountyDescription = '';
 
-                    if (oldFactionRank !== newFactionRank) {
-                        const factionDisplayName = this.getFactionDisplayName('POLICE');
-                        if (typeof uiManager !== "undefined") {
-                            uiManager.addMessage(`${factionDisplayName} Rank: ${newFactionRank}!`, [100, 200, 255]);
-                        }
-                        if (typeof soundManager !== "undefined") {
-                            soundManager.playSound("promotion");
-                        }
-                    }
+            // Police: get credit and bounty for killing pirates OR aliens
+            if (this.isPolice) {
+                if (killTarget.role === AI_ROLE.PIRATE) {
+                    factionKillEligible = true;
+                    bountyAmount = 1000;
+                    bountyDescription = 'Police bounty: 1,000 cr (Pirate)';
+                } else if (killTarget.role === AI_ROLE.ALIEN) {
+                    factionKillEligible = true;
+                    bountyAmount = 1000;
+                    bountyDescription = 'Police bounty: 1,000 cr (Alien)';
+                }
+            }
+            // Military: get credit and bounty for killing aliens OR pirates
+            else if (this.playerFaction === 'MILITARY') {
+                if (killTarget.role === AI_ROLE.ALIEN) {
+                    factionKillEligible = true;
+                    bountyAmount = 4000;
+                    bountyDescription = 'Military bounty: 4,000 cr (Alien)';
+                } else if (killTarget.role === AI_ROLE.PIRATE) {
+                    factionKillEligible = true;
+                    bountyAmount = 1000;
+                    bountyDescription = 'Military bounty: 1,000 cr (Pirate)';
+                }
+            }
+            // Imperial: get credit and bounty for killing Separatists
+            else if (this.playerFaction === 'IMPERIAL') {
+                if (killTarget.faction === 'SEPARATIST') {
+                    factionKillEligible = true;
+                    bountyAmount = 2000;
+                    bountyDescription = 'Imperial bounty: 2,000 cr (Separatist)';
+                }
+            }
+            // Separatist: get credit and bounty for killing Imperials
+            else if (this.playerFaction === 'SEPARATIST') {
+                if (killTarget.faction === 'IMPERIAL') {
+                    factionKillEligible = true;
+                    bountyAmount = 2000;
+                    bountyDescription = 'Separatist bounty: 2,000 cr (Imperial)';
                 }
             }
 
-            // Determine player's faction key (POLICE tracked by `isPolice`)
-            const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
+            // Award bounty and increment faction kill count
+            if (factionKillEligible && playerFactionKey) {
+                // Award bounty credits
+                if (bountyAmount > 0) {
+                    this.addCredits(bountyAmount);
+                    PLAYER_LOG(bountyDescription);
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(bountyDescription, [100, 255, 100]);
+                    }
+                }
 
-            // Opposition mapping: when player is IMPERIAL, kills of SEPARATIST count towards Imperial progression
-            const oppositionMap = {
-                IMPERIAL: 'SEPARATIST',
-                SEPARATIST: 'IMPERIAL',
-                MILITARY: 'ALIEN'
-            };
-
-            // Only increment faction progression if the killed ship has a faction and it matches the opposition map
-            if (killTarget.faction && playerFactionKey && oppositionMap[playerFactionKey] === killTarget.faction) {
+                // Increment faction kill count and check for rank promotion
                 if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
                     const oldFactionRank = this.getFactionRank(playerFactionKey);
                     this.factionKills[playerFactionKey]++;
