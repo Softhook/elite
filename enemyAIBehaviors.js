@@ -182,14 +182,24 @@ class EnemyAIBehaviors {
         let targetExists = this.updateTargeting(system);
         targetExists = this.isTargetValid(this.target);
     
-        // 3. Compute distance to target and angle for firing
+        // 3. Compute distance to target and angle for firing (with predictive aiming)
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
         let shootingAngle = this.angle;
         if (targetExists) {
-            shootingAngle = atan2(
-                this.target.pos.y - this.pos.y,
-                this.target.pos.x - this.pos.x
-            );
+            // Use predictive aiming - aim where the target WILL BE, not where it IS
+            const predictedPos = this.predictTargetPosition();
+            if (predictedPos) {
+                shootingAngle = atan2(
+                    predictedPos.y - this.pos.y,
+                    predictedPos.x - this.pos.x
+                );
+            } else {
+                // Fallback to current position if prediction fails
+                shootingAngle = atan2(
+                    this.target.pos.y - this.pos.y,
+                    this.target.pos.x - this.pos.x
+                );
+            }
             this._handleRangeStall(distanceToTarget);
         } else {
             this._resetRangeStall();
@@ -1191,14 +1201,24 @@ class EnemyAIBehaviors {
 
         targetExists = this.isTargetValid(this.target);
         
-        // Calculate distance and angle for combat
+        // Calculate distance and angle for combat (with predictive aiming)
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
         let shootingAngle = this.angle;
         if (targetExists) {
-            shootingAngle = atan2(
-                this.target.pos.y - this.pos.y,
-                this.target.pos.x - this.pos.x
-            );
+            // Use predictive aiming - aim where the target WILL BE, not where it IS
+            const predictedPos = this.predictTargetPosition();
+            if (predictedPos) {
+                shootingAngle = atan2(
+                    predictedPos.y - this.pos.y,
+                    predictedPos.x - this.pos.x
+                );
+            } else {
+                // Fallback to current position if prediction fails
+                shootingAngle = atan2(
+                    this.target.pos.y - this.pos.y,
+                    this.target.pos.x - this.pos.x
+                );
+            }
             this._handleRangeStall(distanceToTarget);
         } else {
             this._resetRangeStall();
