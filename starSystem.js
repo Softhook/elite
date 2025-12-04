@@ -1755,8 +1755,8 @@ try {
         for (let j = 0; j < entitiesToProcessNow; j++) {
             const entity = wave.entitiesToProcess[wave.processedCount + j];
             
-            // Skip if entity is invalid or already processed
-            if (!entity || !entity.pos || wave.processed[entity.id || entity]) continue;
+            // Skip if entity is invalid, destroyed, or already processed
+            if (!entity || !entity.pos || (typeof entity.isDestroyed === 'function' && entity.isDestroyed()) || wave.processed[entity.id || entity]) continue;
             
             // Fast distance check using squared distance
             const dx = entity.pos.x - wave.pos.x;
@@ -2009,8 +2009,12 @@ try {
     updateBeams() {
         // Remove expired beams (e.g., beams with .lifespan <= 0)
         for (let i = this.beams.length - 1; i >= 0; i--) {
-            let beam = this.beams[i];
-            beam.update && beam.update();
+            const beam = this.beams[i];
+            if (!beam) {
+                this._fastRemove(this.beams, i);
+                continue;
+            }
+            if (beam.update) beam.update();
             if (beam.lifespan !== undefined && beam.lifespan <= 0) {
                 this._fastRemove(this.beams, i);
             }
@@ -2018,15 +2022,22 @@ try {
     }
 
     drawBeams() {
-        for (let beam of this.beams) {
-            beam.draw && beam.draw();
+        const beamCount = this.beams.length;
+        if (beamCount === 0) return; // Early exit
+        for (let i = 0; i < beamCount; i++) {
+            const beam = this.beams[i];
+            if (beam && beam.draw) beam.draw();
         }
     }
 
     updateForceWaves() {
         for (let i = this.forceWaves.length - 1; i >= 0; i--) {
-            let wave = this.forceWaves[i];
-            wave.update && wave.update();
+            const wave = this.forceWaves[i];
+            if (!wave) {
+                this._fastRemove(this.forceWaves, i);
+                continue;
+            }
+            if (wave.update) wave.update();
             if (wave.lifespan !== undefined && wave.lifespan <= 0) {
                 this._fastRemove(this.forceWaves, i);
             }
@@ -2070,8 +2081,13 @@ try {
 
     updateMines() {
         const dt = deltaTime / 1000; // Convert to seconds
+        const mineCount = this.mines.length;
+        if (mineCount === 0) return; // Early exit
         
-        for (let i = this.mines.length - 1; i >= 0; i--) {
+        // Cache enemy count for inner loops
+        const enemyCount = this.enemies ? this.enemies.length : 0;
+        
+        for (let i = mineCount - 1; i >= 0; i--) {
             const mine = this.mines[i];
             
             // Update mine
@@ -2093,8 +2109,10 @@ try {
             if (!mine.armed) continue;
             
             // Check proximity to enemies (if player's mine)
-            if (mine.owner instanceof Player && this.enemies) {
-                for (const enemy of this.enemies) {
+            if (mine.owner instanceof Player && enemyCount > 0) {
+                for (let j = 0; j < enemyCount; j++) {
+                    const enemy = this.enemies[j];
+                    if (!enemy) continue;
                     if (mine.shouldExplode(enemy)) {
                         mine.explode(this);
                         this._removeMineFromSystem(mine, i);
@@ -2113,8 +2131,8 @@ try {
             }
 
             // Also allow enemy mines to be triggered by other enemies (friendly-fire capable)
-            if (!(mine.owner instanceof Player) && this.enemies && this.enemies.length) {
-                for (let j = 0; j < this.enemies.length; j++) {
+            if (!(mine.owner instanceof Player) && enemyCount > 0) {
+                for (let j = 0; j < enemyCount; j++) {
                     const e = this.enemies[j];
                     if (!e || e === mine.owner) continue; // Skip invalid or the owner
                     if (mine.shouldExplode(e)) {
@@ -2282,6 +2300,8 @@ try {
 
     /** Handles all collision detection and responses in the system. */
     checkCollisions() {
+        // Early exit if no player
+        if (!this.player || !this.player.pos) return;
         if (!this.player) return;
         
         try {
@@ -2350,8 +2370,7 @@ try {
      * Check and handle projectile collision with asteroids
      * @private
      */
-    _checkProjectileAsteroidCollision(proj, i, distCheckVector) {
-        const asteroidCount = this.asteroids.length;
+    _checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount) {
         for (let j = asteroidCount - 1; j >= 0; j--) {
             const asteroid = this.asteroids[j];
             if (!asteroid || asteroid.isDestroyed()) continue;
@@ -2454,7 +2473,11 @@ checkProjectileCollisions() {
     if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
     
     const distCheckVector = this._distCheckVector;
+    // Cache counts to avoid repeated length lookups in hot loops
     const enemyCount = this.enemies.length;
+    const asteroidCount = this.asteroids.length;
+    const spaceObjectCount = this.spaceObjects ? this.spaceObjects.length : 0;
+    const mineCount = this.mines.length;
     
     // Process projectiles using optimized collision detection
     for (let i = projCount - 1; i >= 0; i--) {
@@ -2470,7 +2493,7 @@ checkProjectileCollisions() {
         let hit = false;
         
         // Check against various targets using helper methods
-        if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector)) { hit = true; continue; }
+        if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) { hit = true; continue; }
         if (!hit && this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) { hit = true; continue; }
         if (!hit && this._checkProjectileMineCollision(proj, i, distCheckVector)) { hit = true; continue; }
 
@@ -2590,6 +2613,8 @@ checkProjectileCollisions() {
             // Get only nearby enemies using pre-check with distance squared
             for (let j = 0; j < enemyCount; j++) {
                 const enemy = this.enemies[j];
+                // Early bailout for invalid or destroyed enemies
+                if (!enemy || !enemy.pos || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
                 const combinedRadius = enemy.size + projSize;
                 const combinedRadiusSquared = combinedRadius * combinedRadius;
                 distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
@@ -2667,8 +2692,9 @@ checkProjectileCollisions() {
         if (proj.owner instanceof Enemy) {
             for (let j = 0; j < enemyCount; j++) {
                 const enemy = this.enemies[j];
-                // Skip if the enemy is shooting itself
-                if (enemy !== proj.owner && proj.checkCollision(enemy)) {
+                // Early bailout for invalid enemies or self-fire
+                if (!enemy || !enemy.pos || enemy === proj.owner || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+                if (proj.checkCollision(enemy)) {
                     // Harpoon special-case: spawn a Harpoon tether between enemies
                     if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
                         const owner = proj.owner;
@@ -3029,7 +3055,7 @@ checkProjectileCollisions() {
                 const velMag = Math.sqrt(velX * velX + velY * velY);
                 if (velMag > 0.1) {
                     const dotProduct = (dx * velX + dy * velY) / (dist * velMag);
-                    directionBoost = dotProduct > 0 ? dotProduct * STARFIELD_DIRECTION_BOOST : 0;
+                    directionBoost = dotProduct > 0 ? dotProduct * STARFIELD_CONFIG.DIRECTION_BOOST : 0;
                 }
             }
             
@@ -3072,8 +3098,8 @@ checkProjectileCollisions() {
         if (velMag < 2) return;
         
         // Predict position ahead based on current velocity
-        const predictX = playerX + velX * STARFIELD_PREDICTION_FRAMES;
-        const predictY = playerY + velY * STARFIELD_PREDICTION_FRAMES;
+        const predictX = playerX + velX * STARFIELD_CONFIG.PREDICTION_FRAMES;
+        const predictY = playerY + velY * STARFIELD_CONFIG.PREDICTION_FRAMES;
         
         // Calculate predicted tile range
         const padding = tileSize;
@@ -3320,7 +3346,7 @@ checkProjectileCollisions() {
     _cleanupOldTiles(currentTime) {
         // Only cleanup periodically
         if (!this._lastTileCleanup) this._lastTileCleanup = 0;
-        if (currentTime - this._lastTileCleanup < STARFIELD_CLEANUP_INTERVAL_MS) return;
+        if (currentTime - this._lastTileCleanup < STARFIELD_CONFIG.CLEANUP_INTERVAL_MS) return;
         this._lastTileCleanup = currentTime;
         
         // If we're under the limit, don't cleanup
@@ -3752,13 +3778,15 @@ checkProjectileCollisions() {
         // ---
 
         // Draw nebulae (draw first for background effect)
-        for (let nebula of this.nebulae) {
-            nebula.draw(screenBounds);
+        const nebulaCount = this.nebulae.length;
+        for (let i = 0; i < nebulaCount; i++) {
+            this.nebulae[i].draw(screenBounds);
         }
 
         // Draw cosmic storms (after nebulae but before ships)
-        for (let storm of this.cosmicStorms) {
-            storm.draw(screenBounds);
+        const stormCount = this.cosmicStorms.length;
+        for (let i = 0; i < stormCount; i++) {
+            this.cosmicStorms[i].draw(screenBounds);
         }
         // Draw station only if visible
         if (this.station && 
@@ -3777,8 +3805,8 @@ checkProjectileCollisions() {
         // player drawing code to preserve original dashed-line + distance label
         // behavior and correct layering. See `player.draw()` for implementation.
 
-        // Determine sun position using the first planet if it exists
-        let sunPos = this.planets.length > 0 ? this.planets[0].pos : createVector(0,0);
+        // Determine sun position using the first planet if it exists (cache to avoid repeated access)
+        const sunPos = this.planets.length > 0 ? this.planets[0].pos : { x: 0, y: 0 };
 
         // Draw only visible planets
         for (let i = 0; i < planetCount; i++) {
@@ -3797,8 +3825,9 @@ checkProjectileCollisions() {
         }
 
         // Draw decorative space objects (satellites, telescopes)
-        if (this.spaceObjects && this.spaceObjects.length) {
-            for (let i = 0; i < this.spaceObjects.length; i++) {
+        if (this.spaceObjects && this.spaceObjects.length > 0) {
+            const spaceObjCount = this.spaceObjects.length;
+            for (let i = 0; i < spaceObjCount; i++) {
                 const so = this.spaceObjects[i];
                 if (!so || !so.pos) continue;
                 if (this.isInView(so.pos.x, so.pos.y, so.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
@@ -3809,7 +3838,8 @@ checkProjectileCollisions() {
 
         // Draw only visible cargo
         if (this.cargo && this.cargo.length > 0) {
-            for (let i = 0; i < this.cargo.length; i++) {
+            const cargoCount = this.cargo.length;
+            for (let i = 0; i < cargoCount; i++) {
                 const c = this.cargo[i];
                 // Use 1.5 instead of 4, matching other objects' visibility ranges
                 if (this.isInView(c.pos.x, c.pos.y, c.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
