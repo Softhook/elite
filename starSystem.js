@@ -1,9 +1,85 @@
 // ****** StarSystem.js ******
+
+/**
+ * =============================================================================
+ * SYSTEM CONFIGURATION & CONSTANTS
+ * =============================================================================
+ * Centralized configuration for the StarSystem class.
+ * All magic numbers and configuration values are defined here.
+ */
+
 // Toggle for verbose diagnostics (kept off for performance)
 const STAR_SYSTEM_DEBUG = false;
 
-// Build ship role arrays from SHIP_DEFINITIONS
-// Optimized: Single-pass iteration using Map for O(1) role lookups
+// === Jump Zone Configuration ===
+const JUMP_ZONE_CONFIG = {
+    DEFAULT_RADIUS: 500,
+    MIN_DIST_FROM_STATION: 2500,
+    MAX_DIST_FACTOR: 0.8,      // Multiplied by despawnRadius
+    DRAW_RANGE_FACTOR: 8,      // Multiplied by jumpZoneRadius
+    MAX_ALPHA: 200,
+    MIN_ALPHA: 20
+};
+
+// === Starfield Rendering Configuration ===
+const STARFIELD_CONFIG = {
+    TILE_SIZE: 512,
+    MAX_TILES_PER_FRAME: 2,
+    MAX_CACHED_TILES: 64,
+    DIRECTION_BOOST: 500,
+    PREDICTION_FRAMES: 30,
+    CLEANUP_INTERVAL_MS: 5000,
+    WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined')
+};
+
+// === Spawn Configuration ===
+const SPAWN_CONFIG = {
+    ENEMY_SPAWN_INTERVAL: 5000,    // ms
+    ASTEROID_SPAWN_INTERVAL: 3000, // ms
+    MAX_ENEMIES: 30,
+    MAX_ASTEROIDS: 45,
+    DEFAULT_DESPAWN_RADIUS: 5000,
+    SPAWN_DISTANCE_MIN: 800,
+    SPAWN_DISTANCE_MAX: 2000
+};
+
+// === Collision Configuration ===
+const COLLISION_CONFIG = {
+    BUMP_SOUND_COOLDOWN: 250,      // ms between bump sounds
+    ALIEN_SPAWN_SOUND_COOLDOWN: 1000 // ms between alien spawn sounds
+};
+
+// === Planet Generation Configuration ===
+const PLANET_CONFIG = {
+    MIN_COUNT: 2,
+    MAX_COUNT: 7,
+    MIN_ORBIT: 1200,
+    STATION_ORBIT_FACTOR: 1.5,
+    STATION_OFFSET: 80
+};
+
+// === Star Layer Configuration ===
+const STAR_LAYER_CONFIG = {
+    BACKGROUND: {
+        gridSize: 45,
+        maxStarsPerCell: 3,
+        sizeMultiplier: [0.5, 1.5],
+        brightnessRange: [80, 160],
+        colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+    },
+    FEATURE: {
+        gridSize: 200,
+        maxStarsPerCell: 1,
+        sizeMultiplier: [2.0, 4.0],
+        brightnessRange: [180, 255],
+        colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+    }
+};
+
+/**
+ * Build ship role arrays from SHIP_DEFINITIONS
+ * Optimized: Single-pass iteration using Map for O(1) role lookups
+ */
 const buildShipRoleArrays = () => {
     const roleArrays = {
         POLICE_SHIPS: [],
@@ -69,28 +145,16 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("COMBAT_SHIPS:", COMBAT_SHIPS);
 }
 
-// --- Jump Zone Constants ---
-const JUMP_ZONE_DEFAULT_RADIUS = 500;
-const JUMP_ZONE_MIN_DIST_FROM_STATION = 2500;
-const JUMP_ZONE_MAX_DIST_FACTOR = 0.8; // Multiplied by despawnRadius
-const JUMP_ZONE_DRAW_RANGE_FACTOR = 8; // Multiplied by jumpZoneRadius
-const JUMP_ZONE_MAX_ALPHA = 200;
-const JUMP_ZONE_MIN_ALPHA = 20;
-// ---
-
-// --- Starfield Progressive Rendering Constants ---
-const STARFIELD_TILE_SIZE = 512;                    // Size of each tile in pixels
-const STARFIELD_MAX_TILES_PER_FRAME = 2;            // Max tiles to generate per frame
-const STARFIELD_MAX_CACHED_TILES = 64;              // Max tiles to keep in cache
-const STARFIELD_DIRECTION_BOOST = 500;              // Priority boost for tiles in travel direction
-const STARFIELD_PREDICTION_FRAMES = 30;             // Frames ahead to predict (~0.5s at 60fps)
-const STARFIELD_CLEANUP_INTERVAL_MS = 5000;         // How often to cleanup old tiles
-// ---
+/**
+ * =============================================================================
+ * STARFIELD WORKER INITIALIZATION
+ * =============================================================================
+ * Sets up the Web Worker for offscreen starfield tile generation.
+ */
 
 // Worker + OffscreenCanvas support for tile generation
-const STARFIELD_WORKER_ENABLED = (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined');
 let STARFIELD_TILE_WORKER = null;
-if (STARFIELD_WORKER_ENABLED) {
+if (STARFIELD_CONFIG.WORKER_ENABLED) {
     try {
         STARFIELD_TILE_WORKER = new Worker('test/starfield_worker.js');
         STARFIELD_TILE_WORKER.onmessage = function(e) {
@@ -176,17 +240,27 @@ if (STARFIELD_WORKER_ENABLED) {
     } catch (e) { STARFIELD_TILE_WORKER = null; }
 }
 
+/**
+ * =============================================================================
+ * STARSYSTEM CLASS
+ * =============================================================================
+ * Manages a single star system including planets, stations, NPCs, and all
+ * dynamic entities. Handles rendering, collision detection, spawning, and
+ * serialization for save/load functionality.
+ */
+
 class StarSystem {
     /**
      * Creates a Star System instance. Sets up basic properties.
      * Seeded elements (planets, bgStars) are generated later via initStaticElements().
-     * @param {string} name - The name of the system.
-     * @param {string} economy - The actual economy type (e.g., "Industrial").
-     * @param {number} galaxyX - The X coordinate on the main galaxy map.
-     * @param {number} galaxyY - The Y coordinate on the main galaxy map.
-     * @param {number} systemIndex - The unique index of this system, used for seeding.
-     * @param {number} [techLevel=5] - The technological level of the system (1-10).
-     * @param {string} [securityLevel='Medium'] - The security level (e.g., 'High', 'Anarchy').
+     * 
+     * @param {string} name - The name of the system
+     * @param {string} economy - The economy type (e.g., "Industrial", "Agricultural")
+     * @param {number} galaxyX - The X coordinate on the galaxy map
+     * @param {number} galaxyY - The Y coordinate on the galaxy map
+     * @param {number} systemIndex - The unique index of this system, used for seeding
+     * @param {number} [techLevel=5] - The technological level (1-10)
+     * @param {string} [securityLevel='Medium'] - The security level ('High', 'Anarchy', etc.)
      */
     constructor(name, economy, galaxyX, galaxyY, systemIndex, techLevel = 5, securityLevel = 'Medium') {
         if (STAR_SYSTEM_DEBUG) console.log("StarSystem constructor called for", name);
@@ -217,21 +291,22 @@ class StarSystem {
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
         this.cargo = [];
-        this.starColor = null; // Set in i_getDiagonalDistancenitStaticElements
+        this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
         this.bgStars = [];     // Populated in initStaticElements
 
-        // --- Config (can be set here, despawnRadius updated later) ---
-        this.enemySpawnTimer = 0; this.enemySpawnInterval = 5000; this.maxEnemies = 30;
-        this.asteroidSpawnTimer = 0; 
-        this.asteroidSpawnInterval = 3000; 
-        this.maxTotalAsteroids = 45;
-        this.despawnRadius = 5000; // Default, updated in initStaticElements based on screen size
+        // === Spawn Configuration ===
+        this.enemySpawnTimer = 0;
+        this.enemySpawnInterval = SPAWN_CONFIG.ENEMY_SPAWN_INTERVAL;
+        this.maxEnemies = SPAWN_CONFIG.MAX_ENEMIES;
+        this.asteroidSpawnTimer = 0;
+        this.asteroidSpawnInterval = SPAWN_CONFIG.ASTEROID_SPAWN_INTERVAL;
+        this.maxTotalAsteroids = SPAWN_CONFIG.MAX_ASTEROIDS;
+        this.despawnRadius = SPAWN_CONFIG.DEFAULT_DESPAWN_RADIUS;
 
-        // --- Jump Zone Properties ---
+        // === Jump Zone Properties ===
         this.jumpZoneCenter = null; // p5.Vector, calculated in initStaticElements or loaded
-        this.jumpZoneRadius = JUMP_ZONE_DEFAULT_RADIUS;
-        // ---
+        this.jumpZoneRadius = JUMP_ZONE_CONFIG.DEFAULT_RADIUS;
 
         // --- Add flag for static elements ---
         this.staticElementsInitialized = false; // Track if initStaticElements has run
@@ -266,12 +341,12 @@ class StarSystem {
         this._lastPlayerAsteroidBumpSoundTime = 0;
         this._lastPlayerShipBumpSoundTime = 0;
 
-        // Progressive tile-based starfield rendering with LRU cache
-        this._starfieldTileSize = STARFIELD_TILE_SIZE;
+        // === Progressive Starfield Rendering ===
+        this._starfieldTileSize = STARFIELD_CONFIG.TILE_SIZE;
         this._starfieldTiles = new Map(); // Map of "x,y" -> { buffer, lastUsed }
         this._starfieldTileQueue = []; // Queue of tiles to generate
-        this._starfieldMaxTilesPerFrame = STARFIELD_MAX_TILES_PER_FRAME;
-        this._starfieldMaxCachedTiles = STARFIELD_MAX_CACHED_TILES;
+        this._starfieldMaxTilesPerFrame = STARFIELD_CONFIG.MAX_TILES_PER_FRAME;
+        this._starfieldMaxCachedTiles = STARFIELD_CONFIG.MAX_CACHED_TILES;
         this._starfieldLastPlayerVelX = 0; // For predicting movement
         this._starfieldLastPlayerVelY = 0;
         this._starfieldRenderMode = 'progressive'; // 'progressive', 'buffered', 'legacy'
@@ -377,7 +452,16 @@ class StarSystem {
     /**
      * Initializes static, seeded elements (station, planets, background) using p5 functions.
      * MUST be called AFTER p5 setup is complete (e.g., from Galaxy.initGalaxySystems).
-     * @param {number} [sessionSeed] - An optional seed component from the current game session.
+     * 
+     * This method:
+     * - Creates the main station and optional secret stations
+     * - Generates planets with deterministic seeding
+     * - Positions the jump zone
+     * - Spawns decorative space objects
+     * - Generates nebulae (50% chance)
+     * - Initializes ambient sounds
+     * 
+     * @param {number} [sessionSeed] - Optional seed component from the current game session
      */
     initStaticElements(sessionSeed) {
         // Don't skip initialization if already done
@@ -614,7 +698,17 @@ try {
         console.log(`      <<< ${this.name}: initStaticElements() Finished`); // Log completion
     }
 
-    /** Creates random planets using seeded random. Called by initStaticElements. */
+    /**
+     * Creates random planets using seeded random generation.
+     * Called by initStaticElements.
+     * 
+     * Planets are:
+     * - Arranged in an orbital pattern around the central star
+     * - Given randomized sizes and colors
+     * - Associated with the main station (station orbits one planet)
+     * 
+     * The first planet is always the central star at (0,0).
+     */
     createRandomPlanets() {
         // Clear any previous planets and add the central star at (0,0)
         this.planets = [];
@@ -837,7 +931,21 @@ try {
         }
     }
 
-    /** Called when player enters system. Resets dynamic objects. */
+    /**
+     * Called when player enters this system.
+     * 
+     * This method:
+     * - Marks the system as discovered
+     * - Resets dynamic objects (enemies, projectiles, asteroids, etc.)
+     * - Associates the player with this system
+     * - Resets starfield buffer
+     * - Queues planet buffer creation
+     * - Sets police alert status
+     * - Spawns initial population (NPCs, asteroids, bodyguards)
+     * - Updates the system's cached description
+     * 
+     * @param {Player} player - The player object entering the system
+     */
     enterSystem(player) {
         this.discover();
         this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
@@ -991,7 +1099,17 @@ try {
 
 
     /**
-     * Select ship type based on economy and role
+     * ==========================================================================
+     * SHIP SPAWNING & SELECTION
+     * ==========================================================================
+     */
+
+    /**
+     * Selects appropriate ship type based on system economy and security level.
+     * 
+     * @param {string} economy - System economy type
+     * @param {string} security - System security level
+     * @returns {{role: string, ship: string}} Selected ship role and type
      * @private
      */
     _selectShipForEconomy(economy, security) {
@@ -1140,7 +1258,23 @@ try {
         }
     }
 
-    /** Attempts to spawn an NPC ship. Calls init methods after creation. */
+    /**
+     * Attempts to spawn an NPC ship in the system.
+     * 
+     * Spawning logic:
+     * - Checks if under max enemy limit
+     * - Selects ship type based on economy and security level
+     * - Spawns at diagonal distance + offset from player
+     * - Initializes AI state and targeting
+     * - Spawns bodyguards for large haulers
+     * - Sets up police pursuit if player is wanted
+     * 
+     * Ship types are economy-dependent:
+     * - Military: 60% military ships, 15% haulers, 10% pirates
+     * - Alien: 80% alien ships, 10% pirates, 10% haulers
+     * - Industrial/Refinery/Mining: Mining platforms and haulers
+     * - Standard: Based on security level (pirates vs police ratio)
+     */
     trySpawnNPC() {
         if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
 
@@ -1231,7 +1365,19 @@ try {
 }
 
     /**
-     * Generic entity update helper - reduces code duplication
+     * ==========================================================================
+     * ENTITY UPDATE & MANAGEMENT
+     * ==========================================================================
+     */
+
+    /**
+     * Generic entity update helper - reduces code duplication.
+     * Handles update logic and cleanup for arrays of entities.
+     * 
+     * @param {Array} entityArray - Array of entities to update
+     * @param {Function} updateFn - Function to call for each entity update
+     * @param {Function} shouldRemove - Predicate function to determine if entity should be removed
+     * @param {Function} [onDestroyFn] - Optional callback when entity is destroyed
      * @private
      */
     _updateEntities(entityArray, updateFn, shouldRemove, onDestroyFn = null) {
@@ -1261,390 +1407,604 @@ try {
     }
 
     /** 
-     * Updates all system entities.
+     * Main update loop for all system entities.
+     * Orchestrates updates for all dynamic objects, spawning, and collision detection.
      * OPTIMIZED: Uses fast array removal and reduces object allocations.
      */
     update() {
         if (!this.player || !this.player.pos) return;
-        const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-        if (deltaSeconds > 0) {
-            if (this.station?.market?.updateDynamicStock) {
-                this.station.market.updateDynamicStock(deltaSeconds);
-            }
-            if (Array.isArray(this.secretStations)) {
-                for (const secretStation of this.secretStations) {
-                    secretStation?.market?.updateDynamicStock?.(deltaSeconds);
-                }
-            }
-        }
         
-        // Update ambient sound volumes based on player position
-        if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-            ambientSoundManager.updateSoundVolumes(this.player.pos);
-        }
+        // Update dynamic stock for markets
+        this._updateMarketStock();
+        
+        // Update ambient sound volumes
+        this._updateAmbientSounds();
+        
+        // Calculate screen bounds once for visibility checks
+        this._updateScreenBounds();
         
         try {
-            // Calculate screen bounds for visibility checks - reuse pre-allocated object
-            const tx = width / 2 - this.player.pos.x;
-            const ty = height / 2 - this.player.pos.y;
-            const bounds = this.screenBounds;
-            bounds.left = -tx - 100;
-            bounds.right = -tx + width + 100;
-            bounds.top = -ty - 100;
-            bounds.bottom = -ty + height + 100;
-
-            // Update Enemies using unified helper
-            this._updateEntities(
-                this.enemies,
-                (enemy) => enemy.update(this),
-                (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)
-            );
-
-            // Update Asteroids with destruction handling
-            this._updateEntities(
-                this.asteroids,
-                (asteroid) => asteroid.update(),
-                (asteroid) => asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2),
-                (asteroid) => {
-                    if (asteroid.isDestroyed()) {
-                        // Spawn Mineral Cargo on Asteroid Destruction
-                        if (random() < 0.85) {
-                            const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
-                            const mineralMultiplier = (asteroid.getMineralMultiplier && 
-                                                      typeof asteroid.getMineralMultiplier === 'function') 
-                                ? asteroid.getMineralMultiplier() 
-                                : 1.0;
-                            const quantity = max(1, floor(baseQuantity * mineralMultiplier));
-
-                            const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
-                            const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
-
-                            const cargoDrop = new Cargo(
-                                asteroid.pos.x + offsetX, 
-                                asteroid.pos.y + offsetY, 
-                                "Minerals", 
-                                quantity
-                            );
-                            this.addCargo(cargoDrop);
-                            
-                            if (typeof uiManager !== 'undefined') {
-                                uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
-                            }
-                            
-                            if (STAR_SYSTEM_DEBUG) {
-                                console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
-                            }
-                        }
-
-                        // Spawn smaller asteroid on destruction
-                        try {
-                            const minSplitSize = 16;
-                            const splitFactor = 0.6;
-                            const newSize = floor(asteroid.size * splitFactor);
-                            if (newSize >= minSplitSize) {
-                                this.addAsteroid(asteroid.pos.x, asteroid.pos.y, newSize);
-                            }
-                        } catch (e) {
-                            console.error("Error spawning split asteroid:", e);
-                        }
-                    }
-                }
-            );
-
-            // --- Update Planets for rotation ---
-            for (let i = 0; i < this.planets.length; i++) {
-                const planet = this.planets[i];
-                if (planet && typeof planet.update === 'function') {
-                    // Update all planets regardless of visibility
-                    try {
-                        planet.update();
-                    } catch(e) {
-                        console.error("Error updating planet:", e, planet);
-                    }
-                }
-            }
-
-            // Update decorative space objects
-            if (this.spaceObjects && this.spaceObjects.length) {
-                this._updateEntities(
-                    this.spaceObjects,
-                    (so) => so.update(this),
-                    (so) => so.destroyed,
-                    (so) => {
-                        // Notify sabotage missions
-                        try {
-                            if (this.player && this.player.activeMission) {
-                                const am = this.player.activeMission;
-                                const isSab = (typeof MISSION_TYPE !== 'undefined' && am && am.type === MISSION_TYPE.SABOTAGE) || (am && am.type === 'Sabotage');
-                                if (am && isSab && am.targetObjectId !== undefined && am.targetObjectId === so.id) {
-                                    try {
-                                        am.progressCount = Math.max(1, am.progressCount || 0);
-                                        if (typeof am.complete === 'function') {
-                                            am.complete(this.player);
-                                            if (this.player.activeMission === am) this.player.activeMission = null;
-                                        }
-                                    } catch (e) { console.warn('Error completing sabotage mission on object destroy', e); }
-                                }
-                            }
-                        } catch (e) { /* non-fatal */ }
-
-                        // Spawn metals cargo
-                        try {
-                            if (random() < 0.95) {
-                                const baseQuantity = max(1, floor(map(so.size, 28, 110, 1, 6)));
-                                const quantity = max(1, baseQuantity);
-                                const offsetX = random(-so.size * 0.2, so.size * 0.2);
-                                const offsetY = random(-so.size * 0.2, so.size * 0.2);
-                                const cargoDrop = new Cargo(so.pos.x + offsetX, so.pos.y + offsetY, "Metals", quantity);
-                                this.addCargo(cargoDrop);
-                                if (typeof uiManager !== 'undefined') {
-                                    const name = (so && typeof so.getDisplayName === 'function') ? so.getDisplayName() : (so.type || 'space object');
-                                    uiManager.addMessage(`Recovered ${quantity}t Metals from ${name} wreckage`);
-                                }
-                            }
-                        } catch (e) { console.error('Error spawning cargo from spaceObject:', e); }
-                    }
-                );
-            }
-
-            // --- Update Projectiles (special handling for pooling) ---
-            const projCount = this.projectiles.length;
-            if (projCount > 0) {
-                for (let i = projCount - 1; i >= 0; i--) {
-                    let proj = this.projectiles[i];
-                    proj.update();
-                
-                    if (proj.lifespan <= 0 || proj.isOffScreen()) {
-                        this.removeProjectile(i); // Uses pooling internally
-                    }
-                }
-            }
-
-            // Update cargo - OPTIMIZED with unified helper
-            if (this.cargo && this.cargo.length > 0) {
-                // Clean up invalid/expired cargo first
-                this._updateEntities(
-                    this.cargo,
-                    (c) => { if (c && typeof c.update === 'function') c.update(); },
-                    (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired())
-                );
-                // Check for player collection
-                this.handleCargoCollection();
-            }
-
-            // Update Beams
-            this.updateBeams && this.updateBeams();
-            
-            // Update Mines
-            this.updateMines && this.updateMines();
-
-
-            // Update and process force waves with batch processing
-            for (let i = this.forceWaves.length - 1; i >= 0; i--) {
-                const wave = this.forceWaves[i];
-                
-                // Expand the wave
-                wave.radius += wave.growRate;
-                
-                // First time initialization - find all entities to process
-                if (!wave.entitiesToProcess) {
-                    wave.entitiesToProcess = [];
-                    
-                    // Add all relevant entities that might be affected
-                    if (wave.owner === this.player) {
-                        // Player's wave affects enemies and asteroids
-                        wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
-                    } else {
-                        // Enemy's wave affects player only
-                        if (this.player) wave.entitiesToProcess.push(this.player);
-                    }
-                    
-                    // Initialize tracking
-                    wave.processedCount = 0;
-                    wave.processed = {};
-                }
-                
-                // Process entities in batches to prevent frame rate drops
-                const batchSize = 50; // Process up to 50 entities per frame for better throughput
-                const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
-                const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
-                
-                for (let j = 0; j < entitiesToProcessNow; j++) {
-                    const entity = wave.entitiesToProcess[wave.processedCount + j];
-                    
-                    // Skip if entity is invalid or already processed
-                    if (!entity || !entity.pos || wave.processed[entity.id || entity]) continue;
-                    
-                    // Fast distance check using squared distance
-                    const dx = entity.pos.x - wave.pos.x;
-                    const dy = entity.pos.y - wave.pos.y;
-                    const distSq = dx * dx + dy * dy;
-                    const radiusWithEntity = wave.radius + entity.size / 2;
-                    const radiusWithEntitySq = radiusWithEntity * radiusWithEntity;
-
-                    // If entity is within wave radius, apply damage
-                    if (distSq < radiusWithEntitySq) {
-                        const maxRadiusAdj = wave.maxRadius + entity.size / 2;
-                        const dist = Math.sqrt(distSq);
-                        const distRatio = dist / maxRadiusAdj;
-                        
-                        // More gradual falloff curve for better damage distribution across distance
-                        // Using 0.5 exponent gives much more gradual falloff than 0.9
-                        const falloff = Math.pow(1 - distRatio, 0.5);
-                        
-                        // Ensure meaningful minimum damage (at least 30% of max damage)
-                        const minDamage = Math.max(40, Math.floor(wave.damage * 0.3));
-                        const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
-
-                        // Apply damage and mark as processed (pass system for immediate targeting updates)
-                        entity.takeDamage(dmg, wave.owner, this);
-                        wave.processed[entity.id || entity] = true;
-                        
-                        // Apply knockback force without allocating vectors
-                        if (entity.vel) {
-                            const invLen = dist > 0 ? 1 / dist : 0;
-                            const nx = dx * invLen;
-                            const ny = dy * invLen;
-                            const forceMagnitude = 15 - 10 * distRatio; // map(distRatio,0..1,15..5)
-                            entity.vel.x += nx * forceMagnitude;
-                            entity.vel.y += ny * forceMagnitude;
-                        }
-                    }
-                }
-                
-                // Update processed count
-                wave.processedCount += entitiesToProcessNow;
-                
-                // Remove wave if it reaches max size and all entities processed
-                if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
-                    this._fastRemove(this.forceWaves, i);
-                }
-            }
-
-            // Update Harpoons
-            if (this.harpoons && this.harpoons.length) {
-                for (let i = this.harpoons.length - 1; i >= 0; i--) {
-                    const h = this.harpoons[i];
-                    try { h.update && h.update(deltaTime || 16); } catch(e) { console.error('Harpoon update error', e); h && h.break && h.break(); }
-                    // Remove if broken or invalid
-                    const targetDestroyed = !h || h.broken || !h.owner || !h.target || (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed());
-                    const done = (h && typeof h.isDone === 'function') ? h.isDone() : false;
-                    if (targetDestroyed || done) {
-                        this._fastRemove(this.harpoons, i);
-                    }
-                }
-            }
-
-            // Update explosions - OPTIMIZED with unified helper and pooling
-            this._updateEntities(
-                this.explosions,
-                (exp) => exp.update(),
-                (exp) => exp.isDone(),
-                (exp) => {
-                    if (typeof WeaponSystem !== 'undefined' && WeaponSystem.releaseExplosion) {
-                        WeaponSystem.releaseExplosion(exp);
-                    }
-                }
-            );
-
-            // Update nebulae
-            for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
-                const nebula = this.nebulae[i];
-                nebula.update();
-                
-                // Apply effects to player
-                if (this.player) {
-                    nebula.applyEffects(this.player);
-                }
-                
-                // Apply effects to enemies
-                for (let j = 0, elen = this.enemies.length; j < elen; j++) {
-                    nebula.applyEffects(this.enemies[j]);
-                }
-            }
-
-            // Update cosmic storms (they move)
-            for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
-                const storm = this.cosmicStorms[i];
-                const keepStorm = storm.update(); // Get return value from update
-                // Update corresponding ambient sound position if exists
-                try {
-                    if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                        const id = `${this.name}_storm_${i}_${storm.type}`;
-                        const cfg = ambientSoundManager.activeSources.get(id);
-                        if (cfg && storm.pos) cfg.position = storm.pos;
-                    }
-                } catch(_) {}
-                
-                // Remove the storm if it has dissipated
-                if (!keepStorm) {
-                    // Remove ambient sound layer
-                    try {
-                        if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                            const id = `${this.name}_storm_${i}_${storm.type}`;
-                            ambientSoundManager.removeAmbientSound(id);
-                        }
-                    } catch(_) {}
-                    this._fastRemove(this.cosmicStorms, i);
-                    continue; // Skip the rest of this iteration
-                }
-                
-                // Only apply effects and draw if the storm is still active
-                if (this.player) {
-                    storm.applyEffects(this.player);
-                }
-                
-                for (let enemy of this.enemies) {
-                    storm.applyEffects(enemy);
-                }
-            }
-
-            // Move storm spawning OUTSIDE the loop with a small probability
-            if (random() < 0.0002 && this.cosmicStorms.length < 1) { // Limit to 1 storms max
-                const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
-                const angle = random(TWO_PI);
-                const distance = this.despawnRadius * 0.15;
-                
-                this.cosmicStorms.push(new CosmicStorm(
-                    this.player.pos.x + cos(angle) * distance,
-                    this.player.pos.y + sin(angle) * distance,
-                    random(600, 1200),
-                    stormType
-                ));
-                if (STAR_SYSTEM_DEBUG) console.log(`New ${stormType} storm spawned naturally`);
-
-                // Create ambient sound for the newly spawned storm
-                try {
-                    if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                        const idx = this.cosmicStorms.length - 1;
-                        const st = this.cosmicStorms[idx];
-                        const profile = AmbientSoundManager.getSoundProfile('storm', { type: stormType });
-                        const id = `${this.name}_storm_${idx}_${stormType}`;
-                        const snd = ambientSoundManager.createAmbientSound(id, profile);
-                        if (snd && st?.pos) snd.position = st.pos.copy();
-                    }
-                } catch(_) {}
-            }
-
+            // Update all entity categories
+            this._updateEnemies();
+            this._updateAsteroids();
+            this._updatePlanets();
+            this._updateSpaceObjects();
+            this._updateProjectiles();
+            this._updateCargo();
+            this._updateBeams();
+            this._updateMines();
+            this._updateForceWaves();
+            this._updateHarpoons();
+            this._updateExplosions();
+            this._updateNebulae();
+            this._updateCosmicStorms();
 
             // Collision Checks
             this.checkCollisions();
-            this.checkProjectileCollisions(); // Added call to new method
+            this.checkProjectileCollisions();
 
             // Spawning Timers
-            this.enemySpawnTimer += deltaTime; 
-            if (this.enemySpawnTimer >= this.enemySpawnInterval) { 
-                this.trySpawnNPC(); // CHANGE: Don't pass player 
-                this.enemySpawnTimer = 0; 
-            }
+            this._updateSpawnTimers();
+        } catch (e) { 
+            console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); 
+        }
+    }
 
-            this.asteroidSpawnTimer += deltaTime; 
-            if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
-                this.trySpawnAsteroid(); // CHANGE: Don't pass player
-                this.asteroidSpawnTimer = 0; 
+    /**
+     * Updates market dynamic stock for all stations.
+     * @private
+     */
+    _updateMarketStock() {
+        const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        if (deltaSeconds <= 0) return;
+        
+        if (this.station?.market?.updateDynamicStock) {
+            this.station.market.updateDynamicStock(deltaSeconds);
+        }
+        
+        if (Array.isArray(this.secretStations)) {
+            for (const secretStation of this.secretStations) {
+                secretStation?.market?.updateDynamicStock?.(deltaSeconds);
             }
-        } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
-    } // End update
+        }
+    }
+
+    /**
+     * Updates ambient sound volumes based on player position.
+     * @private
+     */
+    _updateAmbientSounds() {
+        if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+            ambientSoundManager.updateSoundVolumes(this.player.pos);
+        }
+    }
+
+    /**
+     * Updates cached screen bounds for visibility culling.
+     * @private
+     */
+    _updateScreenBounds() {
+        const tx = width / 2 - this.player.pos.x;
+        const ty = height / 2 - this.player.pos.y;
+        const bounds = this.screenBounds;
+        bounds.left = -tx - 100;
+        bounds.right = -tx + width + 100;
+        bounds.top = -ty - 100;
+        bounds.bottom = -ty + height + 100;
+    }
+
+    /**
+     * Updates all enemy entities.
+     * @private
+     */
+    _updateEnemies() {
+        this._updateEntities(
+            this.enemies,
+            (enemy) => enemy.update(this),
+            (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)
+        );
+    }
+
+    /**
+     * Updates all asteroids with destruction and cargo drop handling.
+     * @private
+     */
+    _updateAsteroids() {
+        this._updateEntities(
+            this.asteroids,
+            (asteroid) => asteroid.update(),
+            (asteroid) => asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2),
+            (asteroid) => this._handleAsteroidDestruction(asteroid)
+        );
+    }
+
+    /**
+     * Handles asteroid destruction, including cargo drops and splitting.
+     * @param {Asteroid} asteroid - The destroyed asteroid
+     * @private
+     */
+    _handleAsteroidDestruction(asteroid) {
+        if (!asteroid.isDestroyed()) return;
+        
+        // Spawn Mineral Cargo on Asteroid Destruction
+        if (random() < 0.85) {
+            const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
+            const mineralMultiplier = (asteroid.getMineralMultiplier && 
+                                      typeof asteroid.getMineralMultiplier === 'function') 
+                ? asteroid.getMineralMultiplier() 
+                : 1.0;
+            const quantity = max(1, floor(baseQuantity * mineralMultiplier));
+
+            const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
+            const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
+
+            const cargoDrop = new Cargo(
+                asteroid.pos.x + offsetX, 
+                asteroid.pos.y + offsetY, 
+                "Minerals", 
+                quantity
+            );
+            this.addCargo(cargoDrop);
+            
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
+            }
+            
+            if (STAR_SYSTEM_DEBUG) {
+                console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
+            }
+        }
+
+        // Spawn smaller asteroid on destruction
+        try {
+            const minSplitSize = 16;
+            const splitFactor = 0.6;
+            const newSize = floor(asteroid.size * splitFactor);
+            if (newSize >= minSplitSize) {
+                this.addAsteroid(asteroid.pos.x, asteroid.pos.y, newSize);
+            }
+        } catch (e) {
+            console.error("Error spawning split asteroid:", e);
+        }
+    }
+
+    /**
+     * Updates all planets (rotation and visuals).
+     * @private
+     */
+    _updatePlanets() {
+        for (let i = 0; i < this.planets.length; i++) {
+            const planet = this.planets[i];
+            if (planet && typeof planet.update === 'function') {
+                try {
+                    planet.update();
+                } catch(e) {
+                    console.error("Error updating planet:", e, planet);
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates decorative space objects.
+     * @private
+     */
+    _updateSpaceObjects() {
+        if (!this.spaceObjects || !this.spaceObjects.length) return;
+        
+        this._updateEntities(
+            this.spaceObjects,
+            (so) => so.update(this),
+            (so) => so.destroyed,
+            (so) => this._handleSpaceObjectDestruction(so)
+        );
+    }
+
+    /**
+     * Handles space object destruction and cargo drops.
+     * @param {SpaceObject} so - The destroyed space object
+     * @private
+     */
+    _handleSpaceObjectDestruction(so) {
+        // Notify sabotage missions
+        try {
+            if (this.player && this.player.activeMission) {
+                const am = this.player.activeMission;
+                const isSab = (typeof MISSION_TYPE !== 'undefined' && am && am.type === MISSION_TYPE.SABOTAGE) || (am && am.type === 'Sabotage');
+                if (am && isSab && am.targetObjectId !== undefined && am.targetObjectId === so.id) {
+                    try {
+                        am.progressCount = Math.max(1, am.progressCount || 0);
+                        if (typeof am.complete === 'function') {
+                            am.complete(this.player);
+                            if (this.player.activeMission === am) this.player.activeMission = null;
+                        }
+                    } catch (e) { console.warn('Error completing sabotage mission on object destroy', e); }
+                }
+            }
+        } catch (e) { /* non-fatal */ }
+
+        // Spawn metals cargo
+        try {
+            if (random() < 0.95) {
+                const baseQuantity = max(1, floor(map(so.size, 28, 110, 1, 6)));
+                const quantity = max(1, baseQuantity);
+                const offsetX = random(-so.size * 0.2, so.size * 0.2);
+                const offsetY = random(-so.size * 0.2, so.size * 0.2);
+                const cargoDrop = new Cargo(so.pos.x + offsetX, so.pos.y + offsetY, "Metals", quantity);
+                this.addCargo(cargoDrop);
+                if (typeof uiManager !== 'undefined') {
+                    const name = (so && typeof so.getDisplayName === 'function') ? so.getDisplayName() : (so.type || 'space object');
+                    uiManager.addMessage(`Recovered ${quantity}t Metals from ${name} wreckage`);
+                }
+            }
+        } catch (e) { console.error('Error spawning cargo from spaceObject:', e); }
+    }
+
+    /**
+     * Updates all projectiles.
+     * @private
+     */
+    _updateProjectiles() {
+        const projCount = this.projectiles.length;
+        if (projCount === 0) return;
+        
+        for (let i = projCount - 1; i >= 0; i--) {
+            let proj = this.projectiles[i];
+            proj.update();
+        
+            if (proj.lifespan <= 0 || proj.isOffScreen()) {
+                this.removeProjectile(i);
+            }
+        }
+    }
+
+    /**
+     * Updates cargo and handles player collection.
+     * @private
+     */
+    _updateCargo() {
+        if (!this.cargo || this.cargo.length === 0) return;
+        
+        // Clean up invalid/expired cargo
+        this._updateEntities(
+            this.cargo,
+            (c) => { if (c && typeof c.update === 'function') c.update(); },
+            (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired())
+        );
+        
+        // Check for player collection
+        this.handleCargoCollection();
+    }
+
+    /**
+     * Updates beam weapons.
+     * @private
+     */
+    _updateBeams() {
+        if (!this.updateBeams) return;
+        this.updateBeams();
+    }
+
+    /**
+     * Updates proximity mines.
+     * @private
+     */
+    _updateMines() {
+        if (!this.updateMines) return;
+        this.updateMines();
+    }
+
+    /**
+     * Updates force waves with batch processing for performance.
+     * @private
+     */
+    _updateForceWaves() {
+        for (let i = this.forceWaves.length - 1; i >= 0; i--) {
+            const wave = this.forceWaves[i];
+            
+            // Expand the wave
+            wave.radius += wave.growRate;
+            
+            // First time initialization - find all entities to process
+            if (!wave.entitiesToProcess) {
+                this._initializeForceWaveTargets(wave);
+            }
+            
+            // Process entities in batches
+            this._processForceWaveBatch(wave);
+            
+            // Remove wave if complete
+            if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
+                this._fastRemove(this.forceWaves, i);
+            }
+        }
+    }
+
+    /**
+     * Initializes force wave target list.
+     * @param {Object} wave - The force wave to initialize
+     * @private
+     */
+    _initializeForceWaveTargets(wave) {
+        wave.entitiesToProcess = [];
+        
+        // Add all relevant entities that might be affected
+        if (wave.owner === this.player) {
+            // Player's wave affects enemies and asteroids
+            wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
+        } else {
+            // Enemy's wave affects player only
+            if (this.player) wave.entitiesToProcess.push(this.player);
+        }
+        
+        // Initialize tracking
+        wave.processedCount = 0;
+        wave.processed = {};
+    }
+
+    /**
+     * Processes a batch of entities for a force wave.
+     * @param {Object} wave - The force wave to process
+     * @private
+     */
+    _processForceWaveBatch(wave) {
+        const batchSize = 50; // Process up to 50 entities per frame
+        const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
+        const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
+        
+        for (let j = 0; j < entitiesToProcessNow; j++) {
+            const entity = wave.entitiesToProcess[wave.processedCount + j];
+            
+            // Skip if entity is invalid or already processed
+            if (!entity || !entity.pos || wave.processed[entity.id || entity]) continue;
+            
+            // Fast distance check using squared distance
+            const dx = entity.pos.x - wave.pos.x;
+            const dy = entity.pos.y - wave.pos.y;
+            const distSq = dx * dx + dy * dy;
+            const radiusWithEntity = wave.radius + entity.size / 2;
+            const radiusWithEntitySq = radiusWithEntity * radiusWithEntity;
+
+            // If entity is within wave radius, apply damage
+            if (distSq < radiusWithEntitySq) {
+                this._applyForceWaveDamage(wave, entity, distSq, dx, dy);
+            }
+        }
+        
+        // Update processed count
+        wave.processedCount += entitiesToProcessNow;
+    }
+
+    /**
+     * Applies force wave damage and knockback to an entity.
+     * @param {Object} wave - The force wave
+     * @param {Object} entity - The target entity
+     * @param {number} distSq - Squared distance to entity
+     * @param {number} dx - X distance component
+     * @param {number} dy - Y distance component
+     * @private
+     */
+    _applyForceWaveDamage(wave, entity, distSq, dx, dy) {
+        const maxRadiusAdj = wave.maxRadius + entity.size / 2;
+        const dist = Math.sqrt(distSq);
+        const distRatio = dist / maxRadiusAdj;
+        
+        // Gradual falloff curve for better damage distribution
+        const falloff = Math.pow(1 - distRatio, 0.5);
+        
+        // Ensure meaningful minimum damage (at least 30% of max damage)
+        const minDamage = Math.max(40, Math.floor(wave.damage * 0.3));
+        const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
+
+        // Apply damage and mark as processed
+        entity.takeDamage(dmg, wave.owner, this);
+        wave.processed[entity.id || entity] = true;
+        
+        // Apply knockback force without allocating vectors
+        if (entity.vel) {
+            const invLen = dist > 0 ? 1 / dist : 0;
+            const nx = dx * invLen;
+            const ny = dy * invLen;
+            const forceMagnitude = 15 - 10 * distRatio;
+            entity.vel.x += nx * forceMagnitude;
+            entity.vel.y += ny * forceMagnitude;
+        }
+    }
+
+    /**
+     * Updates harpoon tethers.
+     * @private
+     */
+    _updateHarpoons() {
+        if (!this.harpoons || !this.harpoons.length) return;
+        
+        for (let i = this.harpoons.length - 1; i >= 0; i--) {
+            const h = this.harpoons[i];
+            try { 
+                h.update && h.update(deltaTime || 16); 
+            } catch(e) { 
+                console.error('Harpoon update error', e); 
+                h && h.break && h.break(); 
+            }
+            
+            // Remove if broken or invalid
+            const targetDestroyed = !h || h.broken || !h.owner || !h.target || 
+                (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed());
+            const done = (h && typeof h.isDone === 'function') ? h.isDone() : false;
+            
+            if (targetDestroyed || done) {
+                this._fastRemove(this.harpoons, i);
+            }
+        }
+    }
+
+    /**
+     * Updates explosions with pooling.
+     * @private
+     */
+    _updateExplosions() {
+        this._updateEntities(
+            this.explosions,
+            (exp) => exp.update(),
+            (exp) => exp.isDone(),
+            (exp) => {
+                if (typeof WeaponSystem !== 'undefined' && WeaponSystem.releaseExplosion) {
+                    WeaponSystem.releaseExplosion(exp);
+                }
+            }
+        );
+    }
+
+    /**
+     * Updates nebulae and applies their effects.
+     * @private
+     */
+    _updateNebulae() {
+        for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
+            const nebula = this.nebulae[i];
+            nebula.update();
+            
+            // Apply effects to player
+            if (this.player) {
+                nebula.applyEffects(this.player);
+            }
+            
+            // Apply effects to enemies
+            for (let j = 0, elen = this.enemies.length; j < elen; j++) {
+                nebula.applyEffects(this.enemies[j]);
+            }
+        }
+    }
+
+    /**
+     * Updates cosmic storms and handles spawning/cleanup.
+     * @private
+     */
+    _updateCosmicStorms() {
+        for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
+            const storm = this.cosmicStorms[i];
+            const keepStorm = storm.update();
+            
+            // Update corresponding ambient sound position
+            this._updateStormAmbientSound(storm, i);
+            
+            // Remove the storm if it has dissipated
+            if (!keepStorm) {
+                this._removeStormAmbientSound(storm, i);
+                this._fastRemove(this.cosmicStorms, i);
+                continue;
+            }
+            
+            // Apply effects to entities
+            if (this.player) {
+                storm.applyEffects(this.player);
+            }
+            
+            for (let enemy of this.enemies) {
+                storm.applyEffects(enemy);
+            }
+        }
+        
+        // Spawn new storms occasionally
+        this._trySpawnCosmicStorm();
+    }
+
+    /**
+     * Updates ambient sound position for a storm.
+     * @param {CosmicStorm} storm - The storm
+     * @param {number} index - Storm index
+     * @private
+     */
+    _updateStormAmbientSound(storm, index) {
+        try {
+            if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                const id = `${this.name}_storm_${index}_${storm.type}`;
+                const cfg = ambientSoundManager.activeSources.get(id);
+                if (cfg && storm.pos) cfg.position = storm.pos;
+            }
+        } catch(_) {}
+    }
+
+    /**
+     * Removes ambient sound for a dissipated storm.
+     * @param {CosmicStorm} storm - The storm
+     * @param {number} index - Storm index
+     * @private
+     */
+    _removeStormAmbientSound(storm, index) {
+        try {
+            if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                const id = `${this.name}_storm_${index}_${storm.type}`;
+                ambientSoundManager.removeAmbientSound(id);
+            }
+        } catch(_) {}
+    }
+
+    /**
+     * Attempts to spawn a new cosmic storm.
+     * @private
+     */
+    _trySpawnCosmicStorm() {
+        if (random() < 0.0002 && this.cosmicStorms.length < 1) {
+            const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
+            const angle = random(TWO_PI);
+            const distance = this.despawnRadius * 0.15;
+            
+            this.cosmicStorms.push(new CosmicStorm(
+                this.player.pos.x + cos(angle) * distance,
+                this.player.pos.y + sin(angle) * distance,
+                random(600, 1200),
+                stormType
+            ));
+            
+            if (STAR_SYSTEM_DEBUG) console.log(`New ${stormType} storm spawned naturally`);
+
+            // Create ambient sound for the newly spawned storm
+            this._createStormAmbientSound(this.cosmicStorms.length - 1, stormType);
+        }
+    }
+
+    /**
+     * Creates ambient sound for a new storm.
+     * @param {number} index - Storm index
+     * @param {string} stormType - Type of storm
+     * @private
+     */
+    _createStormAmbientSound(index, stormType) {
+        try {
+            if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
+                const st = this.cosmicStorms[index];
+                const profile = AmbientSoundManager.getSoundProfile('storm', { type: stormType });
+                const id = `${this.name}_storm_${index}_${stormType}`;
+                const snd = ambientSoundManager.createAmbientSound(id, profile);
+                if (snd && st?.pos) snd.position = st.pos.copy();
+            }
+        } catch(_) {}
+    }
+
+    /**
+     * Updates spawn timers and triggers spawning.
+     * @private
+     */
+    _updateSpawnTimers() {
+        this.enemySpawnTimer += deltaTime; 
+        if (this.enemySpawnTimer >= this.enemySpawnInterval) { 
+            this.trySpawnNPC();
+            this.enemySpawnTimer = 0; 
+        }
+
+        this.asteroidSpawnTimer += deltaTime; 
+        if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
+            this.trySpawnAsteroid();
+            this.asteroidSpawnTimer = 0; 
+        }
+    }
+
+    /**
+     * ==========================================================================
+     * WEAPON SYSTEM UPDATES
+     * ==========================================================================
+     */
 
     updateBeams() {
         // Remove expired beams (e.g., beams with .lifespan <= 0)
@@ -1820,7 +2180,18 @@ try {
     }
 
     /**
-     * Calculates collision impulse for two entities based on their masses
+     * ==========================================================================
+     * COLLISION DETECTION & PHYSICS
+     * ==========================================================================
+     */
+
+    /**
+     * Calculates collision impulse for two entities based on their masses.
+     * 
+     * @param {Object} entity1 - First entity (must have size and vel properties)
+     * @param {Object} entity2 - Second entity (must have size and vel properties)
+     * @param {number} normalizedX - Normalized X component of collision vector
+     * @param {number} normalizedY - Normalized Y component of collision vector
      * @private
      */
     _calculateCollisionImpulse(entity1, entity2, normalizedX, normalizedY) {
@@ -2489,9 +2860,15 @@ checkProjectileCollisions() {
         return false;
     }
 
+    /**
+     * ==========================================================================
+     * RENDERING & DRAWING
+     * ==========================================================================
+     */
+
     /** 
-     * Draws background stars using the selected rendering mode.
-     * Supports three modes: 'progressive' (default), 'buffered', and 'legacy'.
+     * Draws background stars using progressive tile-based rendering.
+     * Supports worker-based offscreen generation for optimal performance.
      */
     drawBackground() {
         // Clear background with dark space color
@@ -3320,7 +3697,30 @@ checkProjectileCollisions() {
         noStroke();
     }
 
-    /** Draws all system contents. */
+    /**
+     * Draws all system contents with optimized visibility culling.
+     * 
+     * Rendering order (back to front):
+     * 1. Background stars (progressive tile-based rendering)
+     * 2. Jump zone marker
+     * 3. Nebulae
+     * 4. Cosmic storms
+     * 5. Stations (main and secret)
+     * 6. Planets
+     * 7. Asteroids
+     * 8. Decorative space objects
+     * 9. Cargo
+     * 10. Enemies
+     * 11. Projectiles
+     * 12. Harpoons
+     * 13. Beams
+     * 14. Mines
+     * 15. Force waves
+     * 16. Explosions
+     * 17. Player (always on top)
+     * 
+     * Uses screen-space visibility culling for performance.
+     */
     draw() {
         if (!this.player || !this.player.pos) return;
 
@@ -3589,7 +3989,18 @@ checkProjectileCollisions() {
     }
 
     /**
-     * Serialize an array of entities with fallback handling
+     * ==========================================================================
+     * SERIALIZATION (SAVE/LOAD)
+     * ==========================================================================
+     */
+
+    /**
+     * Serializes an array of entities with fallback handling.
+     * Attempts to use entity's toJSON method, falls back to custom serializer.
+     * 
+     * @param {Array} array - Array of entities to serialize
+     * @param {Function} [fallbackSerializer] - Optional custom serializer function
+     * @returns {Array} Array of serialized entities
      * @private
      */
     _serializeEntityArray(array, fallbackSerializer = null) {
@@ -3605,6 +4016,19 @@ checkProjectileCollisions() {
         });
     }
 
+    /**
+     * Serializes the system to JSON for saving.
+     * 
+     * Saved data includes:
+     * - System properties (name, economy, tech level, security, etc.)
+     * - Static elements (planets, station, jump zone)
+     * - Dynamic entities (enemies, projectiles, asteroids, cargo)
+     * - Wanted status and police alert state
+     * - Nebulae and cosmic storms
+     * - Space objects (satellites, telescopes, etc.)
+     * 
+     * @returns {Object} JSON-serializable object representing this system
+     */
     toJSON() {
         return {
             name: this.name,
@@ -3689,7 +4113,13 @@ checkProjectileCollisions() {
     }
 
     /**
-     * Deserialize entity array with type checking
+     * Deserializes entity array with type checking.
+     * Attempts to use EntityClass.fromJSON if available, otherwise uses fallback.
+     * 
+     * @param {Array} dataArray - Array of serialized entity data
+     * @param {Function} EntityClass - The entity class constructor
+     * @param {Function} [fallbackDeserializer] - Optional custom deserializer
+     * @returns {Array} Array of deserialized entities
      * @private
      */
     static _deserializeEntityArray(dataArray, EntityClass, fallbackDeserializer = null) {
@@ -3713,6 +4143,17 @@ checkProjectileCollisions() {
         return result;
     }
 
+    /**
+     * Deserializes a StarSystem from JSON data.
+     * 
+     * This static factory method reconstructs a complete StarSystem from saved data,
+     * including all static elements, dynamic entities, and state information.
+     * After deserialization, call relinkReferences(player) to restore object references.
+     * 
+     * @param {Object} data - Serialized system data from toJSON()
+     * @returns {StarSystem} Reconstructed StarSystem instance
+     * @static
+     */
     static fromJSON(data) {
         const sys = new StarSystem(
             data.name,
@@ -4074,10 +4515,12 @@ checkProjectileCollisions() {
     }
 
     /**
-     * Checks if an entity should be despawned based on distance from player
+     * Checks if an entity should be despawned based on distance from player.
+     * Uses squared distance for performance (avoids sqrt).
+     * 
      * @param {Object} entity - The entity to check (must have pos property)
      * @param {number} [factorMultiplier=1.1] - Optional multiplier for despawn radius
-     * @return {boolean} Whether the entity should be despawned
+     * @returns {boolean} Whether the entity should be despawned
      */
     shouldDespawnEntity(entity, factorMultiplier = 1.1) {
         if (!this.player || !entity || !entity.pos) return false;
@@ -4091,6 +4534,9 @@ checkProjectileCollisions() {
     /**
      * Fast array element removal - swap with last element then pop.
      * Much faster than splice() for large arrays (O(1) vs O(n)).
+     * 
+     * WARNING: This does not preserve array order!
+     * 
      * @param {Array} array - The array to remove from
      * @param {number} index - The index to remove
      * @private
@@ -4215,7 +4661,13 @@ checkProjectileCollisions() {
     }
     
     /**
-     * Adds an enemy to the system with proper references
+     * Adds an enemy to the system with proper references.
+     * 
+     * Also handles:
+     * - Setting bidirectional enemy <-> system reference
+     * - Playing alien spawn sound for Thargoids
+     * - Adding UI message for alien detection
+     * 
      * @param {Enemy} enemy - The enemy to add
      * @returns {boolean} Whether enemy was successfully added
      */
