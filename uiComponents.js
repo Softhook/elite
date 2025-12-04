@@ -430,28 +430,36 @@ class UIComponents {
         const centerY = panelY + panelH / 2;
         
         push();
-        // Clip to panel area
         const ctx = drawingContext;
         ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(panelX, panelY, panelW, panelH, 10);
-        ctx.clip();
-        
-        // Set low opacity for background effect
-        drawingContext.globalAlpha = 0.15;
-        
-        // Determine if we should show space object or station
+
+        // Draw the docked object across the full canvas so its edges reach screen bounds
+        const drawCenterX = width / 2;
+        const drawCenterY = height / 2;
+        const drawW = width;
+        const drawH = height;
+
+        // Slightly stronger alpha so the rotation is visible in the border
+        drawingContext.globalAlpha = 0.25;
+
         const isSpaceObjectState = currentState.includes('SPACE_OBJECT') || 
             currentState === 'DOCKED_SPACE_OBJECT' ||
             (currentState === 'VIEWING_RECORD' && returnFromRecordState === 'DOCKED_SPACE_OBJECT');
-        
+
         if (isSpaceObjectState && spaceObject) {
-            UIComponents._drawScaledObject(spaceObject, centerX, centerY, panelW, panelH, 0.7);
+            UIComponents._drawScaledObject(spaceObject, drawCenterX, drawCenterY, drawW, drawH, 0.9);
         } else if (station) {
-            UIComponents._drawScaledObject(station, centerX, centerY, panelW, panelH, 0.85, 1.5);
+            UIComponents._drawScaledObject(station, drawCenterX, drawCenterY, drawW, drawH, 0.85, 1.5);
         }
-        
-        drawingContext.globalAlpha = 1.0;
+
+        //Mask the center by filling the panel rounded-rect
+        drawingContext.globalAlpha = 0.9;
+        noStroke();
+        const bg = Array.isArray(STANDARD_PANEL_BG) ? STANDARD_PANEL_BG : [20, 20, 40, 220];
+        // Fill the panel area (rounded corners) to hide the object inside the panel bounds
+        fill(bg[0], bg[1], bg[2], 255);
+        rect(panelX, panelY, panelW, panelH, 10);
+
         ctx.restore();
         pop();
     }
