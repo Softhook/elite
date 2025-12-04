@@ -2097,7 +2097,23 @@ handleInput() {
 
         const planets = this.currentSystem.planets || [];
         if (!planets || planets.length === 0) {
+            console.error(`Autopilot error: No planets in ${this.currentSystem.name}. staticElementsInitialized: ${this.currentSystem.staticElementsInitialized}`);
             if (uiManager) uiManager.addMessage('No planets in this system');
+            
+            // Attempt to reinitialize static elements if they're missing
+            if (this.currentSystem && typeof this.currentSystem.initStaticElements === 'function') {
+                console.log('Attempting to reinitialize system static elements...');
+                try {
+                    this.currentSystem.initStaticElements();
+                    if (this.currentSystem.planets && this.currentSystem.planets.length > 0) {
+                        console.log(`Successfully reinitialized ${this.currentSystem.planets.length} planets`);
+                        // Retry the autopilot command
+                        return this.cycleAutopilotPlanet();
+                    }
+                } catch(e) {
+                    console.error('Failed to reinitialize system:', e);
+                }
+            }
             return;
         }
 
@@ -2214,6 +2230,20 @@ handleInput() {
             const idx = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
             const planets = this.currentSystem.planets || [];
             if (!planets || planets.length === 0 || idx < 0 || idx >= planets.length) {
+                console.error(`Autopilot planet target invalid. Planets: ${planets?.length || 0}, Index: ${idx}, staticElementsInitialized: ${this.currentSystem?.staticElementsInitialized}`);
+                
+                // Attempt to reinitialize if planets are missing
+                if ((!planets || planets.length === 0) && this.currentSystem && typeof this.currentSystem.initStaticElements === 'function') {
+                    console.log('Attempting to reinitialize system for autopilot...');
+                    try {
+                        this.currentSystem.initStaticElements();
+                        // Don't disable autopilot yet, let it retry on next update
+                        return;
+                    } catch(e) {
+                        console.error('Failed to reinitialize:', e);
+                    }
+                }
+                
                 this.disableAutopilot();
                 if (uiManager) uiManager.addMessage('Autopilot disengaged: No valid planet target');
                 return;

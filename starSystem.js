@@ -464,10 +464,17 @@ class StarSystem {
      * @param {number} [sessionSeed] - Optional seed component from the current game session
      */
     initStaticElements(sessionSeed) {
-        // Don't skip initialization if already done
-        if (this.staticElementsInitialized) {
-            console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized)`);
+        // Check if initialization is truly complete by verifying planets exist
+        // The flag alone isn't enough since planets aren't persisted in save data
+        if (this.staticElementsInitialized && this.planets && this.planets.length > 0) {
+            console.log(`      >>> ${this.name}: initStaticElements() skipped (already initialized with ${this.planets.length} planets)`);
             return;
+        }
+
+        // If flag is set but planets are missing, force reinitialize
+        if (this.staticElementsInitialized && (!this.planets || this.planets.length === 0)) {
+            console.warn(`      >>> ${this.name}: staticElementsInitialized flag was true but planets array is empty! Forcing reinitialization...`);
+            this.staticElementsInitialized = false;
         }
 
         const seedToUse = sessionSeed ? this.systemIndex + sessionSeed : this.systemIndex;
