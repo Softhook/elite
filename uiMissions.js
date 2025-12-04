@@ -86,14 +86,14 @@ class UIMissions {
                 // Bounties: keep pirate/police as orange, aliens explicit green
                 case MISSION_TYPE.BOUNTY_PIRATE:
                 case MISSION_TYPE.BOUNTY_POLICE:
-                    typeColor = [255, 200, 100];
+                    typeColor = [255, 120, 100];
                     break;
                 case MISSION_TYPE.BOUNTY_ALIEN:
                     typeColor = [100, 200, 100];
                     break;
                 // Assassination -> red
                 case MISSION_TYPE.ASSASSINATION:
-                    typeColor = [220, 60, 60];
+                    typeColor = [255, 0, 0];
                     break;
                 // Sabotage -> yellow
                 case MISSION_TYPE.SABOTAGE:
