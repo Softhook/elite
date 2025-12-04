@@ -120,9 +120,7 @@ if (STARFIELD_WORKER_ENABLED) {
                 return;
             }
 
-            // Worker only returns tile ImageBitmaps now; buffered responses removed
-
-            // Otherwise handle tile response
+            // Process tile ImageBitmap response from worker
             const parts = String(key).split(',');
             if (parts.length !== 2) {
                 try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
@@ -268,8 +266,7 @@ class StarSystem {
         this._lastPlayerAsteroidBumpSoundTime = 0;
         this._lastPlayerShipBumpSoundTime = 0;
 
-        // Starfield: use progressive tile-based rendering only (legacy buffer removed)
-        // Progressive rendering starfield system
+        // Progressive tile-based starfield rendering with LRU cache
         this._starfieldTileSize = STARFIELD_TILE_SIZE;
         this._starfieldTiles = new Map(); // Map of "x,y" -> { buffer, lastUsed }
         this._starfieldTileQueue = []; // Queue of tiles to generate
@@ -993,159 +990,172 @@ try {
     }
 
 
+    /**
+     * Select ship type based on economy and role
+     * @private
+     */
+    _selectShipForEconomy(economy, security) {
+        const econ = (economy || "").toLowerCase();
+        
+        // Economy-specific spawn logic
+        const economyHandlers = {
+            military: () => this._selectMilitaryShip(),
+            alien: () => this._selectAlienShip(),
+            offworld: () => this._selectOffworldShip(),
+            separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS),
+            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS)
+        };
+        
+        const handler = economyHandlers[econ];
+        if (handler) {
+            return handler();
+        }
+        
+        // Standard spawn logic based on security
+        return this._selectStandardShip(security);
+    }
+    
+    /**
+     * Helper methods for ship selection by economy type
+     * @private
+     */
+    _selectMilitaryShip() {
+        const rand = random();
+        if (rand < 0.60 && MILITARY_SHIPS.length > 0) {
+            return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS) };
+        } else if (rand < 0.75 && HAULER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        } else if (rand < 0.85 && PIRATE_SHIPS.length > 0) {
+            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
+        } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) {
+            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
+        } else {
+            return random() < 0.6 && TRANSPORT_SHIPS.length > 0
+                ? { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) }
+                : { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
+        }
+    }
+    
+    _selectAlienShip() {
+        if (random() < 0.8 && ALIEN_SHIPS.length > 0) {
+            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
+        }
+        
+        const alternatives = [];
+        if (PIRATE_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.PIRATE, ships: PIRATE_SHIPS });
+        if (HAULER_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
+        
+        if (alternatives.length > 0) {
+            const selected = random(alternatives);
+            return { role: selected.role, ship: random(selected.ships) };
+        }
+        return { role: AI_ROLE.HAULER, ship: "Krait" };
+    }
+    
+    _selectOffworldShip() {
+        const rand = random();
+        if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(EXPLORER_SHIPS) };
+        } else if (rand < 0.50 && COMBAT_SHIPS.length > 0) {
+            return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+        } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
+            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
+        }
+        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
+    }
+    
+    _selectFactionShip(primaryFaction, secondaryFaction) {
+        const rand = random();
+        if (rand < 0.60 && primaryFaction.length > 0) {
+            return { role: AI_ROLE.COMBAT, ship: random(primaryFaction) };
+        } else if (rand < 0.75 && HAULER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) {
+            return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
+        }
+        return { 
+            role: AI_ROLE.COMBAT, 
+            ship: random(secondaryFaction.length > 0 ? secondaryFaction : COMBAT_SHIPS) 
+        };
+    }
+    
+    _selectStandardShip(security) {
+        const probs = this.getEnemyRoleProbabilities();
+        let r = random();
+        let chosenRole;
+        
+        if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
+        else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
+        else chosenRole = AI_ROLE.HAULER;
+
+        const roleToShip = {
+            [AI_ROLE.PIRATE]: () => random(PIRATE_SHIPS.length > 0 ? PIRATE_SHIPS : ["Krait"]),
+            [AI_ROLE.POLICE]: () => random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]),
+            [AI_ROLE.HAULER]: () => random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"])
+        };
+        
+        let chosenShip = roleToShip[chosenRole] ? roleToShip[chosenRole]() : "Krait";
+        
+        // Optional transport override
+        if (random() < 0.25 && TRANSPORT_SHIPS.length > 0) {
+            chosenRole = AI_ROLE.TRANSPORT;
+            chosenShip = random(TRANSPORT_SHIPS);
+        }
+        
+        return { role: chosenRole, ship: chosenShip };
+    }
+    
+    /**
+     * Spawn guards for large haulers
+     * @private
+     */
+    _spawnGuardsForHauler(hauler) {
+        const slotsLeft = this.maxEnemies - this.enemies.length;
+        if (slotsLeft <= 0) return;
+        
+        const defaultGuardShips = ["Viper", "GladiusFighter"];
+        const numGuards = hauler.size > 100 ? min(2, slotsLeft) : (random() < 0.6 ? 1 : 0);
+        
+        for (let g = 0; g < numGuards; g++) {
+            let guardShipTypeName;
+            if (GUARD_SHIPS.length > 0) guardShipTypeName = random(GUARD_SHIPS);
+            else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
+            else guardShipTypeName = random(defaultGuardShips);
+            
+            if (!guardShipTypeName) guardShipTypeName = "Viper";
+            
+            const offsetAngle = TWO_PI * (g / numGuards);
+            const spawnDist = hauler.size/2 + 30;
+            const guardX = hauler.pos.x + cos(offsetAngle) * spawnDist;
+            const guardY = hauler.pos.y + sin(offsetAngle) * spawnDist;
+            
+            let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
+            guardNPC.calculateRadianProperties();
+            guardNPC.initializeColors();
+            guardNPC.principal = hauler;
+            guardNPC.changeState(AI_STATE.GUARDING, { principal: hauler });
+            
+            this.addEnemy(guardNPC);
+            HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for hauler ${hauler.shipTypeName}`);
+        }
+    }
+
     /** Attempts to spawn an NPC ship. Calls init methods after creation. */
     trySpawnNPC() {
         if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
 
-        let chosenRole, chosenShipTypeName;
-        const econ = (this.economyType || "").toLowerCase();
-        const sec = (this.securityLevel || "").toLowerCase();
+        // Select ship based on economy
+        let selection = this._selectShipForEconomy(this.economyType, this.securityLevel);
+        let chosenRole = selection.role;
+        let chosenShipTypeName = selection.ship;
 
-        // --- Special cases for economy ---
-        if (econ === "military") {
-            const rand = random();
-            if (rand < 0.60 && MILITARY_SHIPS.length > 0) { // 60% military
-                chosenRole = AI_ROLE.COMBAT;
-                chosenShipTypeName = random(MILITARY_SHIPS);
-            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
-                chosenRole = AI_ROLE.HAULER;
-                chosenShipTypeName = random(HAULER_SHIPS);
-            } else if (rand < 0.85 && PIRATE_SHIPS.length > 0) { // 10% pirates
-                chosenRole = AI_ROLE.PIRATE;
-                chosenShipTypeName = random(PIRATE_SHIPS);
-            } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) { // 7% aliens
-                chosenRole = AI_ROLE.ALIEN;
-                chosenShipTypeName = random(ALIEN_SHIPS);
-            } else { // 8% local transports (non-police)
-                // Police are no longer launched based on system/economy type.
-                // Use non-police transport/hauler options here; policing is determined
-                // centrally by security level via getEnemyRoleProbabilities().
-                if (random() < 0.6 && TRANSPORT_SHIPS.length > 0) {
-                    chosenRole = AI_ROLE.TRANSPORT;
-                    chosenShipTypeName = random(TRANSPORT_SHIPS);
-                } else if (HAULER_SHIPS.length > 0) {
-                    chosenRole = AI_ROLE.HAULER;
-                    chosenShipTypeName = random(HAULER_SHIPS);
-                } else {
-                    chosenRole = AI_ROLE.COMBAT;
-                    chosenShipTypeName = random(MILITARY_SHIPS.length > 0 ? MILITARY_SHIPS : COMBAT_SHIPS);
-                }
-            }
-
-        } else if (econ === "alien") {
-            // Mostly alien ships
-            if (random() < 0.8 && ALIEN_SHIPS.length > 0) { // 80% chance for an Alien role ship
-                chosenRole = AI_ROLE.ALIEN; 
-                chosenShipTypeName = random(ALIEN_SHIPS);
-            } else { // 20% chance for a different role
-                const rolesToConsider = [];
-                if (PIRATE_SHIPS.length > 0) {
-                    rolesToConsider.push({ role: AI_ROLE.PIRATE, ships: PIRATE_SHIPS });
-                }
-                if (HAULER_SHIPS.length > 0) {
-                    rolesToConsider.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
-                }
-                // Police removed from alien-branch ad-hoc pools; police spawning is
-                // governed by system security level instead of economy type.
-
-                if (rolesToConsider.length > 0) {
-                    const selectedPool = random(rolesToConsider);
-                    chosenRole = selectedPool.role;
-                    chosenShipTypeName = random(selectedPool.ships);
-                } else {
-                    chosenRole = AI_ROLE.HAULER;
-                    chosenShipTypeName = "Krait"; 
-                }
-            }
-
-        } else if (econ === "offworld") {
-            const rand = random();
-            if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.HAULER; 
-                chosenShipTypeName = random(EXPLORER_SHIPS);
-            } else if (rand < 0.50 && COMBAT_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.COMBAT; 
-                chosenShipTypeName = random(COMBAT_SHIPS);
-            } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.PIRATE;
-                chosenShipTypeName = random(PIRATE_SHIPS);
-            } else if (HAULER_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.HAULER;
-                chosenShipTypeName = random(HAULER_SHIPS);
-            } else { 
-                 chosenRole = AI_ROLE.HAULER;
-                 chosenShipTypeName = "Krait";
-            }
-
-        } else if (econ === "separatist") {
-            const rand = random();
-            if (rand < 0.60 && SEPARATIST_SHIPS.length > 0) { // 60% separatist combat
-                chosenRole = AI_ROLE.COMBAT;
-                chosenShipTypeName = random(SEPARATIST_SHIPS);
-            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
-                chosenRole = AI_ROLE.HAULER;
-                chosenShipTypeName = random(HAULER_SHIPS);
-            } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) { // 10% transports
-                chosenRole = AI_ROLE.TRANSPORT;
-                chosenShipTypeName = random(TRANSPORT_SHIPS);
-            } else { // 15% imperial combat (cross-faction)
-                chosenRole = AI_ROLE.COMBAT;
-                chosenShipTypeName = random(IMPERIAL_SHIPS.length > 0 ? IMPERIAL_SHIPS : COMBAT_SHIPS);
-            }
-        } else if (econ === "imperial") {
-            const rand = random();
-            if (rand < 0.60 && IMPERIAL_SHIPS.length > 0) { // 60% imperial combat
-                chosenRole = AI_ROLE.COMBAT;
-                chosenShipTypeName = random(IMPERIAL_SHIPS);
-            } else if (rand < 0.75 && HAULER_SHIPS.length > 0) { // 15% haulers
-                chosenRole = AI_ROLE.HAULER;
-                chosenShipTypeName = random(HAULER_SHIPS);
-            } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) { // 10% transports
-                chosenRole = AI_ROLE.TRANSPORT;
-                chosenShipTypeName = random(TRANSPORT_SHIPS);
-            } else { // 15% separatist combat (cross-faction)
-                chosenRole = AI_ROLE.COMBAT;
-                chosenShipTypeName = random(SEPARATIST_SHIPS.length > 0 ? SEPARATIST_SHIPS : COMBAT_SHIPS);
-            }
-
-        } else {
-            // --- Standard spawn logic based on security ---
-            const probs = this.getEnemyRoleProbabilities();
-            let r = random();
-            if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
-            else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
-            else chosenRole = AI_ROLE.HAULER;
-
-            switch (chosenRole) {
-                case AI_ROLE.PIRATE:
-                    chosenShipTypeName = random(PIRATE_SHIPS.length > 0 ? PIRATE_SHIPS : ["Krait"]);
-                    break;
-                case AI_ROLE.POLICE:
-                    chosenShipTypeName = random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]);
-                    break;
-                case AI_ROLE.HAULER:
-                    chosenShipTypeName = random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"]);
-                    break;
-                default:
-                    chosenShipTypeName = "Krait"; // Fallback
-                    if (!chosenRole) chosenRole = AI_ROLE.HAULER; // Ensure role if not set
-            }
-
-            // --- Optional: Transport spawn branch ---
-            if (random() < 0.25 && TRANSPORT_SHIPS.length > 0) {
-                chosenRole = AI_ROLE.TRANSPORT;
-                chosenShipTypeName = random(TRANSPORT_SHIPS);
-            }
-        }
-
+        
         // --- Thargoid override only for non-alien systems ---
-        if (econ !== "alien") {
-            const specificAlienChance = 0.01; 
-            if (random() < specificAlienChance && ALIEN_SHIPS.includes("Thargoid")) {
+        if (this.economyType !== "alien" && this.economyType !== "Alien") {
+            if (random() < 0.01 && ALIEN_SHIPS.includes("Thargoid")) {
                 chosenShipTypeName = "Thargoid";
-                chosenRole = AI_ROLE.ALIEN; 
+                chosenRole = AI_ROLE.ALIEN;
                 if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
-                // Sound is played centrally in addEnemy() when an Alien is added
             }
         }
         
@@ -1155,85 +1165,30 @@ try {
             if (!chosenRole) chosenRole = AI_ROLE.HAULER;
         }
 
-
         // --- Spawn the ship ---
         let angle = random(TWO_PI);
         let spawnDist = this._getDiagonalDistance() + random(800, 2000);
-        //let spawnDist = this._getDiagonalDistance() + random(150, 400);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
+        
         try {
             let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
-            // newEnemy.currentSystem = this; // addEnemy will set this
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
             
-            this.addEnemy(newEnemy); // Add the primary NPC
+            this.addEnemy(newEnemy);
 
-
-
-// --- START: GUARD SPAWN LOGIC FOR LARGE HAULERS ---
-if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
-    const slotsLeft = this.maxEnemies - this.enemies.length;
-    if (newEnemy.size > 100 && slotsLeft > 0) {
-        // Spawn two guards for very large haulers
-        const numGuards = min(2, slotsLeft);
-        for (let g = 0; g < numGuards; g++) {
-            let guardShipTypeName;
-            const defaultGuardShips = ["Viper", "GladiusFighter"];
-            if (GUARD_SHIPS.length > 0)        guardShipTypeName = random(GUARD_SHIPS);
-            else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
-            else                                 guardShipTypeName = random(defaultGuardShips);
-
-            if (!guardShipTypeName) guardShipTypeName = "Viper";
-
-            // Offset each guard at a different angle around the hauler
-            const offsetAngle = TWO_PI * (g / numGuards);
-            const spawnDist   = newEnemy.size/2 + 30;
-            const guardX      = newEnemy.pos.x + cos(offsetAngle) * spawnDist;
-            const guardY      = newEnemy.pos.y + sin(offsetAngle) * spawnDist;
-
-            let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
-            guardNPC.calculateRadianProperties();
-            guardNPC.initializeColors();
-            guardNPC.principal = newEnemy;
-            guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
-
-            this.addEnemy(guardNPC);
-            HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
-        }
-    }
-    else if (newEnemy.size <= 100 && slotsLeft > 0 && random() < 0.6) {
-        // 60% chance to spawn a single guard for medium haulers
-        let guardShipTypeName;
-        const defaultGuardShips = ["Viper", "GladiusFighter"];
-        if (GUARD_SHIPS.length > 0)        guardShipTypeName = random(GUARD_SHIPS);
-        else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
-        else                                 guardShipTypeName = random(defaultGuardShips);
-
-        if (!guardShipTypeName) guardShipTypeName = "Viper";
-
-        const guardX = newEnemy.pos.x - (newEnemy.size/2 + 30);
-        const guardY = newEnemy.pos.y;
-
-        let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
-        guardNPC.calculateRadianProperties();
-        guardNPC.initializeColors();
-        guardNPC.principal = newEnemy;
-        guardNPC.changeState(AI_STATE.GUARDING, { principal: newEnemy });
-
-        this.addEnemy(guardNPC);
-        HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for large hauler ${newEnemy.shipTypeName}`);
-    }
-}
-// --- END: GUARD SPAWN LOGIC ---
-
+            // Spawn guards for large haulers
+            if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
+                this._spawnGuardsForHauler(newEnemy);
+            }
             
+            // Initialize police pursuit if player is wanted
             if (newEnemy.role === AI_ROLE.POLICE && 
                 ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
                 
                 newEnemy.target = this.player;
-                newEnemy.changeState(AI_STATE.APPROACHING); // Use changeState for consistency
+                newEnemy.changeState(AI_STATE.APPROACHING);
                                 
                 if (newEnemy.pos && this.player.pos) {
                     let angleToPlayer = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
@@ -1275,6 +1230,36 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         return asteroid;
 }
 
+    /**
+     * Generic entity update helper - reduces code duplication
+     * @private
+     */
+    _updateEntities(entityArray, updateFn, shouldRemove, onDestroyFn = null) {
+        const count = entityArray.length;
+        if (count === 0) return;
+        
+        for (let i = count - 1; i >= 0; i--) {
+            const entity = entityArray[i];
+            if (!entity) {
+                this._fastRemove(entityArray, i);
+                continue;
+            }
+            
+            try { 
+                updateFn(entity); 
+            } catch(e) { 
+                console.error(`Error updating entity:`, e); 
+            }
+            
+            if (shouldRemove(entity)) {
+                if (onDestroyFn) {
+                    try { onDestroyFn(entity, i); } catch(e) { console.error("Error in onDestroy callback:", e); }
+                }
+                this._fastRemove(entityArray, i);
+            }
+        }
+    }
+
     /** 
      * Updates all system entities.
      * OPTIMIZED: Uses fast array removal and reduces object allocations.
@@ -1308,90 +1293,63 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             bounds.top = -ty - 100;
             bounds.bottom = -ty + height + 100;
 
-            // Update Enemies - OPTIMIZED with fast removal and cached length
-            const enemyCount = this.enemies.length;
-            if (enemyCount > 0) {
-                for (let i = enemyCount - 1; i >= 0; i--) {
-                    const enemy = this.enemies[i];
-                    if (!enemy) {
-                        this._fastRemove(this.enemies, i);
-                        continue;
-                    }
-                    
-                    try { enemy.update(this); } catch(e) { console.error("Err updating Enemy:",e); }
-                    
-                    if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
-                        this._fastRemove(this.enemies, i);
-                    }
-                }
-            }
+            // Update Enemies using unified helper
+            this._updateEntities(
+                this.enemies,
+                (enemy) => enemy.update(this),
+                (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)
+            );
 
-            // Update Asteroids - OPTIMIZED with fast removal and cached length
-            const asteroidCount = this.asteroids.length;
-            if (asteroidCount > 0) {
-                for (let i = asteroidCount - 1; i >= 0; i--) {
-                    const asteroid = this.asteroids[i];
-                if (!asteroid) {
-                    this._fastRemove(this.asteroids, i);
-                    continue;
-                }
-                
-                try { asteroid.update(); } catch(e) { console.error("Err updating Asteroid:",e); }
+            // Update Asteroids with destruction handling
+            this._updateEntities(
+                this.asteroids,
+                (asteroid) => asteroid.update(),
+                (asteroid) => asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2),
+                (asteroid) => {
+                    if (asteroid.isDestroyed()) {
+                        // Spawn Mineral Cargo on Asteroid Destruction
+                        if (random() < 0.85) {
+                            const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
+                            const mineralMultiplier = (asteroid.getMineralMultiplier && 
+                                                      typeof asteroid.getMineralMultiplier === 'function') 
+                                ? asteroid.getMineralMultiplier() 
+                                : 1.0;
+                            const quantity = max(1, floor(baseQuantity * mineralMultiplier));
 
-                if (asteroid.isDestroyed()) {
-                    // Spawn Mineral Cargo on Asteroid Destruction
-                    if (random() < 0.85) {
-                        const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
-                        const mineralMultiplier = (asteroid.getMineralMultiplier && 
-                                                  typeof asteroid.getMineralMultiplier === 'function') 
-                            ? asteroid.getMineralMultiplier() 
-                            : 1.0;
-                        const quantity = max(1, floor(baseQuantity * mineralMultiplier));
+                            const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
+                            const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
 
-                        const offsetX = random(-asteroid.size * 0.2, asteroid.size * 0.2);
-                        const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
-
-                        const cargoDrop = new Cargo(
-                            asteroid.pos.x + offsetX, 
-                            asteroid.pos.y + offsetY, 
-                            "Minerals", 
-                            quantity
-                        );
-                        this.addCargo(cargoDrop);
-                        
-                        // Notify player of mineral collection
-                        if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
+                            const cargoDrop = new Cargo(
+                                asteroid.pos.x + offsetX, 
+                                asteroid.pos.y + offsetY, 
+                                "Minerals", 
+                                quantity
+                            );
+                            this.addCargo(cargoDrop);
+                            
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
+                            }
+                            
+                            if (STAR_SYSTEM_DEBUG) {
+                                console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
+                            }
                         }
-                        
-                        if (STAR_SYSTEM_DEBUG) {
-                            console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
+
+                        // Spawn smaller asteroid on destruction
+                        try {
+                            const minSplitSize = 16;
+                            const splitFactor = 0.6;
+                            const newSize = floor(asteroid.size * splitFactor);
+                            if (newSize >= minSplitSize) {
+                                this.addAsteroid(asteroid.pos.x, asteroid.pos.y, newSize);
+                            }
+                        } catch (e) {
+                            console.error("Error spawning split asteroid:", e);
                         }
                     }
-
-                    // On destruction, spawn a smaller asteroid in-place to simulate gradual whittling
-                    // Only split if the asteroid was above a minimum size threshold
-                    try {
-                        const minSplitSize = 16; // don't create too tiny fragments
-                        const splitFactor = 0.6; // 60% of the original size
-                        const newSize = floor(asteroid.size * splitFactor);
-                        if (newSize >= minSplitSize) {
-                            // Respect maxTotalAsteroids via addAsteroid()
-                            this.addAsteroid(asteroid.pos.x, asteroid.pos.y, newSize);
-                        }
-                    } catch (e) {
-                        console.error("Error spawning split asteroid:", e);
-                    }
-
-                    this._fastRemove(this.asteroids, i);
-                    continue;
                 }
-
-                if (this.shouldDespawnEntity(asteroid, 1.2)) {
-                    this._fastRemove(this.asteroids, i);
-                }
-                }
-            }
+            );
 
             // --- Update Planets for rotation ---
             for (let i = 0; i < this.planets.length; i++) {
@@ -1406,31 +1364,31 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
-            // Update decorative space objects (satellites / telescopes)
+            // Update decorative space objects
             if (this.spaceObjects && this.spaceObjects.length) {
-                for (let i = this.spaceObjects.length - 1; i >= 0; i--) {
-                    const so = this.spaceObjects[i];
-                    if (!so) { this._fastRemove(this.spaceObjects, i); continue; }
-                    try { so.update(this); } catch (e) { console.error('SpaceObject.update error', e); }
-                    // If destroyed, spawn a small metals cargo and remove
-                    if (so.destroyed) {
-                        // Notify active sabotage missions that are targeting this object
+                this._updateEntities(
+                    this.spaceObjects,
+                    (so) => so.update(this),
+                    (so) => so.destroyed,
+                    (so) => {
+                        // Notify sabotage missions
                         try {
-                            if (typeof player !== 'undefined' && player && player.activeMission) {
-                                const am = player.activeMission;
+                            if (this.player && this.player.activeMission) {
+                                const am = this.player.activeMission;
                                 const isSab = (typeof MISSION_TYPE !== 'undefined' && am && am.type === MISSION_TYPE.SABOTAGE) || (am && am.type === 'Sabotage');
                                 if (am && isSab && am.targetObjectId !== undefined && am.targetObjectId === so.id) {
                                     try {
                                         am.progressCount = Math.max(1, am.progressCount || 0);
                                         if (typeof am.complete === 'function') {
-                                            am.complete(player);
-                                            if (player.activeMission === am) player.activeMission = null;
+                                            am.complete(this.player);
+                                            if (this.player.activeMission === am) this.player.activeMission = null;
                                         }
                                     } catch (e) { console.warn('Error completing sabotage mission on object destroy', e); }
                                 }
                             }
                         } catch (e) { /* non-fatal */ }
 
+                        // Spawn metals cargo
                         try {
                             if (random() < 0.95) {
                                 const baseQuantity = max(1, floor(map(so.size, 28, 110, 1, 6)));
@@ -1445,52 +1403,31 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                                 }
                             }
                         } catch (e) { console.error('Error spawning cargo from spaceObject:', e); }
-                        this._fastRemove(this.spaceObjects, i);
-                        continue;
                     }
-
-                    // Don't despawn space objects - they are persistent decorative elements
-                    // tied to planets and should remain in the system. Unlike asteroids which
-                    // are regenerated dynamically, space objects are spawned once during
-                    // system initialization and should not be removed based on player distance.
-                    // This ensures planets always have their orbital structures visible and
-                    // sabotage mission targets remain available.
-                }
+                );
             }
 
-            // --- Update Projectiles (Ensure proj.update() is called) ---
+            // --- Update Projectiles (special handling for pooling) ---
             const projCount = this.projectiles.length;
             if (projCount > 0) {
                 for (let i = projCount - 1; i >= 0; i--) {
                     let proj = this.projectiles[i];
                     proj.update();
                 
-                if (proj.lifespan <= 0) {
-                    //console.log("Projectile removed: lifespan expired");
-                    this.removeProjectile(i); // USE NEW METHOD
-                } 
-                else if (proj.isOffScreen()) {
-                    //console.log("Projectile removed: off-screen at", proj.pos.x.toFixed(0), proj.pos.y.toFixed(0));
-                    this.removeProjectile(i); // USE NEW METHOD
-                }
-                }
-            }
-            // --- End Projectile Loop ---
-
-            // Update cargo - OPTIMIZED with fast removal
-            if (this.cargo && this.cargo.length > 0) {
-                // Clean up invalid/expired cargo
-                for (let i = this.cargo.length - 1; i >= 0; i--) {
-                    const cargo = this.cargo[i];
-                    if (!cargo || !cargo.pos || cargo.collected || (cargo.isExpired && cargo.isExpired())) {
-                        this._fastRemove(this.cargo, i);
+                    if (proj.lifespan <= 0 || proj.isOffScreen()) {
+                        this.removeProjectile(i); // Uses pooling internally
                     }
                 }
-                // Update remaining cargo
-                for (let i = 0; i < this.cargo.length; i++) {
-                    const c = this.cargo[i];
-                    if (c && typeof c.update === 'function') c.update();
-                }
+            }
+
+            // Update cargo - OPTIMIZED with unified helper
+            if (this.cargo && this.cargo.length > 0) {
+                // Clean up invalid/expired cargo first
+                this._updateEntities(
+                    this.cargo,
+                    (c) => { if (c && typeof c.update === 'function') c.update(); },
+                    (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired())
+                );
                 // Check for player collection
                 this.handleCargoCollection();
             }
@@ -1598,20 +1535,17 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
             }
 
-            // Update explosions - OPTIMIZED with pooling and fast removal
-            const explosionCount = this.explosions.length;
-            if (explosionCount > 0) {
-                for (let i = explosionCount - 1; i >= 0; i--) {
-                const exp = this.explosions[i];
-                exp.update();
-                if (exp.isDone()) {
+            // Update explosions - OPTIMIZED with unified helper and pooling
+            this._updateEntities(
+                this.explosions,
+                (exp) => exp.update(),
+                (exp) => exp.isDone(),
+                (exp) => {
                     if (typeof WeaponSystem !== 'undefined' && WeaponSystem.releaseExplosion) {
                         WeaponSystem.releaseExplosion(exp);
                     }
-                    this._fastRemove(this.explosions, i);
                 }
-                }
-            }
+            );
 
             // Update nebulae
             for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
@@ -1710,8 +1644,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 this.asteroidSpawnTimer = 0; 
             }
         } catch (e) { console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); }
-
-        //console.log(`[UPDATE] Projectiles remaining: ${this.projectiles.length}`);
     } // End update
 
     updateBeams() {
@@ -1865,7 +1797,6 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
     addExplosion(x, y, size, color) {
         // Use object pooling if WeaponSystem is available
         if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
-            //console.log(`Adding explosion at (${x.toFixed(1)},${y.toFixed(1)}) with size ${size}, using object pooling`);
             const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color);
             
             if (explosion) {
@@ -1888,6 +1819,96 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
         }
     }
 
+    /**
+     * Calculates collision impulse for two entities based on their masses
+     * @private
+     */
+    _calculateCollisionImpulse(entity1, entity2, normalizedX, normalizedY) {
+        const mass1 = entity1.size * entity1.size;
+        const mass2 = entity2.size * entity2.size;
+        const totalMass = mass1 + mass2;
+        const impulse1 = 3 * (mass2 / totalMass);
+        const impulse2 = 3 * (mass1 / totalMass);
+        
+        entity1.vel.x -= normalizedX * impulse1;
+        entity1.vel.y -= normalizedY * impulse1;
+        entity2.vel.x += normalizedX * impulse2;
+        entity2.vel.y += normalizedY * impulse2;
+    }
+    
+    /**
+     * Applies physics-based collision response between two entities
+     * @private
+     */
+    _applyCollisionPhysics(entity1, entity2) {
+        const dx = entity2.pos.x - entity1.pos.x;
+        const dy = entity2.pos.y - entity1.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
+        const normalizedX = dx * invDist;
+        const normalizedY = dy * invDist;
+        
+        this._calculateCollisionImpulse(entity1, entity2, normalizedX, normalizedY);
+    }
+    
+    /**
+     * Handles ship-to-ship collision with damage and physics
+     * @private
+     */
+    _handleShipCollision(ship1, ship2) {
+        const collisionDamage = Math.floor(ship1.vel.mag() + ship2.vel.mag());
+        if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
+        
+        ship1.takeDamage(collisionDamage, ship2);
+        ship2.takeDamage(collisionDamage, ship1, this);
+        
+        // Play bump sound with cooldown
+        if (ship1 === this.player) {
+            try {
+                if (typeof soundManager !== 'undefined') {
+                    const now = (typeof millis === 'function') ? millis() : Date.now();
+                    if (!this._lastPlayerShipBumpSoundTime || (now - this._lastPlayerShipBumpSoundTime) > 250) {
+                        soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
+                        this._lastPlayerShipBumpSoundTime = now;
+                    }
+                }
+            } catch (e) { /* ignore sound errors */ }
+        }
+        
+        this._applyCollisionPhysics(ship1, ship2);
+    }
+    
+    /**
+     * Handles ship-to-asteroid collision
+     * @private
+     */
+    _handleAsteroidCollision(ship, asteroid) {
+        // Special comet collision: destroys ship outright
+        if (asteroid.isComet) {
+            ship.takeDamage(999999, asteroid);
+            asteroid.takeDamage(ship === this.player ? 20 : 10, ship, this);
+        } else {
+            const damage = ship === this.player ? Math.floor(ship.vel.mag()) : 10;
+            ship.takeDamage(damage, asteroid);
+            asteroid.takeDamage(ship === this.player ? 20 : 10, ship, this);
+        }
+        
+        // Play bump sound for player with cooldown
+        if (ship === this.player) {
+            try {
+                if (typeof soundManager !== 'undefined') {
+                    const now = (typeof millis === 'function') ? millis() : Date.now();
+                    if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
+                        soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
+                        this._lastPlayerAsteroidBumpSoundTime = now;
+                    }
+                }
+            } catch (e) { /* ignore sound errors */ }
+        }
+        
+        this._applyCollisionPhysics(ship, asteroid);
+    }
+
     /** Handles all collision detection and responses in the system. */
     checkCollisions() {
         if (!this.player) return;
@@ -1907,51 +1928,7 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 }
                 
                 if (this.player.checkCollision(enemy)) {
-                    // Pre-calculate velocities to avoid multiple property access
-                    const playerVelMag = this.player.vel.mag();
-                    const enemyVelMag = enemy.vel.mag();
-                    
-                    // Handle ship-to-ship collision
-                    const collisionDamage = Math.floor(playerVelMag + enemyVelMag);
-                    if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
-                    this.player.takeDamage(collisionDamage, enemy);
-                    enemy.takeDamage(collisionDamage, this.player, this);
-
-                    // Play a short bump/hit sound with simple cooldown (avoid audio spam)
-                    try {
-                        if (typeof soundManager !== 'undefined') {
-                            const now = (typeof millis === 'function') ? millis() : Date.now();
-                            if (!this._lastPlayerShipBumpSoundTime || (now - this._lastPlayerShipBumpSoundTime) > 250) {
-                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
-                                this._lastPlayerShipBumpSoundTime = now;
-                            }
-                        }
-                    } catch (e) { /* ignore sound errors */ }
-                    
-                    // Apply physics push based on relative mass/size
-                    const playerSize = this.player.size;
-                    const enemySize = enemy.size;
-                    const playerMass = playerSize * playerSize;
-                    const enemyMass = enemySize * enemySize;
-                    const totalMass = playerMass + enemyMass;
-
-                    // Calculate impulse - smaller ships get pushed more
-                    const playerImpulseFactor = 3 * (enemyMass / totalMass);
-                    const enemyImpulseFactor = 3 * (playerMass / totalMass);
-
-                    // Create normalized collision vector - optimized with fast inverse sqrt
-                    const dx = enemy.pos.x - this.player.pos.x;
-                    const dy = enemy.pos.y - this.player.pos.y;
-                    const distSq = dx * dx + dy * dy;
-                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
-                    const normalizedX = dx * invDist;
-                    const normalizedY = dy * invDist;
-
-                    // Apply appropriate impulse to each ship without creating new vectors
-                    this.player.vel.x -= normalizedX * playerImpulseFactor;
-                    this.player.vel.y -= normalizedY * playerImpulseFactor;
-                    enemy.vel.x += normalizedX * enemyImpulseFactor;
-                    enemy.vel.y += normalizedY * enemyImpulseFactor;
+                    this._handleShipCollision(this.player, enemy);
                 }
             }
             
@@ -1961,58 +1938,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 const asteroid = this.asteroids[i];
                 if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                 if (this.player.checkCollision(asteroid)) {
-                    // Special comet collision: destroys ship outright
-                    if (asteroid.isComet) {
-                        this.player.takeDamage(999999, asteroid); // Instant destruction
-                        asteroid.takeDamage(20, this.player, this); // Damage the comet too
-                    } else {
-                        // Handle normal player-asteroid collision
-                        const collisionDamage = Math.floor(this.player.vel.mag());
-                        if (STAR_SYSTEM_DEBUG) console.log(`Player hit asteroid! Damage: ${collisionDamage}`);
-                        this.player.takeDamage(collisionDamage, asteroid);
-                        asteroid.takeDamage(20, this.player, this); // Fixed damage to asteroid, pass system
-                    }
-
-                    // Play a subtle bump/hit sound with simple cooldown (avoid audio spam)
-                    try {
-                        if (typeof soundManager !== 'undefined') {
-                            const now = (typeof millis === 'function') ? millis() : Date.now();
-                            if (!this._lastPlayerAsteroidBumpSoundTime || (now - this._lastPlayerAsteroidBumpSoundTime) > 250) {
-                                soundManager.playWorldSound('bump', this.player.pos.x, this.player.pos.y, this.player.pos);
-                                this._lastPlayerAsteroidBumpSoundTime = now;
-                            }
-                        }
-                    } catch (e) { /* ignore sound errors */ }
-                    
-                    // Apply physics push based on relative mass/size
-                    const playerSize = this.player.size;
-                    const asteroidSize = asteroid.size;
-                    const playerMass = playerSize * playerSize;
-                    const asteroidMass = asteroidSize * asteroidSize;
-                    const totalMass = playerMass + asteroidMass;
-
-                    // Calculate impulse factors
-                    const playerImpulseFactor = 2 * (asteroidMass / totalMass);
-                    const asteroidImpulseFactor = 2 * (playerMass / totalMass);
-
-                    // Create normalized collision vector - optimized
-                    const dx = asteroid.pos.x - this.player.pos.x;
-                    const dy = asteroid.pos.y - this.player.pos.y;
-                    const distSq = dx * dx + dy * dy;
-                    const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
-                    const normalizedX = dx * invDist;
-                    const normalizedY = dy * invDist;
-
-                    // Apply impulses directly
-                    this.player.vel.x -= normalizedX * playerImpulseFactor;
-                    this.player.vel.y -= normalizedY * playerImpulseFactor;
-                    asteroid.vel.x += normalizedX * asteroidImpulseFactor;
-                    asteroid.vel.y += normalizedY * asteroidImpulseFactor;
+                    this._handleAsteroidCollision(this.player, asteroid);
                 }
             }
-
-            // NOTE: Player vs SpaceObjects collision removed - ships can now pass through space objects
-            // Weapons can still damage space objects (handled in checkProjectileCollisions)
             
             // Enemy vs Asteroid collisions - optimized with cached lengths
             for (let i = 0; i < enemyCount; i++) {
@@ -2022,32 +1950,9 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                     const asteroid = this.asteroids[j];
                     if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
                     if (enemy.checkCollision(asteroid)) {
-                        // Special comet collision: destroys ship outright
-                        if (asteroid.isComet) {
-                            enemy.takeDamage(999999, asteroid); // Instant destruction
-                            asteroid.takeDamage(10);
-                        } else {
-                            // Handle enemy-asteroid collision
-                            enemy.takeDamage(10);
-                            asteroid.takeDamage(10);
-                        }
-                        
-                        // Apply physics push - optimized
-                        const dx = asteroid.pos.x - enemy.pos.x;
-                        const dy = asteroid.pos.y - enemy.pos.y;
-                        const distSq = dx * dx + dy * dy;
-                        const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
-                        const normalizedX = dx * invDist * 2;
-                        const normalizedY = dy * invDist * 2;
-                        
-                        enemy.vel.x -= normalizedX;
-                        enemy.vel.y -= normalizedY;
-                        asteroid.vel.x += normalizedX * 0.5;
-                        asteroid.vel.y += normalizedY * 0.5;
+                        this._handleAsteroidCollision(enemy, asteroid);
                     }
                 }
-                // NOTE: Enemy vs SpaceObject collisions removed - ships can now pass through space objects
-                // Weapons can still damage space objects (handled in checkProjectileCollisions)
             }
             
             
@@ -2055,6 +1960,116 @@ if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
             console.error("Error in checkCollisions:", e);
         }
     } // End checkCollisions
+
+    /**
+     * Broadphase distance check for projectile collisions
+     * @private
+     */
+    _checkProjectileBroadphase(proj, target, distCheckVector) {
+        const projSize = proj.size || 3;
+        const targetSize = target.size || 24;
+        const combinedRadius = targetSize + projSize;
+        const combinedRadiusSquared = combinedRadius * combinedRadius;
+        
+        distCheckVector.set(target.pos.x - proj.pos.x, target.pos.y - proj.pos.y);
+        return distCheckVector.magSq() <= combinedRadiusSquared;
+    }
+    
+    /**
+     * Check and handle projectile collision with asteroids
+     * @private
+     */
+    _checkProjectileAsteroidCollision(proj, i, distCheckVector) {
+        const asteroidCount = this.asteroids.length;
+        for (let j = asteroidCount - 1; j >= 0; j--) {
+            const asteroid = this.asteroids[j];
+            if (!asteroid || asteroid.isDestroyed()) continue;
+            
+            if (this._checkProjectileBroadphase(proj, asteroid, distCheckVector) && asteroid.checkCollision(proj)) {
+                asteroid.takeDamage(proj.damage || 1);
+                this.removeProjectile(i);
+                this.addExplosion(proj.pos.x, proj.pos.y, 10, [255, 120, 20]);
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check and handle projectile collision with space objects
+     * @private
+     */
+    _checkProjectileSpaceObjectCollision(proj, i, distCheckVector) {
+        if (!this.spaceObjects || !this.spaceObjects.length) return false;
+        
+        for (let j = this.spaceObjects.length - 1; j >= 0; j--) {
+            const so = this.spaceObjects[j];
+            const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
+            if (!so || soDestroyed) continue;
+
+            if (this._checkProjectileBroadphase(proj, so, distCheckVector) && so.checkCollision && so.checkCollision(proj)) {
+                try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
+                this.removeProjectile(i);
+                this.addExplosion(proj.pos.x, proj.pos.y, 8, [200,100,255]);
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check and handle projectile collision with mines
+     * @private
+     */
+    _checkProjectileMineCollision(proj, i, distCheckVector) {
+        for (let j = this.mines.length - 1; j >= 0; j--) {
+            const mine = this.mines[j];
+            if (!mine || mine.destroyed || proj.owner === mine.owner) continue;
+            
+            if (this._checkProjectileBroadphase(proj, mine, distCheckVector)) {
+                mine.takeDamage(proj.damage || 10, proj.owner, this);
+                this.removeProjectile(i);
+                this.addExplosion(proj.pos.x, proj.pos.y, 5, [200, 100, 0]);
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check and handle harpoon collision with cargo
+     * @private
+     */
+    _checkHarpoonCargoCollision(proj, i, distCheckVector) {
+        if (!this.cargo || !this.cargo.length) return false;
+        if (proj.type !== 'harpoon' && proj.type !== 'HARPOON') return false;
+        
+        for (let j = this.cargo.length - 1; j >= 0; j--) {
+            const cargoItem = this.cargo[j];
+            if (!cargoItem || cargoItem.collected || cargoItem.attached) continue;
+
+            const projSize = proj.size || 3;
+            const cargoSize = cargoItem.size || 8;
+            const combinedRadius = cargoSize + projSize + Math.max(8, cargoSize * 0.6);
+            const combinedRadiusSquared = combinedRadius * combinedRadius;
+            
+            distCheckVector.set(cargoItem.pos.x - proj.pos.x, cargoItem.pos.y - proj.pos.y);
+
+            if (distCheckVector.magSq() <= combinedRadiusSquared) {
+                try {
+                    cargoItem.attached = true;
+                    cargoItem.attachedTo = proj.owner || null;
+                    cargoItem.attachedBy = 'harpoon';
+                    if (cargoItem.vel) { cargoItem.vel.x = 0; cargoItem.vel.y = 0; }
+                    this.addExplosion(proj.pos.x, proj.pos.y, 4, [180,220,255]);
+                    try { if (typeof soundManager !== 'undefined' && soundManager.playWorldSound) soundManager.playWorldSound('harpoonFire', proj.pos.x, proj.pos.y, this.player.pos); } catch(_) {}
+                } catch (e) { console.error('Error attaching cargo to harpoon:', e); }
+                this.removeProjectile(i);
+                return true;
+            }
+        }
+        return false;
+    }
 
 /** 
  * Specifically handles projectile collisions with targets.
@@ -2068,7 +2083,6 @@ checkProjectileCollisions() {
     if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
     
     const distCheckVector = this._distCheckVector;
-    const asteroidCount = this.asteroids.length;
     const enemyCount = this.enemies.length;
     
     // Process projectiles using optimized collision detection
@@ -2084,170 +2098,39 @@ checkProjectileCollisions() {
         const projSize = proj.size || 3;
         let hit = false;
         
-        // Check against asteroids using broadphase filtering
-        for (let j = asteroidCount - 1; j >= 0; j--) {
-            const asteroid = this.asteroids[j];
-            if (!asteroid || asteroid.isDestroyed()) continue;
-            
-            // Fast distance check before expensive collision detection
-            const combinedRadius = asteroid.size + projSize;
-            const combinedRadiusSquared = combinedRadius * combinedRadius;
-            distCheckVector.set(asteroid.pos.x - projPos.x, asteroid.pos.y - projPos.y);
-            
-            if (distCheckVector.magSq() <= combinedRadiusSquared) {
-                // Only do precise collision check if objects are close enough
-                if (asteroid.checkCollision(proj)) {
-                    asteroid.takeDamage(proj.damage || 1);
-                    this.removeProjectile(i);
-                    const explosionColor = [255, 120, 20];
-                    this.addExplosion(projPos.x, projPos.y, 10, explosionColor);
-                    
-                    hit = true;
-                    break;
-                }
-            }
-        }
-
-            // Check against decorative space objects (satellites, telescopes)
-            if (!hit && this.spaceObjects && this.spaceObjects.length) {
-                for (let j = this.spaceObjects.length - 1; j >= 0; j--) {
-                    const so = this.spaceObjects[j];
-                    const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
-                    if (!so || soDestroyed) continue;
-
-                    const combinedRadius = (so.size || 24) + projSize;
-                    const combinedRadiusSquared = combinedRadius * combinedRadius;
-                    distCheckVector.set(so.pos.x - projPos.x, so.pos.y - projPos.y);
-
-                    if (distCheckVector.magSq() <= combinedRadiusSquared) {
-                        if (so.checkCollision && so.checkCollision(proj)) {
-                            try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
-                            this.removeProjectile(i);
-                            this.addExplosion(projPos.x, projPos.y, 8, [200,100,255]);
-                            hit = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        
-        // If already hit something, skip the rest of the checks
-        if (hit) continue;
-        
-        // Check against mines
-        for (let j = this.mines.length - 1; j >= 0; j--) {
-            const mine = this.mines[j];
-            if (!mine || mine.destroyed) continue;
-            
-            // Mines don't get hit by their owner's projectiles
-            if (proj.owner === mine.owner) continue;
-            
-            // Fast distance check
-            const combinedRadius = mine.size + projSize;
-            const combinedRadiusSquared = combinedRadius * combinedRadius;
-            distCheckVector.set(mine.pos.x - projPos.x, mine.pos.y - projPos.y);
-            
-            if (distCheckVector.magSq() <= combinedRadiusSquared) {
-                // Mine takes damage and projectile is destroyed
-                mine.takeDamage(proj.damage || 10, proj.owner, this);
-                this.removeProjectile(i);
-                
-                // Small explosion visual for hitting mine
-                const explosionColor = [200, 100, 0];
-                this.addExplosion(projPos.x, projPos.y, 5, explosionColor);
-                
-                hit = true;
-                break;
-            }
-        }
-        
-        // If already hit something, skip the rest of the checks
-        if (hit) continue;
+        // Check against various targets using helper methods
+        if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector)) { hit = true; continue; }
+        if (!hit && this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) { hit = true; continue; }
+        if (!hit && this._checkProjectileMineCollision(proj, i, distCheckVector)) { hit = true; continue; }
 
         // --- Check collisions against missiles (other projectiles) ---
-        // Allow projectiles (e.g., lasers, bullets) to hit missiles and damage/destroy them
-        if (this.projectiles && this.projectiles.length > 0) {
+        if (!hit && this.projectiles && this.projectiles.length > 0) {
             for (let j = this.projectiles.length - 1; j >= 0; j--) {
-                // Skip self
-                if (j === i) continue;
+                if (j === i) continue; // Skip self
                 const other = this.projectiles[j];
-                if (!other || !other.pos) continue;
-                // Only consider destructible missiles (projectiles marked as missile)
-                if (!other._isMissile) continue;
-                // Prevent friendly-fire hitting own missiles
-                if (other.owner === proj.owner) continue;
+                if (!other || !other.pos || !other._isMissile || other.owner === proj.owner) continue;
 
-                const combinedRadius = (other.size || 3) + projSize;
-                const combinedRadiusSquared = combinedRadius * combinedRadius;
-                distCheckVector.set(other.pos.x - projPos.x, other.pos.y - projPos.y);
-                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(other)) {
+                if (this._checkProjectileBroadphase(proj, other, distCheckVector) && proj.checkCollision(other)) {
                     try {
-                        // Apply damage to the missile
                         if (typeof other.takeDamage === 'function') {
                             other.takeDamage(proj.damage || 1, proj.owner, this);
                         } else {
-                            // Fallback: remove missile immediately
                             other.lifespan = 0;
                             other.destroyed = true;
                             this.addExplosion(other.pos.x, other.pos.y, 8, [255,150,0]);
                         }
                     } catch (e) { console.error('Error applying damage to missile:', e); }
 
-                    // Remove the projectile that struck the missile
                     this.removeProjectile(i);
-                    // Small hit effect
-                    this.addExplosion(projPos.x, projPos.y, 5, [255,200,0]);
+                    this.addExplosion(proj.pos.x, proj.pos.y, 5, [255,200,0]);
                     hit = true;
                     break;
                 }
             }
         }
 
-        // Check against cargo - allow harpoon projectiles to attach cargo and pull it to the owner
-        if (this.cargo && this.cargo.length) {
-            for (let j = this.cargo.length - 1; j >= 0; j--) {
-                const cargoItem = this.cargo[j];
-                if (!cargoItem || cargoItem.collected) continue;
-                // Skip cargo already attached to a ship (being reeled in)
-                if (cargoItem.attached) continue;
-
-                let combinedRadius = (cargoItem.size || 8) + projSize;
-                // Give harpoon projectiles a larger effective hit-area for easier grabs
-                if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                    const extra = Math.max(8, (cargoItem.size || 8) * 0.6);
-                    combinedRadius += extra;
-                }
-                const combinedRadiusSquared = combinedRadius * combinedRadius;
-                distCheckVector.set(cargoItem.pos.x - projPos.x, cargoItem.pos.y - projPos.y);
-
-                // For harpoons accept the expanded broadphase as a hit; otherwise fall back to precise check
-                const collisionPass = (proj.type === 'harpoon' || proj.type === 'HARPOON') ? true : proj.checkCollision(cargoItem);
-                if (distCheckVector.magSq() <= combinedRadiusSquared && collisionPass) {
-                    // Harpoon special-case: attach cargo to the firing ship
-                    if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                        try {
-                            cargoItem.attached = true;
-                            cargoItem.attachedTo = proj.owner || null;
-                            cargoItem.attachedBy = 'harpoon';
-                            if (cargoItem.vel) { cargoItem.vel.x = 0; cargoItem.vel.y = 0; }
-                            // small impact visual and sound
-                            this.addExplosion(projPos.x, projPos.y, 4, [180,220,255]);
-                            try { if (typeof soundManager !== 'undefined') soundManager.playWorldSound && soundManager.playWorldSound('harpoonFire', projPos.x, projPos.y, this.player.pos); } catch(_) {}
-                        } catch (e) { console.error('Error attaching cargo to harpoon:', e); }
-                        this.removeProjectile(i);
-                        hit = true;
-                        break;
-                    } else {
-                        // Non-harpoon projectiles simply create a small explosion and are removed
-                        this.addExplosion(projPos.x, projPos.y, 6, [255,160,0]);
-                        this.removeProjectile(i);
-                        hit = true;
-                        break;
-                    }
-                }
-            }
-        }
-        
+        // Check harpoon-cargo collisions
+        if (!hit && this._checkHarpoonCargoCollision(proj, i, distCheckVector)) { hit = true; continue; }
         // For player hits - use quick distance check first
         if (proj.owner instanceof Enemy) {
             const combinedRadius = this.player.size + projSize;
@@ -2549,32 +2432,22 @@ checkProjectileCollisions() {
                         //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
                     }
                 } else {
-                     // Log why adding failed (e.g., cargo full)
-                     //console.log(`  Add failed. Player Cargo: ${this.player.getCargoAmount()}/${this.player.cargoCapacity}, Reason: ${addResult.reason}`);
-                     // Add UI message for failure if needed
+                     // Show cargo full message if needed
                      if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
-                         // Avoid spamming this message - maybe only show once per few seconds?
-                         // Simple approach: just show it
                          uiManager.addMessage(`Cargo hold full!`, [255, 200, 0]);
                      }
                 }
             }
-            // Note: Expiry check moved outside collision block, handled at the start of the loop iteration
         }
     }
 
     /** Adds a projectile to the system's list. */
     addProjectile(proj) {
         if (proj) {
-            // Add this line to set the system reference
             proj.system = this;
-            
-          //  console.log(`[ADD] Projectile added. Count: ${this.projectiles.length + 1}`);
             this.projectiles.push(proj);
         }
     }
-
-        // Add this method after the addProjectile method:
     
     /** Removes a projectile and returns it to the pool if possible */
     removeProjectile(i) {
@@ -2639,7 +2512,7 @@ checkProjectileCollisions() {
      * @param {string} mode - 'progressive', 'buffered', or 'legacy'
      */
     setStarfieldRenderMode(mode) {
-        // Enforce progressive-only mode. Legacy/buffered modes removed.
+        // Progressive tile-based rendering is the only supported mode.
         this._starfieldRenderMode = 'progressive';
         this.resetStarfieldBuffer();
     }
@@ -3098,17 +2971,11 @@ checkProjectileCollisions() {
         }
     }
     
-    // Buffered starfield mode removed — use progressive tile-based rendering only.
-    
-    // _needsStarfieldRegeneration removed (buffered mode deprecated)
-    
-    // _generateStarfieldBuffer removed — buffered generation deprecated
-    
-    // _drawStarLayerToBuffer removed — buffer-based rendering deprecated
-    
     /**
      * Draws spectacular star phenomena as an overlay.
      * These are animated and drawn directly each frame in the visible area only.
+     * Note: Starfield uses progressive tile-based rendering for performance.
+     * Tiles are generated on-demand and cached for reuse.
      * @private
      */
     _drawSpectacularStarsOverlay() {
@@ -3131,8 +2998,11 @@ checkProjectileCollisions() {
         this.drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis);
     }
     
-    // drawOptimalStarfield removed — legacy direct drawing deprecated
-    
+    /**
+     * Draws a single star layer within the specified bounds.
+     * Uses deterministic procedural generation based on grid cells.
+     * Optimized with inlined random number generation and minimal object allocation.
+     */
     drawStarLayer(left, right, top, bottom, config, currentMillis) {
         const gridSize = config.gridSize;
         const systemSeed = this.systemIndex * 1337;
@@ -3612,6 +3482,15 @@ checkProjectileCollisions() {
     /**
      * Faster check using primitive values instead of object parameter
      */
+    /**
+     * Check if an entity is within the cached screen bounds
+     * @private
+     */
+    _isEntityVisible(x, y, size) {
+        const bounds = this.screenBounds;
+        return this.isInView(x, y, size, bounds.left, bounds.right, bounds.top, bounds.bottom);
+    }
+
     isInView(x, y, size, left, right, top, bottom) {
         return (x + size >= left && x - size <= right && y + size >= top && y - size <= bottom);
     }
@@ -3709,6 +3588,23 @@ checkProjectileCollisions() {
         }
     }
 
+    /**
+     * Serialize an array of entities with fallback handling
+     * @private
+     */
+    _serializeEntityArray(array, fallbackSerializer = null) {
+        if (!Array.isArray(array) || array.length === 0) return [];
+        
+        return array.map(entity => {
+            if (typeof entity.toJSON === 'function') {
+                return entity.toJSON();
+            } else if (fallbackSerializer) {
+                return fallbackSerializer(entity);
+            }
+            return entity;
+        });
+    }
+
     toJSON() {
         return {
             name: this.name,
@@ -3719,95 +3615,102 @@ checkProjectileCollisions() {
             securityLevel: this.securityLevel,
             visited: this.visited,
             connectedSystemIndices: this.connectedSystemIndices ? [...this.connectedSystemIndices] : [],
+            
             // Save planets if present
-            planets: Array.isArray(this.planets)
-                ? this.planets.map(p => (typeof p.toJSON === 'function' ? p.toJSON() : null))
-                : [],
+            planets: this._serializeEntityArray(this.planets),
+            
             // Save station if present
             station: this.station && typeof this.station.toJSON === 'function'
                 ? this.station.toJSON()
                 : null,
-            secretStations: this.secretStations && this.secretStations.length > 0
-                ? this.secretStations.map(s => s.toJSON())
-                : [],
+            secretStations: this._serializeEntityArray(this.secretStations),
+            
             // Save nebulae if present
-            nebulae: Array.isArray(this.nebulae) && this.nebulae.length > 0
-                ? this.nebulae.map(n => (typeof n.toJSON === 'function' ? n.toJSON() : null))
-                : [],
-            // Save decorative space objects (satellites, telescopes, etc.)
-            spaceObjects: Array.isArray(this.spaceObjects) && this.spaceObjects.length > 0
-                ? this.spaceObjects.map(so => (typeof so.toJSON === 'function' ? so.toJSON() : {
-                    type: so.type || null,
-                    x: so.pos ? (so.pos.x || 0) : null,
-                    y: so.pos ? (so.pos.y || 0) : null,
-                    size: so.size || null,
-                    destroyed: !!so.destroyed,
-                    state: so.state || null,
-                    subtype: so.subtype || null
-                }))
-                : [],
-            // --- Add Jump Zone Data ---
+            nebulae: this._serializeEntityArray(this.nebulae),
+            
+            // Save decorative space objects
+            spaceObjects: this._serializeEntityArray(this.spaceObjects, (so) => ({
+                type: so.type || null,
+                x: so.pos ? (so.pos.x || 0) : null,
+                y: so.pos ? (so.pos.y || 0) : null,
+                size: so.size || null,
+                destroyed: !!so.destroyed,
+                state: so.state || null,
+                subtype: so.subtype || null
+            })),
+            
+            // Jump Zone Data
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
             jumpZoneRadius: this.jumpZoneRadius,
-            // Add wanted status properties
-            // Store a boolean and the remaining ms until expiry (portable across sessions)
+            
+            // Wanted status properties
             playerWanted: !!this.playerWanted,
             playerWantedLevel: this.playerWantedLevel ?? 0,
             playerWantedRemainingMs: (this.playerWantedExpiry ? Math.max(0, this.playerWantedExpiry - millis()) : null),
             policeAlertSent: !!this.policeAlertSent,
-            // Persisted generated description (if present)
             cachedDescription: this.cachedDescription ?? null,
-            // ---
-            // Dynamic entities (serialized when possible)
-            enemies: Array.isArray(this.enemies) && this.enemies.length > 0
-                ? this.enemies.map(e => (typeof e.toJSON === 'function' ? e.toJSON() : {
-                    shipType: e.shipTypeName || e.shipType || null,
-                    role: e.role || null,
-                    pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
-                    vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
-                    hp: e.hp ?? e.health ?? null,
-                    angle: e.angle ?? null,
-                    state: e.currentState ?? null,
-                    id: e.id ?? null
-                }))
-                : [],
-            projectiles: Array.isArray(this.projectiles) && this.projectiles.length > 0
-                ? this.projectiles.map(p => (typeof p.toJSON === 'function' ? p.toJSON() : {
-                    type: p.type || null,
-                    pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
-                    vel: p.vel ? { x: p.vel.x, y: p.vel.y } : null,
-                    lifespan: p.lifespan ?? null,
-                    ownerId: p.owner ? (p.owner.id || p.owner.shipTypeName || null) : null
-                }))
-                : [],
-            asteroids: Array.isArray(this.asteroids) && this.asteroids.length > 0
-                ? this.asteroids.map(a => (typeof a.toJSON === 'function' ? a.toJSON() : {
-                    pos: a.pos ? { x: a.pos.x, y: a.pos.y } : null,
-                    size: a.size || null,
-                    isComet: !!a.isComet
-                }))
-                : [],
-            cargo: Array.isArray(this.cargo) && this.cargo.length > 0
-                ? this.cargo.map(c => (typeof c.toJSON === 'function' ? c.toJSON() : c))
-                : [],
-            mines: Array.isArray(this.mines) && this.mines.length > 0
-                ? this.mines.map(m => (typeof m.toJSON === 'function' ? m.toJSON() : {
-                    pos: m.pos ? { x: m.pos.x, y: m.pos.y } : null,
-                    size: m.size || null,
-                    ownerId: m.owner ? (m.owner.id || m.owner.shipTypeName || null) : null
-                }))
-                : [],
-            beams: [], // Transient: do not persist beam objects
-            forceWaves: [], // Transient: do not persist force wave objects
-            harpoons: Array.isArray(this.harpoons) && this.harpoons.length > 0
-                ? this.harpoons.map(h => (typeof h.toJSON === 'function' ? h.toJSON() : h))
-                : [],
-            explosions: Array.isArray(this.explosions) && this.explosions.length > 0
-                ? this.explosions.map(x => (typeof x.toJSON === 'function' ? x.toJSON() : x))
-                : [],
-            staticElementsInitialized: this.staticElementsInitialized // Save initialization state
+            
+            // Dynamic entities
+            enemies: this._serializeEntityArray(this.enemies, (e) => ({
+                shipType: e.shipTypeName || e.shipType || null,
+                role: e.role || null,
+                pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
+                vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
+                hp: e.hp ?? e.health ?? null,
+                angle: e.angle ?? null,
+                state: e.currentState ?? null,
+                id: e.id ?? null
+            })),
+            projectiles: this._serializeEntityArray(this.projectiles, (p) => ({
+                type: p.type || null,
+                pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
+                vel: p.vel ? { x: p.vel.x, y: p.vel.y } : null,
+                lifespan: p.lifespan ?? null,
+                ownerId: p.owner ? (p.owner.id || p.owner.shipTypeName || null) : null
+            })),
+            asteroids: this._serializeEntityArray(this.asteroids, (a) => ({
+                pos: a.pos ? { x: a.pos.x, y: a.pos.y } : null,
+                size: a.size || null,
+                isComet: !!a.isComet
+            })),
+            cargo: this._serializeEntityArray(this.cargo),
+            mines: this._serializeEntityArray(this.mines, (m) => ({
+                pos: m.pos ? { x: m.pos.x, y: m.pos.y } : null,
+                size: m.size || null,
+                ownerId: m.owner ? (m.owner.id || m.owner.shipTypeName || null) : null
+            })),
+            beams: [], // Transient
+            forceWaves: [], // Transient
+            harpoons: this._serializeEntityArray(this.harpoons),
+            explosions: this._serializeEntityArray(this.explosions),
+            staticElementsInitialized: this.staticElementsInitialized
         };
+    }
+
+    /**
+     * Deserialize entity array with type checking
+     * @private
+     */
+    static _deserializeEntityArray(dataArray, EntityClass, fallbackDeserializer = null) {
+        if (!Array.isArray(dataArray) || dataArray.length === 0) return [];
+        
+        const result = [];
+        for (const data of dataArray) {
+            try {
+                if (typeof EntityClass !== 'undefined' && typeof EntityClass.fromJSON === 'function') {
+                    result.push(EntityClass.fromJSON(data));
+                } else if (fallbackDeserializer) {
+                    const entity = fallbackDeserializer(data);
+                    if (entity) result.push(entity);
+                } else {
+                    result.push(data);
+                }
+            } catch (e) {
+                console.error(`Error deserializing entity:`, e, data);
+            }
+        }
+        return result;
     }
 
     static fromJSON(data) {
@@ -3824,53 +3727,37 @@ checkProjectileCollisions() {
         sys.economyType = data.economyType;
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
 
-        // Restore planets if present
-        if (Array.isArray(data.planets) && typeof Planet !== "undefined" && typeof Planet.fromJSON === "function") {
-            sys.planets = data.planets.map(p => Planet.fromJSON(p));
-        } else {
-            sys.planets = [];
-        }
+        // Restore planets
+        sys.planets = this._deserializeEntityArray(data.planets, Planet);
 
-        // Restore station if present
+        // Restore station
         if (data.station && typeof Station !== "undefined" && typeof Station.fromJSON === "function") {
             sys.station = Station.fromJSON(data.station);
         } else {
             sys.station = null;
         }
         
-        // Restore Nebulae if present
-        if (data.nebulae && Array.isArray(data.nebulae)) {
-            sys.nebulae = data.nebulae.map(nebulaData => Nebula.fromJSON(nebulaData));
-        }
+        // Restore Nebulae
+        sys.nebulae = this._deserializeEntityArray(data.nebulae, Nebula);
 
-        // Restore Space Objects if present
-        if (data.spaceObjects && Array.isArray(data.spaceObjects)) {
-            sys.spaceObjects = [];
-            for (const soData of data.spaceObjects) {
-                try {
-                    if (typeof SpaceObject !== 'undefined' && typeof SpaceObject.fromJSON === 'function') {
-                        sys.spaceObjects.push(SpaceObject.fromJSON(soData));
-                    } else if (typeof SpaceObject !== 'undefined') {
-                        const x = soData.x ?? (soData.pos && soData.pos.x) ?? 0;
-                        const y = soData.y ?? (soData.pos && soData.pos.y) ?? 0;
-                        const type = soData.type || 'satellite';
-                        const obj = new SpaceObject(x, y, type);
-                        if (soData.size !== undefined && obj.size !== undefined) obj.size = soData.size;
-                        if (soData.destroyed) obj.destroyed = true;
-                        if (soData.state !== undefined) obj.state = soData.state;
-                        if (soData.subtype !== undefined) obj.subtype = soData.subtype;
-                        if (soData.planetIndex !== undefined && soData.planetIndex !== null) {
-                            obj.planetIndex = soData.planetIndex;
-                            if (Array.isArray(sys.planets) && sys.planets[soData.planetIndex]) obj.planet = sys.planets[soData.planetIndex];
-                        }
-                        if (soData.vel && obj.vel) { obj.vel.x = soData.vel.x || 0; obj.vel.y = soData.vel.y || 0; }
-                        sys.spaceObjects.push(obj);
-                    }
-                } catch (e) {
-                    console.error('Error restoring spaceObject', e, soData);
-                }
+        // Restore Space Objects with fallback
+        sys.spaceObjects = this._deserializeEntityArray(data.spaceObjects, SpaceObject, (soData) => {
+            if (typeof SpaceObject === 'undefined') return null;
+            const x = soData.x ?? (soData.pos && soData.pos.x) ?? 0;
+            const y = soData.y ?? (soData.pos && soData.pos.y) ?? 0;
+            const type = soData.type || 'satellite';
+            const obj = new SpaceObject(x, y, type);
+            if (soData.size !== undefined) obj.size = soData.size;
+            if (soData.destroyed) obj.destroyed = true;
+            if (soData.state !== undefined) obj.state = soData.state;
+            if (soData.subtype !== undefined) obj.subtype = soData.subtype;
+            if (soData.planetIndex !== undefined && soData.planetIndex !== null) {
+                obj.planetIndex = soData.planetIndex;
+                if (Array.isArray(sys.planets) && sys.planets[soData.planetIndex]) obj.planet = sys.planets[soData.planetIndex];
             }
-        }
+            if (soData.vel && obj.vel) { obj.vel.x = soData.vel.x || 0; obj.vel.y = soData.vel.y || 0; }
+            return obj;
+        });
 
         // --- Restore Jump Zone Data ---
         if (data.jumpZoneCenterX !== null && data.jumpZoneCenterY !== null && typeof createVector === 'function') {
@@ -3918,102 +3805,30 @@ checkProjectileCollisions() {
         // initStaticElements needs to be adjusted to skip regeneration of loaded elements.
         // The current structure seems to load everything directly.
 
-        // --- Restore dynamic entities (enemies, projectiles, etc.) ---
-        // Enemies (ships)
-        sys.enemies = [];
-        if (Array.isArray(data.enemies)) {
-            if (typeof Enemy !== 'undefined' && typeof Enemy.fromJSON === 'function') {
-                try {
-                    sys.enemies = data.enemies.map(ed => Enemy.fromJSON(ed));
-                    for (const en of sys.enemies) { if (en) en.currentSystem = sys; }
-                } catch (e) { console.error('Error restoring enemies via Enemy.fromJSON', e); }
-            } else if (typeof Enemy !== 'undefined') {
-                for (const ed of data.enemies) {
-                    try {
-                        const px = ed?.pos?.x ?? (ed.x ?? 0);
-                        const py = ed?.pos?.y ?? (ed.y ?? 0);
-                        const shipType = ed.shipType || ed.shipTypeName || 'Krait';
-                        const role = ed.role || (typeof AI_ROLE !== 'undefined' ? AI_ROLE.HAULER : null);
-                        const enemy = new Enemy(px, py, null, shipType, role);
-                        if (ed.vel && enemy.vel) { enemy.vel.x = ed.vel.x || 0; enemy.vel.y = ed.vel.y || 0; }
-                        if (ed.hp !== undefined) { enemy.hp = ed.hp; }
-                        if (ed.angle !== undefined) { enemy.angle = ed.angle; }
-                        if (ed.state !== undefined && typeof enemy.changeState === 'function') { enemy.changeState(ed.state); }
-                        enemy.currentSystem = sys;
-                        sys.enemies.push(enemy);
-                    } catch (e) { console.error('Error restoring enemy (fallback)', e, ed); }
-                }
-            }
-        }
+        // --- Restore dynamic entities using helper methods ---
+        sys.enemies = this._deserializeEntityArray(data.enemies, Enemy, (ed) => {
+            if (typeof Enemy === 'undefined') return null;
+            const px = ed?.pos?.x ?? (ed.x ?? 0);
+            const py = ed?.pos?.y ?? (ed.y ?? 0);
+            const shipType = ed.shipType || ed.shipTypeName || 'Krait';
+            const role = ed.role || (typeof AI_ROLE !== 'undefined' ? AI_ROLE.HAULER : null);
+            const enemy = new Enemy(px, py, null, shipType, role);
+            if (ed.vel && enemy.vel) { enemy.vel.x = ed.vel.x || 0; enemy.vel.y = ed.vel.y || 0; }
+            if (ed.hp !== undefined) enemy.hp = ed.hp;
+            if (ed.angle !== undefined) enemy.angle = ed.angle;
+            if (ed.state !== undefined && typeof enemy.changeState === 'function') enemy.changeState(ed.state);
+            enemy.currentSystem = sys;
+            return enemy;
+        });
 
-        // Projectiles
-        sys.projectiles = [];
-        if (Array.isArray(data.projectiles)) {
-            if (typeof Projectile !== 'undefined' && typeof Projectile.fromJSON === 'function') {
-                try { sys.projectiles = data.projectiles.map(pd => Projectile.fromJSON(pd)); } catch (e) { console.error('Error restoring projectiles', e); }
-            } else {
-                console.warn('Projectile.fromJSON not available; skipping projectile restore');
-            }
-        }
-
-        // Asteroids
-        sys.asteroids = [];
-        if (Array.isArray(data.asteroids)) {
-            if (typeof Asteroid !== 'undefined' && typeof Asteroid.fromJSON === 'function') {
-                try { sys.asteroids = data.asteroids.map(ad => Asteroid.fromJSON(ad)); } catch (e) { console.error('Error restoring asteroids', e); }
-            } else {
-                console.warn('Asteroid.fromJSON not available; skipping asteroid restore');
-            }
-        }
-
-        // Cargo
-        sys.cargo = [];
-        if (Array.isArray(data.cargo)) {
-            if (typeof Cargo !== 'undefined' && typeof Cargo.fromJSON === 'function') {
-                try { sys.cargo = data.cargo.map(cd => Cargo.fromJSON(cd)); } catch (e) { console.error('Error restoring cargo', e); }
-            } else {
-                // Attempt minimal restoration
-                for (const cd of data.cargo) {
-                    try { sys.cargo.push(cd); } catch(e){}
-                }
-            }
-        }
-
-        // Mines
-        sys.mines = [];
-        if (Array.isArray(data.mines)) {
-            if (typeof Mine !== 'undefined' && typeof Mine.fromJSON === 'function') {
-                try { sys.mines = data.mines.map(md => Mine.fromJSON(md)); } catch (e) { console.error('Error restoring mines', e); }
-            } else {
-                console.warn('Mine.fromJSON not available; skipping mine restore');
-            }
-        }
-
-        // Beams are transient and are not restored from save data
-        sys.beams = [];
-
-        // Force waves are transient and are not restored from save data
-        sys.forceWaves = [];
-
-        // Harpoons
-        sys.harpoons = [];
-        if (Array.isArray(data.harpoons)) {
-            if (typeof Harpoon !== 'undefined' && typeof Harpoon.fromJSON === 'function') {
-                try { sys.harpoons = data.harpoons.map(hd => Harpoon.fromJSON(hd)); } catch (e) { console.error('Error restoring harpoons', e); }
-            } else {
-                console.warn('Harpoon.fromJSON not available; skipping harpoon restore');
-            }
-        }
-
-        // Explosions
-        sys.explosions = [];
-        if (Array.isArray(data.explosions)) {
-            if (typeof Explosion !== 'undefined' && typeof Explosion.fromJSON === 'function') {
-                try { sys.explosions = data.explosions.map(xd => Explosion.fromJSON(xd)); } catch (e) { console.error('Error restoring explosions', e); }
-            } else {
-                console.warn('Explosion.fromJSON not available; skipping explosion restore');
-            }
-        }
+        sys.projectiles = this._deserializeEntityArray(data.projectiles, Projectile);
+        sys.asteroids = this._deserializeEntityArray(data.asteroids, Asteroid);
+        sys.cargo = this._deserializeEntityArray(data.cargo, Cargo);
+        sys.mines = this._deserializeEntityArray(data.mines, Mine);
+        sys.beams = []; // Transient
+        sys.forceWaves = []; // Transient
+        sys.harpoons = this._deserializeEntityArray(data.harpoons, Harpoon);
+        sys.explosions = this._deserializeEntityArray(data.explosions, Explosion);
 
         // --- Post-load relinking helpers ---
         // Build id map and attempt to reconnect owner/target references
