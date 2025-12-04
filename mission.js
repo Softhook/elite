@@ -256,11 +256,9 @@ class Mission {
             reason = `Intelligence suggests the ${obj} is a critical node for ${target}. Removing it would significantly weaken their presence in the region.`;
         }
 
-        return `Sabotage Objective: Destroy the ${obj} ${planet}.
-
-Background: ${reason}
-
-Note: This operation is highly sensitive and likely illegal. Expect strong resistance from ${target} assets in the area.`;
+        // Return a concise backstory only — the explicit objective/location/offering
+        // fields are shown separately in `getDetails()` to avoid repetition.
+        return `${reason}`;
     }
 
     /** Per-frame update called from Player.update to monitor special mission targets. */
@@ -643,72 +641,70 @@ Note: This operation is highly sensitive and likely illegal. Expect strong resis
 
     /** Returns a detailed multi-line string for the mission details panel. */
     getDetails() {
-         // Build the details string step-by-step
-         let details = `Title: ${this.title}\n--------------------\n`;
-         details += `Status: ${this.status}\n\n`; // Show current status
-         // For sabotage missions we show the description as a labeled 'Backstory' later,
-         // so avoid printing it twice here.
-         if (this.type !== MISSION_TYPE.SABOTAGE) details += `${this.description}\n\n`;
-         details += `Type: ${this.type}\n`;
-         details += `Reward: ${this.rewardCredits} Credits\n`;
-         details += `Origin: ${this.originStation} (${this.originSystem})\n`;
+        // Standardized details layout for all mission types.
+        let details = `Title: ${this.title}\n--------------------\n`;
+        details += `Status: ${this.status}\n\n`;
 
-         // Add optional details based on mission type
-         if (this.destinationSystem) {
-            details += `Destination: ${this.destinationStation || 'System Wide'} (${this.destinationSystem})\n`;
-         } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE ||
-                    this.type === MISSION_TYPE.BOUNTY_ALIEN) {
-            // For "anywhere" bounties, explicitly state target location if no destinationSystem
-            details += `Target Location: Any System\n`;
-         }
+        // Core metadata
+        details += `Type: ${this.type}\n`;
+        details += `Origin: ${this.originStation} (${this.originSystem})\n`;
 
-         if (this.cargoType) details += `Cargo: ${this.cargoQuantity}t ${this.cargoType}\n`;
-         
-         if (this.targetDesc) {
-             details += `Target: ${this.targetDesc}`;
-             // Add progress for active bounty missions (both pirate and police)
-             if (this.status === 'Active' && 
-                (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE||
-                    this.type === MISSION_TYPE.BOUNTY_ALIEN)) {
-                  details += ` (${this.progressCount}/${this.targetCount} destroyed)\n`;
-             } else {
-                  details += `\n`;
-             }
-         }
-         if (this.timeLimit) details += `Time Limit: ${this.timeLimit} seconds\n`; // Placeholder display
-         if (this.requiredRep) details += `Requires Reputation: ${this.requiredRep}\n`; // Placeholder display
-
-         // Add warning for illegal missions
-         if (this.isIllegal) {
-             details += `\n!! WARNING:\nThis mission involves illegal activity. Discovery by authorities may lead to fines, bounties, or destruction. Proceed with caution. !!\n`;
-         }
-
-         // Add explicit named target info for assassination missions
-         if (this.type === MISSION_TYPE.ASSASSINATION) {
-             if (this.targetName) details += `Named Target: ${this.targetName}\n`;
-             if (this.targetShipType) details += `Target Ship: ${this.targetShipType}\n`;
-         }
-
-         // Add explicit sabotage info
-         if (this.type === MISSION_TYPE.SABOTAGE) {
-            // Avoid repeating the objective text if the description/backstory already includes it
-            const desc = this.description || '';
-            const hasGeneratedObjective = desc.indexOf('Sabotage Objective:') !== -1 || desc.indexOf('Objective: Destroy') !== -1;
-            if (!hasGeneratedObjective) {
-                details += `\nObjective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
-            }
+        // Location / Destination (type-aware)
+        if (this.type === MISSION_TYPE.SABOTAGE) {
             if (this.targetPlanetName) details += `Location: Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}\n`;
+        } else if (this.destinationSystem) {
+            details += `Destination: ${this.destinationStation || 'System Wide'} (${this.destinationSystem})\n`;
+        } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) {
+            details += `Target Location: Any System\n`;
+        }
+
+        // Objective summary
+        const desc = this.description || '';
+        const hasGeneratedObjective = desc.indexOf('Sabotage Objective:') !== -1 || desc.indexOf('Objective: Destroy') !== -1;
+        if (this.type === MISSION_TYPE.DELIVERY_LEGAL || this.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+            if (this.cargoType) details += `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
+        } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) {
+            if (this.targetDesc) details += `Objective: ${this.targetDesc}\n`;
+        } else if (this.type === MISSION_TYPE.SABOTAGE) {
+            if (!hasGeneratedObjective) details += `Objective: Destroy: ${this.targetObjectType || 'Strategic Object'}\n`;
+        }
+
+        // Reward
+        if (this.type === MISSION_TYPE.SABOTAGE) details += `Reward (High): ${this.rewardCredits} Credits\n`;
+        else details += `Reward: ${this.rewardCredits} Credits\n`;
+
+        // Description / Background
+        if (this.description) {
+            if (this.type === MISSION_TYPE.SABOTAGE) details += `\n${this.description}\n`;
+            else details += `\n${this.description}\n\n`;
+        }
+
+        // Supplemental fields per type
+        if (this.type === MISSION_TYPE.ASSASSINATION) {
+            if (this.targetName) details += `Named Target: ${this.targetName}\n`;
+            if (this.targetShipType) details += `Target Ship: ${this.targetShipType}\n`;
+        }
+
+        if (this.type === MISSION_TYPE.SABOTAGE) {
             if (this.offeringFaction) details += `Offered By: ${this.offeringFaction}\n`;
             if (this.targetFaction) details += `Target Faction: ${this.targetFaction}\n`;
-            details += `Reward (High): ${this.rewardCredits} Credits\n`;
-            // If the description already contains an objective/backstory block, print it directly; otherwise label it as Backstory.
-            if (desc && hasGeneratedObjective) {
-                details += `\n${desc}\n`;
-            } else if (desc) {
-                details += `\nBackstory:\n${desc}\n`;
-            }
-         }
+        }
 
-         return details;
+        // Fallback cargo info (if not presented as the objective)
+        if (this.cargoType && (this.type !== MISSION_TYPE.DELIVERY_LEGAL && this.type !== MISSION_TYPE.DELIVERY_ILLEGAL)) {
+            details += `Cargo: ${this.cargoQuantity}t ${this.cargoType}\n`;
+        }
+
+        // Common warnings & meta
+        if (this.isIllegal) details += `\n!! This mission involves illegal activity.\n`;
+        if (this.timeLimit) details += `Time Limit: ${this.timeLimit} seconds\n`;
+        if (this.requiredRep) details += `Requires Reputation: ${this.requiredRep}\n`;
+
+        // Progress for kill/collect missions
+        if ((this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE || this.type === MISSION_TYPE.BOUNTY_ALIEN) && this.progressCount > 0) {
+            details += `Progress: ${this.progressCount}/${this.targetCount}\n`;
+        }
+
+        return details;
     }
 } // End of Mission Class
