@@ -626,14 +626,13 @@ class Mission {
         
         // Include named target for assassination missions
         if (this.type === MISSION_TYPE.ASSASSINATION && this.targetName) {
-            return `${statusPrefix}${this.title} [Target: ${this.targetName}] - ${this.rewardCredits}cr`;
+            return `${statusPrefix}${this.title} - ${this.rewardCredits}cr`;
         }
-        // Summary for sabotage missions
+        // Summary for sabotage missions — avoid repeating location here (details show Location)
         if (this.type === MISSION_TYPE.SABOTAGE) {
             const obj = this.targetObjectType || 'Strategic Object';
-            const loc = this.targetPlanetName || this.destinationSystem || 'Target System';
             const factionInfo = this.offeringFaction ? ` (${this.offeringFaction})` : '';
-            return `${statusPrefix}${this.title} [Sabotage${factionInfo}: ${obj} near ${loc}] - ${this.rewardCredits}cr`;
+            return `${statusPrefix}${this.title} - ${this.rewardCredits}cr`;
         }
         // Basic summary with status prefix
         return `${statusPrefix}${this.title}${progressInfo} - ${this.rewardCredits}cr`;
