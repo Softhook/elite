@@ -1,7 +1,61 @@
 // ****** Galaxy.js ******
 
+/**
+ * Galaxy Configuration Constants
+ * Centralized configuration for galaxy generation parameters
+ */
+const GALAXY_CONFIG = {
+    // System generation
+    NUM_SYSTEMS: 16,
+    PLACEMENT_BORDER: 50,
+    MAX_PLACEMENT_ATTEMPTS: 150,
+    NEAREST_NEIGHBORS_TO_CONNECT: 3,
+    RELAX_ITERATIONS: 80,
+    
+    // Jump range
+    DEFAULT_HYPERDRIVE_RANGE: 7,
+    
+    // Arrival position
+    MIN_ARRIVAL_DISTANCE: 1000,
+    MAX_ARRIVAL_DISTANCE: 2000
+};
+
+/**
+ * Name generation data for procedural system names
+ */
+const NAME_GENERATION_DATA = {
+    prefixes: [
+        "Ache", "Ali", "An", "Bei", "Beta", "Ceo", "Ceti", "Cor", "Cygn", "Delta",
+        "Diso", "Ep", "Era", "Eta", "Exo", "Glie", "Hep", "Hip", "Kap", "Kru",
+        "Lave", "Mu", "Neu", "Novi", "Omi", "Pro", "Rho", "Ross", "Sol", "Tau",
+        "Uma", "Uri", "Xi", "Zaon", "Zeta"
+    ],
+    roots: [
+        "mar", "ath", "dan", "dis", "gon", "lia", "nar", "nus", "on", "or",
+        "phi", "qua", "ri", "sus", "tei", "tis", "tor", "us", "ve", "xe", "za"
+    ],
+    suffixes: [
+        "", "a", "i", "o", "us", "is", " Prime", " Minor", " Major", " Gateway",
+        " Reach", " Verge", " Drift", " Abyss", " Point", " Outpost", " Landing",
+        " VII", " IX", " IV"
+    ],
+    singleNames: [
+        "Bastion", "Terminus", "Horizon", "Lewes", "Amhurst", "Elysium", "Crucible",
+        "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"
+    ]
+};
+
+/**
+ * Security level distribution for galaxy generation
+ */
+const SECURITY_LEVELS = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
+
 class Galaxy {
-    // --- Static Definition for Economy Types and Colors ---
+    // =========================================================================
+    // STATIC PROPERTIES
+    // =========================================================================
+    
+    /** Economy type definitions with associated colors */
     static ECONOMY_DATA = {
         "Industrial":   { color: [60, 120, 200, 210] }, // Blue
         "Agricultural": { color: [180, 120, 40, 210] }, // Brown/Orange
@@ -16,48 +70,50 @@ class Galaxy {
         "Imperial":     { color: [218, 165, 32, 210] },  // Gold (Placeholder)
         "Alien":        { color: [100, 50, 150, 210] },  // Dark Purple
         "Default":      { color: [150, 150, 150, 210] }   // Default grey if type unknown
-        // Add other properties like typical exports/imports here later if desired
     };
-    // --- End Static Definition ---
+
+    // =========================================================================
+    // CONSTRUCTOR
+    // =========================================================================
 
     constructor() {
-        this.systems = []; // Initialize systems as an empty array
+        this.systems = [];
         this.currentSystemIndex = 0;
-        this.hyperdriveRange = 7; // Default hyperdrive range in light years
-        this._initialized = false; // Mark when systems are generated/loaded
-        this._warnedEmptyOnce = false; // Prevent log spam before initialization
-        // Add other galaxy-wide properties here (e.g., faction data, global events)
+        this.hyperdriveRange = GALAXY_CONFIG.DEFAULT_HYPERDRIVE_RANGE;
+        this._initialized = false;
+        this._warnedEmptyOnce = false;
     }
 
-    initGalaxySystems(globalSessionSeed) { // Add globalSessionSeed parameter
+    // =========================================================================
+    // GALAXY GENERATION
+    // =========================================================================
+
+    /**
+     * Initializes and generates all star systems for the galaxy
+     * @param {number} globalSessionSeed - Seed for deterministic generation
+     */
+    initGalaxySystems(globalSessionSeed) {
         console.log(">>> Galaxy.initGalaxySystems() called for procedural generation.");
-        this.systems = []; // Ensure clear array
+        this.systems = [];
 
-        // --- Generation Parameters ---
-        // ... (parameters remain the same) ...
-        const NUM_SYSTEMS = 16;
+        // Use constants from configuration
+        const NUM_SYSTEMS = GALAXY_CONFIG.NUM_SYSTEMS;
         const MIN_SEPARATION = max(width, height) * 0.15;
-        const PLACEMENT_BORDER = 50;
-        const MAX_PLACEMENT_ATTEMPTS = 150;
-        const NEAREST_NEIGHBORS_TO_CONNECT = 3;
+        const PLACEMENT_BORDER = GALAXY_CONFIG.PLACEMENT_BORDER;
+        const MAX_PLACEMENT_ATTEMPTS = GALAXY_CONFIG.MAX_PLACEMENT_ATTEMPTS;
+        const NEAREST_NEIGHBORS_TO_CONNECT = GALAXY_CONFIG.NEAREST_NEIGHBORS_TO_CONNECT;
 
-        // --- Name Generation Components ---
-        // ... (name lists remain the same) ...
-        const namePrefixes = ["Ache", "Ali", "An", "Bei", "Beta", "Ceo", "Ceti", "Cor", "Cygn", "Delta", "Diso", "Ep", "Era", "Eta", "Exo", "Glie", "Hep", "Hip", "Kap", "Kru", "Lave", "Mu", "Neu", "Novi", "Omi", "Pro", "Rho", "Ross", "Sol", "Tau", "Uma", "Uri", "Xi", "Zaon", "Zeta"];
-        const nameRoots = ["mar", "ath", "dan", "dis", "gon", "lia", "nar", "nus", "on", "or", "phi", "qua", "ri", "sus", "tei", "tis", "tor", "us", "ve", "xe", "za"];
-        const nameSuffixes = ["", "a", "i", "o", "us", "is", " Prime", " Minor", " Major", " Gateway", " Reach", " Verge", " Drift", " Abyss", " Point", " Outpost", " Landing", " VII", " IX", " IV"];
-        const singleNames = ["Bastion", "Terminus", "Horizon", "Lewes", "Amhurst", "Elysium", "Crucible", "Aegis", "Threshold", "Meridian", "Solitude", "Valhalla", "Nexus", "Sanctuary"];
+        // Use name generation data from constants
+        const { prefixes: namePrefixes, roots: nameRoots, suffixes: nameSuffixes, singleNames } = NAME_GENERATION_DATA;
         const generatedNames = new Set();
 
-        // --- Use Economy Data ---
-        const economyTypeNames = Object.keys(Galaxy.ECONOMY_DATA).filter(k => k !== 'Default'); // Get type names from the static data, exclude Default
-        const securityLevels = ["Anarchy", "Low", "Low", "Medium", "Medium", "Medium", "High", "High"];
-        // ---
+        // Get economy and security data
+        const economyTypeNames = Object.keys(Galaxy.ECONOMY_DATA).filter(k => k !== 'Default');
+        const securityLevels = SECURITY_LEVELS;
 
         console.log(`   Attempting to place ${NUM_SYSTEMS} systems...`);
         for (let i = 0; i < NUM_SYSTEMS; i++) {
-            // *** CORRECTED NAME GENERATION SCOPE ***
-            let systemName = "Unnamed System"; // Initialize systemName for this iteration
+            let systemName = "Unnamed System";
             let systemX = -1, systemY = -1;
             let validPosition = false;
             let placementAttempts = 0;
@@ -133,52 +189,7 @@ class Galaxy {
         if(this.systems.length !== NUM_SYSTEMS) { console.warn(`!!! Expected ${NUM_SYSTEMS} systems, but only created ${this.systems.length}.`); }
 
         // --- Relax positions to avoid systems being too close/overlapping ---
-        // Run a few iterations pushing overlapping systems apart
-        try {
-            const RELAX_ITERATIONS = 80;
-            const MIN_DIST = MIN_SEPARATION; // use same minimum separation
-            const MIN_DIST_SQ = MIN_DIST * MIN_DIST;
-            for (let iter = 0; iter < RELAX_ITERATIONS; iter++) {
-                let moved = false;
-                for (let a = 0; a < this.systems.length; a++) {
-                    const A = this.systems[a];
-                    if (!A?.galaxyPos) continue;
-                    for (let b = a + 1; b < this.systems.length; b++) {
-                        const B = this.systems[b];
-                        if (!B?.galaxyPos) continue;
-                        let dx = B.galaxyPos.x - A.galaxyPos.x;
-                        let dy = B.galaxyPos.y - A.galaxyPos.y;
-                        let d2 = dx * dx + dy * dy;
-                        if (d2 === 0) {
-                            // jitter to avoid exact overlap
-                            dx = (random() - 0.5) * 0.01;
-                            dy = (random() - 0.5) * 0.01;
-                            d2 = dx * dx + dy * dy;
-                        }
-                        if (d2 < MIN_DIST_SQ) {
-                            const d = Math.sqrt(d2);
-                            const overlap = (MIN_DIST - d) / 2;
-                            const nx = dx / d;
-                            const ny = dy / d;
-                            // move each system away from the other
-                            A.galaxyPos.x -= nx * overlap;
-                            A.galaxyPos.y -= ny * overlap;
-                            B.galaxyPos.x += nx * overlap;
-                            B.galaxyPos.y += ny * overlap;
-                            // clamp to placement border
-                            A.galaxyPos.x = constrain(A.galaxyPos.x, PLACEMENT_BORDER, width - PLACEMENT_BORDER);
-                            A.galaxyPos.y = constrain(A.galaxyPos.y, PLACEMENT_BORDER, height - PLACEMENT_BORDER);
-                            B.galaxyPos.x = constrain(B.galaxyPos.x, PLACEMENT_BORDER, width - PLACEMENT_BORDER);
-                            B.galaxyPos.y = constrain(B.galaxyPos.y, PLACEMENT_BORDER, height - PLACEMENT_BORDER);
-                            moved = true;
-                        }
-                    }
-                }
-                if (!moved) break;
-            }
-        } catch (e) {
-            console.warn('Galaxy: relaxation pass failed:', e);
-        }
+        this._relaxSystemPositions(MIN_SEPARATION, PLACEMENT_BORDER);
 
         // --- Generate connections ---
         if (this.systems.length >= 2) { this.generateConnections(NEAREST_NEIGHBORS_TO_CONNECT); }
@@ -240,6 +251,69 @@ class Galaxy {
 
         console.log("<<< Galaxy.initGalaxySystems() finished procedural generation.");
         this._initialized = true;
+    }
+
+    /**
+     * Relaxes system positions to avoid overlaps
+     * @param {number} minSeparation - Minimum distance between systems
+     * @param {number} placementBorder - Border margin for placement
+     * @private
+     */
+    _relaxSystemPositions(minSeparation, placementBorder) {
+        try {
+            const iterations = GALAXY_CONFIG.RELAX_ITERATIONS;
+            const minDistSq = minSeparation * minSeparation;
+            
+            for (let iter = 0; iter < iterations; iter++) {
+                let moved = false;
+                
+                for (let a = 0; a < this.systems.length; a++) {
+                    const sysA = this.systems[a];
+                    if (!sysA?.galaxyPos) continue;
+                    
+                    for (let b = a + 1; b < this.systems.length; b++) {
+                        const sysB = this.systems[b];
+                        if (!sysB?.galaxyPos) continue;
+                        
+                        let dx = sysB.galaxyPos.x - sysA.galaxyPos.x;
+                        let dy = sysB.galaxyPos.y - sysA.galaxyPos.y;
+                        let distSq = dx * dx + dy * dy;
+                        
+                        // Jitter to avoid exact overlap
+                        if (distSq === 0) {
+                            dx = (random() - 0.5) * 0.01;
+                            dy = (random() - 0.5) * 0.01;
+                            distSq = dx * dx + dy * dy;
+                        }
+                        
+                        if (distSq < minDistSq) {
+                            const d = Math.sqrt(distSq);
+                            const overlap = (minSeparation - d) / 2;
+                            const nx = dx / d;
+                            const ny = dy / d;
+                            
+                            // Push systems apart
+                            sysA.galaxyPos.x -= nx * overlap;
+                            sysA.galaxyPos.y -= ny * overlap;
+                            sysB.galaxyPos.x += nx * overlap;
+                            sysB.galaxyPos.y += ny * overlap;
+                            
+                            // Clamp to placement border
+                            sysA.galaxyPos.x = constrain(sysA.galaxyPos.x, placementBorder, width - placementBorder);
+                            sysA.galaxyPos.y = constrain(sysA.galaxyPos.y, placementBorder, height - placementBorder);
+                            sysB.galaxyPos.x = constrain(sysB.galaxyPos.x, placementBorder, width - placementBorder);
+                            sysB.galaxyPos.y = constrain(sysB.galaxyPos.y, placementBorder, height - placementBorder);
+                            
+                            moved = true;
+                        }
+                    }
+                }
+                
+                if (!moved) break;
+            }
+        } catch (e) {
+            console.warn('Galaxy: relaxation pass failed:', e);
+        }
     }
 
     /**
@@ -412,24 +486,31 @@ class Galaxy {
                 player.shieldsDisabled = false;
                 player.weaponsDisabled = false;
                 player.inNebula = false;
-                // If there are other specific flags set by storms/nebulas on the player, reset them here too.
-                console.log(`Player effects cleared due to system jump. ShieldsDisabled: ${player.shieldsDisabled}, WeaponsDisabled: ${player.weaponsDisabled}, InNebula: ${player.inNebula}`);
+                console.log(`Player effects cleared due to system jump.`);
                 // --- End effect clearing ---
 
-                const MIN_ARRIVAL_DISTANCE = 1000;
-                const MAX_ARRIVAL_DISTANCE = 2000;
-                let arrivalAngle = random(TWO_PI);
-                let arrivalDist = random(MIN_ARRIVAL_DISTANCE, MAX_ARRIVAL_DISTANCE);
-                let arrivalPosition = p5.Vector.fromAngle(arrivalAngle).mult(arrivalDist);
+                // Calculate arrival position using config constants
+                const arrivalAngle = random(TWO_PI);
+                const arrivalDist = random(
+                    GALAXY_CONFIG.MIN_ARRIVAL_DISTANCE,
+                    GALAXY_CONFIG.MAX_ARRIVAL_DISTANCE
+                );
+                const arrivalPosition = p5.Vector.fromAngle(arrivalAngle).mult(arrivalDist);
                 player.pos.set(arrivalPosition.x, arrivalPosition.y);
                 player.vel.set(0, 0);
-                console.log(`Player arrived in ${newSystemName} at angle ${(arrivalAngle * 180 / Math.PI).toFixed(1)} deg, dist ${arrivalDist.toFixed(0)}, final pos (${player.pos.x.toFixed(0)}, ${player.pos.y.toFixed(0)})`);
+                console.log(`Player arrived in ${newSystemName} at dist ${arrivalDist.toFixed(0)}`);
                 player.currentSystem = newSystem;
-                newSystem.enterSystem(player); // Should be safe if newSystem is valid
-                return true; // Jump succeeded
-            } else { console.error(`Error during jump completion: Player (${!!player}) or New System (${!!newSystem}) object invalid!`); return false; }
-        } else { console.error(`Invalid jump target index: ${targetIndex} or already in system.`); return false; }
-    } // --- End jumpToSystem ---
+                newSystem.enterSystem(player);
+                return true;
+            } else {
+                console.error(`Error during jump: Player or New System invalid!`);
+                return false;
+            }
+        } else {
+            console.error(`Invalid jump target index: ${targetIndex}`);
+            return false;
+        }
+    }
 
 
    /**
