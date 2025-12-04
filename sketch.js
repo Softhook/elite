@@ -376,6 +376,7 @@ function keyPressed() {
     if (handleSpacebarFiring()) return false;
     if (handleWeaponSwitching()) return false;
     if (handleSingleKeyActions()) return;
+    if (handleMissionNavigation()) return;
     if (handleEscapeKey()) return;
 }
 
@@ -492,6 +493,36 @@ function handleSingleKeyActions() {
             return handleMinimapZoomIn();
     }
     return false;
+}
+
+/**
+ * Handle mission list navigation with Up/Down arrows when viewing missions
+ * @returns {boolean} True if handled
+ */
+function handleMissionNavigation() {
+    if (!gameStateManager || gameStateManager.currentState !== "VIEWING_MISSIONS") return false;
+
+    // Only react to Up/Down arrow keys
+    if (!(keyCode === UP_ARROW || keyCode === DOWN_ARROW)) return false;
+
+    const missions = gameStateManager.currentStationMissions || [];
+    if (!Array.isArray(missions) || missions.length === 0) return false;
+
+    let idx = (typeof gameStateManager.selectedMissionIndex === 'number') ? gameStateManager.selectedMissionIndex : -1;
+
+    // If nothing selected, start at 0 on Down or last on Up
+    if (idx === -1) {
+        idx = (keyCode === DOWN_ARROW) ? 0 : (missions.length - 1);
+    } else {
+        if (keyCode === DOWN_ARROW) idx = Math.min(missions.length - 1, idx + 1);
+        else if (keyCode === UP_ARROW) idx = Math.max(0, idx - 1);
+    }
+
+    gameStateManager.selectedMissionIndex = idx;
+    if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+        soundManager.playSound('click');
+    }
+    return true;
 }
 
 /**
