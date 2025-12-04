@@ -119,6 +119,44 @@ class Mission {
         } else {
              console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
         }
+        
+        // Special handling for delivery missions: add cargo to player's ship
+        try {
+            if ((this.type === MISSION_TYPE.DELIVERY_LEGAL || this.type === MISSION_TYPE.DELIVERY_ILLEGAL) && 
+                this.cargoType && this.cargoQuantity > 0 && 
+                typeof player !== 'undefined' && player) {
+                // Check if player has enough cargo space
+                const usedSpace = player.cargo.reduce((sum, item) => sum + item.quantity, 0);
+                const availableSpace = player.cargoCapacity - usedSpace;
+                
+                if (availableSpace >= this.cargoQuantity) {
+                    // Add cargo to player's ship
+                    const existingItem = player.cargo.find(item => item.name === this.cargoType);
+                    if (existingItem) {
+                        existingItem.quantity += this.cargoQuantity;
+                    } else {
+                        player.cargo.push({ name: this.cargoType, quantity: this.cargoQuantity });
+                    }
+                    MISSION_LOG(`Added ${this.cargoQuantity}t ${this.cargoType} to player cargo`);
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Loaded ${this.cargoQuantity}t ${this.cargoType} into cargo hold`);
+                    }
+                } else {
+                    // Not enough cargo space - prevent mission acceptance
+                    console.warn(`Not enough cargo space for mission! Need ${this.cargoQuantity}t, have ${availableSpace}t available`);
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Insufficient cargo space! Need ${this.cargoQuantity}t, have ${availableSpace}t available`, [255, 100, 100]);
+                    }
+                    this.status = 'Available'; // Revert status
+                    return false; // Signal failure
+                }
+            }
+        } catch (e) { 
+            console.error('Mission.activate (delivery cargo) failed:', e); 
+            this.status = 'Available'; // Revert on error
+            return false;
+        }
+        
         // Special handling for assassination missions: spawn the named target near the player
         try {
             if (this.type === MISSION_TYPE.ASSASSINATION && typeof player !== 'undefined' && player && player.currentSystem) {

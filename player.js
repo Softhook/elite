@@ -212,8 +212,15 @@ class Player {
 
         try {
             console.log(`   >>> Calling this.activeMission.activate() <<<`);
-            this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
+            const activateResult = this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
             console.log(`   <<< Finished this.activeMission.activate() >>>`);
+            
+            // Check if activation failed (e.g., not enough cargo space)
+            if (activateResult === false) {
+                console.error("   Mission activation failed (returned false)");
+                this.activeMission = null;
+                return false;
+            }
         } catch(e) {
             console.error("   !!! ERROR during mission.activate():", e);
             this.activeMission = null; // Clear mission if activation failed critically
@@ -354,6 +361,34 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
                 canComplete = true; // Allow completion anywhere once count is met
             } else {
                  console.warn("   Complete failed: Bounty (Alien) target count not met."); return false;
+            }
+        }
+
+        // --- ASSASSINATION MISSIONS (Check if target was destroyed) ---
+        else if (this.activeMission.type === MISSION_TYPE.ASSASSINATION) {
+            console.log(`   Assassination Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount || 1}`);
+            // Assassination missions are auto-completed when the target is destroyed (via mission.update)
+            // But we also allow manual completion if progressCount >= 1
+            if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
+                console.log("   Assassination Check: Target eliminated. Allowing completion.");
+                canComplete = true;
+            } else {
+                console.warn("   Complete failed: Assassination target not yet eliminated."); 
+                return false;
+            }
+        }
+
+        // --- SABOTAGE MISSIONS (Check if target object was destroyed) ---
+        else if (this.activeMission.type === MISSION_TYPE.SABOTAGE) {
+            console.log(`   Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
+            // Sabotage missions are auto-completed when the target object is destroyed (via mission.update)
+            // But we also allow manual completion if status is 'Completable' or progressCount >= 1
+            if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
+                console.log("   Sabotage Check: Target destroyed. Allowing completion.");
+                canComplete = true;
+            } else {
+                console.warn("   Complete failed: Sabotage target not yet destroyed."); 
+                return false;
             }
         }
 

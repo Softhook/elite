@@ -241,6 +241,29 @@ class UIMissions {
                     canCompleteHere = true;
                 }
                 
+                // Check bounty mission completion (can complete anywhere once target count met)
+                if (typeof MISSION_TYPE !== 'undefined' &&
+                    (activeMission.type === MISSION_TYPE.BOUNTY_PIRATE || 
+                     activeMission.type === MISSION_TYPE.BOUNTY_POLICE ||
+                     activeMission.type === MISSION_TYPE.BOUNTY_ALIEN) &&
+                    activeMission.progressCount >= activeMission.targetCount) {
+                    canCompleteHere = true;
+                }
+                
+                // Check assassination mission completion (can complete anywhere once target eliminated)
+                if (typeof MISSION_TYPE !== 'undefined' &&
+                    activeMission.type === MISSION_TYPE.ASSASSINATION &&
+                    (activeMission.progressCount >= 1 || activeMission.status === 'Completable')) {
+                    canCompleteHere = true;
+                }
+                
+                // Check sabotage mission completion (can complete anywhere once target destroyed)
+                if (typeof MISSION_TYPE !== 'undefined' &&
+                    activeMission.type === MISSION_TYPE.SABOTAGE &&
+                    (activeMission.progressCount >= 1 || activeMission.status === 'Completable')) {
+                    canCompleteHere = true;
+                }
+                
                 if (canCompleteHere) {
                     this.missionDetailButtonAreas['complete'] = UIComponents.drawButton(
                         actionBtnX, btnDetailY, btnDetailW, btnDetailH,
