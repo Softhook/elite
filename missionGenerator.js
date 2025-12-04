@@ -509,9 +509,9 @@ class MissionGenerator {
         ];
         
         const missionSources = [
-            'shadowy corporate interests', 'rival political factions', 'underground syndicates',
-            'military intelligence', 'corporate espionage divisions', 'rebel cells',
-            'imperial security services', 'black market consortiums', 'pirate cartels',
+            'Shadowy corporate interests', 'rival political factions', 'underground syndicates',
+            'Military intelligence', 'corporate espionage divisions', 'rebel cells',
+            'Imperial security services', 'black market consortiums', 'pirate cartels',
             'separatist movements', 'industrial magnates', 'colonial governors',
             'trade guilds', 'mercenary guilds', 'intelligence agencies'
         ];

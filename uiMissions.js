@@ -75,15 +75,27 @@ class UIMissions {
         let typeColor;
         if (typeof MISSION_TYPE !== 'undefined') {
             switch (missionType) {
+                // Normal legal deliveries -> blue
                 case MISSION_TYPE.DELIVERY_LEGAL:
-                    typeColor = [100, 200, 100];
+                    typeColor = [100, 150, 255];
                     break;
+                // Smuggling / illegal deliveries -> grey
                 case MISSION_TYPE.DELIVERY_ILLEGAL:
-                    typeColor = [255, 100, 100];
+                    typeColor = [160, 160, 160];
                     break;
-                case MISSION_TYPE.BOUNTY:
+                // Bounties: keep pirate/police as orange, aliens explicit green
+                case MISSION_TYPE.BOUNTY_PIRATE:
+                case MISSION_TYPE.BOUNTY_POLICE:
                     typeColor = [255, 200, 100];
                     break;
+                case MISSION_TYPE.BOUNTY_ALIEN:
+                    typeColor = [100, 200, 100];
+                    break;
+                // Assassination -> red
+                case MISSION_TYPE.ASSASSINATION:
+                    typeColor = [220, 60, 60];
+                    break;
+                // Sabotage -> yellow
                 case MISSION_TYPE.SABOTAGE:
                     typeColor = [255, 255, 100];
                     break;
