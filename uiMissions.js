@@ -174,10 +174,36 @@ class UIMissions {
                 const missionText = m.getSummary ? m.getSummary() : 'Unknown mission';
                 textSize(16);
                 const availableWidth = listW - 40;
-                const approxCharsPerLine = 30;
-                const textLines = Math.ceil(missionText.length / approxCharsPerLine);
                 const minHeight = 35;
                 const heightPerLine = 18;
+                // Measure actual wrapped lines using p5 `textWidth` for accurate height
+                let textLines = 1;
+                try {
+                    const words = missionText.split(/\s+/);
+                    let cur = '';
+                    textLines = 0;
+                    for (let w of words) {
+                        const test = cur ? (cur + ' ' + w) : w;
+                        if (textWidth(test) > availableWidth) {
+                            if (cur === '') {
+                                // single long word exceeds width; count as one line and reset
+                                textLines++;
+                                cur = '';
+                            } else {
+                                // commit current line, start new with the word
+                                textLines++;
+                                cur = w;
+                            }
+                        } else {
+                            cur = test;
+                        }
+                    }
+                    if (cur) textLines++;
+                } catch (e) {
+                    // Fallback to rough estimate if textWidth is unavailable
+                    const approxCharsPerLine = 30;
+                    textLines = Math.ceil(missionText.length / approxCharsPerLine);
+                }
                 const buttonHeight = Math.max(minHeight, textLines * heightPerLine);
                 
                 // Skip if would extend beyond panel
