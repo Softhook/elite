@@ -1,16 +1,82 @@
 // ****** uiManager.js ******
 
-// Constants for space object trading prices - relative to station prices
-// Space objects sell produced goods CHEAPER than station buy price (profitable to buy here, sell at station)
-const SPACE_OBJECT_PRODUCE_DISCOUNT = 0.60;  // 60% of station buy price
-// Space objects buy demanded goods at HIGHER price than station sell price (profitable to buy at station, sell here)
-const SPACE_OBJECT_DEMAND_PREMIUM = 1.50;  // 150% of station sell price
+/**
+ * UI Manager Configuration Constants
+ */
+const UI_MANAGER_CONFIG = {
+    // Space object trading prices - relative to station prices
+    SPACE_OBJECT_PRODUCE_DISCOUNT: 0.60,  // 60% of station buy price
+    SPACE_OBJECT_DEMAND_PREMIUM: 1.50,    // 150% of station sell price
+    
+    // Message display settings
+    MESSAGE_DISPLAY_TIME: 4000,
+    MAX_MESSAGES_TO_SHOW: 4,
+    COMMUNICATION_DISPLAY_TIME: 15000,
+    MAX_COMMUNICATION_MESSAGES: 5,
+    COMMUNICATION_QUEUE_LIMIT: 12,
+    
+    // Button interaction
+    BUTTON_REPEAT_DELAY: 150,
+    
+    // FPS tracking
+    FPS_MAX_SAMPLES: 30,
+    FPS_UPDATE_INTERVAL: 10,
+    
+    // Minimap
+    MINIMAP_DEFAULT_SIZE: 200,
+    MINIMAP_EXPANDED_SIZE: 360,
+    MINIMAP_MARGIN: 15,
+    MINIMAP_WORLD_VIEW_RANGES: [5000, 10000, 20000, 50000]
+};
+
+// Legacy constants for backward compatibility
+const SPACE_OBJECT_PRODUCE_DISCOUNT = UI_MANAGER_CONFIG.SPACE_OBJECT_PRODUCE_DISCOUNT;
+const SPACE_OBJECT_DEMAND_PREMIUM = UI_MANAGER_CONFIG.SPACE_OBJECT_DEMAND_PREMIUM;
 
 // Note: STANDARD_PANEL_BG is now defined in uiComponents.js
 
+/**
+ * UIManager - Central UI coordination class
+ * 
+ * Delegates rendering to specialized UI modules:
+ * - UIHUD: Heads-up display, messages, battle indicators
+ * - UIMinimap: Minimap rendering and interaction
+ * - UIMarket: Market screen and trading
+ * - UIStationMenus: Station service menus
+ * - UIMissions: Mission board and details
+ * - UIGalaxyMap: Galaxy map rendering
+ * - UIFactionRecruitment: Faction recruitment menus
+ */
 class UIManager {
+    // =========================================================================
+    // CONSTRUCTOR & INITIALIZATION
+    // =========================================================================
+    
     constructor() {
-        // --- Instantiate UI Modules ---
+        // Instantiate UI Modules
+        this._initModules();
+        
+        // Initialize state
+        this._initUIAreas();
+        this.lockedDestinationIndex = -1;
+        this._initMinimap();
+        this._initShopAreas();
+        this._initFPSTracking();
+        this._initMessages();
+        
+        // Weapon/Combat state
+        this.selectedWeaponSlot = 0;
+        this.weaponSlotButtons = [];
+        
+        // Panel defaults
+        this.setPanelDefaults();
+    }
+    
+    /**
+     * Initializes UI module instances
+     * @private
+     */
+    _initModules() {
         this.hud = new UIHUD();
         this.minimap = new UIMinimap();
         this.market = new UIMarket();
@@ -18,24 +84,6 @@ class UIManager {
         this.missions = new UIMissions();
         this.galaxyMap = new UIGalaxyMap();
         this.factionRecruitment = new UIFactionRecruitment();
-        
-        // --- UI Areas ---
-        this._initUIAreas();
-        // --- UI State ---
-        this.lockedDestinationIndex = -1; // Tracks locked destination on Galaxy Map (-1 for none)
-        // --- Minimap ---
-        this._initMinimap();
-        // --- Shipyard/Upgrade/Repairs ---
-        this._initShopAreas();
-        // --- FPS Tracking ---
-        this._initFPSTracking();
-        // --- Message System ---
-        this._initMessages();
-        // --- Weapon/Combat ---
-        this.selectedWeaponSlot = 0;
-        this.weaponSlotButtons = [];
-        // --- Panel Defaults ---
-        this.setPanelDefaults();
     }
 
     // --- Initialization Helpers ---
@@ -77,23 +125,18 @@ class UIManager {
     }
 
     _initMinimap() {
-        // Sizes: keep minimap always the large size; clicks change zoom level (world view range)
-        this.minimapDefaultSize = 200;              // legacy/default (kept)
-        this.minimapExpandedSize = 360;             // always use this size for rendering
-        this.minimapSize = this.minimapExpandedSize; // start always large
-
-        // Zoom levels (world view ranges) - clicking cycles these
-        this.minimapWorldViewRanges = [5000, 10000, 20000, 50000];
-        this.minimapZoomIndex = 2; // start at the widest view (index into minimapWorldViewRanges)
-
-        this.minimapMargin = 15;
+        const config = UI_MANAGER_CONFIG;
+        this.minimapDefaultSize = config.MINIMAP_DEFAULT_SIZE;
+        this.minimapExpandedSize = config.MINIMAP_EXPANDED_SIZE;
+        this.minimapSize = this.minimapExpandedSize;
+        this.minimapWorldViewRanges = config.MINIMAP_WORLD_VIEW_RANGES;
+        this.minimapZoomIndex = 2;
+        this.minimapMargin = config.MINIMAP_MARGIN;
         this.minimapX = 0;
         this.minimapY = 0;
         this.minimapScale = 1;
         this.minimapHazardsBuffer = null;
         this._minimapHazardsBufferSize = 0;
-
-        // Keep flag for compatibility but treat the minimap as always "expanded"
         this.minimapExpanded = true;
     }
 
@@ -110,21 +153,23 @@ class UIManager {
     }
 
     _initFPSTracking() {
+        const config = UI_MANAGER_CONFIG;
         this.fpsValues = [];
-        this.fpsMaxSamples = 30;
-        this.fpsUpdateInterval = 10;
+        this.fpsMaxSamples = config.FPS_MAX_SAMPLES;
+        this.fpsUpdateInterval = config.FPS_UPDATE_INTERVAL;
         this.fpsFrameCount = 0;
         this.fpsAverage = 0;
     }
 
     _initMessages() {
+        const config = UI_MANAGER_CONFIG;
         this.messages = [];
-        this.messageDisplayTime = 4000;
-        this.maxMessagesToShow = 4;
+        this.messageDisplayTime = config.MESSAGE_DISPLAY_TIME;
+        this.maxMessagesToShow = config.MAX_MESSAGES_TO_SHOW;
         this.communicationMessages = [];
-        this.communicationDisplayTime = 15000;
-        this.maxCommunicationMessagesToShow = 5;
-        this.communicationQueueLimit = 12;
+        this.communicationDisplayTime = config.COMMUNICATION_DISPLAY_TIME;
+        this.maxCommunicationMessagesToShow = config.MAX_COMMUNICATION_MESSAGES;
+        this.communicationQueueLimit = config.COMMUNICATION_QUEUE_LIMIT;
         this.marketButtonHeld = null;
         this.lastButtonAction = 0;
         this.buttonRepeatDelay = 150;
