@@ -231,12 +231,33 @@ class EnemyDamageSystem {
 
         // Update mission progress
         if (attacker.activeMission) {
+            // Pirate bounty missions
             if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
                 this.role === AI_ROLE.PIRATE) {
                 attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                AI_LOG(`Updated pirate bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
                 if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Bounty mission target count met! Completing mission...");
+                    AI_LOG("Pirate bounty mission target count met! Completing mission...");
+                    system.player.completeMission(); // <<< Use simpler call for auto-complete
+               }
+            }
+            // Police bounty missions
+            else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_POLICE &&
+                this.role === AI_ROLE.POLICE) {
+                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                AI_LOG(`Updated police bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                    AI_LOG("Police bounty mission target count met! Completing mission...");
+                    system.player.completeMission(); // <<< Use simpler call for auto-complete
+               }
+            }
+            // Alien bounty missions
+            else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN &&
+                this.role === AI_ROLE.ALIEN) {
+                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                AI_LOG(`Updated alien bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                    AI_LOG("Alien bounty mission target count met! Completing mission...");
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
                }
             }
