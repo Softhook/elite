@@ -1,170 +1,295 @@
 // ****** player.js ******
 
+/**
+ * Player Configuration Constants
+ * Centralized configuration for player-specific values
+ */
+const PLAYER_CONFIG = {
+    // Physics
+    DEFAULT_DRAG: 0.985,
+    REVERSE_THRUST_MULTIPLIER: 0.6,
+    
+    // Speed Burst
+    SPEED_BURST_COOLDOWN: 10000,
+    SPEED_BURST_MULTIPLIER: 2,
+    SPEED_BURST_DURATION: 1000,
+    
+    // Shield
+    SHIELD_RECHARGE_DELAY: 3000, // 3 seconds delay after shield hit
+    
+    // Autopilot
+    AUTOPILOT_ROTATION_RATE: 0.03,
+    AUTOPILOT_THRUST: 0.25,
+    AUTOPILOT_THROTTLE_MULTIPLIER: 0.8,
+    AUTOPILOT_ROTATION_MULTIPLIER: 0.9,
+    
+    // Bodyguards
+    MAX_BODYGUARDS: 3,
+    
+    // Starting values
+    STARTING_CREDITS: 1000
+};
+
+/**
+ * Player class - represents the player's ship and state
+ * 
+ * Organization:
+ * 1. Constructor & Initialization
+ * 2. Ship Definition & Configuration
+ * 3. Movement & Physics
+ * 4. Combat & Weapons
+ * 5. Damage & Health
+ * 6. Mission Management
+ * 7. Cargo & Credits
+ * 8. Autopilot
+ * 9. Faction & Status
+ * 10. Bodyguard Management
+ * 11. Personal Records
+ * 12. Drawing & Rendering
+ * 13. Save/Load
+ */
 class Player {
+    // =========================================================================
+    // SECTION 1: CONSTRUCTOR & INITIALIZATION
+    // =========================================================================
+    
     /**
-     * Creates a Player instance. Stores speeds/rates
-     * @param {string} [shipTypeName="Sidewinder"] - The type name of the ship to use.
+     * Creates a Player instance
+     * @param {string} [shipTypeName="Sidewinder"] - The type name of the ship to use
      */
     constructor(shipTypeName = "Sidewinder") {
-        // console.log(`Creating Player instance with ship: ${shipTypeName}`); // Optional log
-        this.shipTypeName = shipTypeName; // Store the type name initially
-        // constructor continues; initialization follows below
-        // Resolve ship definition safely (avoid referencing undefined `shipDef`)
-        let shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[this.shipTypeName] : null;
+        // Resolve and validate ship definition
+        const shipDef = this._resolveShipDefinition(shipTypeName);
+        
+        // Initialize all properties in logical groups
+        this._initPhysicsProperties(shipDef);
+        this._initCombatProperties(shipDef);
+        this._initStatusProperties();
+        this._initAutopilotProperties();
+        this._initEffectProperties();
+        this._initRecordProperties();
+    }
+    
+    /**
+     * Resolves and validates the ship definition
+     * @param {string} shipTypeName - Ship type to resolve
+     * @returns {Object} Valid ship definition
+     * @private
+     */
+    _resolveShipDefinition(shipTypeName) {
+        this.shipTypeName = shipTypeName;
+        let shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[shipTypeName] : null;
+        
         if (!shipDef) {
             console.error(`FATAL: Ship definition "${shipTypeName}" not found! Defaulting to Sidewinder.`);
             this.shipTypeName = "Sidewinder";
-            shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[this.shipTypeName] : null;
+            shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS["Sidewinder"] : null;
         }
-
-        this.activeMission = null;  // Holds the currently accepted Mission object or null
-
-        // --- Initialize Position & Basic Physics ---
+        
+        return shipDef;
+    }
+    
+    /**
+     * Initializes physics-related properties
+     * @param {Object} shipDef - Ship definition object
+     * @private
+     */
+    _initPhysicsProperties(shipDef) {
+        // Position & Movement
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
         this.angle = 0; // Current facing angle (RADIANS, 0 = right)
-        this.drag = 0.985;
+        this.drag = PLAYER_CONFIG.DEFAULT_DRAG;
         
-        // Cache frequently used constants
+        // Cached math constants for performance
         this._TWO_PI = TWO_PI;
         this._HALF_PI = HALF_PI;
         this._PI = PI;
-
-        // --- Store Base Stats from Definition ---
+        
+        // Ship stats from definition
         this.size = shipDef.size;
         this.maxSpeed = shipDef.baseMaxSpeed;
+        this.baseMaxSpeed = shipDef.baseMaxSpeed;
         this.thrustForce = shipDef.baseThrust;
         this.rotationSpeed = shipDef.baseTurnRate; // Already in RADIANS
         this.maxHull = shipDef.baseHull;
         this.cargoCapacity = shipDef.cargoCapacity;
-
-
-        // Autopilot properties
-        this.autopilotEnabled = false;
-        this.autopilotTarget = null; // 'station' or 'jumpzone'
-        this.autopilotPlanetIndex = -1; // -1 = not cycling planets
-        this.autopilotThrottleMultiplier = 0.8; // Conservative speed for safety
-        this.autopilotRotationMultiplier = 0.9; // Slightly reduced rotation speed
-        this.lastDamageTime = 0; // Track when player was last hit
-
-        // Autopilot cycle tracking: used so a single full cycle (H/J presses)
-        // will make the next autopilot keypress turn autopilot off.
-        this.autopilotVisitedTargets = new Set();
-        this._autopilotWillDisableOnNextToggle = false;
-        // Planet-cycle tracking for H-key autopilot
-        this._autopilotPlanetSeenIndices = new Set();
-        this._autopilotPlanetStartIndex = null;
-
-
-        // --- Initialize Radian properties (calculated AFTER constructor) ---
-        this.rotationSpeed = 0; // RADIANS per frame
-
-        // --- Current State ---
-        this.hull = this.maxHull; this.credits = 1000; this.cargo = [];
-        this.currentSystem = null; this.fireCooldown = 0;
-        this.currentWeapon = WEAPON_UPGRADES.find(w => w.name === "Tangle Projector") || WEAPON_UPGRADES[0]; // Default to Tangle Projector for testing
-        this.fireRate = this.currentWeapon.fireRate;
-        this.isThrusting = false; 
-        this.isReverseThrusting = false; // Add this line
-
-        this.target = null; // Add this to store the player's current target for missiles etc.
-
-        // Add police status
-        this.isPolice = false;
-        this.hasBeenPolice = false;
-
-        // Add faction status properties
-        this.playerFaction = null; // Current faction: null, "IMPERIAL", "SEPARATIST", "MILITARY"
-        this.hasJoinedFaction = false; // Whether player has ever joined a faction
-        this.factionShip = null; // Ship received when joining faction
-
-        // Nebula effect properties
-        this.shieldsDisabled = false;
-        this.weaponsDisabled = false;
-        this.inNebula = false;
-
-        // Initialize weapons array based on ship definition
-        this.weapons = [];
-        this.weaponIndex = 0;
-        this.weaponHeat = {};
-
-        // Track active mines deployed by this player (max 5)
-        this.activeMines = [];
-
-        // Initialize thrust manager
+        
+        // Movement state flags
+        this.isThrusting = false;
+        this.isReverseThrusting = false;
+        this.isStrafing = false;
+        
+        // Speed burst system
+        this.speedBurstCooldown = PLAYER_CONFIG.SPEED_BURST_COOLDOWN;
+        this.lastBurstTime = -Infinity;
+        this.speedBurstMultiplier = PLAYER_CONFIG.SPEED_BURST_MULTIPLIER;
+        this.isSpeedBursting = false;
+        this.speedBurstEnd = 0;
+        this.isCoastingFromBurst = false;
+        
+        // Thrust particles
         this.thrustManager = new ThrustManager();
-
-        // Add shield properties from ship definition
+        
+        // Cached vectors for performance (lazy initialized)
+        this._tempVector = null;
+        this._tempThrustPos = null;
+    }
+    
+    /**
+     * Initializes combat-related properties
+     * @param {Object} shipDef - Ship definition object
+     * @private
+     */
+    _initCombatProperties(shipDef) {
+        // Health
+        this.hull = this.maxHull;
+        this.destroyed = false;
+        this.isDying = false;
+        this.exploding = false;
+        this.explosionStartTime = 0;
+        
+        // Shield system
         this.maxShield = shipDef.baseShield || 0;
         this.shield = this.maxShield;
         this.shieldRechargeRate = shipDef.shieldRecharge || 0;
-
-        // Add hit effect to shield tracking
+        this.shieldRechargeDelay = PLAYER_CONFIG.SHIELD_RECHARGE_DELAY;
+        this.lastShieldHitTime = 0;
         this.shieldHitTime = 0;
-
-        // Shield recharge delay
-        this.shieldRechargeDelay = 1000; // 3 seconds delay after shield hit
-        this.lastShieldHitTime = 0; // Track when shield was last hit
-
-        // Track shield-down/up transitions for audio cues
         this._shieldWasZero = (this.shield <= 0);
-
-        // Add tangle weapon effect properties
-        this.dragMultiplier = 1.0;   // Default - normal drag
-        this.dragEffectTimer = 0;    // Countdown timer for tangle effect
-        this.tangleEffectTime = 0;   // Visual effect timestamp
-        this.rotationBlockMultiplier = 1.0; // Default - normal rotation
-        this.rotationBlockTimer = 0; // Countdown timer for rotation block effect
-
-        // Track enemy kills for Elite rating
+        
+        // Weapons
+        this.weapons = [];
+        this.weaponIndex = 0;
+        this.weaponHeat = {};
+        this.currentWeapon = (typeof WEAPON_UPGRADES !== 'undefined') 
+            ? (WEAPON_UPGRADES.find(w => w.name === "Pulse Laser") || WEAPON_UPGRADES[0])
+            : null;
+        this.fireRate = this.currentWeapon?.fireRate || 0.5;
+        this.fireCooldown = 0;
+        
+        // Targeting
+        this.target = null;
+        this.lastTurretFiringAngle = null;
+        
+        // Active deployables
+        this.activeMines = [];
+        
+        // Barrier system
+        this.isBarrierActive = false;
+        this.barrierDurationTimer = 0;
+        this.barrierDamageReduction = 0;
+        this.barrierColor = null;
+        
+        // Kill tracking
         this.kills = 0;
-
-        // Track faction-specific kills for faction rankings
         this.factionKills = {
             POLICE: 0,
             MILITARY: 0,
             IMPERIAL: 0,
             SEPARATIST: 0
         };
-
-        // Initialize wanted status
+        
+        // Damage tracking
+        this.lastDamageTime = 0;
+        this.lastAttacker = null;
+        this.lastAttackTime = 0;
+    }
+    
+    /**
+     * Initializes status-related properties
+     * @private
+     */
+    _initStatusProperties() {
+        // Economy
+        this.credits = PLAYER_CONFIG.STARTING_CREDITS;
+        this.cargo = [];
+        
+        // System reference
+        this.currentSystem = null;
+        
+        // Mission
+        this.activeMission = null;
+        
+        // Legal status
         this.isWanted = false;
-
-        // --- Kiting & Speed Burst setup ---
-        this.baseMaxSpeed        = this.maxSpeed;         // remember original cap
-        this.speedBurstCooldown  = 10000;
-        this.lastBurstTime       = -Infinity;
-        this.speedBurstMultiplier= 2;
-        this.isSpeedBursting     = false;
-        this.speedBurstEnd       = 0; // Keep one
-        this.isCoastingFromBurst = false; // Add this new flag
+        this.isPolice = false;
+        this.hasBeenPolice = false;
         
-        // Secret base navigation feature
-        this.showSecretBaseNavigation = false; // Feature flag for drawing path to secret base
-        this._cachedNavigation = null; // Cache for navigation calculations
+        // Faction
+        this.playerFaction = null;
+        this.hasJoinedFaction = false;
+        this.factionShip = null;
         
-        // Bodyguards for protection
-        this.activeBodyguards = []; // Tracks hired bodyguards - destroyed ones are automatically removed
-        this.bodyguardLimit = 3; // Maximum number of bodyguards allowed
-
-        // Personal record tracking
+        // Bodyguards
+        this.activeBodyguards = [];
+        this.bodyguardLimit = PLAYER_CONFIG.MAX_BODYGUARDS;
+        
+        // Navigation
+        this.showSecretBaseNavigation = false;
+        this._cachedNavigation = null;
+    }
+    
+    /**
+     * Initializes autopilot-related properties
+     * @private
+     */
+    _initAutopilotProperties() {
+        this.autopilotEnabled = false;
+        this.autopilotTarget = null;
+        this.autopilotPlanetIndex = -1;
+        this.autopilotThrottleMultiplier = PLAYER_CONFIG.AUTOPILOT_THROTTLE_MULTIPLIER;
+        this.autopilotRotationMultiplier = PLAYER_CONFIG.AUTOPILOT_ROTATION_MULTIPLIER;
+        
+        // Cycle tracking
+        this.autopilotVisitedTargets = new Set();
+        this._autopilotWillDisableOnNextToggle = false;
+        this._autopilotPlanetSeenIndices = new Set();
+        this._autopilotPlanetStartIndex = null;
+    }
+    
+    /**
+     * Initializes effect-related properties (debuffs, environmental effects)
+     * @private
+     */
+    _initEffectProperties() {
+        // Nebula effects
+        this.shieldsDisabled = false;
+        this.weaponsDisabled = false;
+        this.inNebula = false;
+        
+        // Tangle weapon effects
+        this.dragMultiplier = 1.0;
+        this.dragEffectTimer = 0;
+        this.tangleEffectTime = 0;
+        this.rotationBlockMultiplier = 1.0;
+        this.rotationBlockTimer = 0;
+        
+        // Visual effect tracking
+        this.lastBeam = null;
+        this.lastForceWave = null;
+    }
+    
+    /**
+     * Initializes personal record tracking properties
+     * @private
+     */
+    _initRecordProperties() {
         this.shipsDestroyed = [];
         this.systemsVisited = [];
         this.stationsTraded = [];
-        this.currentSessionTradedLocations = new Set(); // Track locations traded at during current session
+        this.currentSessionTradedLocations = new Set();
         this.factionsJoined = [];
         this.eliteStatusChanges = [];
         this.missionsCompleted = [];
         this.wantedStatusChanges = [];
         this.shipsPurchased = [];
         this.weaponsUpgraded = [];
-
-        // Barrier properties
-        this.isBarrierActive = false;
-        this.barrierDurationTimer = 0;
-        this.barrierDamageReduction = 0;
-        this.barrierDamageReduction = 0;
     }
+
+    // =========================================================================
+    // SECTION 2: MISSION MANAGEMENT
+    // =========================================================================
 
     /**
      * Accepts a mission from the station's mission board
@@ -453,8 +578,9 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
     return false; // Indicate failure if somehow canComplete wasn't true
 } // --- End completeMission Method ---
 
-
-
+    // =========================================================================
+    // SECTION 3: SHIP DEFINITION & CONFIGURATION
+    // =========================================================================
 
     /** Applies base stats and calculates Radian properties. */
     applyShipDefinition(shipTypeName) {
@@ -632,10 +758,14 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
         }
     }
 
-/** Handles continuous key presses for movement & new features */
-handleInput() {
-    // DON’T mix manual input & autopilot
-    if (this.autopilotEnabled) return;
+    // =========================================================================
+    // SECTION 4: MOVEMENT & INPUT
+    // =========================================================================
+
+    /** Handles continuous key presses for movement & new features */
+    handleInput() {
+        // DON'T mix manual input & autopilot
+        if (this.autopilotEnabled) return;
   
     // Reset per-frame thrust flags
     this.isThrusting = false;
@@ -811,8 +941,12 @@ handleInput() {
         this.currentSystem.addProjectile(proj);
     }
 
+    // =========================================================================
+    // SECTION 5: COMBAT & WEAPONS
+    // =========================================================================
+
     /** Fires the current weapon based on its type using WeaponSystem. */
-    fireWeapon(target = null) { // Allow target to be passed (e.g. from AI or future auto-turrets)
+    fireWeapon(target = null) {
    
         // Check if weapons are disabled by EMP nebula
         if (this.weaponsDisabled) {
@@ -1330,6 +1464,10 @@ handleInput() {
         }
     }
 
+    // =========================================================================
+    // SECTION 6: DAMAGE & HEALTH
+    // =========================================================================
+
     /** Applies damage to the player's hull. */
     takeDamage(amount, attacker = null) {
         // Prevent damage during death animation
@@ -1456,10 +1594,16 @@ handleInput() {
         return { damage: amount, shieldHit: shieldHit };
     } // End takeDamage
 
+    // =========================================================================
+    // SECTION 7: DOCKING & CARGO
+    // =========================================================================
+
     /** Checks if the player can dock with the station. */
     canDock(station) {
-        if (!station?.pos) return false; let d = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
-        let speed = this.vel.mag(); let radius = station.dockingRadius ?? 0;
+        if (!station?.pos) return false;
+        const d = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
+        const speed = this.vel.mag();
+        const radius = station.dockingRadius ?? 0;
         return (d < radius && speed < 0.5);
     }
 
@@ -1575,6 +1719,10 @@ handleInput() {
     isWantedInCurrentSystem() {
         return this.currentSystem?.isPlayerWanted() || false;
     }
+
+    // =========================================================================
+    // SECTION 8: PERSONAL RECORDS
+    // =========================================================================
 
     /** Records a ship destruction in the personal record */
     recordShipDestruction(enemy) {
@@ -1697,9 +1845,10 @@ handleInput() {
         });
     }
 
-    
+    // =========================================================================
+    // SECTION 9: SAVE/LOAD
+    // =========================================================================
 
-    // --- Save/Load Functionality ---
     /** Save data for persistence */
     getSaveData() {
         // Normalize angle safely to prevent NaN or Infinity in save data
@@ -2043,11 +2192,15 @@ handleInput() {
             }
         }
 
-          /**
+    // =========================================================================
+    // SECTION 10: AUTOPILOT
+    // =========================================================================
+
+    /**
      * Toggles autopilot to the requested target
      * @param {string} target - 'station' or 'jumpzone'
      */
-          toggleAutopilot(target) {
+    toggleAutopilot(target) {
             console.log(`toggleAutopilot called with target: ${target}`);
             console.log(`Current autopilot state: ${this.autopilotEnabled ? 'enabled' : 'disabled'}, target: ${this.autopilotTarget || 'none'}`);
             
@@ -2541,6 +2694,10 @@ handleInput() {
         PLAYER_LOG(`Kill count: ${this.kills}, Rating: ${newRating}`);
     }
 
+    // =========================================================================
+    // SECTION 11: FACTION & STATUS
+    // =========================================================================
+
     /**
      * Determines player's Elite rating based on kill count
      * @returns {string} The Elite rating
@@ -2783,6 +2940,10 @@ handleInput() {
     _isBodyguardSpawned(guard) {
         return guard.hull !== null && guard.maxHull !== null;
     }
+
+    // =========================================================================
+    // SECTION 12: BODYGUARD MANAGEMENT
+    // =========================================================================
 
     /**
      * Returns count of active (alive) bodyguards
