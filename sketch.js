@@ -488,9 +488,9 @@ function handleSingleKeyActions() {
         case 'j':
             return handleAutopilot(keyLower);
         case '.':
-            return handleMinimapZoomOut();
-        case ',':
             return handleMinimapZoomIn();
+        case ',':
+            return handleMinimapZoomOut();
     }
     return false;
 }
@@ -672,7 +672,7 @@ function handleAutopilot(autopilotKey) {
 }
 
 /**
- * Handle minimap zoom out ('.' key)
+ * Handle minimap zoom out (',' key)
  */
 function handleMinimapZoomOut() {
     if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
@@ -683,7 +683,7 @@ function handleMinimapZoomOut() {
 }
 
 /**
- * Handle minimap zoom in (',' key)
+ * Handle minimap zoom in ('.' key)
  */
 function handleMinimapZoomIn() {
     if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {

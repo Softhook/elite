@@ -20,7 +20,7 @@ class UIMinimap {
         this.scale = 1;
         
         // Zoom configuration
-        this.worldViewRanges = [5000, 10000, 20000, 50000];
+        this.worldViewRanges = [3000, 5000, 10000, 20000, 35000, 50000];
         this.zoomIndex = 2; // Start at widest view
         this.worldViewRange = this.worldViewRanges[this.zoomIndex];
         
@@ -67,15 +67,21 @@ class UIMinimap {
     }
 
     /**
-     * Cycles the minimap zoom level.
-     * @param {number} direction - 1 for zoom out, -1 for zoom in
+     * Adjusts the minimap zoom level and clamps at min/max (no cycling).
+     * @param {number} direction - 1 for zoom out (increase index), -1 for zoom in (decrease index)
      */
     cycleZoom(direction) {
         const delta = direction > 0 ? 1 : -1;
-        this.zoomIndex = (this.zoomIndex + delta + this.worldViewRanges.length) % this.worldViewRanges.length;
+        const maxIndex = this.worldViewRanges.length - 1;
+        const newIndex = Math.max(0, Math.min(maxIndex, this.zoomIndex + delta));
+
+        // If already at limit, do nothing
+        if (newIndex === this.zoomIndex) return;
+
+        this.zoomIndex = newIndex;
         this.worldViewRange = this.worldViewRanges[this.zoomIndex];
         this.scale = this.size / this.worldViewRange;
-        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+        if (typeof soundManager !== 'undefined' && soundManager.playSound) soundManager.playSound('click');
     }
 
     /**
