@@ -2652,18 +2652,10 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
                 }
             }
 
-            // Award bounty and increment faction kill count
+            // Increment faction kill count and check for rank promotion
+            // NOTE: Faction bounty credits are awarded centrally by
+            // EnemyDamageSystem._awardFactionBounty to avoid duplicate rewards.
             if (factionKillEligible && playerFactionKey) {
-                // Award bounty credits
-                if (bountyAmount > 0) {
-                    this.addCredits(bountyAmount);
-                    PLAYER_LOG(bountyDescription);
-                    if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage(bountyDescription, [100, 255, 100]);
-                    }
-                }
-
-                // Increment faction kill count and check for rank promotion
                 if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
                     const oldFactionRank = this.getFactionRank(playerFactionKey);
                     this.factionKills[playerFactionKey]++;
