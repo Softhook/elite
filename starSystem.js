@@ -1464,6 +1464,271 @@ try {
     }
 
     /**
+     * Lightweight update for when player is docked or in station menus.
+     * Simulates the world (AI movement, spawning, missions) WITHOUT:
+     * - Damaging the player (no collision checks involving player)
+     * - Processing projectiles that could hit the player
+     * - Applying force waves or beams to the player
+     * 
+     * This allows enemies/mission targets to move realistically while the
+     * player is safely docked.
+     */
+    updateWhileDocked() {
+        if (!this.player || !this.player.pos) return;
+        
+        try {
+            // Update markets (prices fluctuate even while docked)
+            this._updateMarketStock();
+            
+            // Update enemies - they move, patrol, fight each other
+            // But we'll make them ignore the docked player
+            this._updateEnemiesWhileDocked();
+            
+            // Asteroids drift around
+            this._updateAsteroids();
+            
+            // Planets rotate
+            this._updatePlanets();
+            
+            // Space objects update (decorative)
+            this._updateSpaceObjects();
+            
+            // Explosions fade out
+            this._updateExplosions();
+            
+            // Nebulae visual update (but no player effects)
+            for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
+                this.nebulae[i].update();
+                // Apply effects to enemies only, not player
+                for (let j = 0, elen = this.enemies.length; j < elen; j++) {
+                    this.nebulae[i].applyEffects(this.enemies[j]);
+                }
+            }
+            
+            // Cosmic storms (affect enemies only)
+            this._updateCosmicStormsWhileDocked();
+            
+            // NPC-only collisions (enemies vs asteroids, enemies vs enemies)
+            this._checkNPCCollisions();
+            
+            // NPC-only projectile collisions (no player involvement)
+            this._checkNPCProjectileCollisions();
+            
+            // Spawning continues
+            this._updateSpawnTimers();
+            
+            // Clean up projectiles, beams, etc. that expire
+            this._updateProjectiles();
+            this._updateBeams();
+            this._updateMines();
+            this._updateForceWavesWhileDocked();
+            this._updateHarpoons();
+            this._updateCargo();
+            
+        } catch (e) {
+            console.error(`Error in StarSystem.updateWhileDocked:`, e);
+        }
+    }
+
+    /**
+     * Updates enemies while player is docked.
+     * Enemies move, patrol, and fight each other but cannot target the docked player
+     * (player.isDockedAndInvulnerable makes isTargetValid() return false for them).
+     * @private
+     */
+    _updateEnemiesWhileDocked() {
+        const count = this.enemies.length;
+        for (let i = count - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+            if (!enemy) {
+                this._fastRemove(this.enemies, i);
+                continue;
+            }
+            
+            try {
+                // Update the enemy AI/movement
+                // The enemy's isTargetValid() will reject the docked player automatically
+                // since player.isDockedAndInvulnerable is true
+                enemy.update(this);
+            } catch (e) {
+                console.error('Error updating enemy while docked:', e);
+            }
+            
+            // Despawn check (but protect mission targets)
+            if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
+                this._fastRemove(this.enemies, i);
+            }
+        }
+    }
+
+    /**
+     * Updates cosmic storms while docked (affects NPCs only, not player).
+     * @private
+     */
+    _updateCosmicStormsWhileDocked() {
+        for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
+            const storm = this.cosmicStorms[i];
+            const keepStorm = storm.update();
+            
+            this._updateStormAmbientSound(storm, i);
+            
+            if (!keepStorm) {
+                this._removeStormAmbientSound(storm, i);
+                this._fastRemove(this.cosmicStorms, i);
+                continue;
+            }
+            
+            // Apply effects to enemies only (player is safe while docked)
+            for (let enemy of this.enemies) {
+                storm.applyEffects(enemy);
+            }
+        }
+        
+        // Spawn new storms occasionally
+        this._trySpawnCosmicStorm();
+    }
+
+    /**
+     * Updates force waves while docked - affects NPCs only.
+     * @private
+     */
+    _updateForceWavesWhileDocked() {
+        for (let i = this.forceWaves.length - 1; i >= 0; i--) {
+            const wave = this.forceWaves[i];
+            
+            wave.radius += wave.growRate;
+            
+            if (!wave.entitiesToProcess) {
+                // Only include enemies and asteroids, NOT the player
+                wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
+                wave.processedCount = 0;
+                wave.processed = {};
+            }
+            
+            this._processForceWaveBatch(wave);
+            
+            if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
+                this._fastRemove(this.forceWaves, i);
+            }
+        }
+    }
+
+    /**
+     * Checks collisions between NPCs only (no player involvement).
+     * @private
+     */
+    _checkNPCCollisions() {
+        try {
+            const enemyCount = this.enemies.length;
+            const asteroidCount = this.asteroids.length;
+            
+            // Enemy vs Asteroid collisions
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy = this.enemies[i];
+                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
+                for (let j = 0; j < asteroidCount; j++) {
+                    const asteroid = this.asteroids[j];
+                    if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
+                    if (enemy.checkCollision(asteroid)) {
+                        this._handleAsteroidCollision(enemy, asteroid);
+                    }
+                }
+            }
+            
+            // Enemy vs Enemy collisions (optional, can be costly)
+            // Skipped for performance - enemies don't collide with each other normally
+        } catch (e) {
+            console.error('Error in _checkNPCCollisions:', e);
+        }
+    }
+
+    /**
+     * Checks projectile collisions excluding the player.
+     * Enemies can still hit each other, asteroids, space objects, etc.
+     * @private
+     */
+    _checkNPCProjectileCollisions() {
+        const projCount = this.projectiles.length;
+        if (projCount === 0) return;
+        
+        if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
+        const distCheckVector = this._distCheckVector;
+        const enemyCount = this.enemies.length;
+        const asteroidCount = this.asteroids.length;
+        
+        for (let i = projCount - 1; i >= 0; i--) {
+            const proj = this.projectiles[i];
+            if (!proj || !proj.pos) {
+                this.removeProjectile(i);
+                continue;
+            }
+            
+            const projPos = proj.pos;
+            const projSize = proj.size || 3;
+            let hit = false;
+            
+            // Check asteroids
+            if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) continue;
+            
+            // Check space objects
+            if (this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) continue;
+            
+            // Check mines
+            if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
+            
+            // SKIP player collision check entirely - player is docked and invulnerable
+            
+            // Enemy-fired projectiles can hit OTHER enemies (friendly fire / combat)
+            if (proj.owner instanceof Enemy) {
+                for (let j = 0; j < enemyCount; j++) {
+                    const enemy = this.enemies[j];
+                    if (!enemy || !enemy.pos || enemy === proj.owner) continue;
+                    if (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed()) continue;
+                    
+                    const combinedRadius = enemy.size + projSize;
+                    const combinedRadiusSq = combinedRadius * combinedRadius;
+                    distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
+                    
+                    if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
+                        WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
+                        if (proj._isMissile) {
+                            const explosionColor = Array.isArray(proj.color) ? proj.color : [255, 150, 0];
+                            this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
+                        }
+                        this.removeProjectile(i);
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Player-fired projectiles still hit enemies (in case player fired just before docking)
+            if (!hit && proj.owner instanceof Player) {
+                for (let j = 0; j < enemyCount; j++) {
+                    const enemy = this.enemies[j];
+                    if (!enemy || !enemy.pos) continue;
+                    if (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed()) continue;
+                    
+                    const combinedRadius = enemy.size + projSize;
+                    const combinedRadiusSq = combinedRadius * combinedRadius;
+                    distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
+                    
+                    if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
+                        WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
+                        if (proj._isMissile) {
+                            const explosionColor = Array.isArray(proj.color) ? proj.color : [255, 150, 0];
+                            this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
+                        }
+                        this.removeProjectile(i);
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Updates market dynamic stock for all stations.
      * @private
      */
@@ -4579,11 +4844,22 @@ checkProjectileCollisions() {
      * @returns {boolean} Whether the entity should be despawned
      */
     shouldDespawnEntity(entity, factorMultiplier = 1.1) {
+        // If no runtime player or invalid entity, don't despawn by distance
         if (!this.player || !entity || !entity.pos) return false;
-        
+
+        // Protect mission-critical entities from being despawned.
+        // Assassination targets/guards are explicitly flagged when spawned.
+        if (entity.isAssassinationTarget || entity.isAssassinationGuard || entity.isMissionSpecific) return false;
+
+        // Also protect any entity referenced by the player's active mission (if present)
+        try {
+            const am = this.player.activeMission;
+            if (am && am._targetEnemyId && entity.id && am._targetEnemyId === entity.id) return false;
+        } catch (e) { /* non-fatal */ }
+
         const distToPlayerSq = sq(entity.pos.x - this.player.pos.x) + sq(entity.pos.y - this.player.pos.y);
         const despawnDistanceSq = sq(this.despawnRadius * factorMultiplier);
-        
+
         return distToPlayerSq > despawnDistanceSq;
     }
     

@@ -166,6 +166,9 @@ class GameStateManager {
             return;
         }
         
+        // Clear docked invulnerability - player can be targeted again
+        player.isDockedAndInvulnerable = false;
+        
         // Check if undocking from a space object
         if (prevState === "DOCKED_SPACE_OBJECT" && this.currentDockedSpaceObject) {
             this._undockFromSpaceObject();
@@ -246,8 +249,31 @@ class GameStateManager {
         if (player && dockStation?.pos) {
             player.pos = dockStation.pos.copy() || player.pos;
             player.vel.mult(0);
+            // Mark player as docked and invulnerable so enemies stop targeting them
+            player.isDockedAndInvulnerable = true;
         } else {
             console.error("Could not snap player to station - required objects missing.");
+        }
+        
+        // Force all enemies in the system to drop the player as target
+        try {
+            const sys = galaxy?.getCurrentSystem();
+            if (sys && Array.isArray(sys.enemies)) {
+                for (const enemy of sys.enemies) {
+                    if (enemy && enemy.target === player) {
+                        enemy.target = null;
+                        // Reset to default idle/patrol state
+                        if (typeof enemy.changeState === 'function') {
+                            const defaultState = (typeof enemy._getDefaultStateForRole === 'function') 
+                                ? enemy._getDefaultStateForRole() 
+                                : (typeof AI_STATE !== 'undefined' ? AI_STATE.IDLE : 'IDLE');
+                            enemy.changeState(defaultState);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Error clearing enemy targets on dock:', e);
         }
     }
     
@@ -262,6 +288,8 @@ class GameStateManager {
         GS_LOG("Entering DOCKED_SPACE_OBJECT state from IN_FLIGHT.");
         if (player && this.currentDockedSpaceObject?.pos) {
             player.vel.mult(0);
+            // Mark player as docked and invulnerable
+            player.isDockedAndInvulnerable = true;
             // Save game when docking at space object
             if (typeof saveGame === 'function') {
                 try { 
@@ -270,6 +298,26 @@ class GameStateManager {
                     console.warn("Failed to save on space object dock:", e); 
                 }
             }
+        }
+        
+        // Force all enemies to drop the player as target
+        try {
+            const sys = galaxy?.getCurrentSystem();
+            if (sys && Array.isArray(sys.enemies)) {
+                for (const enemy of sys.enemies) {
+                    if (enemy && enemy.target === player) {
+                        enemy.target = null;
+                        if (typeof enemy.changeState === 'function') {
+                            const defaultState = (typeof enemy._getDefaultStateForRole === 'function') 
+                                ? enemy._getDefaultStateForRole() 
+                                : (typeof AI_STATE !== 'undefined' ? AI_STATE.IDLE : 'IDLE');
+                            enemy.changeState(defaultState);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Error clearing enemy targets on space object dock:', e);
         }
     }
 
@@ -559,7 +607,30 @@ class GameStateManager {
             case "VIEWING_MILITARY_RECRUITMENT":
             case "VIEWING_STORAGE":
             case "VIEWING_RECORD":
-                if (player) player.vel.set(0, 0);
+                if (!player) break;
+                try {
+                    // Keep player completely stationary while docked
+                    player.vel.set(0, 0);
+                    
+                    // Run safe background simulation: NPCs move, spawn timers advance,
+                    // but player takes NO damage and is not targeted.
+                    // This uses updateWhileDocked() which skips player collision checks.
+                    if (currentSystem && typeof currentSystem.updateWhileDocked === 'function') {
+                        currentSystem.updateWhileDocked();
+                    }
+                    
+                    // Update mission tracking (assassination target monitoring, etc.)
+                    // but do NOT run full player.update() which could process damage/death
+                    if (player.activeMission && typeof player.activeMission.update === 'function') {
+                        try {
+                            player.activeMission.update(currentSystem);
+                        } catch (e) {
+                            console.error('Error updating mission while docked:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error in background simulation while docked:', e);
+                }
                 break;
                 
             case "VIEWING_SHIPYARD":

@@ -63,6 +63,10 @@ class EnemyUtils {
         if (target && target.constructor && target.constructor.name === 'Cargo') {
             return false;
         }
+        // Player is not a valid target while docked (invulnerable at station)
+        if (target && target.isDockedAndInvulnerable) {
+            return false;
+        }
         return target && target.pos && 
                ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) && 
                (target.destroyed === undefined || !target.destroyed);
