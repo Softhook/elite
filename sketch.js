@@ -644,7 +644,14 @@ function handleAutopilot(autopilotKey) {
     
     if (autopilotKey === 'h') {
         UI_LOG("H key detected - cycle planets autopilot");
-        player.cycleAutopilotPlanet?.() || uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+        if (typeof player.cycleAutopilotPlanet === 'function') {
+            try { player.cycleAutopilotPlanet(); } catch (e) { 
+                console.error('cycleAutopilotPlanet error', e);
+                uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+            }
+        } else {
+            uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+        }
     } else if (autopilotKey === 'j') {
         UI_LOG("J key detected - toggle station/jumpzone autopilot");
         try {

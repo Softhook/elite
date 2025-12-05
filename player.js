@@ -764,13 +764,25 @@ applyDragEffect(duration = 5.0, multiplier = 10.0) {
 
     /** Handles continuous key presses for movement & new features */
     handleInput() {
-        // DON'T mix manual input & autopilot
-        if (this.autopilotEnabled) return;
-  
     // Reset per-frame thrust flags
     this.isThrusting = false;
     this.isReverseThrusting = false;
     this.isStrafing = false;
+    
+    // Check for ANY manual input that would disable autopilot
+    const hasManualTurning = keyIsDown(LEFT_ARROW) || keyIsDown(81) || keyIsDown(RIGHT_ARROW) || keyIsDown(69);
+    const hasManualThrust = keyIsDown(UP_ARROW) || keyIsDown(87) || keyIsDown(DOWN_ARROW) || keyIsDown(83);
+    const hasManualStrafe = keyIsDown(65) || keyIsDown(68);
+    const hasManualInput = hasManualTurning || hasManualThrust || hasManualStrafe;
+    
+    // If player uses ANY manual control while autopilot is active, disable it
+    if (this.autopilotEnabled && hasManualInput) {
+      this.disableAutopilot();
+      if (typeof uiManager !== 'undefined') {
+        uiManager.addMessage("Autopilot disengaged: On manual control");
+      }
+      // Allow the manual input to take effect immediately
+    }
   
     // 1) Rotation
     if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
