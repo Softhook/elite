@@ -57,9 +57,14 @@ class EnemyDamageSystem {
                     communicationSystem.handlePlayerDamageReaction(this, playerSource, amount);
                 }
             }
-            // Record attacker regardless of type
-            this.lastAttacker = attacker;
-            this.lastAttackTime = millis();
+            // Record attacker, but skip non-combat objects like asteroids and cargo
+            // (collisions with these shouldn't trigger combat behavior)
+            const isNonCombatObject = attacker?.constructor?.name === 'Asteroid' || 
+                                      attacker?.constructor?.name === 'Cargo';
+            if (!isNonCombatObject) {
+                this.lastAttacker = attacker;
+                this.lastAttackTime = millis();
+            }
             
             // Debug log for tracking
             DAMAGE_LOG(`🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`);

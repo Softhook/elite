@@ -63,6 +63,10 @@ class EnemyUtils {
         if (target && target.constructor && target.constructor.name === 'Cargo') {
             return false;
         }
+        // Never allow asteroids to be a combat target (bumping into them shouldn't trigger retaliation)
+        if (target && target.constructor && target.constructor.name === 'Asteroid') {
+            return false;
+        }
         // Player is not a valid target while docked (invulnerable at station)
         if (target && target.isDockedAndInvulnerable) {
             return false;

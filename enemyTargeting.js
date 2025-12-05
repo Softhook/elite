@@ -354,6 +354,11 @@ class EnemyTargeting {
             if (!enemy.isTargetValid(target) || target === enemy) {
                 return TARGET_SCORE_INVALID;
             }
+            
+            // Never target asteroids - collisions with asteroids should not trigger combat
+            if (target && target.constructor && target.constructor.name === 'Asteroid') {
+                return TARGET_SCORE_INVALID;
+            }
 
             // --- GUARD: Prioritize Principal's Attacker (with friendly fire prevention) ---
             if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
