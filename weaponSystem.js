@@ -740,6 +740,19 @@ static fireForce(owner, system) {
             }
         }
 
+        // Allow beams to hit mines
+        if (system?.mines && system.mines.length) {
+            const mineList = system.mines;
+            for (let i = 0, len = mineList.length; i < len; i++) {
+                const mine = mineList[i];
+                if (!mine || !mine.pos || mine.destroyed) continue;
+                // Don't hit our own mines
+                if (mine.owner === owner) continue;
+                const radius = mine.size ? mine.size * 0.5 : 4; // Default radius if not set
+                evaluateTarget(mine, radius);
+            }
+        }
+
         if (system?.asteroids?.length) {
             const asteroids = system.asteroids;
             for (let i = 0, len = asteroids.length; i < len; i++) {
