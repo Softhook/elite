@@ -300,7 +300,23 @@ class UIGalaxyMap {
             this._marketOverlayDescHeight = descHeight;
         }
         
-        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonPadding + (this._marketOverlayDescHeight || 110);
+        // Prepare lists: planets (all) and dockable space objects (filtered)
+        const planets = system.planets || [];
+        let dockableObjects = [];
+        if (system.spaceObjects && system.spaceObjects.length) {
+            if (typeof DOCKABLE_SPACE_OBJECT_TYPES !== 'undefined') {
+                dockableObjects = system.spaceObjects.filter(so => DOCKABLE_SPACE_OBJECT_TYPES.includes(so.type));
+            } else {
+                // Fallback: check for explicit flags on objects
+                dockableObjects = system.spaceObjects.filter(so => so.isDockable || so.canDock || so.isStation);
+            }
+        }
+
+        const listLineHeight = 20;
+        const listsHeaderHeight = 24;
+        const listsHeight = Math.max(planets.length, dockableObjects.length) * listLineHeight + listsHeaderHeight;
+
+        const overlayH = headerHeight + (commodities.length * rowHeight) + closeButtonPadding + (this._marketOverlayDescHeight || 110) + listsHeight + 6;
         const overlayW = 360;
         const overlayX = width - overlayW - 20;
         const autopilotOffset = (typeof player !== 'undefined' && player?.autopilotEnabled) ? 35 : 0;
@@ -373,7 +389,34 @@ class UIGalaxyMap {
             
             yPos += rowHeight;
         }
-        
+
+        // Render each planet as a single line: "PlanetName :: obj1, obj2"
+        const listsX = overlayX + 12;
+        const listsY = yPos + 12;
+
+        // Map dockable objects by their planetIndex
+        const soByPlanet = {};
+        for (let so of dockableObjects) {
+            const pIdx = (typeof so.planetIndex === 'number') ? so.planetIndex : null;
+            if (pIdx !== null) {
+                if (!soByPlanet[pIdx]) soByPlanet[pIdx] = [];
+                soByPlanet[pIdx].push(so);
+            }
+        }
+
+        UIComponents.setTextStyle({ fill: 230, size: 13, align: [LEFT, TOP] });
+        for (let pi = 0; pi < planets.length; pi++) {
+            const p = planets[pi];
+            if (!p) continue;
+            const pname = p.name || (p.getDisplayName ? p.getDisplayName() : `Planet ${p.planetIndex || pi}`);
+            const attached = soByPlanet[p.planetIndex] || [];
+            const names = attached.length ? attached.map(s => (typeof s.getDisplayName === 'function' ? s.getDisplayName() : (s.name || s.type || 'Object'))).join(', ') : '';
+            const line = names ? `${pname} :: ${names}` : pname;
+            text(line, listsX, listsY + pi * listLineHeight);
+        }
+
+        yPos = listsY + Math.max(1, planets.length) * listLineHeight + 12;
+
         // System description
         const cachedDesc = this._marketOverlayDescText || '';
         const cachedDescSize = this._marketOverlayDescSize || 16;
