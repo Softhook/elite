@@ -753,6 +753,22 @@ static fireForce(owner, system) {
             }
         }
 
+        // Allow beams to hit spaceObjects (satellites, debris, platforms, etc.)
+        if (system?.spaceObjects && system.spaceObjects.length) {
+            const soList = system.spaceObjects;
+            for (let i = 0, len = soList.length; i < len; i++) {
+                const so = soList[i];
+                if (!so || !so.pos) continue;
+                // Some spaceObjects may be indestructible; only consider those with a size or takeDamage
+                const hasTakeDamage = typeof so.takeDamage === 'function';
+                const radius = so.size ? so.size * 0.5 : (hasTakeDamage ? 20 : 0);
+                if (radius <= 0) continue;
+                // Avoid hitting owner's own deployed objects if applicable
+                if (so.owner && so.owner === owner) continue;
+                evaluateTarget(so, radius);
+            }
+        }
+
         if (system?.asteroids?.length) {
             const asteroids = system.asteroids;
             for (let i = 0, len = asteroids.length; i < len; i++) {
