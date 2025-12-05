@@ -1,5 +1,5 @@
 // ****** spaceObjects.js ******
-// Simple SpaceObject implementation for decorative satellites and telescopes
+// Definitions and renderers for various space objects in the game
 // Designed to be lightweight: small update() to rotate/oscillate, and draw() using p5 primitives
 
 // Define which space object types are dockable by the player
@@ -18,7 +18,8 @@ const DOCKABLE_SPACE_OBJECT_TYPES = [
     'prison',
     'drugLab',
     'labourColony',
-    'undergroundMarket'
+    'undergroundMarket',
+    'shipyard'
 ];
 
 // Size map for each object type
@@ -57,7 +58,8 @@ const sizeMap = {
     prison: 220,
     drugLab: 200,
     labourColony: 240,
-    undergroundMarket: 180
+    undergroundMarket: 180,
+    shipyard: 320
 };
 
 // Mapping of what each SpaceObject type typically produces and what it will buy
@@ -98,6 +100,7 @@ const SPACE_OBJECT_COMMODITIES = {
     drugLab: { produces: ['Narcotics','Medicine'], buys: ['Food','Chemicals'] },
     labourColony: { produces: ['Slaves','Metals','Textiles','Machinery'], buys: ['Food'] },
     undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Food','Luxury Goods'] },
+    shipyard: { produces: ['Machinery'], buys: ['Food','Machinery','Adv Components','Computers'] },
     default: { produces: [], buys: [] }
 };
 
@@ -3491,6 +3494,245 @@ const SpaceObjectRenderers = {
             fill(pr, pg, pb, Math.floor(30 * fade));
             ellipse(px, py, p.sz * 4, p.sz * 2.4);
         }
+    },
+
+    // ==========================================================================
+    // SHIPYARD - Large orbital shipbuilding facility with construction bays,
+    // cranes, welding sparks, and docked ship frames
+    // ==========================================================================
+    shipyard: function(obj, size, anim, bob) {
+        // Animation phases
+        const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
+        const cranePhase = (anim && anim.cranePhase) ? anim.cranePhase : obj.bobPhase * 0.0008;
+        const weldPhase = (anim && anim.weldPhase) ? anim.weldPhase : obj.bobPhase * 0.012;
+        const dockingPulse = 0.7 + 0.3 * Math.sin(phase * 2);
+
+        // Main shipyard hull - large industrial hexagonal structure
+        push();
+        translate(0, bob);
+
+        // Background scaffolding/lattice
+        stroke(60, 80, 100, 120);
+        strokeWeight(1);
+        for (let i = 0; i < 8; i++) {
+            const ang = (TWO_PI / 8) * i + phase * 0.02;
+            const r1 = size * 0.3;
+            const r2 = size * 0.48;
+            line(Math.cos(ang) * r1, Math.sin(ang) * r1,
+                 Math.cos(ang) * r2, Math.sin(ang) * r2);
+        }
+
+        // Main central hub - industrial gray with blue accents
+        noStroke();
+        fill(50, 55, 70);
+        beginShape();
+        for (let i = 0; i < 6; i++) {
+            const ang = (TWO_PI / 6) * i - PI/6;
+            vertex(Math.cos(ang) * size * 0.28, Math.sin(ang) * size * 0.28);
+        }
+        endShape(CLOSE);
+
+        // Hub inner detail
+        fill(70, 80, 100);
+        ellipse(0, 0, size * 0.18, size * 0.18);
+        fill(40, 50, 65);
+        ellipse(0, 0, size * 0.12, size * 0.12);
+
+        // Glowing core
+        const coreGlow = 150 + 80 * Math.sin(phase * 3);
+        fill(100, 180, 255, coreGlow);
+        ellipse(0, 0, size * 0.06, size * 0.06);
+
+        // Four construction bays extending from center
+        for (let bay = 0; bay < 4; bay++) {
+            push();
+            const bayAng = (TWO_PI / 4) * bay + PI/4;
+            rotate(bayAng);
+            translate(size * 0.38, 0);
+
+            // Bay structure - long rectangular arms
+            fill(55, 60, 75);
+            stroke(80, 90, 110);
+            strokeWeight(1);
+            rectMode(CENTER);
+            rect(0, 0, size * 0.32, size * 0.14, 2);
+
+            // Bay interior glow (construction activity)
+            const bayGlow = 80 + 40 * Math.sin(phase * 2 + bay * 1.5);
+            noStroke();
+            fill(255, 200, 100, bayGlow);
+            rect(0, 0, size * 0.26, size * 0.08, 1);
+
+            // Ship frame under construction (silhouette)
+            fill(40, 45, 55);
+            beginShape();
+            vertex(-size * 0.1, -size * 0.03);
+            vertex(size * 0.08, 0);
+            vertex(-size * 0.1, size * 0.03);
+            endShape(CLOSE);
+
+            // Construction crane arm
+            const craneSway = Math.sin(cranePhase + bay * 2) * 0.15;
+            push();
+            translate(size * 0.04, -size * 0.05);
+            rotate(craneSway);
+            stroke(90, 100, 120);
+            strokeWeight(2);
+            line(0, 0, 0, -size * 0.08);
+            line(0, -size * 0.08, size * 0.06, -size * 0.08);
+            // Crane hook
+            stroke(120, 130, 150);
+            strokeWeight(1);
+            line(size * 0.05, -size * 0.08, size * 0.05, -size * 0.04);
+            pop();
+
+            // Welding sparks (animated)
+            if (Math.sin(weldPhase + bay * 3) > 0.6) {
+                noStroke();
+                for (let s = 0; s < 5; s++) {
+                    const sparkAng = Math.random() * TWO_PI;
+                    const sparkDist = Math.random() * size * 0.04;
+                    const sparkX = size * 0.02 + Math.cos(sparkAng) * sparkDist;
+                    const sparkY = Math.sin(sparkAng) * sparkDist;
+                    fill(255, 220 + Math.random() * 35, 100, 200 + Math.random() * 55);
+                    ellipse(sparkX, sparkY, 2 + Math.random() * 2, 2 + Math.random() * 2);
+                }
+                // Bright weld point
+                fill(255, 255, 200, 220);
+                ellipse(size * 0.02, 0, 4, 4);
+            }
+
+            pop();
+        }
+
+        // External docking arms (2 large ones for finished ships)
+        for (let arm = 0; arm < 2; arm++) {
+            push();
+            const armAng = (arm === 0) ? -PI/2 : PI/2;
+            rotate(armAng + Math.sin(phase + arm) * 0.02);
+            translate(0, -size * 0.44);
+
+            // Docking arm structure
+            stroke(70, 80, 100);
+            strokeWeight(3);
+            line(0, 0, 0, -size * 0.1);
+
+            // Docking clamps
+            noStroke();
+            fill(60, 70, 85);
+            rect(-size * 0.04, -size * 0.11, size * 0.08, size * 0.03, 1);
+
+            // Docking lights
+            const dockLight = (Math.sin(phase * 4 + arm * PI) > 0) ? 255 : 80;
+            fill(100, 255, 100, dockLight);
+            ellipse(-size * 0.03, -size * 0.115, 3, 3);
+            ellipse(size * 0.03, -size * 0.115, 3, 3);
+
+            pop();
+        }
+
+        // Rotating warning beacons on corners
+        for (let b = 0; b < 4; b++) {
+            const beaconAng = (TWO_PI / 4) * b;
+            const beaconX = Math.cos(beaconAng) * size * 0.52;
+            const beaconY = Math.sin(beaconAng) * size * 0.52;
+            const beaconFlash = Math.sin(phase * 6 + b * 1.5) > 0.5;
+            fill(beaconFlash ? color(255, 100, 50, 220) : color(100, 40, 20, 150));
+            noStroke();
+            ellipse(beaconX, beaconY, 6, 6);
+            if (beaconFlash) {
+                fill(255, 150, 80, 60);
+                ellipse(beaconX, beaconY, 14, 14);
+            }
+        }
+
+        // Solar panel arrays on sides
+        for (let panel = 0; panel < 2; panel++) {
+            push();
+            const panelAng = (panel === 0) ? 0 : PI;
+            rotate(panelAng);
+            translate(size * 0.46, 0);
+
+            // Panel arm
+            stroke(80, 90, 100);
+            strokeWeight(2);
+            line(0, 0, size * 0.08, 0);
+
+            // Solar panels
+            noStroke();
+            fill(30, 40, 80);
+            rect(size * 0.1, -size * 0.06, size * 0.06, size * 0.12, 1);
+            // Panel grid lines
+            stroke(50, 70, 120, 150);
+            strokeWeight(0.5);
+            for (let g = 0; g < 4; g++) {
+                const gy = -size * 0.05 + g * size * 0.03;
+                line(size * 0.08, gy, size * 0.15, gy);
+            }
+            // Panel reflection
+            noStroke();
+            fill(100, 150, 255, 40);
+            rect(size * 0.1, -size * 0.04, size * 0.05, size * 0.04);
+
+            pop();
+        }
+
+        // Central control tower
+        fill(65, 70, 85);
+        stroke(90, 100, 120);
+        strokeWeight(1);
+        beginShape();
+        vertex(-size * 0.04, -size * 0.08);
+        vertex(size * 0.04, -size * 0.08);
+        vertex(size * 0.03, -size * 0.16);
+        vertex(-size * 0.03, -size * 0.16);
+        endShape(CLOSE);
+
+        // Control tower windows
+        noStroke();
+        fill(150, 200, 255, 180 * dockingPulse);
+        rect(-size * 0.02, -size * 0.14, size * 0.04, size * 0.02, 1);
+
+        // Antenna array on top
+        stroke(100, 110, 130);
+        strokeWeight(1);
+        line(0, -size * 0.16, 0, -size * 0.22);
+        line(-size * 0.02, -size * 0.2, size * 0.02, -size * 0.2);
+
+        // Communication dish
+        noFill();
+        stroke(90, 100, 120);
+        strokeWeight(1.5);
+        arc(0, -size * 0.22, size * 0.04, size * 0.02, PI, TWO_PI);
+
+        pop();
+
+        // Ambient particle effects (floating debris/sparks)
+        if (!obj._shipyardParticles) {
+            obj._shipyardParticles = [];
+            for (let p = 0; p < 15; p++) {
+                obj._shipyardParticles.push({
+                    ang: Math.random() * TWO_PI,
+                    dist: size * (0.2 + Math.random() * 0.4),
+                    speed: 0.001 + Math.random() * 0.002,
+                    sz: 1 + Math.random() * 2,
+                    type: Math.random() > 0.7 ? 'spark' : 'debris'
+                });
+            }
+        }
+
+        noStroke();
+        for (const p of obj._shipyardParticles) {
+            p.ang += p.speed;
+            const px = Math.cos(p.ang) * p.dist;
+            const py = Math.sin(p.ang) * p.dist + bob;
+            if (p.type === 'spark') {
+                fill(255, 200, 100, 150 + Math.sin(phase * 8 + p.ang) * 80);
+            } else {
+                fill(80, 90, 100, 120);
+            }
+            ellipse(px, py, p.sz, p.sz);
+        }
     }
 };
 
@@ -3637,6 +3879,12 @@ class SpaceObject {
                 anim.marketPulse = Math.random() * TWO_PI;
                 anim.lightPhase = Math.random() * TWO_PI;
                 break;
+            case 'shipyard':
+                // shipyard animation: construction phases, crane movement, welding sparks
+                anim.shipyardPhase = Math.random() * TWO_PI;
+                anim.cranePhase = Math.random() * TWO_PI;
+                anim.weldPhase = Math.random() * TWO_PI;
+                break;
         }
         // unique id used by debris RNG and other persistent behaviors
         // Attach commodity lists from the centralized mapping so transports can use them
@@ -3685,7 +3933,8 @@ class SpaceObject {
             prison: 0.00003,
             drugLab: 0.00006,
             labourColony: 0.00004,
-            undergroundMarket: 0.000025
+            undergroundMarket: 0.000025,
+            shipyard: 0.00002
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -3946,6 +4195,7 @@ class SpaceObject {
             drugLab: 'Drug Laboratory',
             labourColony: 'Labour Colony'
             , undergroundMarket: 'Underground Market'
+            , shipyard: 'Orbital Shipyard'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }

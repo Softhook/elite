@@ -1117,9 +1117,10 @@ class UIStationMenus {
      * @param {number} my - Mouse Y
      * @param {Player} player - The player object
      * @param {Function} addMessageFn - Function to add UI messages
+     * @param {string} returnState - State to return to when back is pressed (default: "DOCKED")
      * @returns {boolean} - True if handled
      */
-    handleShipyardClick(mx, my, player, addMessageFn) {
+    handleShipyardClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
         // Check shipyard list areas
         for (const area of this.shipyardListAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
@@ -1160,7 +1161,7 @@ class UIStationMenus {
         
         // Back button
         if (this.shipyardDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
-            if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+            if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }
         return false;
@@ -1172,9 +1173,10 @@ class UIStationMenus {
      * @param {number} my - Mouse Y
      * @param {Player} player - The player object
      * @param {Function} addMessageFn - Function to add UI messages
+     * @param {string} returnState - State to return to when back is pressed (default: "DOCKED")
      * @returns {boolean} - True if handled
      */
-    handleUpgradesClick(mx, my, player, addMessageFn) {
+    handleUpgradesClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
         // Check weapon slot buttons first
         if (this.weaponSlotButtons && this.weaponSlotButtons.length > 0) {
             for (const btn of this.weaponSlotButtons) {
@@ -1226,7 +1228,7 @@ class UIStationMenus {
         
         // Back button
         if (this.upgradeDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
-            if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+            if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }
         return false;

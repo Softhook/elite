@@ -356,12 +356,20 @@ class UIManager {
         
         textFont(font);
         
+        // Build menu options based on space object type
         const menuOpts = [
-            { text: "Commodity Market", state: "VIEWING_SPACE_OBJECT_MARKET" },
-            { text: "Repairs", state: "VIEWING_SPACE_OBJECT_REPAIRS" },
-            { text: "Personal Record", state: "VIEWING_RECORD" },
-            { text: "Undock", action: "UNDOCK" }
+            { text: "Commodity Market", state: "VIEWING_SPACE_OBJECT_MARKET" }
         ];
+        
+        // Shipyard type space objects get shipyard and upgrades screens
+        if (spaceObject.type === 'shipyard') {
+            menuOpts.push({ text: "Shipyard", state: "VIEWING_SPACE_OBJECT_SHIPYARD" });
+            menuOpts.push({ text: "Upgrades", state: "VIEWING_SPACE_OBJECT_UPGRADES" });
+        }
+        
+        menuOpts.push({ text: "Repairs", state: "VIEWING_SPACE_OBJECT_REPAIRS" });
+        menuOpts.push({ text: "Personal Record", state: "VIEWING_RECORD" });
+        menuOpts.push({ text: "Undock", action: "UNDOCK" });
         
         const btnW = pW * 0.6, btnH = 45, btnSpacing = btnH + 15;
         this.spaceObjectMenuButtonAreas = this._drawMenuButtonList(
@@ -532,7 +540,8 @@ class UIManager {
             "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE","VIEWING_RECORD",
-            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"
+            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS",
+            "VIEWING_SPACE_OBJECT_SHIPYARD","VIEWING_SPACE_OBJECT_UPGRADES"
         ];
         if (!statesExpectingSystem.includes(currentState)) {
             return false;
@@ -609,6 +618,21 @@ class UIManager {
                 return true;
             }
             return false;
+        }
+
+        // --- VIEWING_SPACE_OBJECT_SHIPYARD State ---
+        if (currentState === "VIEWING_SPACE_OBJECT_SHIPYARD") {
+            // Handle shipyard clicks with return to space object dock state
+            return this.stationMenus.handleShipyardClick(mx, my, player, (msg, col) => this.addMessage(msg, col), "DOCKED_SPACE_OBJECT");
+        }
+
+        // --- VIEWING_SPACE_OBJECT_UPGRADES State ---
+        if (currentState === "VIEWING_SPACE_OBJECT_UPGRADES") {
+            // Handle upgrades clicks with return to space object dock state
+            const result = this.stationMenus.handleUpgradesClick(mx, my, player, (msg, col) => this.addMessage(msg, col), "DOCKED_SPACE_OBJECT");
+            // Sync selectedWeaponSlot back from module
+            this.selectedWeaponSlot = this.stationMenus.selectedWeaponSlot;
+            return result;
         }
 
         // --- DOCKED State (Main Station Menu) ---

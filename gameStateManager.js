@@ -50,7 +50,9 @@ const STATION_STATES = [
     "VIEWING_RECORD", 
     "DOCKED_SPACE_OBJECT", 
     "VIEWING_SPACE_OBJECT_MARKET", 
-    "VIEWING_SPACE_OBJECT_REPAIRS"
+    "VIEWING_SPACE_OBJECT_REPAIRS",
+    "VIEWING_SPACE_OBJECT_SHIPYARD",
+    "VIEWING_SPACE_OBJECT_UPGRADES"
 ];
 
 class GameStateManager {
@@ -118,7 +120,8 @@ class GameStateManager {
                 "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
                 "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT",
                 "VIEWING_MILITARY_RECRUITMENT","VIEWING_STORAGE","VIEWING_RECORD",
-                "VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS"].includes(state);
+                "VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS",
+                "VIEWING_SPACE_OBJECT_SHIPYARD","VIEWING_SPACE_OBJECT_UPGRADES"].includes(state);
             
             // Docking transitions
             if (newState === "DOCKED" && prevState === "IN_FLIGHT") {
@@ -464,7 +467,8 @@ class GameStateManager {
             "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", 
             "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT", 
-            "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS"
+            "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS",
+            "VIEWING_SPACE_OBJECT_SHIPYARD", "VIEWING_SPACE_OBJECT_UPGRADES"
         ];
         
         return statesExpectingSystem.includes(this.currentState) 
@@ -598,6 +602,8 @@ class GameStateManager {
             case "DOCKED_SPACE_OBJECT":
             case "VIEWING_SPACE_OBJECT_MARKET":
             case "VIEWING_SPACE_OBJECT_REPAIRS":
+            case "VIEWING_SPACE_OBJECT_SHIPYARD":
+            case "VIEWING_SPACE_OBJECT_UPGRADES":
             case "VIEWING_MARKET":
             case "VIEWING_MISSIONS":
             case "VIEWING_PROTECTION":
@@ -952,6 +958,14 @@ class GameStateManager {
                 this._drawSpaceObjectRepairs(player, currentSystem);
                 break;
                 
+            case "VIEWING_SPACE_OBJECT_SHIPYARD":
+                this._drawSpaceObjectShipyard(player, currentSystem);
+                break;
+                
+            case "VIEWING_SPACE_OBJECT_UPGRADES":
+                this._drawSpaceObjectUpgrades(player, currentSystem);
+                break;
+                
             case "VIEWING_MARKET":
                 this._drawMarket(player, currentSystem);
                 break;
@@ -1190,6 +1204,76 @@ class GameStateManager {
             background(10,0,0);
             fill(255);
             text("Error: Space object not found", width/2, height/2);
+        }
+    }
+    
+    /**
+     * Draws VIEWING_SPACE_OBJECT_SHIPYARD state
+     * @private
+     */
+    _drawSpaceObjectShipyard(player, currentSystem) {
+        if (currentSystem) {
+            try {
+                push();
+                currentSystem.drawBackground();
+                if (currentSystem.station) currentSystem.station.draw();
+                if (this.currentDockedSpaceObject && 
+                    typeof this.currentDockedSpaceObject.draw === 'function') {
+                    this.currentDockedSpaceObject.draw();
+                }
+                pop();
+            } catch(e) {
+                console.error("Error drawing space object background:", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try { player.draw(); } catch(e) {}
+        }
+        
+        if (uiManager && player) {
+            try {
+                uiManager.drawShipyardMenu(player);
+            } catch(e) {
+                console.error("Error drawing space object shipyard:", e);
+            }
+        }
+    }
+    
+    /**
+     * Draws VIEWING_SPACE_OBJECT_UPGRADES state
+     * @private
+     */
+    _drawSpaceObjectUpgrades(player, currentSystem) {
+        if (currentSystem) {
+            try {
+                push();
+                currentSystem.drawBackground();
+                if (currentSystem.station) currentSystem.station.draw();
+                if (this.currentDockedSpaceObject && 
+                    typeof this.currentDockedSpaceObject.draw === 'function') {
+                    this.currentDockedSpaceObject.draw();
+                }
+                pop();
+            } catch(e) {
+                console.error("Error drawing space object background:", e);
+            }
+        } else {
+            background(0);
+        }
+        
+        if (player) {
+            try { player.draw(); } catch(e) {}
+        }
+        
+        if (uiManager && player) {
+            try {
+                uiManager.drawUpgradesMenu(player);
+            } catch(e) {
+                console.error("Error drawing space object upgrades:", e);
+            }
         }
     }
     
