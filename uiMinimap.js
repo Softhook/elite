@@ -162,6 +162,9 @@ class UIMinimap {
             // Draw locked target indicator
             this._drawTargetIndicator(player, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds);
 
+            // Draw autopilot lock marker (station / jumpzone / planet)
+            this._drawAutopilotMarker(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds);
+
             // Draw player (always at center)
             push();
             fill(255);
@@ -530,6 +533,91 @@ class UIMinimap {
             rectMode(CENTER);
             rect(cX, cY, indicatorSize, indicatorSize);
             rectMode(CORNER);
+        }
+    }
+
+    _drawAutopilotMarker(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds) {
+        try {
+            if (!player || !player.autopilotEnabled || !player.autopilotTarget) return;
+
+            const target = player.autopilotTarget;
+            let targetPos = null;
+            let color = [0, 200, 255]; // default cyan for autopilot
+            let label = 'AUTO';
+
+            if (target === 'station') {
+                if (!system.station || !system.station.pos) return;
+                targetPos = system.station.pos;
+                color = [0, 160, 255];
+                label = 'STN';
+            } else if (target === 'jumpzone') {
+                if (!system.jumpZoneCenter) return;
+                targetPos = system.jumpZoneCenter;
+                color = [255, 220, 0];
+                label = 'JMP';
+            } else if (typeof target === 'object' && target.type === 'planet') {
+                const idx = Number.isFinite(target.index) ? target.index : player.autopilotPlanetIndex;
+                const planets = system.planets || [];
+                if (!planets || idx < 0 || idx >= planets.length) return;
+                const p = planets[idx];
+                if (!p || !p.pos) return;
+                targetPos = p.pos;
+                // If target planet is the central star, use SUN label
+                if (p.isSun) {
+                    color = [255, 200, 30];
+                    label = 'SUN';
+                } else {
+                    color = [0, 220, 120];
+                    label = 'PLT';
+                }
+            } else {
+                return;
+            }
+
+            // Map world pos to minimap coordinates
+            const relX = targetPos.x - player.pos.x;
+            const relY = targetPos.y - player.pos.y;
+            const mapX = mapCenterX + relX * this.scale;
+            const mapY = mapCenterY + relY * this.scale;
+
+            const size = 8;
+
+            // If on-screen draw pulsing ring + label
+            if (isFullyWithinBounds(mapX, mapY, size, size)) {
+                push();
+                const pulse = 1 + 0.15 * sin(frameCount * 0.2);
+                noFill();
+                stroke(color[0], color[1], color[2], 220);
+                strokeWeight(1.5);
+                ellipse(mapX, mapY, size * 2 * pulse, size * 2 * pulse);
+
+                // Small filled center
+                noStroke();
+                fill(color[0], color[1], color[2], 220);
+                ellipse(mapX, mapY, size * 0.9, size * 0.9);
+
+                // Label above
+                fill(255);
+                textAlign(CENTER, BOTTOM);
+                textSize(10);
+                text(label, mapX, mapY - size - 4);
+                pop();
+            } else {
+                // Off-screen indicator: clamp to minimap edge — only draw 3-letter label
+                const inset = 6;
+                const cX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                const cY = constrain(mapY, mapTop + inset, mapBottom - inset);
+
+                push();
+                noStroke();
+                fill(255); // white label for clarity
+                textAlign(CENTER, CENTER);
+                textSize(12);
+                text(label, cX, cY);
+                pop();
+            }
+        } catch (e) {
+            // non-fatal
         }
     }
 
