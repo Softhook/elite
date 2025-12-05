@@ -17,12 +17,42 @@ const WEAPON_TYPE = {
 
 class WeaponSystem {
     // Scale angle jitter by disruption level (0..1)
-    static _applyAngleJitter(owner, angle) {
+    // Also applies inherent inaccuracy for NPC beam weapons
+    static _applyAngleJitter(owner, angle, weaponType = null) {
+        let totalJitter = 0;
+        
+        // Disruption-based jitter (affects all weapons)
         const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
-        if (!d) return angle;
-        const maxJitter = 0.55 * d; //
-        const jitter = (Math.random() * 2 - 1) * maxJitter;
-        return angle + jitter;
+        if (d > 0) {
+            const maxDisruptionJitter = 0.55 * d;
+            totalJitter += (Math.random() * 2 - 1) * maxDisruptionJitter;
+        }
+        
+        // NPC beam accuracy penalty - beams are harder for AI to aim precisely
+        // Player beams are mouse-aimed so they skip this penalty
+        if (weaponType === WEAPON_TYPE.BEAM && !(owner instanceof Player)) {
+            // Base inaccuracy: ~5-12 degrees of random scatter
+            // This represents the difficulty of maintaining a precise beam lock
+            const baseBeamInaccuracy = 0.06; // halved (~3.5 degrees base)
+            const beamJitter = (Math.random() * 2 - 1) * baseBeamInaccuracy;
+            totalJitter += beamJitter;
+            
+            // Additional inaccuracy based on target movement speed
+            // Fast-moving targets are harder to track with a beam
+            if (owner.target && owner.target.vel) {
+                const targetSpeed = Math.sqrt(
+                    owner.target.vel.x * owner.target.vel.x + 
+                    owner.target.vel.y * owner.target.vel.y
+                );
+                // Add up to ~6 more degrees for very fast targets (speed > 8)
+                const speedFactor = Math.min(1, targetSpeed / 8);
+                const speedJitter = (Math.random() * 2 - 1) * 0.05 * speedFactor;
+                totalJitter += speedJitter;
+            }
+        }
+        
+        if (totalJitter === 0) return angle;
+        return angle + totalJitter;
     }
 
     // Whether targeting/locks should be disabled at this disruption level
@@ -308,8 +338,9 @@ static fireForce(owner, system) {
         const weapon = owner.currentWeapon;
 
         // Apply aim jitter from EM disruption for angle-driven weapons
-        if (type !== WEAPON_TYPE.TURRET && type !== WEAPON_TYPE.MISSILE) {
-            angle = this._applyAngleJitter(owner, angle);
+        // Exclude beams here so beam-specific inaccuracy is applied only inside fireBeam
+        if (type !== WEAPON_TYPE.TURRET && type !== WEAPON_TYPE.MISSILE && type !== WEAPON_TYPE.BEAM) {
+            angle = this._applyAngleJitter(owner, angle, type);
         }
 
         if (type === WEAPON_TYPE.BEAM && weapon?.type === WEAPON_TYPE.BEAM) {
@@ -580,20 +611,10 @@ static fireForce(owner, system) {
         const ownerY = owner.pos.y;
         start.set(ownerX, ownerY);
         
-        // Handle player aiming at mouse cursor
-        if (owner instanceof Player) {
-            // Convert screen mouse position to world coordinates - cache calculations
-            const halfWidth = width * 0.5;
-            const halfHeight = height * 0.5;
-            const worldMx = mouseX + ownerX - halfWidth;
-            const worldMy = mouseY + ownerY - halfHeight;
-            
-            // Calculate angle to mouse cursor
-            angle = atan2(worldMy - ownerY, worldMx - ownerX);
-        }
-        
-        // Apply aim jitter from disruption, then calculate direction and endpoint
-        angle = this._applyAngleJitter(owner, angle);
+        // Note: Player beam aiming is handled in player.fireWeapon() before calling WeaponSystem.fire()
+        // The angle passed in is already calculated to point at the mouse cursor
+        // We only apply jitter here (disruption affects player, NPC inaccuracy affects enemies)
+        angle = this._applyAngleJitter(owner, angle, WEAPON_TYPE.BEAM);
         dir.set(cos(angle), sin(angle));
         
         if (isNaN(dir.x) || isNaN(dir.y)) {
