@@ -124,6 +124,7 @@ class GameStateManager {
                 const system = galaxy?.getCurrentSystem?.();
                 const station = system?.station;
                 const stationInfo = {
+                    stationType: station?.stationType || 'standard',
                     economyType: system?.economyType || 'standard',
                     techLevel: system?.techLevel || 5,
                     securityLevel: system?.securityLevel || 'medium'
