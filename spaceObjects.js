@@ -100,7 +100,7 @@ const SPACE_OBJECT_COMMODITIES = {
     drugLab: { produces: ['Narcotics','Medicine'], buys: ['Food','Chemicals'] },
     labourColony: { produces: ['Slaves','Metals','Textiles','Machinery'], buys: ['Food'] },
     undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Food','Luxury Goods'] },
-    shipyard: { produces: ['Machinery'], buys: ['Food','Machinery','Adv Components','Computers'] },
+    shipyard: { produces: [], buys: ['Food','Machinery','Adv Components','Computers'] },
     default: { produces: [], buys: [] }
 };
 
@@ -3504,7 +3504,8 @@ const SpaceObjectRenderers = {
         // Animation phases
         const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
         const cranePhase = (anim && anim.cranePhase) ? anim.cranePhase : obj.bobPhase * 0.0008;
-        const weldPhase = (anim && anim.weldPhase) ? anim.weldPhase : obj.bobPhase * 0.012;
+        // Slow down weld animation so sparks are less frantic
+        const weldPhase = (anim && anim.weldPhase) ? anim.weldPhase : obj.bobPhase * 0.00005;
         const dockingPulse = 0.7 + 0.3 * Math.sin(phase * 2);
 
         // Main shipyard hull - large industrial hexagonal structure
@@ -3538,69 +3539,143 @@ const SpaceObjectRenderers = {
         fill(40, 50, 65);
         ellipse(0, 0, size * 0.12, size * 0.12);
 
+        // Beveled inner plate for the hex hub (adds perceived depth)
+        push();
+        fill(90, 100, 115);
+        stroke(120, 130, 145); strokeWeight(0.8);
+        beginShape();
+        for (let i = 0; i < 6; i++) {
+            const ang = (TWO_PI / 6) * i - PI/6;
+            vertex(Math.cos(ang) * size * 0.22, Math.sin(ang) * size * 0.22);
+        }
+        endShape(CLOSE);
+        // inner darker inset
+        fill(60, 70, 85);
+        beginShape();
+        for (let i = 0; i < 6; i++) {
+            const ang = (TWO_PI / 6) * i - PI/6;
+            vertex(Math.cos(ang) * size * 0.14, Math.sin(ang) * size * 0.14);
+        }
+        endShape(CLOSE);
+        noStroke();
+        pop();
+
         // Glowing core
         const coreGlow = 150 + 80 * Math.sin(phase * 3);
         fill(100, 180, 255, coreGlow);
         ellipse(0, 0, size * 0.06, size * 0.06);
 
-        // Four construction bays extending from center
+        // Hub plating seams and rivets for extra detail
+        stroke(60, 70, 80, 160); strokeWeight(0.6);
+        for (let s = 0; s < 6; s++) {
+            const sa = s * (TWO_PI / 6);
+            const sx = Math.cos(sa) * size * 0.18;
+            const sy = Math.sin(sa) * size * 0.18;
+            line(0, 0, sx, sy);
+        }
+        // small rivets around the hub rim
+        for (let r = 0; r < 8; r++) {
+            const ra = r * (TWO_PI / 8) + phase * 0.02;
+            fill(120, 130, 140);
+            noStroke();
+            ellipse(Math.cos(ra) * size * 0.26, Math.sin(ra) * size * 0.26, 2, 2);
+        }
+        noStroke();
+
+        // Four construction bays extending from center (enlarged for visibility)
         for (let bay = 0; bay < 4; bay++) {
             push();
             const bayAng = (TWO_PI / 4) * bay + PI/4;
             rotate(bayAng);
-            translate(size * 0.38, 0);
+            translate(size * 0.44, 0);
 
-            // Bay structure - long rectangular arms
-            fill(55, 60, 75);
-            stroke(80, 90, 110);
-            strokeWeight(1);
+            // Bay structure - larger, more detailed arms
+            fill(52, 58, 74);
+            stroke(78, 88, 110);
+            strokeWeight(1.2);
             rectMode(CENTER);
-            rect(0, 0, size * 0.32, size * 0.14, 2);
+            rect(0, 0, size * 0.42, size * 0.18, 3);
 
-            // Bay interior glow (construction activity)
-            const bayGlow = 80 + 40 * Math.sin(phase * 2 + bay * 1.5);
+            // Bay interior glow (construction activity) - larger and more saturated
+            const bayGlow = 110 + 60 * Math.sin(phase * 2 + bay * 1.5);
             noStroke();
-            fill(255, 200, 100, bayGlow);
-            rect(0, 0, size * 0.26, size * 0.08, 1);
+            fill(255, 210, 120, bayGlow);
+            rect(0, 0, size * 0.34, size * 0.12, 2);
 
-            // Ship frame under construction (silhouette)
-            fill(40, 45, 55);
-            beginShape();
-            vertex(-size * 0.1, -size * 0.03);
-            vertex(size * 0.08, 0);
-            vertex(-size * 0.1, size * 0.03);
-            endShape(CLOSE);
-
-            // Construction crane arm
-            const craneSway = Math.sin(cranePhase + bay * 2) * 0.15;
+            // Ship frame under construction (larger, with hull detail)
             push();
-            translate(size * 0.04, -size * 0.05);
-            rotate(craneSway);
-            stroke(90, 100, 120);
-            strokeWeight(2);
-            line(0, 0, 0, -size * 0.08);
-            line(0, -size * 0.08, size * 0.06, -size * 0.08);
-            // Crane hook
-            stroke(120, 130, 150);
-            strokeWeight(1);
-            line(size * 0.05, -size * 0.08, size * 0.05, -size * 0.04);
+            translate(-size * 0.02, 0);
+            fill(36, 42, 52);
+            // hull outline
+            beginShape();
+            vertex(-size * 0.18, -size * 0.05);
+            vertex(size * 0.16, -size * 0.02);
+            vertex(size * 0.16, size * 0.02);
+            vertex(-size * 0.18, size * 0.05);
+            endShape(CLOSE);
+            // cockpit / bridge
+            fill(90, 110, 130);
+            ellipse(size * 0.06, 0, size * 0.06, size * 0.04);
+            // plating seams
+            stroke(60, 70, 80); strokeWeight(0.6);
+            line(-size * 0.08, -size * 0.04, size * 0.08, -size * 0.02);
+            line(-size * 0.08, size * 0.04, size * 0.08, size * 0.02);
+            noStroke();
             pop();
 
-            // Welding sparks (animated)
-            if (Math.sin(weldPhase + bay * 3) > 0.6) {
+            // Construction crane arm (thicker and more visible)
+            const craneSway = Math.sin(cranePhase + bay * 2) * 0.22;
+            push();
+            translate(size * 0.06, -size * 0.06);
+            rotate(craneSway);
+            stroke(92, 104, 124);
+            strokeWeight(3);
+            line(0, 0, 0, -size * 0.12);
+            line(0, -size * 0.12, size * 0.09, -size * 0.12);
+            // Crane hook & cable
+            stroke(140, 150, 170);
+            strokeWeight(1.6);
+            line(size * 0.08, -size * 0.12, size * 0.08, -size * 0.04);
+            // heavy hook
+            noStroke(); fill(120, 130, 150);
+            rect(size * 0.08, -size * 0.03, size * 0.03, size * 0.03, 2);
+            pop();
+
+            // Larger welding sparks and directional streaks (animated)
+            if (Math.sin(weldPhase * 6 + bay * 2.2) > 0.3) {
                 noStroke();
-                for (let s = 0; s < 5; s++) {
-                    const sparkAng = Math.random() * TWO_PI;
-                    const sparkDist = Math.random() * size * 0.04;
+                for (let s = 0; s < 8; s++) {
+                    const sparkAng = -0.6 + Math.random() * 1.2; // biased outward
+                    const sparkDist = Math.random() * size * 0.06;
                     const sparkX = size * 0.02 + Math.cos(sparkAng) * sparkDist;
                     const sparkY = Math.sin(sparkAng) * sparkDist;
-                    fill(255, 220 + Math.random() * 35, 100, 200 + Math.random() * 55);
-                    ellipse(sparkX, sparkY, 2 + Math.random() * 2, 2 + Math.random() * 2);
+                    // streak
+                    fill(255, 220 + Math.random() * 35, 120, 220);
+                    ellipse(sparkX, sparkY, 3 + Math.random() * 3, 2 + Math.random() * 2);
+                    // small trail line
+                    stroke(255, 200, 120, 140); strokeWeight(0.8);
+                    line(sparkX - 3, sparkY - 1, sparkX + 3, sparkY + 1);
+                    noStroke();
                 }
                 // Bright weld point
-                fill(255, 255, 200, 220);
-                ellipse(size * 0.02, 0, 4, 4);
+                fill(255, 255, 220, 240);
+                ellipse(size * 0.02, 0, 6, 6);
+                // small glow halo
+                fill(255, 200, 120, 80);
+                ellipse(size * 0.02, 0, 14, 8);
             }
+
+            // Gantry that traverses the bay (large visible movement)
+            push();
+            const gantryPos = (Math.sin(phase * 0.6 + bay) * 0.45 + 0.5) * (size * 0.16);
+            translate(-size * 0.08 + gantryPos, -size * 0.02);
+            fill(120, 125, 140);
+            rect(0, 0, size * 0.12, size * 0.04, 2);
+            // support wheels/tracks
+            fill(90, 95, 110);
+            ellipse(-size * 0.05, size * 0.02, 4, 3);
+            ellipse(size * 0.05, size * 0.02, 4, 3);
+            pop();
 
             pop();
         }
@@ -3710,13 +3785,27 @@ const SpaceObjectRenderers = {
         // Ambient particle effects (floating debris/sparks)
         if (!obj._shipyardParticles) {
             obj._shipyardParticles = [];
-            for (let p = 0; p < 15; p++) {
+            // convert ambient blobs into a small squad of maintenance drones plus a few sparks/debris
+            const droneCount = 6;
+            for (let d = 0; d < droneCount; d++) {
                 obj._shipyardParticles.push({
+                    type: 'drone',
                     ang: Math.random() * TWO_PI,
-                    dist: size * (0.2 + Math.random() * 0.4),
-                    speed: 0.001 + Math.random() * 0.002,
-                    sz: 1 + Math.random() * 2,
-                    type: Math.random() > 0.7 ? 'spark' : 'debris'
+                    dist: size * (0.18 + Math.random() * 0.45),
+                    // drones orbit slower and predictably
+                    speed: 0.0004 + Math.random() * 0.0008,
+                    sz: 3 + Math.random() * 3,
+                    id: 'drone_' + d
+                });
+            }
+            // a few lingering sparks/debris for atmosphere
+            for (let p = 0; p < 4; p++) {
+                obj._shipyardParticles.push({
+                    type: 'spark',
+                    ang: Math.random() * TWO_PI,
+                    dist: size * (0.18 + Math.random() * 0.4),
+                    speed: 0.001 + Math.random() * 0.0015,
+                    sz: 2 + Math.random() * 2
                 });
             }
         }
@@ -3725,13 +3814,53 @@ const SpaceObjectRenderers = {
         for (const p of obj._shipyardParticles) {
             p.ang += p.speed;
             const px = Math.cos(p.ang) * p.dist;
-            const py = Math.sin(p.ang) * p.dist + bob;
-            if (p.type === 'spark') {
-                fill(255, 200, 100, 150 + Math.sin(phase * 8 + p.ang) * 80);
+            const py = Math.sin(p.ang) * p.dist + bob * 0.6;
+
+            if (p.type === 'drone') {
+                // Draw a small maintenance drone with rotors and a blinking light
+                push();
+                translate(px, py);
+                // drone body orientation slightly faces orbit direction
+                const orient = Math.atan2(py, px) + Math.PI / 2 + (Math.sin(p.ang * 2) * 0.15);
+                rotate(orient);
+                // body
+                fill(180, 185, 190);
+                rect(0, 0, p.sz * 2.2, p.sz * 1.0, 2);
+                // left/right rotor hubs
+                fill(120, 125, 130);
+                ellipse(-p.sz * 0.9, 0, p.sz * 0.8, p.sz * 0.4);
+                ellipse(p.sz * 0.9, 0, p.sz * 0.8, p.sz * 0.4);
+                // rotor blades (very thin lines)
+                stroke(80, 80, 90, 160); strokeWeight(0.8);
+                line(-p.sz * 0.9 - 6, 0, -p.sz * 0.9 + 6, 0);
+                line(p.sz * 0.9 - 6, 0, p.sz * 0.9 + 6, 0);
+                noStroke();
+                // thruster glow behind
+                fill(100, 180, 255, 90);
+                ellipse(0, p.sz * 0.9, p.sz * 1.4, p.sz * 0.7);
+                // blinking nav light
+                const blink = 0.5 + 0.5 * Math.sin(phase * 3 + p.ang * 4);
+                fill(255, 100, 100, 200 * blink);
+                ellipse(0, -p.sz * 0.15, 3, 3);
+                pop();
+
+            } else if (p.type === 'spark') {
+                const intensity = 160 + Math.sin(weldPhase * 6 + p.ang * 2) * 100;
+                // glow behind spark
+                fill(255, 200, 120, Math.min(170, intensity * 0.6));
+                ellipse(px, py, p.sz * 3.2, p.sz * 2.2);
+                // core
+                fill(255, 230, 160, Math.min(255, intensity));
+                ellipse(px, py, p.sz * 1.6, p.sz * 1.2);
+                // short motion streak for dynamism
+                stroke(255, 200, 120, 160); strokeWeight(0.8);
+                line(px - Math.cos(p.ang) * 4, py - Math.sin(p.ang) * 2, px + Math.cos(p.ang) * 2, py + Math.sin(p.ang) * 1);
+                noStroke();
+
             } else {
                 fill(80, 90, 100, 120);
+                ellipse(px, py, p.sz, p.sz);
             }
-            ellipse(px, py, p.sz, p.sz);
         }
     }
 };
