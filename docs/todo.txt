@@ -5,27 +5,17 @@
 
 ## Core Gameplay Enhancements
 
-when it possible for the player to dock at specific space object, then display what they buying and selling in the target overlay
-
-add repairs entry on the main screen and a repais screen when docked at a space object. make this lock the same as the existing station reapirs. just make sure the header text in the top left corner picks up the space object
-
-
 new kind of nebula and storm which slows down ship movement
 
 create a builder ship that errects space objects near planets
 
 Make space objects belong to different factions. Destroying a space object makes the player wanted. 
 
-move desliverues to space objects not planets
-
 local deliveries actually trade goods at planets/ space objects
-
-visit the spacebjects with station screen
 
 spawn ships depengin on which systems are connected
 
 organised invasion missions that invovle jump to another system with 10 team members
-
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 
 
