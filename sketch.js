@@ -13,6 +13,7 @@ const GameGlobals = {
     gameStateManager: null,
     soundManager: null,
     ambientSoundManager: null,
+    stationMusicManager: null,
     titleScreen: null,
     saveSelectionScreen: null,
     inventoryScreen: null,
@@ -25,7 +26,8 @@ const GameGlobals = {
 
 // Maintain backward compatibility with existing code
 let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager, 
-    titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen;
+    titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen,
+    stationMusicManager;
 let loadGameWasSuccessful = false;
 let globalSessionSeed;
 
@@ -78,11 +80,13 @@ function initializeCanvas() {
 function initializeManagers() {
     soundManager = new SoundManager();
     ambientSoundManager = new AmbientSoundManager();
+    stationMusicManager = new StationMusicManager();
     eventManager = new EventManager();
     
     Object.assign(GameGlobals, {
         soundManager,
         ambientSoundManager,
+        stationMusicManager,
         eventManager
     });
 }
@@ -1205,6 +1209,11 @@ function resetGame() {
         ambientSoundManager.cleanup();
     }
     
+    // Clean up station music
+    if (stationMusicManager && typeof stationMusicManager.cleanup === 'function') {
+        stationMusicManager.cleanup();
+    }
+    
     // Reset global state
     loadGameWasSuccessful = false;
     window.activeSaveSlotIndex = 0;
@@ -1219,6 +1228,7 @@ function resetGame() {
     saveSelectionScreen = new SaveSelectionScreen();
     eventManager = new EventManager();
     communicationSystem = new CommunicationSystem();
+    stationMusicManager = new StationMusicManager();
     communicationSystem.initialize({ uiManager, player });
     
     // Reinitialize player ship definition

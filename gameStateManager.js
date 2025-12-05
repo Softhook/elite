@@ -104,6 +104,42 @@ class GameStateManager {
     }
     
     /**
+     * Updates station music state based on current game state
+     * @param {string} newState - The new game state
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _updateStationMusic(newState, prevState) {
+        try {
+            if (typeof stationMusicManager === 'undefined' || !stationMusicManager) {
+                return;
+            }
+            
+            const isStationState = STATION_STATES.includes(newState);
+            const wasStationState = STATION_STATES.includes(prevState);
+            
+            // Start music when entering a station state from non-station state
+            if (isStationState && !wasStationState) {
+                // Get station info for theming
+                const system = galaxy?.getCurrentSystem?.();
+                const station = system?.station;
+                const stationInfo = {
+                    economyType: system?.economyType || 'standard',
+                    techLevel: system?.techLevel || 5,
+                    securityLevel: system?.securityLevel || 'medium'
+                };
+                stationMusicManager.start(stationInfo);
+            }
+            // Stop music when leaving station states
+            else if (!isStationState && wasStationState) {
+                stationMusicManager.stop();
+            }
+        } catch (e) {
+            console.warn('Error updating station music state:', e);
+        }
+    }
+    
+    /**
      * Plays transition-specific sound effects when changing states
      * @param {string} newState - The new game state
      * @param {string} prevState - The previous game state
@@ -342,6 +378,7 @@ class GameStateManager {
 
         // Execute transition handlers
         this._updateAmbientSoundState(newState);
+        this._updateStationMusic(newState, this.previousState);
         this._playTransitionSound(newState, this.previousState);
         this._handleSaveSelectionTransition(newState);
         this._resetStateSpecificData(newState);
@@ -618,6 +655,11 @@ class GameStateManager {
                     // Keep player completely stationary while docked
                     player.vel.set(0, 0);
                     
+                    // Update station music
+                    if (typeof stationMusicManager !== 'undefined' && stationMusicManager) {
+                        stationMusicManager.update();
+                    }
+                    
                     // Run safe background simulation: NPCs move, spawn timers advance,
                     // but player takes NO damage and is not targeted.
                     // This uses updateWhileDocked() which skips player collision checks.
@@ -644,7 +686,13 @@ class GameStateManager {
             case "VIEWING_REPAIRS":
             case "GAME_OVER":
             case "LOADING":
-                // No update logic needed for these states
+                // Update station music for shop screens
+                if ((this.currentState === "VIEWING_SHIPYARD" || 
+                     this.currentState === "VIEWING_UPGRADES" || 
+                     this.currentState === "VIEWING_REPAIRS") && 
+                    typeof stationMusicManager !== 'undefined' && stationMusicManager) {
+                    stationMusicManager.update();
+                }
                 break;
                 
             default:
