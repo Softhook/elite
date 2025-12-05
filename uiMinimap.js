@@ -12,7 +12,7 @@ class UIMinimap {
         this.defaultSize = 200;
         this.expandedSize = 360;
         this.size = this.expandedSize; // Always use expanded size
-        this.margin = 15;
+        this.margin = 0;
         
         // Position (calculated during draw)
         this.x = 0;
@@ -360,8 +360,19 @@ class UIMinimap {
             const iconHalfExtent = 3;
 
             if (isFullyWithinBounds(mapX, mapY, iconHalfExtent, iconHalfExtent)) {
-                const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
-                const colArr = this.roleColors[roleKey] || [255, 0, 0];
+                // Prefer faction-based coloring when available (IMPERIAL / SEPARATIST / MILITARY)
+                let colArr = null;
+                if (enemy.faction === 'IMPERIAL') {
+                    colArr = [0, 120, 255];
+                } else if (enemy.faction === 'SEPARATIST') {
+                    colArr = [200, 60, 200];
+                } else if (enemy.faction === 'MILITARY') {
+                    colArr = [100, 120, 140];
+                }
+                if (!colArr) {
+                    const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
+                    colArr = this.roleColors[roleKey] || [255, 0, 0];
+                }
                 
                 push();
                 noStroke();
