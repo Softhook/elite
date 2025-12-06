@@ -99,7 +99,7 @@ const SPACE_OBJECT_COMMODITIES = {
     prison: { produces: ['Slaves'], buys: ['Food','Textiles','Machinery'] },
     drugLab: { produces: ['Narcotics','Medicine'], buys: ['Food','Chemicals'] },
     labourColony: { produces: ['Slaves','Metals','Textiles','Machinery'], buys: ['Food'] },
-    undergroundMarket: { produces: ['Slaves','Narcotics','Weapons'], buys: ['Food','Luxury Goods'] },
+    undergroundMarket: { produces: [], buys: ['Slaves','Narcotics','Weapons'] },
     shipyard: { produces: [], buys: ['Food','Machinery','Adv Components','Computers'] },
     default: { produces: [], buys: [] }
 };

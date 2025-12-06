@@ -4917,10 +4917,23 @@ checkProjectileCollisions() {
             'High Tech': ['researchArray', 'solarSail', 'ancientRelic', 'satellite', 'telescope', 'beacon', 'signalFlare', 'outpost', 'commDish', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'quantumGate', 'shipyard']
         };
 
-        // Default types for other economies
-        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'undergroundMarket', 'prison','drugLab','labourColony', 'shipyard'];
+        // Default types for other economies (undergroundMarket handled conditionally below)
+        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'drugLab','labourColony', 'shipyard'];
 
-        const availableTypes = typesByEconomy[this.economyType] || defaultTypes;
+        // Clone the selected array so we can modify it safely
+        const availableTypes = (typesByEconomy[this.economyType] || defaultTypes).slice();
+
+        // Only include underground market in systems where illegal goods CANNOT be traded
+        // (i.e., non-Anarchy security levels)
+        const isAnarchy = typeof this.securityLevel === 'string' && this.securityLevel.toLowerCase() === 'anarchy';
+        if (!isAnarchy) {
+            if (!availableTypes.includes('undergroundMarket')) {
+                availableTypes.push('undergroundMarket');
+            }
+            if (!availableTypes.includes('prison')) {
+                availableTypes.push('prison');
+            }
+        }
 
         for (let planetIdx = 1; planetIdx < this.planets.length; planetIdx++) {
             const planet = this.planets[planetIdx];
