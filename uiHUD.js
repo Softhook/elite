@@ -857,9 +857,14 @@ class UIHUD {
      * Draws the Game Over overlay screen.
      */
     drawGameOverScreen() {
+        // Draw simple background starfield (shared singleton)
+        if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
+            sharedStarfield.draw();
+        } else {
+            background(0);
+        }
+
         push();
-        fill(0, 0, 0, 220);
-        rect(0, 0, width, height);
 
         fill(255, 60, 60);
         textAlign(CENTER, CENTER);
