@@ -551,16 +551,19 @@ class UIManager {
 
         // --- Minimap click: target locking (zoom cycling moved to '.' key) ---
         // Always use the expanded size for click region (minimap is always large).
-        const curMinimapSize = this.minimapExpandedSize;
-        const curMinimapX = width - curMinimapSize - this.minimapMargin;
-        const curMinimapY = height - curMinimapSize - this.minimapMargin;
-        if (mx >= curMinimapX && mx <= curMinimapX + curMinimapSize && my >= curMinimapY && my <= curMinimapY + curMinimapSize) {
-            // Try to lock target on entity at click position
-            if (currentState === "IN_FLIGHT" && this.handleMinimapClick(mx, my, player, currentSystem)) {
-                return true;
+        const minimapActive = currentState === "IN_FLIGHT";
+        if (minimapActive) {
+            const curMinimapSize = this.minimapExpandedSize;
+            const curMinimapX = width - curMinimapSize - this.minimapMargin;
+            const curMinimapY = height - curMinimapSize - this.minimapMargin;
+            if (mx >= curMinimapX && mx <= curMinimapX + curMinimapSize && my >= curMinimapY && my <= curMinimapY + curMinimapSize) {
+                // Try to lock target on entity at click position
+                if (this.handleMinimapClick(mx, my, player, currentSystem)) {
+                    return true;
+                }
+                // If no entity found, click does nothing (zoom cycling is now on '.' key)
+                return true; // Still consume the click to prevent other actions
             }
-            // If no entity found, click does nothing (zoom cycling is now on '.' key)
-            return true; // Still consume the click to prevent other actions
         }
 
         // --- DOCKED_SPACE_OBJECT State (Space Object Main Menu) ---
@@ -794,7 +797,8 @@ class UIManager {
 
     /** Helper to check if mouse coords are within a button area object {x,y,w,h} */
     isClickInArea(mx, my, area) {
-        return area && area.w > 0 && area.h > 0 && mx > area.x && mx < area.x + area.w && my > area.y && my < area.y + area.h;
+        // Inclusive bounds to avoid missing clicks on button edges
+        return area && area.w > 0 && area.h > 0 && mx >= area.x && mx <= area.x + area.w && my >= area.y && my <= area.y + area.h;
     }
 
     /**

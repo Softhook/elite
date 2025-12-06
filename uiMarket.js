@@ -357,12 +357,14 @@ class UIMarket {
                 const stationComm = stationPrices ? stationPrices.find(c => c.name === commodityName) : null;
                 if (stationComm) {
                     if (isProduced) {
-                        buyPrice = Math.floor(stationComm.buyPrice * SPACE_OBJECT_PRODUCE_DISCOUNT);
-                        baseBuy = stationComm.baseBuy || stationComm.buyPrice;
+                        const stationBuy = stationComm.buyPrice || stationComm.baseBuy || baseBuy;
+                        buyPrice = Math.floor(stationBuy * SPACE_OBJECT_PRODUCE_DISCOUNT);
+                        baseBuy = stationComm.baseBuy || stationBuy;
                     }
                     if (isBought) {
-                        sellPrice = Math.floor(stationComm.sellPrice * SPACE_OBJECT_DEMAND_PREMIUM);
-                        baseSell = stationComm.baseSell || stationComm.sellPrice;
+                        const stationSell = stationComm.sellPrice || stationComm.baseSell || baseSell;
+                        sellPrice = Math.floor(stationSell * SPACE_OBJECT_DEMAND_PREMIUM);
+                        baseSell = stationComm.baseSell || stationSell;
                     }
                 }
             } else {
@@ -375,6 +377,13 @@ class UIMarket {
                     sellPrice = Math.floor(basePrice * 1.2);
                     baseSell = basePrice;
                 }
+            }
+
+            // Ensure underground markets always offer a sell price for their buys, even if the station omits it
+            if (isBought && sellPrice <= 0) {
+                const fallbackBase = baseSell || this.getCommodityBasePrice(commodityName);
+                sellPrice = Math.max(1, Math.floor(fallbackBase * SPACE_OBJECT_DEMAND_PREMIUM));
+                baseSell = baseSell || fallbackBase;
             }
             
             // Commodity name

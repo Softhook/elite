@@ -799,6 +799,8 @@ class GameStateManager {
                     spaceObj.canPlayerDock(player)) {
                     this.currentDockedSpaceObject = spaceObj;
                     this.setState("DOCKED_SPACE_OBJECT");
+                    // Save on space-object docking (e.g., underground market) just like stations
+                    this._savegameOnDocking();
                     break;
                 }
             }
@@ -1100,17 +1102,33 @@ class GameStateManager {
      * @private
      */
     _drawStationBackground(player, currentSystem) {
-        if (currentSystem) {
+        // Use the simple shared starfield to avoid progressive tile flicker while docked
+        if (sharedStarfield?.draw) {
+            try {
+                sharedStarfield.draw();
+            } catch(e) {
+                console.error("Error drawing shared starfield for station background:", e);
+            }
+        } else if (currentSystem) {
             try {
                 push();
                 currentSystem.drawBackground();
+                pop();
+            } catch(e) {
+                console.error("Error drawing station fallback background:", e);
+            }
+        } else {
+            background(0);
+        }
+
+        if (currentSystem) {
+            try {
+                push();
                 if (currentSystem.station) currentSystem.station.draw();
                 pop();
             } catch(e) {
                 console.error("Error drawing station background:", e);
             }
-        } else {
-            background(0);
         }
         
         if (player) {
