@@ -43,7 +43,7 @@ class StationMusicManager {
         this.restProbability = 0.15; // Chance of silence for breathing room
         
         // Volume control
-        this.baseVolume = 0.35;  // Keep it subtle as background music
+        this.baseVolume = 0.5;  // Keep it subtle as background music
         this.currentVolume = 0;
         this.targetVolume = 0;
         this.fadeSpeed = 0.05;
