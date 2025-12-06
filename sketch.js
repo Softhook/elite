@@ -911,12 +911,43 @@ function __buildSaveData() {
     } else {
         playerData.credits = Math.floor(playerData.credits);
     }
+
+    // Capture a minimal docking snapshot so we can restore space-object/station dock state on load
+    const dockingState = (() => {
+        if (!gameStateManager) return { state: "IN_FLIGHT" };
+        const state = gameStateManager.currentState || "IN_FLIGHT";
+
+        // Persist docked space object id when in a space-object docked/menu state
+        const isSpaceObjectState = state === "DOCKED_SPACE_OBJECT"
+            || state === "VIEWING_SPACE_OBJECT_MARKET"
+            || state === "VIEWING_SPACE_OBJECT_REPAIRS"
+            || state === "VIEWING_SPACE_OBJECT_SHIPYARD"
+            || state === "VIEWING_SPACE_OBJECT_UPGRADES";
+        if (isSpaceObjectState && gameStateManager.currentDockedSpaceObject?.id) {
+            return {
+                state: "DOCKED_SPACE_OBJECT",
+                spaceObjectId: gameStateManager.currentDockedSpaceObject.id
+            };
+        }
+
+        // Persist station docking so we don’t drop the player out of menus after reloads
+        if (state === "DOCKED" && player?.currentSystem?.station) {
+            return {
+                state: "DOCKED",
+                stationName: player.currentSystem.station.name || null
+            };
+        }
+
+        return { state: "IN_FLIGHT" };
+    })();
+
     return {
         playerData,
         galaxyData: galaxy.getSaveData(),
         currentSystemIndex: galaxy.currentSystemIndex,
         savedAt: Date.now(),
-        version: 2
+        version: 2,
+        dockingState
     };
 }
 
@@ -1136,7 +1167,43 @@ function loadGame(slotIndex) {
                     return false;
                 }
 
-                // 6. Ensure economy types are synchronized after loading
+                // 6. Restore docking state (stations and space objects) if present
+                let restoredDockState = false;
+                const dockingState = savedData.dockingState;
+                if (gameStateManager && dockingState && player.currentSystem) {
+                    // Attempt to restore space-object docking first
+                    if (dockingState.state === "DOCKED_SPACE_OBJECT" && dockingState.spaceObjectId) {
+                        const so = player.currentSystem.spaceObjects?.find(o => o && !o.destroyed && o.id === dockingState.spaceObjectId);
+                        if (so) {
+                            gameStateManager.currentDockedSpaceObject = so;
+                            gameStateManager.currentDockedStation = null;
+                            if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
+                            player.isDockedAndInvulnerable = true;
+                            gameStateManager.setState("DOCKED_SPACE_OBJECT");
+                            restoredDockState = true;
+                        }
+                    }
+
+                    // Restore station docking if applicable and space-object restoration did not run
+                    if (!restoredDockState && dockingState.state === "DOCKED" && player.currentSystem.station) {
+                        gameStateManager.currentDockedSpaceObject = null;
+                        gameStateManager.currentDockedStation = player.currentSystem.station;
+                        if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
+                        player.isDockedAndInvulnerable = true;
+                        gameStateManager.setState("DOCKED");
+                        restoredDockState = true;
+                    }
+                }
+
+                // Default to in-flight if no docking context was restored
+                if (gameStateManager && !restoredDockState) {
+                    gameStateManager.currentDockedSpaceObject = null;
+                    gameStateManager.currentDockedStation = null;
+                    player.isDockedAndInvulnerable = false;
+                    gameStateManager.setState("IN_FLIGHT");
+                }
+
+                // 7. Ensure economy types are synchronized after loading
                 if (galaxy.systems) {
                     galaxy.systems.forEach(system => {
                         if (system && system.economyType) {
@@ -1145,12 +1212,12 @@ function loadGame(slotIndex) {
                     });
                 }
                 
-                // 7. Restore current view and other relevant states
+                // 8. Restore current view and other relevant states
                 if (savedData.currentView) {
                     Object.assign(uiManager.currentView, savedData.currentView);
                 }
                 
-                // 8. Clear any locked jump destination to prevent stale jump targets
+                // 9. Clear any locked jump destination to prevent stale jump targets
                 if (uiManager) {
                     uiManager.lockedDestinationIndex = -1;
                 }

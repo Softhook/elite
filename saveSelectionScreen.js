@@ -732,9 +732,8 @@ class SaveSelectionScreen {
         // Use existing global loadGame function, now expecting a slotIndex
         const success = loadGame(slotIndex); // loadGame in sketch.js should handle setting activeSaveSlotIndex
         if (success) {
-            // window.activeSaveSlotIndex = slotIndex; // Already set by global loadGame
-            // The global loadGame function should also set LAST_ACTIVE_SLOT_KEY
-            gameStateManager.setState("IN_FLIGHT");
+            // State is now restored by loadGame (including docked space-object/station contexts)
+            return;
         } else {
             console.error(`Failed to load saved game from slot ${slotIndex}`);
             // Could show error message or fallback
