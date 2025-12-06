@@ -311,8 +311,8 @@ class EnemyDamageSystem {
         let bountyAmount = 0;
         let bountyMessage = null;
 
-        // Police bounties - 1,000 credits for killing aliens
-        if (attacker.isPolice && this.role === AI_ROLE.ALIEN) {
+        // Police bounties - 1,000 credits for killing aliens or pirates
+        if (attacker.isPolice && (this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.PIRATE)) {
             bountyAmount = 1000;
             bountyMessage = "Police bounty: 1,000 cr";
         }
