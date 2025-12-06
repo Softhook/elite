@@ -13,6 +13,7 @@ class AmbientSoundManager {
         this.maxDistance = 3000; // Maximum distance for sound audibility
         this.minVolume = 0.01; // Minimum volume threshold
         this.isDocked = false; // Track docked state
+        this.dockedVolumeScale = 0.01; // Centralized docked attenuation
         
         this.initAudioContext();
     }
@@ -325,19 +326,16 @@ class AmbientSoundManager {
                     volume = 0;
                 }
             }
-            
-            // Apply docked state - reduce all ambient sounds when docked
-            if (this.isDocked) {
-                volume = volume * 0.01;
-            }
-            
-            soundConfig.lastVolume = volume;
+
+            const adjustedVolume = this._applyDockedAttenuation(volume);
+
+            soundConfig.lastVolume = adjustedVolume;
             if (!this.isDocked) {
-                soundConfig.cachedUndockedVolume = volume;
+                soundConfig.cachedUndockedVolume = adjustedVolume;
             }
 
             // Smooth volume changes to avoid clicking
-            this._rampGain(soundConfig.mainGain.gain, volume, 0.1);
+            this._rampGain(soundConfig.mainGain.gain, adjustedVolume, 0.1);
 
             // Update stereo panning based on relative X position
             try {
@@ -360,6 +358,16 @@ class AmbientSoundManager {
                 // ignore panning errors
             }
         }
+    }
+
+    /**
+     * Apply docked attenuation from a single, centralized factor.
+     * @param {number} volume - Base volume before docked scaling
+     * @returns {number} Attenuated volume
+     */
+    _applyDockedAttenuation(volume) {
+        if (!this.isDocked) return volume;
+        return Math.max(0, volume * this.dockedVolumeScale);
     }
 
     /**
@@ -396,15 +404,16 @@ class AmbientSoundManager {
             if (!soundConfig?.mainGain) continue;
             const gainParam = soundConfig.mainGain.gain;
 
+            // Keep an undocked reference so we can restore when leaving dock.
             if (docked) {
                 const resumeVolume = soundConfig.lastVolume ?? soundConfig.baseVolume;
                 soundConfig.cachedUndockedVolume = resumeVolume;
-                const dockVolume = Math.max(0, resumeVolume * 0.5);
-                this._rampGain(gainParam, dockVolume, 0.12);
-            } else {
-                const targetVolume = soundConfig.cachedUndockedVolume ?? soundConfig.lastVolume ?? soundConfig.baseVolume;
-                this._rampGain(gainParam, targetVolume, 0.2);
             }
+
+            const baseVolume = soundConfig.cachedUndockedVolume ?? soundConfig.lastVolume ?? soundConfig.baseVolume;
+            const targetVolume = this._applyDockedAttenuation(baseVolume);
+            const rampDuration = docked ? 0.12 : 0.2;
+            this._rampGain(gainParam, targetVolume, rampDuration);
         }
     }
     

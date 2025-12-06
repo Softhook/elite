@@ -94,9 +94,14 @@ class GameStateManager {
      */
     _updateAmbientSoundState(newState) {
         try {
+            const isDocked = STATION_STATES.includes(newState);
+
             if (typeof ambientSoundManager !== 'undefined' && ambientSoundManager) {
-                const isDocked = STATION_STATES.includes(newState);
                 ambientSoundManager.setDockedState(isDocked);
+            }
+
+            if (typeof soundManager !== 'undefined' && soundManager?.setDockedState) {
+                soundManager.setDockedState(isDocked);
             }
         } catch (e) {
             console.warn('Error updating ambient sound docked state:', e);
@@ -133,7 +138,17 @@ class GameStateManager {
             }
             // Stop music when leaving station states
             else if (!isStationState && wasStationState) {
-                stationMusicManager.stop();
+                // If we're specifically undocking back into IN_FLIGHT, use a slower fade
+                if (newState === "IN_FLIGHT") {
+                    try {
+                        stationMusicManager.stop(3000); // 3s gentle fade after undock
+                    } catch (e) {
+                        // Fallback to default stop
+                        stationMusicManager.stop();
+                    }
+                } else {
+                    stationMusicManager.stop();
+                }
             }
         } catch (e) {
             console.warn('Error updating station music state:', e);

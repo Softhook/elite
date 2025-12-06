@@ -16,6 +16,9 @@
  * - Separatist: Tense, minor key suspense
  * - Standard: Neutral, calming ambient pads
  */
+// Default station music fade-out duration (ms). Change this single value to adjust undock fade time.
+const STATION_MUSIC_FADE_OUT_MS = 3000;
+
 class StationMusicManager {
     constructor() {
         this.isPlaying = false;
@@ -45,6 +48,9 @@ class StationMusicManager {
         this.targetVolume = 0;
         this.fadeSpeed = 0.05;
         
+        // Default fade-out duration (ms) - single editable variable above
+        this.fadeOutMs = STATION_MUSIC_FADE_OUT_MS;
+
         // Current station theme
         this.stationType = 'standard';
         this.theme = null;
@@ -475,14 +481,32 @@ class StationMusicManager {
     
     /**
      * Stop playing station music with fade out
+     * @param {number} fadeMs - Optional fade-out duration in milliseconds (default 600)
      */
-    stop() {
-        if (!this.isPlaying) return;
-        
+    stop(fadeMs) {
+        // Use instance default when fadeMs not provided
+        if (typeof fadeMs !== 'number') fadeMs = this.fadeOutMs || 600;
+
+        // If nothing is playing and target is already silent, nothing to do
+        if (!this.isPlaying && this.targetVolume === 0) return;
+
+        // Ensure we request silence
         this.targetVolume = 0;
+
+        // Use p5.Gain ramp to perform the fade even if update() is not called
+        const fadeSec = Math.max(0.01, fadeMs / 1000);
+        if (this.masterGain) {
+            try {
+                this.masterGain.amp(0, fadeSec);
+            } catch (e) {
+                try { this.masterGain.amp(0); } catch (_) {}
+            }
+        }
+
+        // Mark not playing so update-based playback stops immediately
         this.isPlaying = false;
-        
-        // Stop oscillators after fade
+
+        // Stop oscillators after the fade has completed (plus small buffer)
         setTimeout(() => {
             try {
                 if (this.osc) {
@@ -494,9 +518,9 @@ class StationMusicManager {
             } catch (e) {
                 // Oscillator may already be stopped
             }
-        }, 600);
-        
-        console.log('StationMusicManager: Music stopped');
+        }, Math.max(50, fadeMs + 50));
+
+        console.log('StationMusicManager: Music stopped (fade ' + fadeMs + 'ms)');
     }
     
     /**

@@ -14,6 +14,8 @@ class SoundManager {
         this.activeWebSources = {}; // Track active WebAudio BufferSource nodes per sound for polyphony control
         this.globalActiveSources = []; // Track ALL active Web Audio sources globally
         this.maxGlobalSources = 32; // Hard limit on total concurrent sounds
+        this.isDocked = false; // Track station/menu docked state
+        this.dockedVolumeScale = 0.1; // Global attenuation factor while docked
         this.soundThrottles = {}; // Track last play time for each sound type
         this.minSoundInterval = 50; // Minimum ms between playing same sound type
         this.soundDefinitions = {
@@ -1441,6 +1443,87 @@ class SoundManager {
     }
 
     /**
+     * Apply docked attenuation from a centralized factor.
+     * @param {number} volume - Base volume before dock scaling
+     * @returns {number} Attenuated volume
+     */
+    _applyDockedAttenuation(volume) {
+        if (!this.isDocked) return volume;
+        return Math.max(0, volume * this.dockedVolumeScale);
+    }
+
+    /**
+     * Smoothly ramp an AudioParam toward the desired value.
+     * @param {AudioParam} audioParam
+     * @param {number} targetValue
+     * @param {number} duration
+     */
+    _rampGain(audioParam, targetValue, duration = 0.12) {
+        if (!this.audioContext || !audioParam) return;
+        try {
+            const currentTime = this.audioContext.currentTime;
+            audioParam.cancelScheduledValues(currentTime);
+            audioParam.setValueAtTime(audioParam.value, currentTime);
+            audioParam.linearRampToValueAtTime(targetValue, currentTime + duration);
+        } catch (e) {
+            try {
+                audioParam.value = targetValue;
+            } catch (_) {
+                // Non-fatal if AudioParam is not writable
+            }
+        }
+    }
+
+    /**
+     * Apply dock-state volume to a pooled HTMLAudioElement or sfxr wrapper.
+     * @param {any} audioObj
+     * @private
+     */
+    _applyDockedVolumeToAudio(audioObj) {
+        if (!audioObj) return;
+        const baseVol = (typeof audioObj._eliteBaseVolume === 'number')
+            ? audioObj._eliteBaseVolume
+            : (typeof audioObj.volume === 'number' ? audioObj.volume : null);
+        if (baseVol === null) return;
+
+        const target = this._applyDockedAttenuation(baseVol);
+
+        try {
+            if (typeof audioObj.setVolume === 'function' && typeof audioObj.volume === 'undefined') {
+                audioObj.setVolume(target);
+            } else if (typeof audioObj.volume !== 'undefined') {
+                audioObj.volume = target;
+            }
+        } catch (e) {
+            // Ignore per-instance adjustment errors
+        }
+    }
+
+    /**
+     * Apply docked volume to currently pooled audio instances and singletons.
+     * @private
+     */
+    _applyDockedVolumeToAllHtmlAudio() {
+        try {
+            for (const name in this.activeInstances) {
+                const instances = this.activeInstances[name] || [];
+                for (const inst of instances) {
+                    this._applyDockedVolumeToAudio(inst);
+                }
+            }
+
+            for (const name in this.sounds) {
+                const entry = this.sounds[name];
+                if (entry?.audio) {
+                    this._applyDockedVolumeToAudio(entry.audio);
+                }
+            }
+        } catch (e) {
+            // Non-fatal; best effort only
+        }
+    }
+
+    /**
      * Plays a sound originating from a specific world location.
      * Sets the volume dynamically for off-screen sounds.
      * Handles both HTMLAudioElement and WebAudio BufferSource (sfxr).
@@ -1464,9 +1547,10 @@ class SoundManager {
         
         const baseVolume = soundEntry.definition.sound_vol;
         const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
+        const dockedVolume = this._applyDockedAttenuation(intendedVolume);
         
-        // Skip if volume is too low
-        if (intendedVolume < 0.01) return;
+        // Skip if volume is too low after dock attenuation
+        if (dockedVolume < 0.01) return;
 
         // Apply throttling to prevent sound spam
         if (!this._canPlayThrottled(name)) {
@@ -1522,7 +1606,9 @@ class SoundManager {
                 // Stronger gain scaling: more aggressive volume reduction as sounds stack
                 const activeCount = webList.length;
                 const scale = 1 / Math.pow(activeCount + 1, 0.85); // Increased from 0.6 to 0.85 for more aggressive reduction
-                gainNode.gain.value = Math.max(0, Math.min(1, intendedVolume * scale));
+                const baseGain = Math.max(0, Math.min(1, intendedVolume * scale));
+                const finalGain = this._applyDockedAttenuation(baseGain);
+                gainNode.gain.value = finalGain;
                 
                 source.connect(gainNode);
                 
@@ -1544,7 +1630,8 @@ class SoundManager {
                     gainNode: gainNode,
                     priority: priority,
                     startTime: Date.now(),
-                    name: name
+                    name: name,
+                    baseGain: baseGain
                 };
                 
                 this.globalActiveSources.push(sourceInfo);
@@ -1661,13 +1748,16 @@ class SoundManager {
      * @param {number} volume - Target playback volume (0..1)
      * @param {{resetTime?: boolean, forceSetVolume?: boolean}} opts - Controls behavior
      */
-    _playAnyAudio(audioObj, volume, opts = {}) {
+    _playAnyAudio(audioObj, baseVolume, opts = {}) {
         const { resetTime = false, forceSetVolume = true } = opts;
+        const finalVolume = Math.max(0, Math.min(1, this._applyDockedAttenuation(baseVolume)));
+        const shouldForceVolume = forceSetVolume || this.isDocked;
+        audioObj._eliteBaseVolume = baseVolume;
 
         // sfxr WebAudio wrapper path (has setVolume/play methods, but no .volume property)
         if (typeof audioObj.setVolume === 'function' && typeof audioObj.play === 'function' && typeof audioObj.volume === 'undefined') {
             try {
-                if (forceSetVolume) audioObj.setVolume(Math.max(0, Math.min(1, volume)));
+                if (shouldForceVolume) audioObj.setVolume(finalVolume);
                 audioObj.play();
                 return;
             } catch (e) {
@@ -1682,8 +1772,8 @@ class SoundManager {
             if (resetTime && typeof audioObj.currentTime !== 'undefined') {
                 audioObj.currentTime = 0;
             }
-            if (forceSetVolume && canSetVolume) {
-                audioObj.volume = Math.max(0, Math.min(1, volume));
+            if (shouldForceVolume && canSetVolume) {
+                audioObj.volume = finalVolume;
             }
             audioObj.play();
             // Note: We no longer restore volume since we're using pooled instances
@@ -1709,7 +1799,7 @@ class SoundManager {
         // - For UI sounds, only adjust volume when volMultiplier != 1.0
         const baseVol = soundEntry.definition.sound_vol;
         const desiredVol = Math.max(0, Math.min(1, baseVol * volMultiplier));
-        const forceSetVolume = (volMultiplier !== 1.0);
+        const forceSetVolume = (volMultiplier !== 1.0) || this.isDocked;
 
         this._playAnyAudio(soundEntry.audio, desiredVol, { resetTime: true, forceSetVolume });
     }
@@ -1729,6 +1819,35 @@ class SoundManager {
         // Simple size check for sound selection
         const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
         this.playWorldSound(soundName, sourceX, sourceY, listenerPos);
+    }
+
+    /**
+     * Apply docked attenuation to all currently playing sounds and future playback.
+     * @param {boolean} docked - Whether the player is docked/in-station menus.
+     */
+    setDockedState(docked) {
+        if (this.isDocked === docked) return;
+        this.isDocked = docked;
+
+        // Adjust active Web Audio sources with a smooth ramp
+        if (this.audioContext && Array.isArray(this.globalActiveSources)) {
+            const rampDuration = docked ? 0.08 : 0.14;
+            for (const info of this.globalActiveSources) {
+                const gainParam = info?.gainNode?.gain;
+                if (!gainParam) continue;
+
+                const baseGain = (typeof info.baseGain === 'number')
+                    ? info.baseGain
+                    : (typeof gainParam.value === 'number' ? gainParam.value : 0);
+                info.baseGain = baseGain;
+
+                const target = this._applyDockedAttenuation(baseGain);
+                this._rampGain(gainParam, target, rampDuration);
+            }
+        }
+
+        // Adjust pooled HTMLAudio/sfxr wrapper instances
+        this._applyDockedVolumeToAllHtmlAudio();
     }
 
     /**
