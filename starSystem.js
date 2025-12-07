@@ -2523,7 +2523,7 @@ try {
      * @private
      */
     _handleShipCollision(ship1, ship2) {
-        const collisionDamage = Math.floor(ship1.vel.mag() + ship2.vel.mag());
+        const collisionDamage = Math.floor((ship1.vel.mag() + ship2.vel.mag()) * 0.5);
         if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
         
         ship1.takeDamage(collisionDamage, ship2);
@@ -2555,7 +2555,7 @@ try {
             ship.takeDamage(999999, asteroid);
             asteroid.takeDamage(ship === this.player ? 20 : 10, ship, this);
         } else {
-            const damage = ship === this.player ? Math.floor(ship.vel.mag()) : 10;
+            const damage = ship === this.player ? Math.floor(ship.vel.mag() * 0.5) : 5;
             ship.takeDamage(damage, asteroid);
             asteroid.takeDamage(ship === this.player ? 20 : 10, ship, this);
         }
@@ -4116,15 +4116,7 @@ checkProjectileCollisions() {
                     } catch(e) { console.error('SpaceObject.draw error', e); }
                 }
             }
-            // Log once per second to avoid spam
-            if (!this._lastSpaceObjLogTime || (millis() - this._lastSpaceObjLogTime > 1000)) {
-                console.log(`Drawing ${drawnCount}/${spaceObjCount} visible space objects`);
-                this._lastSpaceObjLogTime = millis();
-            }
-        } else if (!this._warnedNoSpaceObjects) {
-            console.warn(`No space objects to draw in ${this.name}`);
-            this._warnedNoSpaceObjects = true;
-        }
+        } 
 
         // Draw only visible cargo
         if (this.cargo && this.cargo.length > 0) {

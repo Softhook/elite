@@ -171,8 +171,8 @@ class EnemyAIBehaviors {
     }
 
     _shouldConsiderCover(distanceToTarget) {
-        const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.45 : false;
-        const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.35 : false;
+        const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.80 : false;
+        const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.50 : false;
         const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.APPROACHING;
         const farEnough = typeof distanceToTarget === 'number' ? distanceToTarget > (this.size + 50) : true;
         return farEnough && (lowHull || lowShield || stateWantsCover);
