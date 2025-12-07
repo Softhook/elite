@@ -146,7 +146,7 @@
       const cacheValid = system._coverCandidateCacheTime && (now - system._coverCandidateCacheTime) < 500;
       if (cacheValid && Array.isArray(system.coverCandidates)) return system.coverCandidates;
 
-      const minSize = 25;
+      const minSize = 0;
       const maxSpeed = 1.2;
       system.coverCandidates = system.asteroids.filter(ast => {
         if (!ast || ast.destroyed) return false;
@@ -162,7 +162,7 @@
 
     _isLineBlockedByAsteroid(ast, p1, p2) {
       if (!ast || !p1 || !p2) return false;
-      const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
       if (!r || r <= 0) return false;
       const cx = ast.pos?.x; const cy = ast.pos?.y;
       if (cx === undefined || cy === undefined) return false;
@@ -175,12 +175,12 @@
       const projX = p1.x + clampedT * dx;
       const projY = p1.y + clampedT * dy;
       const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
-      return distSq <= r * r;
+      return distSq <= (r * 1.2) * (r * 1.2);
     }
 
     _computeCoverApproachPoint(ast, targetPos) {
       if (!ast?.pos) return null;
-      const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      const radius = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
       const ref = targetPos || this.target?.pos || this.pos;
       const refX = ref?.x ?? ast.pos.x;
       const refY = ref?.y ?? ast.pos.y;
@@ -215,7 +215,7 @@
 
     _scoreCoverCandidate(ast, targetPos) {
       if (!ast || !ast.pos) return -Infinity;
-      const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
       if (!r || r <= 0) return -Infinity;
       const dx = ast.pos.x - this.pos.x;
       const dy = ast.pos.y - this.pos.y;
@@ -260,7 +260,8 @@
       const dx = this.repositionTarget.x - this.pos.x;
       const dy = this.repositionTarget.y - this.pos.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < 15 && this.coverPeekTimer === 0) { // close to the reposition target and peek not already active
+      // Trigger peek when close to cover position (within 20 units, matching stop distance)
+      if (dist < 20 && this.coverPeekTimer === 0) {
         this.coverPeekTimer = 0.6;
       }
       if (this.coverPeekTimer > 0 && dtSeconds > 0) {
@@ -511,7 +512,8 @@
       age: 0,
       duration: simConfig.shotTravel,
       blockedBy: null,
-      willHit: true
+      willHit: true,
+      isEnemyShot: false
     };
     for (const ast of system.asteroids) {
       if (enemy._isLineBlockedByAsteroid(ast, shot.from, shot.to)) {
@@ -523,6 +525,30 @@
       }
     }
     simState.shots.push(shot);
+
+    // During peek, also spawn enemy return fire
+    if (enemy.currentState === AI_STATE.REPOSITIONING && enemy.coverPeekTimer > 0) {
+      const enemyJitterY = (Math.random() - 0.5) * 80;
+      const enemyAimedTo = { x: player.pos.x, y: player.pos.y + enemyJitterY };
+      const enemyShot = {
+        from: { ...enemy.pos },
+        to: enemyAimedTo,
+        age: 0,
+        duration: simConfig.shotTravel,
+        blockedBy: null,
+        willHit: true,
+        isEnemyShot: true
+      };
+      // Check if enemy shot is blocked
+      for (const ast of system.asteroids) {
+        if (enemy._isLineBlockedByAsteroid(ast, enemyShot.from, enemyShot.to)) {
+          enemyShot.blockedBy = ast;
+          enemyShot.willHit = false;
+          break;
+        }
+      }
+      simState.shots.push(enemyShot);
+    }
   }
 
   function updateShots(dtSeconds) {
@@ -545,7 +571,11 @@
       const t = clamp(s.age / s.duration, 0, 1);
       const x = lerp(s.from.x, s.to.x, t);
       const y = lerp(s.from.y, s.to.y, t);
-      ctx.strokeStyle = s.willHit ? '#ff5f52' : '#777';
+      if (s.isEnemyShot) {
+        ctx.strokeStyle = s.willHit ? '#ff4444' : '#884444'; // Red for enemy shots
+      } else {
+        ctx.strokeStyle = s.willHit ? '#ff5f52' : '#777'; // Orange for player shots
+      }
       ctx.lineWidth = s.willHit ? 2 : 1.2;
       ctx.beginPath();
       ctx.moveTo(s.from.x, s.from.y);
@@ -567,7 +597,7 @@
     // Update player movement (circular pattern)
     const centerX = 200;
     const centerY = 280;
-    const radius = 80;
+    const radius = 200;
     const speed = 0.8; // radians per second
     const angle = simState.time * speed;
     player.pos.x = centerX + Math.cos(angle) * radius;
@@ -674,7 +704,12 @@
     hpLabel.textContent = `${Math.round(enemy.hull)} hull / ${Math.round(enemy.shield)} shield`;
     coverLabel.textContent = simState.coverId || 'None yet';
     peekLabel.textContent = enemy.coverPeekTimer.toFixed(1) + 's';
-    blockLabel.textContent = simState.blockedShots.toString();
+    const distToCover = enemy.repositionTarget ? len(sub(enemy.repositionTarget, enemy.pos)).toFixed(1) : '—';
+    let enemyShots = 0;
+    for (const s of simState.shots) {
+      if (s.isEnemyShot) enemyShots++;
+    }
+    blockLabel.textContent = `${simState.blockedShots} blocked | ${distToCover}u to cover | ${enemyShots} enemy shots`;
     timeLabel.textContent = `${simState.time.toFixed(1)}s`;
   }
 

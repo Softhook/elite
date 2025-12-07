@@ -184,7 +184,7 @@ class EnemyAIBehaviors {
         const cacheValid = system._coverCandidateCacheTime && (now - system._coverCandidateCacheTime) < 500;
         if (cacheValid && Array.isArray(system.coverCandidates)) return system.coverCandidates;
 
-        const minSize = 25; // tiny pebbles are ignored
+        const minSize = 0; // consider all asteroids for cover, even tiny ones
         const maxSpeed = 1.2; // prefer static/slow
         system.coverCandidates = system.asteroids.filter(ast => {
             if (!ast || ast.destroyed) return false;
@@ -200,7 +200,7 @@ class EnemyAIBehaviors {
 
     _isLineBlockedByAsteroid(ast, p1, p2) {
         if (!ast || !p1 || !p2) return false;
-        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
         if (!r || r <= 0) return false;
         const cx = ast.pos?.x; const cy = ast.pos?.y;
         if (cx === undefined || cy === undefined) return false;
@@ -213,12 +213,12 @@ class EnemyAIBehaviors {
         const projX = p1.x + clampedT * dx;
         const projY = p1.y + clampedT * dy;
         const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
-        return distSq <= r * r;
+        return distSq <= (r * 1.2) * (r * 1.2);
     }
 
     _computeCoverApproachPoint(ast, targetPos) {
         if (!ast?.pos) return null;
-        const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        const radius = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
         const ref = targetPos || this.target?.pos || this.pos;
         const refX = ref?.x ?? ast.pos.x;
         const refY = ref?.y ?? ast.pos.y;
@@ -253,7 +253,7 @@ class EnemyAIBehaviors {
 
     _scoreCoverCandidate(ast, targetPos) {
         if (!ast || !ast.pos) return -Infinity;
-        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
         if (!r || r <= 0) return -Infinity;
         const dx = ast.pos.x - this.pos.x;
         const dy = ast.pos.y - this.pos.y;
