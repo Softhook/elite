@@ -744,6 +744,15 @@ class EnemyAIBehaviors {
         // Compute an approach target to avoid steering directly to the object's center.
         // This places the movement target outside the SO's collision radius along
         // the line from SO -> ship, with a small lateral jitter to reduce stacking.
+        const approachMargin = 12;
+        let soRadius = null;
+        let dockDistance = null;
+        // Stable per-stop lateral jitter so approach target does not move every frame
+        if (this._routeApproachJitterIndex !== this.currentRouteIndex) {
+            this._routeApproachJitter = random(-6, 6);
+            this._routeApproachJitterIndex = this.currentRouteIndex;
+        }
+        const lateralJitter = this._routeApproachJitter || 0;
         let moveTarget = (destination && typeof destination.copy === 'function') ? destination.copy() : (destination ? createVector(destination.x, destination.y) : createVector(0,0));
         if (destObj && destObj.pos) {
             try {
@@ -753,15 +762,13 @@ class EnemyAIBehaviors {
                 // Use the authoritative collision radius when available, otherwise
                 // derive an approximate radius from the object's size, falling
                 // back to 30 if neither is present.
-                const soRadius = (typeof destObj.collisionRadius === 'number')
+                soRadius = (typeof destObj.collisionRadius === 'number')
                     ? destObj.collisionRadius
                     : (typeof destObj.size === 'number' ? (destObj.size * 0.5) : 30);
-                // Margin to keep ships comfortably outside the object's bounds
-                const approachMargin = 12;
-                const dockDistance = soRadius + (this.size * 0.6) + approachMargin;
+                dockDistance = soRadius + (this.size * 0.6) + approachMargin;
                 moveTarget = p5.Vector.add(destObj.pos, p5.Vector.mult(dir, dockDistance));
-                // lateral jitter to spread ships around the object perimeter
-                const lateral = p5.Vector.fromAngle(atan2(dir.y, dir.x) + HALF_PI).mult(random(-6, 6));
+                // lateral jitter to spread ships around the object perimeter (stable per stop)
+                const lateral = p5.Vector.fromAngle(atan2(dir.y, dir.x) + HALF_PI).mult(lateralJitter);
                 moveTarget.add(lateral);
             } catch (e) {
                 moveTarget = destination.copy ? destination.copy() : createVector(destination.x, destination.y);
@@ -781,23 +788,39 @@ class EnemyAIBehaviors {
 
         // Movement vector/distance (use moveTarget so ships aim for an exterior point)
         this.tempVector.set(moveTarget.x - this.pos.x, moveTarget.y - this.pos.y);
-        let distance = this.tempVector.mag();
+        const distanceToMoveTarget = this.tempVector.mag();
+
+        // Also track distance to the actual destination object center so arrival uses the real proximity,
+        // not the animated moveTarget ring (which can drift as the ship approaches).
+        const distanceToDestination = (destObj && destObj.pos)
+            ? dist(this.pos.x, this.pos.y, destObj.pos.x, destObj.pos.y)
+            : distanceToMoveTarget;
 
         // Determine arrival threshold: if destination is a SpaceObject, stop safely outside its collision radius
         let arrivalThreshold = 30;
         if (destObj) {
-            const soRadius = (typeof destObj.collisionRadius === 'number')
-                ? destObj.collisionRadius
-                : (typeof destObj.size === 'number' ? (destObj.size * 0.5) : 30);
-            const approachMargin = 12;
-            arrivalThreshold = Math.max(30, soRadius + (this.size * 0.6) + approachMargin * 0.8);
+            const baseDockDistance = dockDistance !== null ? dockDistance : ((soRadius || 0) + (this.size * 0.6) + approachMargin);
+            const settlePadding = Math.max(6, this.size * 0.2); // small buffer so we consider the ship "at" the ring
+            arrivalThreshold = Math.max(30, baseDockDistance + settlePadding);
         }
-        const slowSpeedThreshold = 0.2;
+        const slowSpeedThreshold = 0.3;
 
-        if (distance > arrivalThreshold) {
+        // Arrival hysteresis: once latched, allow a small margin before resuming thrust
+        if (this._arrivalLatchIndex !== this.currentRouteIndex) {
+            this._arrivalLatched = false;
+            this._arrivalLatchIndex = this.currentRouteIndex;
+        }
+        const arrivalReleaseMargin = 25;
+        if (distanceToDestination <= arrivalThreshold) {
+            this._arrivalLatched = true;
+        }
+        const holdArrival = this._arrivalLatched && distanceToDestination <= arrivalThreshold + arrivalReleaseMargin;
+
+        if (!holdArrival) {
             // Move towards the computed exterior approach target instead of the center
             if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
             this.performRotationAndThrust(moveTarget); // Use helper
+            this._arrivalLatched = false;
         } else {
             // Arrival detected: brake and conduct trade if destination is a SpaceObject
             this.vel.mult(0.2);
