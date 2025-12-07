@@ -336,6 +336,79 @@ class EnemyCombat {
         return isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD; // Use constant
     }
 
+    _hasClearShotToTarget(system, targetPos, distanceToTarget) {
+        if (!system || !Array.isArray(system.asteroids) || !system.asteroids.length) return true;
+        if (!targetPos || targetPos.x === undefined || targetPos.y === undefined) return true;
+        const maxCheckDist = Math.min(
+            isFinite(distanceToTarget) ? distanceToTarget : Infinity,
+            (this.firingRange || distanceToTarget || 0) * 1.5 || Infinity
+        );
+        const maxCheckDistSq = isFinite(maxCheckDist) ? maxCheckDist * maxCheckDist : Infinity;
+
+        // Quiet LOS test (no console spam) to avoid firing into asteroids or friendlies between us and the target.
+        const p1x = this.pos?.x;
+        const p1y = this.pos?.y;
+        const p2x = targetPos.x;
+        const p2y = targetPos.y;
+        if (p1x === undefined || p1y === undefined) return true;
+
+        const segDx = p2x - p1x;
+        const segDy = p2y - p1y;
+        const segLenSq = segDx * segDx + segDy * segDy;
+        if (segLenSq === 0) return true;
+
+        for (const ast of system.asteroids) {
+            if (!ast || ast.destroyed) continue;
+            const cx = ast.pos?.x; const cy = ast.pos?.y;
+            if (cx === undefined || cy === undefined) continue;
+
+            const radius = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
+            if (!radius || radius < 6) continue; // ignore tiny debris
+
+            // Skip far asteroids to keep checks light
+            const distToAstSq = (cx - p1x) * (cx - p1x) + (cy - p1y) * (cy - p1y);
+            if (distToAstSq > maxCheckDistSq + radius * radius) continue;
+
+            const t = ((cx - p1x) * segDx + (cy - p1y) * segDy) / segLenSq;
+            const clampedT = Math.max(0, Math.min(1, t));
+            const projX = p1x + clampedT * segDx;
+            const projY = p1y + clampedT * segDy;
+            const closestDistSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
+            const blockThreshold = (radius + Math.max(6, this.size * 0.15 || 0)) ** 2;
+            if (closestDistSq <= blockThreshold) {
+                return false;
+            }
+        }
+
+        // Friendly-fire guard: do not shoot through allies in the same faction.
+        const ourFaction = this.faction || (typeof this._getShipFaction === 'function' ? this._getShipFaction(this) : null);
+        if (ourFaction && Array.isArray(system.enemies)) {
+            for (const ally of system.enemies) {
+                if (!ally || ally === this || ally === this.target) continue;
+                if (ally.destroyed) continue;
+                if (!ally.pos || ally.pos.x === undefined || ally.pos.y === undefined) continue;
+                const allyFaction = ally.faction || (typeof ally._getShipFaction === 'function' ? ally._getShipFaction(ally) : null);
+                if (!allyFaction || allyFaction !== ourFaction) continue;
+
+                const cx = ally.pos.x; const cy = ally.pos.y;
+                const radius = ally.size ? ally.size * 0.5 : (ally.maxRadius || 0) || 12;
+                const distToAllySq = (cx - p1x) * (cx - p1x) + (cy - p1y) * (cy - p1y);
+                if (distToAllySq > maxCheckDistSq + radius * radius) continue;
+
+                const t = ((cx - p1x) * segDx + (cy - p1y) * segDy) / segLenSq;
+                const clampedT = Math.max(0, Math.min(1, t));
+                const projX = p1x + clampedT * segDx;
+                const projY = p1y + clampedT * segDy;
+                const closestDistSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
+                const blockThreshold = (radius + Math.max(6, this.size * 0.15 || 0)) ** 2;
+                if (closestDistSq <= blockThreshold) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /** 
      * Checks conditions and calls fire() if appropriate.
      * @param {Object} system - The current star system
@@ -427,6 +500,12 @@ class EnemyCombat {
 
         // Enhanced firing logic
         if (distanceToTarget < effectiveFiringRange && this.isWeaponReady()) {
+            const clearShot = this._hasClearShotToTarget(system, this.target?.pos, distanceToTarget);
+            if (!clearShot) {
+                // Small cooldown bump so we do not spam checks every frame while blocked
+                this.fireCooldown = Math.max(this.fireCooldown || 0, 0.08);
+                return;
+            }
             if (this.canFireAtTarget(shootingAngle)) {
                 // Player-specific targeting debug (throttled to reduce spam)
                 if (targetingPlayer) {
