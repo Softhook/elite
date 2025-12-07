@@ -614,6 +614,80 @@ class EnemyAIBehaviors {
     updateTransportAI(system) {
         if (!system) return;
 
+        const _resolveSpaceObjectCommodities = (obj) => {
+            const defaultSet = { produces: ['Metals'], buys: [] };
+            const mapping = (typeof SPACE_OBJECT_COMMODITIES !== 'undefined' && obj?.type)
+                ? (SPACE_OBJECT_COMMODITIES[obj.type] || SPACE_OBJECT_COMMODITIES.default)
+                : null;
+
+            const produces = Array.isArray(obj?.produces) && obj.produces.length
+                ? obj.produces.slice()
+                : (mapping?.produces || defaultSet.produces);
+            const buys = Array.isArray(obj?.buys) && obj.buys.length
+                ? obj.buys.slice()
+                : (mapping?.buys || defaultSet.buys);
+            return { produces, buys };
+        };
+
+        const _sellCargoToSpaceObject = (buyList) => {
+            const summary = { total: 0, items: [] };
+            if (!Array.isArray(buyList) || buyList.length === 0 || !Array.isArray(this.cargoHold)) {
+                return summary;
+            }
+
+            const shuffled = buyList.slice();
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            shuffled.forEach(name => {
+                const entry = this.cargoHold.find(item => item && item.name === name && item.quantity > 0);
+                if (!entry) { return; }
+                const amount = Math.max(1, Math.floor(entry.quantity * random(0.35, 0.9)));
+                const removed = (typeof this.removeCargo === 'function') ? this.removeCargo(name, amount) : 0;
+                if (removed > 0) {
+                    summary.items.push({ name, quantity: removed });
+                    summary.total += removed;
+                }
+            });
+
+            return summary;
+        };
+
+        const _buyFromSpaceObject = (produceList, targetLoad) => {
+            if (!Array.isArray(produceList) || produceList.length === 0 || typeof this._loadCargoFromOptions !== 'function') {
+                return 0;
+            }
+            const before = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : 0;
+            this._loadCargoFromOptions(produceList, targetLoad, null);
+            const after = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : before;
+            return Math.max(0, after - before);
+        };
+
+        const _tradeAtSpaceObject = (obj) => {
+            const { produces, buys } = _resolveSpaceObjectCommodities(obj);
+            const sellSummary = _sellCargoToSpaceObject(buys);
+            const afterSell = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : 0;
+            const targetLoad = Math.max(afterSell, Math.floor((this.cargoCapacity || 0) * random(0.35, 0.7)));
+            const bought = _buyFromSpaceObject(produces, targetLoad);
+            return { sold: sellSummary.total, bought, soldItems: sellSummary.items, produces, buys };
+        };
+
+        const _tradeAtStation = (activeSystem) => {
+            if (!activeSystem?.station) { return { sold: 0, bought: 0 }; }
+            const before = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : 0;
+            this._hasDockedThisPause = false;
+            if (typeof this.handleStationDocking === 'function') {
+                this.handleStationDocking(activeSystem);
+            }
+            const after = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : before;
+            return {
+                sold: Math.max(0, before - after),
+                bought: Math.max(0, after - before)
+            };
+        };
+
         // Check for attackers FIRST
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
             this.currentState !== AI_STATE.FLEEING &&
@@ -795,6 +869,9 @@ class EnemyAIBehaviors {
         const distanceToDestination = (destObj && destObj.pos)
             ? dist(this.pos.x, this.pos.y, destObj.pos.x, destObj.pos.y)
             : distanceToMoveTarget;
+        const distanceToStation = (system?.station?.pos)
+            ? dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y)
+            : Infinity;
 
         // Determine arrival threshold: if destination is a SpaceObject, stop safely outside its collision radius
         let arrivalThreshold = 30;
@@ -834,60 +911,24 @@ class EnemyAIBehaviors {
 
                     // Perform trade/load when first stopping near a SpaceObject or station
                     try {
-                        if (destObj && !destObj.destroyed) {
-                            // Prefer authoritative commodity lists provided by the SpaceObject instance
-                            // (set by `spaceObjects.js`). Fall back to an internal map if missing.
-                            const fallbackCommodityMap = {
-                                miningPlatform: ['Metals','Minerals'],
-                                asteroidMiner: ['Metals','Minerals'],
-                                cargoCluster: ['Textiles','Machinery','Metals'],
-                                hydroponicsBay: ['Food'],
-                                orbitalGarden: ['Food'],
-                                fuelDepot: ['Fuel'],
-                                researchArray: ['Adv Components','Computers'],
-                                spaceStation: ['Food','Textiles','Machinery'],
-                                solarFarm: ['Metals'],
-                                energyCollector: ['Metals']
-                            };
+                        const nearStation = system?.station && system.station.pos
+                            ? distanceToStation < Math.max(60, system.station.size * 1.2)
+                            : false;
 
-                            const options = (destObj && Array.isArray(destObj.produces) && destObj.produces.length)
-                                ? destObj.produces
-                                : (fallbackCommodityMap[destObj?.type] || ['Metals']);
-                            // Determine available capacity and clamp target load to avoid overfilling
-                            const availableCapacity = (typeof this.getRemainingCargoCapacity === 'function')
-                                ? this.getRemainingCargoCapacity()
-                                : Math.max(0, (this.cargoCapacity || 0) - (typeof this.getCargoAmount === 'function' ? this.getCargoAmount() : 0));
-                            const desiredLoad = Math.floor((this.cargoCapacity || 0) * random(0.2, 0.6));
-                            const targetLoad = Math.max(0, Math.min(this.cargoCapacity || 0, desiredLoad, availableCapacity));
-                            // Use existing helper to load from options (no station market available) only if capacity exists
-                            if (targetLoad > 0) {
-                                this._loadCargoFromOptions(options, targetLoad, null);
-                            } else {
-                                CARGO_LOG && CARGO_LOG(`Transporter ${this.shipTypeName} has no available cargo capacity; skipping load`);
-                            }
-                            // Inform player/ui - only show message if we're close enough for player to see
-                            try {
-                                const playerRef = this.currentSystem?.player || (typeof player !== 'undefined' ? player : null);
-                                const playerDist = playerRef && playerRef.pos && this.pos ? 
-                                    dist(this.pos.x, this.pos.y, playerRef.pos.x, playerRef.pos.y) : Infinity;
-                                // Only show trade message if player is within visual range (e.g., 2000 units)
-                                if (playerDist < 2000 && typeof uiManager !== 'undefined') {
-                                    const planetName = (typeof destObj.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets) && this.currentSystem.planets[destObj.planetIndex])
-                                        ? this.currentSystem.planets[destObj.planetIndex].name
-                                        : null;
-                                    const displayName = (typeof destObj.getDisplayName === 'function') ? destObj.getDisplayName() : (destObj.type || 'space object');
-                                    uiManager.addMessage(`${this.shipTypeName} traded with ${displayName}${planetName ? ' @ ' + planetName : ''}`);
-                                }
-                            } catch (e) { /* ignore UI message errors */ }
-                        } else {
-                            // Possibly arrived at a station point (destObj null but near station)
-                            if (system && system.station && system.station.pos && dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y) < Math.max(60, system.station.size * 1.2)) {
-                                // Use the full station docking/trade behavior used by haulers
-                                try {
-                                    if (typeof this.handleStationDocking === 'function') {
-                                        this.handleStationDocking(system);
-                                    }
-                                } catch (e) { /* ignore */ }
+                        const tradeContext = destObj && !destObj.destroyed
+                            ? { summary: _tradeAtSpaceObject(destObj), name: (typeof destObj.getDisplayName === 'function') ? destObj.getDisplayName() : (destObj.type || 'space object') }
+                            : (nearStation ? { summary: _tradeAtStation(system), name: system?.station?.name || 'station' } : null);
+
+                        if (tradeContext && (tradeContext.summary.sold > 0 || tradeContext.summary.bought > 0)) {
+                            const playerRef = this.currentSystem?.player || (typeof player !== 'undefined' ? player : null);
+                            const playerDist = playerRef && playerRef.pos && this.pos
+                                ? dist(this.pos.x, this.pos.y, playerRef.pos.x, playerRef.pos.y)
+                                : Infinity;
+                            if (playerDist < 2000 && typeof uiManager !== 'undefined') {
+                                const soldText = tradeContext.summary.sold > 0 ? `sold ${tradeContext.summary.sold}` : '';
+                                const boughtText = tradeContext.summary.bought > 0 ? `bought ${tradeContext.summary.bought}` : '';
+                                const details = [soldText, boughtText].filter(Boolean).join(' & ');
+                                uiManager.addMessage(`${this.shipTypeName} traded at ${tradeContext.name}${details ? ` (${details})` : ''}`);
                             }
                         }
                     } catch (e) {
