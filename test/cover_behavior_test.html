@@ -36,20 +36,21 @@
         <span><span class="dot" style="background:#52d1ff"></span>Player</span>
         <span><span class="dot" style="background:#ffb347"></span>Enemy</span>
         <span><span class="dot" style="background:#ff5f52"></span>Incoming shot</span>
-        <span><span class="dot" style="background:#6ddc6d"></span>Cover target</span>
+        <span><span class="dot" style="background:#6ddc6d"></span>Cover approach point</span>
         <span><span class="dot" style="background:#bbbbbb"></span>Asteroid</span>
       </div>
       <div class="hud">
         <div class="card"><label>Enemy State</label><div id="stateLabel">—</div></div>
         <div class="card"><label>Hull / Shield</label><div id="hpLabel">—</div></div>
         <div class="card"><label>Cover Target</label><div id="coverLabel">—</div></div>
+        <div class="card"><label>Peek Timer</label><div id="peekLabel">0.0s</div></div>
         <div class="card"><label>Shots blocked</label><div id="blockLabel">0</div></div>
         <div class="card"><label>Simulation Time</label><div id="timeLabel">0.0s</div></div>
       </div>
-      <div class="note">This runs the actual cover selection logic used in-game, then simulates a short firefight to verify that cover blocks shots and that fleeing triggers when hull is low.</div>
+      <div class="note">This runs the actual cover selection logic used in-game, then simulates a short firefight to verify that cover blocks shots and that fleeing triggers when hull is low. Asteroids are randomized in size and position each run, and ships avoid colliding with them. When behind cover, enemies only fire during peek periods (when peek timer > 0).</div>
       <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
         <button id="restartBtn">Restart Visual Run</button>
-        <span class="note">Expected: enemy hides behind a rock, blocked shots appear red/gray, then the ship flees to the upper-right once hull &lt; 40%.</span>
+        <span class="note">Expected: enemy positions behind a rock (green line shows approach path), fires only during peek periods when behind cover (watch peek timer), blocked shots appear gray, then the ship flees to the upper-right once hull &lt; 40%.</span>
       </div>
     </div>
     <div class="panel">
@@ -82,6 +83,7 @@
   const stateLabel = document.getElementById('stateLabel');
   const hpLabel = document.getElementById('hpLabel');
   const coverLabel = document.getElementById('coverLabel');
+  const peekLabel = document.getElementById('peekLabel');
   const blockLabel = document.getElementById('blockLabel');
   const timeLabel = document.getElementById('timeLabel');
   const restartBtn = document.getElementById('restartBtn');
@@ -176,6 +178,41 @@
       return distSq <= r * r;
     }
 
+    _computeCoverApproachPoint(ast, targetPos) {
+      if (!ast?.pos) return null;
+      const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      const ref = targetPos || this.target?.pos || this.pos;
+      const refX = ref?.x ?? ast.pos.x;
+      const refY = ref?.y ?? ast.pos.y;
+
+      // Calculate direction from asteroid to target (opposite of what we want for cover)
+      let dirX = refX - ast.pos.x;
+      let dirY = refY - ast.pos.y;
+      let mag = Math.hypot(dirX, dirY);
+
+      // Fallback to our own position if target/reference overlaps the asteroid center
+      if (!isFinite(mag) || mag < 1e-3) {
+        dirX = this.pos.x - ast.pos.x;
+        dirY = this.pos.y - ast.pos.y;
+        mag = Math.hypot(dirX, dirY);
+      }
+
+      if (!isFinite(mag) || mag < 1e-3) {
+        dirX = 1; dirY = 0; mag = 1; // arbitrary but stable direction
+      }
+
+      const invMag = 1 / mag;
+      const normX = dirX * invMag;
+      const normY = dirY * invMag;
+      const padding = Math.max(this.size * 0.7, 14);
+      const offset = (radius || 0) + padding;
+
+      // Place approach point on the far side of asteroid from target
+      const px = ast.pos.x - normX * offset;
+      const py = ast.pos.y - normY * offset;
+      return { x: px, y: py };
+    }
+
     _scoreCoverCandidate(ast, targetPos) {
       if (!ast || !ast.pos) return -Infinity;
       const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
@@ -219,20 +256,23 @@
     }
 
     _updateCoverPeek(dtSeconds) {
-      if (!this.coverTarget || !this.coverTarget.pos) return;
-      const dx = this.coverTarget.pos.x - this.pos.x;
-      const dy = this.coverTarget.pos.y - this.pos.y;
+      if (!this.repositionTarget) return;
+      const dx = this.repositionTarget.x - this.pos.x;
+      const dy = this.repositionTarget.y - this.pos.y;
       const dist = Math.hypot(dx, dy);
-      const targetRadius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 0);
-      if (dist < targetRadius * 0.8) {
-        this.coverPeekTimer = Math.max(this.coverPeekTimer, 0.6);
+      if (dist < 15 && this.coverPeekTimer === 0) { // close to the reposition target and peek not already active
+        this.coverPeekTimer = 0.6;
       }
       if (this.coverPeekTimer > 0 && dtSeconds > 0) {
         this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
       }
     }
 
-    _updateCoverBehavior(system, targetPos, distanceToTarget, dtSeconds) {
+    changeState(newState) {
+      this.currentState = newState;
+    }
+
+    _updateCoverBehavior(system, targetExists, distanceToTarget, dtSeconds) {
       if (this.coverEvalTimer > 0 && dtSeconds > 0) {
         this.coverEvalTimer = Math.max(0, this.coverEvalTimer - dtSeconds);
       }
@@ -241,21 +281,45 @@
         return false;
       }
 
+      // Fast bail if system lacks usable cover
       if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
         return false;
       }
 
-      if (this.coverEvalTimer <= 0) {
+      const targetPos = (targetExists && this.target?.pos) ? this.target.pos : null;
+
+      if (this.coverTarget && this.coverTarget.destroyed) {
+        this.coverTarget = null;
+        this.repositionTarget = null;
+      }
+
+      const refreshCoverApproachPoint = () => {
+        if (!this.coverTarget) return;
+        const coverPoint = this._computeCoverApproachPoint(this.coverTarget, targetPos);
+        if (coverPoint) {
+          this.repositionTarget = coverPoint;
+        } else if (this.coverTarget.pos) {
+          this.repositionTarget = this.coverTarget.pos;
+        }
+      };
+
+      // Only pick a new cover target when timer expires
+      if (this.coverEvalTimer <= 0 || !this.coverTarget) {
         const cover = this._pickCoverTarget(system, targetPos);
-        this.coverEvalTimer = 0.8 + Math.random() * 0.2;
+        this.coverEvalTimer = 0.8 + Math.random() * 0.2; // jitter
         if (cover) {
           this.coverTarget = cover;
-          this.repositionTarget = cover.pos;
+          refreshCoverApproachPoint();
           if (this.currentState !== AI_STATE.REPOSITIONING) {
-            this.currentState = AI_STATE.REPOSITIONING;
+            this.changeState(AI_STATE.REPOSITIONING);
           }
+        } else {
+          this.coverTarget = null;
+          this.repositionTarget = null;
         }
       }
+
+      refreshCoverApproachPoint();
 
       this._updateCoverPeek(dtSeconds);
       return !!this.coverTarget;
@@ -299,7 +363,7 @@
       const distanceToTarget = len(sub(this.target.pos, this.pos));
 
       // Evaluate cover and repositioning
-      this._updateCoverBehavior(system, this.target.pos, distanceToTarget, dtSeconds);
+      this._updateCoverBehavior(system, !!this.target, distanceToTarget, dtSeconds);
 
       // Decide to flee if too damaged
       if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
@@ -312,28 +376,80 @@
       const speed = this.currentState === AI_STATE.FLEEING ? this.thrust * 1.5 : this.thrust;
       let desired = this.target.pos;
       if (this.currentState === AI_STATE.REPOSITIONING && this.repositionTarget) {
-        desired = this.repositionTarget;
+        const distToReposition = len(sub(this.repositionTarget, this.pos));
+        if (distToReposition < 20) {
+          // Close enough to cover position, stop moving
+          desired = this.pos;
+        } else {
+          desired = this.repositionTarget;
+        }
       }
       if (this.currentState === AI_STATE.FLEEING && this.fleeTarget) {
         desired = this.fleeTarget;
       }
 
-      const dir = norm(sub(desired, this.pos));
+      let dir = norm(sub(desired, this.pos));
+      
+      // Collision avoidance for asteroids
+      if (system && system.asteroids) {
+        for (const ast of system.asteroids) {
+          if (!ast || ast.destroyed) continue;
+          const astRadius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+          const combinedRadius = astRadius + this.size * 0.5;
+          const toAsteroid = sub(ast.pos, this.pos);
+          const distToAsteroid = len(toAsteroid);
+          
+          if (distToAsteroid < combinedRadius * 1.5) { // Start avoiding when within 1.5x collision distance
+            const avoidStrength = Math.max(0, (combinedRadius * 1.5 - distToAsteroid) / (combinedRadius * 0.5));
+            const avoidDir = norm(toAsteroid);
+            // Push away from asteroid
+            dir = norm(add(dir, scale(avoidDir, -avoidStrength)));
+          }
+        }
+      }
+      
       this.vel = scale(dir, speed);
       this.pos = add(this.pos, scale(this.vel, dtSeconds));
       this.angle = Math.atan2(dir.y, dir.x);
     }
+
+    // Simulate firing behavior with peek logic
+    canFire() {
+      if (!this.target) return false;
+      const distanceToTarget = len(sub(this.target.pos, this.pos));
+      
+      // Always fire if in range and not repositioning
+      if (this.currentState !== AI_STATE.REPOSITIONING && distanceToTarget < 200) {
+        return true;
+      }
+      
+      // When repositioning (behind cover), only fire during peek periods
+      if (this.currentState === AI_STATE.REPOSITIONING && this.coverPeekTimer > 0 && distanceToTarget < 200) {
+        return true;
+      }
+      
+      return false;
+    }
   }
 
   // Visual simulation runner ---------------------------------------------
-  const systemTemplate = {
-    asteroids: [
-      asteroid('big-blocker', 430, 260, 70, 0),
-      asteroid('side-cover', 520, 120, 55, 0),
-      asteroid('fast-pebble', 280, 300, 22, 2.4), // ignored for speed
-      asteroid('tiny', 600, 360, 18, 0) // ignored for size
-    ]
-  };
+  const baseAsteroids = [
+    { id: 'big-blocker', baseX: 430, baseY: 260, baseRadius: 70, speed: 0 },
+    { id: 'side-cover', baseX: 520, baseY: 120, baseRadius: 55, speed: 0 },
+    { id: 'fast-pebble', baseX: 280, baseY: 300, baseRadius: 22, speed: 2.4 }, // ignored for speed
+    { id: 'tiny', baseX: 600, baseY: 360, baseRadius: 18, speed: 0 } // ignored for size
+  ];
+
+  function randomizeAsteroids() {
+    return baseAsteroids.map(ast => {
+      const sizeVariation = 0.7 + Math.random() * 0.6; // 0.7 to 1.3
+      const radius = Math.round(ast.baseRadius * sizeVariation);
+      const posVariation = 80; // pixels
+      const x = ast.baseX + (Math.random() - 0.5) * posVariation;
+      const y = ast.baseY + (Math.random() - 0.5) * posVariation;
+      return asteroid(ast.id, x, y, radius, ast.speed);
+    });
+  }
 
   const simConfig = {
     width: canvas.width,
@@ -360,7 +476,7 @@
     simState = {
       enemy,
       player,
-      system: JSON.parse(JSON.stringify(systemTemplate)),
+      system: { asteroids: randomizeAsteroids() },
       time: 0,
       lastShot: 0,
       shots: [],
@@ -383,6 +499,10 @@
 
   function spawnShot() {
     const { enemy, player, system } = simState;
+    
+    // Only fire if enemy can fire (considering peek behavior)
+    if (!enemy.canFire()) return;
+    
     const jitterY = (Math.random() - 0.5) * 120; // shooters are imperfect: some shots skirt the rock
     const aimedTo = { x: enemy.pos.x, y: enemy.pos.y + jitterY };
     const shot = {
@@ -443,6 +563,15 @@
   function update(dtSeconds) {
     const { enemy, player, system } = simState;
     simState.time += dtSeconds;
+
+    // Update player movement (circular pattern)
+    const centerX = 200;
+    const centerY = 280;
+    const radius = 80;
+    const speed = 0.8; // radians per second
+    const angle = simState.time * speed;
+    player.pos.x = centerX + Math.cos(angle) * radius;
+    player.pos.y = centerY + Math.sin(angle * 2) * radius * 0.5; // figure-8 pattern
 
     // Shot spawning
     if (simState.time - simState.lastShot > simConfig.shotInterval && simState.running) {
@@ -526,7 +655,11 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(enemy.pos.x, enemy.pos.y);
-      ctx.lineTo(enemy.coverTarget.pos.x, enemy.coverTarget.pos.y);
+      if (enemy.repositionTarget) {
+        ctx.lineTo(enemy.repositionTarget.x, enemy.repositionTarget.y);
+      } else {
+        ctx.lineTo(enemy.coverTarget.pos.x, enemy.coverTarget.pos.y);
+      }
       ctx.stroke();
       ctx.fillStyle = 'rgba(109,220,109,0.25)';
       ctx.beginPath();
@@ -540,6 +673,7 @@
     stateLabel.textContent = AI_STATE_NAME[enemy.currentState] || '—';
     hpLabel.textContent = `${Math.round(enemy.hull)} hull / ${Math.round(enemy.shield)} shield`;
     coverLabel.textContent = simState.coverId || 'None yet';
+    peekLabel.textContent = enemy.coverPeekTimer.toFixed(1) + 's';
     blockLabel.textContent = simState.blockedShots.toString();
     timeLabel.textContent = `${simState.time.toFixed(1)}s`;
   }

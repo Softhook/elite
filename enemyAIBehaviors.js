@@ -223,14 +223,15 @@ class EnemyAIBehaviors {
         const refX = ref?.x ?? ast.pos.x;
         const refY = ref?.y ?? ast.pos.y;
 
-        let dirX = ast.pos.x - refX;
-        let dirY = ast.pos.y - refY;
+        // Calculate direction from asteroid to target (opposite of what we want for cover)
+        let dirX = refX - ast.pos.x;
+        let dirY = refY - ast.pos.y;
         let mag = Math.hypot(dirX, dirY);
 
         // Fallback to our own position if target/reference overlaps the asteroid center
         if (!isFinite(mag) || mag < 1e-3) {
-            dirX = ast.pos.x - this.pos.x;
-            dirY = ast.pos.y - this.pos.y;
+            dirX = this.pos.x - ast.pos.x;
+            dirY = this.pos.y - ast.pos.y;
             mag = Math.hypot(dirX, dirY);
         }
 
@@ -244,8 +245,9 @@ class EnemyAIBehaviors {
         const padding = Math.max(this.size * 0.7, 14);
         const offset = (radius || 0) + padding;
 
-        const px = ast.pos.x + normX * offset;
-        const py = ast.pos.y + normY * offset;
+        // Place approach point on the far side of asteroid from target
+        const px = ast.pos.x - normX * offset;
+        const py = ast.pos.y - normY * offset;
         return createVector(px, py);
     }
 
@@ -293,13 +295,12 @@ class EnemyAIBehaviors {
     }
 
     _updateCoverPeek(dtSeconds) {
-        if (!this.coverTarget || !this.coverTarget.pos) return;
-        const dx = this.coverTarget.pos.x - this.pos.x;
-        const dy = this.coverTarget.pos.y - this.pos.y;
+        if (!this.repositionTarget) return;
+        const dx = this.repositionTarget.x - this.pos.x;
+        const dy = this.repositionTarget.y - this.pos.y;
         const dist = Math.hypot(dx, dy);
-        const targetRadius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 0);
-        if (dist < targetRadius * 0.8) {
-            this.coverPeekTimer = Math.max(this.coverPeekTimer, 0.6);
+        if (dist < 15 && this.coverPeekTimer === 0) { // close to the reposition target and peek not already active
+            this.coverPeekTimer = 0.6;
         }
         if (this.coverPeekTimer > 0 && dtSeconds > 0) {
             this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
