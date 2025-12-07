@@ -262,6 +262,7 @@
       const dist = Math.hypot(dx, dy);
       // Trigger peek when close to cover position (within 20 units, matching stop distance)
       if (dist < 20 && this.coverPeekTimer === 0) {
+        console.log(`${this.shipTypeName} attempting peek attack, dist to cover: ${dist.toFixed(1)}`);
         this.coverPeekTimer = 0.6;
       }
       if (this.coverPeekTimer > 0 && dtSeconds > 0) {
@@ -294,6 +295,11 @@
         this.repositionTarget = null;
       }
 
+      // Keep ships in REPOSITIONING while an intact cover target exists.
+      if (this.coverTarget && !this.coverTarget.destroyed && this.currentState !== AI_STATE.REPOSITIONING) {
+        this.changeState(AI_STATE.REPOSITIONING);
+      }
+
       const refreshCoverApproachPoint = () => {
         if (!this.coverTarget) return;
         const coverPoint = this._computeCoverApproachPoint(this.coverTarget, targetPos);
@@ -307,12 +313,20 @@
       // Only pick a new cover target when timer expires
       if (this.coverEvalTimer <= 0 || !this.coverTarget) {
         const cover = this._pickCoverTarget(system, targetPos);
-        this.coverEvalTimer = 0.8 + Math.random() * 0.2; // jitter
+        this.coverEvalTimer = 1.6 + Math.random() * 0.3; // slower cadence to reduce churn
         if (cover) {
-          this.coverTarget = cover;
-          refreshCoverApproachPoint();
-          if (this.currentState !== AI_STATE.REPOSITIONING) {
-            this.changeState(AI_STATE.REPOSITIONING);
+          const coverScore = this._scoreCoverCandidate(cover, targetPos);
+          if (coverScore >= 0.35) {
+            console.log(`${this.shipTypeName} attempting to go into cover behind asteroid at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}), score: ${coverScore.toFixed(2)}, dist to target: ${distanceToTarget.toFixed(0)}, hull: ${(this.hull/this.maxHull*100).toFixed(0)}%`);
+            this.coverTarget = cover;
+            refreshCoverApproachPoint();
+            if (this.currentState !== AI_STATE.REPOSITIONING) {
+              this.changeState(AI_STATE.REPOSITIONING);
+            }
+          } else {
+            console.log(`${this.shipTypeName} skipped cover (score too low: ${coverScore.toFixed(2)}) at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)})`);
+            this.coverTarget = null;
+            this.repositionTarget = null;
           }
         } else {
           this.coverTarget = null;

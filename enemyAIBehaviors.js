@@ -173,7 +173,7 @@ class EnemyAIBehaviors {
     _shouldConsiderCover(distanceToTarget) {
         const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.80 : false;
         const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.50 : false;
-        const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.APPROACHING;
+        const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING; // only actively look for cover while repositioning or when damaged
         const farEnough = typeof distanceToTarget === 'number' ? distanceToTarget > (this.size + 50) : true;
         return farEnough && (lowHull || lowShield || stateWantsCover);
     }
@@ -213,7 +213,8 @@ class EnemyAIBehaviors {
         const projX = p1.x + clampedT * dx;
         const projY = p1.y + clampedT * dy;
         const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
-        return distSq <= (r * 1.2) * (r * 1.2);
+        console.log(`LOS check: p1(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}) to p2(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)}), ast at (${cx.toFixed(1)}, ${cy.toFixed(1)}) r=${r.toFixed(1)}, t=${t.toFixed(3)}, clampedT=${clampedT.toFixed(3)}, proj(${projX.toFixed(1)}, ${projY.toFixed(1)}), distSq=${distSq.toFixed(1)}, threshold=${((r * 2) * (r * 2)).toFixed(1)}, blocks=${distSq <= (r * 2) * (r * 2)}`);
+        return distSq <= (r * 2) * (r * 2);
     }
 
     _computeCoverApproachPoint(ast, targetPos) {
@@ -264,7 +265,7 @@ class EnemyAIBehaviors {
         const speedPenalty = Math.min(speed, 3) * 0.4;
         const blocksLOS = targetPos ? this._isLineBlockedByAsteroid(ast, this.pos, targetPos) : false;
         let score = sizeFactor * 1.1 + distFactor * 0.6 - speedPenalty;
-        if (blocksLOS) score += 1.0; else score -= 0.2;
+        if (blocksLOS) score += 1.0; else score -= 0.5;
         return score;
     }
 
@@ -281,7 +282,8 @@ class EnemyAIBehaviors {
             nearest.push({ ast, d2 });
         }
         nearest.sort((a, b) => a.d2 - b.d2);
-        const limited = nearest.slice(0, 8);
+        const maxCoverDist = 500; // max distance for cover asteroids
+        const limited = nearest.filter(entry => entry.d2 <= maxCoverDist * maxCoverDist).slice(0, 8);
         let best = null;
         let bestScore = -Infinity;
         for (const entry of limited) {
@@ -300,6 +302,7 @@ class EnemyAIBehaviors {
         const dy = this.repositionTarget.y - this.pos.y;
         const dist = Math.hypot(dx, dy);
         if (dist < 15 && this.coverPeekTimer === 0) { // close to the reposition target and peek not already active
+            console.log(`${this.shipTypeName} reached cover at (${this.repositionTarget.x.toFixed(0)}, ${this.repositionTarget.y.toFixed(0)}), starting peek attack (dist:${dist.toFixed(1)}, timer:0.6s)`);
             this.coverPeekTimer = 0.6;
         }
         if (this.coverPeekTimer > 0 && dtSeconds > 0) {
@@ -325,8 +328,14 @@ class EnemyAIBehaviors {
         const targetPos = (targetExists && this.target?.pos) ? this.target.pos : null;
 
         if (this.coverTarget && this.coverTarget.destroyed) {
+            console.log(`${this.shipTypeName} cover target destroyed, clearing cover`);
             this.coverTarget = null;
             this.repositionTarget = null;
+        }
+
+        // Keep ships in REPOSITIONING while an intact cover target exists.
+        if (this.coverTarget && !this.coverTarget.destroyed && this.currentState !== AI_STATE.REPOSITIONING) {
+            this.changeState(AI_STATE.REPOSITIONING);
         }
 
         const refreshCoverApproachPoint = () => {
@@ -342,12 +351,28 @@ class EnemyAIBehaviors {
         // Only pick a new cover target when timer expires
         if (this.coverEvalTimer <= 0 || !this.coverTarget) {
             const cover = this._pickCoverTarget(system, targetPos);
-            this.coverEvalTimer = 0.8 + Math.random() * 0.2; // jitter
+            this.coverEvalTimer = 1.6 + Math.random() * 0.3; // slower cadence to reduce churn
             if (cover) {
-                this.coverTarget = cover;
-                refreshCoverApproachPoint();
-                if (this.currentState !== AI_STATE.REPOSITIONING) {
-                    this.changeState(AI_STATE.REPOSITIONING);
+                const coverScore = this._scoreCoverCandidate(cover, targetPos);
+                const blocksLOS = targetPos ? this._isLineBlockedByAsteroid(cover, this.pos, targetPos) : false;
+                if (coverScore >= 0.35) {
+                    // Compute detailed score components for logging
+                    const r = cover.size ? cover.size * 0.5 : (cover.maxRadius || 0);
+                    const dx = cover.pos.x - this.pos.x;
+                    const dy = cover.pos.y - this.pos.y;
+                    const distToAst = Math.hypot(dx, dy);
+                    const distFactor = 1 / (distToAst + 1);
+                    const sizeFactor = Math.max(0, Math.min(1, ((r * 2) - this.size) / Math.max(r * 2, 1)));
+                    const speed = (cover.vel && typeof cover.vel.mag === 'function') ? cover.vel.mag() : Math.hypot(cover.vel?.x || 0, cover.vel?.y || 0);
+                    const speedPenalty = Math.min(speed, 3) * 0.4;
+                    
+                    console.log(`${this.shipTypeName} attempting cover at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}) | score:${coverScore.toFixed(2)} dist_tgt:${distanceToTarget.toFixed(0)} hull:${(this.hull/this.maxHull*100).toFixed(0)}% | ast_r:${r.toFixed(1)} dist_ast:${distToAst.toFixed(1)} sizeF:${sizeFactor.toFixed(2)} distF:${distFactor.toFixed(2)} speedP:${speedPenalty.toFixed(2)} LOS:${blocksLOS ? 'Y' : 'N'}`);
+                    this.coverTarget = cover;
+                    refreshCoverApproachPoint();
+                    if (this.currentState !== AI_STATE.REPOSITIONING) {
+                        console.log(`${this.shipTypeName} entering REPOSITIONING to reach cover at (${this.repositionTarget.x.toFixed(0)}, ${this.repositionTarget.y.toFixed(0)})`);
+                        this.changeState(AI_STATE.REPOSITIONING);
+                    }
                 }
             } else {
                 this.coverTarget = null;
