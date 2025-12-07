@@ -278,6 +278,11 @@ class Enemy {
             }
         }
 
+        // Cover behavior state
+        this.coverEvalTimer = 0;
+        this.coverTarget = null;
+        this.coverPeekTimer = 0;
+
         //console.log(`Created Enemy: ${this.role} ${this.shipTypeName} (State: ${Object.keys(AI_STATE).find(key => AI_STATE[key] === this.currentState)})`);
         // IMPORTANT: calculateRadianProperties() and initializeColors() MUST be called AFTER construction.
 

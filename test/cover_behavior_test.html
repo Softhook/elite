@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cover Behavior Tests</title>
+  <style>
+    body { font-family: sans-serif; background: #0b0d10; color: #e8f0ff; padding: 16px; }
+    .pass { color: #6ddc6d; }
+    .fail { color: #ff8080; }
+    pre { background: #11161f; padding: 12px; border-radius: 6px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Cover Behavior Tests (isolated)</h1>
+  <div id="results"></div>
+  <pre id="log"></pre>
+<script>
+(function(){
+  // Minimal clamp helper
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  // Minimal fake enemy replicating the cover methods (logic only)
+  class FakeEnemy {
+    constructor(size) {
+      this.size = size;
+      this.pos = { x: 0, y: 0 };
+      this.hull = 50;
+      this.maxHull = 100;
+      this.shield = 20;
+      this.maxShield = 50;
+      this.currentState = 'APPROACHING';
+      this.coverEvalTimer = 0;
+      this.coverTarget = null;
+      this.coverPeekTimer = 0;
+    }
+
+    _shouldConsiderCover(distanceToTarget) {
+      const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.45 : false;
+      const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.35 : false;
+      const stateWantsCover = this.currentState === 'REPOSITIONING' || this.currentState === 'APPROACHING';
+      const farEnough = typeof distanceToTarget === 'number' ? distanceToTarget > (this.size + 50) : true;
+      return farEnough && (lowHull || lowShield || stateWantsCover);
+    }
+
+    _refreshCoverCandidates(system) {
+      if (!system || !Array.isArray(system.asteroids) || !system.asteroids.length) return [];
+      const now = performance.now();
+      const cacheValid = system._coverCandidateCacheTime && (now - system._coverCandidateCacheTime) < 500;
+      if (cacheValid && Array.isArray(system.coverCandidates)) return system.coverCandidates;
+
+      const minSize = 25;
+      const maxSpeed = 1.2;
+      system.coverCandidates = system.asteroids.filter(ast => {
+          if (!ast || ast.destroyed) return false;
+          if (!ast.pos || typeof ast.pos.x !== 'number' || typeof ast.pos.y !== 'number') return false;
+          const size = ast.size || (ast.maxRadius ? ast.maxRadius * 2 : 0);
+          if (!size || size < minSize) return false;
+          const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
+          return speed <= maxSpeed;
+      });
+      system._coverCandidateCacheTime = now;
+      return system.coverCandidates;
+    }
+
+    _isLineBlockedByAsteroid(ast, p1, p2) {
+      if (!ast || !p1 || !p2) return false;
+      const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      if (!r || r <= 0) return false;
+      const cx = ast.pos?.x; const cy = ast.pos?.y;
+      if (cx === undefined || cy === undefined) return false;
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) return false;
+      const t = ((cx - p1.x) * dx + (cy - p1.y) * dy) / lenSq;
+      const clampedT = Math.max(0, Math.min(1, t));
+      const projX = p1.x + clampedT * dx;
+      const projY = p1.y + clampedT * dy;
+      const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
+      return distSq <= r * r;
+    }
+
+    _scoreCoverCandidate(ast, targetPos) {
+      if (!ast || !ast.pos) return -Infinity;
+      const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+      if (!r || r <= 0) return -Infinity;
+      const dx = ast.pos.x - this.pos.x;
+      const dy = ast.pos.y - this.pos.y;
+      const dist = Math.hypot(dx, dy);
+      const distFactor = 1 / (dist + 1);
+      const sizeFactor = Math.max(0, Math.min(1, ((r * 2) - this.size) / Math.max(r * 2, 1)));
+      const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
+      const speedPenalty = Math.min(speed, 3) * 0.4;
+      const blocksLOS = targetPos ? this._isLineBlockedByAsteroid(ast, this.pos, targetPos) : false;
+      let score = sizeFactor * 1.1 + distFactor * 0.6 - speedPenalty;
+      if (blocksLOS) score += 1.0; else score -= 0.2;
+      return score;
+    }
+
+    _pickCoverTarget(system, targetPos) {
+      const candidates = this._refreshCoverCandidates(system);
+      if (!candidates.length) return null;
+      const nearest = [];
+      for (const ast of candidates) {
+        if (!ast?.pos) continue;
+        const dx = ast.pos.x - this.pos.x;
+        const dy = ast.pos.y - this.pos.y;
+        const d2 = dx * dx + dy * dy;
+        nearest.push({ ast, d2 });
+      }
+      nearest.sort((a, b) => a.d2 - b.d2);
+      const limited = nearest.slice(0, 8);
+      let best = null;
+      let bestScore = -Infinity;
+      for (const entry of limited) {
+        const score = this._scoreCoverCandidate(entry.ast, targetPos);
+        if (score > bestScore) {
+          bestScore = score;
+          best = entry.ast;
+        }
+      }
+      return best;
+    }
+  }
+
+  function asteroid(id, x, y, radius, speed=0) {
+    return {
+      id,
+      pos: { x, y },
+      maxRadius: radius,
+      vel: { x: speed, y: 0, mag: () => Math.hypot(speed, 0) },
+      destroyed: false
+    };
+  }
+
+  const logEl = document.getElementById('log');
+  const resultsEl = document.getElementById('results');
+  const logs = [];
+  function log(msg) { logs.push(msg); }
+  const results = [];
+  function assert(name, condition, detail) {
+    results.push({ name, pass: !!condition, detail });
+  }
+
+  function runTests() {
+    const enemySmall = new FakeEnemy(20);
+    const enemyLarge = new FakeEnemy(80);
+    const targetPos = { x: 400, y: 0 };
+
+    // Test 1: picks blocking static asteroid
+    const sys1 = { asteroids: [
+      asteroid('close-small', 100, 10, 20),
+      asteroid('blocking', 200, 0, 60, 0),
+      asteroid('far', 800, 0, 200, 0)
+    ] };
+    const pick1 = enemySmall._pickCoverTarget(sys1, targetPos);
+    assert('Pick blocking static asteroid', pick1 && pick1.id === 'blocking', pick1 && pick1.id);
+
+    // Test 2: ignores fast asteroid in favor of slow large
+    const sys2 = { asteroids: [
+      asteroid('fast', 150, 0, 80, 3.0),
+      asteroid('slow', 160, 0, 70, 0.2)
+    ] };
+    const pick2 = enemySmall._pickCoverTarget(sys2, targetPos);
+    assert('Prefer slow over fast asteroid', pick2 && pick2.id === 'slow', pick2 && pick2.id);
+
+    // Test 3: large ship prefers big rock (size-fit)
+    const sys3 = { asteroids: [
+      asteroid('tiny', 120, 0, 30, 0),
+      asteroid('big', 180, 0, 120, 0)
+    ] };
+    const pick3 = enemyLarge._pickCoverTarget(sys3, targetPos);
+    assert('Large ship picks big asteroid', pick3 && pick3.id === 'big', pick3 && pick3.id);
+
+    // Test 4: no asteroids -> null
+    const sys4 = { asteroids: [] };
+    const pick4 = enemySmall._pickCoverTarget(sys4, targetPos);
+    assert('No asteroids returns null', pick4 === null, pick4);
+
+    // Render results
+    const passCount = results.filter(r => r.pass).length;
+    const failCount = results.length - passCount;
+    resultsEl.innerHTML = `<div>Pass: <span class="pass">${passCount}</span> | Fail: <span class="fail">${failCount}</span></div>` +
+      '<ul>' + results.map(r => `<li class="${r.pass ? 'pass' : 'fail'}">${r.name}${r.detail ? ' — ' + r.detail : ''}</li>`).join('') + '</ul>';
+    logEl.textContent = logs.join('\n');
+  }
+
+  runTests();
+})();
+</script>
+</body>
+</html>

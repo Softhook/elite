@@ -170,6 +170,143 @@ class EnemyAIBehaviors {
         return false;
     }
 
+    _shouldConsiderCover(distanceToTarget) {
+        const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.45 : false;
+        const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.35 : false;
+        const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.APPROACHING;
+        const farEnough = typeof distanceToTarget === 'number' ? distanceToTarget > (this.size + 50) : true;
+        return farEnough && (lowHull || lowShield || stateWantsCover);
+    }
+
+    _refreshCoverCandidates(system) {
+        if (!system || !Array.isArray(system.asteroids) || !system.asteroids.length) return [];
+        const now = (typeof millis === 'function') ? millis() : (performance?.now?.() || Date.now());
+        const cacheValid = system._coverCandidateCacheTime && (now - system._coverCandidateCacheTime) < 500;
+        if (cacheValid && Array.isArray(system.coverCandidates)) return system.coverCandidates;
+
+        const minSize = 25; // tiny pebbles are ignored
+        const maxSpeed = 1.2; // prefer static/slow
+        system.coverCandidates = system.asteroids.filter(ast => {
+            if (!ast || ast.destroyed) return false;
+            if (!ast.pos || typeof ast.pos.x !== 'number' || typeof ast.pos.y !== 'number') return false;
+            const size = ast.size || (ast.maxRadius ? ast.maxRadius * 2 : 0);
+            if (!size || size < minSize) return false;
+            const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
+            return speed <= maxSpeed;
+        });
+        system._coverCandidateCacheTime = now;
+        return system.coverCandidates;
+    }
+
+    _isLineBlockedByAsteroid(ast, p1, p2) {
+        if (!ast || !p1 || !p2) return false;
+        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        if (!r || r <= 0) return false;
+        const cx = ast.pos?.x; const cy = ast.pos?.y;
+        if (cx === undefined || cy === undefined) return false;
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return false;
+        const t = ((cx - p1.x) * dx + (cy - p1.y) * dy) / lenSq;
+        const clampedT = Math.max(0, Math.min(1, t));
+        const projX = p1.x + clampedT * dx;
+        const projY = p1.y + clampedT * dy;
+        const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
+        return distSq <= r * r;
+    }
+
+    _scoreCoverCandidate(ast, targetPos) {
+        if (!ast || !ast.pos) return -Infinity;
+        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        if (!r || r <= 0) return -Infinity;
+        const dx = ast.pos.x - this.pos.x;
+        const dy = ast.pos.y - this.pos.y;
+        const dist = Math.hypot(dx, dy);
+        const distFactor = 1 / (dist + 1);
+        const sizeFactor = Math.max(0, Math.min(1, ((r * 2) - this.size) / Math.max(r * 2, 1)));
+        const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
+        const speedPenalty = Math.min(speed, 3) * 0.4;
+        const blocksLOS = targetPos ? this._isLineBlockedByAsteroid(ast, this.pos, targetPos) : false;
+        let score = sizeFactor * 1.1 + distFactor * 0.6 - speedPenalty;
+        if (blocksLOS) score += 1.0; else score -= 0.2;
+        return score;
+    }
+
+    _pickCoverTarget(system, targetPos) {
+        const candidates = this._refreshCoverCandidates(system);
+        if (!candidates.length) return null;
+        // Take nearest N to bound cost
+        const nearest = [];
+        for (const ast of candidates) {
+            if (!ast?.pos) continue;
+            const dx = ast.pos.x - this.pos.x;
+            const dy = ast.pos.y - this.pos.y;
+            const d2 = dx * dx + dy * dy;
+            nearest.push({ ast, d2 });
+        }
+        nearest.sort((a, b) => a.d2 - b.d2);
+        const limited = nearest.slice(0, 8);
+        let best = null;
+        let bestScore = -Infinity;
+        for (const entry of limited) {
+            const score = this._scoreCoverCandidate(entry.ast, targetPos);
+            if (score > bestScore) {
+                bestScore = score;
+                best = entry.ast;
+            }
+        }
+        return best;
+    }
+
+    _updateCoverPeek(dtSeconds) {
+        if (!this.coverTarget || !this.coverTarget.pos) return;
+        const dx = this.coverTarget.pos.x - this.pos.x;
+        const dy = this.coverTarget.pos.y - this.pos.y;
+        const dist = Math.hypot(dx, dy);
+        const targetRadius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 0);
+        if (dist < targetRadius * 0.8) {
+            this.coverPeekTimer = Math.max(this.coverPeekTimer, 0.6);
+        }
+        if (this.coverPeekTimer > 0 && dtSeconds > 0) {
+            this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
+        }
+    }
+
+    _updateCoverBehavior(system, targetExists, distanceToTarget) {
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+        if (this.coverEvalTimer > 0 && dtSeconds > 0) {
+            this.coverEvalTimer = Math.max(0, this.coverEvalTimer - dtSeconds);
+        }
+
+        if (!this._shouldConsiderCover(distanceToTarget)) {
+            return false;
+        }
+
+        // Fast bail if system lacks usable cover
+        if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
+            return false;
+        }
+
+        const targetPos = (targetExists && this.target?.pos) ? this.target.pos : null;
+
+        // Only pick a new cover target when timer expires
+        if (this.coverEvalTimer <= 0) {
+            const cover = this._pickCoverTarget(system, targetPos);
+            this.coverEvalTimer = 0.8 + Math.random() * 0.2; // jitter
+            if (cover) {
+                this.coverTarget = cover;
+                this.repositionTarget = cover.pos;
+                if (this.currentState !== AI_STATE.REPOSITIONING) {
+                    this.changeState(AI_STATE.REPOSITIONING);
+                }
+            }
+        }
+
+        this._updateCoverPeek(dtSeconds);
+        return !!this.coverTarget;
+    }
+
     /**
      * Main combat AI implementation - now using smaller helper methods
      * @param {Object} system - The current star system
@@ -210,6 +347,9 @@ class EnemyAIBehaviors {
         //    Allow updateCombatState to run even if in forced combat,
         //    so Haulers can transition from APPROACHING to ATTACK_PASS.
         this.updateCombatState(targetExists, distanceToTarget);
+
+        // 4b. Cover behavior: pick cover and reposition if needed
+        this._updateCoverBehavior(system, targetExists, distanceToTarget);
     
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
         // ← NO MORE "if (FLEEING) updateFleeingAI" here!
