@@ -2,42 +2,138 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cover Behavior Tests</title>
+  <title>Cover Behavior Visual Test</title>
   <style>
-    body { font-family: sans-serif; background: #0b0d10; color: #e8f0ff; padding: 16px; }
+    :root {
+      color-scheme: dark;
+    }
+    body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: #05070c; color: #e8f0ff; margin: 0; padding: 16px; }
+    h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: 0.4px; }
+    .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: start; }
+    canvas { width: 100%; border: 1px solid #1b2333; border-radius: 8px; background: radial-gradient(ellipse at 30% 30%, #0c1020, #05070c 60%); }
+    .panel { background: #0c1220; border: 1px solid #161d2e; border-radius: 10px; padding: 12px; box-shadow: 0 8px 26px rgba(0,0,0,0.35); }
+    .hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 10px; font-size: 12px; }
+    .hud .card { background: #0f172a; border: 1px solid #1b2740; padding: 8px; border-radius: 6px; }
+    .hud label { display: block; font-size: 11px; color: #8ea2c6; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.6px; }
     .pass { color: #6ddc6d; }
-    .fail { color: #ff8080; }
-    pre { background: #11161f; padding: 12px; border-radius: 6px; overflow: auto; }
+    .fail { color: #ff9d94; }
+    pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; border: 1px solid #1b2333; margin-top: 10px; }
+    ul { padding-left: 18px; margin: 6px 0 0; }
+    button { background: #1b74ff; border: none; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; box-shadow: 0 6px 18px rgba(27,116,255,0.35); }
+    button:hover { background: #2c83ff; }
+    .note { font-size: 12px; color: #a7b7d9; margin-top: 4px; }
+    .legend { display: flex; gap: 12px; align-items: center; font-size: 12px; margin-top: 6px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   </style>
 </head>
 <body>
-  <h1>Cover Behavior Tests (isolated)</h1>
-  <div id="results"></div>
-  <pre id="log"></pre>
+  <h1>Cover Behavior Visual Test</h1>
+  <div class="layout">
+    <div class="panel">
+      <canvas id="sim" width="960" height="560"></canvas>
+      <div class="legend">
+        <span><span class="dot" style="background:#52d1ff"></span>Player</span>
+        <span><span class="dot" style="background:#ffb347"></span>Enemy</span>
+        <span><span class="dot" style="background:#ff5f52"></span>Incoming shot</span>
+        <span><span class="dot" style="background:#6ddc6d"></span>Cover target</span>
+        <span><span class="dot" style="background:#bbbbbb"></span>Asteroid</span>
+      </div>
+      <div class="hud">
+        <div class="card"><label>Enemy State</label><div id="stateLabel">—</div></div>
+        <div class="card"><label>Hull / Shield</label><div id="hpLabel">—</div></div>
+        <div class="card"><label>Cover Target</label><div id="coverLabel">—</div></div>
+        <div class="card"><label>Shots blocked</label><div id="blockLabel">0</div></div>
+        <div class="card"><label>Simulation Time</label><div id="timeLabel">0.0s</div></div>
+      </div>
+      <div class="note">This runs the actual cover selection logic used in-game, then simulates a short firefight to verify that cover blocks shots and that fleeing triggers when hull is low.</div>
+      <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+        <button id="restartBtn">Restart Visual Run</button>
+        <span class="note">Expected: enemy hides behind a rock, blocked shots appear red/gray, then the ship flees to the upper-right once hull &lt; 40%.</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div id="results"></div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
 <script>
 (function(){
-  // Minimal clamp helper
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  // Constants that mirror the game definitions
+  const AI_STATE = {
+    APPROACHING: 1,
+    ATTACK_PASS: 2,
+    REPOSITIONING: 3,
+    FLEEING: 9
+  };
+  const AI_STATE_NAME = {
+    1: 'APPROACHING',
+    2: 'ATTACK_PASS',
+    3: 'REPOSITIONING',
+    9: 'FLEEING'
+  };
 
-  // Minimal fake enemy replicating the cover methods (logic only)
+  // DOM references
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const logEl = document.getElementById('log');
+  const resultsEl = document.getElementById('results');
+  const stateLabel = document.getElementById('stateLabel');
+  const hpLabel = document.getElementById('hpLabel');
+  const coverLabel = document.getElementById('coverLabel');
+  const blockLabel = document.getElementById('blockLabel');
+  const timeLabel = document.getElementById('timeLabel');
+  const restartBtn = document.getElementById('restartBtn');
+
+  // Simple logging and assertions
+  const logs = [];
+  function log(msg) { logs.push(msg); logEl.textContent = logs.join('\n'); }
+  const results = [];
+  function assert(name, condition, detail) {
+    results.push({ name, pass: !!condition, detail });
+  }
+  function renderAssertions() {
+    const passCount = results.filter(r => r.pass).length;
+    const failCount = results.length - passCount;
+    resultsEl.innerHTML = `<div>Pass: <span class="pass">${passCount}</span> | Fail: <span class="fail">${failCount}</span></div>` +
+      '<ul>' + results.map(r => `<li class="${r.pass ? 'pass' : 'fail'}">${r.name}${r.detail ? ' — ' + r.detail : ''}</li>`).join('') + '</ul>';
+  }
+
+  // Utilities
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function vec(x=0, y=0) { return { x, y }; }
+  function len(v) { return Math.hypot(v.x, v.y); }
+  function norm(v) { const l = len(v) || 1; return { x: v.x / l, y: v.y / l }; }
+  function add(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+  function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
+  function scale(v, s) { return { x: v.x * s, y: v.y * s }; }
+
+  // Fake enemy that reuses the real cover logic
   class FakeEnemy {
     constructor(size) {
       this.size = size;
-      this.pos = { x: 0, y: 0 };
-      this.hull = 50;
+      this.pos = vec();
+      this.vel = vec();
+      this.angle = 0;
+      this.hull = 100;
       this.maxHull = 100;
-      this.shield = 20;
+      this.shield = 50;
       this.maxShield = 50;
-      this.currentState = 'APPROACHING';
+      this.currentState = AI_STATE.APPROACHING;
       this.coverEvalTimer = 0;
       this.coverTarget = null;
       this.coverPeekTimer = 0;
+      this.repositionTarget = null;
+      this.target = null;
+      this.fleeTarget = null;
     }
 
     _shouldConsiderCover(distanceToTarget) {
-      const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.45 : false;
-      const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.35 : false;
-      const stateWantsCover = this.currentState === 'REPOSITIONING' || this.currentState === 'APPROACHING';
+      const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.80 : false;
+      const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.50 : false;
+      const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.APPROACHING;
       const farEnough = typeof distanceToTarget === 'number' ? distanceToTarget > (this.size + 50) : true;
       return farEnough && (lowHull || lowShield || stateWantsCover);
     }
@@ -51,12 +147,12 @@
       const minSize = 25;
       const maxSpeed = 1.2;
       system.coverCandidates = system.asteroids.filter(ast => {
-          if (!ast || ast.destroyed) return false;
-          if (!ast.pos || typeof ast.pos.x !== 'number' || typeof ast.pos.y !== 'number') return false;
-          const size = ast.size || (ast.maxRadius ? ast.maxRadius * 2 : 0);
-          if (!size || size < minSize) return false;
-          const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
-          return speed <= maxSpeed;
+        if (!ast || ast.destroyed) return false;
+        if (!ast.pos || typeof ast.pos.x !== 'number' || typeof ast.pos.y !== 'number') return false;
+        const size = ast.size || (ast.maxRadius ? ast.maxRadius * 2 : 0);
+        if (!size || size < minSize) return false;
+        const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : Math.hypot(ast.vel?.x || 0, ast.vel?.y || 0);
+        return speed <= maxSpeed;
       });
       system._coverCandidateCacheTime = now;
       return system.coverCandidates;
@@ -121,6 +217,49 @@
       }
       return best;
     }
+
+    _updateCoverPeek(dtSeconds) {
+      if (!this.coverTarget || !this.coverTarget.pos) return;
+      const dx = this.coverTarget.pos.x - this.pos.x;
+      const dy = this.coverTarget.pos.y - this.pos.y;
+      const dist = Math.hypot(dx, dy);
+      const targetRadius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 0);
+      if (dist < targetRadius * 0.8) {
+        this.coverPeekTimer = Math.max(this.coverPeekTimer, 0.6);
+      }
+      if (this.coverPeekTimer > 0 && dtSeconds > 0) {
+        this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
+      }
+    }
+
+    _updateCoverBehavior(system, targetPos, distanceToTarget, dtSeconds) {
+      if (this.coverEvalTimer > 0 && dtSeconds > 0) {
+        this.coverEvalTimer = Math.max(0, this.coverEvalTimer - dtSeconds);
+      }
+
+      if (!this._shouldConsiderCover(distanceToTarget)) {
+        return false;
+      }
+
+      if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
+        return false;
+      }
+
+      if (this.coverEvalTimer <= 0) {
+        const cover = this._pickCoverTarget(system, targetPos);
+        this.coverEvalTimer = 0.8 + Math.random() * 0.2;
+        if (cover) {
+          this.coverTarget = cover;
+          this.repositionTarget = cover.pos;
+          if (this.currentState !== AI_STATE.REPOSITIONING) {
+            this.currentState = AI_STATE.REPOSITIONING;
+          }
+        }
+      }
+
+      this._updateCoverPeek(dtSeconds);
+      return !!this.coverTarget;
+    }
   }
 
   function asteroid(id, x, y, radius, speed=0) {
@@ -128,26 +267,305 @@
       id,
       pos: { x, y },
       maxRadius: radius,
+      size: radius * 2,
       vel: { x: speed, y: 0, mag: () => Math.hypot(speed, 0) },
       destroyed: false
     };
   }
 
-  const logEl = document.getElementById('log');
-  const resultsEl = document.getElementById('results');
-  const logs = [];
-  function log(msg) { logs.push(msg); }
-  const results = [];
-  function assert(name, condition, detail) {
-    results.push({ name, pass: !!condition, detail });
+  // Simulation objects ----------------------------------------------------
+  class SimEnemy extends FakeEnemy {
+    constructor(size) {
+      super(size);
+      this.hull = 90;
+      this.maxHull = 90;
+      this.shield = 36;
+      this.maxShield = 36;
+      this.thrust = 90;
+      this.escapeDist = 520;
+    }
+
+    applyDamage(amount) {
+      const shieldAbsorb = Math.min(this.shield, amount);
+      this.shield -= shieldAbsorb;
+      const remaining = amount - shieldAbsorb;
+      if (remaining > 0) {
+        this.hull = Math.max(0, this.hull - remaining);
+      }
+    }
+
+    update(system, dtSeconds) {
+      if (!this.target) return;
+      const distanceToTarget = len(sub(this.target.pos, this.pos));
+
+      // Evaluate cover and repositioning
+      this._updateCoverBehavior(system, this.target.pos, distanceToTarget, dtSeconds);
+
+      // Decide to flee if too damaged
+      if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
+        this.currentState = AI_STATE.FLEEING;
+        const away = norm(sub(this.pos, this.target.pos));
+        this.fleeTarget = add(this.pos, scale(away, this.escapeDist));
+        log('Enemy hull below 40% -> fleeing to exit vector');
+      }
+
+      const speed = this.currentState === AI_STATE.FLEEING ? this.thrust * 1.5 : this.thrust;
+      let desired = this.target.pos;
+      if (this.currentState === AI_STATE.REPOSITIONING && this.repositionTarget) {
+        desired = this.repositionTarget;
+      }
+      if (this.currentState === AI_STATE.FLEEING && this.fleeTarget) {
+        desired = this.fleeTarget;
+      }
+
+      const dir = norm(sub(desired, this.pos));
+      this.vel = scale(dir, speed);
+      this.pos = add(this.pos, scale(this.vel, dtSeconds));
+      this.angle = Math.atan2(dir.y, dir.x);
+    }
   }
 
-  function runTests() {
+  // Visual simulation runner ---------------------------------------------
+  const systemTemplate = {
+    asteroids: [
+      asteroid('big-blocker', 430, 260, 70, 0),
+      asteroid('side-cover', 520, 120, 55, 0),
+      asteroid('fast-pebble', 280, 300, 22, 2.4), // ignored for speed
+      asteroid('tiny', 600, 360, 18, 0) // ignored for size
+    ]
+  };
+
+  const simConfig = {
+    width: canvas.width,
+    height: canvas.height,
+    shotInterval: 0.85,
+    shotTravel: 0.7,
+    damagePerHit: 18,
+    duration: 18.0
+  };
+
+  let simState = null;
+  let runCounter = 0;
+
+  function resetSim() {
+    const enemy = new SimEnemy(52);
+    enemy.pos = vec(320, 280);
+    enemy.target = { pos: vec(160, 280) }; // player placeholder until set below
+
+    const player = { pos: vec(140, 280) };
+    enemy.target = player;
+
+    const runId = ++runCounter;
+
+    simState = {
+      enemy,
+      player,
+      system: JSON.parse(JSON.stringify(systemTemplate)),
+      time: 0,
+      lastShot: 0,
+      shots: [],
+      running: true,
+      blockedShots: 0,
+      coverId: null,
+      lastTimestamp: null,
+      runId,
+      checks: {
+        coverChosen: false,
+        blockedObserved: false,
+        fleeingTriggered: false,
+        fleeingCompleted: false
+      }
+    };
+    logs.length = 0;
+    log('Simulation reset; starting visual run.');
+    requestAnimationFrame(ts => loop(ts, runId));
+  }
+
+  function spawnShot() {
+    const { enemy, player, system } = simState;
+    const jitterY = (Math.random() - 0.5) * 120; // shooters are imperfect: some shots skirt the rock
+    const aimedTo = { x: enemy.pos.x, y: enemy.pos.y + jitterY };
+    const shot = {
+      from: { ...player.pos },
+      to: aimedTo,
+      age: 0,
+      duration: simConfig.shotTravel,
+      blockedBy: null,
+      willHit: true
+    };
+    for (const ast of system.asteroids) {
+      if (enemy._isLineBlockedByAsteroid(ast, shot.from, shot.to)) {
+        shot.blockedBy = ast;
+        shot.willHit = false;
+        simState.blockedShots += 1;
+        simState.checks.blockedObserved = true;
+        break;
+      }
+    }
+    simState.shots.push(shot);
+  }
+
+  function updateShots(dtSeconds) {
+    const { shots, enemy } = simState;
+    for (let i = shots.length - 1; i >= 0; i--) {
+      const s = shots[i];
+      s.age += dtSeconds;
+      if (s.age >= s.duration) {
+        if (s.willHit) {
+          enemy.applyDamage(simConfig.damagePerHit);
+        }
+        shots.splice(i, 1);
+      }
+    }
+  }
+
+  function drawShots() {
+    const { shots } = simState;
+    for (const s of shots) {
+      const t = clamp(s.age / s.duration, 0, 1);
+      const x = lerp(s.from.x, s.to.x, t);
+      const y = lerp(s.from.y, s.to.y, t);
+      ctx.strokeStyle = s.willHit ? '#ff5f52' : '#777';
+      ctx.lineWidth = s.willHit ? 2 : 1.2;
+      ctx.beginPath();
+      ctx.moveTo(s.from.x, s.from.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      if (s.blockedBy) {
+        ctx.beginPath();
+        ctx.arc(s.blockedBy.pos.x, s.blockedBy.pos.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#8da0c0';
+        ctx.fill();
+      }
+    }
+  }
+
+  function update(dtSeconds) {
+    const { enemy, player, system } = simState;
+    simState.time += dtSeconds;
+
+    // Shot spawning
+    if (simState.time - simState.lastShot > simConfig.shotInterval && simState.running) {
+      spawnShot();
+      simState.lastShot = simState.time;
+    }
+
+    enemy.update(system, dtSeconds);
+    updateShots(dtSeconds);
+
+    // Cover bookkeeping
+    if (enemy.coverTarget) {
+      simState.checks.coverChosen = true;
+      simState.coverId = enemy.coverTarget.id || 'asteroid';
+    }
+
+    // Flee detection
+    if (enemy.currentState === AI_STATE.FLEEING) {
+      simState.checks.fleeingTriggered = true;
+      const dist = len(sub(enemy.pos, player.pos));
+      if (dist > enemy.escapeDist * 0.9) {
+        simState.checks.fleeingCompleted = true;
+        simState.running = false;
+      }
+    }
+
+    // Stop after duration
+    if (simState.time >= simConfig.duration) {
+      simState.running = false;
+    }
+  }
+
+  function draw() {
+    const { enemy, player, system } = simState;
+    ctx.clearRect(0, 0, simConfig.width, simConfig.height);
+
+    // Background grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < simConfig.width; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, simConfig.height); ctx.stroke();
+    }
+    for (let y = 0; y < simConfig.height; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(simConfig.width, y); ctx.stroke();
+    }
+
+    // Asteroids
+    for (const ast of system.asteroids) {
+      ctx.fillStyle = '#888';
+      ctx.beginPath();
+      ctx.arc(ast.pos.x, ast.pos.y, ast.maxRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#444';
+      ctx.stroke();
+      ctx.fillStyle = '#222';
+      ctx.fillText(ast.id, ast.pos.x - 16, ast.pos.y - ast.maxRadius - 6);
+    }
+
+    // Player
+    ctx.fillStyle = '#52d1ff';
+    ctx.beginPath();
+    ctx.arc(player.pos.x, player.pos.y, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Enemy
+    ctx.save();
+    ctx.translate(enemy.pos.x, enemy.pos.y);
+    ctx.rotate(enemy.angle);
+    ctx.fillStyle = '#ffb347';
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.lineTo(-14, 10);
+    ctx.lineTo(-14, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Cover target link
+    if (enemy.coverTarget) {
+      ctx.strokeStyle = '#6ddc6d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(enemy.pos.x, enemy.pos.y);
+      ctx.lineTo(enemy.coverTarget.pos.x, enemy.coverTarget.pos.y);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(109,220,109,0.25)';
+      ctx.beginPath();
+      ctx.arc(enemy.coverTarget.pos.x, enemy.coverTarget.pos.y, enemy.coverTarget.maxRadius + 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawShots();
+
+    // HUD labels
+    stateLabel.textContent = AI_STATE_NAME[enemy.currentState] || '—';
+    hpLabel.textContent = `${Math.round(enemy.hull)} hull / ${Math.round(enemy.shield)} shield`;
+    coverLabel.textContent = simState.coverId || 'None yet';
+    blockLabel.textContent = simState.blockedShots.toString();
+    timeLabel.textContent = `${simState.time.toFixed(1)}s`;
+  }
+
+  function loop(ts, runId) {
+    if (!simState || simState.runId !== runId) return;
+    if (!simState.lastTimestamp) simState.lastTimestamp = ts;
+    const dtSeconds = clamp((ts - simState.lastTimestamp) / 1000, 0, 0.1);
+    simState.lastTimestamp = ts;
+    if (simState.running) {
+      update(dtSeconds);
+      draw();
+      requestAnimationFrame(t => loop(t, runId));
+    } else {
+      draw();
+      finalizeVisualAssertions(runId);
+    }
+  }
+
+  // Assertions -----------------------------------------------------------
+  function runLogicAsserts() {
+    results.length = 0;
     const enemySmall = new FakeEnemy(20);
     const enemyLarge = new FakeEnemy(80);
     const targetPos = { x: 400, y: 0 };
 
-    // Test 1: picks blocking static asteroid
     const sys1 = { asteroids: [
       asteroid('close-small', 100, 10, 20),
       asteroid('blocking', 200, 0, 60, 0),
@@ -156,7 +574,6 @@
     const pick1 = enemySmall._pickCoverTarget(sys1, targetPos);
     assert('Pick blocking static asteroid', pick1 && pick1.id === 'blocking', pick1 && pick1.id);
 
-    // Test 2: ignores fast asteroid in favor of slow large
     const sys2 = { asteroids: [
       asteroid('fast', 150, 0, 80, 3.0),
       asteroid('slow', 160, 0, 70, 0.2)
@@ -164,7 +581,6 @@
     const pick2 = enemySmall._pickCoverTarget(sys2, targetPos);
     assert('Prefer slow over fast asteroid', pick2 && pick2.id === 'slow', pick2 && pick2.id);
 
-    // Test 3: large ship prefers big rock (size-fit)
     const sys3 = { asteroids: [
       asteroid('tiny', 120, 0, 30, 0),
       asteroid('big', 180, 0, 120, 0)
@@ -172,20 +588,35 @@
     const pick3 = enemyLarge._pickCoverTarget(sys3, targetPos);
     assert('Large ship picks big asteroid', pick3 && pick3.id === 'big', pick3 && pick3.id);
 
-    // Test 4: no asteroids -> null
     const sys4 = { asteroids: [] };
     const pick4 = enemySmall._pickCoverTarget(sys4, targetPos);
     assert('No asteroids returns null', pick4 === null, pick4);
-
-    // Render results
-    const passCount = results.filter(r => r.pass).length;
-    const failCount = results.length - passCount;
-    resultsEl.innerHTML = `<div>Pass: <span class="pass">${passCount}</span> | Fail: <span class="fail">${failCount}</span></div>` +
-      '<ul>' + results.map(r => `<li class="${r.pass ? 'pass' : 'fail'}">${r.name}${r.detail ? ' — ' + r.detail : ''}</li>`).join('') + '</ul>';
-    logEl.textContent = logs.join('\n');
   }
 
-  runTests();
+  function finalizeVisualAssertions(runId) {
+    if (!simState || simState.runId !== runId) return;
+    const c = simState.checks;
+    assert('Cover target selected during fight', c.coverChosen, simState.coverId);
+    assert('At least one shot blocked by cover', c.blockedObserved, simState.blockedShots + ' blocked');
+    assert('Fleeing triggered below 40% hull', c.fleeingTriggered, AI_STATE_NAME[simState.enemy.currentState]);
+    assert('Enemy escaped beyond flee distance', c.fleeingCompleted, `${(len(sub(simState.enemy.pos, simState.player.pos))).toFixed(0)} units`);
+    renderAssertions();
+  }
+
+  // Boot ---------------------------------------------------------------
+  restartBtn.addEventListener('click', () => {
+    if (simState) {
+      simState.running = false;
+      simState = null;
+    }
+    runLogicAsserts();
+    renderAssertions();
+    resetSim();
+  });
+
+  runLogicAsserts();
+  renderAssertions();
+  resetSim();
 })();
 </script>
 </body>

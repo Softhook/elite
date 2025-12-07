@@ -216,6 +216,39 @@ class EnemyAIBehaviors {
         return distSq <= r * r;
     }
 
+    _computeCoverApproachPoint(ast, targetPos) {
+        if (!ast?.pos) return null;
+        const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+        const ref = targetPos || this.target?.pos || this.pos;
+        const refX = ref?.x ?? ast.pos.x;
+        const refY = ref?.y ?? ast.pos.y;
+
+        let dirX = ast.pos.x - refX;
+        let dirY = ast.pos.y - refY;
+        let mag = Math.hypot(dirX, dirY);
+
+        // Fallback to our own position if target/reference overlaps the asteroid center
+        if (!isFinite(mag) || mag < 1e-3) {
+            dirX = ast.pos.x - this.pos.x;
+            dirY = ast.pos.y - this.pos.y;
+            mag = Math.hypot(dirX, dirY);
+        }
+
+        if (!isFinite(mag) || mag < 1e-3) {
+            dirX = 1; dirY = 0; mag = 1; // arbitrary but stable direction
+        }
+
+        const invMag = 1 / mag;
+        const normX = dirX * invMag;
+        const normY = dirY * invMag;
+        const padding = Math.max(this.size * 0.7, 14);
+        const offset = (radius || 0) + padding;
+
+        const px = ast.pos.x + normX * offset;
+        const py = ast.pos.y + normY * offset;
+        return createVector(px, py);
+    }
+
     _scoreCoverCandidate(ast, targetPos) {
         if (!ast || !ast.pos) return -Infinity;
         const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
@@ -290,18 +323,38 @@ class EnemyAIBehaviors {
 
         const targetPos = (targetExists && this.target?.pos) ? this.target.pos : null;
 
+        if (this.coverTarget && this.coverTarget.destroyed) {
+            this.coverTarget = null;
+            this.repositionTarget = null;
+        }
+
+        const refreshCoverApproachPoint = () => {
+            if (!this.coverTarget) return;
+            const coverPoint = this._computeCoverApproachPoint(this.coverTarget, targetPos);
+            if (coverPoint) {
+                this.repositionTarget = coverPoint;
+            } else if (this.coverTarget.pos) {
+                this.repositionTarget = this.coverTarget.pos;
+            }
+        };
+
         // Only pick a new cover target when timer expires
-        if (this.coverEvalTimer <= 0) {
+        if (this.coverEvalTimer <= 0 || !this.coverTarget) {
             const cover = this._pickCoverTarget(system, targetPos);
             this.coverEvalTimer = 0.8 + Math.random() * 0.2; // jitter
             if (cover) {
                 this.coverTarget = cover;
-                this.repositionTarget = cover.pos;
+                refreshCoverApproachPoint();
                 if (this.currentState !== AI_STATE.REPOSITIONING) {
                     this.changeState(AI_STATE.REPOSITIONING);
                 }
+            } else {
+                this.coverTarget = null;
+                this.repositionTarget = null;
             }
         }
+
+        refreshCoverApproachPoint();
 
         this._updateCoverPeek(dtSeconds);
         return !!this.coverTarget;
