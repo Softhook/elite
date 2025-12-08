@@ -515,31 +515,35 @@ class Mission {
                 } catch (e) { /* ignore proximity match errors */ }
 
                 // Last resort: create a mission-specific SpaceObject so the mission is resolvable
-                try {
-                    if (typeof SpaceObject === 'function') {
-                        // Determine spawn position: near player if present, otherwise near the named planet if available
-                        let sx = 0, sy = 0;
-                        const planet = (Array.isArray(currentSystem.planets) && this.targetPlanetName) ? currentSystem.planets.find(p => p && p.name === this.targetPlanetName) : null;
-                        if (typeof player !== 'undefined' && player && player.pos) {
-                            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI * 2);
-                            const dist = 600 + ((planet && planet.size) ? Math.max(planet.size, 200) : 800);
-                            sx = player.pos.x + (Math.cos(angle) * dist);
-                            sy = player.pos.y + (Math.sin(angle) * dist);
-                        } else if (planet && planet.pos) {
-                            sx = planet.pos.x + 800; sy = planet.pos.y + 120;
-                        } else {
-                            // Fallback to origin of system
-                            sx = 0; sy = 0;
+                // Only create if the player is in the correct system (spawn or destination)
+                if (currentSystem && typeof currentSystem.index === 'number' &&
+                    (currentSystem.index === this.spawnSystemIndex || currentSystem.index === this.destinationSystemIndex)) {
+                    try {
+                        if (typeof SpaceObject === 'function') {
+                            // Determine spawn position: near player if present, otherwise near the named planet if available
+                            let sx = 0, sy = 0;
+                            const planet = (Array.isArray(currentSystem.planets) && this.targetPlanetName) ? currentSystem.planets.find(p => p && p.name === this.targetPlanetName) : null;
+                            if (typeof player !== 'undefined' && player && player.pos) {
+                                const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI * 2);
+                                const dist = 600 + ((planet && planet.size) ? Math.max(planet.size, 200) : 800);
+                                sx = player.pos.x + (Math.cos(angle) * dist);
+                                sy = player.pos.y + (Math.sin(angle) * dist);
+                            } else if (planet && planet.pos) {
+                                sx = planet.pos.x + 800; sy = planet.pos.y + 120;
+                            } else {
+                                // Fallback to origin of system
+                                sx = 0; sy = 0;
+                            }
+                            const soNew = new SpaceObject(sx, sy, this.targetObjectType || 'satellite');
+                            soNew.isMissionSpecific = true;
+                            currentSystem.spaceObjects = currentSystem.spaceObjects || [];
+                            currentSystem.spaceObjects.push(soNew);
+                            try { this.targetObjectId = soNew.id; } catch (e) { /* ignore */ }
+                            Object.defineProperty(this, '_targetObjectRef', { value: soNew, writable: true, enumerable: false, configurable: true });
+                            if (typeof uiManager !== 'undefined' && uiManager && typeof uiManager.addMessage === 'function') uiManager.addMessage('Mission target established for sabotage operation.');
                         }
-                        const soNew = new SpaceObject(sx, sy, this.targetObjectType || 'satellite');
-                        soNew.isMissionSpecific = true;
-                        currentSystem.spaceObjects = currentSystem.spaceObjects || [];
-                        currentSystem.spaceObjects.push(soNew);
-                        try { this.targetObjectId = soNew.id; } catch (e) { /* ignore */ }
-                        Object.defineProperty(this, '_targetObjectRef', { value: soNew, writable: true, enumerable: false, configurable: true });
-                        if (typeof uiManager !== 'undefined' && uiManager && typeof uiManager.addMessage === 'function') uiManager.addMessage('Mission target established for sabotage operation.');
-                    }
-                } catch (e) { /* creating SpaceObject failed — non-fatal */ }
+                    } catch (e) { /* creating SpaceObject failed — non-fatal */ }
+                }
             }
         } catch (e) { /* non-fatal overall */ }
     }
