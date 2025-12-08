@@ -1102,24 +1102,7 @@ class GameStateManager {
      * @private
      */
     _drawStationBackground(player, currentSystem) {
-        // Use the simple shared starfield to avoid progressive tile flicker while docked
-        if (sharedStarfield?.draw) {
-            try {
-                sharedStarfield.draw();
-            } catch(e) {
-                console.error("Error drawing shared starfield for station background:", e);
-            }
-        } else if (currentSystem) {
-            try {
-                push();
-                currentSystem.drawBackground();
-                pop();
-            } catch(e) {
-                console.error("Error drawing station fallback background:", e);
-            }
-        } else {
-            background(0);
-        }
+        background(0);
 
         if (currentSystem) {
             try {
@@ -1182,20 +1165,19 @@ class GameStateManager {
      * @private
      */
     _drawDockedSpaceObject(player, currentSystem) {
+        background(0);
+        
         if (currentSystem) {
             try {
                 push();
-                currentSystem.drawBackground();
                 if (this.currentDockedSpaceObject && 
                     typeof this.currentDockedSpaceObject.draw === 'function') {
                     this.currentDockedSpaceObject.draw();
                 }
                 pop();
             } catch(e) {
-                console.error("Error drawing space object background:", e);
+                console.error("Error drawing space object:", e);
             }
-        } else {
-            background(0);
         }
         
         if (player) {
