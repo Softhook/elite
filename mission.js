@@ -438,13 +438,23 @@ class Mission {
                 }
                 // If still not found, search entire galaxy for the object (covers moved/remote cases)
                 if (!this._targetObjectRef && (typeof galaxy !== 'undefined') && Array.isArray(galaxy.systems)) {
-                    for (let si = 0; si < galaxy.systems.length; si++) {
-                        const sys = galaxy.systems[si];
-                        if (!sys || !Array.isArray(sys.spaceObjects)) continue;
-                        const found = sys.spaceObjects.find(o => o && o.id === this.targetObjectId);
-                        if (found) {
-                            Object.defineProperty(this, '_targetObjectRef', { value: found, writable: true, enumerable: false, configurable: true });
-                            break;
+                    // Throttle expensive galaxy-wide searches (max once per 2 seconds)
+                    const now = (typeof millis === 'function') ? millis() : Date.now();
+                    if (!this._nextGalaxySearchTime || now >= this._nextGalaxySearchTime) {
+                        let foundAny = false;
+                        for (let si = 0; si < galaxy.systems.length; si++) {
+                            const sys = galaxy.systems[si];
+                            if (!sys || !Array.isArray(sys.spaceObjects)) continue;
+                            const found = sys.spaceObjects.find(o => o && o.id === this.targetObjectId);
+                            if (found) {
+                                Object.defineProperty(this, '_targetObjectRef', { value: found, writable: true, enumerable: false, configurable: true });
+                                foundAny = true;
+                                this._nextGalaxySearchTime = 0; // Reset on success
+                                break;
+                            }
+                        }
+                        if (!foundAny) {
+                            this._nextGalaxySearchTime = now + 2000;
                         }
                     }
                 }
