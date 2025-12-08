@@ -31,11 +31,11 @@ const sizeMap = {
     debris: 150,
     probe: 50,
     beacon: 40,
-    solarSail: 320,
+    solarSail: 150,
     engineArray: 150,
     cargoCluster: 200,
     researchArray: 176,
-    orbitalGarden: 200,
+    orbitalGarden: 260,
     decoyBuoy: 40,
     miningPlatform: 200,
     ancientRelic: 150,
@@ -50,7 +50,7 @@ const sizeMap = {
     alienArtifact: 80,
     wreckage: 95,
     observatoryDome: 150,
-    hydroponicsBay: 150,
+    hydroponicsBay: 200,
     weaponPlatform: 200,
     shieldGenerator: 180,
     energyCollector: 130,
@@ -58,7 +58,7 @@ const sizeMap = {
     prison: 220,
     drugLab: 200,
     labourColony: 240,
-    undergroundMarket: 180,
+    undergroundMarket: 250,
     shipyard: 320
 };
 
