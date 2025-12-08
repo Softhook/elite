@@ -59,7 +59,7 @@ class EventManager {
                     useRankFactorForCount: true, // Aliens scale with rank
                     shipSelection: {
                         strategy: 'randomFromList',
-                        shipList: ["Thargoid", "GeometricDrone", "ShardInterceptor", "BioFrigate"], // Ensure these are valid ALIEN role ships
+                        shipList: ["Thargoid", "GeometricDrone", "BioFrigate"], // Ensure these are valid ALIEN role ships
                         fallbackShip: "BioFrigate" // Ensure this is a valid ALIEN role ship
                     },
                     aiRole: AI_ROLE.ALIEN,
@@ -124,7 +124,7 @@ class EventManager {
                     useRankFactorForCount: true,
                     shipSelection: {
                         strategy: 'filteredRandomFromList',
-                        potentialShipList: ["Viper", "GladiusFighter", "GnatInterceptor", "HummingBird", "WaspAssault", "FerDeLance"],
+                        potentialShipList: ["Viper", "GladiusFighter", "GnatInterceptor", "HummingBird", "WaspAssault", "FerDeLance", "ShardInterceptor"],
                         filterAiRole: AI_ROLE.BOUNTY_HUNTER,
                         fallbackShip: "Viper" // Must be a valid BOUNTY_HUNTER ship
                     },

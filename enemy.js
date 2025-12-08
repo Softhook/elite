@@ -124,7 +124,10 @@ class Enemy {
         } else if (this.role === AI_ROLE.ALIEN) {
             this.faction = "ALIEN";
         }
-        // ---
+        // Set faction based on aiRoles if not set
+        if (this.faction === null && shipDef.aiRoles && shipDef.aiRoles.includes("MILITARY")) {
+            this.faction = "MILITARY";
+        }
 
         // Add forced combat timer
         this.forcedCombatTimer = 0;
