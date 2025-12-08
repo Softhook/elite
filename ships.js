@@ -1452,111 +1452,421 @@ function drawGenericShip(def, s, thrusting) {
 
 // --- Custom Drawing Functions (for ships with special effects) ---
 
-function drawThargoid(s, thrusting = false) { // (Original Thargoid)
-    let r = s / 2;
-    let baseHue = (frameCount * 0.5) % 360; colorMode(HSB, 360, 100, 100, 100);
-    fill(baseHue, 80, 70, 80); stroke( (baseHue + 40) % 360, 90, 90, 90); strokeWeight(2);
+// Helper for Faux-3D depth extrusion
+function drawExtrudedShape(r, vertexData, fillColor, strokeColor, depth, layers = 5) {
+    noStroke();
+    let rVal = red(fillColor), gVal = green(fillColor), bVal = blue(fillColor);
+    
+    // Draw "sides" by stacking darker layers
+    for (let i = 0; i < layers; i++) {
+        let darken = map(i, 0, layers, 0.4, 0.8);
+        fill(rVal * darken, gVal * darken, bVal * darken);
+        push();
+        translate(0, depth * (1 - i/layers)); // Shift down
+        scale(0.95 + (i/layers)*0.05); // Slight taper
+        beginShape();
+        for (let v of vertexData) vertex(v.x * r, v.y * r);
+        endShape(CLOSE);
+        pop();
+    }
+    // Top face
+    fill(fillColor);
+    stroke(strokeColor);
+    strokeWeight(1.5);
     beginShape();
-    for (let i = 0; i < 8; i++) {
-        let angle1 = map(i, 0, 8, 0, TWO_PI); // Using TWO_PI (radians)
-        let angle2 = map(i + 0.5, 0, 8, 0, TWO_PI);
-        let outerR = r * 1.1; let innerR = r * 0.6;
-        vertex(cos(angle1) * outerR, sin(angle1) * outerR); vertex(cos(angle2) * innerR, sin(angle2) * innerR);
-    } endShape(CLOSE);
-    colorMode(RGB, 255); fill(0, 255, 150, map(sin(frameCount * 0.1), -1, 1, 50, 150)); noStroke();
-    ellipse(0, 0, r*0.5, r*0.5);
+    for (let v of vertexData) vertex(v.x * r, v.y * r);
+    endShape(CLOSE);
 }
 
-function drawGeometricDrone(s, thrusting = false) { // Alien 3
-    let r = s / 2; let def = SHIP_DEFINITIONS.GeometricDrone;
-    // Sharp geometric look
-    push(); // Use push/pop for rotation
-    rotate(frameCount * 0.3); // Assuming radians
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+function drawThargoid(s, thrusting = false) { 
+    let r = s / 2;
+    let pulse = 1.0 + sin(frameCount * 0.1) * 0.05;
+    
+    // Organic pulsing core
+    noStroke();
+    fill(100, 255, 100, 50);
+    ellipse(0, 0, s * 0.8 * pulse);
+    
+    // Petals
+    let petals = 8;
+    colorMode(HSB, 360, 100, 100);
+    let hueVal = (frameCount * 0.5) % 360;
+    fill(hueVal, 80, 60);
+    stroke((hueVal + 180) % 360, 90, 100);
+    strokeWeight(2);
+    
+    beginShape();
+    for (let i = 0; i < petals * 2; i++) {
+        let angle = map(i, 0, petals * 2, 0, TWO_PI);
+        let rad = (i % 2 === 0) ? r : r * 0.4;
+        rad *= pulse;
+        vertex(cos(angle) * rad, sin(angle) * rad);
+    }
+    endShape(CLOSE);
+    
+    // Central Eye
+    fill(0, 0, 100);
+    ellipse(0, 0, r * 0.3);
+    fill(0, 100, 50);
+    ellipse(0, 0, r * 0.15);
+    colorMode(RGB, 255);
+}
+
+function drawBioFrigate(s, thrusting = false) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.BioFrigate;
+    let pulse = 1.0 + sin(frameCount * 0.05) * 0.03;
+    
+    // Breathing hull effect
+    push();
+    scale(pulse);
+    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    pop();
+    
+    // Veins/Texture
+    stroke(50, 200, 100, 100);
+    strokeWeight(1);
+    noFill();
+    beginShape();
+    for(let i=0; i<10; i++) {
+        let ang = map(i, 0, 10, 0, TWO_PI);
+        let rad = r * 0.6 + noise(i, frameCount*0.02) * r * 0.2;
+        vertex(cos(ang)*rad, sin(ang)*rad);
+    }
+    endShape(CLOSE);
+}
+
+function drawGeometricDrone(s, thrusting = false) {
+    let r = s / 2;
+    // Rotating 3D Cube Projection
+    push();
+    rotate(frameCount * 0.02);
+    stroke(100, 200, 255);
+    strokeWeight(2);
+    noFill();
+    
+    let size = r * 0.6;
+    // Front face
+    rectMode(CENTER);
+    push(); translate(sin(frameCount*0.05)*5, cos(frameCount*0.05)*5);
+    rect(0, 0, size, size);
+    pop();
+    
+    // Back face
+    push(); translate(-sin(frameCount*0.05)*5, -cos(frameCount*0.05)*5);
+    stroke(100, 200, 255, 100);
+    rect(0, 0, size, size);
+    pop();
+    
+    // Connecting lines (simplified)
+    line(-size/2 + sin(frameCount*0.05)*5, -size/2 + cos(frameCount*0.05)*5, -size/2 - sin(frameCount*0.05)*5, -size/2 - cos(frameCount*0.05)*5);
+    line(size/2 + sin(frameCount*0.05)*5, size/2 + cos(frameCount*0.05)*5, size/2 - sin(frameCount*0.05)*5, size/2 - cos(frameCount*0.05)*5);
+    
     pop();
 }
 
-function drawProspectorMiner(s, thrusting = false) { // Miner
-    let r = s / 2; let def = SHIP_DEFINITIONS.ProspectorMiner;
-    // Main body
-    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    // Add simple "mining arms" representation
-    stroke(100, 100, 110); strokeWeight(2); fill(150, 150, 160);
-    rect(r * 0.5, r * 0.4, r * 0.4, r * 0.2); // Top arm base
-    rect(r * 0.5, -r * 0.6, r * 0.4, r * 0.2); // Bottom arm base
-    ellipse(r*0.9, r*0.5, r*0.1, r*0.1); // Top claw endpoint
-    ellipse(r*0.9, -r*0.5, r*0.1, r*0.1); // Bottom claw endpoint
+function drawShardInterceptor(s, thrusting = false) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.ShardInterceptor;
+    
+    // Floating shards
+    push();
+    rotate(frameCount * 0.01);
+    
+    // Main body (Crystal)
+    fill(180, 180, 255, 200);
+    stroke(255);
+    strokeWeight(1);
+    beginShape();
+    vertex(0, -r);
+    vertex(r*0.5, 0);
+    vertex(0, r);
+    vertex(-r*0.5, 0);
+    endShape(CLOSE);
+    
+    // Orbiting shards
+    for(let i=0; i<3; i++) {
+        push();
+        rotate(i * TWO_PI/3 + frameCount * 0.05);
+        translate(r * 0.8, 0);
+        fill(200, 200, 255, 150);
+        triangle(-5, -10, 5, -10, 0, 10);
+        pop();
+    }
+    pop();
 }
 
-function drawPathfinderSurvey(s, thrusting = false) { // Explorer 1
-    let r = s / 2; let def = SHIP_DEFINITIONS.PathfinderSurvey;
-    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    // Implied Sensor dish
-    noFill(); stroke(180, 180, 220); strokeWeight(1); arc(r*0.8, 0, r*0.4, r*0.8, -90, 90);
+function drawObeliskSentinel(s, thrusting = false) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.ObeliskSentinel;
+    
+    // Monolith with depth
+    push();
+    // Shadow/Depth
+    fill(20, 100, 60);
+    rectMode(CENTER);
+    rect(5, 5, r*0.8, r*1.8); // Offset shadow
+    
+    // Main Face
+    fill(60, 255, 180);
+    stroke(0, 200, 120);
+    strokeWeight(2);
+    rect(0, 0, r*0.8, r*1.8);
+    
+    // Glowing Runes
+    stroke(255, 255, 255, 150 + sin(frameCount*0.1)*100);
+    strokeWeight(2);
+    line(-r*0.2, -r*0.5, r*0.2, -r*0.5);
+    line(-r*0.2, 0, r*0.2, 0);
+    line(-r*0.2, r*0.5, r*0.2, r*0.5);
+    pop();
 }
 
 function drawSpiralWarden(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.SpiralWarden;
+    let r = s / 2;
     push();
-    rotate(frameCount * 0.02); // Subtle spiral animation
-    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    rotate(frameCount * -0.05);
+    noFill();
+    strokeWeight(2);
+    
+    for(let i=0; i<3; i++) {
+        stroke(0, 255 - i*50, 200);
+        beginShape();
+        for(let a=0; a<TWO_PI; a+=0.2) {
+            let rad = map(a, 0, TWO_PI, 0, r);
+            let x = cos(a + i*2) * rad;
+            let y = sin(a + i*2) * rad;
+            vertex(x, y);
+        }
+        endShape();
+    }
     pop();
+    
+    // Core
+    fill(255);
+    noStroke();
+    ellipse(0, 0, r*0.3);
 }
 
 function drawTriadProbe(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.TriadProbe;
+    let r = s / 2;
     push();
-    rotate(frameCount * 0.04); // Fast spinning probe
+    rotate(frameCount * 0.05);
+    
+    // 3 Orbs connected
+    stroke(200, 255, 100);
+    strokeWeight(2);
+    noFill();
+    triangle(0, -r*0.8, r*0.7, r*0.4, -r*0.7, r*0.4);
+    
+    fill(200, 255, 180);
+    ellipse(0, -r*0.8, r*0.4);
+    ellipse(r*0.7, r*0.4, r*0.4);
+    ellipse(-r*0.7, r*0.4, r*0.4);
+    
+    // Center pulse
+    fill(255, 100);
+    ellipse(0, 0, r*0.3 * (1+sin(frameCount*0.2)*0.2));
+    pop();
+}
+
+function drawHexaManta(s, thrusting = false) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.HexaManta;
+    
+    // Undulating wings
+    let wave = sin(frameCount * 0.1) * 0.1;
+    
+    push();
+    scale(1 + wave, 1 - wave); // Squash and stretch
     drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
     pop();
+    
+    // Energy trails
+    stroke(0, 255, 255, 100);
+    line(-r, 0, -r*1.5, 0);
+    line(r, 0, r*1.5, 0);
 }
 
 function drawFractalRay(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.FractalRay;
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.FractalRay;
+    
+    // Jittery movement
     push();
-    rotate(sin(frameCount * 0.03) * 0.2); // Subtle fractal shimmer
+    translate(random(-1, 1), random(-1, 1));
     drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
     pop();
+    
+    // Lightning arcs
+    if (frameCount % 5 === 0) {
+        stroke(255, 255, 0, 150);
+        strokeWeight(2);
+        let angle = random(TWO_PI);
+        line(0, 0, cos(angle)*r*1.2, sin(angle)*r*1.2);
+    }
 }
 
 function drawPetalSpinner(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.PetalSpinner;
+    let r = s / 2;
     push();
-    rotate(frameCount * 0.08); // Fast spinning petals
-    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    rotate(frameCount * 0.15); // Fast spin
+    
+    // Draw petals
+    for(let i=0; i<5; i++) {
+        push();
+        rotate(i * TWO_PI/5);
+        fill(255, 100, 255);
+        stroke(150, 0, 150);
+        ellipse(r*0.5, 0, r*0.8, r*0.3);
+        pop();
+    }
+    
+    // Center
+    fill(255);
+    ellipse(0, 0, r*0.4);
     pop();
 }
 
-function drawTesseractScout(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.TesseractScout;
+function drawCrescentMarauder(s, thrusting = false) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.CrescentMarauder;
+    
     push();
-    rotate(frameCount * 0.05); // 4D shifting illusion
+    rotate(PI/2); // Orient crescent
+    
+    // Glow
+    drawingContext.shadowBlur = 15;
+    drawingContext.shadowColor = "cyan";
+    
     drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    
+    drawingContext.shadowBlur = 0;
+    pop();
+}
+
+function drawObsidianOrb(s, thrusting = false) {
+    let r = s / 2;
+    
+    // Sphere effect
+    noStroke();
+    fill(20, 20, 30);
+    ellipse(0, 0, s, s);
+    
+    // Highlight
+    fill(255, 255, 255, 50);
+    ellipse(-r*0.3, -r*0.3, r*0.4, r*0.4);
+    
+    // Dark core
+    fill(0);
+    ellipse(0, 0, r*0.8, r*0.8);
+    
+    // Ring
+    noFill();
+    stroke(100, 100, 255);
+    strokeWeight(2);
+    ellipse(0, 0, s*1.1, s*0.2);
+}
+
+function drawTesseractScout(s, thrusting = false) {
+    let r = s / 2;
+    
+    push();
+    rotate(frameCount * 0.02);
+    noFill();
+    stroke(0, 255, 255);
+    strokeWeight(1.5);
+    
+    let size = r * 0.6;
+    rectMode(CENTER);
+    
+    // Outer square
+    rect(0, 0, size*1.5, size*1.5);
+    
+    // Inner square rotating opposite
+    push();
+    rotate(frameCount * -0.04);
+    rect(0, 0, size, size);
+    pop();
+    
+    // Connecting lines
+    line(-size*0.75, -size*0.75, -size*0.5, -size*0.5); // Approx corners
+    line(size*0.75, -size*0.75, size*0.5, -size*0.5);
+    line(size*0.75, size*0.75, size*0.5, size*0.5);
+    line(-size*0.75, size*0.75, -size*0.5, size*0.5);
+    
     pop();
 }
 
 function drawLotusCarrier(s, thrusting = false) {
-    let r = s / 2; let def = SHIP_DEFINITIONS.LotusCarrier;
+    let r = s / 2;
+    
+    // Rotating layers
     push();
-    rotate(sin(frameCount * 0.01) * 0.1); // Gentle petal sway
-    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    rotate(frameCount * 0.005);
+    
+    // Outer petals
+    fill(200, 100, 200);
+    stroke(100, 0, 100);
+    for(let i=0; i<8; i++) {
+        push();
+        rotate(i * TWO_PI/8);
+        ellipse(r*0.6, 0, r*0.8, r*0.4);
+        pop();
+    }
+    
+    // Inner petals
+    rotate(frameCount * 0.01);
+    fill(255, 150, 255);
+    for(let i=0; i<6; i++) {
+        push();
+        rotate(i * TWO_PI/6);
+        ellipse(r*0.4, 0, r*0.6, r*0.3);
+        pop();
+    }
+    
+    // Core
+    fill(255, 255, 200);
+    ellipse(0, 0, r*0.4);
     pop();
+}
+
+// Non-Alien Custom Ships
+function drawProspectorMiner(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.ProspectorMiner;
+    drawShapeFromData(r, def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    stroke(100, 100, 110); strokeWeight(2); fill(150, 150, 160);
+    rect(r * 0.5, r * 0.4, r * 0.4, r * 0.2);
+    rect(r * 0.5, -r * 0.6, r * 0.4, r * 0.2);
+    ellipse(r*0.9, r*0.5, r*0.1, r*0.1);
+    ellipse(r*0.9, -r*0.5, r*0.1, r*0.1);
+}
+
+function drawPathfinderSurvey(s, thrusting = false) {
+    let r = s / 2; let def = SHIP_DEFINITIONS.PathfinderSurvey;
+    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    noFill(); stroke(180, 180, 220); strokeWeight(1); arc(r*0.8, 0, r*0.4, r*0.8, -90, 90);
 }
 
 // --- Initialization Logic ---
 
-// Map of ship names to their custom draw functions
 const CUSTOM_DRAW_FUNCTIONS = {
     "Thargoid": drawThargoid,
+    "BioFrigate": drawBioFrigate,
     "GeometricDrone": drawGeometricDrone,
-    "ProspectorMiner": drawProspectorMiner,
-    "PathfinderSurvey": drawPathfinderSurvey,
+    "ShardInterceptor": drawShardInterceptor,
+    "ObeliskSentinel": drawObeliskSentinel,
     "SpiralWarden": drawSpiralWarden,
     "TriadProbe": drawTriadProbe,
+    "HexaManta": drawHexaManta,
     "FractalRay": drawFractalRay,
     "PetalSpinner": drawPetalSpinner,
+    "CrescentMarauder": drawCrescentMarauder,
+    "ObsidianOrb": drawObsidianOrb,
     "TesseractScout": drawTesseractScout,
-    "LotusCarrier": drawLotusCarrier
+    "LotusCarrier": drawLotusCarrier,
+    "ProspectorMiner": drawProspectorMiner,
+    "PathfinderSurvey": drawPathfinderSurvey
 };
 
 // Assign draw functions to definitions
