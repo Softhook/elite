@@ -48,6 +48,8 @@
     <script src="../debug.js"></script>
     <script src="../ships.js"></script>
     <script src="../weapons.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../harpoon.js"></script>
     <script src="../weaponSystem.js"></script>
     <script src="../enemyConstants.js"></script>
     <script src="../objectPool.js"></script>
@@ -717,6 +719,72 @@
         });
 
         // Run all tests
+        // ============================================
+        // Harpoon behavior tests
+        // Ensure an enemy only fires/creates a harpoon once and won't continue
+        // firing a harpoon at a target that is already harpooned.
+        // ============================================
+        describe('Harpoon Behavior', () => {
+            it('enemy fires harpoon once and does not fire again once harpooned', () => {
+                const system = createMockSystem({ enemies: [], projectiles: [] });
+
+                // Attacker setup
+                const attacker = new Enemy(0, 0, null, 'Sidewinder', AI_ROLE.PIRATE);
+                attacker.pos.set(0, 0);
+                attacker.vel.set(0, 0);
+                attacker.size = 20;
+                attacker.currentSystem = system;
+
+                // Equip a simple harpoon weapon
+                const harpoonWeapon = { name: 'Harpoon', type: WEAPON_TYPE.HARPOON, damage: 10, speed: 30, fireRate: 0.5, projectileSize: 6 };
+                attacker.weapons = [harpoonWeapon];
+                attacker.currentWeapon = harpoonWeapon;
+                attacker.fireRate = harpoonWeapon.fireRate;
+
+                // Target setup
+                const target = new Enemy(150, 0, null, 'Sidewinder', AI_ROLE.PIRATE);
+                target.pos.set(150, 0);
+                target.vel.set(0, 0);
+                target.size = 20;
+
+                attacker.target = target;
+                system.enemies.push(target);
+
+                // Sanity: no harpoons or counts before firing
+                expect(!!attacker._harpoonCount).toBe(false);
+                expect(!!target._harpoonCount).toBe(false);
+
+                // First attempt: should fire a harpoon projectile (added to system.projectiles)
+                attacker.currentSystem = system;
+                attacker.fireWeapon(atan2(target.pos.y - attacker.pos.y, target.pos.x - attacker.pos.x), target);
+
+                // Ensure a harpoon projectile exists
+                const harpoonProjList = system.projectiles.filter(p => p && (p._isHarpoon || p.type === 'harpoon' || p.type === 'HARPOON'));
+                expect(harpoonProjList.length).toBeGreaterThan(0);
+
+                // Simulate the projectile hitting and spawning a Harpoon tether (starSystem would do this)
+                if (typeof Harpoon !== 'undefined') {
+                    const har = new Harpoon(attacker, target, system, { segmentCount: 8, breakTension: 900 });
+                    system.harpoons = system.harpoons || [];
+                    system.harpoons.push(har);
+                }
+
+                // Counts should now reflect an active tether
+                expect((attacker._harpoonCount || 0)).toBeGreaterThan(0);
+                expect((target._harpoonCount || 0)).toBeGreaterThan(0);
+
+                // Clear non-harpoon projectiles so we can detect new harpoon spawns precisely
+                system.projectiles = system.projectiles.filter(p => !(p && (p._isHarpoon || p.type === 'harpoon' || p.type === 'HARPOON')));
+
+                // Second attempt: attacker should avoid firing another harpoon (weapon will be cycled)
+                attacker.fireWeapon(atan2(target.pos.y - attacker.pos.y, target.pos.x - attacker.pos.x), target);
+
+                // There should be no new harpoon projectiles added
+                const harpoonCountAfter = system.projectiles.filter(p => p && (p._isHarpoon || p.type === 'harpoon' || p.type === 'HARPOON')).length;
+                expect(harpoonCountAfter).toBe(0);
+            });
+        });
+
         runTests();
     </script>
 </body>

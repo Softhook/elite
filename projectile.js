@@ -81,7 +81,12 @@ class Projectile {
         this.tangleDuration = tangleDuration;
         this.dragMultiplier = dragMultiplier;
         this.rotationBlockMultiplier = rotationBlockMultiplier;
-        this._isPlayer = (owner && owner instanceof Player);
+        this._isPlayer = !!owner && (
+            (typeof Player !== 'undefined' && owner instanceof Player) ||
+            (typeof player !== 'undefined' && owner === player) ||
+            (owner && owner.isPlayer === true) ||
+            (owner && owner.constructor && owner.constructor.name === 'Player')
+        );
 
         // Type will be determined from weapon or parameter below
         // Cache type checks will be set after finalizing this.type
@@ -99,12 +104,19 @@ class Projectile {
 
             // Update color efficiently
             const weaponColor = weapon.color;
-            if (this.color) {
-                this.color.setRed(weaponColor[0]);
-                this.color.setGreen(weaponColor[1]);
-                this.color.setBlue(weaponColor[2]);
+            if (Array.isArray(weaponColor) && weaponColor.length >= 3) {
+                if (this.color) {
+                    this.color.setRed(weaponColor[0]);
+                    this.color.setGreen(weaponColor[1]);
+                    this.color.setBlue(weaponColor[2]);
+                } else {
+                    this.color = color(weaponColor[0], weaponColor[1], weaponColor[2]);
+                }
             } else {
-                this.color = color(weaponColor[0], weaponColor[1], weaponColor[2]);
+                // If weapon has no color specified, ensure we at least have a sensible default
+                if (!this.color) {
+                    this.color = color(255, 0, 0);
+                }
             }
 
             // Set type from weapon (takes priority over parameter)

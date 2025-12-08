@@ -61,6 +61,9 @@ class Player {
         // Resolve and validate ship definition
         const shipDef = this._resolveShipDefinition(shipTypeName);
 
+        // Runtime flag to allow safe player detection without relying on `instanceof Player`
+        this.isPlayer = true;
+
         // Initialize all properties in logical groups
         this._initPhysicsProperties(shipDef);
         this._initCombatProperties(shipDef);
