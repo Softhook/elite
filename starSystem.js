@@ -95,11 +95,11 @@ const buildShipRoleArrays = () => {
         SEPARATIST_SHIPS: [],
         COMBAT_SHIPS: []
     };
-    
+
     // Single loop iteration - more efficient than 11 includes() checks per ship
     for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
         if (!shipData.aiRoles || !Array.isArray(shipData.aiRoles)) continue;
-        
+
         // Loop through roles once instead of checking each role with includes()
         for (const role of shipData.aiRoles) {
             const arrayKey = `${role}_SHIPS`;
@@ -108,7 +108,7 @@ const buildShipRoleArrays = () => {
             }
         }
     }
-    
+
     return roleArrays;
 };
 
@@ -116,7 +116,7 @@ const buildShipRoleArrays = () => {
 const {
     POLICE_SHIPS,
     PIRATE_SHIPS,
-    HAULER_SHIPS, 
+    HAULER_SHIPS,
     TRANSPORT_SHIPS,
     MILITARY_SHIPS,
     ALIEN_SHIPS,
@@ -140,7 +140,7 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
     console.log("BOUNTY_HUNTER_SHIPS:", BOUNTY_HUNTER_SHIPS);
     console.log("GUARD_SHIPS:", GUARD_SHIPS);
-    console.log("IMPERIAL_SHIPS:",IMPERIAL_SHIPS);
+    console.log("IMPERIAL_SHIPS:", IMPERIAL_SHIPS);
     console.log("SEPARATIST_SHIPS:", SEPARATIST_SHIPS);
     console.log("COMBAT_SHIPS:", COMBAT_SHIPS);
 }
@@ -156,8 +156,8 @@ if (STAR_SYSTEM_DEBUG) {
 let STARFIELD_TILE_WORKER = null;
 if (STARFIELD_CONFIG.WORKER_ENABLED) {
     try {
-        STARFIELD_TILE_WORKER = new Worker('test/starfield_worker.js');
-        STARFIELD_TILE_WORKER.onmessage = function(e) {
+        STARFIELD_TILE_WORKER = new Worker('starfield_worker.js');
+        STARFIELD_TILE_WORKER.onmessage = function (e) {
             const data = e.data;
             if (!data) return;
             const key = data.key;
@@ -166,43 +166,43 @@ if (STARFIELD_CONFIG.WORKER_ENABLED) {
 
             // Locate system
             let sys = null;
-            try { if (typeof galaxy !== 'undefined' && galaxy && Array.isArray(galaxy.systems)) sys = galaxy.systems[sysIdx]; } catch(_) { sys = null; }
+            try { if (typeof galaxy !== 'undefined' && galaxy && Array.isArray(galaxy.systems)) sys = galaxy.systems[sysIdx]; } catch (_) { sys = null; }
 
             // If system no longer exists, close the ImageBitmap (if any) and bail
             if (!sys) {
-                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
                 return;
             }
 
             if (data.error) {
                 // Handle worker error - cleanup and remove tile so it can be re-generated
                 try {
-                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
                     // Remove tile from cache so it can be re-queued for generation
                     sys._starfieldTiles.delete(key);
-                } catch(_) {}
+                } catch (_) { }
                 return;
             }
 
             // Process tile ImageBitmap response from worker
             const parts = String(key).split(',');
             if (parts.length !== 2) {
-                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(_) {}
+                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
                 // Remove invalid tile from cache
                 sys._starfieldTiles.delete(key);
                 return;
             }
-            
+
             // Verify we have a valid ImageBitmap
             if (!imgBitmap) {
                 sys._starfieldTiles.delete(key);
                 return;
             }
-            
+
             const [tx, ty] = parts.map(Number);
             let buffer = null;
             let drawSuccess = false;
-            
+
             try {
                 buffer = createGraphics(sys._starfieldTileSize, sys._starfieldTileSize);
                 const ctx = buffer.drawingContext;
@@ -212,12 +212,12 @@ if (STARFIELD_CONFIG.WORKER_ENABLED) {
                 drawSuccess = true;
             } catch (err) {
                 // Drawing failed - cleanup and let tile be regenerated
-                if (buffer) { try { buffer.remove(); } catch(_) {} }
+                if (buffer) { try { buffer.remove(); } catch (_) { } }
                 buffer = null;
             }
-            
-            try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(e) {}
-            
+
+            try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { }
+
             if (drawSuccess && buffer) {
                 sys._starfieldTiles.set(key, { buffer, lastUsed: millis() });
             } else {
@@ -230,13 +230,13 @@ if (STARFIELD_CONFIG.WORKER_ENABLED) {
         try {
             if (typeof window !== 'undefined' && window && STARFIELD_TILE_WORKER) {
                 const _terminateStarfieldWorker = () => {
-                    try { STARFIELD_TILE_WORKER.terminate(); } catch (e) {}
+                    try { STARFIELD_TILE_WORKER.terminate(); } catch (e) { }
                     STARFIELD_TILE_WORKER = null;
                 };
                 window.addEventListener('beforeunload', _terminateStarfieldWorker);
                 window.addEventListener('unload', _terminateStarfieldWorker);
             }
-        } catch (e) {}
+        } catch (e) { }
     } catch (e) { STARFIELD_TILE_WORKER = null; }
 }
 
@@ -267,7 +267,7 @@ class StarSystem {
         this.name = name;
         // SINGLE SOURCE OF TRUTH for economy type
         this.economyType = economy;
-        try { this.galaxyPos = createVector(galaxyX, galaxyY); } catch(e) { this.galaxyPos = {x: galaxyX, y: galaxyY}; } // Map position
+        try { this.galaxyPos = createVector(galaxyX, galaxyY); } catch (e) { this.galaxyPos = { x: galaxyX, y: galaxyY }; } // Map position
         this.visited = false;
         this.systemIndex = systemIndex; // Used for seeding static elements
         this.connectedSystemIndices = []; // <-- ADD THIS LINE
@@ -282,7 +282,7 @@ class StarSystem {
         this.planets = [];
         this.asteroids = [];
         this.enemies = [];
-        
+
         // Cache diagonal distance for spawn calculations
         this._cachedDiagonalDist = null;
         this.projectiles = [];
@@ -316,13 +316,13 @@ class StarSystem {
 
         // Pre-allocate screenBounds to avoid creating object every frame
         this.screenBounds = { left: 0, right: 0, top: 0, bottom: 0 };
-        
+
         // Pre-allocate reusable vector for distance checks (hot path optimization)
         this._distCheckVector = null; // Lazy init in checkProjectileCollisions
 
         // Add a system-specific player wanted status
         this.playerWanted = false;
-        
+
         // Optionally track wanted level and expiration time
         this.playerWantedLevel = 0; // 0-5 scale
         this.playerWantedExpiry = null; // Timestamp when wanted status expires
@@ -377,18 +377,18 @@ class StarSystem {
         if (wanted && this.player && this.player.isPolice) {
             this.player.removePoliceStatus();
         }
-        
+
         if (wanted) {
             this.playerWantedLevel = Math.min(5, Math.max(1, level));
             this.policeAlertSent = true;
-            
+
             // Set expiry time if duration provided
             if (duration) {
                 this.playerWantedExpiry = millis() + (duration * 1000);
             } else {
                 this.playerWantedExpiry = null;
             }
-            
+
             // Notify connected systems based on level
             if (this.playerWantedLevel >= 3 && galaxy && galaxy.systems) {
                 this.notifyConnectedSystemsOfCriminal();
@@ -398,7 +398,7 @@ class StarSystem {
             this.playerWantedExpiry = null;
             this.policeAlertSent = false;
         }
-        
+
         // Record wanted status change if it actually changed
         if (previousWantedStatus !== wanted && this.player) {
             this.player.recordWantedStatusChange(wanted, this.name);
@@ -412,7 +412,7 @@ class StarSystem {
      */
     _getDiagonalDistance() {
         if (!this._cachedDiagonalDist) {
-            this._cachedDiagonalDist = sqrt(sq(width/2) + sq(height/2));
+            this._cachedDiagonalDist = sqrt(sq(width / 2) + sq(height / 2));
         }
         return this._cachedDiagonalDist;
     }
@@ -428,7 +428,7 @@ class StarSystem {
             this.playerWantedLevel = 0;
             this.playerWantedExpiry = null;
         }
-        
+
         return this.playerWanted;
     }
 
@@ -437,10 +437,10 @@ class StarSystem {
      */
     notifyConnectedSystemsOfCriminal() {
         if (!galaxy || !Array.isArray(this.connectedSystemIndices)) return;
-        
+
         // Reduce wanted level for connected systems
         const connectedLevel = Math.max(1, this.playerWantedLevel - 1);
-        
+
         this.connectedSystemIndices.forEach(sysIndex => {
             const system = galaxy.systems[sysIndex];
             if (system && !system.playerWanted) {
@@ -498,11 +498,11 @@ class StarSystem {
         try {
             const stationX = random(-this.despawnRadius * 0.6, this.despawnRadius * 0.6);
             const stationY = random(-this.despawnRadius * 0.6, this.despawnRadius * 0.6);
-            
+
             // Pass the economy type from the system to the station
             this.station = new Station(stationX, stationY, this.economyType, stationName);
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error("Error creating station:", e);
         }
         console.log(`         Station created (Name: ${this.station?.name || 'N/A'})`);
@@ -511,7 +511,7 @@ class StarSystem {
         try {
             this.despawnRadius = 10000; // Set a fixed large radius
             console.log(`         Despawn Radius set to fixed value: ${this.despawnRadius}`); // Add log
-        } catch(e) {
+        } catch (e) {
             console.error("         Error setting fixed despawnRadius:", e);
             this.despawnRadius = 10000; // Use fixed fallback
         }
@@ -520,7 +520,7 @@ class StarSystem {
 
         // --- Initialize Planets (This will also position the station) ---
         try { this.createRandomPlanets(); }
-        catch(e) { console.error("Error during createRandomPlanets call:", e); }
+        catch (e) { console.error("Error during createRandomPlanets call:", e); }
 
         // --- Secret Station Generation ---
         this.secretStations = [];
@@ -528,7 +528,7 @@ class StarSystem {
             try { // <<< ADD TRY HERE
                 // We already know which planet the main station is near
                 let mainStationPlanetIndex = this.mainStationPlanetIndex || -1;
-                
+
                 // If mainStationPlanetIndex is somehow not set, find it based on proximity
                 if (mainStationPlanetIndex === -1 && this.station && this.station.pos) {
                     let closestDist = Infinity;
@@ -541,7 +541,7 @@ class StarSystem {
                         }
                     }
                 }
-                
+
                 // Generate list of eligible planets (excluding sun and main station planet)
                 let eligiblePlanets = [];
                 for (let i = 1; i < this.planets.length; i++) {
@@ -549,17 +549,17 @@ class StarSystem {
                         eligiblePlanets.push(i);
                     }
                 }
-                
+
                 // Only proceed if we have eligible planets
                 if (eligiblePlanets.length > 0) {
                     // Pick a random eligible planet
                     let planetIdx = eligiblePlanets[floor(random(eligiblePlanets.length))];
                     let planet = this.planets[planetIdx];
-                    
+
                     let angle = atan2(planet.pos.y, planet.pos.x) + random(-0.5, 0.5); // Offset angle
                     let dist = planet.size * 1.8 + random(200, 600);
                     let pos = p5.Vector.add(planet.pos, p5.Vector.fromAngle(angle).mult(dist));
-                    
+
                     // Pick subtype based on system type
                     let subtype = null;
                     let sysType = (this.economyType || "").toLowerCase();
@@ -567,7 +567,7 @@ class StarSystem {
                     else if (sysType.includes("alien")) subtype = "secret_alien";
                     else if (sysType.includes("separatist")) subtype = "secret_separatist";
                     else subtype = "secret_generic";
-                    
+
                     let secretName = `${this.name} Secret Base`;
                     let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
                     this.secretStations.push(secretStation);
@@ -600,7 +600,7 @@ class StarSystem {
                 this.jumpZoneCenter = createVector(cos(fallbackAngle) * fallbackDist, sin(fallbackAngle) * fallbackDist);
             }
         } else {
-             console.log(`         Jump Zone for ${this.name} loaded from save data.`);
+            console.log(`         Jump Zone for ${this.name} loaded from save data.`);
         }
         // --- End Jump Zone Calculation ---
 
@@ -608,82 +608,82 @@ class StarSystem {
         try {
             this.spawnSpaceObjectsForPlanets();
             console.log(`         Space objects spawned`);
-        } catch(e) { console.error("Error spawning space objects:", e); }
+        } catch (e) { console.error("Error spawning space objects:", e); }
 
         // --- Generate Nebulae ---
-try {
-    // Skip nebula generation if we already have nebulae from saved data
-    if (this.nebulae.length > 0) {
-        console.log(`Skipping nebula generation: ${this.nebulae.length} nebulae loaded from save data`);
-    }
-    else if (random() < 0.5) { // 50% chance of having a nebula in the system
-        const nebulaCount = floor(random(1, 3));
-        const nebulaTypes = ['ion', 'radiation', 'emp'];
-        
-        // Only proceed if we have valid reference points
-        if (this.station && this.station.pos && this.jumpZoneCenter) {
-            // Calculate midpoint between station and jump zone
-            const midX = (this.station.pos.x + this.jumpZoneCenter.x) / 2;
-            const midY = (this.station.pos.y + this.jumpZoneCenter.y) / 2;
-            
-            // Define possible nebula positions with weighted distribution
-            const possiblePositions = [
-                { x: this.station.pos.x, y: this.station.pos.y, type: 'near_station', weight: 0.25 },
-                { x: this.jumpZoneCenter.x, y: this.jumpZoneCenter.y, type: 'near_jump', weight: 0.25 },
-                { x: midX, y: midY, type: 'midway', weight: 0.5 }
-            ];
-            
-            for (let i = 0; i < nebulaCount; i++) {
-                // Choose position based on weights
-                const roll = random();
-                let targetPos;
-                let cumulativeWeight = 0;
-                
-                for (const pos of possiblePositions) {
-                    cumulativeWeight += pos.weight;
-                    if (roll < cumulativeWeight) {
-                        targetPos = pos;
-                        break;
+        try {
+            // Skip nebula generation if we already have nebulae from saved data
+            if (this.nebulae.length > 0) {
+                console.log(`Skipping nebula generation: ${this.nebulae.length} nebulae loaded from save data`);
+            }
+            else if (random() < 0.5) { // 50% chance of having a nebula in the system
+                const nebulaCount = floor(random(1, 3));
+                const nebulaTypes = ['ion', 'radiation', 'emp'];
+
+                // Only proceed if we have valid reference points
+                if (this.station && this.station.pos && this.jumpZoneCenter) {
+                    // Calculate midpoint between station and jump zone
+                    const midX = (this.station.pos.x + this.jumpZoneCenter.x) / 2;
+                    const midY = (this.station.pos.y + this.jumpZoneCenter.y) / 2;
+
+                    // Define possible nebula positions with weighted distribution
+                    const possiblePositions = [
+                        { x: this.station.pos.x, y: this.station.pos.y, type: 'near_station', weight: 0.25 },
+                        { x: this.jumpZoneCenter.x, y: this.jumpZoneCenter.y, type: 'near_jump', weight: 0.25 },
+                        { x: midX, y: midY, type: 'midway', weight: 0.5 }
+                    ];
+
+                    for (let i = 0; i < nebulaCount; i++) {
+                        // Choose position based on weights
+                        const roll = random();
+                        let targetPos;
+                        let cumulativeWeight = 0;
+
+                        for (const pos of possiblePositions) {
+                            cumulativeWeight += pos.weight;
+                            if (roll < cumulativeWeight) {
+                                targetPos = pos;
+                                break;
+                            }
+                        }
+
+                        // If no position selected (shouldn't happen), use midway
+                        if (!targetPos) targetPos = possiblePositions[2];
+
+                        // Add randomness to exact position (avoid direct overlap)
+                        const offsetDist = targetPos.type === 'midway' ? 800 : 1500;
+                        const offsetAngle = random(TWO_PI);
+                        const x = targetPos.x + cos(offsetAngle) * random(300, offsetDist);
+                        const y = targetPos.y + sin(offsetAngle) * random(300, offsetDist);
+
+                        // Choose nebula type
+                        let nebulaType;
+                        nebulaType = random(nebulaTypes);
+
+
+                        // Size varies by position
+                        const nebulaRadius = targetPos.type === 'midway'
+                            ? random(1500, 3000)  // Larger in midway
+                            : random(800, 2000);  // Smaller near facilities
+
+                        this.nebulae.push(new Nebula(x, y, nebulaRadius, nebulaType));
+                        console.log(`Nebula (${nebulaType}) positioned near ${targetPos.type}`);
+                    }
+                } else {
+                    // Fallback to random placement if no reference points
+                    for (let i = 0; i < nebulaCount; i++) {
+                        const angle = random(TWO_PI);
+                        const distance = random(3000, this.despawnRadius * 0.8);
+                        this.nebulae.push(new Nebula(
+                            cos(angle) * distance,
+                            sin(angle) * distance,
+                            random(1000, 3000),
+                            random(nebulaTypes)
+                        ));
                     }
                 }
-                
-                // If no position selected (shouldn't happen), use midway
-                if (!targetPos) targetPos = possiblePositions[2];
-                
-                // Add randomness to exact position (avoid direct overlap)
-                const offsetDist = targetPos.type === 'midway' ? 800 : 1500;
-                const offsetAngle = random(TWO_PI);
-                const x = targetPos.x + cos(offsetAngle) * random(300, offsetDist);
-                const y = targetPos.y + sin(offsetAngle) * random(300, offsetDist);
-                
-                // Choose nebula type
-                let nebulaType;
-                nebulaType = random(nebulaTypes);
-
-                
-                // Size varies by position
-                const nebulaRadius = targetPos.type === 'midway' 
-                    ? random(1500, 3000)  // Larger in midway
-                    : random(800, 2000);  // Smaller near facilities
-                
-                this.nebulae.push(new Nebula(x, y, nebulaRadius, nebulaType));
-                console.log(`Nebula (${nebulaType}) positioned near ${targetPos.type}`);
             }
-        } else {
-            // Fallback to random placement if no reference points
-            for (let i = 0; i < nebulaCount; i++) {
-                const angle = random(TWO_PI);
-                const distance = random(3000, this.despawnRadius * 0.8);
-                this.nebulae.push(new Nebula(
-                    cos(angle) * distance,
-                    sin(angle) * distance,
-                    random(1000, 3000),
-                    random(nebulaTypes)
-                ));
-            }
-        }
-    }
-} catch(e) { console.error("Error generating nebulae:", e); }
+        } catch (e) { console.error("Error generating nebulae:", e); }
 
         // --- Initialize Ambient Sounds ---
         try {
@@ -691,7 +691,7 @@ try {
                 this.initAmbientSounds();
                 console.log(`         Ambient sounds initialized`);
             }
-        } catch(e) { console.error("Error initializing ambient sounds:", e); }
+        } catch (e) { console.error("Error initializing ambient sounds:", e); }
 
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         // NOTE: We intentionally DO NOT enqueue planet buffer creation here. Enqueuing
@@ -759,7 +759,7 @@ try {
             let offsetDistance = chosenPlanet.size * 1.5 + 80; // Ensure the station is offset a bit
             let offset = p5.Vector.fromAngle(angle).mult(offsetDistance);
             this.station.pos = p5.Vector.add(chosenPlanet.pos, offset);
-            
+
             // Store which planet the main station is associated with
             this.mainStationPlanetIndex = randomIndex;
             console.log(`         Main station positioned near planet index ${randomIndex}`);
@@ -773,7 +773,7 @@ try {
         if (typeof ambientSoundManager === 'undefined' || !ambientSoundManager) {
             return;
         }
-        
+
         // Create ambient sound for the sun (at 0,0)
         if (this.planets && this.planets.length > 0 && this.planets[0].isSun) {
             const sunProfile = AmbientSoundManager.getSoundProfile('sun');
@@ -785,7 +785,7 @@ try {
                 sunSound.position = createVector(0, 0);
             }
         }
-        
+
         // Create ambient sound for the main station
         if (this.station && this.station.pos) {
             const stationProfile = AmbientSoundManager.getSoundProfile('station', { type: this.station.stationType });
@@ -797,7 +797,7 @@ try {
                 stationSound.position = this.station.pos.copy();
             }
         }
-        
+
         // Create ambient sounds for secret stations
         if (this.secretStations && this.secretStations.length > 0) {
             for (let i = 0; i < this.secretStations.length; i++) {
@@ -814,7 +814,7 @@ try {
                 }
             }
         }
-        
+
         // Create ambient sound for the jump gate
         if (this.jumpZoneCenter) {
             const jumpProfile = AmbientSoundManager.getSoundProfile('jumpgate');
@@ -826,21 +826,21 @@ try {
                 jumpSound.position = this.jumpZoneCenter.copy();
             }
         }
-        
+
         // Create ambient sounds for planets (excluding the sun)
         if (this.planets && this.planets.length > 1) {
             for (let i = 1; i < this.planets.length; i++) {
                 const planet = this.planets[i];
                 if (planet && planet.pos) {
                     // Get color value for frequency variation
-                    const colorValue = planet.baseColor ? 
+                    const colorValue = planet.baseColor ?
                         (red(planet.baseColor) + green(planet.baseColor) + blue(planet.baseColor)) / 3 : 150;
-                    
+
                     const planetProfile = AmbientSoundManager.getSoundProfile('planet', {
                         hasRings: planet.hasRings || false,
                         colorValue: colorValue
                     });
-                    
+
                     const planetSound = ambientSoundManager.createAmbientSound(
                         `${this.name}_planet_${i}`,
                         planetProfile
@@ -876,7 +876,7 @@ try {
             }
         }
     }
-    
+
     /**
      * Clean up ambient sounds for this system
      */
@@ -884,7 +884,7 @@ try {
         if (typeof ambientSoundManager === 'undefined' || !ambientSoundManager) {
             return;
         }
-        
+
         // Remove all sounds associated with this system
         const soundIds = Array.from(ambientSoundManager.activeSources.keys());
         for (let soundId of soundIds) {
@@ -960,13 +960,13 @@ try {
         this.discover();
         this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
-        
+
         // Note: Do NOT clear spaceObjects array - these are static decorative elements
         // that should persist across visits and are created during initStaticElements
-        
+
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
-        
+
         // Reset starfield buffer to force regeneration with new player position
         this.resetStarfieldBuffer();
 
@@ -998,7 +998,7 @@ try {
                 }
             }
         } catch (e) { console.warn('Error queuing planet buffers on enterSystem:', e); }
-        
+
         // Set system-wide police alert immediately
         this.policeAlertSent = player?.isWanted || false;
         console.log(`Player entering ${this.name} system. Wanted status: ${player?.isWanted}`);
@@ -1011,26 +1011,26 @@ try {
         } catch (e) {
             console.warn('Failed to generate cachedDescription on enterSystem:', e);
         }
-        
+
         // Initial system population - use this.player consistently in timers
         setTimeout(() => {
             if (this.player && this.player.pos) {  // CHANGE: Use this.player instead of player
                 console.log(`Populating ${this.name} system. Player wanted status: ${this.player.isWanted}`);
-                
+
                 // Spawn player's bodyguards if any
                 if (this.player.activeBodyguards && this.player.activeBodyguards.length > 0) {
                     console.log(`Player has ${this.player.activeBodyguards.length} active bodyguards to spawn`);
                     this.player.spawnBodyguards(this);
                 }
-                
+
                 // CHANGE: Use this.player in method calls
                 for (let i = 0; i < 3; i++) {
-                    try { this.trySpawnNPC(); } catch(e) {}
+                    try { this.trySpawnNPC(); } catch (e) { }
                 }
                 for (let i = 0; i < 8; i++) {
-                    try { this.trySpawnAsteroid(); } catch(e) {}
+                    try { this.trySpawnAsteroid(); } catch (e) { }
                 }
-                
+
                 // Use this.player in nested setTimeout too
                 setTimeout(() => {
                     // Check again if player exists and is wanted
@@ -1046,19 +1046,19 @@ try {
                             if (enemy.role === AI_ROLE.POLICE) {
                                 enemy.target = this.player;
                                 enemy.currentState = AI_STATE.APPROACHING;
-                                
+
                                 // Force initial rotation toward player
                                 if (enemy.pos && this.player.pos) {
                                     let angleToPlayer = atan2(this.player.pos.y - enemy.pos.y, this.player.pos.x - enemy.pos.x);
                                     enemy.angle = angleToPlayer;
                                     enemy.desiredAngle = enemy.angle;
                                 }
-                                
+
                                 policeCalled = true;
                                 policeCount++;
                             }
                         }
-                        
+
                         // Only log summary rather than per-ship messages
                         if (policeCalled) {
                             console.log(`System Alert: ${policeCount} police ships responding to wanted status`);
@@ -1083,7 +1083,7 @@ try {
         if (this._starfieldTiles) {
             for (const tile of this._starfieldTiles.values()) {
                 if (tile && tile.buffer) {
-                    try { tile.buffer.remove(); } catch (e) {}
+                    try { tile.buffer.remove(); } catch (e) { }
                 }
             }
             this._starfieldTiles.clear();
@@ -1127,7 +1127,7 @@ try {
      */
     _selectShipForEconomy(economy, security) {
         const econ = (economy || "").toLowerCase();
-        
+
         // Economy-specific spawn logic
         const economyHandlers = {
             military: () => this._selectMilitaryShip(),
@@ -1136,16 +1136,16 @@ try {
             separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS),
             imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS)
         };
-        
+
         const handler = economyHandlers[econ];
         if (handler) {
             return handler();
         }
-        
+
         // Standard spawn logic based on security
         return this._selectStandardShip(security);
     }
-    
+
     /**
      * Helper methods for ship selection by economy type
      * @private
@@ -1166,23 +1166,23 @@ try {
                 : { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
         }
     }
-    
+
     _selectAlienShip() {
         if (random() < 0.8 && ALIEN_SHIPS.length > 0) {
             return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
         }
-        
+
         const alternatives = [];
         if (PIRATE_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.PIRATE, ships: PIRATE_SHIPS });
         if (HAULER_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
-        
+
         if (alternatives.length > 0) {
             const selected = random(alternatives);
             return { role: selected.role, ship: random(selected.ships) };
         }
         return { role: AI_ROLE.HAULER, ship: "Krait" };
     }
-    
+
     _selectOffworldShip() {
         const rand = random();
         if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
@@ -1194,7 +1194,7 @@ try {
         }
         return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
     }
-    
+
     _selectFactionShip(primaryFaction, secondaryFaction) {
         const rand = random();
         if (rand < 0.60 && primaryFaction.length > 0) {
@@ -1204,17 +1204,17 @@ try {
         } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) {
             return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
         }
-        return { 
-            role: AI_ROLE.COMBAT, 
-            ship: random(secondaryFaction.length > 0 ? secondaryFaction : COMBAT_SHIPS) 
+        return {
+            role: AI_ROLE.COMBAT,
+            ship: random(secondaryFaction.length > 0 ? secondaryFaction : COMBAT_SHIPS)
         };
     }
-    
+
     _selectStandardShip(security) {
         const probs = this.getEnemyRoleProbabilities();
         let r = random();
         let chosenRole;
-        
+
         if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
         else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
         else chosenRole = AI_ROLE.HAULER;
@@ -1224,18 +1224,18 @@ try {
             [AI_ROLE.POLICE]: () => random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]),
             [AI_ROLE.HAULER]: () => random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"])
         };
-        
+
         let chosenShip = roleToShip[chosenRole] ? roleToShip[chosenRole]() : "Krait";
-        
+
         // Optional transport override
         if (random() < 0.25 && TRANSPORT_SHIPS.length > 0) {
             chosenRole = AI_ROLE.TRANSPORT;
             chosenShip = random(TRANSPORT_SHIPS);
         }
-        
+
         return { role: chosenRole, ship: chosenShip };
     }
-    
+
     /**
      * Spawn guards for large haulers
      * @private
@@ -1243,29 +1243,29 @@ try {
     _spawnGuardsForHauler(hauler) {
         const slotsLeft = this.maxEnemies - this.enemies.length;
         if (slotsLeft <= 0) return;
-        
+
         const defaultGuardShips = ["Viper", "GladiusFighter"];
         const numGuards = hauler.size > 100 ? min(2, slotsLeft) : (random() < 0.6 ? 1 : 0);
-        
+
         for (let g = 0; g < numGuards; g++) {
             let guardShipTypeName;
             if (GUARD_SHIPS.length > 0) guardShipTypeName = random(GUARD_SHIPS);
             else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
             else guardShipTypeName = random(defaultGuardShips);
-            
+
             if (!guardShipTypeName) guardShipTypeName = "Viper";
-            
+
             const offsetAngle = TWO_PI * (g / numGuards);
-            const spawnDist = hauler.size/2 + 30;
+            const spawnDist = hauler.size / 2 + 30;
             const guardX = hauler.pos.x + cos(offsetAngle) * spawnDist;
             const guardY = hauler.pos.y + sin(offsetAngle) * spawnDist;
-            
+
             let guardNPC = new Enemy(guardX, guardY, this.player, guardShipTypeName, AI_ROLE.GUARD);
             guardNPC.calculateRadianProperties();
             guardNPC.initializeColors();
             guardNPC.principal = hauler;
             guardNPC.changeState(AI_STATE.GUARDING, { principal: hauler });
-            
+
             this.addEnemy(guardNPC);
             HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for hauler ${hauler.shipTypeName}`);
         }
@@ -1296,7 +1296,7 @@ try {
         let chosenRole = selection.role;
         let chosenShipTypeName = selection.ship;
 
-        
+
         // --- Thargoid override only for non-alien systems ---
         if (this.economyType !== "alien" && this.economyType !== "Alien") {
             if (random() < 0.01 && ALIEN_SHIPS.includes("Thargoid")) {
@@ -1305,7 +1305,7 @@ try {
                 if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
             }
         }
-        
+
         if (!chosenShipTypeName) {
             console.warn("StarSystem: chosenShipTypeName was undefined after role selection, defaulting to Krait (Hauler). Role was:", chosenRole);
             chosenShipTypeName = "Krait";
@@ -1317,36 +1317,36 @@ try {
         let spawnDist = this._getDiagonalDistance() + random(800, 2000);
         let spawnX = this.player.pos.x + cos(angle) * spawnDist;
         let spawnY = this.player.pos.y + sin(angle) * spawnDist;
-        
+
         try {
             let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
             newEnemy.calculateRadianProperties();
             newEnemy.initializeColors();
-            
+
             this.addEnemy(newEnemy);
 
             // Spawn guards for large haulers
             if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
                 this._spawnGuardsForHauler(newEnemy);
             }
-            
+
             // Initialize police pursuit if player is wanted
-            if (newEnemy.role === AI_ROLE.POLICE && 
+            if (newEnemy.role === AI_ROLE.POLICE &&
                 ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
-                
+
                 newEnemy.target = this.player;
                 newEnemy.changeState(AI_STATE.APPROACHING);
-                                
+
                 if (newEnemy.pos && this.player.pos) {
                     let angleToPlayer = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
-                    newEnemy.angle = angleToPlayer; 
+                    newEnemy.angle = angleToPlayer;
                 }
-                
+
                 if (STAR_SYSTEM_DEBUG) console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
             }
-            
-        } catch(e) { 
-            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e, "Chosen Ship:", chosenShipTypeName, "Role:", chosenRole); 
+
+        } catch (e) {
+            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e, "Chosen Ship:", chosenShipTypeName, "Role:", chosenRole);
         }
     }
 
@@ -1357,13 +1357,13 @@ try {
         if (!this.player?.pos || this.asteroids.length >= this.maxTotalAsteroids) return;
         try {
             let angle = random(TWO_PI);
-            let spawnDist = this._getDiagonalDistance() + random(200,500);
+            let spawnDist = this._getDiagonalDistance() + random(200, 500);
             let spawnX = this.player.pos.x + cos(angle) * spawnDist;
             let spawnY = this.player.pos.y + sin(angle) * spawnDist;
             let size = random(40, 90); // Use larger default size
             // Call the main addAsteroid method to respect maxTotalAsteroids and centralize creation
             this.addAsteroid(spawnX, spawnY, size);
-        } catch(e) { console.error("!!! ERROR during trySpawnAsteroid:", e); }
+        } catch (e) { console.error("!!! ERROR during trySpawnAsteroid:", e); }
     }
 
     /** Adds a single asteroid to the system. Called by EventManager or trySpawnAsteroid. */
@@ -1375,7 +1375,7 @@ try {
         const asteroid = new Asteroid(x, y, size);
         this.asteroids.push(asteroid);
         return asteroid;
-}
+    }
 
     /**
      * ==========================================================================
@@ -1396,23 +1396,23 @@ try {
     _updateEntities(entityArray, updateFn, shouldRemove, onDestroyFn = null) {
         const count = entityArray.length;
         if (count === 0) return;
-        
+
         for (let i = count - 1; i >= 0; i--) {
             const entity = entityArray[i];
             if (!entity) {
                 this._fastRemove(entityArray, i);
                 continue;
             }
-            
-            try { 
-                updateFn(entity); 
-            } catch(e) { 
-                console.error(`Error updating entity:`, e); 
+
+            try {
+                updateFn(entity);
+            } catch (e) {
+                console.error(`Error updating entity:`, e);
             }
-            
+
             if (shouldRemove(entity)) {
                 if (onDestroyFn) {
-                    try { onDestroyFn(entity, i); } catch(e) { console.error("Error in onDestroy callback:", e); }
+                    try { onDestroyFn(entity, i); } catch (e) { console.error("Error in onDestroy callback:", e); }
                 }
                 this._fastRemove(entityArray, i);
             }
@@ -1426,16 +1426,16 @@ try {
      */
     update() {
         if (!this.player || !this.player.pos) return;
-        
+
         // Update dynamic stock for markets
         this._updateMarketStock();
-        
+
         // Update ambient sound volumes
         this._updateAmbientSounds();
-        
+
         // Calculate screen bounds once for visibility checks
         this._updateScreenBounds();
-        
+
         try {
             // Update all entity categories
             this._updateEnemies();
@@ -1458,8 +1458,8 @@ try {
 
             // Spawning Timers
             this._updateSpawnTimers();
-        } catch (e) { 
-            console.error(`Major ERROR in StarSystem ${this.name}.update:`, e); 
+        } catch (e) {
+            console.error(`Major ERROR in StarSystem ${this.name}.update:`, e);
         }
     }
 
@@ -1475,27 +1475,27 @@ try {
      */
     updateWhileDocked() {
         if (!this.player || !this.player.pos) return;
-        
+
         try {
             // Update markets (prices fluctuate even while docked)
             this._updateMarketStock();
-            
+
             // Update enemies - they move, patrol, fight each other
             // But we'll make them ignore the docked player
             this._updateEnemiesWhileDocked();
-            
+
             // Asteroids drift around
             this._updateAsteroids();
-            
+
             // Planets rotate
             this._updatePlanets();
-            
+
             // Space objects update (decorative)
             this._updateSpaceObjects();
-            
+
             // Explosions fade out
             this._updateExplosions();
-            
+
             // Nebulae visual update (but no player effects)
             for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
                 this.nebulae[i].update();
@@ -1504,19 +1504,19 @@ try {
                     this.nebulae[i].applyEffects(this.enemies[j]);
                 }
             }
-            
+
             // Cosmic storms (affect enemies only)
             this._updateCosmicStormsWhileDocked();
-            
+
             // NPC-only collisions (enemies vs asteroids, enemies vs enemies)
             this._checkNPCCollisions();
-            
+
             // NPC-only projectile collisions (no player involvement)
             this._checkNPCProjectileCollisions();
-            
+
             // Spawning continues
             this._updateSpawnTimers();
-            
+
             // Clean up projectiles, beams, etc. that expire
             this._updateProjectiles();
             this._updateBeams();
@@ -1524,7 +1524,7 @@ try {
             this._updateForceWavesWhileDocked();
             this._updateHarpoons();
             this._updateCargo();
-            
+
         } catch (e) {
             console.error(`Error in StarSystem.updateWhileDocked:`, e);
         }
@@ -1544,7 +1544,7 @@ try {
                 this._fastRemove(this.enemies, i);
                 continue;
             }
-            
+
             try {
                 // Update the enemy AI/movement
                 // The enemy's isTargetValid() will reject the docked player automatically
@@ -1553,7 +1553,7 @@ try {
             } catch (e) {
                 console.error('Error updating enemy while docked:', e);
             }
-            
+
             // Despawn check (but protect mission targets)
             if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
                 this._fastRemove(this.enemies, i);
@@ -1569,21 +1569,21 @@ try {
         for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
             const storm = this.cosmicStorms[i];
             const keepStorm = storm.update();
-            
+
             this._updateStormAmbientSound(storm, i);
-            
+
             if (!keepStorm) {
                 this._removeStormAmbientSound(storm, i);
                 this._fastRemove(this.cosmicStorms, i);
                 continue;
             }
-            
+
             // Apply effects to enemies only (player is safe while docked)
             for (let enemy of this.enemies) {
                 storm.applyEffects(enemy);
             }
         }
-        
+
         // Spawn new storms occasionally
         this._trySpawnCosmicStorm();
     }
@@ -1595,18 +1595,18 @@ try {
     _updateForceWavesWhileDocked() {
         for (let i = this.forceWaves.length - 1; i >= 0; i--) {
             const wave = this.forceWaves[i];
-            
+
             wave.radius += wave.growRate;
-            
+
             if (!wave.entitiesToProcess) {
                 // Only include enemies and asteroids, NOT the player
                 wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
                 wave.processedCount = 0;
                 wave.processed = {};
             }
-            
+
             this._processForceWaveBatch(wave);
-            
+
             if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
                 this._fastRemove(this.forceWaves, i);
             }
@@ -1621,7 +1621,7 @@ try {
         try {
             const enemyCount = this.enemies.length;
             const asteroidCount = this.asteroids.length;
-            
+
             // Enemy vs Asteroid collisions
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
@@ -1634,7 +1634,7 @@ try {
                     }
                 }
             }
-            
+
             // Enemy vs Enemy collisions (optional, can be costly)
             // Skipped for performance - enemies don't collide with each other normally
         } catch (e) {
@@ -1650,45 +1650,45 @@ try {
     _checkNPCProjectileCollisions() {
         const projCount = this.projectiles.length;
         if (projCount === 0) return;
-        
+
         if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
         const distCheckVector = this._distCheckVector;
         const enemyCount = this.enemies.length;
         const asteroidCount = this.asteroids.length;
-        
+
         for (let i = projCount - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
             if (!proj || !proj.pos) {
                 this.removeProjectile(i);
                 continue;
             }
-            
+
             const projPos = proj.pos;
             const projSize = proj.size || 3;
             let hit = false;
-            
+
             // Check asteroids
             if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) continue;
-            
+
             // Check space objects
             if (this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) continue;
-            
+
             // Check mines
             if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
-            
+
             // SKIP player collision check entirely - player is docked and invulnerable
-            
+
             // Enemy-fired projectiles can hit OTHER enemies (friendly fire / combat)
             if (proj.owner instanceof Enemy) {
                 for (let j = 0; j < enemyCount; j++) {
                     const enemy = this.enemies[j];
                     if (!enemy || !enemy.pos || enemy === proj.owner) continue;
                     if (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed()) continue;
-                    
+
                     const combinedRadius = enemy.size + projSize;
                     const combinedRadiusSq = combinedRadius * combinedRadius;
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
-                    
+
                     if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
                         WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
                         if (proj._isMissile) {
@@ -1701,18 +1701,18 @@ try {
                     }
                 }
             }
-            
+
             // Player-fired projectiles still hit enemies (in case player fired just before docking)
             if (!hit && proj.owner instanceof Player) {
                 for (let j = 0; j < enemyCount; j++) {
                     const enemy = this.enemies[j];
                     if (!enemy || !enemy.pos) continue;
                     if (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed()) continue;
-                    
+
                     const combinedRadius = enemy.size + projSize;
                     const combinedRadiusSq = combinedRadius * combinedRadius;
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
-                    
+
                     if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
                         WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
                         if (proj._isMissile) {
@@ -1735,11 +1735,11 @@ try {
     _updateMarketStock() {
         const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
         if (deltaSeconds <= 0) return;
-        
+
         if (this.station?.market?.updateDynamicStock) {
             this.station.market.updateDynamicStock(deltaSeconds);
         }
-        
+
         if (Array.isArray(this.secretStations)) {
             for (const secretStation of this.secretStations) {
                 secretStation?.market?.updateDynamicStock?.(deltaSeconds);
@@ -1803,13 +1803,13 @@ try {
      */
     _handleAsteroidDestruction(asteroid) {
         if (!asteroid.isDestroyed()) return;
-        
+
         // Spawn Mineral Cargo on Asteroid Destruction
         if (random() < 0.85) {
             const baseQuantity = max(1, floor(map(asteroid.size, 30, 350, 1, 15)));
-            const mineralMultiplier = (asteroid.getMineralMultiplier && 
-                                      typeof asteroid.getMineralMultiplier === 'function') 
-                ? asteroid.getMineralMultiplier() 
+            const mineralMultiplier = (asteroid.getMineralMultiplier &&
+                typeof asteroid.getMineralMultiplier === 'function')
+                ? asteroid.getMineralMultiplier()
                 : 1.0;
             const quantity = max(1, floor(baseQuantity * mineralMultiplier));
 
@@ -1817,17 +1817,17 @@ try {
             const offsetY = random(-asteroid.size * 0.2, asteroid.size * 0.2);
 
             const cargoDrop = new Cargo(
-                asteroid.pos.x + offsetX, 
-                asteroid.pos.y + offsetY, 
-                "Minerals", 
+                asteroid.pos.x + offsetX,
+                asteroid.pos.y + offsetY,
+                "Minerals",
                 quantity
             );
             this.addCargo(cargoDrop);
-            
+
             if (typeof uiManager !== 'undefined') {
                 uiManager.addMessage(`Mined ${quantity}t Minerals${asteroid.isRich ? ' (Rich Vein!)' : ''}`);
             }
-            
+
             if (STAR_SYSTEM_DEBUG) {
                 console.log(`Asteroid destroyed, dropped ${quantity}t Minerals${asteroid.isRich ? ' (Rich!)' : ''}`);
             }
@@ -1856,7 +1856,7 @@ try {
             if (planet && typeof planet.update === 'function') {
                 try {
                     planet.update();
-                } catch(e) {
+                } catch (e) {
                     console.error("Error updating planet:", e, planet);
                 }
             }
@@ -1869,7 +1869,7 @@ try {
      */
     _updateSpaceObjects() {
         if (!this.spaceObjects || !this.spaceObjects.length) return;
-        
+
         this._updateEntities(
             this.spaceObjects,
             (so) => so.update(this),
@@ -1925,11 +1925,11 @@ try {
     _updateProjectiles() {
         const projCount = this.projectiles.length;
         if (projCount === 0) return;
-        
+
         for (let i = projCount - 1; i >= 0; i--) {
             let proj = this.projectiles[i];
             proj.update();
-        
+
             if (proj.lifespan <= 0 || proj.isOffScreen()) {
                 this.removeProjectile(i);
             }
@@ -1942,14 +1942,14 @@ try {
      */
     _updateCargo() {
         if (!this.cargo || this.cargo.length === 0) return;
-        
+
         // Clean up invalid/expired cargo
         this._updateEntities(
             this.cargo,
             (c) => { if (c && typeof c.update === 'function') c.update(); },
             (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired())
         );
-        
+
         // Check for player collection
         this.handleCargoCollection();
     }
@@ -1979,18 +1979,18 @@ try {
     _updateForceWaves() {
         for (let i = this.forceWaves.length - 1; i >= 0; i--) {
             const wave = this.forceWaves[i];
-            
+
             // Expand the wave
             wave.radius += wave.growRate;
-            
+
             // First time initialization - find all entities to process
             if (!wave.entitiesToProcess) {
                 this._initializeForceWaveTargets(wave);
             }
-            
+
             // Process entities in batches
             this._processForceWaveBatch(wave);
-            
+
             // Remove wave if complete
             if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
                 this._fastRemove(this.forceWaves, i);
@@ -2005,7 +2005,7 @@ try {
      */
     _initializeForceWaveTargets(wave) {
         wave.entitiesToProcess = [];
-        
+
         // Add all relevant entities that might be affected
         if (wave.owner === this.player) {
             // Player's wave affects enemies and asteroids
@@ -2014,7 +2014,7 @@ try {
             // Enemy's wave affects player only
             if (this.player) wave.entitiesToProcess.push(this.player);
         }
-        
+
         // Initialize tracking
         wave.processedCount = 0;
         wave.processed = {};
@@ -2029,13 +2029,13 @@ try {
         const batchSize = 50; // Process up to 50 entities per frame
         const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
         const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
-        
+
         for (let j = 0; j < entitiesToProcessNow; j++) {
             const entity = wave.entitiesToProcess[wave.processedCount + j];
-            
+
             // Skip if entity is invalid, destroyed, or already processed
             if (!entity || !entity.pos || (typeof entity.isDestroyed === 'function' && entity.isDestroyed()) || wave.processed[entity.id || entity]) continue;
-            
+
             // Fast distance check using squared distance
             const dx = entity.pos.x - wave.pos.x;
             const dy = entity.pos.y - wave.pos.y;
@@ -2048,7 +2048,7 @@ try {
                 this._applyForceWaveDamage(wave, entity, distSq, dx, dy);
             }
         }
-        
+
         // Update processed count
         wave.processedCount += entitiesToProcessNow;
     }
@@ -2066,10 +2066,10 @@ try {
         const maxRadiusAdj = wave.maxRadius + entity.size / 2;
         const dist = Math.sqrt(distSq);
         const distRatio = dist / maxRadiusAdj;
-        
+
         // Gradual falloff curve for better damage distribution
         const falloff = Math.pow(1 - distRatio, 0.5);
-        
+
         // Ensure meaningful minimum damage (at least 30% of max damage)
         const minDamage = Math.max(40, Math.floor(wave.damage * 0.3));
         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
@@ -2077,7 +2077,7 @@ try {
         // Apply damage and mark as processed
         entity.takeDamage(dmg, wave.owner, this);
         wave.processed[entity.id || entity] = true;
-        
+
         // Apply knockback force without allocating vectors
         if (entity.vel) {
             const invLen = dist > 0 ? 1 / dist : 0;
@@ -2095,21 +2095,21 @@ try {
      */
     _updateHarpoons() {
         if (!this.harpoons || !this.harpoons.length) return;
-        
+
         for (let i = this.harpoons.length - 1; i >= 0; i--) {
             const h = this.harpoons[i];
-            try { 
-                h.update && h.update(deltaTime || 16); 
-            } catch(e) { 
-                console.error('Harpoon update error', e); 
-                h && h.break && h.break(); 
+            try {
+                h.update && h.update(deltaTime || 16);
+            } catch (e) {
+                console.error('Harpoon update error', e);
+                h && h.break && h.break();
             }
-            
+
             // Remove if broken or invalid
-            const targetDestroyed = !h || h.broken || !h.owner || !h.target || 
+            const targetDestroyed = !h || h.broken || !h.owner || !h.target ||
                 (typeof h.target.isDestroyed === 'function' && h.target.isDestroyed());
             const done = (h && typeof h.isDone === 'function') ? h.isDone() : false;
-            
+
             if (targetDestroyed || done) {
                 this._fastRemove(this.harpoons, i);
             }
@@ -2141,12 +2141,12 @@ try {
         for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
             const nebula = this.nebulae[i];
             nebula.update();
-            
+
             // Apply effects to player
             if (this.player) {
                 nebula.applyEffects(this.player);
             }
-            
+
             // Apply effects to enemies
             for (let j = 0, elen = this.enemies.length; j < elen; j++) {
                 nebula.applyEffects(this.enemies[j]);
@@ -2162,27 +2162,27 @@ try {
         for (let i = this.cosmicStorms.length - 1; i >= 0; i--) {
             const storm = this.cosmicStorms[i];
             const keepStorm = storm.update();
-            
+
             // Update corresponding ambient sound position
             this._updateStormAmbientSound(storm, i);
-            
+
             // Remove the storm if it has dissipated
             if (!keepStorm) {
                 this._removeStormAmbientSound(storm, i);
                 this._fastRemove(this.cosmicStorms, i);
                 continue;
             }
-            
+
             // Apply effects to entities
             if (this.player) {
                 storm.applyEffects(this.player);
             }
-            
+
             for (let enemy of this.enemies) {
                 storm.applyEffects(enemy);
             }
         }
-        
+
         // Spawn new storms occasionally
         this._trySpawnCosmicStorm();
     }
@@ -2200,7 +2200,7 @@ try {
                 const cfg = ambientSoundManager.activeSources.get(id);
                 if (cfg && storm.pos) cfg.position = storm.pos;
             }
-        } catch(_) {}
+        } catch (_) { }
     }
 
     /**
@@ -2215,7 +2215,7 @@ try {
                 const id = `${this.name}_storm_${index}_${storm.type}`;
                 ambientSoundManager.removeAmbientSound(id);
             }
-        } catch(_) {}
+        } catch (_) { }
     }
 
     /**
@@ -2227,14 +2227,14 @@ try {
             const stormType = random(['electromagnetic', 'gravitational', 'radiation']);
             const angle = random(TWO_PI);
             const distance = this.despawnRadius * 0.15;
-            
+
             this.cosmicStorms.push(new CosmicStorm(
                 this.player.pos.x + cos(angle) * distance,
                 this.player.pos.y + sin(angle) * distance,
                 random(600, 1200),
                 stormType
             ));
-            
+
             if (STAR_SYSTEM_DEBUG) console.log(`New ${stormType} storm spawned naturally`);
 
             // Create ambient sound for the newly spawned storm
@@ -2257,7 +2257,7 @@ try {
                 const snd = ambientSoundManager.createAmbientSound(id, profile);
                 if (snd && st?.pos) snd.position = st.pos.copy();
             }
-        } catch(_) {}
+        } catch (_) { }
     }
 
     /**
@@ -2265,16 +2265,16 @@ try {
      * @private
      */
     _updateSpawnTimers() {
-        this.enemySpawnTimer += deltaTime; 
-        if (this.enemySpawnTimer >= this.enemySpawnInterval) { 
+        this.enemySpawnTimer += deltaTime;
+        if (this.enemySpawnTimer >= this.enemySpawnInterval) {
             this.trySpawnNPC();
-            this.enemySpawnTimer = 0; 
+            this.enemySpawnTimer = 0;
         }
 
-        this.asteroidSpawnTimer += deltaTime; 
-        if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) { 
+        this.asteroidSpawnTimer += deltaTime;
+        if (this.asteroidSpawnTimer >= this.asteroidSpawnInterval) {
             this.trySpawnAsteroid();
-            this.asteroidSpawnTimer = 0; 
+            this.asteroidSpawnTimer = 0;
         }
     }
 
@@ -2325,30 +2325,30 @@ try {
     /** Draws force waves with proper transformation */
     drawForceWaves() {
         if (!this.forceWaves || this.forceWaves.length === 0) return;
-        
+
         // No need for push/pop/translate here since we're already in the right coordinate system
         // from the parent draw() method
-        
+
         for (const wave of this.forceWaves) {
             // Fade out as the wave expands
             const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
-            
+
             // Draw outer ring
             noFill();
             strokeWeight(6);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
             circle(wave.pos.x, wave.pos.y, wave.radius * 2);
-            
+
             // Draw secondary ring
             strokeWeight(3);
             stroke(255, 255, 255, alpha * 0.7);
             circle(wave.pos.x, wave.pos.y, wave.radius * 1.9);
-            
+
             // Draw inner glow
             strokeWeight(10);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
             circle(wave.pos.x, wave.pos.y, wave.radius * 1.7);
-            
+
             // Draw center pulse
             const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
             fill(wave.color[0], wave.color[1], wave.color[2], alpha);
@@ -2361,31 +2361,31 @@ try {
         const dt = deltaTime / 1000; // Convert to seconds
         const mineCount = this.mines.length;
         if (mineCount === 0) return; // Early exit
-        
+
         // Cache enemy count for inner loops
         const enemyCount = this.enemies ? this.enemies.length : 0;
-        
+
         for (let i = mineCount - 1; i >= 0; i--) {
             const mine = this.mines[i];
-            
+
             // Update mine
             mine.update(dt);
-            
+
             // Check if mine is destroyed
             if (mine.destroyed) {
                 this._removeMineFromSystem(mine, i);
                 continue;
             }
-            
+
             // Check if mine is too far from player (cleanup)
             if (this.player && mine.isOffScreen(this.player.pos, this.despawnRadius)) {
                 this._removeMineFromSystem(mine, i);
                 continue;
             }
-            
+
             // Skip if mine is not armed yet
             if (!mine.armed) continue;
-            
+
             // Check proximity to enemies (if player's mine)
             if (mine.owner instanceof Player && enemyCount > 0) {
                 for (let j = 0; j < enemyCount; j++) {
@@ -2398,7 +2398,7 @@ try {
                     }
                 }
             }
-            
+
             // Check proximity to player (if enemy's mine)
             if (!(mine.owner instanceof Player) && this.player) {
                 if (mine.shouldExplode(this.player)) {
@@ -2431,7 +2431,7 @@ try {
     _removeMineFromSystem(mine, index) {
         // Remove from system's mines array
         this._fastRemove(this.mines, index);
-        
+
         // Remove from owner's activeMines tracking array
         if (mine.owner && mine.owner.activeMines) {
             const ownerIndex = mine.owner.activeMines.indexOf(mine);
@@ -2454,7 +2454,7 @@ try {
         // Use object pooling if WeaponSystem is available
         if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
             const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color);
-            
+
             if (explosion) {
                 this.explosions.push(explosion);
                 if (STAR_SYSTEM_DEBUG) console.log(`Successfully added pooled explosion, total explosions: ${this.explosions.length}`);
@@ -2463,7 +2463,7 @@ try {
                 if (STAR_SYSTEM_DEBUG) console.warn(`Failed to get pooled explosion object at (${x.toFixed(1)},${y.toFixed(1)})`);
             }
         }
-        
+
         // Fall back to direct instantiation if pooling is unavailable or failed
         if (STAR_SYSTEM_DEBUG) console.log(`Creating new explosion directly at (${x.toFixed(1)},${y.toFixed(1)})`);
         try {
@@ -2496,13 +2496,13 @@ try {
         const totalMass = mass1 + mass2;
         const impulse1 = 3 * (mass2 / totalMass);
         const impulse2 = 3 * (mass1 / totalMass);
-        
+
         entity1.vel.x -= normalizedX * impulse1;
         entity1.vel.y -= normalizedY * impulse1;
         entity2.vel.x += normalizedX * impulse2;
         entity2.vel.y += normalizedY * impulse2;
     }
-    
+
     /**
      * Applies physics-based collision response between two entities
      * @private
@@ -2514,10 +2514,10 @@ try {
         const invDist = distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
         const normalizedX = dx * invDist;
         const normalizedY = dy * invDist;
-        
+
         this._calculateCollisionImpulse(entity1, entity2, normalizedX, normalizedY);
     }
-    
+
     /**
      * Handles ship-to-ship collision with damage and physics
      * @private
@@ -2525,10 +2525,10 @@ try {
     _handleShipCollision(ship1, ship2) {
         const collisionDamage = Math.floor((ship1.vel.mag() + ship2.vel.mag()) * 0.5);
         if (STAR_SYSTEM_DEBUG) console.log(`Ship collision! Damage: ${collisionDamage}`);
-        
+
         ship1.takeDamage(collisionDamage, ship2);
         ship2.takeDamage(collisionDamage, ship1, this);
-        
+
         // Play bump sound with cooldown
         if (ship1 === this.player) {
             try {
@@ -2541,10 +2541,10 @@ try {
                 }
             } catch (e) { /* ignore sound errors */ }
         }
-        
+
         this._applyCollisionPhysics(ship1, ship2);
     }
-    
+
     /**
      * Handles ship-to-asteroid collision
      * @private
@@ -2559,7 +2559,7 @@ try {
             ship.takeDamage(damage, asteroid);
             asteroid.takeDamage(ship === this.player ? 20 : 10, ship, this);
         }
-        
+
         // Play bump sound for player with cooldown
         if (ship === this.player) {
             try {
@@ -2572,7 +2572,7 @@ try {
                 }
             } catch (e) { /* ignore sound errors */ }
         }
-        
+
         this._applyCollisionPhysics(ship, asteroid);
     }
 
@@ -2581,26 +2581,26 @@ try {
         // Early exit if no player
         if (!this.player || !this.player.pos) return;
         if (!this.player) return;
-        
+
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
-            
+
             // Player vs Enemies - cache lengths for better performance
             const enemyCount = this.enemies.length;
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
                 if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
-                
+
                 // Skip collision detection for player's bodyguards
                 if (enemy.role === AI_ROLE.GUARD && enemy.principal === this.player) {
                     continue; // This prevents collisions between player and their bodyguards
                 }
-                
+
                 if (this.player.checkCollision(enemy)) {
                     this._handleShipCollision(this.player, enemy);
                 }
             }
-            
+
             // Player vs Asteroids collision - cache lengths
             const asteroidCount = this.asteroids.length;
             for (let i = 0; i < asteroidCount; i++) {
@@ -2610,7 +2610,7 @@ try {
                     this._handleAsteroidCollision(this.player, asteroid);
                 }
             }
-            
+
             // Enemy vs Asteroid collisions - optimized with cached lengths
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
@@ -2623,9 +2623,9 @@ try {
                     }
                 }
             }
-            
-            
-        } catch(e) {
+
+
+        } catch (e) {
             console.error("Error in checkCollisions:", e);
         }
     } // End checkCollisions
@@ -2639,11 +2639,11 @@ try {
         const targetSize = target.size || 24;
         const combinedRadius = targetSize + projSize;
         const combinedRadiusSquared = combinedRadius * combinedRadius;
-        
+
         distCheckVector.set(target.pos.x - proj.pos.x, target.pos.y - proj.pos.y);
         return distCheckVector.magSq() <= combinedRadiusSquared;
     }
-    
+
     /**
      * Check and handle projectile collision with asteroids
      * @private
@@ -2652,7 +2652,7 @@ try {
         for (let j = asteroidCount - 1; j >= 0; j--) {
             const asteroid = this.asteroids[j];
             if (!asteroid || asteroid.isDestroyed()) continue;
-            
+
             if (this._checkProjectileBroadphase(proj, asteroid, distCheckVector) && asteroid.checkCollision(proj)) {
                 asteroid.takeDamage(proj.damage || 1);
                 this.removeProjectile(i);
@@ -2662,14 +2662,14 @@ try {
         }
         return false;
     }
-    
+
     /**
      * Check and handle projectile collision with space objects
      * @private
      */
     _checkProjectileSpaceObjectCollision(proj, i, distCheckVector) {
         if (!this.spaceObjects || !this.spaceObjects.length) return false;
-        
+
         for (let j = this.spaceObjects.length - 1; j >= 0; j--) {
             const so = this.spaceObjects[j];
             const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
@@ -2678,13 +2678,13 @@ try {
             if (this._checkProjectileBroadphase(proj, so, distCheckVector) && so.checkCollision && so.checkCollision(proj)) {
                 try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
                 this.removeProjectile(i);
-                this.addExplosion(proj.pos.x, proj.pos.y, 8, [200,100,255]);
+                this.addExplosion(proj.pos.x, proj.pos.y, 8, [200, 100, 255]);
                 return true;
             }
         }
         return false;
     }
-    
+
     /**
      * Check and handle projectile collision with mines
      * @private
@@ -2693,7 +2693,7 @@ try {
         for (let j = this.mines.length - 1; j >= 0; j--) {
             const mine = this.mines[j];
             if (!mine || mine.destroyed || proj.owner === mine.owner) continue;
-            
+
             if (this._checkProjectileBroadphase(proj, mine, distCheckVector)) {
                 mine.takeDamage(proj.damage || 10, proj.owner, this);
                 this.removeProjectile(i);
@@ -2703,7 +2703,7 @@ try {
         }
         return false;
     }
-    
+
     /**
      * Check and handle harpoon collision with cargo
      * @private
@@ -2711,7 +2711,7 @@ try {
     _checkHarpoonCargoCollision(proj, i, distCheckVector) {
         if (!this.cargo || !this.cargo.length) return false;
         if (proj.type !== 'harpoon' && proj.type !== 'HARPOON') return false;
-        
+
         for (let j = this.cargo.length - 1; j >= 0; j--) {
             const cargoItem = this.cargo[j];
             if (!cargoItem || cargoItem.collected || cargoItem.attached) continue;
@@ -2720,7 +2720,7 @@ try {
             const cargoSize = cargoItem.size || 8;
             const combinedRadius = cargoSize + projSize + Math.max(8, cargoSize * 0.6);
             const combinedRadiusSquared = combinedRadius * combinedRadius;
-            
+
             distCheckVector.set(cargoItem.pos.x - proj.pos.x, cargoItem.pos.y - proj.pos.y);
 
             if (distCheckVector.magSq() <= combinedRadiusSquared) {
@@ -2729,8 +2729,8 @@ try {
                     cargoItem.attachedTo = proj.owner || null;
                     cargoItem.attachedBy = 'harpoon';
                     if (cargoItem.vel) { cargoItem.vel.x = 0; cargoItem.vel.y = 0; }
-                    this.addExplosion(proj.pos.x, proj.pos.y, 4, [180,220,255]);
-                    try { if (typeof soundManager !== 'undefined' && soundManager.playWorldSound) soundManager.playWorldSound('harpoonFire', proj.pos.x, proj.pos.y, this.player.pos); } catch(_) {}
+                    this.addExplosion(proj.pos.x, proj.pos.y, 4, [180, 220, 255]);
+                    try { if (typeof soundManager !== 'undefined' && soundManager.playWorldSound) soundManager.playWorldSound('harpoonFire', proj.pos.x, proj.pos.y, this.player.pos); } catch (_) { }
                 } catch (e) { console.error('Error attaching cargo to harpoon:', e); }
                 this.removeProjectile(i);
                 return true;
@@ -2739,170 +2739,82 @@ try {
         return false;
     }
 
-/** 
- * Specifically handles projectile collisions with targets.
- * OPTIMIZED: Uses squared distance checks, reusable vectors, and early exits.
- */
-checkProjectileCollisions() {
-    const projCount = this.projectiles.length;
-    if (projCount === 0) return; // Early exit if no projectiles
-    
-    // Lazy init of reusable vector to avoid object creation in the loop
-    if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
-    
-    const distCheckVector = this._distCheckVector;
-    // Cache counts to avoid repeated length lookups in hot loops
-    const enemyCount = this.enemies.length;
-    const asteroidCount = this.asteroids.length;
-    const spaceObjectCount = this.spaceObjects ? this.spaceObjects.length : 0;
-    const mineCount = this.mines.length;
-    
-    // Process projectiles using optimized collision detection
-    for (let i = projCount - 1; i >= 0; i--) {
-        const proj = this.projectiles[i];
-        if (!proj || !proj.pos) {
-            console.warn(`Invalid projectile at index ${i}, removing`);
-            this.removeProjectile(i);
-            continue;
-        }
-        
-        const projPos = proj.pos;
-        const projSize = proj.size || 3;
-        let hit = false;
-        
-        // Check against various targets using helper methods
-        if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) { hit = true; continue; }
-        if (!hit && this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) { hit = true; continue; }
-        if (!hit && this._checkProjectileMineCollision(proj, i, distCheckVector)) { hit = true; continue; }
+    /** 
+     * Specifically handles projectile collisions with targets.
+     * OPTIMIZED: Uses squared distance checks, reusable vectors, and early exits.
+     */
+    checkProjectileCollisions() {
+        const projCount = this.projectiles.length;
+        if (projCount === 0) return; // Early exit if no projectiles
 
-        // --- Check collisions against missiles (other projectiles) ---
-        if (!hit && this.projectiles && this.projectiles.length > 0) {
-            for (let j = this.projectiles.length - 1; j >= 0; j--) {
-                if (j === i) continue; // Skip self
-                const other = this.projectiles[j];
-                if (!other || !other.pos || !other._isMissile || other.owner === proj.owner) continue;
+        // Lazy init of reusable vector to avoid object creation in the loop
+        if (!this._distCheckVector) this._distCheckVector = createVector(0, 0);
 
-                if (this._checkProjectileBroadphase(proj, other, distCheckVector) && proj.checkCollision(other)) {
-                    try {
-                        if (typeof other.takeDamage === 'function') {
-                            other.takeDamage(proj.damage || 1, proj.owner, this);
-                        } else {
-                            other.lifespan = 0;
-                            other.destroyed = true;
-                            this.addExplosion(other.pos.x, other.pos.y, 8, [255,150,0]);
-                        }
-                    } catch (e) { console.error('Error applying damage to missile:', e); }
+        const distCheckVector = this._distCheckVector;
+        // Cache counts to avoid repeated length lookups in hot loops
+        const enemyCount = this.enemies.length;
+        const asteroidCount = this.asteroids.length;
+        const spaceObjectCount = this.spaceObjects ? this.spaceObjects.length : 0;
+        const mineCount = this.mines.length;
 
-                    this.removeProjectile(i);
-                    this.addExplosion(proj.pos.x, proj.pos.y, 5, [255,200,0]);
-                    hit = true;
-                    break;
-                }
-            }
-        }
-
-        // Check harpoon-cargo collisions
-        if (!hit && this._checkHarpoonCargoCollision(proj, i, distCheckVector)) { hit = true; continue; }
-        // For player hits - use quick distance check first
-        if (proj.owner instanceof Enemy) {
-            const combinedRadius = this.player.size + projSize;
-            const combinedRadiusSquared = combinedRadius * combinedRadius;
-            distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
-            
-            if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(this.player)) {
-                // Harpoon special-case: if an enemy fired a harpoon at the player, spawn a Harpoon tether
-                if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                    // Ensure owner and target have positions before creating tether
-                    const owner = proj.owner;
-                    const target = this.player;
-                    const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
-                    const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
-
-                    if (!ownerHasPos || !targetHasPos) {
-                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                            console.warn('Harpoon spawn skipped: missing anchor positions', {
-                                projType: proj.type,
-                                owner: owner && owner.constructor ? owner.constructor.name : owner,
-                                ownerPos: owner && owner.pos,
-                                targetPos: target && target.pos,
-                                projPos: projPos
-                            });
-                        }
-                        // Remove projectile anyway to avoid lingering projectile
-                        this.removeProjectile(i);
-                        continue;
-                    }
-
-                    try {
-                        if (typeof Harpoon !== 'undefined') {
-                            const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                            if (!this.harpoons) this.harpoons = [];
-                            this.harpoons.push(har);
-                            if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
-                            }
-                        }
-                        // small impact visual and sound
-                        this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
-                    } catch(e) { console.error('Failed to create Harpoon', e); }
-                    this.removeProjectile(i);
-                    continue;
-                }
-
-                // Use centralized hit handler from WeaponSystem
-                WeaponSystem.handleHitEffects(
-                    this.player,
-                    projPos,
-                    proj.damage,
-                    proj.owner,
-                    this,
-                    proj.color
-                );
-                
-                // Apply Tangle effect if it's a tangle projectile
-                if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
-                    this.player.applyDragEffect(
-                        proj.tangleDuration || 5.0, 
-                        proj.dragMultiplier || 10.0,
-                        proj.rotationBlockMultiplier || 0.1
-                    );
-                    
-                    // Add visual feedback
-                    if (typeof uiManager !== 'undefined') {
-                        uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
-                    }
-                }
-                
-                // Create explosion effect for missile hits
-                if (proj._isMissile) {
-                    const explosionColor = Array.isArray(proj.color) ? proj.color : 
-                        (proj.color && proj.color.levels) ? [proj.color.levels[0], proj.color.levels[1], proj.color.levels[2]] :
-                        [255, 150, 0];
-                    this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
-                }
-                
+        // Process projectiles using optimized collision detection
+        for (let i = projCount - 1; i >= 0; i--) {
+            const proj = this.projectiles[i];
+            if (!proj || !proj.pos) {
+                console.warn(`Invalid projectile at index ${i}, removing`);
                 this.removeProjectile(i);
                 continue;
             }
-        }
-        
-        // For enemy hits - use spatial partitioning approach
-        if (proj.owner instanceof Player) {
-            // Get only nearby enemies using pre-check with distance squared
-            for (let j = 0; j < enemyCount; j++) {
-                const enemy = this.enemies[j];
-                // Early bailout for invalid or destroyed enemies
-                if (!enemy || !enemy.pos || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
-                const combinedRadius = enemy.size + projSize;
+
+            const projPos = proj.pos;
+            const projSize = proj.size || 3;
+            let hit = false;
+
+            // Check against various targets using helper methods
+            if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) { hit = true; continue; }
+            if (!hit && this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) { hit = true; continue; }
+            if (!hit && this._checkProjectileMineCollision(proj, i, distCheckVector)) { hit = true; continue; }
+
+            // --- Check collisions against missiles (other projectiles) ---
+            if (!hit && this.projectiles && this.projectiles.length > 0) {
+                for (let j = this.projectiles.length - 1; j >= 0; j--) {
+                    if (j === i) continue; // Skip self
+                    const other = this.projectiles[j];
+                    if (!other || !other.pos || !other._isMissile || other.owner === proj.owner) continue;
+
+                    if (this._checkProjectileBroadphase(proj, other, distCheckVector) && proj.checkCollision(other)) {
+                        try {
+                            if (typeof other.takeDamage === 'function') {
+                                other.takeDamage(proj.damage || 1, proj.owner, this);
+                            } else {
+                                other.lifespan = 0;
+                                other.destroyed = true;
+                                this.addExplosion(other.pos.x, other.pos.y, 8, [255, 150, 0]);
+                            }
+                        } catch (e) { console.error('Error applying damage to missile:', e); }
+
+                        this.removeProjectile(i);
+                        this.addExplosion(proj.pos.x, proj.pos.y, 5, [255, 200, 0]);
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+
+            // Check harpoon-cargo collisions
+            if (!hit && this._checkHarpoonCargoCollision(proj, i, distCheckVector)) { hit = true; continue; }
+            // For player hits - use quick distance check first
+            if (proj.owner instanceof Enemy) {
+                const combinedRadius = this.player.size + projSize;
                 const combinedRadiusSquared = combinedRadius * combinedRadius;
-                distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
-                
-                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
-                    // Harpoon special-case: spawn a Harpoon tether instead of normal hit
+                distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
+
+                if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(this.player)) {
+                    // Harpoon special-case: if an enemy fired a harpoon at the player, spawn a Harpoon tether
                     if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
                         // Ensure owner and target have positions before creating tether
                         const owner = proj.owner;
-                        const target = enemy;
+                        const target = this.player;
                         const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
                         const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
 
@@ -2916,8 +2828,9 @@ checkProjectileCollisions() {
                                     projPos: projPos
                                 });
                             }
+                            // Remove projectile anyway to avoid lingering projectile
                             this.removeProjectile(i);
-                            break;
+                            continue;
                         }
 
                         try {
@@ -2926,19 +2839,19 @@ checkProjectileCollisions() {
                                 if (!this.harpoons) this.harpoons = [];
                                 this.harpoons.push(har);
                                 if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                    console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                    console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
                                 }
                             }
                             // small impact visual and sound
-                            this.addExplosion(projPos.x, projPos.y, 6, [180,220,255]);
-                        } catch(e) { console.error('Failed to create Harpoon', e); }
+                            this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                        } catch (e) { console.error('Failed to create Harpoon', e); }
                         this.removeProjectile(i);
-                        break;
+                        continue;
                     }
 
                     // Use centralized hit handler from WeaponSystem
                     WeaponSystem.handleHitEffects(
-                        enemy,
+                        this.player,
                         projPos,
                         proj.damage,
                         proj.owner,
@@ -2947,96 +2860,183 @@ checkProjectileCollisions() {
                     );
 
                     // Apply Tangle effect if it's a tangle projectile
-                    if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
-                        enemy.applyDragEffect(
-                            proj.tangleDuration || 5.0, 
+                    if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
+                        this.player.applyDragEffect(
+                            proj.tangleDuration || 5.0,
                             proj.dragMultiplier || 10.0,
                             proj.rotationBlockMultiplier || 0.1
                         );
 
-                        // Add visual feedback for player
+                        // Add visual feedback
                         if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage(`${enemy.shipTypeName} caught in energy tangle!`, "#30FFB4");
+                            uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
                         }
                     }
 
+                    // Create explosion effect for missile hits
+                    if (proj._isMissile) {
+                        const explosionColor = Array.isArray(proj.color) ? proj.color :
+                            (proj.color && proj.color.levels) ? [proj.color.levels[0], proj.color.levels[1], proj.color.levels[2]] :
+                                [255, 150, 0];
+                        this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
+                    }
+
                     this.removeProjectile(i);
-                    break;
+                    continue;
                 }
             }
-        }
-        
-        // For enemy-to-enemy hits (friendly fire)
-        if (proj.owner instanceof Enemy) {
-            for (let j = 0; j < enemyCount; j++) {
-                const enemy = this.enemies[j];
-                // Early bailout for invalid enemies or self-fire
-                if (!enemy || !enemy.pos || enemy === proj.owner || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
-                if (proj.checkCollision(enemy)) {
-                    // Harpoon special-case: spawn a Harpoon tether between enemies
-                    if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
-                        const owner = proj.owner;
-                        const target = enemy;
-                        const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
-                        const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
 
-                        if (!ownerHasPos || !targetHasPos) {
-                            if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                console.warn('Harpoon spawn skipped (enemy->enemy): missing anchor positions', {
-                                    projType: proj.type,
-                                    owner: owner && owner.constructor ? owner.constructor.name : owner,
-                                    ownerPos: owner && owner.pos,
-                                    targetPos: target && target.pos,
-                                    projPos: proj.pos
-                                });
+            // For enemy hits - use spatial partitioning approach
+            if (proj.owner instanceof Player) {
+                // Get only nearby enemies using pre-check with distance squared
+                for (let j = 0; j < enemyCount; j++) {
+                    const enemy = this.enemies[j];
+                    // Early bailout for invalid or destroyed enemies
+                    if (!enemy || !enemy.pos || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+                    const combinedRadius = enemy.size + projSize;
+                    const combinedRadiusSquared = combinedRadius * combinedRadius;
+                    distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
+
+                    if (distCheckVector.magSq() <= combinedRadiusSquared && proj.checkCollision(enemy)) {
+                        // Harpoon special-case: spawn a Harpoon tether instead of normal hit
+                        if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                            // Ensure owner and target have positions before creating tether
+                            const owner = proj.owner;
+                            const target = enemy;
+                            const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                            const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
+
+                            if (!ownerHasPos || !targetHasPos) {
+                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                    console.warn('Harpoon spawn skipped: missing anchor positions', {
+                                        projType: proj.type,
+                                        owner: owner && owner.constructor ? owner.constructor.name : owner,
+                                        ownerPos: owner && owner.pos,
+                                        targetPos: target && target.pos,
+                                        projPos: projPos
+                                    });
+                                }
+                                this.removeProjectile(i);
+                                break;
                             }
+
+                            try {
+                                if (typeof Harpoon !== 'undefined') {
+                                    const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                    if (!this.harpoons) this.harpoons = [];
+                                    this.harpoons.push(har);
+                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                        console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                    }
+                                }
+                                // small impact visual and sound
+                                this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                            } catch (e) { console.error('Failed to create Harpoon', e); }
                             this.removeProjectile(i);
                             break;
                         }
 
-                        try {
-                            if (typeof Harpoon !== 'undefined') {
-                                const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                if (!this.harpoons) this.harpoons = [];
-                                this.harpoons.push(har);
-                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                    console.log('Harpoon spawned (enemy->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
-                                }
+                        // Use centralized hit handler from WeaponSystem
+                        WeaponSystem.handleHitEffects(
+                            enemy,
+                            projPos,
+                            proj.damage,
+                            proj.owner,
+                            this,
+                            proj.color
+                        );
+
+                        // Apply Tangle effect if it's a tangle projectile
+                        if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
+                            enemy.applyDragEffect(
+                                proj.tangleDuration || 5.0,
+                                proj.dragMultiplier || 10.0,
+                                proj.rotationBlockMultiplier || 0.1
+                            );
+
+                            // Add visual feedback for player
+                            if (typeof uiManager !== 'undefined') {
+                                uiManager.addMessage(`${enemy.shipTypeName} caught in energy tangle!`, "#30FFB4");
                             }
-                            this.addExplosion(proj.pos.x, proj.pos.y, 6, [180,220,255]);
-                        } catch(e) { console.error('Failed to create Harpoon (enemy->enemy)', e); }
+                        }
+
                         this.removeProjectile(i);
-                        hit = true;
                         break;
                     }
+                }
+            }
 
-                    // Use centralized hit handler from WeaponSystem for other projectile types
-                    WeaponSystem.handleHitEffects(
-                        enemy,
-                        proj.pos,
-                        proj.damage / 2, // Reduce damage for friendly fire
-                        proj.owner,
-                        this,
-                        proj.color
-                    );
+            // For enemy-to-enemy hits (friendly fire)
+            if (proj.owner instanceof Enemy) {
+                for (let j = 0; j < enemyCount; j++) {
+                    const enemy = this.enemies[j];
+                    // Early bailout for invalid enemies or self-fire
+                    if (!enemy || !enemy.pos || enemy === proj.owner || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+                    if (proj.checkCollision(enemy)) {
+                        // Harpoon special-case: spawn a Harpoon tether between enemies
+                        if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                            const owner = proj.owner;
+                            const target = enemy;
+                            const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                            const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
 
-                    // Apply Tangle effect if it's a tangle projectile
-                    if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
-                        enemy.applyDragEffect(
-                            (proj.tangleDuration || 5.0), 
-                            (proj.dragMultiplier || 10.0),
-                            (proj.rotationBlockMultiplier || 0.1)
+                            if (!ownerHasPos || !targetHasPos) {
+                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                    console.warn('Harpoon spawn skipped (enemy->enemy): missing anchor positions', {
+                                        projType: proj.type,
+                                        owner: owner && owner.constructor ? owner.constructor.name : owner,
+                                        ownerPos: owner && owner.pos,
+                                        targetPos: target && target.pos,
+                                        projPos: proj.pos
+                                    });
+                                }
+                                this.removeProjectile(i);
+                                break;
+                            }
+
+                            try {
+                                if (typeof Harpoon !== 'undefined') {
+                                    const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                    if (!this.harpoons) this.harpoons = [];
+                                    this.harpoons.push(har);
+                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                        console.log('Harpoon spawned (enemy->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                    }
+                                }
+                                this.addExplosion(proj.pos.x, proj.pos.y, 6, [180, 220, 255]);
+                            } catch (e) { console.error('Failed to create Harpoon (enemy->enemy)', e); }
+                            this.removeProjectile(i);
+                            hit = true;
+                            break;
+                        }
+
+                        // Use centralized hit handler from WeaponSystem for other projectile types
+                        WeaponSystem.handleHitEffects(
+                            enemy,
+                            proj.pos,
+                            proj.damage / 2, // Reduce damage for friendly fire
+                            proj.owner,
+                            this,
+                            proj.color
                         );
-                    }
 
-                    this.removeProjectile(i);
-                    hit = true;          // mark that we've handled this projectile
-                    break;
+                        // Apply Tangle effect if it's a tangle projectile
+                        if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
+                            enemy.applyDragEffect(
+                                (proj.tangleDuration || 5.0),
+                                (proj.dragMultiplier || 10.0),
+                                (proj.rotationBlockMultiplier || 0.1)
+                            );
+                        }
+
+                        this.removeProjectile(i);
+                        hit = true;          // mark that we've handled this projectile
+                        break;
+                    }
                 }
             }
         }
-    }
-} // End checkProjectileCollisions
+    } // End checkProjectileCollisions
 
     /**
      * Handles player collecting cargo in the system
@@ -3053,9 +3053,9 @@ checkProjectileCollisions() {
                 this._fastRemove(this.cargo, i);
                 continue;
             }
-            
+
             if (cargoItem.collected) continue;
-            
+
             if (cargoItem.isExpired && cargoItem.isExpired()) {
                 CARGO_LOG(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
                 this._fastRemove(this.cargo, i);
@@ -3107,10 +3107,10 @@ checkProjectileCollisions() {
                         //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
                     }
                 } else {
-                     // Show cargo full message if needed
-                     if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
-                         uiManager.addMessage(`Cargo hold full!`, [255, 200, 0]);
-                     }
+                    // Show cargo full message if needed
+                    if (addResult.reason === 'CARGO_FULL' && typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Cargo hold full!`, [255, 200, 0]);
+                    }
                 }
             }
         }
@@ -3123,7 +3123,7 @@ checkProjectileCollisions() {
             this.projectiles.push(proj);
         }
     }
-    
+
     /** Removes a projectile and returns it to the pool if possible */
     removeProjectile(i) {
         // Return projectile to pool before splicing if WeaponSystem is available
@@ -3142,7 +3142,7 @@ checkProjectileCollisions() {
     addBeam(beam) { if (beam) this.beams.push(beam); }
 
     /** Adds a mine to the system's list. */
-    addMine(mine) { 
+    addMine(mine) {
         if (mine) {
             mine.system = this;
             this.mines.push(mine);
@@ -3155,7 +3155,7 @@ checkProjectileCollisions() {
     /** Adds a cargo item to the system's cargo array */
     addCargo(cargo) {
         if (!this.cargo) this.cargo = [];
-        
+
         if (cargo) {
             this.cargo.push(cargo);
             CARGO_LOG(`Cargo added to system ${this.name}: ${cargo.type} x${cargo.quantity}`);
@@ -3176,18 +3176,18 @@ checkProjectileCollisions() {
      */
     drawBackground() {
         // Clear background with dark space color
-        fill(0, 0, 0); 
+        fill(0, 0, 0);
         noStroke();
         rect(-width * 2, -height * 2, width * 4, height * 4);
-        
+
         // Always use progressive tile-based rendering (worker-driven)
         this._drawProgressiveStarfield();
-        
+
         // Draw spectacular stars (animated phenomena) - these are rare and change over time
         // so they're drawn directly each frame, but only in visible area
         this._drawSpectacularStarsOverlay();
     }
-    
+
     /**
      * Sets the starfield rendering mode.
      * @param {string} mode - 'progressive', 'buffered', or 'legacy'
@@ -3197,7 +3197,7 @@ checkProjectileCollisions() {
         this._starfieldRenderMode = 'progressive';
         this.resetStarfieldBuffer();
     }
-    
+
     /**
      * Progressive starfield rendering - generates tiles incrementally over multiple frames.
      * Never shows black background by falling back to direct rendering for uncached tiles.
@@ -3205,38 +3205,38 @@ checkProjectileCollisions() {
      */
     _drawProgressiveStarfield() {
         if (!this.player || !this.player.pos) return;
-        
+
         const tileSize = this._starfieldTileSize;
         const playerX = this.player.pos.x;
         const playerY = this.player.pos.y;
-        
+
         // Track player velocity for predictive loading
         if (this.player.vel) {
             this._starfieldLastPlayerVelX = this.player.vel.x || 0;
             this._starfieldLastPlayerVelY = this.player.vel.y || 0;
         }
-        
+
         // Calculate visible tile range with some padding
         const padding = tileSize; // One tile extra on each side
-        const left = playerX - width/2 - padding;
-        const right = playerX + width/2 + padding;
-        const top = playerY - height/2 - padding;
-        const bottom = playerY + height/2 + padding;
-        
+        const left = playerX - width / 2 - padding;
+        const right = playerX + width / 2 + padding;
+        const top = playerY - height / 2 - padding;
+        const bottom = playerY + height / 2 + padding;
+
         const startTileX = Math.floor(left / tileSize);
         const endTileX = Math.ceil(right / tileSize);
         const startTileY = Math.floor(top / tileSize);
         const endTileY = Math.ceil(bottom / tileSize);
-        
+
         // Update tile last-used timestamps and identify missing tiles
         const currentTime = millis();
         const missingTiles = [];
-        
+
         for (let tx = startTileX; tx <= endTileX; tx++) {
             for (let ty = startTileY; ty <= endTileY; ty++) {
                 const key = `${tx},${ty}`;
                 const tile = this._starfieldTiles.get(key);
-                
+
                 if (tile && tile.buffer) {
                     // Update last used time
                     tile.lastUsed = currentTime;
@@ -3253,20 +3253,20 @@ checkProjectileCollisions() {
                 }
             }
         }
-        
+
         // Add missing tiles to queue (prioritize by proximity to player and direction of travel)
         this._queueTilesForGeneration(missingTiles, playerX, playerY);
-        
+
         // Process tile generation queue (limited per frame for smoothness)
         this._processTileQueue();
-        
+
         // Predictive loading: queue tiles ahead of player movement
         this._queuePredictiveTiles(playerX, playerY, startTileX, endTileX, startTileY, endTileY);
-        
+
         // Cleanup old tiles to manage memory
         this._cleanupOldTiles(currentTime);
     }
-    
+
     /**
      * Draws stars directly for a single tile area (fallback when tile not cached).
      * This prevents black backgrounds by rendering stars immediately when a tile
@@ -3282,11 +3282,11 @@ checkProjectileCollisions() {
         const right = left + tileSize;
         const top = ty * tileSize;
         const bottom = top + tileSize;
-        
+
         const currentMillis = millis();
         const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
         const baseStarSize = Math.max(1, pixelRatio * 0.6);
-        
+
         // Draw both star layers for this tile
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 45,
@@ -3295,7 +3295,7 @@ checkProjectileCollisions() {
             brightnessRange: [80, 160],
             colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
         }, currentMillis);
-        
+
         this.drawStarLayer(left, right, top, bottom, {
             gridSize: 200,
             maxStarsPerCell: 1,
@@ -3304,7 +3304,7 @@ checkProjectileCollisions() {
             colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
         }, currentMillis);
     }
-    
+
     /**
      * Queues tiles for background generation, prioritizing by distance and direction.
      * @param {Array} tiles - Array of {tx, ty, key} objects
@@ -3316,17 +3316,17 @@ checkProjectileCollisions() {
         const tileSize = this._starfieldTileSize;
         const velX = this._starfieldLastPlayerVelX;
         const velY = this._starfieldLastPlayerVelY;
-        
+
         // Calculate priority for each tile
         const tilesWithPriority = tiles.map(t => {
             const tileCenterX = (t.tx + 0.5) * tileSize;
             const tileCenterY = (t.ty + 0.5) * tileSize;
-            
+
             // Base priority on distance from player
             const dx = tileCenterX - playerX;
             const dy = tileCenterY - playerY;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            
+
             // Boost priority for tiles in direction of travel
             let directionBoost = 0;
             if (velX !== 0 || velY !== 0) {
@@ -3336,16 +3336,16 @@ checkProjectileCollisions() {
                     directionBoost = dotProduct > 0 ? dotProduct * STARFIELD_CONFIG.DIRECTION_BOOST : 0;
                 }
             }
-            
+
             return {
                 ...t,
                 priority: dist - directionBoost // Lower is better
             };
         });
-        
+
         // Sort by priority and add to queue (avoid duplicates)
         tilesWithPriority.sort((a, b) => a.priority - b.priority);
-        
+
         for (const tile of tilesWithPriority) {
             // Check if already in queue or already cached (including pending tiles)
             const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
@@ -3355,13 +3355,13 @@ checkProjectileCollisions() {
                 this._starfieldTileQueue.push(tile);
             }
         }
-        
+
         // Limit queue size
         if (this._starfieldTileQueue.length > this._starfieldMaxCachedTiles * 2) {
             this._starfieldTileQueue.length = this._starfieldMaxCachedTiles * 2;
         }
     }
-    
+
     /**
      * Queues tiles ahead of player movement for predictive loading.
      * @private
@@ -3370,27 +3370,27 @@ checkProjectileCollisions() {
         const tileSize = this._starfieldTileSize;
         const velX = this._starfieldLastPlayerVelX;
         const velY = this._starfieldLastPlayerVelY;
-        
+
         // Only predict if moving reasonably fast
         const velMag = Math.sqrt(velX * velX + velY * velY);
         if (velMag < 2) return;
-        
+
         // Predict position ahead based on current velocity
         const predictX = playerX + velX * STARFIELD_CONFIG.PREDICTION_FRAMES;
         const predictY = playerY + velY * STARFIELD_CONFIG.PREDICTION_FRAMES;
-        
+
         // Calculate predicted tile range
         const padding = tileSize;
-        const predLeft = predictX - width/2 - padding;
-        const predRight = predictX + width/2 + padding;
-        const predTop = predictY - height/2 - padding;
-        const predBottom = predictY + height/2 + padding;
-        
+        const predLeft = predictX - width / 2 - padding;
+        const predRight = predictX + width / 2 + padding;
+        const predTop = predictY - height / 2 - padding;
+        const predBottom = predictY + height / 2 + padding;
+
         const predStartX = Math.floor(predLeft / tileSize);
         const predEndX = Math.ceil(predRight / tileSize);
         const predStartY = Math.floor(predTop / tileSize);
         const predEndY = Math.ceil(predBottom / tileSize);
-        
+
         // Queue tiles that are in predicted range but not in current range
         const predictiveTiles = [];
         for (let tx = predStartX; tx <= predEndX; tx++) {
@@ -3399,14 +3399,14 @@ checkProjectileCollisions() {
                 if (tx >= startTileX && tx <= endTileX && ty >= startTileY && ty <= endTileY) {
                     continue;
                 }
-                
+
                 const key = `${tx},${ty}`;
                 if (!this._starfieldTiles.has(key)) {
                     predictiveTiles.push({ tx, ty, key });
                 }
             }
         }
-        
+
         // Queue predictive tiles with low priority
         for (const tile of predictiveTiles) {
             const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
@@ -3415,7 +3415,7 @@ checkProjectileCollisions() {
             }
         }
     }
-    
+
     /**
      * Processes the tile generation queue, generating a limited number per frame.
      * @private
@@ -3423,19 +3423,19 @@ checkProjectileCollisions() {
     _processTileQueue() {
         const maxPerFrame = this._starfieldMaxTilesPerFrame;
         let generated = 0;
-        
+
         while (this._starfieldTileQueue.length > 0 && generated < maxPerFrame) {
             const tile = this._starfieldTileQueue.shift();
-            
+
             // Skip if already generated
             if (this._starfieldTiles.has(tile.key)) continue;
-            
+
             // Generate the tile
             this._generateTile(tile.tx, tile.ty);
             generated++;
         }
     }
-    
+
     /**
      * Generates a single starfield tile and caches it.
      * @param {number} tx - Tile X coordinate
@@ -3501,7 +3501,7 @@ checkProjectileCollisions() {
             console.log(`Generated starfield tile at (${tx}, ${ty})`);
         }
     }
-    
+
     /**
      * Draws a layer of stars to a tile buffer.
      * @private
@@ -3510,7 +3510,7 @@ checkProjectileCollisions() {
         const tileSize = this._starfieldTileSize;
         const gridSize = config.gridSize;
         const systemSeed = this.systemIndex * 1337;
-        
+
         // Pre-define colors
         const colors = {
             white: [255, 255, 255],
@@ -3518,13 +3518,13 @@ checkProjectileCollisions() {
             yellow: [255, 250, 200],
             red: [255, 200, 180]
         };
-        
+
         // Integer math for grid coordinates
         const startGX = Math.floor(worldLeft / gridSize);
         const endGX = Math.ceil(worldRight / gridSize);
         const startGY = Math.floor(worldTop / gridSize);
         const endGY = Math.ceil(worldBottom / gridSize);
-        
+
         // Extract config values for faster access
         const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
         const minSize = sizeRange[0];
@@ -3532,79 +3532,79 @@ checkProjectileCollisions() {
         const minBright = brightnessRange[0];
         const brightDiff = brightnessRange[1] - minBright;
         const typesLen = colorTypes.length;
-        
+
         // Calculate buffer offset
         const bufferOffsetX = worldLeft;
         const bufferOffsetY = worldTop;
-        
+
         // Reuse variables
         let rng, cellSeed, starCount, worldX, worldY, bufferX, bufferY;
         let size, brightness, colorType, baseColor, r, g, b;
-        
+
         for (let gx = startGX; gx <= endGX; gx++) {
             const gxSeed = (gx * 73856093) >>> 0;
-            
+
             for (let gy = startGY; gy <= endGY; gy++) {
                 cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                 rng = cellSeed;
-                
+
                 // Skip check
                 rng = (rng * 1664525 + 1013904223) >>> 0;
                 if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                
+
                 // Star count
                 rng = (rng * 1664525 + 1013904223) >>> 0;
                 starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                
+
                 for (let i = 0; i < starCount; i++) {
                     // World X
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
+
                     // World Y
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
+
                     // Convert world coords to buffer coords
                     bufferX = worldX - bufferOffsetX;
                     bufferY = worldY - bufferOffsetY;
-                    
+
                     // Skip if outside tile bounds (with small margin)
                     if (bufferX < -5 || bufferX > tileSize + 5 ||
                         bufferY < -5 || bufferY > tileSize + 5) {
                         continue;
                     }
-                    
+
                     // Size
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     size = minSize + (rng / 4294967296) * sizeDiff;
-                    
+
                     // Brightness
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     brightness = minBright + (rng / 4294967296) * brightDiff;
-                    
+
                     if (size < 2) {
                         brightness = (brightness * 1.4 > 255) ? 255 : brightness * 1.4;
                     }
-                    
+
                     // Color
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     colorType = colorTypes[Math.floor((rng / 4294967296) * typesLen)];
                     baseColor = colors[colorType];
-                    
+
                     // Apply brightness
                     const brightnessFactor = brightness / 255;
                     r = baseColor[0] * brightnessFactor;
                     g = baseColor[1] * brightnessFactor;
                     b = baseColor[2] * brightnessFactor;
-                    
+
                     buffer.fill(r, g, b);
-                    
+
                     if (size <= 2) {
                         buffer.square(bufferX, bufferY, (size < 1 ? 1 : Math.round(size)));
                     } else {
                         buffer.ellipse(bufferX, bufferY, size, size);
-                        
+
                         // Glow effect for large bright stars
                         if (brightness > 200 && size > 3) {
                             buffer.fill(r, g, b, 40);
@@ -3615,7 +3615,7 @@ checkProjectileCollisions() {
             }
         }
     }
-    
+
     /**
      * Cleans up old tiles that haven't been used recently.
      * @param {number} currentTime - Current timestamp
@@ -3626,32 +3626,32 @@ checkProjectileCollisions() {
         if (!this._lastTileCleanup) this._lastTileCleanup = 0;
         if (currentTime - this._lastTileCleanup < STARFIELD_CONFIG.CLEANUP_INTERVAL_MS) return;
         this._lastTileCleanup = currentTime;
-        
+
         // If we're under the limit, don't cleanup
         if (this._starfieldTiles.size <= this._starfieldMaxCachedTiles) return;
-        
+
         // Build list of tiles with their age
         const tiles = [];
         for (const [key, tile] of this._starfieldTiles.entries()) {
             tiles.push({ key, age: currentTime - tile.lastUsed, buffer: tile.buffer });
         }
-        
+
         // Sort by age (oldest first)
         tiles.sort((a, b) => b.age - a.age);
-        
+
         // Remove oldest tiles until we're under the limit
         const toRemove = tiles.length - this._starfieldMaxCachedTiles;
         for (let i = 0; i < toRemove; i++) {
             const tile = tiles[i];
-            try { tile.buffer.remove(); } catch (e) {}
+            try { tile.buffer.remove(); } catch (e) { }
             this._starfieldTiles.delete(tile.key);
         }
-        
+
         if (STAR_SYSTEM_DEBUG && toRemove > 0) {
             console.log(`Cleaned up ${toRemove} old starfield tiles`);
         }
     }
-    
+
     /**
      * Draws spectacular star phenomena as an overlay.
      * These are animated and drawn directly each frame in the visible area only.
@@ -3662,23 +3662,23 @@ checkProjectileCollisions() {
     _drawSpectacularStarsOverlay() {
         // Safety check for player position
         if (!this.player || !this.player.pos) return;
-        
+
         const currentMillis = millis();
         const padding = 100;
         const playerX = this.player.pos.x;
         const playerY = this.player.pos.y;
-        
-        const left = playerX - width/2 - padding;
-        const right = playerX + width/2 + padding;
-        const top = playerY - height/2 - padding;
-        const bottom = playerY + height/2 + padding;
-        
+
+        const left = playerX - width / 2 - padding;
+        const right = playerX + width / 2 + padding;
+        const top = playerY - height / 2 - padding;
+        const bottom = playerY + height / 2 + padding;
+
         const pixelRatio = typeof pixelDensity === 'function' ? pixelDensity() : 1;
         const baseStarSize = Math.max(1, pixelRatio * 0.6);
-        
+
         this.drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis);
     }
-    
+
     /**
      * Draws a single star layer within the specified bounds.
      * Uses deterministic procedural generation based on grid cells.
@@ -3687,7 +3687,7 @@ checkProjectileCollisions() {
     drawStarLayer(left, right, top, bottom, config, currentMillis) {
         const gridSize = config.gridSize;
         const systemSeed = this.systemIndex * 1337;
-        
+
         // Pre-define colors to avoid object creation inside loops
         // Using Int16Array or simple vars is faster, but object lookup is optimized enough in V8
         // providing we don't recreate the object every frame
@@ -3697,13 +3697,13 @@ checkProjectileCollisions() {
             yellow: [255, 250, 200],
             red: [255, 200, 180]
         };
-        
+
         // Integer math for grid coordinates is faster
         const startGX = Math.floor(left / gridSize);
         const endGX = Math.ceil(right / gridSize);
         const startGY = Math.floor(top / gridSize);
         const endGY = Math.ceil(bottom / gridSize);
-        
+
         noStroke();
 
         // Extract config values to local variables for faster access inside loop
@@ -3713,87 +3713,87 @@ checkProjectileCollisions() {
         const minBright = brightnessRange[0];
         const brightDiff = brightnessRange[1] - minBright;
         const typesLen = colorTypes.length;
-        
+
         // Reuse variables to avoid GC
         let rng, cellSeed, starCount, worldX, worldY;
         let size, brightness, colorType, baseColor, r, g, b;
-        
+
         for (let gx = startGX; gx <= endGX; gx++) {
             // Cache the X part of the seed calculation
             const gxSeed = (gx * 73856093) >>> 0;
-            
+
             for (let gy = startGY; gy <= endGY; gy++) {
-                
+
                 // Deterministic random seed
                 cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                 rng = cellSeed;
-                
+
                 // INLINED fastRandom() logic
                 // 1. Skip Check
                 rng = (rng * 1664525 + 1013904223) >>> 0;
                 if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                
+
                 // 2. Star Count
                 rng = (rng * 1664525 + 1013904223) >>> 0;
                 starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                
+
                 for (let i = 0; i < starCount; i++) {
                     // 3. World X
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
+
                     // 4. World Y
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                    
+
                     // 5. Size
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     size = minSize + (rng / 4294967296) * sizeDiff;
-                    
+
                     // 6. Brightness
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     brightness = minBright + (rng / 4294967296) * brightDiff;
-                    
+
                     if (size < 2) {
                         brightness = (brightness * 1.4 > 255) ? 255 : brightness * 1.4;
                     }
-                    
+
                     // 7. Color
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     colorType = colorTypes[Math.floor((rng / 4294967296) * typesLen)];
                     baseColor = colors[colorType];
-                    
+
                     // Apply brightness
                     const brightnessFactor = brightness / 255;
                     r = baseColor[0] * brightnessFactor;
                     g = baseColor[1] * brightnessFactor;
                     b = baseColor[2] * brightnessFactor;
-                    
+
                     fill(r, g, b);
-                    
+
                     if (size <= 2) {
                         // Use square instead of rect for slight optimization
                         square(worldX, worldY, (size < 1 ? 1 : Math.round(size)));
                     } else {
                         ellipse(worldX, worldY, size, size);
-                        
+
                         // Glow effect - Only for stars that are large AND bright
                         if (brightness > 200 && size > 3) {
                             fill(r, g, b, 40);
                             ellipse(worldX, worldY, size * 1.5, size * 1.5);
                         }
                     }
-                    
+
                     // Twinkling effect
                     // Optimization: Pre-check logic before calculating sin/cos
                     if (size > 4 && brightness > 180) {
                         // Use cached currentMillis
                         const twinkle = 0.3 + 0.4 * Math.sin(currentMillis * 0.005 + worldX * 0.01 + worldY * 0.01);
                         fill(r, g, b, brightness * twinkle * 0.3);
-                        
+
                         const twinkleSize = size * 0.3;
-                        rect(worldX - size, worldY - twinkleSize/2, size * 2, twinkleSize);
-                        rect(worldX - twinkleSize/2, worldY - size, twinkleSize, size * 2);
+                        rect(worldX - size, worldY - twinkleSize / 2, size * 2, twinkleSize);
+                        rect(worldX - twinkleSize / 2, worldY - size, twinkleSize, size * 2);
                     }
                 }
             }
@@ -3803,42 +3803,42 @@ checkProjectileCollisions() {
     drawSpectacularStars(left, right, top, bottom, baseStarSize, currentMillis) {
         const gridSize = 400;
         const systemSeed = this.systemIndex * 1337;
-        
+
         // Integer math
         const startGX = Math.floor(left / gridSize);
         const endGX = Math.ceil(right / gridSize);
         const startGY = Math.floor(top / gridSize);
         const endGY = Math.ceil(bottom / gridSize);
-        
+
         // Helper for specific RNG needs inside phenomena
         // (We can't easily inline this in the sub-functions, so we pass a simple generator)
         // Using a shared object reduces allocation
         const rngState = { val: 0 };
         const nextRand = () => {
-             rngState.val = (rngState.val * 1664525 + 1013904223) >>> 0;
-             return (rngState.val >>> 0) / 4294967296;
+            rngState.val = (rngState.val * 1664525 + 1013904223) >>> 0;
+            return (rngState.val >>> 0) / 4294967296;
         };
 
         for (let gx = startGX; gx <= endGX; gx++) {
             // Cache X seed
             const gxSeed = (gx * 73856093) >>> 0;
-            
+
             for (let gy = startGY; gy <= endGY; gy++) {
-                
+
                 const cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                 rngState.val = cellSeed; // Reset RNG for this cell
-                
+
                 if (nextRand() > 0.05) continue;
-                
+
                 const worldX = gx * gridSize + (nextRand() - 0.5) * gridSize * 1.5;
                 const worldY = gy * gridSize + (nextRand() - 0.5) * gridSize * 1.5;
-                
+
                 // Strict culling for expensive spectacular stars
                 // We do this check here because the drawing functions are heavy
                 if (worldX < left || worldX > right || worldY < top || worldY > bottom) continue;
 
                 const phenomType = nextRand();
-                
+
                 // Pass cached currentMillis to avoid calling millis() inside sub-functions
                 if (phenomType < 0.3) {
                     this.drawSupernova(worldX, worldY, baseStarSize, nextRand, currentMillis);
@@ -3854,26 +3854,26 @@ checkProjectileCollisions() {
             }
         }
     }
-    
+
     drawSupernova(x, y, baseSize, rng, timeMs) {
         const time = timeMs * 0.003;
         const phase = Math.sin(time + x * 0.01 + y * 0.01);
-        
+
         const coreSize = baseSize * (3 + phase * 0.5);
         fill(255, 255, 255);
         ellipse(x, y, coreSize, coreSize);
-        
+
         for (let ring = 1; ring <= 3; ring++) {
             const ringSize = coreSize * (1.5 + ring * 0.8 + phase * 0.3);
             const opacity = 80 / ring;
-            
+
             if (ring === 1) fill(255, 200, 150, opacity);
             else if (ring === 2) fill(255, 100, 100, opacity);
             else fill(150, 50, 200, opacity);
-            
+
             ellipse(x, y, ringSize, ringSize);
         }
-        
+
         stroke(255, 150, 100, 60);
         strokeWeight(1);
         const baseLen = baseSize * (8 + phase * 2);
@@ -3883,53 +3883,53 @@ checkProjectileCollisions() {
         }
         noStroke();
     }
-    
+
     drawNeutronStar(x, y, baseSize, rng, timeMs) {
         const time = timeMs * 0.003;
         const pulse = 0.8 + 0.2 * Math.sin(time * 1.5 + x * 0.01);
-        
+
         fill(180, 200, 230, 200 * pulse);
         const s = baseSize * 1.5 * pulse;
         ellipse(x, y, s, s);
-        
+
         if (pulse > 0.9) {
             stroke(120, 150, 200, 60);
             strokeWeight(1);
-            
+
             const beamLength = baseSize * 6;
             const beamAngle = time * 0.5 + x * 0.002;
             const cosA = Math.cos(beamAngle);
             const sinA = Math.sin(beamAngle);
-            
+
             line(x + cosA * baseSize, y + sinA * baseSize,
-                 x + cosA * beamLength, y + sinA * beamLength);
+                x + cosA * beamLength, y + sinA * beamLength);
             line(x - cosA * baseSize, y - sinA * baseSize,
-                 x - cosA * beamLength, y - sinA * beamLength);
+                x - cosA * beamLength, y - sinA * beamLength);
         }
         noStroke();
     }
-    
+
     drawBinaryStar(x, y, baseSize, rng, timeMs) {
         const time = timeMs * 0.002;
         const orbitRadius = baseSize * 4;
         const angle = time + x * 0.01 + y * 0.01;
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
-        
+
         const star1X = x + cosA * orbitRadius * 0.6;
         const star1Y = y + sinA * orbitRadius * 0.6;
         fill(255, 240, 180);
         ellipse(star1X, star1Y, baseSize * 3, baseSize * 3);
-        
+
         const star2X = x - cosA * orbitRadius * 0.4;
         const star2Y = y - sinA * orbitRadius * 0.4;
         fill(180, 200, 255);
         ellipse(star2X, star2Y, baseSize * 2, baseSize * 2);
-        
+
         stroke(255, 150, 100, 100);
         strokeWeight(1);
         // Reduced steps from 10 to 6 for performance without visual loss
-        const steps = 6; 
+        const steps = 6;
         const invSteps = 1 / steps;
         for (let i = 0; i < steps; i++) {
             const t = i * invSteps;
@@ -3939,44 +3939,44 @@ checkProjectileCollisions() {
         }
         noStroke();
     }
-    
+
     drawNebulaStar(x, y, baseSize, rng, timeMs) {
         const time = timeMs * 0.001;
-        
+
         for (let layer = 0; layer < 3; layer++) {
             const cloudSize = baseSize * (8 + layer * 3);
             const opacity = 25 / (layer + 1);
             const offset = Math.sin(time + layer) * baseSize * 0.5;
-            
+
             if (layer === 0) fill(100, 50, 200, opacity);
             else if (layer === 1) fill(200, 50, 100, opacity);
             else fill(50, 100, 200, opacity);
-            
+
             ellipse(x + offset, y - offset, cloudSize, cloudSize * 0.7);
         }
-        
+
         fill(255, 255, 255);
         ellipse(x, y, baseSize * 2.5, baseSize * 2.5);
-        
+
         fill(255, 255, 255, 60);
         ellipse(x, y, baseSize * 5, baseSize * 5);
     }
-    
+
     drawGiantStar(x, y, baseSize, rng, timeMs) {
         const time = timeMs * 0.002;
         const breathe = 0.9 + 0.1 * Math.sin(time + x * 0.005);
-        
+
         // Hardcoded halos to avoid array creation
         // Size 15
         let shimmer = 0.8 + 0.2 * Math.sin((time) * 2);
         fill(255, 100, 50, 15 * shimmer);
         ellipse(x, y, baseSize * 15 * breathe, baseSize * 15 * breathe);
-        
+
         // Size 10
         shimmer = 0.8 + 0.2 * Math.sin((time + 0.5) * 2);
         fill(255, 150, 100, 25 * shimmer);
         ellipse(x, y, baseSize * 10 * breathe, baseSize * 10 * breathe);
-        
+
         // Size 6
         shimmer = 0.8 + 0.2 * Math.sin((time + 1.0) * 2);
         fill(255, 200, 150, 40 * shimmer);
@@ -3986,11 +3986,11 @@ checkProjectileCollisions() {
         shimmer = 0.8 + 0.2 * Math.sin((time + 1.5) * 2);
         fill(255, 220, 180, 80 * shimmer);
         ellipse(x, y, baseSize * 3 * breathe, baseSize * 3 * breathe);
-        
+
         // Core
         fill(255, 200, 100);
         ellipse(x, y, baseSize * 4 * breathe, baseSize * 4 * breathe);
-        
+
         stroke(255, 150, 50, 40);
         strokeWeight(1);
         for (let i = 0; i < 12; i++) {
@@ -4040,7 +4040,7 @@ checkProjectileCollisions() {
         screenBounds.right = -tx + width + 100;
         screenBounds.top = -ty - 100;
         screenBounds.bottom = -ty + height + 100;
-        
+
         // Cache array lengths for draw loops
         const planetCount = this.planets.length;
         const asteroidCount = this.asteroids.length;
@@ -4067,9 +4067,9 @@ checkProjectileCollisions() {
             this.cosmicStorms[i].draw(screenBounds);
         }
         // Draw station only if visible
-        if (this.station && 
-            this.isInView(this.station.pos.x, this.station.pos.y, 
-                          this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+        if (this.station &&
+            this.isInView(this.station.pos.x, this.station.pos.y,
+                this.station.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
             this.station.draw();
         }
         // Draw discovered secret stations
@@ -4110,13 +4110,13 @@ checkProjectileCollisions() {
                 const so = this.spaceObjects[i];
                 if (!so || !so.pos) continue;
                 if (this.isInView(so.pos.x, so.pos.y, so.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
-                    try { 
-                        so.draw(); 
+                    try {
+                        so.draw();
                         drawnCount++;
-                    } catch(e) { console.error('SpaceObject.draw error', e); }
+                    } catch (e) { console.error('SpaceObject.draw error', e); }
                 }
             }
-        } 
+        }
 
         // Draw only visible cargo
         if (this.cargo && this.cargo.length > 0) {
@@ -4153,11 +4153,11 @@ checkProjectileCollisions() {
                 // cull by endpoints
                 // Harpoon segments now use numeric {x,y,px,py} fields, not p5 vectors
                 const a = h.segments && h.segments[0] && h.segments[0];
-                const b = h.segments && h.segments[h.segments.length-1] && h.segments[h.segments.length-1];
+                const b = h.segments && h.segments[h.segments.length - 1] && h.segments[h.segments.length - 1];
                 if (!a || !b) continue;
                 if (this.isInView(a.x, a.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom) ||
                     this.isInView(b.x, b.y, 4, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
-                    try { h.draw && h.draw(); } catch(e) {}
+                    try { h.draw && h.draw(); } catch (e) { }
                 }
             }
         }
@@ -4166,7 +4166,7 @@ checkProjectileCollisions() {
         if (this.beams && this.beams.length > 0) {
             this.drawBeamsWithCulling(screenBounds);
         }
-        
+
         // Draw mines
         if (this.mines && this.mines.length > 0) {
             this.drawMines();
@@ -4211,11 +4211,11 @@ checkProjectileCollisions() {
     drawBeamsWithCulling(screenBounds) {
         for (let i = 0; i < this.beams.length; i++) {
             const beam = this.beams[i];
-            
+
             // Fast check if either beam endpoint is in view
             const startInView = this.isInView(beam.start.x, beam.start.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
             const endInView = this.isInView(beam.end.x, beam.end.y, 10, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom);
-            
+
             // If either end is visible, or beam crosses screen, draw it
             if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
                 stroke(beam.color);
@@ -4229,7 +4229,7 @@ checkProjectileCollisions() {
     drawForceWavesWithCulling(screenBounds) {
         for (let i = 0; i < this.forceWaves.length; i++) {
             const wave = this.forceWaves[i];
-            
+
             // Only draw if wave intersects screen
             if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 noFill();
@@ -4265,23 +4265,23 @@ checkProjectileCollisions() {
 
     /** Generates or retrieves missions for the station in this system */
     getAvailableMissions(galaxy, player) {
-         // Return cached missions if already generated for this session/visit
-         if (Array.isArray(this.availableMissions) && this.availableMissions.length > 0) {
-             return this.availableMissions;
-         }
+        // Return cached missions if already generated for this session/visit
+        if (Array.isArray(this.availableMissions) && this.availableMissions.length > 0) {
+            return this.availableMissions;
+        }
 
-         if (this.station && typeof MissionGenerator?.generateMissions === 'function' && galaxy && player) {
-             try {
-                 this.availableMissions = MissionGenerator.generateMissions(this, this.station, galaxy, player);
-                 return this.availableMissions;
-             } catch(e) {
-                 console.error("Error generating missions:", e);
-                 this.availableMissions = [];
-                 return [];
-             }
-         }
-         console.warn(`Cannot get missions for ${this.name}: Missing station, MissionGenerator, galaxy, or player.`);
-         return []; // Return empty if cannot generate
+        if (this.station && typeof MissionGenerator?.generateMissions === 'function' && galaxy && player) {
+            try {
+                this.availableMissions = MissionGenerator.generateMissions(this, this.station, galaxy, player);
+                return this.availableMissions;
+            } catch (e) {
+                console.error("Error generating missions:", e);
+                this.availableMissions = [];
+                return [];
+            }
+        }
+        console.warn(`Cannot get missions for ${this.name}: Missing station, MissionGenerator, galaxy, or player.`);
+        return []; // Return empty if cannot generate
     }
 
     getEnemyRoleProbabilities() {
@@ -4317,7 +4317,7 @@ checkProjectileCollisions() {
      */
     _serializeEntityArray(array, fallbackSerializer = null) {
         if (!Array.isArray(array) || array.length === 0) return [];
-        
+
         return array.map(entity => {
             if (typeof entity.toJSON === 'function') {
                 return entity.toJSON();
@@ -4351,19 +4351,19 @@ checkProjectileCollisions() {
             securityLevel: this.securityLevel,
             visited: this.visited,
             connectedSystemIndices: this.connectedSystemIndices ? [...this.connectedSystemIndices] : [],
-            
+
             // Save planets if present
             planets: this._serializeEntityArray(this.planets),
-            
+
             // Save station if present
             station: this.station && typeof this.station.toJSON === 'function'
                 ? this.station.toJSON()
                 : null,
             secretStations: this._serializeEntityArray(this.secretStations),
-            
+
             // Save nebulae if present
             nebulae: this._serializeEntityArray(this.nebulae),
-            
+
             // Save decorative space objects
             spaceObjects: this._serializeEntityArray(this.spaceObjects, (so) => ({
                 type: so.type || null,
@@ -4375,19 +4375,19 @@ checkProjectileCollisions() {
                 subtype: so.subtype || null,
                 planetIndex: so.planetIndex !== undefined ? so.planetIndex : null
             })),
-            
+
             // Jump Zone Data
             jumpZoneCenterX: this.jumpZoneCenter ? this.jumpZoneCenter.x : null,
             jumpZoneCenterY: this.jumpZoneCenter ? this.jumpZoneCenter.y : null,
             jumpZoneRadius: this.jumpZoneRadius,
-            
+
             // Wanted status properties
             playerWanted: !!this.playerWanted,
             playerWantedLevel: this.playerWantedLevel ?? 0,
             playerWantedRemainingMs: (this.playerWantedExpiry ? Math.max(0, this.playerWantedExpiry - millis()) : null),
             policeAlertSent: !!this.policeAlertSent,
             cachedDescription: this.cachedDescription ?? null,
-            
+
             // Dynamic entities
             enemies: this._serializeEntityArray(this.enemies, (e) => ({
                 shipType: e.shipTypeName || e.shipType || null,
@@ -4437,7 +4437,7 @@ checkProjectileCollisions() {
      */
     static _deserializeEntityArray(dataArray, EntityClass, fallbackDeserializer = null) {
         if (!Array.isArray(dataArray) || dataArray.length === 0) return [];
-        
+
         const result = [];
         for (const data of dataArray) {
             try {
@@ -4490,7 +4490,7 @@ checkProjectileCollisions() {
         } else {
             sys.station = null;
         }
-        
+
         // Restore Nebulae
         sys.nebulae = this._deserializeEntityArray(data.nebulae, Nebula);
 
@@ -4534,7 +4534,7 @@ checkProjectileCollisions() {
         sys.policeAlertSent = !!data.policeAlertSent;
         // Restore persisted generated description if present
         sys.cachedDescription = (typeof data.cachedDescription === 'string') ? data.cachedDescription : null;
-        
+
         // --- Restore initialization state ---
         // This prevents initStaticElements from running again if it already ran before saving
         sys.staticElementsInitialized = data.staticElementsInitialized ?? false;
@@ -4586,7 +4586,7 @@ checkProjectileCollisions() {
 
         // --- Post-load relinking helpers ---
         // Build id map and attempt to reconnect owner/target references
-        sys._postLoadRelink = function() {
+        sys._postLoadRelink = function () {
             const makeVector = (v) => {
                 if (!v) return null;
                 return (typeof createVector === 'function' && v && typeof v.x === 'number') ? createVector(v.x, v.y) : { x: (v.x || 0), y: (v.y || 0) };
@@ -4596,7 +4596,7 @@ checkProjectileCollisions() {
             if (Array.isArray(this.enemies)) {
                 for (const e of this.enemies) {
                     if (e && (e.id !== undefined && e.id !== null)) idMap.set(String(e.id), e);
-                    try { e.currentSystem = this; } catch(_) {}
+                    try { e.currentSystem = this; } catch (_) { }
                 }
             }
             if (this.player && this.player.id !== undefined && this.player.id !== null) idMap.set(String(this.player.id), this.player);
@@ -4745,9 +4745,9 @@ checkProjectileCollisions() {
                                 e.principal = principal;
                                 // If the enemy was saved in GUARDING state, ensure entry logic runs
                                 if (e.currentState === AI_STATE.GUARDING) {
-                                    try { if (typeof e.onStateEntry === 'function') e.onStateEntry(AI_STATE.GUARDING, { principal }); } catch(_) {}
+                                    try { if (typeof e.onStateEntry === 'function') e.onStateEntry(AI_STATE.GUARDING, { principal }); } catch (_) { }
                                 } else {
-                                    try { if (typeof e.changeState === 'function') e.changeState(AI_STATE.GUARDING, { principal }); } catch(_) {}
+                                    try { if (typeof e.changeState === 'function') e.changeState(AI_STATE.GUARDING, { principal }); } catch (_) { }
                                 }
                             }
                         }
@@ -4758,7 +4758,7 @@ checkProjectileCollisions() {
                         // was handled above, so skip re-calling for GUARDING.
                         try {
                             if (typeof e.onStateEntry === 'function' && e.currentState !== AI_STATE.GUARDING) {
-                                try { e.onStateEntry(e.currentState, {}); } catch (_) {}
+                                try { e.onStateEntry(e.currentState, {}); } catch (_) { }
                             }
                         } catch (err) { /* non-fatal */ }
                     } catch (err) { console.warn('enemy relink error', err); }
@@ -4766,7 +4766,7 @@ checkProjectileCollisions() {
             }
         };
 
-        sys.relinkReferences = function(player) {
+        sys.relinkReferences = function (player) {
             if (player) this.player = player;
             if (typeof this._postLoadRelink === 'function') this._postLoadRelink();
         };
@@ -4776,25 +4776,25 @@ checkProjectileCollisions() {
         return sys;
     }
 
-        /**
-         * Helper to relink all systems after a full galaxy load.
-         * Call this once after `galaxy.systems` and `player` are instantiated.
-         */
-        static relinkAll(galaxy, player) {
-            if (!galaxy || !Array.isArray(galaxy.systems)) return;
-            for (const sys of galaxy.systems) {
-                try { if (typeof sys._postLoadRelink === 'function') sys._postLoadRelink(); } catch (e) { console.warn('StarSystem.relinkAll _postLoadRelink error', sys && sys.name, e); }
-            }
-            for (const sys of galaxy.systems) {
-                try { if (typeof sys.relinkReferences === 'function') sys.relinkReferences(player); } catch (e) { console.warn('StarSystem.relinkAll relinkReferences error', sys && sys.name, e); }
-            }
+    /**
+     * Helper to relink all systems after a full galaxy load.
+     * Call this once after `galaxy.systems` and `player` are instantiated.
+     */
+    static relinkAll(galaxy, player) {
+        if (!galaxy || !Array.isArray(galaxy.systems)) return;
+        for (const sys of galaxy.systems) {
+            try { if (typeof sys._postLoadRelink === 'function') sys._postLoadRelink(); } catch (e) { console.warn('StarSystem.relinkAll _postLoadRelink error', sys && sys.name, e); }
         }
+        for (const sys of galaxy.systems) {
+            try { if (typeof sys.relinkReferences === 'function') sys.relinkReferences(player); } catch (e) { console.warn('StarSystem.relinkAll relinkReferences error', sys && sys.name, e); }
+        }
+    }
 
     // Add this method to the StarSystem class - place it after constructor
     setEconomyType(economyType) {
         // Store the economy type in the system
         this.economyType = economyType;
-        
+
         // CRITICAL: Update all stations (main and secret) with the new economy type
         // This updates appearance, market type, and regenerates commodities
         if (this.station) {
@@ -4809,7 +4809,7 @@ checkProjectileCollisions() {
                 }
             }
         }
-        
+
         // Update secret stations as well
         if (this.secretStations && this.secretStations.length > 0) {
             for (const secretStation of this.secretStations) {
@@ -4854,7 +4854,7 @@ checkProjectileCollisions() {
 
         return distToPlayerSq > despawnDistanceSq;
     }
-    
+
     /**
      * Fast array element removal - swap with last element then pop.
      * Much faster than splice() for large arrays (O(1) vs O(n)).
@@ -4880,14 +4880,14 @@ checkProjectileCollisions() {
      */
     spawnSpaceObjectsForPlanets() {
         console.log(`         >>> spawnSpaceObjectsForPlanets START for ${this.name}`);
-        
+
         // GUARD: If space objects already exist, don't spawn more
         // This prevents on-demand spawning with non-deterministic seeds during gameplay
         if (this.spaceObjects && this.spaceObjects.length > 0) {
             console.log(`         >>> Space objects already exist (${this.spaceObjects.length}), skipping spawn`);
             return;
         }
-        
+
         if (!this.planets || this.planets.length === 0) {
             console.warn(`         >>> No planets found in ${this.name}, skipping space objects`);
             return;
@@ -4896,7 +4896,7 @@ checkProjectileCollisions() {
             console.error(`         >>> SpaceObject class not defined, skipping space objects`);
             return;
         }
-        
+
         const initialCount = this.spaceObjects.length;
         console.log(`         >>> Initial spaceObjects count: ${initialCount}`);
 
@@ -4910,7 +4910,7 @@ checkProjectileCollisions() {
         };
 
         // Default types for other economies (undergroundMarket handled conditionally below)
-        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'drugLab','labourColony', 'shipyard'];
+        const defaultTypes = ['satellite', 'telescope', 'relay', 'debris', 'probe', 'beacon', 'solarSail', 'cargoCluster', 'decoyBuoy', 'habitat', 'researchArray', 'orbitalGarden', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'drugLab', 'labourColony', 'shipyard'];
 
         // Clone the selected array so we can modify it safely
         const availableTypes = (typesByEconomy[this.economyType] || defaultTypes).slice();
@@ -4931,7 +4931,7 @@ checkProjectileCollisions() {
             const planet = this.planets[planetIdx];
             // Store the correct planet index for space object association
             const correctPlanetIndex = planet.planetIndex || planetIdx;
-            
+
             if (['Industrial', 'Refinery', 'Mining'].includes(this.economyType)) {
                 // Always spawn at least one mining platform
                 const angle = random(TWO_PI);
@@ -5002,12 +5002,12 @@ checkProjectileCollisions() {
                 }
             }
         }
-        
+
         const finalCount = this.spaceObjects.length;
         const spawned = finalCount - initialCount;
         console.log(`         >>> spawnSpaceObjectsForPlanets END: spawned ${spawned} objects (total now ${finalCount})`);
     }
-    
+
     /**
      * Fast inverse square root for normalization
      * Returns 1/sqrt(value) efficiently
@@ -5018,7 +5018,7 @@ checkProjectileCollisions() {
     _fastInvSqrt(distSq) {
         return distSq > 0 ? 1 / Math.sqrt(distSq) : 0;
     }
-    
+
     /**
      * Adds an enemy to the system with proper references.
      * 
@@ -5036,7 +5036,7 @@ checkProjectileCollisions() {
             enemy.currentSystem = this;
             window.currentSystem = this;
             this.enemies.push(enemy);
-            
+
             // Centralized Thargoid/Alien spawn cue: plays once when aliens are added
             try {
                 if (enemy.role === AI_ROLE.ALIEN && typeof soundManager !== 'undefined') {
@@ -5049,7 +5049,7 @@ checkProjectileCollisions() {
                             soundManager.playSound('thargoid');
                         }
                         this._lastAlienSpawnSoundTime = now;
-                        
+
                         // Add UI message for alien detection
                         if (typeof uiManager !== 'undefined') {
                             uiManager.addMessage("Alien presence detected!", [255, 0, 255]);
