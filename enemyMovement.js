@@ -104,7 +104,23 @@ class EnemyMovement {
                     this.vel.mult(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99)); 
                     canThrust = false; // No active thrust, just braking
                 }
-            } else { // For other active states like REPOSITIONING, PATROLLING, TRANSPORTING, COLLECTING_CARGO
+            } else if (this.currentState === AI_STATE.REPOSITIONING) {
+                // effectiveThrustMultiplier is 1.0 by default
+                
+                // Add braking when close to reposition target to prevent overshooting/ramming
+                if (desiredMovementTargetPos) {
+                    const distToRepo = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
+                    const brakingDist = this.size * 4.0;
+                    
+                    if (distToRepo < brakingDist) {
+                        effectiveThrustMultiplier = map(distToRepo, this.size, brakingDist, 0.2, 1.0, true);
+                    }
+                }
+
+                if (isAlignedForThrust) {
+                    canThrust = true;
+                }
+            } else { // For other active states like PATROLLING, TRANSPORTING, COLLECTING_CARGO
                 // effectiveThrustMultiplier is 1.0 by default
                 if (isAlignedForThrust) {
                     canThrust = true;

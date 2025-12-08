@@ -200,7 +200,7 @@ class EnemyAIBehaviors {
 
     _isLineBlockedByAsteroid(ast, p1, p2) {
         if (!ast || !p1 || !p2) return false;
-        const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
+        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
         if (!r || r <= 0) return false;
         const cx = ast.pos?.x; const cy = ast.pos?.y;
         if (cx === undefined || cy === undefined) return false;
@@ -213,13 +213,12 @@ class EnemyAIBehaviors {
         const projX = p1.x + clampedT * dx;
         const projY = p1.y + clampedT * dy;
         const distSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
-        console.log(`LOS check: p1(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}) to p2(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)}), ast at (${cx.toFixed(1)}, ${cy.toFixed(1)}) r=${r.toFixed(1)}, t=${t.toFixed(3)}, clampedT=${clampedT.toFixed(3)}, proj(${projX.toFixed(1)}, ${projY.toFixed(1)}), distSq=${distSq.toFixed(1)}, threshold=${((r * 2) * (r * 2)).toFixed(1)}, blocks=${distSq <= (r * 2) * (r * 2)}`);
-        return distSq <= (r * 2) * (r * 2);
+        return distSq <= r * r;
     }
 
     _computeCoverApproachPoint(ast, targetPos) {
         if (!ast?.pos) return null;
-        const radius = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
+        const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
         const ref = targetPos || this.target?.pos || this.pos;
         const refX = ref?.x ?? ast.pos.x;
         const refY = ref?.y ?? ast.pos.y;
@@ -254,7 +253,7 @@ class EnemyAIBehaviors {
 
     _scoreCoverCandidate(ast, targetPos) {
         if (!ast || !ast.pos) return -Infinity;
-        const r = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
+        const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
         if (!r || r <= 0) return -Infinity;
         const dx = ast.pos.x - this.pos.x;
         const dy = ast.pos.y - this.pos.y;
@@ -297,16 +296,60 @@ class EnemyAIBehaviors {
     }
 
     _updateCoverPeek(dtSeconds) {
-        if (!this.repositionTarget) return;
+        if (!this.repositionTarget || !this.coverTarget) return;
+        
+        // Check distance to the base cover position
         const dx = this.repositionTarget.x - this.pos.x;
         const dy = this.repositionTarget.y - this.pos.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 15 && this.coverPeekTimer === 0) { // close to the reposition target and peek not already active
-            console.log(`${this.shipTypeName} reached cover at (${this.repositionTarget.x.toFixed(0)}, ${this.repositionTarget.y.toFixed(0)}), starting peek attack (dist:${dist.toFixed(1)}, timer:0.6s)`);
-            this.coverPeekTimer = 0.6;
+        
+        // Start peek cycle if at cover and timer is expired
+        // Relaxed distance check (was 30) to ensure ships actually trigger the behavior
+        const triggerDist = Math.max(50, this.size * 2);
+        if (dist < triggerDist && (!this.coverPeekTimer || this.coverPeekTimer <= 0)) {
+            this.coverPeekTimer = 4.0; // 2s out, 2s back
+            this.peekSide = Math.random() < 0.5 ? 1 : -1;
         }
-        if (this.coverPeekTimer > 0 && dtSeconds > 0) {
+        
+        if (this.coverPeekTimer > 0) {
             this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
+            
+            // If in first half of timer (peeking out), modify repositionTarget
+            if (this.coverPeekTimer > 2.0) {
+                const targetPos = this.target?.pos || this.pos;
+                const ax = this.coverTarget.pos.x;
+                const ay = this.coverTarget.pos.y;
+                const tx = targetPos.x;
+                const ty = targetPos.y;
+                
+                let dirX = tx - ax;
+                let dirY = ty - ay;
+                const len = Math.hypot(dirX, dirY);
+                
+                if (len > 0.001) {
+                    dirX /= len;
+                    dirY /= len;
+                    
+                    // Perpendicular vector (sideways)
+                    const perpX = -dirY * this.peekSide;
+                    const perpY = dirX * this.peekSide;
+                    
+                    // Calculate peek offset distance
+                    const radius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 20);
+                    const peekOffset = radius * 1.5 + this.size; // Increased from 1.2 for safety
+                    
+                    // Push the peek point slightly further away from the asteroid to avoid clipping
+                    // The 'dir' vector points from Asteroid to Target.
+                    // We want to move opposite to 'dir' (away from target, which is also away from asteroid on this side)
+                    const outwardPush = this.size * 2.0; 
+
+                    // Modify repositionTarget to be the peek position
+                    this.repositionTarget = createVector(
+                        this.repositionTarget.x + perpX * peekOffset - dirX * outwardPush,
+                        this.repositionTarget.y + perpY * peekOffset - dirY * outwardPush
+                    );
+                }
+            }
         }
     }
 
@@ -357,7 +400,7 @@ class EnemyAIBehaviors {
                 const blocksLOS = targetPos ? this._isLineBlockedByAsteroid(cover, this.pos, targetPos) : false;
                 if (coverScore >= 0.35) {
                     // Compute detailed score components for logging
-                    const r = cover.size ? cover.size * 0.5 : (cover.maxRadius || 0);
+                    const r = cover.maxRadius || (cover.size ? cover.size * 0.5 : 0);
                     const dx = cover.pos.x - this.pos.x;
                     const dy = cover.pos.y - this.pos.y;
                     const distToAst = Math.hypot(dx, dy);

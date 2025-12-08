@@ -362,7 +362,8 @@ class EnemyCombat {
             const cx = ast.pos?.x; const cy = ast.pos?.y;
             if (cx === undefined || cy === undefined) continue;
 
-            const radius = ast.size ? ast.size * 0.5 : (ast.maxRadius || 0);
+            // Use maxRadius if available for better accuracy with irregular asteroids
+            const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
             if (!radius || radius < 6) continue; // ignore tiny debris
 
             // Skip far asteroids to keep checks light
