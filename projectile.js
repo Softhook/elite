@@ -9,18 +9,18 @@
 // - Removed try-catch from hot path (reset) for better JIT optimization
 
 class Projectile {
-    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
-           type = "projectile", target = null, lifespan = 90, turnRate = 0, 
-           missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
-           rotationBlockMultiplier = 0.1) {
+    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
+        type = "projectile", target = null, lifespan = 90, turnRate = 0,
+        missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+        rotationBlockMultiplier = 0.1) {
         // Create vectors just once at construction time (reused for entire lifecycle)
         this.pos = createVector(0, 0);
         this.vel = createVector(0, 0);
-        
+
         // Reusable vectors for calculations (avoid allocations in update/collision)
         this._tempVec = createVector(0, 0);
         this._steerVec = createVector(0, 0);
-        
+
         // Set default values (will be overridden by reset())
         this.size = 3;
         // Hull for destructible projectiles (missiles/mines)
@@ -49,17 +49,17 @@ class Projectile {
 
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target, 
-                    lifespan, turnRate, missileSpeed, tangleDuration, dragMultiplier,
-                    rotationBlockMultiplier);
+            this.reset(x, y, angle, owner, speed, damage, colorOverride, type, target,
+                lifespan, turnRate, missileSpeed, tangleDuration, dragMultiplier,
+                rotationBlockMultiplier);
         }
     }
 
     // Reset method for object pooling
-    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null, 
-     type = "projectile", target = null, lifespan = 90, turnRate = 0, 
-     missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
-     rotationBlockMultiplier = 0.1, system = null) {
+    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
+        type = "projectile", target = null, lifespan = 90, turnRate = 0,
+        missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+        rotationBlockMultiplier = 0.1, system = null) {
         // Validate position inputs (early return on invalid)
         if (isNaN(x) || isNaN(y)) {
             console.warn(`Invalid projectile position: x=${x}, y=${y}`);
@@ -70,7 +70,7 @@ class Projectile {
                 x = 0; y = 0;
             }
         }
-        
+
         // Set basic properties
         this.pos.set(x, y);
         this.owner = owner;
@@ -82,7 +82,7 @@ class Projectile {
         this.dragMultiplier = dragMultiplier;
         this.rotationBlockMultiplier = rotationBlockMultiplier;
         this._isPlayer = (owner && owner instanceof Player);
-        
+
         // Type will be determined from weapon or parameter below
         // Cache type checks will be set after finalizing this.type
 
@@ -96,7 +96,7 @@ class Projectile {
         if (owner && owner.currentWeapon) {
             const weapon = owner.currentWeapon;
             this.damage = weapon.damage;
-            
+
             // Update color efficiently
             const weaponColor = weapon.color;
             if (this.color) {
@@ -106,10 +106,10 @@ class Projectile {
             } else {
                 this.color = color(weaponColor[0], weaponColor[1], weaponColor[2]);
             }
-            
+
             // Set type from weapon (takes priority over parameter)
             this.type = weapon.type;
-            
+
             // Missile-specific properties from weapon definition
             if (weapon.type === "missile") {
                 this.missileSpeed = weapon.speed || speed;
@@ -123,7 +123,7 @@ class Projectile {
                 this.initialLifespan = lifespan;
                 this.size = this._isPlayer ? 4 : 3;
             }
-        
+
         } else {
             // Fallback if no owner or currentWeapon
             this.damage = damage;
@@ -142,20 +142,20 @@ class Projectile {
             this.initialLifespan = lifespan;
             this.size = this._isPlayer ? 4 : 3;
         }
-        
+
         // Update cached type checks AFTER type is finalized
         // Note: External code should use these cached flags instead of comparing this.type
         this._isMissile = (this.type === "missile");
         this._isTangle = (this.type === "tangle");
         this._isHarpoon = (this.type === "harpoon" || this.type === "HARPOON");
-        
+
         this.lifespan = this.initialLifespan;
         this.destroyed = false;
-        
+
         // Set velocity vector
         const effectiveSpeed = this._isMissile ? this.missileSpeed : speed;
         this.vel.set(1, 0).rotate(angle).mult(effectiveSpeed);
-        
+
         return this;
     }
 
@@ -168,7 +168,7 @@ class Projectile {
 
             // Calculate steering force (reuse steer vector)
             this._steerVec.set(this._tempVec.x - this.vel.x, this._tempVec.y - this.vel.y);
-            
+
             // Scale turnRate by deltaTime for frame-rate independence
             this._timeCorrection = deltaTime ? (deltaTime / 16.666667) : 1; // 1000/60 = 16.666667
             this._steerVec.limit(this.turnRate * this._timeCorrection);
@@ -176,7 +176,7 @@ class Projectile {
             this.vel.add(this._steerVec);
             this.vel.setMag(this.missileSpeed);
         }
-        
+
         // Move projectile
         this.pos.add(this.vel);
         this.lifespan--;
@@ -194,7 +194,7 @@ class Projectile {
             this.lifespan = 0;
             this.destroyed = true;
             if (system && typeof system.addExplosion === 'function') {
-                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255,150,0];
+                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255, 150, 0];
                 system.addExplosion(this.pos.x, this.pos.y, 8, col);
             }
             return;
@@ -206,7 +206,7 @@ class Projectile {
             this.destroyed = true;
             this.lifespan = 0;
             if (system && typeof system.addExplosion === 'function') {
-                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255,150,0];
+                const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255, 150, 0];
                 system.addExplosion(this.pos.x, this.pos.y, 12, col);
             }
         }
@@ -250,18 +250,18 @@ class Projectile {
         } else if (this._isTangle) {
             push();
             translate(this.pos.x, this.pos.y);
-            
+
             // Energy field background
             noStroke();
             fill(200, 150);
             const sizeMult2 = this.size * 2;
             ellipse(0, 0, sizeMult2, sizeMult2);
-            
+
             // Energy strands
             stroke(255);
             strokeWeight(1.5);
             noFill();
-        
+
             // Draw tethers/tendrils (optimized - reduced random calls)
             const frameOffset = frameCount * 0.1;
             const piOver4 = PI / 4;
@@ -270,7 +270,7 @@ class Projectile {
             const jitter2 = random(-1, 1);
             const jitter3 = random(-1, 1);
             const jitter4 = random(-1, 1);
-            
+
             for (let i = 0; i < 8; i++) {
                 const angle = (frameOffset + i * piOver4) % TWO_PI;
                 beginShape();
@@ -314,44 +314,45 @@ class Projectile {
     // Optimized collision check (inline distance calculation)
     checkCollision(target) {
         if (!target || !target.pos || typeof target.size !== 'number') return false;
-        
+
         // Inline distance calculation (avoid p5.js dist() function call overhead)
         const dx = this.pos.x - target.pos.x;
         const dy = this.pos.y - target.pos.y;
         const distSq = dx * dx + dy * dy;
-        
+
         // Use squared distance to avoid sqrt
         const combinedRadius = (target.size * 0.5) + this.size;
         const combinedRadiusSq = combinedRadius * combinedRadius;
-        
+
         return distSq < combinedRadiusSq;
     }
-    
+
     isOffScreen() {
         // Safety check for uninitialized dimensions
         if (!width || !height) return false;
-        
+
         // Avoid vector allocation in fallback case
         const playerPos = this.system?.player?.pos;
         const playerX = playerPos ? playerPos.x : 0;
         const playerY = playerPos ? playerPos.y : 0;
-        
+
         // Calculate screen coordinates relative to player/camera
-        const screenX = width/2 + (this.pos.x - playerX);
-        const screenY = height/2 + (this.pos.y - playerY);
-        
+        const screenX = width / 2 + (this.pos.x - playerX);
+        const screenY = height / 2 + (this.pos.y - playerY);
+
         const margin = 100;
-        
-        return (screenX < -margin || 
-                screenX > width + margin || 
-                screenY < -margin || 
-                screenY > height + margin);
+
+        return (screenX < -margin ||
+            screenX > width + margin ||
+            screenY < -margin ||
+            screenY > height + margin);
     }
 
     toJSON() {
         return {
             pos: { x: this.pos.x, y: this.pos.y },
             vel: { x: this.vel.x, y: this.vel.y },
+            angle: this.vel.heading(),
             size: this.size,
             type: this.type,
             damage: this.damage,
@@ -360,7 +361,7 @@ class Projectile {
             ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
             hull: this.hull,
             maxHull: this.maxHull,
-            color: this.color && this.color.levels ? this.color.levels.slice(0,3) : null,
+            color: this.color && this.color.levels ? this.color.levels.slice(0, 3) : null,
             _meta: {
                 turnRate: this.turnRate,
                 missileSpeed: this.missileSpeed

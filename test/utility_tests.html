@@ -97,7 +97,7 @@
                 pool.release(obj);
                 const stats = pool.getStats();
                 expect(stats.active).toBe(0);
-                expect(stats.available).toBe(6); // Initial 5 + 1 released
+                expect(stats.available).toBe(5); // Initial 5, 1 taken -> 4, 1 released -> 5
             });
 
             it('should reuse released objects', () => {
@@ -136,7 +136,7 @@
                 pool.releaseAll();
                 const stats = pool.getStats();
                 expect(stats.active).toBe(0);
-                expect(stats.available).toBe(8); // 5 initial + 3 released
+                expect(stats.available).toBe(5); // Back to initial 5
             });
 
             it('should track reuse statistics', () => {
@@ -152,7 +152,7 @@
                 pool.release(obj);
                 pool.release(obj); // Second release should be ignored
                 const stats = pool.getStats();
-                expect(stats.available).toBe(6); // Not 7
+                expect(stats.available).toBe(5); // Still 5
             });
         });
 

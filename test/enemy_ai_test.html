@@ -48,6 +48,7 @@
     <script src="../debug.js"></script>
     <script src="../ships.js"></script>
     <script src="../weapons.js"></script>
+    <script src="../weaponSystem.js"></script>
     <script src="../enemyConstants.js"></script>
     <script src="../objectPool.js"></script>
     <script src="../enemyUtils.js"></script>
@@ -67,6 +68,61 @@
         // Setup mock p5 before tests
         setupMockP5();
 
+        const debugDiv = document.createElement('div');
+        debugDiv.id = 'debug-output';
+        debugDiv.style.border = '1px solid magenta';
+        debugDiv.style.padding = '10px';
+        debugDiv.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(debugDiv);
+        function logDebug(msg) {
+            debugDiv.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        // Debug SHIP_DEFINITIONS
+        if (typeof SHIP_DEFINITIONS !== 'undefined') {
+            logDebug('SHIP_DEFINITIONS keys: ' + Object.keys(SHIP_DEFINITIONS).join(', '));
+            logDebug('Has Sidewinder? ' + !!SHIP_DEFINITIONS['Sidewinder']);
+        } else {
+            logDebug('SHIP_DEFINITIONS is UNDEFINED');
+        }
+
+        // Apply Enemy Mixins
+        logDebug('Applying Enemy Mixins...');
+        if (typeof applyEnemyUtilityMethods === 'function') applyEnemyUtilityMethods();
+        if (typeof applyEnemyDamageSystemMethods === 'function') applyEnemyDamageSystemMethods();
+        if (typeof applyEnemyRenderingMethods === 'function') applyEnemyRenderingMethods();
+        if (typeof applyEnemyMovementMethods === 'function') applyEnemyMovementMethods();
+        if (typeof applyEnemyTargetingMethods === 'function') applyEnemyTargetingMethods();
+        if (typeof applyEnemyCombatMethods === 'function') applyEnemyCombatMethods();
+        if (typeof applyEnemyStateMachineMethods === 'function') applyEnemyStateMachineMethods();
+
+        if (typeof applyEnemyAIBehaviorMethods === 'function') {
+            logDebug('applyEnemyAIBehaviorMethods is a function. Executing...');
+            // Debug: check prototype of source
+            if (typeof EnemyAIBehaviors !== 'undefined') {
+                try {
+                    const keys = Object.getOwnPropertyNames(EnemyAIBehaviors.prototype);
+                    logDebug('EnemyAIBehaviors prototype keys: ' + keys.join(', '));
+                    logDebug('Has _handleRangeStall? ' + keys.includes('_handleRangeStall'));
+                } catch (e) { logDebug('Error checking prototype: ' + e); }
+            } else {
+                logDebug('EnemyAIBehaviors is UNDEFINED');
+            }
+            applyEnemyAIBehaviorMethods();
+        } else {
+            logDebug('applyEnemyAIBehaviorMethods IS NOT A FUNCTION');
+        }
+
+        if (typeof applyEnemyCargoMethods === 'function') applyEnemyCargoMethods();
+
+        // Debug: check Enemy prototype
+        if (typeof Enemy !== 'undefined') {
+            logDebug('Enemy prototype has _handleRangeStall? ' + (typeof Enemy.prototype._handleRangeStall));
+        } else {
+            logDebug('Enemy is UNDEFINED');
+        }
+
         // Mock player for enemy targeting
         function createMockPlayer(options = {}) {
             return {
@@ -80,7 +136,8 @@
                 wantedLevel: options.wantedLevel || 0,
                 cargo: options.cargo || [],
                 isPlayer: true,
-                faction: options.faction || null
+                faction: options.faction || null,
+                constructor: { name: 'Player' }
             };
         }
 
@@ -273,6 +330,7 @@
             });
 
             it('should track last attacker for retaliation', () => {
+                enemy.takeDamage(10, mockPlayer);
                 expect(enemy.lastAttacker).toBeDefined();
             });
         });
@@ -373,7 +431,7 @@
 
             it('should start unarmed or lightly armed', () => {
                 // Haulers may not have weapons or have minimal weapons
-                expect(hauler.equippedWeapons).toBeDefined();
+                expect(hauler.weapons).toBeDefined();
             });
         });
 

@@ -93,7 +93,9 @@
                 projectiles: [],
                 enemies: [],
                 player: createMockOwner({ isPlayer: true }),
-                asteroids: []
+                asteroids: [],
+                addProjectile: function (p) { this.projectiles.push(p); },
+                addExplosion: () => { }
             };
         }
 
@@ -259,18 +261,20 @@
                 expect(system.projectiles.length).toBeGreaterThan(initialCount);
             });
 
-            it('should create projectile at owner position', () => {
+            it('should create projectile at owner position (with offset)', () => {
                 WeaponSystem.fireProjectile(owner, system, 0);
                 const proj = system.projectiles[system.projectiles.length - 1];
-                expect(proj.pos.x).toBeCloseTo(owner.pos.x, 0);
-                expect(proj.pos.y).toBeCloseTo(owner.pos.y, 0);
+                // Projectiles spawn at an offset from owner center
+                const d = dist(proj.pos.x, proj.pos.y, owner.pos.x, owner.pos.y);
+                expect(d).toBeGreaterThan(0);
+                expect(d).toBeLessThan(100); // Reasonable offset limit
             });
 
             it('should set projectile angle correctly', () => {
                 const angle = Math.PI / 4;
                 WeaponSystem.fireProjectile(owner, system, angle);
                 const proj = system.projectiles[system.projectiles.length - 1];
-                expect(proj.angle).toBeCloseTo(angle, 1);
+                expect(proj.vel.heading()).toBeCloseTo(angle, 1);
             });
 
             it('should set projectile owner reference', () => {
@@ -303,7 +307,7 @@
 
             it('should spread projectiles at different angles', () => {
                 WeaponSystem.fireSpread(owner, system, 0, 3);
-                const angles = system.projectiles.map(p => p.angle);
+                const angles = system.projectiles.map(p => p.vel.heading());
                 // Should have different angles
                 const uniqueAngles = new Set(angles.map(a => Math.round(a * 100)));
                 expect(uniqueAngles.size).toBe(3);

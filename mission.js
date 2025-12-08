@@ -745,4 +745,52 @@ class Mission {
 
         return details;
     }
+    /**
+     * Serializes the mission to a JSON-compatible object.
+     * Excludes runtime references like _targetEnemyRef and _guardRefs.
+     */
+    toJSON() {
+        return {
+            id: this.id,
+            title: this.title,
+            type: this.type,
+            description: this.description,
+            originSystem: this.originSystem,
+            originStation: this.originStation,
+            destinationSystem: this.destinationSystem,
+            destinationStation: this.destinationStation,
+            destinationSystemIndex: this.destinationSystemIndex,
+            targetCount: this.targetCount,
+            targetName: this.targetName,
+            targetShipType: this.targetShipType,
+            guardCount: this.guardCount,
+            guardShipType: this.guardShipType,
+            cargoType: this.cargoType,
+            cargoQuantity: this.cargoQuantity,
+            rewardCredits: this.rewardCredits,
+            isIllegal: this.isIllegal,
+            requiredRep: this.requiredRep,
+            timeLimit: this.timeLimit,
+            canLeaveSystem: this.canLeaveSystem,
+            _targetEnemyId: this._targetEnemyId,
+            _guardIds: this._guardIds,
+            offeringFaction: this.offeringFaction,
+            targetFaction: this.targetFaction,
+            targetObjectType: this.targetObjectType,
+            targetObjectId: this.targetObjectId,
+            targetPlanetName: this.targetPlanetName,
+            spawnSystemIndex: this.spawnSystemIndex,
+            status: this.status,
+            progressCount: this.progressCount
+        };
+    }
+
+    /**
+     * Creates a new Mission instance from a JSON object.
+     * @param {Object} json - The JSON object to deserialize.
+     * @returns {Mission} The rehydrated Mission object.
+     */
+    static fromJSON(json) {
+        return new Mission(json);
+    }
 } // End of Mission Class

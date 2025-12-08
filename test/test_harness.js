@@ -580,6 +580,22 @@ function setupMockP5() {
         window.radians = (deg) => deg * Math.PI / 180;
         window.degrees = (rad) => rad * 180 / Math.PI;
         window.constrain = (n, low, high) => Math.max(low, Math.min(high, n));
+
+        // p5 namespace mock
+        window.p5 = {
+            Vector: {
+                random2D: () => {
+                    const angle = Math.random() * Math.PI * 2;
+                    return new MockVector(Math.cos(angle), Math.sin(angle), 0);
+                },
+                add: (v1, v2) => new MockVector(v1.x + v2.x, v1.y + v2.y, (v1.z || 0) + (v2.z || 0)),
+                sub: (v1, v2) => new MockVector(v1.x - v2.x, v1.y - v2.y, (v1.z || 0) - (v2.z || 0)),
+                mult: (v, n) => new MockVector(v.x * n, v.y * n, (v.z || 0) * n),
+                div: (v, n) => new MockVector(v.x / n, v.y / n, (v.z || 0) / n),
+                dist: (v1, v2) => Math.sqrt(Math.pow(v2.x - v1.x, 2) + Math.pow(v2.y - v1.y, 2) + Math.pow((v2.z || 0) - (v1.z || 0), 2))
+            }
+        };
+
         window.map = (value, start1, stop1, start2, stop2) => {
             return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
         };
@@ -588,11 +604,41 @@ function setupMockP5() {
         window.noise = () => Math.random(); // Simple noise approximation
         window.noiseSeed = () => { };
         window.randomSeed = () => { };
-        window.color = (r, g, b, a) => ({ r, g, b, a: a ?? 255, levels: [r, g, b, a ?? 255] });
-        window.red = (c) => c.r || c.levels?.[0] || 0;
-        window.green = (c) => c.g || c.levels?.[1] || 0;
-        window.blue = (c) => c.b || c.levels?.[2] || 0;
-        window.alpha = (c) => c.a || c.levels?.[3] || 255;
+        window.color = (r, g, b, a) => {
+            let levels = [0, 0, 0, 255];
+            if (typeof r === 'string') {
+                if (r.startsWith('#')) {
+                    const bigint = parseInt(r.substring(1), 16);
+                    levels[0] = (bigint >> 16) & 255;
+                    levels[1] = (bigint >> 8) & 255;
+                    levels[2] = bigint & 255;
+                } else {
+                    const match = r.match(/[-\d.]+/g);
+                    if (match && match.length >= 3) {
+                        levels[0] = parseFloat(match[0]);
+                        levels[1] = parseFloat(match[1]);
+                        levels[2] = parseFloat(match[2]);
+                        if (match.length >= 4) levels[3] = parseFloat(match[3]) * (match[3] <= 1 ? 255 : 1);
+                    }
+                }
+            } else if (Array.isArray(r)) {
+                levels = [r[0], r[1], r[2], r[3] ?? 255];
+            } else {
+                levels = [r || 0, g || 0, b || 0, a ?? 255];
+            }
+            return {
+                levels,
+                toString: function () { return `rgba(${Math.round(this.levels[0])},${Math.round(this.levels[1])},${Math.round(this.levels[2])},${this.levels[3]})`; },
+                setRed: function (v) { this.levels[0] = v; },
+                setGreen: function (v) { this.levels[1] = v; },
+                setBlue: function (v) { this.levels[2] = v; },
+                setAlpha: function (v) { this.levels[3] = v; }
+            };
+        };
+        window.red = (c) => c && c.levels ? c.levels[0] : 0;
+        window.green = (c) => c && c.levels ? c.levels[1] : 0;
+        window.blue = (c) => c && c.levels ? c.levels[2] : 0;
+        window.alpha = (c) => c && c.levels ? c.levels[3] : 255;
         window.lerpColor = (c1, c2, amt) => ({
             r: c1.r + (c2.r - c1.r) * amt,
             g: c1.g + (c2.g - c1.g) * amt,

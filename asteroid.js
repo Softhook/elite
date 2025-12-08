@@ -51,7 +51,7 @@ class Asteroid {
         let maxRadius = baseRadius;
 
         // Generate angles in ascending order
-        const angles = Array.from({length: numVertices}, (_, i) => i * TWO_PI / numVertices);
+        const angles = Array.from({ length: numVertices }, (_, i) => i * TWO_PI / numVertices);
         angles.sort((a, b) => a - b);
 
         // Create vertices
@@ -135,7 +135,7 @@ class Asteroid {
             line(offset, offset, offset, offset - bracketSize);
             pop();
         }
-        
+
         pop();
 
         // --- Draw Health Bar ---
@@ -200,6 +200,7 @@ class Asteroid {
             isComet: !!this.isComet,
             angle: this.angle,
             rotationSpeed: this.rotationSpeed,
+            maxRadius: this.maxRadius,
             vertices: Array.isArray(this.vertices) ? this.vertices.map(v => ({ x: v.x, y: v.y })) : null,
             color: this.color && this.color.levels ? this.color.levels.slice(0, 3) : null,
             seamColor: this.seamColor && this.seamColor.levels ? this.seamColor.levels.slice(0, 4) : null,
@@ -219,6 +220,7 @@ class Asteroid {
         if (data.vel) a.vel = createVector(data.vel.x || 0, data.vel.y || 0);
         a.angle = (data.angle !== undefined) ? data.angle : a.angle;
         a.rotationSpeed = (data.rotationSpeed !== undefined) ? data.rotationSpeed : a.rotationSpeed;
+        if (typeof data.maxRadius === 'number') a.maxRadius = data.maxRadius;
         if (Array.isArray(data.vertices)) {
             a.vertices = data.vertices.map(v => createVector(v.x || 0, v.y || 0));
         }

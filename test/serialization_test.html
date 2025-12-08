@@ -69,6 +69,10 @@
     <script src="../player.js"></script>
 
     <script>
+        // Constants needed for Cargo tests
+        const LEGAL_CARGO = ['Food', 'Textiles', 'Machinery', 'Metals', 'Minerals', 'Chemicals', 'Computers', 'Medicine', 'Adv Components', 'Luxury Goods'];
+        const ILLEGAL_CARGO = ['Narcotics', 'Weapons', 'Slaves'];
+
         // Setup mock p5 before tests
         setupMockP5();
 
@@ -85,7 +89,7 @@
                 player.vel = createVector(1, 2);
                 player.angle = 1.5;
                 player.credits = 5000;
-                player.hull = 80;
+                player.hull = 40;
                 player.shield = 30;
                 player.cargo = [
                     { name: 'Food', quantity: 10 },
@@ -117,7 +121,7 @@
 
             it('should serialize health', () => {
                 const json = player.toJSON();
-                expect(json.hull).toBe(80);
+                expect(json.hull).toBe(40);
                 expect(json.shield).toBe(30);
             });
 
@@ -341,8 +345,8 @@
                 expect(json.damage).toBe(15);
             });
 
-            it('should have fromJSON method', () => {
-                expect(typeof projectile.fromJSON).toBe('function');
+            it('should have static fromJSON method', () => {
+                expect(typeof Projectile.fromJSON).toBe('function');
             });
         });
 
@@ -377,14 +381,13 @@
                 expect(json.quantity).toBe(3);
             });
 
-            it('should have fromJSON method', () => {
-                expect(typeof cargo.fromJSON).toBe('function');
+            it('should have static fromJSON method', () => {
+                expect(typeof Cargo.fromJSON).toBe('function');
             });
 
             it('should round-trip cargo', () => {
                 const json = cargo.toJSON();
-                const restored = new Cargo(0, 0, 'Food', 1);
-                restored.fromJSON(json);
+                const restored = Cargo.fromJSON(json);
 
                 expect(restored.pos.x).toBe(300);
                 expect(restored.type).toBe('Luxury Goods');
@@ -425,8 +428,8 @@
                 expect(json.maxRadius).toBeDefined();
             });
 
-            it('should have fromJSON method', () => {
-                expect(typeof asteroid.fromJSON).toBe('function');
+            it('should have static fromJSON method', () => {
+                expect(typeof Asteroid.fromJSON).toBe('function');
             });
         });
 
@@ -441,7 +444,7 @@
                 market = new Market('Mining');
                 market.updatePrices();
                 // Modify some stock
-                const metals = market.goods.find(g => g.name === 'Metals');
+                const metals = market.commodities.find(g => g.name === 'Metals');
                 if (metals) metals.stock = 100;
             });
 
@@ -452,26 +455,24 @@
 
             it('should serialize goods with stock', () => {
                 const json = market.toJSON();
-                expect(json.goods).toBeDefined();
-                expect(Array.isArray(json.goods)).toBe(true);
+                expect(json.commodities).toBeDefined();
+                expect(Array.isArray(json.commodities)).toBe(true);
 
-                const metals = json.goods.find(g => g.name === 'Metals');
+                const metals = json.commodities.find(g => g.name === 'Metals');
                 expect(metals.stock).toBe(100);
             });
 
             it('should deserialize economy type', () => {
                 const json = market.toJSON();
-                const restored = new Market('Unknown');
-                restored.fromJSON(json);
+                const restored = Market.fromJSON(json, 'Unknown');
                 expect(restored.systemType).toBe('Mining');
             });
 
             it('should deserialize stock levels', () => {
                 const json = market.toJSON();
-                const restored = new Market('Unknown');
-                restored.fromJSON(json);
+                const restored = Market.fromJSON(json, 'Unknown');
 
-                const metals = restored.goods.find(g => g.name === 'Metals');
+                const metals = restored.commodities.find(g => g.name === 'Metals');
                 expect(metals.stock).toBe(100);
             });
         });

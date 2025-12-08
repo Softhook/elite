@@ -66,7 +66,7 @@ class Enemy {
     // ---------------------------------
     // --- Constructor & Initialization
     // ---------------------------------
-    
+
     /**
      * Creates an Enemy instance with role-specific behavior and ship type.
      * Stores speeds/rates/colors initially as raw values.
@@ -81,24 +81,32 @@ class Enemy {
     constructor(x, y, playerRef, shipTypeName, role) {
         // --- Robust Ship Definition Lookup ---
         let actualShipTypeName = shipTypeName; // Store the name passed in
-        let shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Try to find definition
-        
+        let shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[actualShipTypeName] : null;
+
         // Initialize thrust manager
         this.thrustManager = new ThrustManager();
 
         // Handle fallback if type not found
         if (!shipDef) {
-            console.warn(`Enemy constructor: Ship type "${shipTypeName}" not found! Defaulting to Krait.`);
-            actualShipTypeName = "Krait"; // Use the KEY of the fallback
-            shipDef = SHIP_DEFINITIONS[actualShipTypeName]; // Get the default definition using the correct key
+            console.warn(`Enemy constructor: Ship type "${shipTypeName}" not found! Defaulting to Sidewinder.`);
+            // Try Sidewinder first as it is the starter ship
+            if (typeof SHIP_DEFINITIONS !== 'undefined' && SHIP_DEFINITIONS["Sidewinder"]) {
+                actualShipTypeName = "Sidewinder";
+                shipDef = SHIP_DEFINITIONS["Sidewinder"];
+            } else {
+                // Determine fallback - check for KraitMKI
+                actualShipTypeName = "KraitMKI";
+                shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[actualShipTypeName] : null;
+            }
+
             // Safety check for the default definition itself
-              if (!shipDef) {
-                  console.error("FATAL: Default ship definition 'Krait' is missing from SHIP_DEFINITIONS! Cannot create enemy properly.");
-                  // Make enemy unusable if Krait is also missing
-                  this.hull = 0; this.destroyed = true; shipTypeName="ErrorShip"; role="Error"; // Prevent further errors
-                  // Minimal dummy values with expected property names
-                  shipDef = { name: "ErrorShip", size: 10, baseMaxSpeed: 0, baseThrust: 0, baseTurnRate: 0, baseHull: 1, baseShield: 0, shieldRecharge: 0, cargoCapacity: 0 };
-              }
+            if (!shipDef) {
+                console.error("FATAL: Default ship definition is missing from SHIP_DEFINITIONS! Cannot create enemy properly.");
+                // Make enemy unusable if fallback is also missing
+                this.hull = 0; this.destroyed = true; shipTypeName = "ErrorShip"; role = "Error"; // Prevent further errors
+                // Minimal dummy values with expected property names
+                shipDef = { name: "ErrorShip", size: 10, baseMaxSpeed: 0, baseThrust: 0, baseTurnRate: 0, baseHull: 1, baseShield: 0, shieldRecharge: 0, cargoCapacity: 0 };
+            }
         }
         // --- End Lookup ---
 
@@ -106,7 +114,7 @@ class Enemy {
         this.shipTypeName = actualShipTypeName; // Store the ACTUAL KEY used to find the definition
         this.role = role;
         this.displayName = (this.role === AI_ROLE.ALIEN) ? null : generateHumanEnemyName();
-        
+
         // Assign faction based on role and ship type
         this.faction = null; // Default to no faction
         if (this.role === AI_ROLE.POLICE) {
@@ -165,19 +173,19 @@ class Enemy {
         // --- Store Raw Color VALUES ---
         this.baseColorValue = [random(80, 180), random(80, 180), random(80, 180)]; // Store as [R, G, B] array
         this.strokeColorValue = [200, 200, 200]; // Default grey as [R, G, B]
-        switch(this.role) {
+        switch (this.role) {
             case AI_ROLE.POLICE: this.strokeColorValue = [100, 150, 255]; break; // Blue
             case AI_ROLE.HAULER: this.strokeColorValue = [200, 200, 100]; break; // Yellow
             case AI_ROLE.PIRATE: this.strokeColorValue = [255, 100, 100]; break; // Red
-            case AI_ROLE.ALIEN:  this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; break;// Default Alien Green or from shipDef
+            case AI_ROLE.ALIEN: this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; break;// Default Alien Green or from shipDef
             case AI_ROLE.BOUNTY_HUNTER:
-            this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
-            // Bounty hunters might have slightly better stats or use shipDef overrides
-            this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.1; // Slightly faster turning
-            this.angleTolerance = shipDef.angleTolerance || (10 * PI/180); // Standard tolerance
-            this.drag = shipDef.drag || 0.99; // Slightly less drag
-            this.target = playerRef;
-            break;
+                this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
+                // Bounty hunters might have slightly better stats or use shipDef overrides
+                this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.1; // Slightly faster turning
+                this.angleTolerance = shipDef.angleTolerance || (10 * PI / 180); // Standard tolerance
+                this.drag = shipDef.drag || 0.99; // Slightly less drag
+                this.target = playerRef;
+                break;
             case AI_ROLE.GUARD:
                 this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
                 // Guards might inherit target from principal or player initially
@@ -203,10 +211,10 @@ class Enemy {
         this.fireCooldown = random(1.0, 2.5);
         this.weaponIndex = 0; // To track which weapon is currently active if ship has multiple
         this.weaponHeat = {};
-        
+
         // Track active mines deployed by this enemy (max 5)
         this.activeMines = [];
-        
+
         // Resolve weapons strictly from ship definition. Do NOT auto-arm unarmed ships.
         this.weapons = [];
         this.currentWeapon = null;
@@ -252,7 +260,7 @@ class Enemy {
                 this.fireRate = 0;
             }
         }
-        
+
         // --- Role-Specific Initial State ---
         if (this.role === AI_ROLE.TRANSPORT) {
             // For transport shuttles, use lower speed and a fixed route behavior.
@@ -271,7 +279,7 @@ class Enemy {
             this.currentState = AI_STATE.PATROLLING;
         } else {
             // Existing role assignments – for Pirates/Police/Hauler, etc.
-            switch(this.role) {
+            switch (this.role) {
                 case AI_ROLE.HAULER: this.currentState = AI_STATE.PATROLLING; break;
                 case AI_ROLE.POLICE: this.currentState = AI_STATE.PATROLLING; break;
                 case AI_ROLE.PIRATE: this.currentState = AI_STATE.IDLE; break;
@@ -344,8 +352,8 @@ class Enemy {
         this.hasLoggedDamageActivation = false;
         this.hasLoggedPlayerTargeting = false;
         this.targetSwitchCooldown = 0;
-            this.dragMultiplier = 1.0;   // Default - normal drag
-            this.dragEffectTimer = 0;    // Countdown timer for tangle effect
+        this.dragMultiplier = 1.0;   // Default - normal drag
+        this.dragEffectTimer = 0;    // Countdown timer for tangle effect
         // --- End Combat AI Flags ---
 
         // --- Barrier System Properties ---
@@ -378,46 +386,46 @@ class Enemy {
     // -----------------------------
     // --- Initialization Methods ---
     // -----------------------------
-    
+
     /** Calculates and sets radian-based properties using p5.radians(). */
     calculateRadianProperties() {
-         if (typeof radians !== 'function') {
-             console.warn("Enemy.calculateRadianProperties: radians function not available!");
-             return;
-         }
-         try {
-             // No need to recalculate baseTurnRate - it's already in radians from constructor
-             // Just set the derived properties:
-             this.rotationSpeed = this.baseTurnRate * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
-             this.angleTolerance = 15 * PI/180; // This still converts 15 degrees to radians
-         } catch(e) {
-             console.error(`Error calc radians for Enemy ${this.shipTypeName}: ${e}`);
-         }
+        if (typeof radians !== 'function') {
+            console.warn("Enemy.calculateRadianProperties: radians function not available!");
+            return;
+        }
+        try {
+            // No need to recalculate baseTurnRate - it's already in radians from constructor
+            // Just set the derived properties:
+            this.rotationSpeed = this.baseTurnRate * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
+            this.angleTolerance = 15 * PI / 180; // This still converts 15 degrees to radians
+        } catch (e) {
+            console.error(`Error calc radians for Enemy ${this.shipTypeName}: ${e}`);
+        }
     }
 
     /** Creates p5.Color objects using stored values. Must be called after p5 is ready. */
     initializeColors() {
-         if (typeof color !== 'function') { return; } // Skip if p5 not ready
-         try {
-             this.p5FillColor = color(this.baseColorValue[0], this.baseColorValue[1], this.baseColorValue[2]);
-             this.p5StrokeColor = color(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2]);
-             // console.log(` Enemy ${this.shipTypeName} Colors Initialized.`); // Optional
-         } catch(e) { console.error(`Error creating colors for Enemy ${this.shipTypeName}:`, e); this.p5FillColor = color(180); this.p5StrokeColor = color(255); } // Fallbacks
+        if (typeof color !== 'function') { return; } // Skip if p5 not ready
+        try {
+            this.p5FillColor = color(this.baseColorValue[0], this.baseColorValue[1], this.baseColorValue[2]);
+            this.p5StrokeColor = color(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2]);
+            // console.log(` Enemy ${this.shipTypeName} Colors Initialized.`); // Optional
+        } catch (e) { console.error(`Error creating colors for Enemy ${this.shipTypeName}:`, e); this.p5FillColor = color(180); this.p5StrokeColor = color(255); } // Fallbacks
     }
 
     // -------------------------
     // --- Core Update Logic ---
     // -------------------------
-    
+
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         // Allow update to continue during jump-fade even if `destroyed` is set,
         // so we can complete the visual fade-back phase after logical destruction.
         if ((this.destroyed && !this._isJumpFading) || !system) return;
-    
+
         // Always update system reference when update is called
         this.currentSystem = system;
-        
+
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
@@ -458,14 +466,14 @@ class Enemy {
 
             return; // Skip normal updates while performing jump-fade
         }
-        
+
         // Update weapon cooldown
         this.fireCooldown -= deltaSeconds;
 
         if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
             WeaponSystem.coolWeaponHeat(this, deltaSeconds);
         }
-        
+
         // Cargo collection cooldown
         if (this.cargoCollectionCooldown > 0) {
             this.cargoCollectionCooldown -= deltaSeconds;
@@ -475,12 +483,12 @@ class Enemy {
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaSeconds;
         }
-        
+
         // Process target switch cooldown
         if (this.targetSwitchCooldown > 0) {
             this.targetSwitchCooldown -= deltaSeconds;
         }
-        
+
         // Process guard engagement lock timer
         if (this.guardEngagementLock > 0) {
             this.guardEngagementLock -= deltaSeconds;
@@ -507,7 +515,7 @@ class Enemy {
         if (this.barrierCooldown > 0) {
             this.barrierCooldown -= deltaSeconds;
         }
-        
+
         // Update barrier duration timer
         if (this.isBarrierActive && this.barrierDurationTimer > 0) {
             this.barrierDurationTimer -= deltaSeconds;
@@ -531,10 +539,10 @@ class Enemy {
         // avoid decrementing here to prevent double counting.
 
         // For pirates: Look for cargo first if not already collecting
-        if (this.role === AI_ROLE.PIRATE && 
-            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+        if (this.role === AI_ROLE.PIRATE &&
+            this.currentState !== AI_STATE.COLLECTING_CARGO &&
             this.cargoCollectionCooldown <= 0) {
-            
+
             const cargoTarget = this.detectCargo(system);
             if (cargoTarget) {
                 this.cargoTarget = cargoTarget;
@@ -544,10 +552,10 @@ class Enemy {
         }
 
         // For transporters: Check for cargo like pirates do
-        if (this.role === AI_ROLE.TRANSPORT && 
-            this.currentState !== AI_STATE.COLLECTING_CARGO && 
+        if (this.role === AI_ROLE.TRANSPORT &&
+            this.currentState !== AI_STATE.COLLECTING_CARGO &&
             this.cargoCollectionCooldown <= 0) {
-            
+
             const cargoTarget = this.detectCargo(system);
             if (cargoTarget) {
                 // Remember current state to return to after collection
@@ -572,7 +580,7 @@ class Enemy {
                     // Normal transport behavior
                     this.updateTransportAI(system);
                 }
-            } 
+            }
             // --- START OF NEW GUARD ROLE LOGIC ---
             else if (this.role === AI_ROLE.GUARD) {
                 // *** ADD THIS CHECK ***
@@ -602,27 +610,27 @@ class Enemy {
                             this.updateCombatAI(system);
                         }
                         break;
-                    case AI_ROLE.POLICE: 
-                        this.updatePoliceAI(system); 
+                    case AI_ROLE.POLICE:
+                        this.updatePoliceAI(system);
                         break;
-                    case AI_ROLE.HAULER: 
-                        this.updateHaulerAI(system); 
+                    case AI_ROLE.HAULER:
+                        this.updateHaulerAI(system);
                         break;
                     case AI_ROLE.COMBAT:
                         this.updateCombatRoleAI(system); // New combat role AI
                         break;
-                    case AI_ROLE.ALIEN: 
+                    case AI_ROLE.ALIEN:
                         this.updateCombatAI(system);
                         break;
                     case AI_ROLE.BOUNTY_HUNTER:
                         this.updateCombatAI(system); // Bounty Hunters use combat AI
                         break;
-                    default: 
+                    default:
                         // Default behavior for unknown roles
-                        this.vel.mult(this.drag * 0.95); 
+                        this.vel.mult(this.drag * 0.95);
                         break;
                 }
-                
+
                 // Update physics - except for Transport role which handles its own physics
                 this.updatePhysics();
             }
@@ -636,7 +644,7 @@ class Enemy {
     // ---------------------------
     // --- Role-Specific Updates ---
     // ---------------------------
-    
+
     // Targeting methods moved to enemyTargeting.js
 
     // Combat and weapons methods (selectOptimalWeapon, selectBestWeapon, isWeaponReady, 
@@ -664,7 +672,7 @@ class Enemy {
     // -----------------------
     // --- Movement & Physics ---
     // -----------------------
-    
+
     /** Predicts player's future position. */
     // Utility methods moved to enemyUtils.js
 
@@ -787,8 +795,8 @@ class Enemy {
             }
 
             // Recompute derived properties and colors (p5 must be ready for colors)
-            try { enemy.calculateRadianProperties(); } catch (_) {}
-            try { enemy.initializeColors(); } catch (_) {}
+            try { enemy.calculateRadianProperties(); } catch (_) { }
+            try { enemy.initializeColors(); } catch (_) { }
 
             // Preserve principal reference id for guards so relinker can restore it
             enemy._principalId = data.principalId || null;
@@ -799,17 +807,17 @@ class Enemy {
             return null;
         }
     }
-    
-/**
- * Damage System Methods
- * All damage-related methods moved to enemyDamageSystem.js
- * - takeDamage()
- * - _handleAttackerReference()
- * - _applyDamageDistribution()
- * - _processDestruction()
- * - _handlePlayerKillConsequences()
- * - _checkRandomCargoDrop()
- */
+
+    /**
+     * Damage System Methods
+     * All damage-related methods moved to enemyDamageSystem.js
+     * - takeDamage()
+     * - _handleAttackerReference()
+     * - _applyDamageDistribution()
+     * - _processDestruction()
+     * - _handlePlayerKillConsequences()
+     * - _checkRandomCargoDrop()
+     */
 
 
     // isDestroyed and checkCollision moved to enemyUtils.js

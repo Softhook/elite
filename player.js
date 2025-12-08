@@ -3191,6 +3191,24 @@ class Player {
         return true;
     }
 
+    /**
+     * Serializes the player to a JSON-compatible object.
+     * Delegates to getSaveData() for consistency.
+     */
+    toJSON() {
+        return this.getSaveData();
+    }
+
+    /**
+     * Creates a new Player instance from a JSON object.
+     * @param {Object} json - The JSON object to deserialize.
+     * @returns {Player} The rehydrated Player object.
+     */
+    static fromJSON(json) {
+        const player = new Player(json.shipTypeName || "Sidewinder");
+        player.loadSaveData(json);
+        return player;
+    }
 } // End of Player Class
 
 // Single source-of-truth for faction thresholds, ranks and base rank

@@ -287,6 +287,20 @@
         // ============================================
 
         describe('Mission Progress', () => {
+            it('should have updateProgress method', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Test',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5
+                });
+                expect(typeof mission.updateProgress).toBe('function');
+
+                mission.progressCount = 0;
+                mission.updateProgress(1);
+                expect(mission.progressCount).toBe(1);
+            });
+
             it('should track bounty kills', () => {
                 const mission = new Mission({
                     id: 1,

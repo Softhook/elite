@@ -11,10 +11,10 @@ const GALAXY_CONFIG = {
     MAX_PLACEMENT_ATTEMPTS: 150,
     NEAREST_NEIGHBORS_TO_CONNECT: 3,
     RELAX_ITERATIONS: 80,
-    
+
     // Jump range
     DEFAULT_HYPERDRIVE_RANGE: 7,
-    
+
     // Arrival position
     MIN_ARRIVAL_DISTANCE: 1000,
     MAX_ARRIVAL_DISTANCE: 2000
@@ -54,22 +54,22 @@ class Galaxy {
     // =========================================================================
     // STATIC PROPERTIES
     // =========================================================================
-    
+
     /** Economy type definitions with associated colors */
     static ECONOMY_DATA = {
-        "Industrial":   { color: [60, 120, 200, 210] }, // Blue
+        "Industrial": { color: [60, 120, 200, 210] }, // Blue
         "Agricultural": { color: [180, 120, 40, 210] }, // Brown/Orange
-        "Mining":       { color: [160, 160, 170, 210] }, // Light Grey/Silver
-        "Refinery":     { color: [160, 40, 40, 210] },   // Maroon
-        "Post Human":    { color: [0, 200, 200, 210] },   // Cyan
-        "Tourism":      { color: [200, 80, 200, 210] },  // Purple/Pink
-        "Service":      { color: [200, 255, 255, 210] }, // 
-        "Military":     { color: [200, 50, 50, 210] },   // Red
-        "Offworld":     { color: [100, 180, 100, 210] }, // Light Green (Placeholder)
-        "Separatist":   { color: [200, 100, 0, 210] },   // Orange (Placeholder)
-        "Imperial":     { color: [218, 165, 32, 210] },  // Gold (Placeholder)
-        "Alien":        { color: [100, 50, 150, 210] },  // Dark Purple
-        "Default":      { color: [150, 150, 150, 210] }   // Default grey if type unknown
+        "Mining": { color: [160, 160, 170, 210] }, // Light Grey/Silver
+        "Refinery": { color: [160, 40, 40, 210] },   // Maroon
+        "Post Human": { color: [0, 200, 200, 210] },   // Cyan
+        "Tourism": { color: [200, 80, 200, 210] },  // Purple/Pink
+        "Service": { color: [200, 255, 255, 210] }, // 
+        "Military": { color: [200, 50, 50, 210] },   // Red
+        "Offworld": { color: [100, 180, 100, 210] }, // Light Green (Placeholder)
+        "Separatist": { color: [200, 100, 0, 210] },   // Orange (Placeholder)
+        "Imperial": { color: [218, 165, 32, 210] },  // Gold (Placeholder)
+        "Alien": { color: [100, 50, 150, 210] },  // Dark Purple
+        "Default": { color: [150, 150, 150, 210] }   // Default grey if type unknown
     };
 
     // =========================================================================
@@ -142,9 +142,9 @@ class Galaxy {
 
             // Fallback if unique name wasn't found after attempts
             if (systemName === "Unnamed System") {
-                 systemName = `System ${i + 1}`;
-                 generatedNames.add(systemName); // Add fallback name to set
-                 console.warn(`   -> Using fallback name: ${systemName}`);
+                systemName = `System ${i + 1}`;
+                generatedNames.add(systemName); // Add fallback name to set
+                console.warn(`   -> Using fallback name: ${systemName}`);
             }
             // *** END NAME GENERATION CORRECTION ***
 
@@ -186,7 +186,7 @@ class Galaxy {
         } // End main generation loop
 
         console.log(`   Galaxy.initGalaxySystems: Finished generating system definitions. Actual count: ${this.systems.length}.`);
-        if(this.systems.length !== NUM_SYSTEMS) { console.warn(`!!! Expected ${NUM_SYSTEMS} systems, but only created ${this.systems.length}.`); }
+        if (this.systems.length !== NUM_SYSTEMS) { console.warn(`!!! Expected ${NUM_SYSTEMS} systems, but only created ${this.systems.length}.`); }
 
         // --- Relax positions to avoid systems being too close/overlapping ---
         this._relaxSystemPositions(MIN_SEPARATION, PLACEMENT_BORDER);
@@ -203,11 +203,11 @@ class Galaxy {
         // --- Initialize Static Elements ---
         console.log("   Galaxy.initGalaxySystems: Initializing static elements for each system...");
         this.systems.forEach((system, index) => { /* ... same init logic ... */
-             if (system && system.initStaticElements) {
-                 try { system.initStaticElements(globalSessionSeed); } // Pass globalSessionSeed
-                 catch (e) { console.error(`Error during initStaticElements for system ${index} (${system?.name || 'N/A'}):`, e); }
-             } else { console.warn(`Skipping initStaticElements for invalid system object at index ${index}.`); }
-         });
+            if (system && system.initStaticElements) {
+                try { system.initStaticElements(globalSessionSeed); } // Pass globalSessionSeed
+                catch (e) { console.error(`Error during initStaticElements for system ${index} (${system?.name || 'N/A'}):`, e); }
+            } else { console.warn(`Skipping initStaticElements for invalid system object at index ${index}.`); }
+        });
         console.log("   Galaxy.initGalaxySystems: Finished initializing static elements.");
 
         // --- Final Setup ---
@@ -236,10 +236,10 @@ class Galaxy {
         if (this.systems.length > 0 && this.systems[this.currentSystemIndex]) {
             let startSystem = this.systems[this.currentSystemIndex];
             startSystem.visited = true;
-            
+
             // Use the setter method to ensure consistency
             startSystem.setEconomyType(startSystem.economyType);
-            
+
             console.log(`Galaxy.initGalaxySystems: Starting system set to ${startSystem.name} (Index ${this.currentSystemIndex}, Economy: ${startSystem.economyType}) and marked as discovered.`);
         } else {
             console.error("   Galaxy.initGalaxySystems: No valid starting system found after generation!");
@@ -263,52 +263,52 @@ class Galaxy {
         try {
             const iterations = GALAXY_CONFIG.RELAX_ITERATIONS;
             const minDistSq = minSeparation * minSeparation;
-            
+
             for (let iter = 0; iter < iterations; iter++) {
                 let moved = false;
-                
+
                 for (let a = 0; a < this.systems.length; a++) {
                     const sysA = this.systems[a];
                     if (!sysA?.galaxyPos) continue;
-                    
+
                     for (let b = a + 1; b < this.systems.length; b++) {
                         const sysB = this.systems[b];
                         if (!sysB?.galaxyPos) continue;
-                        
+
                         let dx = sysB.galaxyPos.x - sysA.galaxyPos.x;
                         let dy = sysB.galaxyPos.y - sysA.galaxyPos.y;
                         let distSq = dx * dx + dy * dy;
-                        
+
                         // Jitter to avoid exact overlap
                         if (distSq === 0) {
                             dx = (random() - 0.5) * 0.01;
                             dy = (random() - 0.5) * 0.01;
                             distSq = dx * dx + dy * dy;
                         }
-                        
+
                         if (distSq < minDistSq) {
                             const d = Math.sqrt(distSq);
                             const overlap = (minSeparation - d) / 2;
                             const nx = dx / d;
                             const ny = dy / d;
-                            
+
                             // Push systems apart
                             sysA.galaxyPos.x -= nx * overlap;
                             sysA.galaxyPos.y -= ny * overlap;
                             sysB.galaxyPos.x += nx * overlap;
                             sysB.galaxyPos.y += ny * overlap;
-                            
+
                             // Clamp to placement border
                             sysA.galaxyPos.x = constrain(sysA.galaxyPos.x, placementBorder, width - placementBorder);
                             sysA.galaxyPos.y = constrain(sysA.galaxyPos.y, placementBorder, height - placementBorder);
                             sysB.galaxyPos.x = constrain(sysB.galaxyPos.x, placementBorder, width - placementBorder);
                             sysB.galaxyPos.y = constrain(sysB.galaxyPos.y, placementBorder, height - placementBorder);
-                            
+
                             moved = true;
                         }
                     }
                 }
-                
+
                 if (!moved) break;
             }
         } catch (e) {
@@ -390,8 +390,8 @@ class Galaxy {
         }
 
         console.log("   Finished generating galaxy connections.");
-         // Optional: Log connections for debugging
-         // this.systems.forEach((sys, idx) => { console.log(`   System ${idx} (${sys?.name}) connections: [${sys?.connectedSystemIndices?.join(',')}]`); });
+        // Optional: Log connections for debugging
+        // this.systems.forEach((sys, idx) => { console.log(`   System ${idx} (${sys?.name}) connections: [${sys?.connectedSystemIndices?.join(',')}]`); });
     } // --- End generateConnections ---
 
 
@@ -417,8 +417,8 @@ class Galaxy {
         const system = this.systems[this.currentSystemIndex];
         // Check if the system object itself is valid
         if (!system) {
-             console.warn(`getCurrentSystem: System object at index ${this.currentSystemIndex} is null or undefined.`);
-             return null;
+            console.warn(`getCurrentSystem: System object at index ${this.currentSystemIndex} is null or undefined.`);
+            return null;
         }
         return system;
     }
@@ -434,11 +434,11 @@ class Galaxy {
             console.warn(`jumpToSystem: Already in system ${targetIndex}. Ignoring duplicate jump request.`);
             return false;
         }
-        
+
         // Get current system and check connections
         const currentSystemIndex = this.currentSystemIndex;
         const reachable = this.getReachableSystems();
-        
+
         // ENFORCE connection check
         if (!reachable.includes(targetIndex)) {
             console.warn(`Attempted jump to unconnected system index: ${targetIndex}. Allowed: [${reachable.join(', ')}]`);
@@ -450,7 +450,7 @@ class Galaxy {
             const oldSystemName = this.systems[this.currentSystemIndex]?.name || "Unknown";
             const newSystemName = this.systems[targetIndex]?.name || "Unknown";
             console.log(`Jumping from ${oldSystemName} to ${newSystemName} (Index: ${targetIndex})`);
-            
+
             // Clean up ambient sounds from old system
             const oldSystem = this.systems[this.currentSystemIndex];
             if (oldSystem && typeof oldSystem.cleanupAmbientSounds === 'function') {
@@ -471,7 +471,7 @@ class Galaxy {
 
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter
-            
+
             // Record system visit in player's personal record with economy and security context
             if (player && typeof player.recordSystemVisit === 'function') {
                 player.recordSystemVisit(
@@ -513,12 +513,12 @@ class Galaxy {
     }
 
 
-   /**
-     * Calculates the minimum number of jumps between two systems using BFS.
-     * @param {number} startIndex - The index of the starting system.
-     * @param {number} endIndex - The index of the destination system.
-     * @returns {number} The minimum number of jumps, or Infinity if unreachable.
-     */
+    /**
+      * Calculates the minimum number of jumps between two systems using BFS.
+      * @param {number} startIndex - The index of the starting system.
+      * @param {number} endIndex - The index of the destination system.
+      * @returns {number} The minimum number of jumps, or Infinity if unreachable.
+      */
     getJumpDistance(startIndex, endIndex) {
         // Basic validation
         if (startIndex < 0 || startIndex >= this.systems.length ||
@@ -554,10 +554,10 @@ class Galaxy {
 
             for (let neighborIndex of neighbors) {
                 // Validate neighbor index
-                 if (neighborIndex < 0 || neighborIndex >= this.systems.length || !this.systems[neighborIndex]) {
-                     // console.warn(`getJumpDistance: Skipping invalid neighbor index ${neighborIndex} from system ${currentIndex}.`);
-                     continue;
-                 }
+                if (neighborIndex < 0 || neighborIndex >= this.systems.length || !this.systems[neighborIndex]) {
+                    // console.warn(`getJumpDistance: Skipping invalid neighbor index ${neighborIndex} from system ${currentIndex}.`);
+                    continue;
+                }
 
                 // Check if we reached the destination
                 if (neighborIndex === endIndex) {
@@ -603,14 +603,14 @@ class Galaxy {
         if (!currentSystem || !Array.isArray(currentSystem.connectedSystemIndices)) {
             // Use a more specific log message based on what failed
             if (!currentSystem) {
-                 console.warn(`getReachableSystems: Current system object is invalid (Index: ${this.currentSystemIndex}). Cannot determine reachable systems.`);
+                console.warn(`getReachableSystems: Current system object is invalid (Index: ${this.currentSystemIndex}). Cannot determine reachable systems.`);
             } else {
-                 console.warn(`getReachableSystems: System ${this.currentSystemIndex} (${currentSystem.name}) connections property is not a valid array. Type: ${typeof currentSystem.connectedSystemIndices}`);
-                 // Attempt recovery if possible
-                 if (typeof currentSystem.connectedSystemIndices === 'undefined') {
+                console.warn(`getReachableSystems: System ${this.currentSystemIndex} (${currentSystem.name}) connections property is not a valid array. Type: ${typeof currentSystem.connectedSystemIndices}`);
+                // Attempt recovery if possible
+                if (typeof currentSystem.connectedSystemIndices === 'undefined') {
                     console.log(" -> Attempting to initialize connections array.");
                     currentSystem.connectedSystemIndices = [];
-                 }
+                }
             }
             return []; // Return empty array if invalid
         }
@@ -719,4 +719,22 @@ class Galaxy {
     }
     // ---
 
+    /**
+     * Serializes the galaxy to a JSON-compatible object.
+     * Delegates to getSaveData() for consistency.
+     */
+    toJSON() {
+        return this.getSaveData();
+    }
+
+    /**
+     * Creates a new Galaxy instance from a JSON object.
+     * @param {Object} json - The JSON object to deserialize.
+     * @returns {Galaxy} The rehydrated Galaxy object.
+     */
+    static fromJSON(json) {
+        const galaxy = new Galaxy();
+        galaxy.loadSaveData(json);
+        return galaxy;
+    }
 } // End Galaxy Class
