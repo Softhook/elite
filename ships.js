@@ -1514,26 +1514,57 @@ function drawThargoid(s, thrusting = false) {
 
 function drawBioFrigate(s, thrusting = false) {
     let r = s / 2;
-    let def = SHIP_DEFINITIONS.BioFrigate;
-    let pulse = 1.0 + sin(frameCount * 0.05) * 0.03;
+    // Organic Blob / Amoeba style - "The Living Cell"
+    let t = frameCount * 0.05;
     
-    // Breathing hull effect
     push();
-    scale(pulse);
-    drawShapeFromData(r, def.vertexLayers, color(def.fillColor), color(def.strokeColor), def.strokeW);
-    pop();
+    rotate(t * 0.1); // Slow rotation
     
-    // Veins/Texture
-    stroke(50, 200, 100, 100);
+    // 1. Cilia / Feelers (Background)
+    stroke(100, 255, 150, 100);
     strokeWeight(1);
     noFill();
+    for (let a = 0; a < TWO_PI; a += 0.3) {
+        let startR = r * 0.7;
+        let endR = r * 1.3;
+        let x1 = cos(a) * startR;
+        let y1 = sin(a) * startR;
+        // Wiggle effect
+        let wiggle = sin(t + a * 5) * (r * 0.1);
+        let x2 = cos(a) * endR + wiggle; 
+        let y2 = sin(a) * endR + wiggle;
+        
+        bezier(x1, y1, x1*1.1, y1*1.1, x2*0.9, y2*0.9, x2, y2);
+    }
+
+    // 2. Outer Membrane (Translucent)
+    noStroke();
+    fill(50, 150, 100, 60);
     beginShape();
-    for(let i=0; i<10; i++) {
-        let ang = map(i, 0, 10, 0, TWO_PI);
-        let rad = r * 0.6 + noise(i, frameCount*0.02) * r * 0.2;
-        vertex(cos(ang)*rad, sin(ang)*rad);
+    for (let a = 0; a < TWO_PI; a += 0.1) {
+        // Noise for wobbly shape
+        let offset = map(noise(cos(a) + t, sin(a) + t), 0, 1, -r*0.1, r*0.1);
+        let rad = r + offset;
+        vertex(cos(a) * rad, sin(a) * rad);
     }
     endShape(CLOSE);
+    
+    // 3. Inner Organ (Pulsing Core)
+    let pulse = 1 + sin(t * 3) * 0.05;
+    fill(180, 60, 60, 200); // Fleshy red/pink
+    beginShape();
+    for (let a = 0; a < TWO_PI; a += 0.2) {
+        let offset = map(noise(cos(a)*2 + t + 10, sin(a)*2 + t + 10), 0, 1, -r*0.15, r*0.15);
+        let rad = (r * 0.5 + offset) * pulse;
+        vertex(cos(a) * rad, sin(a) * rad);
+    }
+    endShape(CLOSE);
+
+    // 4. Nucleus
+    fill(40, 10, 10);
+    ellipse(0, 0, r * 0.25);
+    
+    pop();
 }
 
 function drawGeometricDrone(s, thrusting = false) {
@@ -1565,36 +1596,7 @@ function drawGeometricDrone(s, thrusting = false) {
     pop();
 }
 
-function drawShardInterceptor(s, thrusting = false) {
-    let r = s / 2;
-    let def = SHIP_DEFINITIONS.ShardInterceptor;
-    
-    // Floating shards
-    push();
-    rotate(frameCount * 0.01);
-    
-    // Main body (Crystal)
-    fill(180, 180, 255, 200);
-    stroke(255);
-    strokeWeight(1);
-    beginShape();
-    vertex(0, -r);
-    vertex(r*0.5, 0);
-    vertex(0, r);
-    vertex(-r*0.5, 0);
-    endShape(CLOSE);
-    
-    // Orbiting shards
-    for(let i=0; i<3; i++) {
-        push();
-        rotate(i * TWO_PI/3 + frameCount * 0.05);
-        translate(r * 0.8, 0);
-        fill(200, 200, 255, 150);
-        triangle(-5, -10, 5, -10, 0, 10);
-        pop();
-    }
-    pop();
-}
+
 
 function drawObeliskSentinel(s, thrusting = false) {
     let r = s / 2;
@@ -1854,7 +1856,7 @@ const CUSTOM_DRAW_FUNCTIONS = {
     "Thargoid": drawThargoid,
     "BioFrigate": drawBioFrigate,
     "GeometricDrone": drawGeometricDrone,
-    "ShardInterceptor": drawShardInterceptor,
+
     "ObeliskSentinel": drawObeliskSentinel,
     "SpiralWarden": drawSpiralWarden,
     "TriadProbe": drawTriadProbe,
