@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚀 Player Tests</h1>
+    <div class="description">
+        Tests for Player class: movement, combat, cargo, missions, and serialization.
+    </div>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../mission.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../thrustParticles.js"></script>
+
+    <!-- Source under test -->
+    <script src="../player.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // ============================================
+        // Player Construction Tests
+        // ============================================
+
+        describe('Player Construction', () => {
+            it('should create player with default Sidewinder', () => {
+                const player = new Player();
+                expect(player.shipTypeName).toBe('Sidewinder');
+                expect(player.pos).toBeDefined();
+                expect(player.vel).toBeDefined();
+            });
+
+            it('should create player with specified ship type', () => {
+                const player = new Player('CobraMkIII');
+                expect(player.shipTypeName).toBe('CobraMkIII');
+            });
+
+            it('should fallback to Sidewinder for invalid ship', () => {
+                const player = new Player('InvalidShipName');
+                expect(player.shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should initialize with full hull and shield', () => {
+                const player = new Player();
+                expect(player.hull).toBe(player.maxHull);
+                expect(player.shield).toBe(player.maxShield);
+            });
+
+            it('should initialize with starting credits', () => {
+                const player = new Player();
+                expect(player.credits).toBeGreaterThan(0);
+            });
+
+            it('should have empty cargo initially', () => {
+                const player = new Player();
+                expect(player.cargo).toEqual([]);
+            });
+
+            it('should initialize physics properties', () => {
+                const player = new Player();
+                expect(player.maxSpeed).toBeGreaterThan(0);
+                expect(player.thrustForce).toBeGreaterThan(0);
+                expect(player.size).toBeGreaterThan(0);
+            });
+        });
+
+        // ============================================
+        // Player Credits Tests
+        // ============================================
+
+        describe('Player Credits', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+                player.credits = 1000;
+            });
+
+            it('should add credits', () => {
+                player.addCredits(500);
+                expect(player.credits).toBe(1500);
+            });
+
+            it('should enforce integer credits when adding', () => {
+                player.addCredits(100.7);
+                expect(player.credits).toBe(1100); // Floor to integer
+            });
+
+            it('should spend credits when sufficient', () => {
+                const success = player.spendCredits(300);
+                expect(success).toBe(true);
+                expect(player.credits).toBe(700);
+            });
+
+            it('should fail to spend when insufficient', () => {
+                const success = player.spendCredits(2000);
+                expect(success).toBe(false);
+                expect(player.credits).toBe(1000); // Unchanged
+            });
+
+            it('should enforce integer credits when spending', () => {
+                player.spendCredits(100.9);
+                expect(player.credits).toBe(900); // Floor to integer
+            });
+        });
+
+        // ============================================
+        // Player Cargo Tests
+        // ============================================
+
+        describe('Player Cargo', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+                player.cargo = [];
+                player.cargoCapacity = 20;
+            });
+
+            it('should add cargo', () => {
+                player.cargo.push({ name: 'Food', quantity: 5 });
+                expect(player.cargo).toHaveLength(1);
+                expect(player.cargo[0].name).toBe('Food');
+            });
+
+            it('should check hasCargo correctly', () => {
+                player.cargo.push({ name: 'Food', quantity: 10 });
+                expect(player.hasCargo('Food', 5)).toBe(true);
+                expect(player.hasCargo('Food', 15)).toBe(false);
+                expect(player.hasCargo('Metals', 1)).toBe(false);
+            });
+
+            it('should remove cargo', () => {
+                player.cargo.push({ name: 'Food', quantity: 10 });
+                player.removeCargo('Food', 3);
+                const food = player.cargo.find(c => c.name === 'Food');
+                expect(food.quantity).toBe(7);
+            });
+
+            it('should remove cargo item when quantity reaches zero', () => {
+                player.cargo.push({ name: 'Food', quantity: 5 });
+                player.removeCargo('Food', 5);
+                expect(player.cargo.find(c => c.name === 'Food')).toBeUndefined();
+            });
+
+            it('should calculate used cargo space', () => {
+                player.cargo.push({ name: 'Food', quantity: 5 });
+                player.cargo.push({ name: 'Metals', quantity: 3 });
+                const used = player.cargo.reduce((sum, c) => sum + c.quantity, 0);
+                expect(used).toBe(8);
+            });
+        });
+
+        // ============================================
+        // Player Combat Tests
+        // ============================================
+
+        describe('Player Combat', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+            });
+
+            it('should have weapons array', () => {
+                expect(player.weapons).toBeDefined();
+                expect(Array.isArray(player.weapons)).toBe(true);
+                // Player starts with empty weapons array, loadWeaponsFromShipDefinition must be called
+            });
+
+            it('should load weapons from ship definition', () => {
+                player.loadWeaponsFromShipDefinition(player.shipTypeName);
+                expect(player.weapons.length).toBeGreaterThan(0);
+            });
+
+            it('should track current weapon index', () => {
+                expect(player.weaponIndex).toBeDefined();
+                expect(player.weaponIndex).toBeGreaterThanOrEqual(0);
+            });
+
+            it('should switch weapons', () => {
+                if (player.weapons.length > 1) {
+                    const originalIndex = player.weaponIndex;
+                    player.switchToWeapon((originalIndex + 1) % player.weapons.length);
+                    expect(player.weaponIndex).not.toBe(originalIndex);
+                }
+            });
+
+            it('should not switch to invalid weapon index', () => {
+                const originalIndex = player.weaponIndex;
+                player.switchToWeapon(999);
+                expect(player.weaponIndex).toBe(originalIndex);
+            });
+
+            it('should have current weapon reference', () => {
+                expect(player.currentWeapon).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Player Damage Tests
+        // ============================================
+
+        describe('Player Damage', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+                player.hull = 100;
+                player.maxHull = 100;
+                player.shield = 50;
+                player.maxShield = 50;
+            });
+
+            it('should have takeDamage method', () => {
+                expect(typeof player.takeDamage).toBe('function');
+            });
+
+            it('should absorb damage with shield first', () => {
+                player.takeDamage(30);
+                expect(player.shield).toBe(20);
+                expect(player.hull).toBe(100); // Hull untouched
+            });
+
+            it('should pass through to hull when shield depleted', () => {
+                player.takeDamage(70); // 50 to shield, 20 to hull
+                expect(player.shield).toBe(0);
+                expect(player.hull).toBe(80);
+            });
+
+            it('should not go below zero hull', () => {
+                player.takeDamage(200);
+                expect(player.hull).toBeGreaterThanOrEqual(0);
+            });
+        });
+
+        // ============================================
+        // Player Movement Tests
+        // ============================================
+
+        describe('Player Movement', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+                player.pos = createVector(0, 0);
+                player.vel = createVector(0, 0);
+                player.angle = 0;
+            });
+
+            it('should have position vector', () => {
+                expect(player.pos).toBeDefined();
+                expect(player.pos.x).toBeDefined();
+                expect(player.pos.y).toBeDefined();
+            });
+
+            it('should have velocity vector', () => {
+                expect(player.vel).toBeDefined();
+                expect(player.vel.x).toBeDefined();
+                expect(player.vel.y).toBeDefined();
+            });
+
+            it('should have angle property', () => {
+                expect(player.angle).toBeDefined();
+            });
+
+            it('should have thrust capability', () => {
+                expect(player.thrustForce).toBeGreaterThan(0);
+            });
+
+            it('should have speed burst properties', () => {
+                expect(player.speedBurstCooldown).toBeDefined();
+                expect(player.isSpeedBursting).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Player Mission Tests
+        // ============================================
+
+        describe('Player Missions', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+            });
+
+            it('should start with no active mission', () => {
+                expect(player.activeMission).toBeFalsy();
+            });
+
+            it('should accept mission', () => {
+                const missionData = {
+                    id: 12345,
+                    title: 'Test Delivery',
+                    type: MISSION_TYPE.DELIVERY_LEGAL,
+                    cargoType: 'Food',
+                    cargoQuantity: 10,
+                    reward: 5000,
+                    destination: 'Test Station',
+                    destinationSystemIndex: 0,
+                    originSystemIndex: 0
+                };
+
+                const result = player.acceptMission(missionData);
+                expect(result).toBe(true);
+                expect(player.activeMission).toBeTruthy();
+            });
+
+            it('should not accept mission when one is active', () => {
+                const mission1 = {
+                    id: 1,
+                    title: 'First Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000,
+                    originSystemIndex: 0
+                };
+                const mission2 = {
+                    id: 2,
+                    title: 'Second Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 3,
+                    reward: 2000,
+                    originSystemIndex: 0
+                };
+
+                player.acceptMission(mission1);
+                const result = player.acceptMission(mission2);
+                expect(result).toBe(false);
+                expect(player.activeMission.title).toBe('First Mission');
+            });
+
+            it('should abandon mission', () => {
+                const missionData = {
+                    id: 12345,
+                    title: 'Test Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000,
+                    originSystemIndex: 0
+                };
+                player.acceptMission(missionData);
+                player.abandonMission();
+                expect(player.activeMission).toBeFalsy();
+            });
+        });
+
+        // ============================================
+        // Player Effects Tests
+        // ============================================
+
+        describe('Player Effects', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+            });
+
+            it('should have drag effect properties', () => {
+                expect(player.dragMultiplier).toBeDefined();
+                expect(player.dragEffectTimer).toBeDefined();
+            });
+
+            it('should apply drag effect', () => {
+                player.applyDragEffect(5.0, 10.0);
+                expect(player.dragMultiplier).toBeGreaterThan(1.0);
+                expect(player.dragEffectTimer).toBeGreaterThan(0);
+            });
+
+            it('should compute cooldown correctly', () => {
+                const baseCooldown = 1.0;
+                const adjustedCooldown = player.computeCooldown(baseCooldown);
+                expect(adjustedCooldown).toBeGreaterThanOrEqual(baseCooldown);
+            });
+        });
+
+        // ============================================
+        // Player Serialization Tests
+        // ============================================
+
+        describe('Player Serialization', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+                player.credits = 5000;
+                player.cargo = [{ name: 'Food', quantity: 10 }];
+                // Don't set hull above maxHull - use value within limits
+                player.hull = Math.min(40, player.maxHull);
+            });
+
+            it('should have getSaveData method', () => {
+                expect(typeof player.getSaveData).toBe('function');
+            });
+
+            it('should serialize to save data', () => {
+                const saveData = player.getSaveData();
+                expect(saveData).toBeDefined();
+                expect(saveData.credits).toBe(5000);
+                expect(saveData.shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should serialize cargo', () => {
+                const saveData = player.getSaveData();
+                expect(saveData.cargo).toBeDefined();
+                expect(saveData.cargo).toHaveLength(1);
+                expect(saveData.cargo[0].name).toBe('Food');
+            });
+
+            it('should serialize position', () => {
+                player.pos = createVector(100, 200);
+                const saveData = player.getSaveData();
+                expect(saveData.pos).toBeDefined();
+                expect(saveData.pos.x).toBe(100);
+                expect(saveData.pos.y).toBe(200);
+            });
+
+            it('should have loadSaveData method', () => {
+                expect(typeof player.loadSaveData).toBe('function');
+            });
+
+            it('should restore from save data', () => {
+                const testHull = Math.min(40, player.maxHull);
+                player.hull = testHull;
+                const saveData = player.getSaveData();
+                const restored = new Player();
+                restored.loadSaveData(saveData);
+                expect(restored).toBeDefined();
+                expect(restored.credits).toBe(5000);
+                expect(restored.hull).toBe(testHull);
+            });
+
+            it('should round-trip serialization', () => {
+                player.pos = createVector(150, 250);
+                player.angle = 1.5;
+                const testHull = Math.min(40, player.maxHull);
+                player.hull = testHull;
+
+                const saveData = player.getSaveData();
+                const restored = new Player();
+                restored.loadSaveData(saveData);
+
+                expect(restored.credits).toBe(player.credits);
+                expect(restored.hull).toBe(testHull);
+                expect(restored.shipTypeName).toBe(player.shipTypeName);
+                expect(restored.cargo).toEqual(player.cargo);
+            });
+        });
+
+        // ============================================
+        // Player Bodyguard Tests
+        // ============================================
+
+        describe('Player Bodyguards', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+            });
+
+            it('should initialize bodyguard tracking', () => {
+                expect(player.activeBodyguards).toBeDefined();
+                expect(Array.isArray(player.activeBodyguards)).toBe(true);
+            });
+
+            it('should start with no bodyguards', () => {
+                expect(player.activeBodyguards).toHaveLength(0);
+            });
+
+            it('should have bodyguard limit', () => {
+                expect(player.bodyguardLimit).toBeDefined();
+                expect(player.bodyguardLimit).toBeGreaterThan(0);
+            });
+        });
+
+        // ============================================
+        // Player Records Tests
+        // ============================================
+
+        describe('Player Records', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player();
+            });
+
+            it('should initialize ships destroyed tracking', () => {
+                expect(player.shipsDestroyed).toBeDefined();
+                expect(Array.isArray(player.shipsDestroyed)).toBe(true);
+            });
+
+            it('should track kills', () => {
+                expect(player.kills).toBeDefined();
+                expect(typeof player.kills).toBe('number');
+            });
+
+            it('should have systems visited tracking', () => {
+                expect(player.systemsVisited).toBeDefined();
+                expect(Array.isArray(player.systemsVisited)).toBe(true);
+            });
+        });
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>

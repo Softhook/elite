@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📋 Mission Tests</h1>
+    <div class="description">
+        Tests for Mission and MissionGenerator: creation, lifecycle, progress tracking, and completion.
+    </div>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+
+    <!-- Source under test -->
+    <script src="../mission.js"></script>
+    <script src="../missionGenerator.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // Mock player for mission tests
+        function createMockPlayer(options = {}) {
+            return {
+                pos: createVector(0, 0),
+                credits: options.credits || 5000,
+                cargo: options.cargo || [],
+                cargoCapacity: options.cargoCapacity || 50,
+                activeMission: null,
+                wantedLevel: 0,
+                eliteScore: options.eliteScore || 100,
+                personalRecords: { kills: { total: 0 } },
+                addCredits(amount) { this.credits += Math.floor(amount); },
+                hasCargo(name, qty) {
+                    const item = this.cargo.find(c => c.name === name);
+                    return item && item.quantity >= qty;
+                }
+            };
+        }
+
+        // Mock system for mission tests
+        function createMockSystem(options = {}) {
+            return {
+                name: options.name || 'Test System',
+                index: options.index || 0,
+                systemIndex: options.index || 0,
+                economyType: options.economyType || 'Industrial',
+                securityLevel: options.securityLevel || 'Medium',
+                station: options.station || { name: 'Test Station', pos: createVector(500, 500) }
+            };
+        }
+
+        // Mock galaxy for mission generation
+        function createMockGalaxy(numSystems = 4) {
+            const systems = [];
+            for (let i = 0; i < numSystems; i++) {
+                systems.push(createMockSystem({
+                    name: `System ${i}`,
+                    index: i,
+                    economyType: ['Industrial', 'Agricultural', 'Mining', 'Service'][i % 4]
+                }));
+            }
+            return {
+                systems,
+                getSystemByIndex(idx) { return this.systems[idx]; },
+                getJumpDistance(from, to) { return Math.abs(to - from); }
+            };
+        }
+
+        // ============================================
+        // Mission Type Constants Tests
+        // ============================================
+
+        describe('Mission Type Constants', () => {
+            it('should define MISSION_TYPE object', () => {
+                expect(MISSION_TYPE).toBeDefined();
+            });
+
+            it('should have delivery types', () => {
+                expect(MISSION_TYPE.DELIVERY_LEGAL).toBe('Legal delivery');
+                expect(MISSION_TYPE.DELIVERY_ILLEGAL).toBe('Illegal delivery');
+            });
+
+            it('should have bounty types', () => {
+                expect(MISSION_TYPE.BOUNTY_PIRATE).toBe('Bounty');
+                expect(MISSION_TYPE.BOUNTY_ALIEN).toBe('Alien Bounty');
+            });
+
+            it('should have assassination type', () => {
+                expect(MISSION_TYPE.ASSASSINATION).toBe('Assassination');
+            });
+
+            it('should have sabotage type', () => {
+                expect(MISSION_TYPE.SABOTAGE).toBe('Sabotage');
+            });
+
+            it('should have cop killer type', () => {
+                expect(MISSION_TYPE.COP_KILLER).toBe('Cop Killer');
+            });
+        });
+
+        // ============================================
+        // Mission Construction Tests
+        // ============================================
+
+        describe('Mission Construction', () => {
+            it('should create mission from data object', () => {
+                const data = {
+                    id: 12345,
+                    title: 'Test Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000,
+                    originSystemIndex: 0
+                };
+                const mission = new Mission(data);
+                expect(mission).toBeDefined();
+                expect(mission.title).toBe('Test Mission');
+            });
+
+            it('should set mission ID', () => {
+                const data = { id: 99999, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE };
+                const mission = new Mission(data);
+                expect(mission.id).toBe(99999);
+            });
+
+            it('should set mission type', () => {
+                const data = { id: 1, title: 'Test', type: MISSION_TYPE.DELIVERY_LEGAL };
+                const mission = new Mission(data);
+                expect(mission.type).toBe(MISSION_TYPE.DELIVERY_LEGAL);
+            });
+
+            it('should set reward', () => {
+                const data = { id: 1, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE, reward: 5000 };
+                const mission = new Mission(data);
+                expect(mission.reward).toBe(5000);
+            });
+
+            it('should initialize status as Available', () => {
+                const data = { id: 1, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE };
+                const mission = new Mission(data);
+                expect(mission.status).toBe('Available');
+            });
+
+            it('should initialize progress to zero', () => {
+                const data = { id: 1, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE, targetCount: 5 };
+                const mission = new Mission(data);
+                expect(mission.progressCount).toBe(0);
+            });
+        });
+
+        // ============================================
+        // Mission Activation Tests
+        // ============================================
+
+        describe('Mission Activation', () => {
+            let mission;
+
+            beforeEach(() => {
+                mission = new Mission({
+                    id: 1,
+                    title: 'Test Bounty',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000
+                });
+            });
+
+            it('should have activate method', () => {
+                expect(typeof mission.activate).toBe('function');
+            });
+
+            it('should change status to Active', () => {
+                mission.activate();
+                expect(mission.status).toBe('Active');
+            });
+
+            it('should not reactivate completed mission', () => {
+                mission.status = 'Completed';
+                mission.activate();
+                expect(mission.status).toBe('Completed');
+            });
+        });
+
+        // ============================================
+        // Mission Completion Tests
+        // ============================================
+
+        describe('Mission Completion', () => {
+            let mission;
+            let player;
+
+            beforeEach(() => {
+                mission = new Mission({
+                    id: 1,
+                    title: 'Test Bounty',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 3,
+                    reward: 5000
+                });
+                mission.status = 'Active';
+                mission.progressCount = 3; // Met target
+                player = createMockPlayer({ credits: 1000 });
+            });
+
+            it('should have complete method', () => {
+                expect(typeof mission.complete).toBe('function');
+            });
+
+            it('should change status to Completed', () => {
+                mission.complete(player);
+                expect(mission.status).toBe('Completed');
+            });
+
+            it('should add reward to player', () => {
+                const initialCredits = player.credits;
+                mission.complete(player);
+                expect(player.credits).toBe(initialCredits + 5000);
+            });
+        });
+
+        // ============================================
+        // Mission Failure Tests
+        // ============================================
+
+        describe('Mission Failure', () => {
+            let mission;
+
+            beforeEach(() => {
+                mission = new Mission({
+                    id: 1,
+                    title: 'Test Mission',
+                    type: MISSION_TYPE.DELIVERY_LEGAL,
+                    reward: 3000
+                });
+                mission.status = 'Active';
+            });
+
+            it('should have fail method', () => {
+                expect(typeof mission.fail).toBe('function');
+            });
+
+            it('should change status to Failed', () => {
+                mission.fail();
+                expect(mission.status).toBe('Failed');
+            });
+        });
+
+        // ============================================
+        // Mission Progress Tests
+        // ============================================
+
+        describe('Mission Progress', () => {
+            it('should track bounty kills', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Bounty Hunt',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 5000
+                });
+                mission.status = 'Active';
+                mission.progressCount = 0;
+
+                // Simulate kills
+                mission.progressCount += 1;
+                expect(mission.progressCount).toBe(1);
+
+                mission.progressCount += 2;
+                expect(mission.progressCount).toBe(3);
+            });
+
+            it('should check if target reached', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Bounty Hunt',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 3,
+                    reward: 5000
+                });
+                mission.progressCount = 3;
+
+                expect(mission.progressCount >= mission.targetCount).toBe(true);
+            });
+        });
+
+        // ============================================
+        // Delivery Mission Tests
+        // ============================================
+
+        describe('Delivery Missions', () => {
+            it('should store cargo type', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Deliver Food',
+                    type: MISSION_TYPE.DELIVERY_LEGAL,
+                    cargoType: 'Food',
+                    cargoQuantity: 10,
+                    reward: 2000
+                });
+                expect(mission.cargoType).toBe('Food');
+                expect(mission.cargoQuantity).toBe(10);
+            });
+
+            it('should store destination', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Deliver Food',
+                    type: MISSION_TYPE.DELIVERY_LEGAL,
+                    destination: 'Alpha Station',
+                    destinationSystemIndex: 2,
+                    reward: 2000
+                });
+                expect(mission.destination).toBe('Alpha Station');
+                expect(mission.destinationSystemIndex).toBe(2);
+            });
+        });
+
+        // ============================================
+        // Assassination Mission Tests
+        // ============================================
+
+        describe('Assassination Missions', () => {
+            it('should store target name', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Eliminate Target',
+                    type: MISSION_TYPE.ASSASSINATION,
+                    targetName: 'Captain Vex',
+                    targetSystemIndex: 1,
+                    reward: 10000
+                });
+                expect(mission.targetName).toBe('Captain Vex');
+            });
+
+            it('should store target ship type', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Eliminate Target',
+                    type: MISSION_TYPE.ASSASSINATION,
+                    targetShipType: 'Anaconda',
+                    reward: 10000
+                });
+                expect(mission.targetShipType).toBe('Anaconda');
+            });
+
+            it('should track guards', () => {
+                const mission = new Mission({
+                    id: 1,
+                    title: 'Eliminate Target',
+                    type: MISSION_TYPE.ASSASSINATION,
+                    guardCount: 2,
+                    reward: 10000
+                });
+                expect(mission.guardCount).toBe(2);
+            });
+        });
+
+        // ============================================
+        // Mission Display Tests
+        // ============================================
+
+        describe('Mission Display', () => {
+            let mission;
+
+            beforeEach(() => {
+                mission = new Mission({
+                    id: 1,
+                    title: 'Test Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000,
+                    description: 'Hunt down pirates'
+                });
+            });
+
+            it('should have getSummary method', () => {
+                expect(typeof mission.getSummary).toBe('function');
+            });
+
+            it('should return summary string', () => {
+                const summary = mission.getSummary();
+                expect(typeof summary).toBe('string');
+                expect(summary.length).toBeGreaterThan(0);
+            });
+
+            it('should have getDetails method', () => {
+                expect(typeof mission.getDetails).toBe('function');
+            });
+
+            it('should return details string', () => {
+                const details = mission.getDetails();
+                expect(typeof details).toBe('string');
+            });
+        });
+
+        // ============================================
+        // MissionGenerator Tests
+        // ============================================
+
+        describe('MissionGenerator', () => {
+            let system;
+            let station;
+            let galaxy;
+            let player;
+
+            beforeEach(() => {
+                galaxy = createMockGalaxy(8);
+                system = galaxy.systems[0];
+                station = system.station;
+                player = createMockPlayer();
+            });
+
+            it('should have generateMissions method', () => {
+                expect(typeof MissionGenerator.generateMissions).toBe('function');
+            });
+
+            it('should generate array of missions', () => {
+                const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+                expect(Array.isArray(missions)).toBe(true);
+            });
+
+            it('should generate multiple missions', () => {
+                const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+                expect(missions.length).toBeGreaterThan(0);
+            });
+
+            it('should create missions with required fields', () => {
+                const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+                for (const mission of missions) {
+                    expect(mission.id).toBeDefined();
+                    expect(mission.title).toBeDefined();
+                    expect(mission.type).toBeDefined();
+                    expect(mission.reward).toBeDefined();
+                }
+            });
+        });
+
+        // ============================================
+        // MissionGenerator - Specific Mission Types
+        // ============================================
+
+        describe('MissionGenerator - Mission Types', () => {
+            let system;
+            let station;
+            let galaxy;
+            let player;
+
+            beforeEach(() => {
+                galaxy = createMockGalaxy(8);
+                system = galaxy.systems[0];
+                station = system.station;
+                player = createMockPlayer();
+            });
+
+            it('should have createLegalDelivery method', () => {
+                expect(typeof MissionGenerator.createLegalDelivery).toBe('function');
+            });
+
+            it('should create legal delivery mission', () => {
+                const mission = MissionGenerator.createLegalDelivery(system, station, galaxy, player);
+                if (mission) {
+                    expect(mission.type).toBe(MISSION_TYPE.DELIVERY_LEGAL);
+                    expect(mission.cargoType).toBeDefined();
+                    expect(mission.cargoQuantity).toBeGreaterThan(0);
+                }
+            });
+
+            it('should have createIllegalDelivery method', () => {
+                expect(typeof MissionGenerator.createIllegalDelivery).toBe('function');
+            });
+
+            it('should have createBountyMission method', () => {
+                expect(typeof MissionGenerator.createBountyMission).toBe('function');
+            });
+
+            it('should create bounty mission', () => {
+                const mission = MissionGenerator.createBountyMission(system, station, galaxy, player);
+                if (mission) {
+                    expect(mission.type).toBe(MISSION_TYPE.BOUNTY_PIRATE);
+                    expect(mission.targetCount).toBeGreaterThan(0);
+                }
+            });
+
+            it('should have createAssassinationMission method', () => {
+                expect(typeof MissionGenerator.createAssassinationMission).toBe('function');
+            });
+
+            it('should have createSabotageMission method', () => {
+                expect(typeof MissionGenerator.createSabotageMission).toBe('function');
+            });
+
+            it('should have createAlienBountyMission method', () => {
+                expect(typeof MissionGenerator.createAlienBountyMission).toBe('function');
+            });
+
+            it('should have createCopKillerMission method', () => {
+                expect(typeof MissionGenerator.createCopKillerMission).toBe('function');
+            });
+        });
+
+        // ============================================
+        // MissionGenerator - Destination Finding
+        // ============================================
+
+        describe('MissionGenerator - Destinations', () => {
+            let galaxy;
+            let system;
+
+            beforeEach(() => {
+                galaxy = createMockGalaxy(8);
+                system = galaxy.systems[0];
+            });
+
+            it('should have findNearbyDestination method', () => {
+                expect(typeof MissionGenerator.findNearbyDestination).toBe('function');
+            });
+
+            it('should find destination in range', () => {
+                const dest = MissionGenerator.findNearbyDestination(system, galaxy, true, 4);
+                // May or may not find one depending on galaxy structure
+                // Just verify it doesn't throw
+            });
+        });
+
+        // ============================================
+        // Mission Cargo Constants
+        // ============================================
+
+        describe('Mission Cargo Constants', () => {
+            it('should define LEGAL_CARGO', () => {
+                expect(LEGAL_CARGO).toBeDefined();
+                expect(Array.isArray(LEGAL_CARGO)).toBe(true);
+            });
+
+            it('should include common commodities', () => {
+                expect(LEGAL_CARGO).toContain('Food');
+                expect(LEGAL_CARGO).toContain('Metals');
+            });
+
+            it('should define ILLEGAL_CARGO', () => {
+                expect(ILLEGAL_CARGO).toBeDefined();
+                expect(Array.isArray(ILLEGAL_CARGO)).toBe(true);
+            });
+
+            it('should include contraband', () => {
+                expect(ILLEGAL_CARGO).toContain('Narcotics');
+                expect(ILLEGAL_CARGO).toContain('Weapons');
+            });
+
+            it('should define ECONOMY_EXPORTS', () => {
+                expect(ECONOMY_EXPORTS).toBeDefined();
+            });
+
+            it('should define ECONOMY_IMPORTS', () => {
+                expect(ECONOMY_IMPORTS).toBeDefined();
+            });
+        });
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>

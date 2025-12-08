@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enemy AI Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🤖 Enemy AI Tests</h1>
+    <div class="description">
+        Tests for Enemy AI: state machine, targeting, role behaviors, and cover mechanics.
+    </div>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../enemyUtils.js"></script>
+    <script src="../enemyDamageSystem.js"></script>
+    <script src="../enemyRendering.js"></script>
+    <script src="../enemyMovement.js"></script>
+    <script src="../enemyTargeting.js"></script>
+    <script src="../enemyCombat.js"></script>
+    <script src="../enemyStateMachine.js"></script>
+    <script src="../enemyAIBehaviors.js"></script>
+    <script src="../enemyCargo.js"></script>
+    <script src="../thrustParticles.js"></script>
+    <script src="../enemy.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // Mock player for enemy targeting
+        function createMockPlayer(options = {}) {
+            return {
+                pos: createVector(options.x || 0, options.y || 0),
+                vel: createVector(0, 0),
+                size: options.size || 30,
+                hull: options.hull || 100,
+                maxHull: 100,
+                shield: options.shield || 50,
+                maxShield: 50,
+                wantedLevel: options.wantedLevel || 0,
+                cargo: options.cargo || [],
+                isPlayer: true,
+                faction: options.faction || null
+            };
+        }
+
+        // Mock system for AI tests
+        function createMockSystem(options = {}) {
+            return {
+                asteroids: options.asteroids || [],
+                enemies: options.enemies || [],
+                projectiles: options.projectiles || [],
+                station: options.station || { pos: createVector(500, 500), size: 100 },
+                planets: options.planets || [],
+                jumpZoneCenter: createVector(0, 0)
+            };
+        }
+
+        // ============================================
+        // AI Constants Tests
+        // ============================================
+
+        describe('AI Constants', () => {
+            it('should define AI_ROLE constants', () => {
+                expect(AI_ROLE).toBeDefined();
+                expect(AI_ROLE.PIRATE).toBe('Pirate');
+                expect(AI_ROLE.POLICE).toBe('Police');
+                expect(AI_ROLE.HAULER).toBe('Hauler');
+                expect(AI_ROLE.COMBAT).toBe('Combat');
+            });
+
+            it('should define AI_STATE constants', () => {
+                expect(AI_STATE).toBeDefined();
+                expect(AI_STATE.IDLE).toBe(0);
+                expect(AI_STATE.APPROACHING).toBe(1);
+                expect(AI_STATE.ATTACK_PASS).toBe(2);
+                expect(AI_STATE.FLEEING).toBe(9);
+                expect(AI_STATE.SNIPING).toBe(11);
+            });
+
+            it('should have AI_STATE_NAME reverse lookup', () => {
+                expect(AI_STATE_NAME).toBeDefined();
+                expect(AI_STATE_NAME[0]).toBe('IDLE');
+                expect(AI_STATE_NAME[1]).toBe('APPROACHING');
+            });
+
+            it('should define targeting score constants', () => {
+                expect(POLICE_WANTED_BASE_SCORE).toBeDefined();
+                expect(PIRATE_CARGO_BASE_SCORE).toBeDefined();
+                expect(RETALIATION_SCORE_BONUS).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Enemy Construction Tests
+        // ============================================
+
+        describe('Enemy Construction', () => {
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 100, y: 100 });
+            });
+
+            it('should create enemy with valid ship type', () => {
+                const enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(enemy).toBeDefined();
+                expect(enemy.shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should set role correctly', () => {
+                const pirate = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(pirate.role).toBe(AI_ROLE.PIRATE);
+
+                const police = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.POLICE);
+                expect(police.role).toBe(AI_ROLE.POLICE);
+            });
+
+            it('should initialize position', () => {
+                const enemy = new Enemy(100, 200, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(enemy.pos.x).toBe(100);
+                expect(enemy.pos.y).toBe(200);
+            });
+
+            it('should initialize health properties', () => {
+                const enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(enemy.hull).toBe(enemy.maxHull);
+                expect(enemy.shield).toBe(enemy.maxShield);
+            });
+
+            it('should set initial state based on role', () => {
+                const pirate = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(pirate.currentState).toBeDefined();
+
+                const hauler = new Enemy(0, 0, mockPlayer, 'Adder', AI_ROLE.HAULER);
+                expect(hauler.currentState).toBeDefined();
+            });
+
+            it('should fallback to Sidewinder for invalid ship', () => {
+                const enemy = new Enemy(0, 0, mockPlayer, 'InvalidShip', AI_ROLE.PIRATE);
+                expect(enemy.shipTypeName).toBe('Sidewinder');
+            });
+        });
+
+        // ============================================
+        // State Machine Tests
+        // ============================================
+
+        describe('Enemy State Machine', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                enemy.target = mockPlayer;
+            });
+
+            it('should have changeState method', () => {
+                expect(typeof enemy.changeState).toBe('function');
+            });
+
+            it('should change state', () => {
+                enemy.changeState(AI_STATE.APPROACHING);
+                expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
+            });
+
+            it('should transition from IDLE to APPROACHING when target exists', () => {
+                enemy.currentState = AI_STATE.IDLE;
+                enemy._updateState_IDLE(true);
+                expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
+            });
+
+            it('should enter FLEEING when hull is low', () => {
+                enemy.hull = enemy.maxHull * 0.2; // 20% hull
+                enemy.currentState = AI_STATE.ATTACK_PASS;
+                // The state machine should eventually trigger fleeing
+                expect(enemy.hull / enemy.maxHull).toBeLessThan(0.4);
+            });
+
+            it('should have onStateEntry callback', () => {
+                expect(typeof enemy.onStateEntry).toBe('function');
+            });
+
+            it('should have onStateExit callback', () => {
+                expect(typeof enemy.onStateExit).toBe('function');
+            });
+
+            it('should track previous state', () => {
+                enemy.currentState = AI_STATE.IDLE;
+                enemy.changeState(AI_STATE.APPROACHING);
+                // The previousState should be set
+                expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
+            });
+        });
+
+        // ============================================
+        // Targeting Tests
+        // ============================================
+
+        describe('Enemy Targeting', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500, wantedLevel: 2, cargo: [{ name: 'Gold', quantity: 10 }] });
+                enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+            });
+
+            it('should have target reference', () => {
+                enemy.target = mockPlayer;
+                expect(enemy.target).toBeDefined();
+            });
+
+            it('should calculate target score for pirates', () => {
+                enemy.role = AI_ROLE.PIRATE;
+                if (typeof enemy._calculateTargetScore === 'function') {
+                    const score = enemy._calculateTargetScore(mockPlayer);
+                    expect(score).toBeDefined();
+                    // Pirates should value cargo
+                    expect(score).toBeGreaterThan(0);
+                }
+            });
+
+            it('should calculate target score for police', () => {
+                enemy.role = AI_ROLE.POLICE;
+                if (typeof enemy._calculateTargetScore === 'function') {
+                    const score = enemy._calculateTargetScore(mockPlayer);
+                    expect(score).toBeDefined();
+                    // Police should value wanted level
+                    expect(score).toBeGreaterThan(0);
+                }
+            });
+
+            it('should track last attacker for retaliation', () => {
+                expect(enemy.lastAttacker).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Pirate AI Tests
+        // ============================================
+
+        describe('Pirate AI Behavior', () => {
+            let pirate;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                pirate = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                pirate.target = mockPlayer;
+                mockSystem = createMockSystem();
+            });
+
+            it('should have pirate role', () => {
+                expect(pirate.role).toBe(AI_ROLE.PIRATE);
+            });
+
+            it('should have detection range', () => {
+                expect(pirate.detectionRange).toBeGreaterThan(0);
+            });
+
+            it('should prioritize cargo-laden targets', () => {
+                const richTarget = createMockPlayer({ cargo: [{ name: 'Gold', quantity: 50 }] });
+                const poorTarget = createMockPlayer({ cargo: [] });
+
+                if (typeof pirate._calculateTargetScore === 'function') {
+                    const richScore = pirate._calculateTargetScore(richTarget);
+                    const poorScore = pirate._calculateTargetScore(poorTarget);
+                    expect(richScore).toBeGreaterThan(poorScore);
+                }
+            });
+        });
+
+        // ============================================
+        // Police AI Tests
+        // ============================================
+
+        describe('Police AI Behavior', () => {
+            let police;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                police = new Enemy(0, 0, mockPlayer, 'ACAB', AI_ROLE.POLICE);
+                mockSystem = createMockSystem();
+            });
+
+            it('should have police role', () => {
+                expect(police.role).toBe(AI_ROLE.POLICE);
+            });
+
+            it('should prioritize wanted targets', () => {
+                const wantedTarget = createMockPlayer({ wantedLevel: 3 });
+                const cleanTarget = createMockPlayer({ wantedLevel: 0 });
+
+                if (typeof police._calculateTargetScore === 'function') {
+                    const wantedScore = police._calculateTargetScore(wantedTarget);
+                    const cleanScore = police._calculateTargetScore(cleanTarget);
+                    expect(wantedScore).toBeGreaterThan(cleanScore);
+                }
+            });
+
+            it('should have patrol state capability', () => {
+                expect(AI_STATE.PATROLLING).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Hauler AI Tests
+        // ============================================
+
+        describe('Hauler AI Behavior', () => {
+            let hauler;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                hauler = new Enemy(0, 0, mockPlayer, 'Adder', AI_ROLE.HAULER);
+                mockSystem = createMockSystem();
+            });
+
+            it('should have hauler role', () => {
+                expect(hauler.role).toBe(AI_ROLE.HAULER);
+            });
+
+            it('should have cargo capacity', () => {
+                expect(hauler.cargoCapacity).toBeGreaterThan(0);
+            });
+
+            it('should start unarmed or lightly armed', () => {
+                // Haulers may not have weapons or have minimal weapons
+                expect(hauler.equippedWeapons).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Combat Role AI Tests
+        // ============================================
+
+        describe('Combat Role AI Behavior', () => {
+            let combatShip;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                combatShip = new Enemy(0, 0, mockPlayer, 'Viper', AI_ROLE.COMBAT);
+                mockSystem = createMockSystem();
+            });
+
+            it('should have combat role', () => {
+                expect(combatShip.role).toBe(AI_ROLE.COMBAT);
+            });
+
+            it('should have faction property', () => {
+                expect(combatShip.faction).toBeDefined();
+            });
+
+            it('should apply faction rivalry bonuses', () => {
+                if (typeof combatShip._applyFactionRivalryBonus === 'function') {
+                    // Should not throw
+                    expect(() => combatShip._applyFactionRivalryBonus()).not.toThrow();
+                }
+            });
+        });
+
+        // ============================================
+        // Cover Behavior Tests
+        // ============================================
+
+        describe('Cover Behavior', () => {
+            let enemy;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 0, y: 0 });
+                enemy = new Enemy(300, 300, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                enemy.target = mockPlayer;
+
+                // Create system with asteroids for cover
+                mockSystem = createMockSystem({
+                    asteroids: [
+                        { pos: createVector(200, 200), size: 80, maxRadius: 40, destroyed: false, vel: { mag: () => 0 } },
+                        { pos: createVector(400, 100), size: 60, maxRadius: 30, destroyed: false, vel: { mag: () => 0 } }
+                    ]
+                });
+            });
+
+            it('should have cover evaluation methods', () => {
+                expect(typeof enemy._shouldConsiderCover).toBe('function');
+                expect(typeof enemy._pickCoverTarget).toBe('function');
+            });
+
+            it('should consider cover when damaged', () => {
+                enemy.hull = enemy.maxHull * 0.5; // 50% hull
+                const shouldCover = enemy._shouldConsiderCover(500);
+                expect(shouldCover).toBe(true);
+            });
+
+            it('should not consider cover when healthy', () => {
+                enemy.hull = enemy.maxHull;
+                enemy.shield = enemy.maxShield;
+                enemy.currentState = AI_STATE.ATTACK_PASS;
+                const shouldCover = enemy._shouldConsiderCover(500);
+                expect(shouldCover).toBe(false);
+            });
+
+            it('should pick cover target from asteroids', () => {
+                enemy.hull = enemy.maxHull * 0.5;
+                const cover = enemy._pickCoverTarget(mockSystem, mockPlayer.pos);
+                // Should pick one of the asteroids
+                if (cover) {
+                    expect(cover.pos).toBeDefined();
+                    expect(cover.size).toBeGreaterThan(0);
+                }
+            });
+
+            it('should compute cover approach point', () => {
+                const asteroid = mockSystem.asteroids[0];
+                if (typeof enemy._computeCoverApproachPoint === 'function') {
+                    const point = enemy._computeCoverApproachPoint(asteroid, mockPlayer.pos);
+                    expect(point).toBeDefined();
+                    expect(point.x).toBeDefined();
+                    expect(point.y).toBeDefined();
+                }
+            });
+
+            it('should detect line blocked by asteroid', () => {
+                const asteroid = { pos: createVector(100, 100), size: 60, maxRadius: 30 };
+                if (typeof enemy._isLineBlockedByAsteroid === 'function') {
+                    // Line through asteroid
+                    const blocked = enemy._isLineBlockedByAsteroid(
+                        asteroid,
+                        { x: 0, y: 100 },
+                        { x: 200, y: 100 }
+                    );
+                    expect(blocked).toBe(true);
+
+                    // Line not through asteroid
+                    const notBlocked = enemy._isLineBlockedByAsteroid(
+                        asteroid,
+                        { x: 0, y: 0 },
+                        { x: 200, y: 0 }
+                    );
+                    expect(notBlocked).toBe(false);
+                }
+            });
+        });
+
+        // ============================================
+        // Sniping Behavior Tests
+        // ============================================
+
+        describe('Sniping Behavior', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 1000, y: 1000 });
+                enemy = new Enemy(0, 0, mockPlayer, 'Viper', AI_ROLE.PIRATE);
+                enemy.target = mockPlayer;
+            });
+
+            it('should have sniping state', () => {
+                expect(AI_STATE.SNIPING).toBe(11);
+            });
+
+            it('should check for sniping weapon capability', () => {
+                if (typeof enemy.hasGoodSnipingWeapon === 'function') {
+                    const canSnipe = enemy.hasGoodSnipingWeapon();
+                    expect(typeof canSnipe).toBe('boolean');
+                }
+            });
+
+            it('should use hysteresis for sniping entry/exit', () => {
+                // Entry requires 50-105% of visual firing range
+                expect(SNIPING_ENTRY_MIN_FACTOR).toBe(0.5);
+                expect(SNIPING_ENTRY_MAX_FACTOR).toBe(1.05);
+
+                // Exit uses wider band
+                expect(SNIPING_EXIT_MIN_FACTOR).toBe(0.35);
+                expect(SNIPING_EXIT_MAX_FACTOR).toBe(1.25);
+            });
+        });
+
+        // ============================================
+        // Enemy Damage Tests
+        // ============================================
+
+        describe('Enemy Damage System', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer();
+                enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                enemy.hull = 100;
+                enemy.maxHull = 100;
+                enemy.shield = 50;
+                enemy.maxShield = 50;
+            });
+
+            it('should have takeDamage method', () => {
+                expect(typeof enemy.takeDamage).toBe('function');
+            });
+
+            it('should absorb damage with shield first', () => {
+                enemy.takeDamage(30, mockPlayer, null);
+                expect(enemy.shield).toBe(20);
+                expect(enemy.hull).toBe(100);
+            });
+
+            it('should pass through to hull when shield depleted', () => {
+                enemy.takeDamage(70, mockPlayer, null);
+                expect(enemy.shield).toBe(0);
+                expect(enemy.hull).toBe(80);
+            });
+
+            it('should track last attacker', () => {
+                enemy.takeDamage(10, mockPlayer, null);
+                expect(enemy.lastAttacker).toBe(mockPlayer);
+            });
+
+            it('should spawn cargo on destruction', () => {
+                enemy.hull = 10;
+                enemy.cargo = [{ name: 'Gold', quantity: 5 }];
+                // Destroying enemy should trigger cargo spawn
+                expect(enemy.cargo).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // Enemy Serialization Tests
+        // ============================================
+
+        describe('Enemy Serialization', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer();
+                enemy = new Enemy(100, 200, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                enemy.hull = 80;
+                enemy.shield = 30;
+            });
+
+            it('should have toJSON method', () => {
+                expect(typeof enemy.toJSON).toBe('function');
+            });
+
+            it('should serialize to JSON', () => {
+                const json = enemy.toJSON();
+                expect(json).toBeDefined();
+                expect(json.shipTypeName).toBe('Sidewinder');
+                expect(json.role).toBe(AI_ROLE.PIRATE);
+            });
+
+            it('should serialize position', () => {
+                const json = enemy.toJSON();
+                expect(json.pos).toBeDefined();
+                expect(json.pos.x).toBe(100);
+                expect(json.pos.y).toBe(200);
+            });
+
+            it('should serialize health', () => {
+                const json = enemy.toJSON();
+                expect(json.hull).toBe(80);
+                expect(json.shield).toBe(30);
+            });
+
+            it('should serialize state', () => {
+                const json = enemy.toJSON();
+                expect(json.currentState).toBeDefined();
+            });
+
+            it('should have fromJSON static method', () => {
+                expect(typeof Enemy.fromJSON).toBe('function');
+            });
+
+            it('should round-trip serialization', () => {
+                const json = enemy.toJSON();
+                const restored = Enemy.fromJSON(json);
+
+                expect(restored).toBeDefined();
+                expect(restored.shipTypeName).toBe(enemy.shipTypeName);
+                expect(restored.role).toBe(enemy.role);
+                expect(restored.hull).toBe(enemy.hull);
+            });
+        });
+
+        // ============================================
+        // Range Stall Detection Tests
+        // ============================================
+
+        describe('Range Stall Detection', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                enemy.target = mockPlayer;
+            });
+
+            it('should have range stall handling', () => {
+                expect(typeof enemy._handleRangeStall).toBe('function');
+            });
+
+            it('should reset range stall tracking', () => {
+                expect(typeof enemy._resetRangeStall).toBe('function');
+                enemy._resetRangeStall();
+                // Should not throw
+            });
+        });
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>

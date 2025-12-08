@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serialization Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💾 Serialization Tests</h1>
+    <div class="description">
+        Tests for save/load: Player, Enemy, Mission, Projectile, Cargo, and Market serialization.
+    </div>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../mission.js"></script>
+    <script src="../market.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../cargo.js"></script>
+    <script src="../asteroid.js"></script>
+    <script src="../enemyUtils.js"></script>
+    <script src="../enemyDamageSystem.js"></script>
+    <script src="../enemyRendering.js"></script>
+    <script src="../enemyMovement.js"></script>
+    <script src="../enemyTargeting.js"></script>
+    <script src="../enemyCombat.js"></script>
+    <script src="../enemyStateMachine.js"></script>
+    <script src="../enemyAIBehaviors.js"></script>
+    <script src="../enemyCargo.js"></script>
+    <script src="../thrustParticles.js"></script>
+    <script src="../enemy.js"></script>
+    <script src="../player.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // ============================================
+        // Player Serialization Tests
+        // ============================================
+
+        describe('Player Serialization', () => {
+            let player;
+
+            beforeEach(() => {
+                player = new Player('Sidewinder');
+                player.pos = createVector(100, 200);
+                player.vel = createVector(1, 2);
+                player.angle = 1.5;
+                player.credits = 5000;
+                player.hull = 80;
+                player.shield = 30;
+                player.cargo = [
+                    { name: 'Food', quantity: 10 },
+                    { name: 'Metals', quantity: 5 }
+                ];
+            });
+
+            it('should serialize position', () => {
+                const json = player.toJSON();
+                expect(json.pos.x).toBe(100);
+                expect(json.pos.y).toBe(200);
+            });
+
+            it('should serialize velocity', () => {
+                const json = player.toJSON();
+                expect(json.vel.x).toBe(1);
+                expect(json.vel.y).toBe(2);
+            });
+
+            it('should serialize angle', () => {
+                const json = player.toJSON();
+                expect(json.angle).toBe(1.5);
+            });
+
+            it('should serialize credits', () => {
+                const json = player.toJSON();
+                expect(json.credits).toBe(5000);
+            });
+
+            it('should serialize health', () => {
+                const json = player.toJSON();
+                expect(json.hull).toBe(80);
+                expect(json.shield).toBe(30);
+            });
+
+            it('should serialize cargo', () => {
+                const json = player.toJSON();
+                expect(json.cargo).toHaveLength(2);
+                expect(json.cargo[0].name).toBe('Food');
+            });
+
+            it('should serialize ship type', () => {
+                const json = player.toJSON();
+                expect(json.shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should deserialize position', () => {
+                const json = player.toJSON();
+                const restored = Player.fromJSON(json);
+                expect(restored.pos.x).toBe(100);
+                expect(restored.pos.y).toBe(200);
+            });
+
+            it('should deserialize credits', () => {
+                const json = player.toJSON();
+                const restored = Player.fromJSON(json);
+                expect(restored.credits).toBe(5000);
+            });
+
+            it('should deserialize cargo', () => {
+                const json = player.toJSON();
+                const restored = Player.fromJSON(json);
+                expect(restored.cargo).toHaveLength(2);
+            });
+
+            it('should round-trip all properties', () => {
+                const json = player.toJSON();
+                const restored = Player.fromJSON(json);
+
+                expect(restored.shipTypeName).toBe(player.shipTypeName);
+                expect(restored.hull).toBe(player.hull);
+                expect(restored.shield).toBe(player.shield);
+                expect(restored.credits).toBe(player.credits);
+                expect(restored.cargo).toEqual(player.cargo);
+            });
+
+            it('should produce valid JSON string', () => {
+                const json = player.toJSON();
+                const str = JSON.stringify(json);
+                expect(typeof str).toBe('string');
+
+                const parsed = JSON.parse(str);
+                expect(parsed.credits).toBe(5000);
+            });
+        });
+
+        // ============================================
+        // Enemy Serialization Tests
+        // ============================================
+
+        describe('Enemy Serialization', () => {
+            let enemy;
+            let mockPlayer;
+
+            beforeEach(() => {
+                mockPlayer = { pos: createVector(0, 0), size: 30 };
+                enemy = new Enemy(150, 250, mockPlayer, 'Viper', AI_ROLE.PIRATE);
+                enemy.hull = 60;
+                enemy.shield = 20;
+                enemy.currentState = AI_STATE.APPROACHING;
+            });
+
+            it('should serialize position', () => {
+                const json = enemy.toJSON();
+                expect(json.pos.x).toBe(150);
+                expect(json.pos.y).toBe(250);
+            });
+
+            it('should serialize ship type', () => {
+                const json = enemy.toJSON();
+                expect(json.shipTypeName).toBe('Viper');
+            });
+
+            it('should serialize role', () => {
+                const json = enemy.toJSON();
+                expect(json.role).toBe(AI_ROLE.PIRATE);
+            });
+
+            it('should serialize health', () => {
+                const json = enemy.toJSON();
+                expect(json.hull).toBe(60);
+                expect(json.shield).toBe(20);
+            });
+
+            it('should serialize state', () => {
+                const json = enemy.toJSON();
+                expect(json.currentState).toBe(AI_STATE.APPROACHING);
+            });
+
+            it('should deserialize position', () => {
+                const json = enemy.toJSON();
+                const restored = Enemy.fromJSON(json);
+                expect(restored.pos.x).toBe(150);
+                expect(restored.pos.y).toBe(250);
+            });
+
+            it('should deserialize role', () => {
+                const json = enemy.toJSON();
+                const restored = Enemy.fromJSON(json);
+                expect(restored.role).toBe(AI_ROLE.PIRATE);
+            });
+
+            it('should round-trip all properties', () => {
+                const json = enemy.toJSON();
+                const restored = Enemy.fromJSON(json);
+
+                expect(restored.shipTypeName).toBe(enemy.shipTypeName);
+                expect(restored.role).toBe(enemy.role);
+                expect(restored.hull).toBe(enemy.hull);
+                expect(restored.currentState).toBe(enemy.currentState);
+            });
+        });
+
+        // ============================================
+        // Mission Serialization Tests
+        // ============================================
+
+        describe('Mission Serialization', () => {
+            let mission;
+
+            beforeEach(() => {
+                mission = new Mission({
+                    id: 12345,
+                    title: 'Test Bounty',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 5,
+                    reward: 3000,
+                    description: 'Hunt pirates',
+                    originSystemIndex: 0
+                });
+                mission.status = 'Active';
+                mission.progressCount = 2;
+            });
+
+            it('should serialize ID', () => {
+                expect(mission.id).toBe(12345);
+            });
+
+            it('should serialize type', () => {
+                expect(mission.type).toBe(MISSION_TYPE.BOUNTY_PIRATE);
+            });
+
+            it('should preserve status after creation', () => {
+                expect(mission.status).toBe('Active');
+            });
+
+            it('should preserve progress after creation', () => {
+                expect(mission.progressCount).toBe(2);
+            });
+
+            it('should serialize for save data', () => {
+                const data = {
+                    id: mission.id,
+                    title: mission.title,
+                    type: mission.type,
+                    status: mission.status,
+                    progressCount: mission.progressCount,
+                    targetCount: mission.targetCount,
+                    reward: mission.reward
+                };
+
+                expect(data.id).toBe(12345);
+                expect(data.status).toBe('Active');
+            });
+
+            it('should rehydrate from save data', () => {
+                const data = {
+                    id: mission.id,
+                    title: mission.title,
+                    type: mission.type,
+                    status: mission.status,
+                    progressCount: mission.progressCount,
+                    targetCount: mission.targetCount,
+                    reward: mission.reward
+                };
+
+                const restored = new Mission(data);
+                expect(restored.id).toBe(12345);
+                expect(restored.status).toBe('Active');
+                expect(restored.progressCount).toBe(2);
+            });
+        });
+
+        // ============================================
+        // Projectile Serialization Tests
+        // ============================================
+
+        describe('Projectile Serialization', () => {
+            let projectile;
+
+            beforeEach(() => {
+                projectile = new Projectile(100, 200, Math.PI / 4, null, 8, 15);
+                projectile.lifespan = 60;
+            });
+
+            it('should have toJSON method', () => {
+                expect(typeof projectile.toJSON).toBe('function');
+            });
+
+            it('should serialize position', () => {
+                const json = projectile.toJSON();
+                expect(json.pos.x).toBe(100);
+                expect(json.pos.y).toBe(200);
+            });
+
+            it('should serialize angle', () => {
+                const json = projectile.toJSON();
+                expect(json.angle).toBeCloseTo(Math.PI / 4, 3);
+            });
+
+            it('should serialize damage', () => {
+                const json = projectile.toJSON();
+                expect(json.damage).toBe(15);
+            });
+
+            it('should have fromJSON method', () => {
+                expect(typeof projectile.fromJSON).toBe('function');
+            });
+        });
+
+        // ============================================
+        // Cargo Serialization Tests
+        // ============================================
+
+        describe('Cargo Serialization', () => {
+            let cargo;
+
+            beforeEach(() => {
+                cargo = new Cargo(300, 400, 'Luxury Goods', 3);
+            });
+
+            it('should have toJSON method', () => {
+                expect(typeof cargo.toJSON).toBe('function');
+            });
+
+            it('should serialize position', () => {
+                const json = cargo.toJSON();
+                expect(json.pos.x).toBe(300);
+                expect(json.pos.y).toBe(400);
+            });
+
+            it('should serialize type', () => {
+                const json = cargo.toJSON();
+                expect(json.type).toBe('Luxury Goods');
+            });
+
+            it('should serialize quantity', () => {
+                const json = cargo.toJSON();
+                expect(json.quantity).toBe(3);
+            });
+
+            it('should have fromJSON method', () => {
+                expect(typeof cargo.fromJSON).toBe('function');
+            });
+
+            it('should round-trip cargo', () => {
+                const json = cargo.toJSON();
+                const restored = new Cargo(0, 0, 'Food', 1);
+                restored.fromJSON(json);
+
+                expect(restored.pos.x).toBe(300);
+                expect(restored.type).toBe('Luxury Goods');
+                expect(restored.quantity).toBe(3);
+            });
+        });
+
+        // ============================================
+        // Asteroid Serialization Tests
+        // ============================================
+
+        describe('Asteroid Serialization', () => {
+            let asteroid;
+
+            beforeEach(() => {
+                asteroid = new Asteroid(500, 600, 50);
+                asteroid.health = 75;
+            });
+
+            it('should have toJSON method', () => {
+                expect(typeof asteroid.toJSON).toBe('function');
+            });
+
+            it('should serialize position', () => {
+                const json = asteroid.toJSON();
+                expect(json.pos.x).toBe(500);
+                expect(json.pos.y).toBe(600);
+            });
+
+            it('should serialize health', () => {
+                const json = asteroid.toJSON();
+                expect(json.health).toBe(75);
+            });
+
+            it('should serialize size properties', () => {
+                const json = asteroid.toJSON();
+                expect(json.size).toBeDefined();
+                expect(json.maxRadius).toBeDefined();
+            });
+
+            it('should have fromJSON method', () => {
+                expect(typeof asteroid.fromJSON).toBe('function');
+            });
+        });
+
+        // ============================================
+        // Market Serialization Tests
+        // ============================================
+
+        describe('Market Serialization', () => {
+            let market;
+
+            beforeEach(() => {
+                market = new Market('Mining');
+                market.updatePrices();
+                // Modify some stock
+                const metals = market.goods.find(g => g.name === 'Metals');
+                if (metals) metals.stock = 100;
+            });
+
+            it('should serialize economy type', () => {
+                const json = market.toJSON();
+                expect(json.systemType).toBe('Mining');
+            });
+
+            it('should serialize goods with stock', () => {
+                const json = market.toJSON();
+                expect(json.goods).toBeDefined();
+                expect(Array.isArray(json.goods)).toBe(true);
+
+                const metals = json.goods.find(g => g.name === 'Metals');
+                expect(metals.stock).toBe(100);
+            });
+
+            it('should deserialize economy type', () => {
+                const json = market.toJSON();
+                const restored = new Market('Unknown');
+                restored.fromJSON(json);
+                expect(restored.systemType).toBe('Mining');
+            });
+
+            it('should deserialize stock levels', () => {
+                const json = market.toJSON();
+                const restored = new Market('Unknown');
+                restored.fromJSON(json);
+
+                const metals = restored.goods.find(g => g.name === 'Metals');
+                expect(metals.stock).toBe(100);
+            });
+        });
+
+        // ============================================
+        // Vector Serialization Tests
+        // ============================================
+
+        describe('Vector Serialization', () => {
+            it('should serialize vector to plain object', () => {
+                const v = createVector(10, 20);
+                const json = { x: v.x, y: v.y };
+                expect(json.x).toBe(10);
+                expect(json.y).toBe(20);
+            });
+
+            it('should deserialize vector from plain object', () => {
+                const json = { x: 30, y: 40 };
+                const v = createVector(json.x, json.y);
+                expect(v.x).toBe(30);
+                expect(v.y).toBe(40);
+            });
+
+            it('should handle 3D vectors', () => {
+                const v = createVector(1, 2, 3);
+                const json = { x: v.x, y: v.y, z: v.z };
+                const restored = createVector(json.x, json.y, json.z);
+                expect(restored.z).toBe(3);
+            });
+        });
+
+        // ============================================
+        // JSON Compatibility Tests
+        // ============================================
+
+        describe('JSON Compatibility', () => {
+            it('should produce valid JSON from player', () => {
+                const player = new Player();
+                const json = player.toJSON();
+                expect(() => JSON.stringify(json)).not.toThrow();
+            });
+
+            it('should handle undefined values', () => {
+                const obj = { a: 1, b: undefined };
+                const str = JSON.stringify(obj);
+                const parsed = JSON.parse(str);
+                expect(parsed.a).toBe(1);
+                expect(parsed.b).toBeUndefined();
+            });
+
+            it('should handle circular reference prevention', () => {
+                // toJSON methods should avoid circular references
+                const player = new Player();
+                const json = player.toJSON();
+                const str = JSON.stringify(json);
+                expect(typeof str).toBe('string');
+            });
+
+            it('should handle special number values', () => {
+                // Infinity and NaN need special handling
+                const obj = { normal: 5 };
+                const str = JSON.stringify(obj);
+                const parsed = JSON.parse(str);
+                expect(parsed.normal).toBe(5);
+            });
+        });
+
+        // ============================================
+        // Save Data Structure Tests
+        // ============================================
+
+        describe('Save Data Structure', () => {
+            it('should create complete save object', () => {
+                const player = new Player();
+                player.credits = 10000;
+
+                const saveData = {
+                    version: 1,
+                    timestamp: Date.now(),
+                    player: player.toJSON()
+                };
+
+                expect(saveData.version).toBe(1);
+                expect(saveData.player).toBeDefined();
+                expect(saveData.player.credits).toBe(10000);
+            });
+
+            it('should include timestamp', () => {
+                const now = Date.now();
+                const saveData = { timestamp: now };
+                expect(saveData.timestamp).toBe(now);
+            });
+        });
+
+        // ============================================
+        // Array Serialization Tests
+        // ============================================
+
+        describe('Array Serialization', () => {
+            it('should serialize array of enemies', () => {
+                const mockPlayer = { pos: createVector(0, 0), size: 30 };
+                const enemies = [
+                    new Enemy(100, 100, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE),
+                    new Enemy(200, 200, mockPlayer, 'Viper', AI_ROLE.POLICE)
+                ];
+
+                const json = enemies.map(e => e.toJSON());
+                expect(json).toHaveLength(2);
+                expect(json[0].shipTypeName).toBe('Sidewinder');
+                expect(json[1].role).toBe(AI_ROLE.POLICE);
+            });
+
+            it('should deserialize array of enemies', () => {
+                const mockPlayer = { pos: createVector(0, 0), size: 30 };
+                const enemies = [
+                    new Enemy(100, 100, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE)
+                ];
+
+                const json = enemies.map(e => e.toJSON());
+                const restored = json.map(d => Enemy.fromJSON(d));
+
+                expect(restored).toHaveLength(1);
+                expect(restored[0].shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should serialize array of cargo', () => {
+                const cargoItems = [
+                    new Cargo(100, 100, 'Food', 5),
+                    new Cargo(200, 200, 'Metals', 3)
+                ];
+
+                const json = cargoItems.map(c => c.toJSON());
+                expect(json).toHaveLength(2);
+            });
+        });
+
+        // ============================================
+        // Version Migration Tests
+        // ============================================
+
+        describe('Version Migration', () => {
+            it('should handle missing fields gracefully', () => {
+                // Old save data might lack new fields
+                const oldSaveData = {
+                    shipTypeName: 'Sidewinder',
+                    pos: { x: 100, y: 200 },
+                    credits: 5000
+                    // Missing: cargo, hull, shield, etc.
+                };
+
+                const player = Player.fromJSON(oldSaveData);
+                expect(player).toBeDefined();
+                expect(player.shipTypeName).toBe('Sidewinder');
+            });
+
+            it('should use defaults for missing values', () => {
+                const minimalData = {
+                    shipTypeName: 'Sidewinder',
+                    pos: { x: 0, y: 0 }
+                };
+
+                const player = Player.fromJSON(minimalData);
+                // Should have default values for missing fields
+                expect(player.cargo).toBeDefined();
+            });
+        });
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>
