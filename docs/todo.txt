@@ -5,6 +5,11 @@
 
 ## Core Gameplay Enhancements
 
+reduce the ship spawn number and only increase for specific states like war
+
+all the ships go towards a particulr enemy instead of spliting up by distance to go for a few
+
+
 new kind of nebula and storm which slows down ship movement
 
 create a builder ship that errects space objects near planets

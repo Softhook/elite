@@ -30,4 +30,4 @@ Low-risk incremental patch (suggestion)
 
 
 Next steps
-- I can implement a non-invasive patch that adds `aggression` and cooldown jitter in `enemyCombat.js`, plus a simple LOS helper and one movement stub for cover. 
+- I can implement a non-invasive patch that adds `aggression` and cooldown jitter in `enemyCombat.js`

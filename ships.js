@@ -1139,7 +1139,7 @@ const SHIP_DEFINITIONS = {
     "ShardInterceptor": {
         name: "Shard Interceptor", role: "Fighter", sizeCategory: "Small", size: 30,
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
-        baseHull: 50, baseShield: 100, shieldRecharge: 1.8, // Crystalline structure?
+        baseHull: 50, baseShield: 100, shieldRecharge: 1.8,cargoCapacity: 4, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Fast fighter incorporating alien technology of crystalline structures.",
         drawFunction: drawShardInterceptor, 
@@ -1155,7 +1155,7 @@ const SHIP_DEFINITIONS = {
         strokeColor: [240, 240, 255],
         strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
-        price: 19400,
+        price: 30400,
         aiRoles: ["MILITARY","BOUNTY_HUNTER"],
         techLevel: 5
     },
