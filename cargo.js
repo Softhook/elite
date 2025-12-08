@@ -60,7 +60,7 @@ class Cargo {
             } else {
                 const dx = this.attachedTo.pos.x - this.pos.x;
                 const dy = this.attachedTo.pos.y - this.pos.y;
-                const dist = Math.sqrt(dx*dx + dy*dy) || 0.0001;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
 
                 // Pull speed: proportional to distance but clamped for stability
                 const speed = Math.min(12, 0.12 * dist + 2.0);
@@ -97,7 +97,7 @@ class Cargo {
 
                     if (success && added > 0) {
                         // Play pickup sound if available
-                        try { if (typeof soundManager !== 'undefined') soundManager.playSound && soundManager.playSound('pickupCoin'); } catch(_) {}
+                        try { if (typeof soundManager !== 'undefined') soundManager.playSound && soundManager.playSound('pickupCoin'); } catch (_) { }
                         // If partial add, reduce quantity and remain in world
                         if (added < this.quantity) {
                             this.quantity -= added;
@@ -140,28 +140,28 @@ class Cargo {
         strokeWeight(1);
         // Draw container
         beginShape();
-        vertex(-this.size/1.5, -this.size/1.5);
-        vertex(this.size/1.5, -this.size/1.5);
-        vertex(this.size/1.5, this.size/1.5);
-        vertex(-this.size/1.5, this.size/1.5);
+        vertex(-this.size / 1.5, -this.size / 1.5);
+        vertex(this.size / 1.5, -this.size / 1.5);
+        vertex(this.size / 1.5, this.size / 1.5);
+        vertex(-this.size / 1.5, this.size / 1.5);
         endShape(CLOSE);
         // Draw details (packaging lines)
         stroke(min(255, this.color[0] * 0.6), min(255, this.color[1] * 0.6), min(255, this.color[2] * 0.6));
-        line(-this.size/1.5, 0, this.size/1.5, 0);
-        line(0, -this.size/1.5, 0, this.size/1.5);
+        line(-this.size / 1.5, 0, this.size / 1.5, 0);
+        line(0, -this.size / 1.5, 0, this.size / 1.5);
         // Asymmetrical mark for rotation visibility
         fill(255, 255, 255, 120);
         noStroke();
         triangle(
-            -this.size/2.5, -this.size/2.5,
-            -this.size/1.8, -this.size/2.5,
-            -this.size/2.5, -this.size/1.8
+            -this.size / 2.5, -this.size / 2.5,
+            -this.size / 1.8, -this.size / 2.5,
+            -this.size / 2.5, -this.size / 1.8
         );
         // Glint for valuable content
         if (this.lifetime % 60 < 15) {
             fill(255, 255, 255, 180);
             noStroke();
-            ellipse(this.size/3, -this.size/3, 2, 2);
+            ellipse(this.size / 3, -this.size / 3, 2, 2);
         }
         pop();
         // Fading effect when lifetime is low
@@ -180,8 +180,11 @@ class Cargo {
 
     checkCollision(player) {
         if (!player || !player.pos) return false;
-        const d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
-        return d < (player.size/2 + this.size * 2);
+        const dx = this.pos.x - player.pos.x;
+        const dy = this.pos.y - player.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const threshold = player.size / 2 + this.size * 2;
+        return distSq < threshold * threshold;
     }
 
     getValue() {
@@ -206,7 +209,7 @@ class Cargo {
             attachedBy: this.attachedBy || null,
             lifetime: this.lifetime,
             collected: !!this.collected,
-            color: Array.isArray(this.color) ? this.color : (this.color && this.color.levels ? this.color.levels.slice(0,3) : null)
+            color: Array.isArray(this.color) ? this.color : (this.color && this.color.levels ? this.color.levels.slice(0, 3) : null)
         };
     }
 

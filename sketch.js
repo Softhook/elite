@@ -25,7 +25,7 @@ const GameGlobals = {
 };
 
 // Maintain backward compatibility with existing code
-let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager, 
+let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager,
     titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen,
     stationMusicManager;
 let loadGameWasSuccessful = false;
@@ -56,7 +56,7 @@ function setup() {
         setInitialGameState();
         setupAudioGestures();
         setupFullscreenBehavior();
-        
+
         UI_LOG("--- Setup Complete ---");
     } catch (error) {
         handleCriticalSetupError(error);
@@ -82,7 +82,7 @@ function initializeManagers() {
     ambientSoundManager = new AmbientSoundManager();
     stationMusicManager = new StationMusicManager();
     eventManager = new EventManager();
-    
+
     Object.assign(GameGlobals, {
         soundManager,
         ambientSoundManager,
@@ -126,7 +126,7 @@ function initializeGameObjects() {
     saveSelectionScreen = new SaveSelectionScreen();
     communicationSystem = new CommunicationSystem();
     communicationSystem.initialize({ uiManager, player });
-    
+
     Object.assign(GameGlobals, {
         gameStateManager,
         galaxy,
@@ -156,7 +156,7 @@ function configurePlayerShip() {
 function setInitialGameState() {
     loadGameWasSuccessful = false;
     GameGlobals.loadGameWasSuccessful = false;
-    
+
     if (gameStateManager) {
         if (gameStateManager.currentState === "LOADING") {
             gameStateManager.setState("TITLE_SCREEN");
@@ -227,13 +227,13 @@ function handleCriticalSetupError(error) {
 // --- p5.js Draw Function ---
 function draw() {
     background(0);
-    
+
     if (!validateGameState()) {
         return;
     }
-    
+
     const currentState = gameStateManager.currentState;
-    
+
     updateTitleScreens(currentState);
     updateGameState();
     handleContinuousFiring();
@@ -288,19 +288,19 @@ function updateGameState() {
 function updateEventManager() {
     const currentState = gameStateManager.currentState;
     const activeGameStates = ["IN_FLIGHT", "DOCKED", "JUMPING", "GALAXY_MAP"];
-    
+
     if (!activeGameStates.includes(currentState) || !eventManager) {
         return;
     }
-    
+
     const currentSystem = galaxy?.getCurrentSystem();
     if (!currentSystem) return;
-    
+
     // Initialize event manager references if needed
     if (eventManager.starSystem !== currentSystem || eventManager.player !== player) {
         eventManager.initializeReferences(currentSystem, player, uiManager);
     }
-    
+
     // Update event manager only during active flight
     if (currentState === "IN_FLIGHT" && eventManager.starSystem) {
         eventManager.update();
@@ -315,7 +315,7 @@ function performPeriodicTasks() {
     if (frameCount % 3600 === 0 && communicationSystem) {
         communicationSystem.performPeriodicCleanup?.();
     }
-    
+
     // Faction motivation messages every ~2 minutes
     if (frameCount % 7200 === 0 && communicationSystem) {
         communicationSystem.sendFactionMotivationMessage?.();
@@ -326,8 +326,8 @@ function performPeriodicTasks() {
  * Handle continuous firing when space is held
  */
 function handleContinuousFiring() {
-    if (gameStateManager.currentState === "IN_FLIGHT" && 
-        !player.destroyed && 
+    if (gameStateManager.currentState === "IN_FLIGHT" &&
+        !player.destroyed &&
         keyIsDown(32)) {
         player.handleFireInput();
     }
@@ -351,7 +351,7 @@ function renderUI() {
     if (gameStateManager.currentState === "VIEWING_MARKET" && uiManager) {
         uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
     }
-    
+
     uiManager?.drawFramerate();
     uiManager?.drawMessages();
 }
@@ -390,7 +390,7 @@ function keyPressed() {
  */
 function handleGameOverInput() {
     if (gameStateManager?.currentState !== "GAME_OVER") return false;
-    
+
     if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
         // Verify player is actually dead before allowing reset
         if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
@@ -405,7 +405,7 @@ function handleGameOverInput() {
         }
         return false;
     }
-    
+
     // Toggle inventory with “I”
     if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
         const opening = !gameStateManager.showingInventory;
@@ -445,7 +445,7 @@ function handleSaveSelectionInput() {
  * @returns {boolean} True if handled
  */
 function handleSpacebarFiring() {
-    if ((key === ' ' || keyCode === 32) && 
+    if ((key === ' ' || keyCode === 32) &&
         gameStateManager.currentState === "IN_FLIGHT" && player) {
         player.handleFireInput();
         return true;
@@ -459,10 +459,10 @@ function handleSpacebarFiring() {
  */
 function handleWeaponSwitching() {
     if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
-    
+
     const numKey = parseInt(key);
     if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
-    
+
     const weaponIndex = numKey - 1;
     if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
         if (player.switchToWeapon(weaponIndex)) {
@@ -478,7 +478,7 @@ function handleWeaponSwitching() {
  */
 function handleSingleKeyActions() {
     const keyLower = key.toLowerCase();
-    
+
     switch (keyLower) {
         case 'i':
             return handleInventoryToggle();
@@ -543,19 +543,6 @@ function handleInventoryToggle() {
 }
 
 /**
- * Toggle inventory screen
- */
-function handleInventoryToggle() {
-    if (gameStateManager.currentState === "IN_FLIGHT") {
-        const opening = !gameStateManager.showingInventory;
-        gameStateManager.showingInventory = opening;
-        soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
-        return true;
-    }
-    return false;
-}
-
-/**
  * Toggle galaxy map
  */
 function handleMapToggle() {
@@ -572,10 +559,10 @@ function handleMapToggle() {
  */
 function handleSecretBaseNavigation() {
     if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
-    
+
     const wasActive = player.showSecretBaseNavigation;
     player.showSecretBaseNavigation = !wasActive;
-    
+
     if (player.showSecretBaseNavigation) {
         showSecretBaseStatus();
     } else {
@@ -594,10 +581,10 @@ function showSecretBaseStatus() {
         player.showSecretBaseNavigation = false;
         return;
     }
-    
+
     const anyDiscovered = player.currentSystem.secretStations.some(s => s.discovered);
     player._cachedNavigation = null;
-    
+
     if (anyDiscovered) {
         uiManager?.addMessage("Secret Base Navigation: ACTIVATED", [0, 255, 255]);
     } else {
@@ -610,23 +597,23 @@ function showSecretBaseStatus() {
  */
 function handleWantedToggle() {
     if (!player?.currentSystem) return false;
-    
+
     const currentSystem = player.currentSystem;
     const isCurrentlyWanted = currentSystem.playerWanted || false;
-    const securityLevel = typeof currentSystem.securityLevel === 'string' 
-        ? currentSystem.securityLevel.toLowerCase() 
+    const securityLevel = typeof currentSystem.securityLevel === 'string'
+        ? currentSystem.securityLevel.toLowerCase()
         : '';
-    
+
     if (!isCurrentlyWanted && securityLevel === 'anarchy') {
         uiManager?.addMessage(`No legal authority operates in ${currentSystem.name}.`, 'lightblue');
         GS_LOG(`Wanted status toggle skipped in ${currentSystem.name}: Anarchy system.`);
         return true;
     }
-    
+
     currentSystem.playerWanted = !isCurrentlyWanted;
     currentSystem.policeAlertSent = !isCurrentlyWanted;
     GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
-    
+
     if (!isCurrentlyWanted) {
         uiManager?.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
         GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
@@ -645,16 +632,16 @@ function handleAutopilot(autopilotKey) {
     if (gameStateManager.currentState !== "IN_FLIGHT" || !player || player.destroyed) {
         return false;
     }
-    
+
     if (autopilotKey === 'h') {
         UI_LOG("H key detected - cycle planets autopilot");
         if (typeof player.cycleAutopilotPlanet === 'function') {
-            try { player.cycleAutopilotPlanet(); } catch (e) { 
+            try { player.cycleAutopilotPlanet(); } catch (e) {
                 console.error('cycleAutopilotPlanet error', e);
-                uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+                uiManager?.addMessage("No planet autopilot available", [255, 150, 100]);
             }
         } else {
-            uiManager?.addMessage("No planet autopilot available", [255,150,100]);
+            uiManager?.addMessage("No planet autopilot available", [255, 150, 100]);
         }
     } else if (autopilotKey === 'j') {
         UI_LOG("J key detected - toggle station/jumpzone autopilot");
@@ -702,8 +689,8 @@ function handleMinimapZoomIn() {
  */
 function handleEscapeKey() {
     if (keyCode !== ESCAPE) return false;
-    
-    if (gameStateManager.currentState === "GALAXY_MAP" || 
+
+    if (gameStateManager.currentState === "GALAXY_MAP" ||
         gameStateManager.currentState === "DOCKED") {
         gameStateManager.setState("IN_FLIGHT");
     }
@@ -735,7 +722,7 @@ function mousePressed() {
  */
 function handleGameOverClick() {
     if (gameStateManager?.currentState !== "GAME_OVER") return false;
-    
+
     console.log("Game over screen clicked, resetting game...");
     // Always allow reset when in GAME_OVER state, regardless of player state
     if (typeof resetGame === 'function') {
@@ -795,7 +782,7 @@ function handleInventoryClick() {
     if (!gameStateManager.showingInventory || gameStateManager.currentState !== "IN_FLIGHT") {
         return false;
     }
-    
+
     const res = inventoryScreen.handleClick(mouseX, mouseY, player);
     if (res === 'close') {
         gameStateManager.showingInventory = false;
@@ -816,7 +803,7 @@ function handleInventoryClick() {
  */
 function handleGeneralUIClick() {
     if (!gameStateManager || !player || !uiManager || !galaxy) return false;
-    
+
     return uiManager.handleMouseClicks(
         mouseX, mouseY,
         gameStateManager.currentState,
@@ -845,10 +832,10 @@ function handleInFlightTargeting() {
 function handleJettisonFromInventory(idx) {
     const item = player.cargo[idx];
     if (!item) return;
-    
+
     if (player.removeCargo(item.name, 1)) {
         uiManager?.addMessage(`Jettisoned 1 ${item.name}`);
-        
+
         const dir = p5.Vector.fromAngle(player.angle + PI);
         const pos = p5.Vector.add(player.pos, dir.copy().mult(player.size * 2.6));
         const cargo = new Cargo(pos.x, pos.y, item.name, 1);
@@ -956,7 +943,7 @@ function __atomicStoreToSlot(slotIndex) {
     const backupKey = saveKey + '_bak';
 
     const saveData = __buildSaveData();
-    
+
     // Validate before saving
     const validation = __validatePayload(saveData);
     if (!validation.ok) {
@@ -993,14 +980,14 @@ function saveGame() {
             console.warn("Save blocked: Cannot save during GAME_OVER state");
             return;
         }
-        
+
         // Prevent saves if player is dead or dying
         if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
             console.warn("Save blocked: Player is dead or dying");
             return;
         }
-        
-        if (typeof(Storage) === "undefined") {
+
+        if (typeof (Storage) === "undefined") {
             console.warn("localStorage is not supported. Game cannot be saved.");
             return;
         }
@@ -1009,21 +996,21 @@ function saveGame() {
         if (__saveDebounceTimer) {
             clearTimeout(__saveDebounceTimer);
         }
-        
+
         __saveDebounceTimer = setTimeout(() => {
             __saveDebounceTimer = null;
-            
+
             const currentSlotIndex = (window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0);
             const ok = __atomicStoreToSlot(currentSlotIndex);
-            
+
             if (!ok) {
                 console.error('Save aborted: validation failed. Your last known-good backup was preserved.');
                 return;
             }
-            
+
             localStorage.setItem(LAST_ACTIVE_SLOT_KEY, String(currentSlotIndex));
             SAVE_LOG(`Game saved to slot ${currentSlotIndex + 1} (Key: ${SAVE_KEY_PREFIX + currentSlotIndex})`);
-            
+
             // Refresh previews after a successful write
             if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.loadAllSavePreviews === 'function') {
                 saveSelectionScreen.loadAllSavePreviews();
@@ -1031,14 +1018,14 @@ function saveGame() {
                 window.saveScreen.loadAllSavePreviews();
             }
         }, 300); // Small debounce to batch rapid saves
-        
+
     } catch (e) {
         console.error("Error scheduling save:", e);
     }
 }
 
 function loadGame(slotIndex) {
-    if (typeof(Storage) !== "undefined") {
+    if (typeof (Storage) !== "undefined") {
         if (slotIndex === undefined || slotIndex === null) {
             console.error("loadGame: slotIndex is undefined. Cannot load.");
             return false;
@@ -1087,7 +1074,7 @@ function loadGame(slotIndex) {
                 } else {
                     savedData = primary.data;
                 }
-                
+
                 // Clean up any existing ambient layers before rebuilding from save data
                 if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
                     ambientSoundManager.cleanup();
@@ -1128,7 +1115,7 @@ function loadGame(slotIndex) {
                     console.error(`Galaxy systems array is empty AFTER attempting to load galaxy data from slot ${slotIndex}.`);
                     return false;
                 }
-                
+
                 // 4. Restore Player Data
                 if (savedData.playerData) {
                     player.loadSaveData(savedData.playerData);
@@ -1139,25 +1126,25 @@ function loadGame(slotIndex) {
                 }
 
                 // 5. Link Player to the (now loaded) Current System
-                player.currentSystem = galaxy.getCurrentSystem(); 
+                player.currentSystem = galaxy.getCurrentSystem();
 
                 if (player.currentSystem) {
                     player.currentSystem.player = player; // Link player object to the system instance
-                    
+
                     // Fix for initial station positioning: 
                     if (player.currentSystem.station && player.currentSystem.station.pos) {
-                        const distToStation = dist(player.pos.x, player.pos.y, 
-                                                 player.currentSystem.station.pos.x, 
-                                                 player.currentSystem.station.pos.y);
-                        
+                        const distToStation = dist(player.pos.x, player.pos.y,
+                            player.currentSystem.station.pos.x,
+                            player.currentSystem.station.pos.y);
+
                         if (distToStation > 10000 || isNaN(player.pos.x) || isNaN(player.pos.y)) {
                             console.warn("Player position appears invalid or too far from station. Repositioning near station.");
-                            player.pos.set(player.currentSystem.station.pos.x + player.currentSystem.station.size + 100, 
-                                         player.currentSystem.station.pos.y);
+                            player.pos.set(player.currentSystem.station.pos.x + player.currentSystem.station.size + 100,
+                                player.currentSystem.station.pos.y);
                             player.vel.set(0, 0);
                         }
                     }
-                    
+
                     if (eventManager) {
                         eventManager.initializeReferences(player.currentSystem, player, uiManager);
                     }
@@ -1211,21 +1198,21 @@ function loadGame(slotIndex) {
                         }
                     });
                 }
-                
+
                 // 8. Restore current view and other relevant states
                 if (savedData.currentView) {
                     Object.assign(uiManager.currentView, savedData.currentView);
                 }
-                
+
                 // 9. Clear any locked jump destination to prevent stale jump targets
                 if (uiManager) {
                     uiManager.lockedDestinationIndex = -1;
                 }
-                
+
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
                 localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
                 // Mark the time of a successful load so we can suppress unintended immediate auto-saves
-                try { if (typeof window !== 'undefined') { window.__lastLoadTime = Date.now(); } } catch(_) {}
+                try { if (typeof window !== 'undefined') { window.__lastLoadTime = Date.now(); } } catch (_) { }
                 SAVE_LOG(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
                 return true;
             } catch (e) {
@@ -1253,10 +1240,10 @@ function loadGame(slotIndex) {
  */
 function resetGame() {
     console.log("Resetting game to initial state...");
-    
+
     // Store fullscreen state
     const wasFullscreen = fullscreen();
-    
+
     // Clear any pending saves
     if (__saveDebounceTimer) {
         clearTimeout(__saveDebounceTimer);
@@ -1265,26 +1252,26 @@ function resetGame() {
     // Note: We no longer clear the active save slot on reset.
     // Saves are preserved because saving is blocked during GAME_OVER or dying,
     // and load validation rejects dead/destroyed states.
-    
+
     // Stop all sounds
     if (soundManager && typeof soundManager.stopAllSounds === 'function') {
         soundManager.stopAllSounds();
     }
-    
+
     // Clean up ambient sounds
     if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
         ambientSoundManager.cleanup();
     }
-    
+
     // Clean up station music
     if (stationMusicManager && typeof stationMusicManager.cleanup === 'function') {
         stationMusicManager.cleanup();
     }
-    
+
     // Reset global state
     loadGameWasSuccessful = false;
     window.activeSaveSlotIndex = 0;
-    
+
     // Create new instances of all core game objects
     gameStateManager = new GameStateManager();
     galaxy = new Galaxy();
@@ -1297,26 +1284,26 @@ function resetGame() {
     communicationSystem = new CommunicationSystem();
     stationMusicManager = new StationMusicManager();
     communicationSystem.initialize({ uiManager, player });
-    
+
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
     }
-    
+
     // Reinitialize weapon system pools
     if (typeof WeaponSystem !== 'undefined' && typeof ObjectPool !== 'undefined') {
         console.log("Reinitializing weapon system pool after reset");
         WeaponSystem.init(100);
     }
-    
+
     // Restore fullscreen if it was active
     if (wasFullscreen) {
         fullscreen(true);
     }
-    
+
     // Set initial state to title screen
     gameStateManager.setState("TITLE_SCREEN");
-    
+
     console.log("Game reset complete. Returning to title screen.");
 }
 
