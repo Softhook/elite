@@ -50,6 +50,7 @@
     <script src="../weapons.js"></script>
     <script src="../enemyConstants.js"></script>
     <script src="../objectPool.js"></script>
+    <script src="../missionGenerator.js"></script>
     <script src="../mission.js"></script>
     <script src="../market.js"></script>
     <script src="../projectile.js"></script>
@@ -164,7 +165,7 @@
                 market.updatePrices();
 
                 // Ensure market has stock
-                const food = market.goods.find(g => g.name === 'Food');
+                const food = market.commodities.find(g => g.name === 'Food');
                 if (food) food.stock = 100;
             });
 
@@ -575,7 +576,7 @@
                 // Buy at Agricultural
                 const agMarket = new Market('Agricultural');
                 agMarket.updatePrices();
-                const agFood = agMarket.goods.find(g => g.name === 'Food');
+                const agFood = agMarket.commodities.find(g => g.name === 'Food');
                 agFood.stock = 100;
 
                 agMarket.buy('Food', 20, player);

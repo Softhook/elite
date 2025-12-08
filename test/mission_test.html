@@ -296,6 +296,7 @@
                 });
                 expect(typeof mission.updateProgress).toBe('function');
 
+                mission.status = 'Active'; // Set to active so updateProgress works
                 mission.progressCount = 0;
                 mission.updateProgress(1);
                 expect(mission.progressCount).toBe(1);
@@ -357,11 +358,11 @@
                     id: 1,
                     title: 'Deliver Food',
                     type: MISSION_TYPE.DELIVERY_LEGAL,
-                    destination: 'Alpha Station',
+                    destinationStation: 'Alpha Station',
                     destinationSystemIndex: 2,
                     reward: 2000
                 });
-                expect(mission.destination).toBe('Alpha Station');
+                expect(mission.destinationStation).toBe('Alpha Station');
                 expect(mission.destinationSystemIndex).toBe(2);
             });
         });
@@ -481,7 +482,7 @@
                     expect(mission.id).toBeDefined();
                     expect(mission.title).toBeDefined();
                     expect(mission.type).toBeDefined();
-                    expect(mission.reward).toBeDefined();
+                    expect(mission.rewardCredits).toBeDefined();
                 }
             });
         });

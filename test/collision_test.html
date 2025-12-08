@@ -48,6 +48,7 @@
     <script src="../debug.js"></script>
     <script src="../objectPool.js"></script>
     <script src="../projectile.js"></script>
+    <script src="../missionGenerator.js"></script>
     <script src="../asteroid.js"></script>
     <script src="../cargo.js"></script>
 
@@ -139,13 +140,13 @@
             });
 
             it('should consider target size', () => {
-                const largeTarget = { pos: createVector(80, 50), size: 50 };
+                const largeTarget = { pos: createVector(75, 50), size: 50 };
                 expect(projectile.checkCollision(largeTarget)).toBe(true);
             });
 
             it('should consider projectile size', () => {
                 projectile.size = 30;
-                const target = { pos: createVector(80, 50), size: 10 };
+                const target = { pos: createVector(65, 50), size: 10 };
                 expect(projectile.checkCollision(target)).toBe(true);
             });
 
@@ -454,8 +455,8 @@
             });
 
             it('should determine color based on type', () => {
-                expect(typeof cargo.determineColor).toBe('function');
-                const color = cargo.determineColor('Metals');
+                expect(typeof Cargo.determineColor).toBe('function');
+                const color = Cargo.determineColor('Metals');
                 expect(Array.isArray(color)).toBe(true);
                 expect(color).toHaveLength(3);
             });

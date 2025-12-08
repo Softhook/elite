@@ -572,6 +572,7 @@ function setupMockP5() {
         window.max = Math.max;
         window.abs = Math.abs;
         window.sqrt = Math.sqrt;
+        window.sq = (x) => x * x;
         window.pow = Math.pow;
         window.sin = Math.sin;
         window.cos = Math.cos;
