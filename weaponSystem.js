@@ -447,7 +447,11 @@ class WeaponSystem {
             );
             proj.system = system;
         }
-        system.addProjectile(proj);
+        if (system && typeof system.addProjectile === 'function') {
+            system.addProjectile(proj);
+        } else if (system && Array.isArray(system.projectiles)) {
+            system.projectiles.push(proj);
+        }
 
         // Play weapon-specific sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
@@ -497,7 +501,11 @@ class WeaponSystem {
             );
             proj.system = system;
         }
-        system.addProjectile(proj);
+        if (system && typeof system.addProjectile === 'function') {
+            system.addProjectile(proj);
+        } else if (system && Array.isArray(system.projectiles)) {
+            system.projectiles.push(proj);
+        }
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
@@ -893,7 +901,11 @@ class WeaponSystem {
 
         // Make projectile bigger
         proj.size = weapon.projectileSize || 7;
-        system.addProjectile(proj);
+        if (system && typeof system.addProjectile === 'function') {
+            system.addProjectile(proj);
+        } else if (system && Array.isArray(system.projectiles)) {
+            system.projectiles.push(proj);
+        }
 
         // Play tangle sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
@@ -923,7 +935,11 @@ class WeaponSystem {
             proj.system = system;
         }
         proj.size = weapon.projectileSize || 6;
-        system.addProjectile(proj);
+            if (system && typeof system.addProjectile === 'function') {
+                system.addProjectile(proj);
+            } else if (system && Array.isArray(system.projectiles)) {
+                system.projectiles.push(proj);
+            }
 
         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
             WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
