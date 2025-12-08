@@ -237,8 +237,8 @@
             });
 
             it('should accept and activate mission', () => {
-                bountyMission.activate();
-                player.activeMission = bountyMission;
+                // Use Player.acceptMission so activation runs in player context
+                player.acceptMission(bountyMission);
 
                 expect(player.activeMission).toBe(bountyMission);
                 expect(bountyMission.status).toBe('Active');
@@ -624,8 +624,8 @@
                     reward: 5000,
                     originSystemIndex: 0
                 });
-                mission.activate();
-                player.activeMission = mission;
+                // Use Player.acceptMission so activation runs in player context
+                player.acceptMission(mission);
 
                 expect(mission.status).toBe('Active');
 
@@ -654,8 +654,8 @@
                 expect(mission.progressCount).toBe(3);
 
                 // 3. Complete mission
-                mission.complete(player);
-                player.activeMission = null;
+                // Complete via player to ensure cargo/removal logic runs in-context
+                player.completeMission();
 
                 expect(mission.status).toBe('Completed');
                 expect(player.credits).toBe(startCredits + 5000);

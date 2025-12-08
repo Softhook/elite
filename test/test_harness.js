@@ -135,7 +135,8 @@ class TestHarness {
                 } catch (e) {
                     this.results.failed++;
                     this.log(`  ❌ ${test.name}`, 'fail');
-                    this.log(`     ${e.message}`, 'error');
+                        // Include stack trace when available to aid debugging
+                        this.log(`     ${e.stack || e.message}`, 'error');
                 }
             }
 
@@ -560,8 +561,17 @@ function setupMockP5() {
         // Create mock p5 functions
         window.createVector = (x, y, z) => new MockVector(x, y, z);
         window.random = (min, max) => {
+            // p5.random behavior:
+            // - random() -> [0,1)
+            // - random(maxNumber) -> number in [0,maxNumber)
+            // - random(minNumber, maxNumber) -> number in [min,max)
+            // - random(array) -> random element from array
             if (max === undefined) {
                 if (min === undefined) return Math.random();
+                if (Array.isArray(min)) {
+                    if (min.length === 0) return undefined;
+                    return min[Math.floor(Math.random() * min.length)];
+                }
                 return Math.random() * min;
             }
             return min + Math.random() * (max - min);
