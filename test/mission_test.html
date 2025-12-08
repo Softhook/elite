@@ -130,8 +130,8 @@
                 expect(MISSION_TYPE.SABOTAGE).toBe('Sabotage');
             });
 
-            it('should have cop killer type', () => {
-                expect(MISSION_TYPE.COP_KILLER).toBe('Cop Killer');
+            it('should have bounty police type', () => {
+                expect(MISSION_TYPE.BOUNTY_POLICE).toBe('Bounty');
             });
         });
 
@@ -167,9 +167,9 @@
             });
 
             it('should set reward', () => {
-                const data = { id: 1, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE, reward: 5000 };
+                const data = { id: 1, title: 'Test', type: MISSION_TYPE.BOUNTY_PIRATE, rewardCredits: 5000 };
                 const mission = new Mission(data);
-                expect(mission.reward).toBe(5000);
+                expect(mission.rewardCredits).toBe(5000);
             });
 
             it('should initialize status as Available', () => {

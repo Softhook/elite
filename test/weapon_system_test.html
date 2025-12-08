@@ -48,8 +48,13 @@
     <script src="../debug.js"></script>
     <script src="../objectPool.js"></script>
     <script src="../weapons.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../mission.js"></script>
+    <script src="../thrustParticles.js"></script>
     <script src="../projectile.js"></script>
     <script src="../weaponSystem.js"></script>
+    <script src="../player.js"></script>
 
     <script>
         // Setup mock p5 before tests
@@ -513,7 +518,8 @@
                 proj.reset(100, 200, Math.PI, null, 10, 20);
                 expect(proj.pos.x).toBe(100);
                 expect(proj.pos.y).toBe(200);
-                expect(proj.angle).toBeCloseTo(Math.PI, 5);
+                // Velocity direction reflects the angle
+                expect(proj.vel.heading()).toBeCloseTo(Math.PI, 1);
             });
 
             it('should track lifespan', () => {
@@ -528,8 +534,8 @@
                 expect(json.pos).toBeDefined();
             });
 
-            it('should have fromJSON method', () => {
-                expect(typeof Projectile.prototype.fromJSON).toBe('function');
+            it('should have static fromJSON method', () => {
+                expect(typeof Projectile.fromJSON).toBe('function');
             });
         });
 
