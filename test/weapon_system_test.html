@@ -50,6 +50,8 @@
     <script src="../weapons.js"></script>
     <script src="../ships.js"></script>
     <script src="../enemyConstants.js"></script>
+    <script src="../enemyUtils.js"></script>
+    <script src="../enemy.js"></script>
     <script src="../mission.js"></script>
     <script src="../thrustParticles.js"></script>
     <script src="../projectile.js"></script>
@@ -59,6 +61,10 @@
     <script>
         // Setup mock p5 before tests
         setupMockP5();
+
+        // Mock global player for WeaponSystem checks
+        window.player = null;
+        window.uiManager = { addMessage: () => { } };
 
         // Mock owner for weapon fire tests
         function createMockOwner(options = {}) {
@@ -71,7 +77,13 @@
                 equippedWeapons: options.weapons || [WEAPON_UPGRADES[0]],
                 currentWeaponIndex: 0,
                 disruption: 0,
-                _beamHeatStates: new Map()
+                _beamHeatStates: new Map(),
+                weaponHeat: {}, // Correct property used by WeaponSystem._getHeatState
+                credits: 0,
+                shield: 100,
+                hull: 100,
+                uiManager: { addMessage: () => { } },
+                get currentWeapon() { return this.equippedWeapons[this.currentWeaponIndex]; }
             };
         }
 
@@ -145,7 +157,10 @@
                 for (const weapon of WEAPON_UPGRADES) {
                     expect(weapon.name).toBeDefined();
                     expect(weapon.type).toBeDefined();
-                    expect(weapon.damage).toBeDefined();
+                    // Barrier weapons don't have damage, they have damageReduction
+                    if (weapon.type !== 'barrier') {
+                        expect(weapon.damage).toBeDefined();
+                    }
                 }
             });
 

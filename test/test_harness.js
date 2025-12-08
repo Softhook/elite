@@ -567,7 +567,9 @@ function setupMockP5() {
             return min + Math.random() * (max - min);
         };
         window.floor = Math.floor;
-        window.ceil = Math.ceil;
+        window.exp = Math.exp;
+        window.min = Math.min;
+        window.max = Math.max;
         window.abs = Math.abs;
         window.sqrt = Math.sqrt;
         window.pow = Math.pow;

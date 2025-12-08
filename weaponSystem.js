@@ -20,14 +20,14 @@ class WeaponSystem {
     // Also applies inherent inaccuracy for NPC beam weapons
     static _applyAngleJitter(owner, angle, weaponType = null) {
         let totalJitter = 0;
-        
+
         // Disruption-based jitter (affects all weapons)
         const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
         if (d > 0) {
             const maxDisruptionJitter = 0.55 * d;
             totalJitter += (Math.random() * 2 - 1) * maxDisruptionJitter;
         }
-        
+
         // NPC beam accuracy penalty - beams are harder for AI to aim precisely
         // Player beams are mouse-aimed so they skip this penalty
         if (weaponType === WEAPON_TYPE.BEAM && !(owner instanceof Player)) {
@@ -36,12 +36,12 @@ class WeaponSystem {
             const baseBeamInaccuracy = 0.06; // halved (~3.5 degrees base)
             const beamJitter = (Math.random() * 2 - 1) * baseBeamInaccuracy;
             totalJitter += beamJitter;
-            
+
             // Additional inaccuracy based on target movement speed
             // Fast-moving targets are harder to track with a beam
             if (owner.target && owner.target.vel) {
                 const targetSpeed = Math.sqrt(
-                    owner.target.vel.x * owner.target.vel.x + 
+                    owner.target.vel.x * owner.target.vel.x +
                     owner.target.vel.y * owner.target.vel.y
                 );
                 // Add up to ~6 more degrees for very fast targets (speed > 8)
@@ -50,7 +50,7 @@ class WeaponSystem {
                 totalJitter += speedJitter;
             }
         }
-        
+
         if (totalJitter === 0) return angle;
         return angle + totalJitter;
     }
@@ -62,7 +62,7 @@ class WeaponSystem {
     }
     // Static regex for parsing weapon count from type string
     static _countRegex = /(\d+)$/;
-    
+
     // Initialize projectile pool safely
     static init(initialPoolSize = 100) {
         try {
@@ -239,81 +239,81 @@ class WeaponSystem {
         const state = this._getHeatState(owner, weapon, false);
         return !!(state && state.overheated);
     }
-    
-/** 
- * Handles force blast weapon (area effect damage)
- * @param {Object} owner - Entity firing the weapon
- * @param {Object} system - Current star system
- */
-static fireForce(owner, system) {
-    if (!owner || !system) return;
-    
-    WEAPON_LOG(`Force weapon fired by ${owner.constructor.name}`); // Debug output
-    
-    // Cache owner position in local variables for faster access
-    const ownerX = owner.pos.x;
-    const ownerY = owner.pos.y;
-    
-    // Each force wave needs its own position vector (can't share reference!)
-    const wavePos = createVector(ownerX, ownerY);
-    
-    // Get owner's current weapon for properties
-    const weapon = owner.currentWeapon;
-    const damage = weapon?.damage || 20;
-    const color = weapon?.color || [255, 0, 0];
-    const maxRadius = weapon?.maxRadius || 1000; // INCREASED from 750 to 1000
-    const currentTime = millis();
-    
-    // Pre-populate enemies to process - THIS IS THE KEY FIX
-    let entitiesToProcess;
-        if (owner === system.player) {
-        // Player attacking enemies - use concat to avoid spread operator overhead
-        entitiesToProcess = system.enemies.concat(system.asteroids);
-            WEAPON_LOG(`Found ${entitiesToProcess.length} potential targets for force wave`);
-    } else if (system.player) {
-        // Enemy attacking player
-        entitiesToProcess = [system.player];
-    } else {
-        entitiesToProcess = [];
-    }
-    
-    // Create force wave in the system (reuse objects to minimize allocation)
-    system.forceWaves.push({
-        pos: wavePos,
-        owner: owner,
-        startTime: currentTime,
-        radius: 50,
-        maxRadius: maxRadius,
-        growRate: 20, // INCREASED from 15 to 20
-        damage: damage,
-        color: color,
-        processed: {},
-        // Add batch processing properties with pre-populated entities
-        processedCount: 0,
-        entitiesToProcess: entitiesToProcess,
-        maxProcessPerFrame: 20 // INCREASED from 10 to 20
-    });
-    
-    WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
-    
-    // Store reference for drawing effects (reusing owner's lastForceWave if possible)
-    if (!owner.lastForceWave) {
-        owner.lastForceWave = {
-            pos: createVector(ownerX, ownerY),
-            time: currentTime,
-            color: color
-        };
-    } else {
-        owner.lastForceWave.pos.set(ownerX, ownerY);
-        owner.lastForceWave.time = currentTime;
-        owner.lastForceWave.color = color;
-    }
 
-    // Play force blast sound
-    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('force', ownerX, ownerY, player.pos);
+    /** 
+     * Handles force blast weapon (area effect damage)
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     */
+    static fireForce(owner, system) {
+        if (!owner || !system) return;
+
+        WEAPON_LOG(`Force weapon fired by ${owner.constructor.name}`); // Debug output
+
+        // Cache owner position in local variables for faster access
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
+
+        // Each force wave needs its own position vector (can't share reference!)
+        const wavePos = createVector(ownerX, ownerY);
+
+        // Get owner's current weapon for properties
+        const weapon = owner.currentWeapon;
+        const damage = weapon?.damage || 20;
+        const color = weapon?.color || [255, 0, 0];
+        const maxRadius = weapon?.maxRadius || 1000; // INCREASED from 750 to 1000
+        const currentTime = millis();
+
+        // Pre-populate enemies to process - THIS IS THE KEY FIX
+        let entitiesToProcess;
+        if (owner === system.player) {
+            // Player attacking enemies - use concat to avoid spread operator overhead
+            entitiesToProcess = system.enemies.concat(system.asteroids);
+            WEAPON_LOG(`Found ${entitiesToProcess.length} potential targets for force wave`);
+        } else if (system.player) {
+            // Enemy attacking player
+            entitiesToProcess = [system.player];
+        } else {
+            entitiesToProcess = [];
+        }
+
+        // Create force wave in the system (reuse objects to minimize allocation)
+        system.forceWaves.push({
+            pos: wavePos,
+            owner: owner,
+            startTime: currentTime,
+            radius: 50,
+            maxRadius: maxRadius,
+            growRate: 20, // INCREASED from 15 to 20
+            damage: damage,
+            color: color,
+            processed: {},
+            // Add batch processing properties with pre-populated entities
+            processedCount: 0,
+            entitiesToProcess: entitiesToProcess,
+            maxProcessPerFrame: 20 // INCREASED from 10 to 20
+        });
+
+        WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
+
+        // Store reference for drawing effects (reusing owner's lastForceWave if possible)
+        if (!owner.lastForceWave) {
+            owner.lastForceWave = {
+                pos: createVector(ownerX, ownerY),
+                time: currentTime,
+                color: color
+            };
+        } else {
+            owner.lastForceWave.pos.set(ownerX, ownerY);
+            owner.lastForceWave.time = currentTime;
+            owner.lastForceWave.color = color;
+        }
+
+        // Play force blast sound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+            soundManager.playWorldSound('force', ownerX, ownerY, player.pos);
+        }
     }
-}
 
     /** 
      * Generic fire method that dispatches to specific weapon handlers
@@ -325,7 +325,7 @@ static fireForce(owner, system) {
      */
     static fire(owner, system, angle, type = WEAPON_TYPE.PROJECTILE, target = null) {
         if (!owner || !system) return false;
-        
+
         // Extract count from type name if present (e.g., "spread3" -> 3)
         let count = 1;
         const countMatch = this._countRegex.exec(type);
@@ -348,20 +348,20 @@ static fireForce(owner, system) {
                 return false;
             }
         }
-        
+
         // Handle different weapon types
         let fired = false;
-        switch(type) {
+        switch (type) {
             case WEAPON_TYPE.FORCE:
                 this.fireForce(owner, system);
                 fired = true;
                 break;
-                
+
             case WEAPON_TYPE.BEAM:
                 this.fireBeam(owner, system, angle);
                 fired = true;
                 break;
-                
+
             case WEAPON_TYPE.TURRET:
                 // If disrupted, skip auto-targeting and fire forward with jitter
                 if (this._isLockDisabled(owner)) {
@@ -372,12 +372,12 @@ static fireForce(owner, system) {
                 }
                 fired = true;
                 break;
-                
+
             case WEAPON_TYPE.STRAIGHT:
                 this.fireStraight(owner, system, angle, count);
                 fired = true;
                 break;
-                
+
             case WEAPON_TYPE.SPREAD:
                 this.fireSpread(owner, system, angle, count);
                 fired = true;
@@ -425,13 +425,13 @@ static fireForce(owner, system) {
      */
     static fireProjectile(owner, system, angle) {
         if (!owner?.currentWeapon) return;
-        
+
         const weapon = owner.currentWeapon;
         const speed = weapon.speed || 8; // Use defined speed with fallback
         const ownerX = owner.pos.x;
         const ownerY = owner.pos.y;
         let proj;
-        
+
         // Use the speed variable instead of hardcoded 8
         if (this.projectilePool) {
             proj = this.projectilePool.get(
@@ -439,7 +439,7 @@ static fireForce(owner, system) {
                 speed, weapon.damage, weapon.color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
-        
+
         if (!proj) {
             proj = new Projectile(
                 ownerX, ownerY, angle, owner,
@@ -448,9 +448,9 @@ static fireForce(owner, system) {
             proj.system = system;
         }
         system.addProjectile(proj);
-        
+
         // Play weapon-specific sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             let soundName = 'laser';
             const wType = weapon?.type;
             if (wType === WEAPON_TYPE.TURRET) {
@@ -499,7 +499,7 @@ static fireForce(owner, system) {
         }
         system.addProjectile(proj);
 
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
             soundManager.playWorldSound('missileLaunch', ownerX, ownerY, player.pos);
         }
@@ -515,13 +515,13 @@ static fireForce(owner, system) {
      */
     static fireSpread(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system) return;
-        
+
         // Calculate appropriate spread based on count
         const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
         const spread = spreadMap[count] || 0.3;
         const halfSpread = spread * 0.5;
         const step = count > 1 ? spread / (count - 1) : 0;
-        
+
         // Pre-calculate angles for better performance
         for (let i = 0; i < count; i++) {
             const projectileAngle = angle - halfSpread + i * step;
@@ -538,31 +538,31 @@ static fireForce(owner, system) {
      */
     static fireStraight(owner, system, angle, count = 3) {
         if (count < 1 || !owner || !system || !owner.currentWeapon) return;
- 
+
         // Offset projectiles perpendicular to angle
         const spacing = 12; // pixels between projectiles
         const mid = (count - 1) * 0.5; // Use multiplication instead of division
         const perpAngle = angle + HALF_PI;
-        
+
         // Calculate perpendicular direction directly (faster than creating/setting vector)
         const perpDirX = cos(perpAngle);
         const perpDirY = sin(perpAngle);
-        
+
         const weapon = owner.currentWeapon;
         const speed = weapon.speed || 8; // Use defined speed with fallback
         const damage = weapon.damage;
         const color = weapon.color;
-        
+
         // Cache owner position for faster access
         const ownerX = owner.pos.x;
         const ownerY = owner.pos.y;
-        
+
         for (let i = 0; i < count; i++) {
             const offset = (i - mid) * spacing;
             // Calculate the position with minimal vector allocations
             const x = ownerX + perpDirX * offset;
             const y = ownerY + perpDirY * offset;
-            
+
             // FIXED: Create projectile at the correct offset position
             let proj;
             if (this.projectilePool) {
@@ -579,9 +579,9 @@ static fireForce(owner, system) {
             }
             system.addProjectile(proj);
         }
-        
+
         // Play sound once for all projectiles
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
         }
     }
@@ -598,30 +598,30 @@ static fireForce(owner, system) {
         const cache = this._ensureBeamCache();
         const { start, dir, end } = cache;
         const weapon = owner.currentWeapon;
-        
+
         // Validate angle
         if (isNaN(angle) || !isFinite(angle)) {
             console.error("Invalid angle in fireBeam:", angle);
             return;
         }
-        
+
         // Get beam properties and cache position
         const beamLength = 1200;
         const ownerX = owner.pos.x;
         const ownerY = owner.pos.y;
         start.set(ownerX, ownerY);
-        
+
         // Note: Player beam aiming is handled in player.fireWeapon() before calling WeaponSystem.fire()
         // The angle passed in is already calculated to point at the mouse cursor
         // We only apply jitter here (disruption affects player, NPC inaccuracy affects enemies)
         angle = this._applyAngleJitter(owner, angle, WEAPON_TYPE.BEAM);
         dir.set(cos(angle), sin(angle));
-        
+
         if (isNaN(dir.x) || isNaN(dir.y)) {
             console.error("Invalid beam direction from angle:", angle);
             return;
         }
-        
+
         // Default beam end in case nothing is hit
         end.set(start.x + dir.x * beamLength, start.y + dir.y * beamLength);
 
@@ -630,7 +630,7 @@ static fireForce(owner, system) {
         if (hit && hit.point) {
             end.set(hit.point.x, hit.point.y);
         }
-        
+
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
@@ -647,7 +647,7 @@ static fireForce(owner, system) {
             owner.lastBeam.time = millis();
             owner.lastBeam.hit = hit.target !== null;
         }
-        
+
         // Handle hit effects
         if (hit.target) {
             this.handleHitEffects(
@@ -661,7 +661,8 @@ static fireForce(owner, system) {
         }
 
         // Play sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        // Play sound using playWorldSound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             soundManager.playWorldSound('beam', ownerX, ownerY, player.pos);
         }
 
@@ -669,7 +670,7 @@ static fireForce(owner, system) {
             this._applyBeamHeat(owner, weapon);
         }
     }
-    
+
     /**
      * Performs hit detection for beam weapons using cached vectors.
      * @param {Object} owner - Entity firing the beam
@@ -704,7 +705,7 @@ static fireForce(owner, system) {
 
             const radialSq = relX * relX + relY * relY - projLength * projLength;
             const radiusSq = radius * radius;
-            
+
             if (radialSq <= radiusSq) {
                 minDist = projLength;
                 hitTarget = target;
@@ -714,7 +715,7 @@ static fireForce(owner, system) {
 
         const isPlayer = owner instanceof Player;
         const isEnemy = owner instanceof Enemy;
-        
+
         if (isPlayer && system?.enemies?.length) {
             const enemies = system.enemies;
             for (let i = 0, len = enemies.length; i < len; i++) {
@@ -802,7 +803,7 @@ static fireForce(owner, system) {
             point: hitTarget ? hitPoint : defaultEnd
         };
     }
-    
+
     /**
      * Find the nearest valid target for a turret
      * @param {Object} owner - Entity firing the turret
@@ -813,43 +814,43 @@ static fireForce(owner, system) {
         if (!owner || !system) return null;
         // Under electromagnetic disruption, disable auto-acquisition
         if (this._isLockDisabled(owner)) return null;
-        
+
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
             const enemies = system.enemies;
             if (!enemies || enemies.length === 0) return null;
-            
+
             let nearestEnemy = null;
             let closestDistSq = Infinity;
             const ownerX = owner.pos.x;
             const ownerY = owner.pos.y;
-            
+
             // Use squared distance to avoid sqrt
             for (let i = 0, len = enemies.length; i < len; i++) {
                 const enemy = enemies[i];
                 if (!enemy?.pos) continue;
-                
+
                 const dx = enemy.pos.x - ownerX;
                 const dy = enemy.pos.y - ownerY;
                 const distSq = dx * dx + dy * dy;
-                
+
                 if (distSq < closestDistSq) {
                     nearestEnemy = enemy;
                     closestDistSq = distSq;
                 }
             }
-            
+
             return nearestEnemy;
         }
         // Find player if enemy is firing
         else if (owner instanceof Enemy && system.player?.pos) {
             return system.player;
         }
-        
+
         return null;
     }
 
-// Tangle weapons
+    // Tangle weapons
     /**
      * Fire a tangle weapon that temporarily immobilizes the target
      * @param {Object} owner - Entity firing the weapon
@@ -857,81 +858,81 @@ static fireForce(owner, system) {
      * @param {number} angle - Firing angle in radians
      */
 
-static fireTangle(owner, system, angle) {
-    if (!owner?.currentWeapon) return;
-    
-    const weapon = owner.currentWeapon;
-    const ownerX = owner.pos.x;
-    const ownerY = owner.pos.y;
-    const speed = weapon.speed || 6; // Slower than regular projectiles
-    const tangleDuration = weapon.tangleDuration || 5.0;
-    const dragMultiplier = weapon.dragMultiplier || 10.0;
-    const rotationBlockMultiplier = weapon.rotationBlockMultiplier || 0.1;
-    
-    let proj;
-    
-    // Create projectile with tangle properties using unified duration
-    if (this.projectilePool) {
-        proj = this.projectilePool.get(
-            ownerX, ownerY, angle, owner,
-            speed, weapon.damage, weapon.color, 
-            "tangle", null, 60, 0, 0, 
-            tangleDuration, dragMultiplier,
-            rotationBlockMultiplier, system
-        );
-    } else {
-        proj = new Projectile(
-            ownerX, ownerY, angle, owner,
-            speed, weapon.damage, weapon.color, 
-            "tangle", null, 60, 0, 0,
-            tangleDuration, dragMultiplier,
-            rotationBlockMultiplier
-        );
-        proj.system = system;
-    }
-    
-    // Make projectile bigger
-    proj.size = weapon.projectileSize || 7;
-    system.addProjectile(proj);
-    
-    // Play tangle sound
-    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        soundManager.playWorldSound('tangleCast', ownerX, ownerY, player.pos);
-    }
-}
+    static fireTangle(owner, system, angle) {
+        if (!owner?.currentWeapon) return;
 
-/**
- * Fire a harpoon projectile. On hit the projectile will spawn a Harpoon tether.
- */
-static fireHarpoon(owner, system, angle) {
-    if (!owner?.currentWeapon || !system) return;
-    const weapon = owner.currentWeapon;
-    const ownerX = owner.pos.x;
-    const ownerY = owner.pos.y;
-    const speed = weapon.speed || 30; // increased default harpoon projectile speed to fly quickly
+        const weapon = owner.currentWeapon;
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
+        const speed = weapon.speed || 6; // Slower than regular projectiles
+        const tangleDuration = weapon.tangleDuration || 5.0;
+        const dragMultiplier = weapon.dragMultiplier || 10.0;
+        const rotationBlockMultiplier = weapon.rotationBlockMultiplier || 0.1;
 
-    let proj;
-    if (this.projectilePool) {
-        proj = this.projectilePool.get(
-            ownerX, ownerY, angle, owner,
-            speed, weapon.damage, weapon.color, "harpoon", null, 120, 0, 0, 5.0, 10.0, 0.1, system
-        );
+        let proj;
+
+        // Create projectile with tangle properties using unified duration
+        if (this.projectilePool) {
+            proj = this.projectilePool.get(
+                ownerX, ownerY, angle, owner,
+                speed, weapon.damage, weapon.color,
+                "tangle", null, 60, 0, 0,
+                tangleDuration, dragMultiplier,
+                rotationBlockMultiplier, system
+            );
+        } else {
+            proj = new Projectile(
+                ownerX, ownerY, angle, owner,
+                speed, weapon.damage, weapon.color,
+                "tangle", null, 60, 0, 0,
+                tangleDuration, dragMultiplier,
+                rotationBlockMultiplier
+            );
+            proj.system = system;
+        }
+
+        // Make projectile bigger
+        proj.size = weapon.projectileSize || 7;
+        system.addProjectile(proj);
+
+        // Play tangle sound
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+            soundManager.playWorldSound('tangleCast', ownerX, ownerY, player.pos);
+        }
     }
-    if (!proj) {
-        proj = new Projectile(ownerX, ownerY, angle, owner, speed, weapon.damage, weapon.color, "harpoon");
-        proj.system = system;
-    }
-    proj.size = weapon.projectileSize || 6;
-    system.addProjectile(proj);
+
+    /**
+     * Fire a harpoon projectile. On hit the projectile will spawn a Harpoon tether.
+     */
+    static fireHarpoon(owner, system, angle) {
+        if (!owner?.currentWeapon || !system) return;
+        const weapon = owner.currentWeapon;
+        const ownerX = owner.pos.x;
+        const ownerY = owner.pos.y;
+        const speed = weapon.speed || 30; // increased default harpoon projectile speed to fly quickly
+
+        let proj;
+        if (this.projectilePool) {
+            proj = this.projectilePool.get(
+                ownerX, ownerY, angle, owner,
+                speed, weapon.damage, weapon.color, "harpoon", null, 120, 0, 0, 5.0, 10.0, 0.1, system
+            );
+        }
+        if (!proj) {
+            proj = new Projectile(ownerX, ownerY, angle, owner, speed, weapon.damage, weapon.color, "harpoon");
+            proj.system = system;
+        }
+        proj.size = weapon.projectileSize || 6;
+        system.addProjectile(proj);
 
         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
             WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
         }
 
-    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-        try { soundManager.playWorldSound('harpoonFire', ownerX, ownerY, player.pos); } catch(_) {}
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+            try { soundManager.playWorldSound('harpoonFire', ownerX, ownerY, player.pos); } catch (_) { }
+        }
     }
-}
 
 
     /**
@@ -941,34 +942,34 @@ static fireHarpoon(owner, system, angle) {
      */
     static fireMine(owner, system) {
         if (!owner?.currentWeapon || !system) return;
-        
+
         const weapon = owner.currentWeapon;
         const ownerX = owner.pos.x;
         const ownerY = owner.pos.y;
-        
+
         // Get mine properties from weapon definition
         const damage = weapon.damage || 80;
         const blastRadius = weapon.blastRadius || 150;
         const triggerRadius = weapon.triggerRadius || 80;
         const color = weapon.color || [255, 100, 0];
         const health = weapon.mineHealth || 30;
-        
+
         // Create mine slightly behind the ship
         const dropOffset = owner.size ? owner.size * 1.5 : 20;
         const dropAngle = owner.angle + Math.PI; // Behind the ship
         const dropX = ownerX + Math.cos(dropAngle) * dropOffset;
         const dropY = ownerY + Math.sin(dropAngle) * dropOffset;
-        
+
         // Create the mine
         const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
         mine.system = system;
-        
+
         // Enforce 5-mine limit per owner
         // Initialize activeMines array if it doesn't exist
         if (!owner.activeMines) {
             owner.activeMines = [];
         }
-        
+
         // If owner already has 5 mines, remove the oldest one
         if (owner.activeMines.length >= 5) {
             const oldestMine = owner.activeMines.shift(); // Remove first (oldest) mine from owner's array
@@ -984,21 +985,21 @@ static fireHarpoon(owner, system, angle) {
                 }
             }
         }
-        
+
         // Add new mine to owner's tracking array
         owner.activeMines.push(mine);
-        
+
         // Add mine to system
         if (system.addMine) {
             system.addMine(mine);
         }
-        
+
         // Play mine drop sound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos);
         }
     }
-    
+
 
     /** 
      * Fire a turret weapon that auto-aims at the nearest target
@@ -1008,26 +1009,26 @@ static fireHarpoon(owner, system, angle) {
      */
     static fireTurret(owner, system, target) {
         if (!owner || !system) return;
-        
+
         // If target is not provided or invalid, find one
         if (!target?.pos) {
             target = this.findNearestTarget(owner, system);
         }
-        
+
         // If still no valid target, fire forward
         if (!target?.pos) {
             this.fireProjectile(owner, system, owner.angle);
             return;
         }
-        
+
         // Calculate angle to target - use atan2 directly (Math. is faster than p5)
         const dx = target.pos.x - owner.pos.x;
         const dy = target.pos.y - owner.pos.y;
         const angleToTarget = atan2(dy, dx);
-        
+
         // Update turret firing angle for visual sync
         owner.lastTurretFiringAngle = angleToTarget;
-        
+
         // Fire the projectile at the calculated angle
         this.fireProjectile(owner, system, angleToTarget);
     }
@@ -1044,7 +1045,7 @@ static fireHarpoon(owner, system, angle) {
     static handleHitEffects(target, hitPoint, damage, owner, system, color) {
         // IMPORTANT: Check shield status BEFORE applying damage
         const targetHasShield = target.shield > 0;
-        
+
         // Apply damage and get result, passing owner as the attacker and system for immediate targeting
         // (some targets may not have currentSystem populated at the instant of hit)
         if (typeof target.takeDamage === 'function') {
@@ -1054,12 +1055,12 @@ static fireHarpoon(owner, system, angle) {
                 console.error('Error calling takeDamage on target:', e);
             }
         }
-        
+
         // Set shield hit time if target has shields
         if (targetHasShield) {
             target.lastShieldHitTime = millis();
         }
-        
+
         // Play a lightweight hit sound when shields absorb damage (throttled)
         if (targetHasShield) {
             try {
@@ -1080,12 +1081,12 @@ static fireHarpoon(owner, system, angle) {
             const isColorArray = Array.isArray(color);
             const explosionColor = isColorArray ? color :
                 (color && color.levels) ? [color.levels[0], color.levels[1], color.levels[2]] :
-                [255, 0, 0];
-            
+                    [255, 0, 0];
+
             system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
         }
     }
-    
+
     /**
      * Clean up and release projectiles
      * This should be called by the system when projectiles are removed
@@ -1096,7 +1097,7 @@ static fireHarpoon(owner, system, angle) {
             this.projectilePool.release(projectile);
         }
     }
-    
+
     /**
      * Get stats about the projectile pool
      * @return {Object} Stats object

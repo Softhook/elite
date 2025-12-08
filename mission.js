@@ -26,28 +26,38 @@ class Mission {
      * or rehydrated from saved data object loaded from localStorage.
      * @param {object} data - Configuration object OR loaded save data object. It should contain properties matching the class fields.
      */
-    constructor(data) {
-        // --- Core Mission Details ---
-        // Use provided data value OR a default value if data property is missing/nullish
-        this.id = data.id || (Date.now() + Math.random()); // Use saved ID or generate a new simple unique ID
-        this.type = data.type || 'Unknown'; // Mission type from MISSION_TYPE enum
-        this.title = data.title || 'Unnamed Mission'; // Short display title
-        this.description = data.description || 'No description provided.'; // Longer flavor text
-        this.originSystem = data.originSystem || 'Unknown System'; // System where mission was generated
-        this.originStation = data.originStation || 'Unknown Station'; // Station where mission was generated
+    constructor(data = {}) {
+        // Handle ID: Start with data.id, then try positional arg if legacy (not likely here), else auto-gen
+        if (data.id) {
+            this.id = data.id;
+        } else {
+            // If no ID provided, auto-increment
+            this.id = Mission.nextId++;
+        }
 
-        // --- Target/Destination Details (nullable) ---
-        this.destinationSystem = data.destinationSystem || null; // Target system name (for delivery/assassination)
-        this.destinationStation = data.destinationStation || null; // Target station name (for delivery)
-        this.targetDesc = data.targetDesc || null; // Description of bounty target (e.g., "3 Pirate Kraits")
-        this.targetCount = data.targetCount || 0; // Number of targets to destroy/collect (for bounty/collection)
+        this.title = data.title || 'Unknown Mission';
+        this.type = data.type || MISSION_TYPE.DELIVERY_LEGAL;
+        this.description = data.description || '';
 
-        // --- Cargo Details (nullable) ---
-        this.cargoType = data.cargoType || null;   // Type of commodity for delivery missions
+        // --- Location Data ---
+        this.originSystem = data.originSystem || 'Unknown';
+        this.originStation = data.originStation || 'Unknown';
+        this.destinationSystem = data.destinationSystem || 'Unknown';
+        this.destinationStation = data.destinationStation || 'Unknown';
+        this.destinationSystemIndex = data.destinationSystemIndex; // Optional optimization
+
+        // --- Specific Mission Data ---
+        this.targetCount = data.targetCount || 0; // For Bounty/Kill missions
+        this.targetName = data.targetName || null; // For Assassination/specific targets
+        this.targetShipType = data.targetShipType || null;
+        this.guardCount = data.guardCount || 0;
+        this.guardShipType = data.guardShipType || null;
+
+        this.cargoType = data.cargoType || null;   // For delivery
         this.cargoQuantity = data.cargoQuantity || 0;  // Amount of cargo for delivery
 
         // --- Rewards & Penalties ---
-        this.rewardCredits = data.rewardCredits || 0; // Credits awarded on completion
+        this.rewardCredits = data.rewardCredits || data.reward || 0; // Credits awarded on completion (accept 'reward' alias)
         this.isIllegal = data.isIllegal || false; // Flag for illegal missions (smuggling, etc.)
         this.requiredRep = data.requiredRep || 0;    // Placeholder for reputation needed later
         this.timeLimit = data.timeLimit || null;    // Placeholder for time limit later (e.g., seconds)
@@ -114,21 +124,21 @@ class Mission {
     activate() {
         MISSION_LOG(`      >>> Mission.activate() called for: ${this.title}`); // Log entry
         if (this.status === 'Available') { // Only activate if it was available
-             this.status = 'Active';
-             MISSION_LOG(`      <<< Mission status set to: ${this.status}`); // Log exit
+            this.status = 'Active';
+            MISSION_LOG(`      <<< Mission status set to: ${this.status}`); // Log exit
         } else {
-             console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
+            console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
         }
-        
+
         // Special handling for delivery missions: add cargo to player's ship
         try {
-            if ((this.type === MISSION_TYPE.DELIVERY_LEGAL || this.type === MISSION_TYPE.DELIVERY_ILLEGAL) && 
-                this.cargoType && this.cargoQuantity > 0 && 
+            if ((this.type === MISSION_TYPE.DELIVERY_LEGAL || this.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
+                this.cargoType && this.cargoQuantity > 0 &&
                 typeof player !== 'undefined' && player) {
                 // Check if player has enough cargo space
                 const usedSpace = player.cargo.reduce((sum, item) => sum + item.quantity, 0);
                 const availableSpace = player.cargoCapacity - usedSpace;
-                
+
                 if (availableSpace >= this.cargoQuantity) {
                     // Add cargo to player's ship
                     const existingItem = player.cargo.find(item => item.name === this.cargoType);
@@ -151,12 +161,12 @@ class Mission {
                     return false; // Signal failure
                 }
             }
-        } catch (e) { 
-            console.error('Mission.activate (delivery cargo) failed:', e); 
+        } catch (e) {
+            console.error('Mission.activate (delivery cargo) failed:', e);
             this.status = 'Available'; // Revert on error
             return false;
         }
-        
+
         // Special handling for assassination missions: spawn the named target near the player
         try {
             if (this.type === MISSION_TYPE.ASSASSINATION && typeof player !== 'undefined' && player && player.currentSystem) {
@@ -164,7 +174,7 @@ class Mission {
                 if (!this._targetEnemyRef) {
                     const sys = player.currentSystem;
                     const angle = random(TWO_PI);
-                    const spawnDist = sys._getDiagonalDistance ? sys._getDiagonalDistance() + random(150, 400) : (500 + random(150,400));
+                    const spawnDist = sys._getDiagonalDistance ? sys._getDiagonalDistance() + random(150, 400) : (500 + random(150, 400));
                     const spawnX = player.pos.x + cos(angle) * spawnDist;
                     const spawnY = player.pos.y + sin(angle) * spawnDist;
                     // Choose ship type fallback
@@ -190,11 +200,11 @@ class Mission {
                             if (!this._guardRefs) Object.defineProperty(this, '_guardRefs', { value: [], writable: true, enumerable: false, configurable: true });
                             if (!Array.isArray(this._guardIds)) this._guardIds = [];
                             for (let g = 0; g < guardCount; g++) {
-                                const gAngle = angle + (TWO_PI * (g+1) / (guardCount + 1)) + random(-0.25, 0.25);
+                                const gAngle = angle + (TWO_PI * (g + 1) / (guardCount + 1)) + random(-0.25, 0.25);
                                 const gDist = spawnDist * 0.4 + random(80, 220);
                                 const gx = newEnemy.pos.x + cos(gAngle) * gDist;
                                 const gy = newEnemy.pos.y + sin(gAngle) * gDist;
-                                const gShip = guardShipType || ((typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length>0) ? random(COMBAT_SHIPS) : (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
+                                const gShip = guardShipType || ((typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) ? random(COMBAT_SHIPS) : (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
                                 const guardRole = (typeof AI_ROLE !== 'undefined') ? AI_ROLE.GUARD : 'GUARD';
                                 const guardNPC = new Enemy(gx, gy, player, gShip, guardRole);
                                 guardNPC.calculateRadianProperties && guardNPC.calculateRadianProperties();
@@ -204,7 +214,7 @@ class Mission {
                                 // Link guard to principal (the named target) so AI will guard/follow
                                 guardNPC.principal = newEnemy;
                                 // Set small formation offset to keep guards spaced
-                                try { guardNPC.guardFormationOffset = createVector(cos(gAngle) * (80 + g*30), sin(gAngle) * (80 + g*30)); } catch(e) { /* createVector may be unavailable in some contexts */ }
+                                try { guardNPC.guardFormationOffset = createVector(cos(gAngle) * (80 + g * 30), sin(gAngle) * (80 + g * 30)); } catch (e) { /* createVector may be unavailable in some contexts */ }
                                 // Add guard NPC to system
                                 sys.addEnemy(guardNPC);
                                 // Track guard refs and ids (ids are persisted, refs are runtime-only)
@@ -289,7 +299,7 @@ class Mission {
                 // If the target left the player's current system, cancel the mission
                 if (enemy.currentSystem && currentSystem && enemy.currentSystem !== currentSystem) {
                     this.fail();
-                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`,[255,120,80]);
+                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`, [255, 120, 80]);
                     try { this._cleanupAssassinationRuntime(currentSystem); } catch (e) { MISSION_LOG('Cleanup after fail failed:', e); }
                     if (typeof player !== 'undefined' && player && player.activeMission === this) player.activeMission = null;
                 }
@@ -319,7 +329,7 @@ class Mission {
                             // Clear any sabotage-specific runtime refs
                             try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = null; }
                             // Clear player's activeMission if it still points at this mission
-                            try { if (player.activeMission === this) player.activeMission = null; } catch (e) {}
+                            try { if (player.activeMission === this) player.activeMission = null; } catch (e) { }
                         }
                     } catch (e) { console.error('Mission.update (sabotage) completion error:', e); }
                     return;
@@ -339,12 +349,12 @@ class Mission {
                                     foundAny = true;
                                     if (so.destroyed) {
                                         try { if (typeof this.complete === 'function') this.complete(player); } catch (e) { console.error('Error completing mission (galaxy-found destroyed):', e); }
-                                        try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch(e){ this._targetObjectRef = null; }
-                                        try { if (player && player.activeMission === this) player.activeMission = null; } catch(e){}
+                                        try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = null; }
+                                        try { if (player && player.activeMission === this) player.activeMission = null; } catch (e) { }
                                         return;
                                     } else {
                                         // Link to the live object so monitoring proceeds normally
-                                        try { Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true }); } catch(e) { this._targetObjectRef = so; }
+                                        try { Object.defineProperty(this, '_targetObjectRef', { value: so, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = so; }
                                         return;
                                     }
                                 }
@@ -356,8 +366,8 @@ class Mission {
                     if (!foundAny) {
                         try {
                             if (typeof this.complete === 'function') this.complete(player);
-                            try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch(e){ this._targetObjectRef = null; }
-                            try { if (player && player.activeMission === this) player.activeMission = null; } catch(e){}
+                            try { Object.defineProperty(this, '_targetObjectRef', { value: null, writable: true, enumerable: false, configurable: true }); } catch (e) { this._targetObjectRef = null; }
+                            try { if (player && player.activeMission === this) player.activeMission = null; } catch (e) { }
                         } catch (e) { console.error('Mission.update (sabotage) assumed-missing completion error:', e); }
                         return;
                     }
@@ -392,7 +402,7 @@ class Mission {
             for (let gid of this._guardIds) {
                 const g = list.find(e => e && e.id === gid);
                 if (g) {
-                    try { this._guardRefs.push(g); } catch (e) {}
+                    try { this._guardRefs.push(g); } catch (e) { }
                     // Re-establish principal if missing
                     if (!g.principal && this._targetEnemyRef) g.principal = this._targetEnemyRef;
                 }
@@ -477,7 +487,7 @@ class Mission {
                                 try { nameMatch = (so.getDisplayName && so.getDisplayName() === this.targetObjectType); } catch (e) { nameMatch = false; }
                                 const dx = so.pos.x - planet.pos.x;
                                 const dy = so.pos.y - planet.pos.y;
-                                const d = Math.sqrt(dx*dx + dy*dy);
+                                const d = Math.sqrt(dx * dx + dy * dy);
                                 if (d <= maxConsiderDist && d < bestDist) {
                                     // prefer name matches over generic proximity
                                     if (!best || nameMatch || (!best.nameMatch && d < bestDist)) {
@@ -486,7 +496,7 @@ class Mission {
                                 }
                             }
                             if (best) {
-                                try { this.targetObjectId = best.id || this.targetObjectId; } catch (e) {}
+                                try { this.targetObjectId = best.id || this.targetObjectId; } catch (e) { }
                                 Object.defineProperty(this, '_targetObjectRef', { value: best, writable: true, enumerable: false, configurable: true });
                                 return;
                             }
@@ -501,7 +511,7 @@ class Mission {
                         let sx = 0, sy = 0;
                         const planet = (Array.isArray(currentSystem.planets) && this.targetPlanetName) ? currentSystem.planets.find(p => p && p.name === this.targetPlanetName) : null;
                         if (typeof player !== 'undefined' && player && player.pos) {
-                            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI*2);
+                            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI * 2);
                             const dist = 600 + ((planet && planet.size) ? Math.max(planet.size, 200) : 800);
                             sx = player.pos.x + (Math.cos(angle) * dist);
                             sy = player.pos.y + (Math.sin(angle) * dist);
@@ -532,7 +542,7 @@ class Mission {
             // Clear guard principals so guards revert to normal AI
             if (Array.isArray(this._guardRefs)) {
                 for (let guard of this._guardRefs) {
-                    try { if (guard) { guard.principal = null; guard.isAssassinationGuard = false; } } catch (e) {}
+                    try { if (guard) { guard.principal = null; guard.isAssassinationGuard = false; } } catch (e) { }
                 }
             }
             // Optionally remove guards from system? We will not remove them automatically to avoid surprising the world state.
@@ -564,11 +574,11 @@ class Mission {
                 }
                 if (typeof uiManager !== 'undefined' && uiManager) {
                     uiManager.inactiveMissionIds = uiManager.inactiveMissionIds || new Set();
-                    try { uiManager.inactiveMissionIds.add(this.id); } catch(e) { /* ignore */ }
+                    try { uiManager.inactiveMissionIds.add(this.id); } catch (e) { /* ignore */ }
                     uiManager.addMessage(`Mission Complete: ${this.title} | Reward: ${this.rewardCredits}cr`);
                 }
                 if (typeof saveGame === 'function') saveGame();
-            } catch(e) { MISSION_LOG('Error recording mission completion in Mission.complete():', e); }
+            } catch (e) { MISSION_LOG('Error recording mission completion in Mission.complete():', e); }
             // Apply consequences for illegal assassinations (mark player wanted locally)
             try {
                 if (this.isIllegal) {
@@ -599,9 +609,30 @@ class Mission {
     fail() {
         MISSION_LOG(`Mission Failed: ${this.title}`);
         this.status = 'Failed';
-            // Cleanup runtime refs when mission fails
-            try { this._cleanupAssassinationRuntime(null); } catch (e) { MISSION_LOG('Cleanup in fail() failed:', e); }
-            // TODO: Add penalties (credits, rep) or consequences later
+        // Cleanup runtime refs when mission fails
+        try { this._cleanupAssassinationRuntime(null); } catch (e) { MISSION_LOG('Cleanup in fail() failed:', e); }
+        // TODO: Add penalties (credits, rep) or consequences later
+    }
+
+    /**
+     * Updates the progress of the mission (e.g., kills, cargo delivered).
+     * @param {number} amount - Amount to increment progress by (default 1).
+     */
+    updateProgress(amount = 1) {
+        if (this.status !== 'Active') return;
+
+        this.progressCount += amount;
+
+        // Check if progress meets target
+        if (this.targetCount > 0 && this.progressCount >= this.targetCount) {
+            // Can optionally auto-complete or mark as ready
+            // For now, just ensuring progress is tracked
+            this.status = 'Completable'; // Or keep Active but ready? Let's say Active but capable of complete.
+            // Some systems might auto-complete.
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(`Mission Objective Updated: ${this.progressCount}/${this.targetCount}`);
+            }
+        }
     }
 
     // Update the getSummary method
@@ -614,16 +645,16 @@ class Mission {
         } else if (this.status === 'Failed') {
             statusPrefix = '[FAILED] ';
         }
-        
+
         // Show progress for active bounty missions
         let progressInfo = '';
-        if (this.status === 'Active' && 
-            (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE||
-             this.type === MISSION_TYPE.BOUNTY_ALIEN) && 
+        if (this.status === 'Active' &&
+            (this.type === MISSION_TYPE.BOUNTY_PIRATE || this.type === MISSION_TYPE.BOUNTY_POLICE ||
+                this.type === MISSION_TYPE.BOUNTY_ALIEN) &&
             this.progressCount > 0) {
             progressInfo = ` (${this.progressCount}/${this.targetCount})`;
         }
-        
+
         // Include named target for assassination missions
         if (this.type === MISSION_TYPE.ASSASSINATION && this.targetName) {
             return `${statusPrefix}${this.title} - ${this.rewardCredits}cr`;
