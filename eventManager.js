@@ -341,6 +341,229 @@ class EventManager {
                 }
             }
         ];
+        
+        // Additional dynamic events (market, social, infrastructure)
+        this.events.push(
+            {
+                type: "MARKET_SHORTAGE",
+                probabilityPerFrame: 0.00004,
+                minCooldownFrames: 12 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "MARKET ALERT: Local shortage detected!", color: "orange", consoleLog: "EventManager: Market shortage warning issued." },
+                // no spawnConfig - handled by custom logic
+            },
+            {
+                type: "MARKET_SURPLUS",
+                probabilityPerFrame: 0.00003,
+                minCooldownFrames: 12 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "MARKET NOTICE: Oversupply affecting prices.", color: "green", consoleLog: "EventManager: Market surplus warning issued." },
+            },
+            {
+                type: "BLACK_MARKET_AUCTION",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 30 * 60 * 60,
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "UNDERTONE: Black market auction incoming.", color: "purple", consoleLog: "EventManager: Black market auction warning issued." },
+            },
+            {
+                type: "SMUGGLING_BUST",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 20 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "ENFORCEMENT: Smuggling interdiction underway.", color: "red", consoleLog: "EventManager: Smuggling bust warning issued." },
+            },
+            {
+                type: "BLOCKADE",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 40 * 60 * 60,
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "BLOCKADE: Trade lanes restricted by military.", color: "blue", consoleLog: "EventManager: Blockade warning issued." },
+            },
+            {
+                type: "DIPLOMATIC_VISIT",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 45 * 60 * 60,
+                warningDurationFrames: 400,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "CIVIC: Diplomatic envoy arriving.", color: "teal", consoleLog: "EventManager: Diplomatic visit warning issued." },
+            },
+            {
+                type: "TECH_BREAKTHROUGH",
+                probabilityPerFrame: 0.000008,
+                minCooldownFrames: 60 * 60 * 60,
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "RESEARCH: New tech prototype surfaced.", color: "magenta", consoleLog: "EventManager: Tech breakthrough warning issued." },
+            },
+            {
+                type: "STATION_STRIKE",
+                probabilityPerFrame: 0.000012,
+                minCooldownFrames: 30 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "LABOR: Station strike in progress.", color: "orange", consoleLog: "EventManager: Station strike warning issued." },
+            },
+            {
+                type: "POWER_OUTAGE",
+                probabilityPerFrame: 0.000015,
+                minCooldownFrames: 25 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "ALERT: Station power outage reported.", color: "yellow", consoleLog: "EventManager: Power outage warning issued." },
+            },
+            {
+                type: "SABOTAGE",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 40 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." },
+            },
+            {
+                type: "MINING_BOOM",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 35 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." },
+            },
+            {
+                type: "MINE_ACCIDENT",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 30 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." },
+            },
+            {
+                type: "SOLAR_FLARE",
+                probabilityPerFrame: 0.000008,
+                minCooldownFrames: 50 * 60 * 60,
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." },
+            },
+            {
+                type: "QUARANTINE",
+                probabilityPerFrame: 0.000006,
+                minCooldownFrames: 80 * 60 * 60,
+                warningDurationFrames: 600,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." },
+            },
+            {
+                type: "REFUGEE_INFLUX",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 40 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." },
+            },
+            {
+                type: "RARE_COMMODITY",
+                probabilityPerFrame: 0.00001,
+                minCooldownFrames: 50 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." },
+                spawnConfig: {
+                    entityType: 'cargo',
+                    minEntities: 1,
+                    maxEntities: 2,
+                    spawnRadiusMin: 1500,
+                    spawnRadiusMax: 3000,
+                    cargoType: 'Rare Ore',
+                    quantity: 1
+                }
+            },
+            {
+                type: "HACKER_ATTACK",
+                probabilityPerFrame: 0.000009,
+                minCooldownFrames: 36 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." },
+            },
+            {
+                type: "SALVAGE_OPPORTUNITY",
+                probabilityPerFrame: 0.00002,
+                minCooldownFrames: 12 * 60 * 60,
+                warningDurationFrames: 240,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." },
+                spawnConfig: {
+                    entityType: 'cargo',
+                    minEntities: 1,
+                    maxEntities: 3,
+                    spawnRadiusMin: 1600,
+                    spawnRadiusMax: 3000,
+                    cargoType: 'Metals',
+                    quantity: 2
+                }
+            },
+            {
+                type: "BOUNTY_INCREASE",
+                probabilityPerFrame: 0.000015,
+                minCooldownFrames: 28 * 60 * 60,
+                warningDurationFrames: 300,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." },
+            },
+            {
+                type: "REPUTATION_SCANDAL",
+                probabilityPerFrame: 0.000007,
+                minCooldownFrames: 40 * 60 * 60,
+                warningDurationFrames: 360,
+                lastTriggeredFrame: -Infinity,
+                isWarningActive: false,
+                eventTriggerFrame: 0,
+                warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." },
+            }
+        );
     }
 
     // New events added below
@@ -426,7 +649,318 @@ class EventManager {
                 console.warn(`EventManager: Unknown entityType '${event.spawnConfig.entityType}' for event ${eventType}.`);
             }
         } else {
-            console.warn(`EventManager: No spawnConfig for event type ${eventType}. If it's not a spawn event, implement custom execution.`);
+            // Custom event handling for non-spawn events
+            switch (eventType) {
+                case 'MARKET_SHORTAGE': {
+                    // Drain a high-demand commodity from a station so traders see a clear scarcity to profit from.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: MARKET_SHORTAGE triggered without a valid station.');
+                        return;
+                    }
+                    const commodity = this._pickCommodity(station.market, comm => comm && comm.stock > 1);
+                    if (!commodity) return;
+                    const baseline = commodity.baseStock || commodity.stock || commodity.defaultBaseStock || 10;
+                    const request = Math.max(1, Math.round(baseline * random(0.22, 0.45)));
+                    const removed = station.market.consumeStockForNPC(commodity.name, request, { allowPartial: true });
+                    if (removed > 0) {
+                        this._notifyEvent(`${station.name}: ${commodity.name} shortage (-${removed} units)`, 'orange');
+                    }
+                    return;
+                }
+                case 'MARKET_SURPLUS': {
+                    // Flood the market with goods so haulers can scoop up cheap cargo and move it elsewhere.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: MARKET_SURPLUS triggered without a valid station.');
+                        return;
+                    }
+                    const commodity = this._pickCommodity(station.market);
+                    if (!commodity) return;
+                    const baseline = commodity.baseStock || commodity.defaultBaseStock || commodity.stock || 8;
+                    const grant = Math.max(1, Math.round(baseline * random(0.25, 0.5)));
+                    const added = station.market.addStockFromNPC(commodity.name, grant);
+                    if (added > 0) {
+                        this._notifyEvent(`${station.name}: ${commodity.name} oversupply (+${added} units)`, 'green');
+                    }
+                    return;
+                }
+                case 'BLACK_MARKET_AUCTION': {
+                    // Drop contraband caches into nearby traffic lanes so smugglers have something tangible to chase.
+                    const types = ['Narcotics', 'Weapons', 'Slaves'];
+                    const count = floor(random(1, 4));
+                    const spawnedTypes = new Set();
+                    for (let i = 0; i < count; i++) {
+                        const angle = random(TWO_PI);
+                        const r = random(1600, 3000);
+                        const x = this.player.pos.x + cos(angle) * r;
+                        const y = this.player.pos.y + sin(angle) * r;
+                        const t = random(types);
+                        spawnedTypes.add(t);
+                        const qty = Math.max(1, floor(random(1, 4)));
+                        const c = new Cargo(x, y, t, qty);
+                        this.starSystem.addCargo(c);
+                    }
+                    const systemLabel = this.starSystem?.name || 'Local sector';
+                    this._notifyEvent(`${systemLabel}: Black market auction seeded ${count} caches (${Array.from(spawnedTypes).join(', ')})`, 'purple');
+                    return;
+                }
+                case 'SMUGGLING_BUST': {
+                    // Confiscate contraband from a station and flood the area with ad-hoc police interceptors.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: SMUGGLING_BUST triggered without a valid station.');
+                        return;
+                    }
+                    const illegal = station.market.commodities?.filter(c => c && c.isLegal === false && c.stock > 0) || [];
+                    let seizedName = null;
+                    let seizedAmount = 0;
+                    if (illegal.length) {
+                        const chosen = random(illegal);
+                        const request = Math.max(1, Math.round((chosen.baseStock || chosen.stock || 10) * random(0.3, 0.6)));
+                        seizedAmount = station.market.consumeStockForNPC(chosen.name, request, { allowPartial: true });
+                        seizedName = chosen.name;
+                    }
+
+                    const spawnCount = Math.max(2, Math.floor(random(2, 5)));
+                    const anchor = station.pos || this.player.pos;
+                    for (let i = 0; i < spawnCount; i++) {
+                        const ang = random(TWO_PI);
+                        const dist = random(900, 1700);
+                        const sx = anchor.x + cos(ang) * dist;
+                        const sy = anchor.y + sin(ang) * dist;
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.POLICE, (enemy) => {
+                            enemy.currentState = AI_STATE.PATROLLING;
+                            enemy.target = null;
+                        });
+                    }
+
+                    const seizedText = seizedAmount > 0 && seizedName
+                        ? `${seizedAmount} ${seizedName} seized`
+                        : 'Contraband routes disrupted';
+                    this._notifyEvent(`${station.name}: Smuggling bust (${seizedText}; ${spawnCount} patrol ships dispatched)`, 'red');
+                    return;
+                }
+                case 'BLOCKADE': {
+                    // Deploy a ring of guard ships and flag the system as blockaded so traders must wait it out or fight through.
+                    const durationMs = 60 * 1000;
+                    this.starSystem.blockadeExpires = millis() + durationMs;
+                    const station = this._pickRandomStation();
+                    const anchor = station?.pos || this.player.pos;
+                    const anchorName = this._formatStationLabel(station);
+                    const spawnCount = Math.max(3, Math.floor(random(3, 6)));
+                    const radius = (station?.dockingRadius || 800) + random(400, 900);
+                    for (let i = 0; i < spawnCount; i++) {
+                        const angle = random(TWO_PI);
+                        const dist = radius + random(-150, 150);
+                        const sx = anchor.x + cos(angle) * dist;
+                        const sy = anchor.y + sin(angle) * dist;
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (enemy) => {
+                            enemy.principal = station || this.player;
+                            enemy.currentState = AI_STATE.GUARDING;
+                        });
+                    }
+                    this._notifyEvent(`${anchorName}: Naval blockade established (${spawnCount} gunships)`, 'blue', durationMs);
+                    return;
+                }
+                case 'DIPLOMATIC_VISIT': {
+                    // Visiting envoys offload gifts, boosting luxury stock at the featured station.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: DIPLOMATIC_VISIT triggered without a valid station.');
+                        return;
+                    }
+                    const currentLux = station.market.getAvailableStock ? station.market.getAvailableStock('Luxury Goods') : 0;
+                    const added = station.market.addStockFromNPC('Luxury Goods', Math.max(5, Math.round((currentLux || 20) * random(0.3, 0.6))));
+                    this._notifyEvent(`${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
+                    return;
+                }
+                case 'TECH_BREAKTHROUGH': {
+                    // Research labs dump a limited run of prototype parts into the market.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: TECH_BREAKTHROUGH triggered without a valid station.');
+                        return;
+                    }
+                    const added = station.market.addStockFromNPC('Adv Components', Math.max(2, Math.round(random(3, 7))));
+                    this._notifyEvent(`${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
+                    return;
+                }
+                case 'STATION_STRIKE': {
+                    // Workers walk off the job, forcing the station to burn through food reserves.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: STATION_STRIKE triggered without a valid station.');
+                        return;
+                    }
+                    const availableFood = station.market.getAvailableStock ? station.market.getAvailableStock('Food') : 0;
+                    const consumed = station.market.consumeStockForNPC('Food', Math.max(1, Math.round((availableFood || 15) * random(0.2, 0.4))), { allowPartial: true });
+                    this._notifyEvent(`${station.name}: Strike limits services (-${consumed} Food)`, 'orange');
+                    return;
+                }
+                case 'POWER_OUTAGE': {
+                    // Stations lose critical spares during the blackout, so traders see immediate shortages.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: POWER_OUTAGE triggered without a valid station.');
+                        return;
+                    }
+                    station.powerOutageExpires = millis() + 45 * 1000;
+                    const lostComputers = this._drainCommodityByPercent(station.market, 'Computers', 0.25, 0.45);
+                    const lostMachinery = this._drainCommodityByPercent(station.market, 'Machinery', 0.2, 0.35);
+                    const lostAdv = this._drainCommodityByPercent(station.market, 'Adv Components', 0.15, 0.3);
+                    const parts = [];
+                    if (lostComputers) parts.push(`${lostComputers} Computers`);
+                    if (lostMachinery) parts.push(`${lostMachinery} Machinery`);
+                    if (lostAdv) parts.push(`${lostAdv} Adv Components`);
+                    const summary = parts.length ? parts.join(', ') : 'systems offline';
+                    this._notifyEvent(`${station.name}: Power outage (${summary})`, 'yellow');
+                    return;
+                }
+                case 'SABOTAGE': {
+                    // Blow up a random space object (or area) and leave salvageable scrap behind.
+                    const targetObj = this._pickSpaceObject(obj => obj && !obj.destroyed);
+                    const anchor = targetObj?.pos || this.player.pos;
+                    const ang = random(TWO_PI);
+                    const r = random(900, 2200);
+                    const x = anchor.x + cos(ang) * r;
+                    const y = anchor.y + sin(ang) * r;
+                    const c = new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))));
+                    this.starSystem.addCargo(c);
+                    const descriptor = targetObj ? `${targetObj.type} near ${targetObj.planetName || 'deep orbit'}` : `${this._formatStationLabel(null)} infrastructure`;
+                    this._notifyEvent(`Sabotage: ${descriptor} damaged, salvage drifting nearby`, 'crimson');
+                    return;
+                }
+                case 'MINING_BOOM': {
+                    // Large strike floods the closest market with raw ore.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: MINING_BOOM triggered without a valid station.');
+                        return;
+                    }
+                    const metals = station.market.addStockFromNPC('Metals', Math.max(5, Math.floor(random(8, 20))));
+                    const minerals = station.market.addStockFromNPC('Minerals', Math.max(5, Math.floor(random(8, 20))));
+                    this._notifyEvent(`${station.name}: Mining boom (+${metals} Metals, +${minerals} Minerals)`, 'olive');
+                    return;
+                }
+                case 'MINE_ACCIDENT': {
+                    // Punctured cargo pods spill ore into space for opportunistic salvagers.
+                    const ang = random(TWO_PI);
+                    const r = random(1200, 2200);
+                    const qty = Math.max(1, floor(random(1, 6)));
+                    const x = this.player.pos.x + cos(ang) * r;
+                    const y = this.player.pos.y + sin(ang) * r;
+                    this.starSystem.addCargo(new Cargo(x, y, 'Metals', qty));
+                    const systemLabel = this.starSystem?.name || 'Local sector';
+                    this._notifyEvent(`${systemLabel}: Mine accident spilled ${qty} units of ore — salvage beacons deployed`, 'orange');
+                    return;
+                }
+                case 'SOLAR_FLARE': {
+                    // Solar activity chews through shields and leaves an ionized storm cloud behind.
+                    const shieldDamage = Math.round(Math.max(15, (this.player.maxShield || 0) * random(0.35, 0.55)));
+                    if (typeof this.player.shield === 'number') {
+                        this.player.shield = Math.max(0, this.player.shield - shieldDamage);
+                        this.player.lastShieldHitTime = millis();
+                        this.player.shieldHitTime = millis();
+                    }
+                    const flareAngle = random(TWO_PI);
+                    const flareDist = random(900, 1600);
+                    const fx = this.player.pos.x + cos(flareAngle) * flareDist;
+                    const fy = this.player.pos.y + sin(flareAngle) * flareDist;
+                    const storm = new CosmicStorm(fx, fy, random(400, 700), 'solar');
+                    this.starSystem.cosmicStorms.push(storm);
+                    const systemLabel = this.starSystem?.name || 'Local sector';
+                    this._notifyEvent(`${systemLabel}: Solar flare scorches shields (-${shieldDamage} shield strength)`, 'yellow');
+                    return;
+                }
+                case 'QUARANTINE': {
+                    // Medical lockdown forces the station to chew through food stocks.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: QUARANTINE triggered without a valid station.');
+                        return;
+                    }
+                    const consumed = station.market.consumeStockForNPC('Food', Math.max(2, Math.round(random(6, 20))), { allowPartial: true });
+                    this._notifyEvent(`${station.name}: Quarantine enforced (-${consumed} Food)`, 'purple');
+                    return;
+                }
+                case 'REFUGEE_INFLUX': {
+                    // Sudden arrivals chew through relief supplies.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: REFUGEE_INFLUX triggered without a valid station.');
+                        return;
+                    }
+                    const consumed = station.market.consumeStockForNPC('Food', Math.max(3, Math.round(random(6, 25))), { allowPartial: true });
+                    this._notifyEvent(`${station.name}: Refugee influx (-${consumed} Food)`, 'brown');
+                    return;
+                }
+                case 'HACKER_ATTACK': {
+                    // Sliced control nets fry computer cores and unleash hijacked drones into nearby space.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: HACKER_ATTACK triggered without a valid station.');
+                        return;
+                    }
+                    const computersLost = this._drainCommodityByPercent(station.market, 'Computers', 0.25, 0.5);
+                    const medsLost = this._drainCommodityByPercent(station.market, 'Medicine', 0.1, 0.25);
+                    const spawnCount = Math.max(1, Math.floor(random(1, 4)));
+                    const anchor = station.pos || this.player.pos;
+                    for (let i = 0; i < spawnCount; i++) {
+                        const ang = random(TWO_PI);
+                        const dist = random(700, 1400);
+                        const sx = anchor.x + cos(ang) * dist;
+                        const sy = anchor.y + sin(ang) * dist;
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.PIRATE, (enemy) => {
+                            enemy.currentState = AI_STATE.APPROACHING;
+                            enemy.target = this.player;
+                        });
+                    }
+                    const parts = [];
+                    if (computersLost) parts.push(`${computersLost} Computers fried`);
+                    if (medsLost) parts.push(`${medsLost} Medicine spoiled`);
+                    const summary = parts.length ? parts.join(', ') : 'systems glitching';
+                    this._notifyEvent(`${station.name}: Hacker attack (${summary}; ${spawnCount} hijacked cutters)`, 'purple');
+                    return;
+                }
+                case 'BOUNTY_INCREASE': {
+                    // Authority posts fresh contracts, drawing extra bounty hunters into the jump lanes.
+                    const spawnCount = Math.max(2, Math.floor(random(2, 5)));
+                    const anchorVec = this.starSystem.jumpZoneCenter || this.player.pos;
+                    const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(300, 700);
+                    for (let i = 0; i < spawnCount; i++) {
+                        const angle = random(TWO_PI);
+                        const dist = baseRadius + random(-200, 200);
+                        const sx = anchorVec.x + cos(angle) * dist;
+                        const sy = anchorVec.y + sin(angle) * dist;
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.BOUNTY_HUNTER, (enemy) => {
+                            enemy.currentState = AI_STATE.APPROACHING;
+                            enemy.target = this.player;
+                        });
+                    }
+                    const systemLabel = this.starSystem?.name || 'Local sector';
+                    this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships inbound`, 'red');
+                    return;
+                }
+                case 'REPUTATION_SCANDAL': {
+                    // Embarrassing leaks tank demand for prestige goods and force refunds.
+                    const station = this._pickStationWithMarket();
+                    if (!station) {
+                        console.warn('EventManager: REPUTATION_SCANDAL triggered without a valid station.');
+                        return;
+                    }
+                    const addedLux = this._addCommodityByPercent(station.market, 'Luxury Goods', 0.25, 0.5);
+                    const recalledTextiles = this._drainCommodityByPercent(station.market, 'Textiles', 0.15, 0.3);
+                    const pieces = [];
+                    if (addedLux) pieces.push(`+${addedLux} Luxury Goods dumped`);
+                    if (recalledTextiles) pieces.push(`${recalledTextiles} Textiles recalled`);
+                    const summary = pieces.length ? pieces.join(', ') : 'brand damage ripples';
+                    this._notifyEvent(`${station.name}: Reputation scandal (${summary})`, 'pink');
+                    return;
+                }
+                default:
+                    console.warn(`EventManager: No spawnConfig for event type ${eventType}. If it's not a spawn event, implement custom execution.`);
+            }
         }
     }
 
@@ -669,5 +1203,131 @@ class EventManager {
             const cargo = new Cargo(spawnX, spawnY, config.cargoType || 'Unknown', config.quantity || 1);
             this.starSystem.addCargo(cargo);
         }
+    }
+
+    // Helper: pick a random station (main or secret) in this system
+    _pickRandomStation() {
+        if (!this.starSystem) return null;
+        const candidates = [];
+        if (this.starSystem.station) candidates.push(this.starSystem.station);
+        if (Array.isArray(this.starSystem.secretStations)) candidates.push(...this.starSystem.secretStations);
+        if (candidates.length === 0) return null;
+        return random(candidates);
+    }
+
+    // Helper: select a reasonable ship type name for a desired AI role
+    _selectShipForRole(role) {
+        try {
+            switch (role) {
+                case AI_ROLE.POLICE:
+                    if (typeof POLICE_SHIPS !== 'undefined' && POLICE_SHIPS.length) return random(POLICE_SHIPS);
+                    return 'Viper';
+                case AI_ROLE.PIRATE:
+                    if (typeof PIRATE_SHIPS !== 'undefined' && PIRATE_SHIPS.length) return random(PIRATE_SHIPS);
+                    return 'Sidewinder';
+                case AI_ROLE.HAULER:
+                    if (typeof HAULER_SHIPS !== 'undefined' && HAULER_SHIPS.length) return random(HAULER_SHIPS);
+                    return 'CobraMKIII';
+                case AI_ROLE.BOUNTY_HUNTER:
+                    if (typeof BOUNTY_HUNTER_SHIPS !== 'undefined' && BOUNTY_HUNTER_SHIPS.length) return random(BOUNTY_HUNTER_SHIPS);
+                    return 'Viper';
+                case AI_ROLE.GUARD:
+                case AI_ROLE.COMBAT:
+                    if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length) return random(COMBAT_SHIPS);
+                    return 'Viper';
+                default:
+                    // Default combat ship
+                    if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length) return random(COMBAT_SHIPS);
+                    return 'Viper';
+            }
+        } catch (e) {
+            return 'Viper';
+        }
+    }
+
+    _notifyEvent(message, color = 'white', durationMs = 4000) {
+        if (!this.uiManager || !message) return;
+        this.uiManager.addMessage(message, color, durationMs);
+    }
+
+    _pickStationWithMarket() {
+        const station = this._pickRandomStation();
+        if (station && station.market) {
+            return station;
+        }
+        return null;
+    }
+
+    _pickCommodity(market, filterFn) {
+        if (!market || !Array.isArray(market.commodities) || market.commodities.length === 0) {
+            return null;
+        }
+        const pool = typeof filterFn === 'function'
+            ? market.commodities.filter(filterFn)
+            : market.commodities.slice();
+        if (!pool.length) return null;
+        return random(pool);
+    }
+
+    _drainCommodityByPercent(market, commodityName, minPercent = 0.15, maxPercent = 0.35) {
+        if (!market || typeof market.getAvailableStock !== 'function') return 0;
+        const available = market.getAvailableStock(commodityName);
+        if (available <= 0) return 0;
+        const ratio = Math.min(1, Math.max(0, random(minPercent, maxPercent)));
+        const request = Math.max(1, Math.round(available * ratio));
+        if (typeof market.consumeStockForNPC !== 'function') return 0;
+        return market.consumeStockForNPC(commodityName, request, { allowPartial: true });
+    }
+
+    _addCommodityByPercent(market, commodityName, minPercent = 0.15, maxPercent = 0.35) {
+        if (!market || typeof market.addStockFromNPC !== 'function') return 0;
+        let baseline = 0;
+        if (typeof market._getCommodity === 'function') {
+            const comm = market._getCommodity(commodityName);
+            baseline = comm ? (comm.baseStock || comm.defaultBaseStock || comm.stock || 0) : 0;
+        }
+        if (!baseline && typeof market.getAvailableStock === 'function') {
+            baseline = market.getAvailableStock(commodityName);
+        }
+        if (baseline <= 0) return 0;
+        const ratio = Math.max(0, random(minPercent, maxPercent));
+        const grant = Math.max(1, Math.round(baseline * ratio));
+        return market.addStockFromNPC(commodityName, grant);
+    }
+
+    _pickSpaceObject(predicate) {
+        if (!this.starSystem || !Array.isArray(this.starSystem.spaceObjects) || !this.starSystem.spaceObjects.length) {
+            return null;
+        }
+        const pool = typeof predicate === 'function'
+            ? this.starSystem.spaceObjects.filter(predicate)
+            : this.starSystem.spaceObjects.slice();
+        if (!pool.length) return null;
+        return random(pool);
+    }
+
+    _spawnAdHocEnemy(x, y, role, setupFn = null, forcedShip = null) {
+        if (!this.starSystem || !this.player) return null;
+        const shipType = forcedShip || this._selectShipForRole(role);
+        if (!shipType) return null;
+        const enemy = new Enemy(x, y, this.player, shipType, role);
+        enemy.currentSystem = this.starSystem;
+        if (typeof enemy.calculateRadianProperties === 'function') {
+            enemy.calculateRadianProperties();
+        }
+        if (typeof enemy.initializeColors === 'function') {
+            enemy.initializeColors();
+        }
+        if (typeof setupFn === 'function') {
+            setupFn(enemy);
+        }
+        this.starSystem.addEnemy(enemy);
+        return enemy;
+    }
+
+    _formatStationLabel(station) {
+        if (station?.name) return station.name;
+        if (this.starSystem?.name) return `${this.starSystem.name} sector`;
+        return 'local grid';
     }
 }
