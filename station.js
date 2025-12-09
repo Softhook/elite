@@ -69,16 +69,26 @@ class Station {
             const strokeW = random([0.5,1,1.5,2,3]); // occasional thicker lines
             const shading = random() < 0.42; // some crates have shading pattern
             // color by station type with small variance
-            let baseCol;
+            let r, g, b;
             switch (this.stationType) {
-                case 'industrial': baseCol = [160 + random(-20,20),140 + random(-20,20),120 + random(-20,20)]; break;
-                case 'mining': baseCol = [170 + random(-30,30),120 + random(-30,30),70 + random(-20,20)]; break;
-                case 'refinery': baseCol = [200 + random(-30,30),120 + random(-30,30),80 + random(-30,30)]; break;
-                case 'agricultural': baseCol = [120 + random(-20,20),180 + random(-30,30),100 + random(-20,20)]; break;
-                default: baseCol = [180 + random(-30,30),180 + random(-30,30),200 + random(-30,30)];
+                case 'industrial': r=160; g=140; b=120; break;
+                case 'mining': r=170; g=120; b=70; break;
+                case 'refinery': r=200; g=120; b=80; break;
+                case 'agricultural': r=120; g=180; b=100; break;
+                default: r=180; g=180; b=200;
+            }
+            r += random(-20, 20);
+            g += random(-20, 20);
+            b += random(-20, 20);
+            
+            let colObj;
+            try {
+                colObj = color(r, g, b);
+            } catch (e) {
+                colObj = [r, g, b]; // Fallback if p5 not ready
             }
 
-            this.crateField.push({ x, y, s, rot, strokeW, shading, baseCol, arm });
+            this.crateField.push({ x, y, s, rot, strokeW, shading, colObj, arm });
         }
     }
 
@@ -96,7 +106,12 @@ class Station {
             const rot = c.rot + sin(this.lightTimer * 0.5 + i) * 0.02;
             rotate(rot);
             
-            const col = color(c.baseCol[0], c.baseCol[1], c.baseCol[2]);
+            let col = c.colObj;
+            if (Array.isArray(col)) {
+                 // Just in case it was created before p5 was ready
+                 try { col = color(col[0], col[1], col[2]); c.colObj = col; } catch(e) {}
+            }
+            
             const depth = c.s * 0.5;
             
             this._drawBox3D(0, 0, c.s, c.s * 0.9, depth, col, rot);
@@ -297,19 +312,26 @@ class Station {
 
     /**
      * Calculates the local offset vector for 3D depth effect.
+     * Optimized to avoid object allocation.
      * @param {number} depth - The depth magnitude (pixels)
      * @param {number} extraRotation - Additional rotation applied to the context
-     * @returns {p5.Vector} The local offset vector
+     * @returns {{x: number, y: number}} The local offset vector
      * @private
      */
     _getDepthVector(depth, extraRotation = 0) {
-        const v = createVector(0, depth);
-        v.rotate(-(this.angle + extraRotation));
-        return v;
+        const theta = this.angle + extraRotation;
+        // v = (0, depth) rotated by -theta
+        // x = depth * sin(theta)
+        // y = depth * cos(theta)
+        return {
+            x: depth * Math.sin(theta),
+            y: depth * Math.cos(theta)
+        };
     }
 
     /**
      * Draws a 3D-style prism (extruded polygon).
+     * Optimized to avoid array allocations.
      * @param {number} x - Center X
      * @param {number} y - Center Y
      * @param {number} r - Radius
@@ -322,62 +344,58 @@ class Station {
     _drawPrism(x, y, r, sides, depth, col, extraRotation = 0) {
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
-        const verticesTop = [];
-        const verticesBottom = [];
-
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
-            const vx = x + cos(ang) * r;
-            const vy = y + sin(ang) * r;
-            verticesTop.push({x: vx, y: vy});
-            verticesBottom.push({x: vx + dv.x, y: vy + dv.y});
-        }
-
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
+        
         strokeWeight(1);
         
+        // Draw sides
         for (let i = 0; i < sides; i++) {
-            const next = (i + 1) % sides;
-
-            // Calculate shading based on face normal relative to sun
-            // Face normal angle in local space
+            const ang = i * angleStep - PI/2;
+            const nextAng = (i + 1) * angleStep - PI/2;
+            
+            // Face normal angle
             const faceAngle = (i + 0.5) * angleStep - PI/2;
             
-            // Back-face culling: check if face is visible given the depth vector
-            // Depth vector is dv. Face normal is (cos(faceAngle), sin(faceAngle))
-            // We see the face if normal . dv > 0
-            const nx = cos(faceAngle);
-            const ny = sin(faceAngle);
+            // Back-face culling
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
             
             if (dot > 0.001) {
-                // Adjust for extra rotation to get angle in current context vs sun in current context
-                // Effective light angle in current context: this._localSunAngle - extraRotation
-                const lightAngle = (this._localSunAngle || 0) - extraRotation;
+                const vx = x + Math.cos(ang) * r;
+                const vy = y + Math.sin(ang) * r;
+                const nvx = x + Math.cos(nextAng) * r;
+                const nvy = y + Math.sin(nextAng) * r;
+                
                 const diff = faceAngle - lightAngle;
-                // Map cosine of difference to brightness (0.4 to 0.9)
-                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
                 fill(red(col)*b, green(col)*b, blue(col)*b);
                 stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
 
                 beginShape();
-                vertex(verticesBottom[i].x, verticesBottom[i].y);
-                vertex(verticesBottom[next].x, verticesBottom[next].y);
-                vertex(verticesTop[next].x, verticesTop[next].y);
-                vertex(verticesTop[i].x, verticesTop[i].y);
+                vertex(vx + dv.x, vy + dv.y);
+                vertex(nvx + dv.x, nvy + dv.y);
+                vertex(nvx, nvy);
+                vertex(vx, vy);
                 endShape(CLOSE);
             }
         }
 
+        // Draw Top
         fill(col);
         stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
         beginShape();
-        for (let v of verticesTop) vertex(v.x, v.y);
+        for (let i = 0; i < sides; i++) {
+            const ang = i * angleStep - PI/2;
+            vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+        }
         endShape(CLOSE);
     }
 
     /**
      * Draws a 3D-style box.
+     * Optimized to avoid array allocations.
      * @param {number} x - Center X
      * @param {number} y - Center Y
      * @param {number} w - Width
@@ -391,38 +409,41 @@ class Station {
         const dv = this._getDepthVector(depth, extraRotation);
         const hw = w/2;
         const hh = h/2;
-        const corners = [
-            {x: x - hw, y: y - hh},
-            {x: x + hw, y: y - hh},
-            {x: x + hw, y: y + hh},
-            {x: x - hw, y: y + hh}
-        ];
+        
+        const faceAngles = [-PI/2, 0, PI/2, PI]; 
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
         
         strokeWeight(1);
-        
-        const faceAngles = [-PI/2, 0, PI/2, PI]; // Top, Right, Bottom, Left
 
         for (let i = 0; i < 4; i++) {
-            const next = (i + 1) % 4;
-
             // Back-face culling
-            const nx = cos(faceAngles[i]);
-            const ny = sin(faceAngles[i]);
+            const nx = Math.cos(faceAngles[i]);
+            const ny = Math.sin(faceAngles[i]);
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
-                const lightAngle = (this._localSunAngle || 0) - extraRotation;
                 const diff = faceAngles[i] - lightAngle;
-                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
                 fill(red(col)*b, green(col)*b, blue(col)*b);
                 stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
 
                 beginShape();
-                vertex(corners[i].x + dv.x, corners[i].y + dv.y);
-                vertex(corners[next].x + dv.x, corners[next].y + dv.y);
-                vertex(corners[next].x, corners[next].y);
-                vertex(corners[i].x, corners[i].y);
+                let x1, y1, x2, y2;
+                if (i === 0) { // Top: TL -> TR
+                    x1 = x - hw; y1 = y - hh; x2 = x + hw; y2 = y - hh;
+                } else if (i === 1) { // Right: TR -> BR
+                    x1 = x + hw; y1 = y - hh; x2 = x + hw; y2 = y + hh;
+                } else if (i === 2) { // Bottom: BR -> BL
+                    x1 = x + hw; y1 = y + hh; x2 = x - hw; y2 = y + hh;
+                } else { // Left: BL -> TL
+                    x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh;
+                }
+                
+                vertex(x1 + dv.x, y1 + dv.y);
+                vertex(x2 + dv.x, y2 + dv.y);
+                vertex(x2, y2);
+                vertex(x1, y1);
                 endShape(CLOSE);
             }
         }
@@ -435,6 +456,7 @@ class Station {
 
     /**
      * Draws an extruded custom shape.
+     * Optimized.
      * @param {Array<{x:number, y:number}>} vertices - Array of vertices
      * @param {number} depth - Depth (thickness)
      * @param {p5.Color} col - Base color
@@ -444,38 +466,39 @@ class Station {
      */
     _drawExtrudedShape(vertices, depth, col, extraRotation = 0, cull = true) {
         const dv = this._getDepthVector(depth, extraRotation);
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
         
-        // Draw sides
         strokeWeight(1);
         
-        const lightAngle = (this._localSunAngle || 0) - extraRotation;
-
-        for (let i = 0; i < vertices.length; i++) {
-            const next = (i + 1) % vertices.length;
+        const len = vertices.length;
+        for (let i = 0; i < len; i++) {
+            const next = (i + 1) % len;
+            const v1 = vertices[i];
+            const v2 = vertices[next];
 
             // Calculate normal angle
-            const dx = vertices[next].x - vertices[i].x;
-            const dy = vertices[next].y - vertices[i].y;
+            const dx = v2.x - v1.x;
+            const dy = v2.y - v1.y;
             // Normal is (-dy, dx)
-            const faceAngle = atan2(dx, -dy);
+            const faceAngle = Math.atan2(dx, -dy);
             
             // Back-face culling
-            const nx = cos(faceAngle);
-            const ny = sin(faceAngle);
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
 
             if (!cull || dot > 0.001) {
                 const diff = faceAngle - lightAngle;
-                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
                 fill(red(col)*b, green(col)*b, blue(col)*b);
                 stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
 
                 beginShape();
-                vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
-                vertex(vertices[next].x + dv.x, vertices[next].y + dv.y);
-                vertex(vertices[next].x, vertices[next].y);
-                vertex(vertices[i].x, vertices[i].y);
+                vertex(v1.x + dv.x, v1.y + dv.y);
+                vertex(v2.x + dv.x, v2.y + dv.y);
+                vertex(v2.x, v2.y);
+                vertex(v1.x, v1.y);
                 endShape(CLOSE);
             }
         }
@@ -484,12 +507,15 @@ class Station {
         fill(col);
         stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
         beginShape();
-        for (let v of vertices) vertex(v.x, v.y);
+        for (let i = 0; i < len; i++) {
+            vertex(vertices[i].x, vertices[i].y);
+        }
         endShape(CLOSE);
     }
 
     /**
      * Draws a 3D-style ring (extruded annulus).
+     * Optimized.
      * @param {number} x - Center X
      * @param {number} y - Center Y
      * @param {number} rOuter - Outer Radius
@@ -503,85 +529,168 @@ class Station {
     _drawRing3D(x, y, rOuter, rInner, sides, depth, col, extraRotation = 0) {
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
-        
-        const outerTop = [];
-        const outerBottom = [];
-        const innerTop = [];
-        const innerBottom = [];
-        
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep;
-            const c = cos(ang);
-            const s = sin(ang);
-            
-            outerTop.push({x: x + c * rOuter, y: y + s * rOuter});
-            outerBottom.push({x: x + c * rOuter + dv.x, y: y + s * rOuter + dv.y});
-            
-            innerTop.push({x: x + c * rInner, y: y + s * rInner});
-            innerBottom.push({x: x + c * rInner + dv.x, y: y + s * rInner + dv.y});
-        }
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
         
         strokeWeight(1);
         
-        const lightAngle = (this._localSunAngle || 0) - extraRotation;
-
         for (let i = 0; i < sides; i++) {
-            const next = (i + 1) % sides;
+            const ang = i * angleStep;
+            const nextAng = (i + 1) * angleStep;
             
-            // Outer face normal
-            const faceAngle = (i + 0.5) * angleStep; // Normal points out
+            const c = Math.cos(ang);
+            const s = Math.sin(ang);
+            const nc = Math.cos(nextAng);
+            const ns = Math.sin(nextAng);
             
-            // Back-face culling for outer face
-            const nx = cos(faceAngle);
-            const ny = sin(faceAngle);
+            const ox1 = x + c * rOuter;
+            const oy1 = y + s * rOuter;
+            const ox2 = x + nc * rOuter;
+            const oy2 = y + ns * rOuter;
+            
+            const ix1 = x + c * rInner;
+            const iy1 = y + s * rInner;
+            const ix2 = x + nc * rInner;
+            const iy2 = y + ns * rInner;
+            
+            // Outer face
+            const faceAngle = (i + 0.5) * angleStep;
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
                 const diff = faceAngle - lightAngle;
-                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
                 fill(red(col)*b, green(col)*b, blue(col)*b);
                 stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
 
                 beginShape();
-                vertex(outerBottom[i].x, outerBottom[i].y);
-                vertex(outerBottom[next].x, outerBottom[next].y);
-                vertex(outerTop[next].x, outerTop[next].y);
-                vertex(outerTop[i].x, outerTop[i].y);
+                vertex(ox1 + dv.x, oy1 + dv.y);
+                vertex(ox2 + dv.x, oy2 + dv.y);
+                vertex(ox2, oy2);
+                vertex(ox1, oy1);
                 endShape(CLOSE);
             }
             
-            // Inner face normal (points in, so +PI)
+            // Inner face
             const innerFaceAngle = faceAngle + PI;
-            
-            // Back-face culling for inner face
-            const nxIn = cos(innerFaceAngle);
-            const nyIn = sin(innerFaceAngle);
+            const nxIn = Math.cos(innerFaceAngle);
+            const nyIn = Math.sin(innerFaceAngle);
             const dotIn = nxIn * dv.x + nyIn * dv.y;
 
             if (dotIn > 0.001) {
                 const diffInner = innerFaceAngle - lightAngle;
-                const bInner = map(cos(diffInner), -1, 1, 0.4, 0.9);
+                const bInner = map(Math.cos(diffInner), -1, 1, 0.4, 0.9);
                 
                 fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner);
                 stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8);
 
                 beginShape();
-                vertex(innerBottom[i].x, innerBottom[i].y);
-                vertex(innerBottom[next].x, innerBottom[next].y);
-                vertex(innerTop[next].x, innerTop[next].y);
-                vertex(innerTop[i].x, innerTop[i].y);
+                vertex(ix1 + dv.x, iy1 + dv.y);
+                vertex(ix2 + dv.x, iy2 + dv.y);
+                vertex(ix2, iy2);
+                vertex(ix1, iy1);
                 endShape(CLOSE);
             }
         }
         
+        // Top
         fill(col);
         stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
         beginShape();
-        for (let v of outerTop) vertex(v.x, v.y);
+        // Outer loop
+        for (let i = 0; i < sides; i++) {
+            const ang = i * angleStep;
+            vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
+        }
+        // Inner loop (contour)
         beginContour();
         for (let i = sides - 1; i >= 0; i--) {
-            vertex(innerTop[i].x, innerTop[i].y);
+            const ang = i * angleStep;
+            vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
+        }
+        endContour();
+        endShape(CLOSE);
+    }
+
+    /**
+     * Draws a 3D-style extruded ring defined by arbitrary outer and inner vertices.
+     * @param {Array<{x:number, y:number}>} outerVerts - Outer vertices
+     * @param {Array<{x:number, y:number}>} innerVerts - Inner vertices (must match length of outer)
+     * @param {number} depth - Depth
+     * @param {p5.Color} col - Color
+     * @param {number} extraRotation - Extra rotation
+     * @private
+     */
+    _drawExtrudedRing(outerVerts, innerVerts, depth, col, extraRotation = 0) {
+        const dv = this._getDepthVector(depth, extraRotation);
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
+        strokeWeight(1);
+        
+        const len = outerVerts.length;
+        
+        // Draw sides
+        for (let i = 0; i < len; i++) {
+            const next = (i + 1) % len;
+            
+            // Outer face
+            const v1 = outerVerts[i];
+            const v2 = outerVerts[next];
+            const dx = v2.x - v1.x;
+            const dy = v2.y - v1.y;
+            const faceAngle = Math.atan2(dx, -dy);
+            
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
+            const dot = nx * dv.x + ny * dv.y;
+            
+            if (dot > 0.001) {
+                const diff = faceAngle - lightAngle;
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                beginShape();
+                vertex(v1.x + dv.x, v1.y + dv.y);
+                vertex(v2.x + dv.x, v2.y + dv.y);
+                vertex(v2.x, v2.y);
+                vertex(v1.x, v1.y);
+                endShape(CLOSE);
+            }
+            
+            // Inner face
+            const iv1 = innerVerts[i];
+            const iv2 = innerVerts[next];
+            const idx = iv2.x - iv1.x;
+            const idy = iv2.y - iv1.y;
+            const innerFaceAngle = Math.atan2(idx, -idy) + PI;
+            
+            const inx = Math.cos(innerFaceAngle);
+            const iny = Math.sin(innerFaceAngle);
+            const idot = inx * dv.x + iny * dv.y;
+            
+            if (idot > 0.001) {
+                const diff = innerFaceAngle - lightAngle;
+                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                beginShape();
+                vertex(iv1.x + dv.x, iv1.y + dv.y);
+                vertex(iv2.x + dv.x, iv2.y + dv.y);
+                vertex(iv2.x, iv2.y);
+                vertex(iv1.x, iv1.y);
+                endShape(CLOSE);
+            }
+        }
+        
+        // Top cap
+        fill(col);
+        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        beginShape();
+        for (let v of outerVerts) vertex(v.x, v.y);
+        beginContour();
+        for (let i = len - 1; i >= 0; i--) {
+            vertex(innerVerts[i].x, innerVerts[i].y);
         }
         endContour();
         endShape(CLOSE);
@@ -1717,24 +1826,21 @@ class Station {
      */
     _drawAlienCore() {
         // Main core - non-circular, more organic
-        push();
-        fill(40, 180, 140);
-        stroke(60, 220, 180);
-        strokeWeight(2);
-        
         // Slightly pulsating core
         let pulseSize = this.size * (0.3 + sin(this.lightTimer) * 0.02);
         
-        // Draw an irregular, somewhat octagonal shape
-        beginShape();
+        // Generate vertices for irregular octagonal shape
+        const vertices = [];
         for (let i = 0; i < 8; i++) {
             let angle = i * TWO_PI / 8;
             let radius = pulseSize * (1 + (i % 2 === 0 ? 0.1 : -0.1));
-            vertex(cos(angle) * radius, sin(angle) * radius);
+            vertices.push({x: cos(angle) * radius, y: sin(angle) * radius});
         }
-        endShape(CLOSE);
+        
+        this._drawExtrudedShape(vertices, 25, color(40, 180, 140));
         
         // Inner energy pattern
+        push();
         noFill();
         stroke(120, 255, 200, 150 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 100);
         strokeWeight(1.5);
@@ -1758,44 +1864,38 @@ class Station {
         for (let i = 0; i < 5; i++) {
             push();
             // Non-uniform rotation
-            rotate(i * TWO_PI / 5 + sin(i) * 0.2);
+            const rot = i * TWO_PI / 5 + sin(i) * 0.2;
+            rotate(rot);
             
-            // Curved, organic arm structure
-            fill(60, 200, 160, 220);
-            stroke(100, 240, 200);
-            beginShape();
-            vertex(-this.size * 0.05, 0);
-            bezierVertex(
-                -this.size * 0.08, -this.size * 0.2,
-                -this.size * 0.03, -this.size * 0.35,
-                -this.size * 0.05, -this.size * 0.45
-            );
-            vertex(this.size * 0.05, -this.size * 0.45);
-            bezierVertex(
-                this.size * 0.03, -this.size * 0.35,
-                this.size * 0.08, -this.size * 0.2,
-                this.size * 0.05, 0
-            );
-            endShape(CLOSE);
+            // Curved, organic arm structure approximated as polygon
+            const armVerts = [
+                {x: -this.size * 0.05, y: 0},
+                {x: -this.size * 0.07, y: -this.size * 0.2},
+                {x: -this.size * 0.04, y: -this.size * 0.35},
+                {x: -this.size * 0.05, y: -this.size * 0.45},
+                {x: this.size * 0.05, y: -this.size * 0.45},
+                {x: this.size * 0.04, y: -this.size * 0.35},
+                {x: this.size * 0.07, y: -this.size * 0.2},
+                {x: this.size * 0.05, y: 0}
+            ];
+            
+            this._drawExtrudedShape(armVerts, 15, color(60, 200, 160), rot);
             
             // Organic nodules along arm
-            fill(30, 160, 120);
-            stroke(80, 220, 180);
             for (let j = 1; j < 4; j++) {
                 let y = -j * this.size * 0.11;
                 let size = this.size * 0.04 * (1 + sin(this.lightTimer * 2 * 0.55 + j + this.animationOffset) * 0.2);
-                ellipse(0, y, size, size);
+                this._drawPrism(0, y, size/2, 6, 10, color(30, 160, 120), rot);
             }
             
             // Connection to outer zone - organic shape
-            fill(50, 190, 150);
-            stroke(90, 230, 190);
-            beginShape();
-            vertex(-this.size * 0.05, -this.size * 0.45);
-            vertex(-this.size * 0.07, -this.size * 0.48);
-            vertex(this.size * 0.07, -this.size * 0.48);
-            vertex(this.size * 0.05, -this.size * 0.45);
-            endShape(CLOSE);
+            const connVerts = [
+                {x: -this.size * 0.05, y: -this.size * 0.45},
+                {x: -this.size * 0.07, y: -this.size * 0.48},
+                {x: this.size * 0.07, y: -this.size * 0.48},
+                {x: this.size * 0.05, y: -this.size * 0.45}
+            ];
+            this._drawExtrudedShape(connVerts, 12, color(50, 190, 150), rot);
             pop();
         }
     }
@@ -1806,22 +1906,24 @@ class Station {
      */
     _drawAlienRings() {
         // Outer ring - not a perfect circle, slightly undulating
-        push();
-        noFill();
-        stroke(100, 240, 200);
-        strokeWeight(2.5);
-        
-        beginShape();
-        for (let i = 0; i < 60; i++) {
-            let angle = i * TWO_PI / 60;
+        const ringVerts = [];
+        const innerRingVerts = [];
+        const steps = 60;
+        for (let i = 0; i < steps; i++) {
+            let angle = i * TWO_PI / steps;
             let radius = this.size * (0.48 + sin(angle * 5 + this.lightTimer) * 0.02);
-            vertex(cos(angle) * radius, sin(angle) * radius);
+            let innerRadius = radius - this.size * 0.04;
+            ringVerts.push({x: cos(angle) * radius, y: sin(angle) * radius});
+            innerRingVerts.push({x: cos(angle) * innerRadius, y: sin(angle) * innerRadius});
         }
-        endShape(CLOSE);
+        
+        this._drawExtrudedRing(ringVerts, innerRingVerts, 10, color(100, 240, 200));
         
         // Inner energy field
+        push();
         stroke(60, 220, 180, 100);
         strokeWeight(4);
+        noFill();
         beginShape();
         for (let i = 0; i < 40; i++) {
             let angle = i * TWO_PI / 40 - (this.lightTimer * 0.5 * 0.55 + this.animationOffset * 0.15);
@@ -1839,14 +1941,12 @@ class Station {
     _drawAlienModules() {
         for (let i = 0; i < 15; i++) {
             push();
-            // Non-uniform spacing
-            rotate(i * TWO_PI / 15 + sin(i * 0.5) * 0.1);
+            const rot = i * TWO_PI / 15 + sin(i * 0.5) * 0.1;
+            rotate(rot);
             
             if (i % 5 === 0) {
                 // Transport portals at specific points
-                fill(20, 120, 100);
-                stroke(60, 200, 160);
-                ellipse(0, -this.size * 0.48, this.size * 0.08, this.size * 0.08);
+                this._drawPrism(0, -this.size * 0.48, this.size * 0.04, 8, 10, color(20, 120, 100), rot);
                 
                 // Portal energy
                 fill(100, 255, 200, 150 + sin(this.lightTimer * 3 * 0.55 + i + this.animationOffset) * 100);
@@ -1854,16 +1954,14 @@ class Station {
                 ellipse(0, -this.size * 0.48, this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2), this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2));
             } else {
                 // Organic pods
-                fill(50, 180, 140);
-                stroke(80, 220, 170);
-                beginShape();
+                const podVerts = [];
                 for (let j = 0; j < 8; j++) {
                     let angle = j * TWO_PI / 8;
                     let rx = this.size * 0.04 * (1 + (j % 2 === 0 ? 0.2 : -0.1));
                     let ry = this.size * 0.035 * (1 + (j % 2 === 0 ? -0.1 : 0.2));
-                    vertex(cos(angle) * rx, sin(angle) * ry - this.size * 0.48);
+                    podVerts.push({x: cos(angle) * rx, y: sin(angle) * ry - this.size * 0.48});
                 }
-                endShape(CLOSE);
+                this._drawExtrudedShape(podVerts, 12, color(50, 180, 140), rot);
                 
                 // Bioluminescent spots
                 fill(120, 255, 220, 180 + sin(this.lightTimer + i*2) * 75);
@@ -1886,12 +1984,11 @@ class Station {
     _drawEnergyFields() {
         for (let i = 0; i < 3; i++) {
             push();
-            rotate(i * TWO_PI / 3 + PI/6);
+            const rot = i * TWO_PI / 3 + PI/6;
+            rotate(rot);
             
             // Energy field generator
-            fill(40, 170, 130);
-            stroke(90, 230, 190);
-            ellipse(0, this.size * 0.15, this.size * 0.06, this.size * 0.06);
+            this._drawPrism(0, this.size * 0.15, this.size * 0.03, 6, 15, color(40, 170, 130), rot);
             
             // Energy field - pulsating
             fill(100, 255, 200, 40 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 30);
