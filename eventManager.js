@@ -155,8 +155,12 @@ class EventManager {
                     minEntities: 1,
                     maxEntities: 1,
                     useRankFactorForCount: false,
-                    spawnRadiusMin: 2000,
-                    spawnRadiusMax: 2500,
+                    // Spawn comets far enough to be visible on approach but still
+                    // within the system's despawn radius so they aren't removed
+                    // immediately. Choose values slightly inside the system's
+                    // despawn threshold (which defaults to ~10000).
+                    spawnRadiusMin: 8000,
+                    spawnRadiusMax: 9000,
                     clusterSpreadRadius: 0,
                     asteroidSizeMin: 150,
                     asteroidSizeMax: 200,
@@ -529,9 +533,29 @@ class EventManager {
             // Special comet setup
             if (config.isComet && asteroid) {
                 asteroid.isComet = true;
-                // Set velocity towards player
-                const angleToPlayer = atan2(this.player.pos.y - asteroid.pos.y, this.player.pos.x - asteroid.pos.x);
-                asteroid.vel = p5.Vector.fromAngle(angleToPlayer).mult(config.speed || 5);
+                // Aim the comet to pass near the player rather than hit directly.
+                // Compute a lateral offset so the trajectory goes beside the player.
+                try {
+                    const angleToPlayer = atan2(this.player.pos.y - asteroid.pos.y, this.player.pos.x - asteroid.pos.x);
+
+                    // Choose an offset distance based on asteroid size (and a minimum)
+                    const baseOffset = (asteroid.size || 100) * 0.6;
+                    const minOffset = 150; // minimum miss distance in world units
+                    const offsetDist = max(minOffset, baseOffset + random(-100, 200));
+
+                    // Randomly choose left or right side to pass
+                    const side = random() < 0.5 ? -1 : 1;
+                    const perpAngle = angleToPlayer + (PI / 2) * side;
+
+                    const missPoint = p5.Vector.add(this.player.pos, p5.Vector.fromAngle(perpAngle).mult(offsetDist));
+
+                    const aimAngle = atan2(missPoint.y - asteroid.pos.y, missPoint.x - asteroid.pos.x);
+                    asteroid.vel = p5.Vector.fromAngle(aimAngle).mult(config.speed || 5);
+                } catch (e) {
+                    // Fallback to direct velocity if anything goes wrong
+                    const angleToPlayer = atan2(this.player.pos.y - asteroid.pos.y, this.player.pos.x - asteroid.pos.x);
+                    asteroid.vel = p5.Vector.fromAngle(angleToPlayer).mult(config.speed || 5);
+                }
             }
             
             this.starSystem.asteroids.push(asteroid);

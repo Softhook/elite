@@ -162,6 +162,9 @@ class UIMinimap {
             // Draw space objects
             this._drawSpaceObjects(player, system, mapCenterX, mapCenterY, isFullyWithinBounds);
 
+            // Draw comets (very visible long red lines pointing towards player)
+            this._drawComets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
+
             // Draw floating cargo
             this._drawCargo(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
 
@@ -402,6 +405,64 @@ class UIMinimap {
                 ellipse(mapX, mapY, 2, 2);
             }
         }
+    }
+
+    _drawComets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
+        const asteroids = system.asteroids || [];
+        if (!asteroids || asteroids.length === 0) return;
+
+        // Clip to minimap area so long trajectory lines don't draw over UI
+        const ctx = drawingContext;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(this.x, this.y, this.size, this.size);
+        ctx.clip();
+
+        for (let i = 0; i < asteroids.length; i++) {
+            const a = asteroids[i];
+            if (!a || !a.pos || !a.isComet || (typeof a.isDestroyed === 'function' && a.isDestroyed())) continue;
+
+            const relX = a.pos.x - player.pos.x;
+            const relY = a.pos.y - player.pos.y;
+            const mapStartX = mapCenterX + relX * this.scale;
+            const mapStartY = mapCenterY + relY * this.scale;
+
+            const vx = (a.vel && typeof a.vel.x === 'number') ? a.vel.x : 0;
+            const vy = (a.vel && typeof a.vel.y === 'number') ? a.vel.y : 0;
+            const speed = Math.sqrt(vx * vx + vy * vy);
+
+            // Compute a simple target point along the velocity vector
+            const vnx = speed > 0 ? vx / speed : 1;
+            const vny = speed > 0 ? vy / speed : 0;
+            const trajWorldLen = 8000; // draw a reasonably long segment
+            const endWorldX = a.pos.x + vnx * trajWorldLen;
+            const endWorldY = a.pos.y + vny * trajWorldLen;
+            const mapEndX = mapCenterX + (endWorldX - player.pos.x) * this.scale;
+            const mapEndY = mapCenterY + (endWorldY - player.pos.y) * this.scale;
+
+            // Use unclamped coordinates and rely on the clip region so the
+            // trajectory continues off-screen naturally instead of snapping.
+            const sx = mapStartX;
+            const sy = mapStartY;
+            const ex = mapEndX;
+            const ey = mapEndY;
+
+            // Guard against invalid numbers
+            if (![sx, sy, ex, ey].every(v => Number.isFinite(v))) continue;
+
+            push();
+            stroke(220, 40, 40, 230);
+            strokeWeight(1.5);
+            line(sx, sy, ex, ey);
+
+            noStroke();
+            fill(255, 80, 80, 255);
+            // Small dot at the comet head (start)
+            ellipse(sx, sy, 4, 4);
+            pop();
+        }
+
+        ctx.restore();
     }
 
     _drawCargo(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
