@@ -482,7 +482,7 @@ class EnemyAIBehaviors {
     
         // 6. Otherwise, do normal combat movement & firing
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
-        this.performRotationAndThrust(desiredMovementTargetPos);
+        this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
 
@@ -589,7 +589,7 @@ class EnemyAIBehaviors {
                 desiredMovementTargetPos = this.patrolTargetPos;
             }
             
-            this.performRotationAndThrust(desiredMovementTargetPos);
+            this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         }
     }
 
@@ -665,7 +665,7 @@ class EnemyAIBehaviors {
                     this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy(); // Restore patrol target
                     
                     // Don't run combat AI this frame if disengaging
-                    this.performRotationAndThrust(this.patrolTargetPos); // Move towards patrol target
+                    this.performSafeRotationAndThrust(system, this.patrolTargetPos); // Move towards patrol target
                     this.updatePhysics();
                     return;
                 }
@@ -867,7 +867,7 @@ class EnemyAIBehaviors {
         }
 
         if (shouldMove) {
-            this.performRotationAndThrust(desiredMovementTargetPos);
+            this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         }
         this.updatePhysics();
     }
@@ -1158,7 +1158,7 @@ class EnemyAIBehaviors {
         if (!holdArrival) {
             // Move towards the computed exterior approach target instead of the center
             if (this.waitTimer !== 0) { this.waitTimer = 0; } // Reset timer if moving
-            this.performRotationAndThrust(moveTarget); // Use helper
+            this.performSafeRotationAndThrust(system, moveTarget); // Use helper
             this._arrivalLatched = false;
         } else {
             // Arrival detected: brake and conduct trade if destination is a SpaceObject
@@ -1252,7 +1252,7 @@ class EnemyAIBehaviors {
         // (Keep the existing role-specific movement logic here - performRotationAndThrust or Transport-specific movement)
         // Example placeholder for movement logic:
         const desiredMovementTargetPos = this.cargoTarget.pos;
-        this.performRotationAndThrust(desiredMovementTargetPos); // Or the transport-specific movement
+        this.performSafeRotationAndThrust(system, desiredMovementTargetPos); // Or the transport-specific movement
         // --- End Movement Logic ---
 
 
@@ -1452,7 +1452,7 @@ class EnemyAIBehaviors {
                     this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy();
                     
                     // Move towards patrol target this frame
-                    this.performRotationAndThrust(this.patrolTargetPos);
+                    this.performSafeRotationAndThrust(system, this.patrolTargetPos);
                     this.updatePhysics();
                     return;
                 }
@@ -1561,7 +1561,7 @@ class EnemyAIBehaviors {
         
         // Normal combat behavior
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
-        this.performRotationAndThrust(desiredMovementTargetPos);
+        this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
 
@@ -1661,7 +1661,94 @@ class EnemyAIBehaviors {
             desiredMovementTargetPos = this.patrolTargetPos;
         }
         
-        this.performRotationAndThrust(desiredMovementTargetPos);
+        this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
+    }
+
+    /**
+     * Lightweight asteroid avoidance: nudge movement target away from the nearest
+     * asteroid intersecting the current path, or slightly slow the ship for a short time.
+     * Low CPU: only checks asteroids within the forward cone and a capped distance.
+     */
+    _avoidAsteroidsAndAdjustTarget(system, desiredMovementTargetPos) {
+        if (!system || !Array.isArray(system.asteroids) || !desiredMovementTargetPos) return desiredMovementTargetPos;
+        // Quick guards
+        const toX = desiredMovementTargetPos.x - this.pos.x;
+        const toY = desiredMovementTargetPos.y - this.pos.y;
+        const toDist = Math.hypot(toX, toY);
+        if (!isFinite(toDist) || toDist < 1) return desiredMovementTargetPos;
+
+        // Direction vector towards target
+        const dirX = toX / toDist;
+        const dirY = toY / toDist;
+
+        // Only consider asteroids within this forward distance
+        const maxCheckDist = Math.min(600, toDist);
+
+        let threat = null;
+        let threatProj = Infinity;
+
+        for (const ast of system.asteroids) {
+            if (!ast || ast.destroyed || !ast.pos) continue;
+            const dx = ast.pos.x - this.pos.x;
+            const dy = ast.pos.y - this.pos.y;
+            const proj = dx * dirX + dy * dirY; // distance along forward vector
+            if (proj <= 0 || proj > maxCheckDist) continue;
+            // perpendicular squared distance from path
+            const perpSq = dx * dx + dy * dy - proj * proj;
+            const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+            const safety = Math.max(this.size, 16) + r + 12; // padding
+            if (perpSq <= safety * safety) {
+                if (proj < threatProj) {
+                    threat = ast;
+                    threatProj = proj;
+                }
+            }
+        }
+
+        if (!threat) return desiredMovementTargetPos;
+
+        // If threat is very close, prefer to slow briefly rather than sharp steering
+        const closeThresh = Math.max(threat.maxRadius || (threat.size ? threat.size * 0.5 : 20), this.size) + 60;
+        if (threatProj < closeThresh) {
+            // Set a short avoidance timer so we damp velocity for a moment
+            this._asteroidAvoidTimer = 0.6;
+            return desiredMovementTargetPos; // keep target but slow ship in wrapper
+        }
+
+        // Nudge movement target laterally away from asteroid path
+        // Perpendicular vector to forward dir
+        let perpX = -dirY;
+        let perpY = dirX;
+        // choose side that increases distance from asteroid center
+        const ax = threat.pos.x - this.pos.x;
+        const ay = threat.pos.y - this.pos.y;
+        const dot = ax * perpX + ay * perpY;
+        if (dot < 0) { perpX = -perpX; perpY = -perpY; }
+
+        const offset = Math.max(threat.maxRadius || (threat.size ? threat.size * 0.5 : 20), this.size) + 48;
+        return createVector(desiredMovementTargetPos.x + perpX * offset, desiredMovementTargetPos.y + perpY * offset);
+    }
+
+    /**
+     * Wrapper that applies lightweight avoidance then delegates to existing rotation/thrust.
+     * Also applies gentle damping while avoidance timer is active.
+     */
+    performSafeRotationAndThrust(system, desiredMovementTargetPos) {
+        const safeTarget = this._avoidAsteroidsAndAdjustTarget(system, desiredMovementTargetPos);
+        // Delegate to existing movement helper
+        try {
+            this.performRotationAndThrust(safeTarget);
+        } catch (e) {
+            // Defensive: if underlying method is missing, do nothing
+        }
+
+        // If an avoidance timer is set, gently reduce velocity to avoid collisions
+        if (this._asteroidAvoidTimer === undefined) this._asteroidAvoidTimer = 0;
+        if (this._asteroidAvoidTimer > 0) {
+            this._asteroidAvoidTimer = Math.max(0, this._asteroidAvoidTimer - ((typeof deltaTime === 'number') ? (deltaTime / 1000) : 0.016));
+            // Gentle damping (cheap): small multiplier to slow over avoidance window
+            this.vel.mult(0.92);
+        }
     }
 }
 
