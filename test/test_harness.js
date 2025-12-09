@@ -603,7 +603,8 @@ function setupMockP5() {
                 sub: (v1, v2) => new MockVector(v1.x - v2.x, v1.y - v2.y, (v1.z || 0) - (v2.z || 0)),
                 mult: (v, n) => new MockVector(v.x * n, v.y * n, (v.z || 0) * n),
                 div: (v, n) => new MockVector(v.x / n, v.y / n, (v.z || 0) / n),
-                dist: (v1, v2) => Math.sqrt(Math.pow(v2.x - v1.x, 2) + Math.pow(v2.y - v1.y, 2) + Math.pow((v2.z || 0) - (v1.z || 0), 2))
+                dist: (v1, v2) => Math.sqrt(Math.pow(v2.x - v1.x, 2) + Math.pow(v2.y - v1.y, 2) + Math.pow((v2.z || 0) - (v1.z || 0), 2)),
+                fromAngle: (angle, length = 1) => new MockVector(Math.cos(angle) * length, Math.sin(angle) * length, 0)
             }
         };
 
