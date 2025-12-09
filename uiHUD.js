@@ -27,6 +27,32 @@ class UIHUD {
         
         // Cached values for performance
         this._lastMessageBlockHeight = 0;
+        
+        // Persistent messages (top of screen)
+        this.persistentMessages = [];
+    }
+
+    /**
+     * Adds a persistent message to the top of the screen.
+     * @param {string} id - Unique identifier for the message
+     * @param {string} text - Message text
+     * @param {string|Array} color - Message color
+     */
+    addPersistentMessage(id, text, color = [255, 255, 255]) {
+        const existingIndex = this.persistentMessages.findIndex(m => m.id === id);
+        if (existingIndex >= 0) {
+            this.persistentMessages[existingIndex] = { id, text, color };
+        } else {
+            this.persistentMessages.push({ id, text, color });
+        }
+    }
+
+    /**
+     * Removes a persistent message by ID.
+     * @param {string} id - Unique identifier for the message
+     */
+    removePersistentMessage(id) {
+        this.persistentMessages = this.persistentMessages.filter(m => m.id !== id);
     }
 
     /**
@@ -151,6 +177,40 @@ class UIHUD {
     }
 
     /**
+     * Draws persistent messages at the top of the screen.
+     */
+    drawPersistentMessages() {
+        if (this.persistentMessages.length === 0) return;
+
+        push();
+        textAlign(CENTER, TOP);
+        textFont(font);
+        textSize(18);
+        noStroke();
+
+        const startY = 45; // Below the top bar (height 40)
+        const lineHeight = 22;
+
+        for (let i = 0; i < this.persistentMessages.length; i++) {
+            const msg = this.persistentMessages[i];
+            
+            // Draw background for readability
+            fill(0, 0, 0, 150);
+            const textW = textWidth(msg.text);
+            rect(width/2 - textW/2 - 10, startY + i * lineHeight, textW + 20, lineHeight);
+
+            // Draw text
+            if (Array.isArray(msg.color)) {
+                fill(...msg.color);
+            } else {
+                fill(msg.color);
+            }
+            text(msg.text, width/2, startY + i * lineHeight + 2);
+        }
+        pop();
+    }
+
+    /**
      * Draws the main Heads-Up Display during flight.
      * @param {Player} player - The player object
      */
@@ -167,6 +227,7 @@ class UIHUD {
         const eliteRating = player.getEliteRating();
     
         this.drawBattleIndicators(player); 
+        this.drawPersistentMessages();
 
         push(); 
         fill(0, 180, 0, 150); 

@@ -966,6 +966,14 @@ class UIManager {
         this.hud.addCommunicationMessage(msg, color, duration);
     }
 
+    addPersistentMessage(id, text, color) {
+        this.hud.addPersistentMessage(id, text, color);
+    }
+
+    removePersistentMessage(id) {
+        this.hud.removePersistentMessage(id);
+    }
+
     // Draw messages at the bottom of the screen - delegates to HUD module
     drawMessages() {
         this.hud.drawMessages();
