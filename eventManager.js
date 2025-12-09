@@ -551,7 +551,7 @@ class EventManager {
                     this._addPersistentEvent(`SHORTAGE_${station.name}`, `${station.name}: ${commodity.name} Shortage (High Prices)`, 'orange', this._extendDurationMs(180000));
                     try {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                            this.uiManager.addEventMarker(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Market Shortage`, 'orange', this._extendDurationMs(180000));
+                            this.uiManager.addEventMarker(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Shortage`, 'orange', this._extendDurationMs(180000));
                         }
                     } catch (e) {}
                 }
@@ -571,7 +571,7 @@ class EventManager {
                     this._addPersistentEvent(`SURPLUS_${station.name}`, `${station.name}: ${commodity.name} Surplus (Low Prices)`, 'green', this._extendDurationMs(180000));
                     try {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                            this.uiManager.addEventMarker(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Market Surplus`, 'green', this._extendDurationMs(180000));
+                            this.uiManager.addEventMarker(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Surplus`, 'green', this._extendDurationMs(180000));
                         }
                     } catch (e) {}
                 }
@@ -631,7 +631,7 @@ class EventManager {
                 try {
                     const anchorLabel = this._formatStationLabel(station);
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling bust near ${anchorLabel}`, 'red', this._extendDurationMs(120000));
+                        this.uiManager.addEventMarker(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(120000));
                     }
                 } catch (e) {}
                 break;
@@ -660,7 +660,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         const ax = anchor.x || this.player.pos.x;
                         const ay = anchor.y || this.player.pos.y;
-                        this.uiManager.addEventMarker(`BLOCKADE_${frameCount}`, ax, ay, `${anchorName}: Blockade`, 'blue', durationMs);
+                        this.uiManager.addEventMarker(`BLOCKADE_${frameCount}`, ax, ay, `Blockade`, 'blue', durationMs);
                     }
                 } catch (e) {}
                 break;
@@ -673,7 +673,7 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
+                        this.uiManager.addEventMarker(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
                     }
                 } catch (e) {}
                 break;
@@ -685,7 +685,7 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
+                        this.uiManager.addEventMarker(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
                     }
                 } catch (e) {}
                 break;
@@ -699,7 +699,7 @@ class EventManager {
                 this._addPersistentEvent(`STRIKE_${station.name}`, `${station.name}: Station Strike (Services Limited)`, 'orange', this._extendDurationMs(120000));
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Station Strike`, 'orange', this._extendDurationMs(120000));
+                        this.uiManager.addEventMarker(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(120000));
                     }
                 } catch (e) {}
                 break;
@@ -721,7 +721,7 @@ class EventManager {
                 this._addPersistentEvent(`OUTAGE_${station.name}`, `${station.name}: Power Outage`, 'yellow', outageDuration);
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`OUTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Power Outage`, 'yellow', outageDuration);
+                        this.uiManager.addEventMarker(`OUTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Power Outage`, 'yellow', outageDuration);
                     }
                 } catch (e) {}
                 break;
@@ -747,7 +747,7 @@ class EventManager {
                 this._addPersistentEvent(`BOOM_${station.name}`, `${station.name}: Mining Boom (High Supply)`, 'olive', this._extendDurationMs(180000));
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`BOOM_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Mining Boom`, 'olive', this._extendDurationMs(180000));
+                        this.uiManager.addEventMarker(`BOOM_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Mining Boom`, 'olive', this._extendDurationMs(180000));
                     }
                 } catch (e) {}
                 break;
@@ -763,7 +763,7 @@ class EventManager {
                 this._notifyEvent(`${systemLabel}: Mine accident spilled ${qty} units of ore — salvage beacons deployed`, 'orange');
                 try {
                     const anchorLabel = this._deriveAnchorLabelForPos(x, y);
-                    const label = `Salvage: ${qty} Metals — near ${anchorLabel}`;
+                    const label = `Salvage: ${qty} Metals`;
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this.uiManager.addEventMarker(`MINE_ACCIDENT_${frameCount}`, x, y, label, 'orange', this._extendDurationMs(180000));
                     }
@@ -796,7 +796,7 @@ class EventManager {
                 this._addPersistentEvent(`QUARANTINE_${station.name}`, `${station.name}: Quarantine (Food Shortage)`, 'purple', this._extendDurationMs(180000));
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Quarantine`, 'purple', this._extendDurationMs(180000));
+                        this.uiManager.addEventMarker(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', this._extendDurationMs(180000));
                     }
                 } catch (e) {}
                 break;
@@ -833,7 +833,7 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Hacker attack (${summary}; ${spawnCount} hijacked cutters)`, 'purple');
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${station.name}: Hacker Attack`, 'purple', this._extendDurationMs(120000));
+                        this.uiManager.addEventMarker(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
                     }
                 } catch (e) {}
                 break;
@@ -955,7 +955,7 @@ class EventManager {
         // Add a single HUD marker for the cluster so player can find it quickly
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
-            const clusterLabel = `${event.type.replace(/_/g,' ')} — near ${anchorLabel}`;
+            const clusterLabel = `${event.type.replace(/_/g,' ')}`;
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                 this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, clusterLabel, 'orange', this._extendDurationMs(180000));
             }
@@ -988,7 +988,7 @@ class EventManager {
                 // Mark the comet on HUD so player knows where to look
                 try {
                     const anchorLabel = this._deriveAnchorLabelForPos(asteroid.pos.x, asteroid.pos.y);
-                    const label = `Comet — near ${anchorLabel}`;
+                    const label = `Comet`;
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, label, 'yellow', this._extendDurationMs(240000));
                     }
@@ -1075,7 +1075,7 @@ class EventManager {
             this.starSystem.cosmicStorms.push(storm);
             // Add HUD marker for storm so player can find it
             try {
-                const label = `Cosmic Storm (${this.starSystem?.name || 'local sector'})`;
+                const label = `Cosmic Storm`;
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
                 }
@@ -1102,7 +1102,7 @@ class EventManager {
             // Add an HUD marker + notify player where the cargo appeared
             try {
                 const anchorLabel = this._deriveAnchorLabelForPos(spawnX, spawnY);
-                const label = `${config.cargoType || 'Cargo'} — near ${anchorLabel}`;
+                const label = `${config.cargoType || 'Cargo'}`;
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`${event.type}_${frameCount}_${i}`, spawnX, spawnY, label, 'gold', this._extendDurationMs(180000));
                 }
