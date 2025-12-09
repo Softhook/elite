@@ -1286,8 +1286,8 @@ class EnemyAIBehaviors {
                 }) : -1;
                 if (harpoonIdx !== -1 && typeof this.isWeaponReady === 'function' && this.isWeaponReady()) {
                     // Prevent firing duplicate harpoons if owner or cargo already has a tether
-                    const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
-                    const cargoHarpooned = !!(this.cargoTarget && this.cargoTarget._harpoonCount && this.cargoTarget._harpoonCount > 0);
+                    const ownerHasHarpoon = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
+                    const cargoHarpooned = !!(this.cargoTarget && (((this.cargoTarget._harpoonCount || 0) + (this.cargoTarget._harpoonPending || 0)) > 0));
                     if (ownerHasHarpoon || cargoHarpooned) {
                         // Skip firing if already tethered
                     } else {

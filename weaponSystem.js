@@ -941,6 +941,12 @@ class WeaponSystem {
                 system.projectiles.push(proj);
             }
 
+        // Mark owner as having an outgoing harpoon to prevent immediate re-fire
+        try {
+            if (owner) owner._harpoonPending = (owner._harpoonPending || 0) + 1;
+            proj._harpoonPending = true;
+        } catch (e) { /* defensive */ }
+
         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
             WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
         }
@@ -1110,6 +1116,20 @@ class WeaponSystem {
      */
     static releaseProjectile(projectile) {
         if (this.projectilePool && projectile) {
+            // If this was a harpoon projectile that was pending (not yet converted to a Harpoon tether),
+            // decrement the owner's pending counter so the owner can fire again when appropriate.
+            try {
+                if (projectile && (projectile._isHarpoon || projectile.type === 'harpoon')) {
+                    const owner = projectile.owner;
+                    if (owner && owner._harpoonPending) {
+                        // Only decrement if this projectile had the pending flag set
+                        if (projectile._harpoonPending) owner._harpoonPending = Math.max(0, (owner._harpoonPending || 0) - 1);
+                    }
+                    // Clear the projectile pending marker to avoid double-decrement
+                    projectile._harpoonPending = false;
+                }
+            } catch (e) { /* defensive */ }
+
             this.projectilePool.release(projectile);
         }
     }

@@ -2757,6 +2757,9 @@ class StarSystem {
         const spaceObjectCount = this.spaceObjects ? this.spaceObjects.length : 0;
         const mineCount = this.mines.length;
 
+        // Helper to determine if an active (not-broken) harpoon already links owner->target
+        const harpoonExists = (owner, target) => Array.isArray(this.harpoons) && this.harpoons.some(h => h && !h.broken && h.owner === owner && h.target === target);
+
         // Process projectiles using optimized collision detection
         for (let i = projCount - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
@@ -2833,18 +2836,22 @@ class StarSystem {
                             continue;
                         }
 
-                        try {
-                            if (typeof Harpoon !== 'undefined') {
-                                const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                if (!this.harpoons) this.harpoons = [];
-                                this.harpoons.push(har);
-                                if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                    console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
+                            try {
+                                if (typeof Harpoon !== 'undefined') {
+                                    if (!harpoonExists(owner, target)) {
+                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                            console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
+                                        }
+                                    } else {
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (enemy->player)', { owner: owner && (owner.shipTypeName || owner.id), target: 'player' });
+                                    }
                                 }
-                            }
-                            // small impact visual and sound
-                            this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
-                        } catch (e) { console.error('Failed to create Harpoon', e); }
+                                // small impact visual and sound
+                                this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                            } catch (e) { console.error('Failed to create Harpoon', e); }
                         this.removeProjectile(i);
                         continue;
                     }
@@ -2922,11 +2929,15 @@ class StarSystem {
 
                             try {
                                 if (typeof Harpoon !== 'undefined') {
-                                    const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                    if (!this.harpoons) this.harpoons = [];
-                                    this.harpoons.push(har);
-                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                        console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                    if (!harpoonExists(owner, target)) {
+                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                            console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                        }
+                                    } else {
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (player->enemy)', { owner: owner && (owner.shipTypeName || owner.id), target: target && (target.shipTypeName || target.id) });
                                     }
                                 }
                                 // small impact visual and sound
@@ -2996,11 +3007,15 @@ class StarSystem {
 
                             try {
                                 if (typeof Harpoon !== 'undefined') {
-                                    const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                    if (!this.harpoons) this.harpoons = [];
-                                    this.harpoons.push(har);
-                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                        console.log('Harpoon spawned (enemy->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                    if (!harpoonExists(owner, target)) {
+                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                            console.log('Harpoon spawned (enemy->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
+                                        }
+                                    } else {
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (enemy->enemy)', { owner: owner && (owner.shipTypeName || owner.id), target: target && (target.shipTypeName || target.id) });
                                     }
                                 }
                                 this.addExplosion(proj.pos.x, proj.pos.y, 6, [180, 220, 255]);

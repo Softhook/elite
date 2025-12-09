@@ -51,11 +51,12 @@ class EnemyCombat {
 
         // Detect whether the target is currently part of an active Harpoon tether in the system
         // Use a simple counter on the entity for O(1) checks (set when harpoon is created/broken)
-        const targetHarpooned = !!(target && (target._harpoonCount && target._harpoonCount > 0));
+        const targetHarpooned = !!(target && (((target._harpoonCount || 0) + (target._harpoonPending || 0)) > 0));
 
-        // Also detect whether *we* (the owner) already have an active harpoon tether.
-        // If the ship already has a tether out, it should not attempt to fire another one.
-        const ownerHarpooned = !!(this._harpoonCount && this._harpoonCount > 0);
+        // Also detect whether *we* (the owner) already have an active harpoon tether or
+        // an outgoing harpoon projectile. If the ship already has a tether out or a pending
+        // shot, it should not attempt to fire another one.
+        const ownerHarpooned = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
         
         for (const weapon of this.weapons) {
             let score = 0;
@@ -460,9 +461,9 @@ class EnemyCombat {
         this.selectBestWeapon(distanceToTarget);
 
         // If the target is currently attached to an active Harpoon tether, avoid holding/firing a harpoon against it
-        try {
-            const targetIsHarpooned = !!(this.target && (this.target._harpoonCount && this.target._harpoonCount > 0));
-            const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
+            try {
+            const targetIsHarpooned = !!(this.target && (((this.target._harpoonCount || 0) + (this.target._harpoonPending || 0)) > 0));
+            const ownerHasHarpoon = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
             if ((targetIsHarpooned || ownerHasHarpoon) && this.currentWeapon) {
                 const curBase = getBaseWeaponType(this.currentWeapon.type || '');
                 if (curBase === WEAPON_TYPE.HARPOON) {
@@ -614,9 +615,9 @@ class EnemyCombat {
 
         // Prevent firing a second harpoon if either we already have an active tether
         // or the target is already attached to a harpoon. Cycle to another weapon instead.
-        if (weaponType === WEAPON_TYPE.HARPOON) {
-            const ownerHasHarpoon = !!(this._harpoonCount && this._harpoonCount > 0);
-            const targetHasHarpoon = !!(targetToPass && (targetToPass._harpoonCount && targetToPass._harpoonCount > 0));
+            if (weaponType === WEAPON_TYPE.HARPOON) {
+            const ownerHasHarpoon = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
+            const targetHasHarpoon = !!(targetToPass && (((targetToPass._harpoonCount || 0) + (targetToPass._harpoonPending || 0)) > 0));
             if (ownerHasHarpoon || targetHasHarpoon) {
                 this.cycleWeapon();
                 this.fireCooldown = Math.max(this.fireCooldown || 0, 0.05);
