@@ -30,6 +30,8 @@ class UIHUD {
         
         // Persistent messages (top of screen)
         this.persistentMessages = [];
+        // Event markers for location-based events (visible on HUD/minimap)
+        this.eventMarkers = []; // { id, x, y, label, color, expires }
     }
 
     /**
@@ -73,6 +75,153 @@ class UIHUD {
         });
 
         this.cleanupBattleIndicators();
+    }
+
+    /**
+     * Adds a persistent event marker to the HUD.
+     * @param {string} id - Unique id for the marker
+     * @param {number} x - World X
+     * @param {number} y - World Y
+     * @param {string} label - Short label to show
+     * @param {string|Array} color - Color for marker
+     * @param {number} durationMs - How long to show marker
+     */
+    addEventMarker(id, x, y, label, color = [255, 100, 255], durationMs = 180000) {
+        const expires = millis() + durationMs;
+        // Coalesce markers near the same world position to avoid duplicates
+        const POSITION_TOLERANCE = 12; // world units
+        for (let i = 0; i < this.eventMarkers.length; i++) {
+            const m = this.eventMarkers[i];
+            if (!m) continue;
+            const dx = (m.x || 0) - x;
+            const dy = (m.y || 0) - y;
+            if ((dx * dx + dy * dy) <= POSITION_TOLERANCE * POSITION_TOLERANCE) {
+                // Update existing marker rather than add a new one
+                m.x = x; m.y = y; m.label = label; m.color = color; m.expires = Math.max(m.expires || 0, expires);
+                // prefer a stable id if provided
+                if (!m.id && id) m.id = id;
+                return;
+            }
+        }
+
+        // No nearby marker found -> add new
+        this.eventMarkers.push({ id, x, y, label, color, expires });
+    }
+
+    removeEventMarker(id) {
+        this.eventMarkers = this.eventMarkers.filter(m => m.id !== id);
+    }
+
+    clearEventMarkers() {
+        this.eventMarkers = [];
+    }
+
+    _cleanupEventMarkers() {
+        const now = millis();
+        this.eventMarkers = this.eventMarkers.filter(m => now < m.expires);
+    }
+
+    /**
+     * Draws event markers; on-screen as blips + label, off-screen as edge indicators.
+     * @param {Player} player
+     */
+    drawEventMarkers(player) {
+        if (!player || !player.pos || !this.eventMarkers || this.eventMarkers.length === 0) return;
+        this._cleanupEventMarkers();
+        if (this.eventMarkers.length === 0) return;
+
+        push();
+        textFont(font);
+        textSize(14);
+        textAlign(CENTER, CENTER);
+
+        const screenCenterX = width / 2;
+        const screenCenterY = height / 2;
+        const edgeBuffer = 10;
+
+        for (let i = 0; i < this.eventMarkers.length; i++) {
+            const m = this.eventMarkers[i];
+            const relX = m.x - player.pos.x;
+            const relY = m.y - player.pos.y;
+
+            const screenX = screenCenterX + relX;
+            const screenY = screenCenterY + relY;
+
+            const onScreen = (screenX >= 0 && screenX <= width && screenY >= 0 && screenY <= height);
+
+            // Compute opacity based on remaining time
+            const remaining = Math.max(1, m.expires - millis());
+            const opacity = Math.min(255, Math.max(80, Math.round(map(remaining, 0, 180000, 0, 255))));
+
+            if (onScreen) {
+                // Draw pulsing blip
+                noStroke();
+                const pulse = 1 + 0.5 * sin(millis() / 200);
+                const sz = 10 * pulse;
+                if (Array.isArray(m.color)) {
+                    fill(...m.color, opacity);
+                } else {
+                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255,255,255, opacity); }
+                }
+                circle(screenX, screenY, sz);
+
+                // Label above blip
+                fill(255, 255, 255, opacity);
+                text(m.label, screenX, screenY - 16);
+            } else {
+                // Off-screen edge indicator
+                const dx = relX;
+                const dy = relY;
+                const angle = atan2(dy, dx);
+
+                // Find intersection with screen edge (reuse logic similar to battle indicators)
+                let edgeX, edgeY;
+                const h = height - 2 * edgeBuffer;
+                const w = width - 2 * edgeBuffer;
+
+                let tVert = Infinity;
+                if (abs(cos(angle)) > 1e-6) tVert = (cos(angle) > 0 ? w / 2 : -w / 2) / cos(angle);
+                const yAtScreenVertEdge = screenCenterY + sin(angle) * tVert;
+
+                let tHoriz = Infinity;
+                if (abs(sin(angle)) > 1e-6) tHoriz = (sin(angle) > 0 ? h / 2 : -h / 2) / sin(angle);
+                const xAtScreenHorizEdge = screenCenterX + cos(angle) * tHoriz;
+
+                if (abs(yAtScreenVertEdge - screenCenterY) <= h / 2 && tVert < tHoriz) {
+                    edgeX = cos(angle) > 0 ? width - edgeBuffer : edgeBuffer;
+                    edgeY = constrain(yAtScreenVertEdge, edgeBuffer, height - edgeBuffer);
+                } else if (abs(xAtScreenHorizEdge - screenCenterX) <= w / 2) {
+                    edgeY = sin(angle) > 0 ? height - edgeBuffer : edgeBuffer;
+                    edgeX = constrain(xAtScreenHorizEdge, edgeBuffer, width - edgeBuffer);
+                } else {
+                    if (abs(cos(angle)) > abs(sin(angle))) {
+                        edgeX = cos(angle) > 0 ? width - edgeBuffer : edgeBuffer;
+                        edgeY = constrain(screenCenterY + tan(angle) * (edgeX - screenCenterX), edgeBuffer, height - edgeBuffer);
+                    } else {
+                        edgeY = sin(angle) > 0 ? height - edgeBuffer : edgeBuffer;
+                        edgeX = constrain(screenCenterX + (edgeY - screenCenterY) / tan(angle), edgeBuffer, width - edgeBuffer);
+                    }
+                }
+
+                // Draw small arrow/triangle
+                push();
+                translate(edgeX, edgeY);
+                rotate(angle);
+                noStroke();
+                if (Array.isArray(m.color)) {
+                    fill(...m.color, opacity);
+                } else {
+                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255,255,255, opacity); }
+                }
+                triangle(-8, -6, -8, 6, 8, 0);
+                pop();
+
+                // Label near edge
+                fill(255, 255, 255, opacity);
+                text(m.label, edgeX + (cos(angle) * 20), edgeY + (sin(angle) * 20));
+            }
+        }
+        pop();
     }
 
     /**
@@ -177,9 +326,10 @@ class UIHUD {
     }
 
     /**
-     * Draws persistent messages at the top of the screen.
+     * Draws persistent messages below the weapon indicator bar.
+     * @param {Player} player - optional player to account for autopilot area
      */
-    drawPersistentMessages() {
+    drawPersistentMessages(player) {
         if (this.persistentMessages.length === 0) return;
 
         push();
@@ -188,7 +338,13 @@ class UIHUD {
         textSize(18);
         noStroke();
 
-        const startY = 45; // Below the top bar (height 40)
+        // Weapon bar defaults (kept in sync with drawWeaponSelector)
+        const weaponBarY = 45;
+        const weaponBarH = 24;
+        // Autopilot area sits below the weapon bar when enabled
+        const autopilotExtra = (player?.autopilotEnabled) ? 25 : 0;
+
+        const startY = weaponBarY + weaponBarH + 6 + autopilotExtra;
         const lineHeight = 22;
 
         for (let i = 0; i < this.persistentMessages.length; i++) {
@@ -226,8 +382,8 @@ class UIHUD {
         const shipName = player.shipTypeName || "Unknown Ship";
         const eliteRating = player.getEliteRating();
     
-        this.drawBattleIndicators(player); 
-        this.drawPersistentMessages();
+        this.drawBattleIndicators(player);
+        this.drawEventMarkers(player);
 
         push(); 
         fill(0, 180, 0, 150); 
@@ -332,6 +488,8 @@ class UIHUD {
         this.drawWeaponSelector(player);
         
         pop();
+        // Draw persistent messages after weapon selector so they appear below it
+        this.drawPersistentMessages(player);
         
         if (gameStateManager?.currentState !== "GALAXY_MAP") {
             this.drawTargetOverlay(player);

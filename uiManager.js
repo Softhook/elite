@@ -974,6 +974,21 @@ class UIManager {
         this.hud.removePersistentMessage(id);
     }
 
+    addEventMarker(id, x, y, label, color, durationMs) {
+        if (!this.hud) return;
+        this.hud.addEventMarker(id, x, y, label, color, durationMs);
+    }
+
+    removeEventMarker(id) {
+        if (!this.hud) return;
+        this.hud.removeEventMarker(id);
+    }
+
+    clearEventMarkers() {
+        if (!this.hud) return;
+        this.hud.clearEventMarkers();
+    }
+
     // Draw messages at the bottom of the screen - delegates to HUD module
     drawMessages() {
         this.hud.drawMessages();

@@ -724,6 +724,11 @@ class SaveSelectionScreen {
         window.activeSaveSlotIndex = slotIndex; // Set active slot for saving
         localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
         
+        // Clear any existing event markers from previous sessions
+        if (typeof uiManager !== 'undefined') {
+            uiManager.clearEventMarkers();
+        }
+
         // Transition to game
         gameStateManager.setState("IN_FLIGHT");
     }
@@ -815,6 +820,11 @@ class SaveSelectionScreen {
 
         this.loadAllSavePreviews(); // Refresh previews as one slot is now effectively new/empty
         
+        // Clear any existing event markers from previous sessions
+        if (typeof uiManager !== 'undefined') {
+            uiManager.clearEventMarkers();
+        }
+
         if (gameStateManager && typeof gameStateManager.setState === 'function') {
             gameStateManager.setState("IN_FLIGHT");
         } else {

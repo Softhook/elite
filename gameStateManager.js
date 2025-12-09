@@ -930,6 +930,11 @@ class GameStateManager {
                 this.jumpChargeTimer = 0;
                 this.isJumpCharging = false;
                 this.jumpFadeState = "WHITE_HOLD";
+                
+                // Clear event markers on jump
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.clearEventMarkers();
+                }
             }
         } 
         else if (this.jumpFadeState === "WHITE_HOLD") {

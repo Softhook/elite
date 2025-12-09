@@ -150,6 +150,9 @@ class UIMinimap {
             // Draw hazards buffer
             this._drawHazardsBuffer(player, system, mapCenterX, mapCenterY);
 
+            // Draw event markers from HUD (so mission/event markers appear on minimap)
+            this._drawEventMarkersFromHUD(player, system, uiManager, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
+
             // Draw station
             this._drawStation(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds);
 
@@ -611,6 +614,67 @@ class UIMinimap {
             rectMode(CENTER);
             rect(cX, cY, indicatorSize, indicatorSize);
             rectMode(CORNER);
+        }
+    }
+
+    /**
+     * Draw event markers that were added to the HUD (so events are visible on minimap).
+     */
+    _drawEventMarkersFromHUD(player, system, uiManager, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
+        try {
+            if (!uiManager || !uiManager.hud || !Array.isArray(uiManager.hud.eventMarkers)) return;
+            const markers = uiManager.hud.eventMarkers;
+            if (!markers || markers.length === 0) return;
+
+            for (let i = 0; i < markers.length; i++) {
+                const m = markers[i];
+                if (!m || typeof m.x !== 'number' || typeof m.y !== 'number') continue;
+
+                const relX = m.x - player.pos.x;
+                const relY = m.y - player.pos.y;
+                const mapX = mapCenterX + relX * this.scale;
+                const mapY = mapCenterY + relY * this.scale;
+
+                // Simple visibility check: skip if very far outside expanded bounds
+                const pad = 6;
+                const onMap = (mapX >= mapLeft - pad && mapX <= mapRight + pad && mapY >= mapTop - pad && mapY <= mapBottom + pad);
+
+                // Choose color
+                let col = [255, 100, 255];
+                if (Array.isArray(m.color)) col = m.color;
+                else if (typeof m.color === 'string') {
+                    try { const cc = color(m.color); col = [red(cc), green(cc), blue(cc)]; } catch (e) {}
+                }
+
+                push();
+                const size = 4;
+                if (onMap && mapX >= mapLeft && mapX <= mapRight && mapY >= mapTop && mapY <= mapBottom) {
+                    noStroke();
+                    fill(col[0], col[1], col[2], 220);
+                    rect(mapX - size/2, mapY - size/2, size, size, 2);
+
+                    // Try to draw abbreviated label if space allows
+                    if (m.label && typeof m.label === 'string') {
+                        fill(255);
+                        textSize(9);
+                        textAlign(LEFT, TOP);
+                        const tx = mapX + 6;
+                        const ty = mapY - 6;
+                        text(m.label.substring(0, 18), tx, ty);
+                    }
+                } else {
+                    // Clamp to edge
+                    const inset = 6;
+                    const cX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                    const cY = constrain(mapY, mapTop + inset, mapBottom - inset);
+                    noStroke();
+                    fill(col[0], col[1], col[2], 220);
+                    triangle(cX - 3, cY - 3, cX - 3, cY + 3, cX + 4, cY);
+                }
+                pop();
+            }
+        } catch (e) {
+            // non-fatal
         }
     }
 
