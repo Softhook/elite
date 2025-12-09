@@ -131,6 +131,18 @@
         }
         window.CosmicStorm = MockCosmicStorm;
 
+        // Deterministic randomness for repeatable tests
+        const BASE_RANDOM_VALUE = 0.42;
+        const originalMathRandom = Math.random;
+
+        function setDeterministicRandom(value = BASE_RANDOM_VALUE) {
+            Math.random = () => value;
+        }
+
+        function restoreRandom() {
+            Math.random = originalMathRandom;
+        }
+
         // Mock Objects
         function createMockPlayer() {
             return {
@@ -228,11 +240,28 @@
             };
         }
 
+        // Helper: capture commodity stocks for delta assertions
+        function snapshotStocks(market) {
+            return market.commodities.map(c => ({ name: c.name, stock: c.stock }));
+        }
+
+        function findStockDelta(before, after) {
+            for (let i = 0; i < before.length; i++) {
+                if (after[i].stock !== before[i].stock) {
+                    return { name: after[i].name, before: before[i].stock, after: after[i].stock };
+                }
+            }
+            return null;
+        }
+
         // ============================================
         // EventManager Tests
         // ============================================
 
         describe('EventManager Initialization', () => {
+            beforeEach(() => setDeterministicRandom());
+            afterEach(() => restoreRandom());
+
             it('should initialize ship groups', () => {
                 const em = new EventManager();
                 expect(em.shipGroups.POLICE).toContain('Viper');
@@ -253,12 +282,15 @@
             let em, system, player, ui;
 
             beforeEach(() => {
+                setDeterministicRandom();
                 em = new EventManager();
                 system = createMockStarSystem();
                 player = createMockPlayer();
                 ui = createMockUIManager();
                 em.initializeReferences(system, player, ui);
             });
+
+            afterEach(() => restoreRandom());
 
             it('should execute ASTEROID_CLUSTER', () => {
                 em.executeConfiguredEvent('ASTEROID_CLUSTER');
@@ -331,6 +363,7 @@
             let em, system, player, ui;
 
             beforeEach(() => {
+                setDeterministicRandom();
                 em = new EventManager();
                 system = createMockStarSystem();
                 player = createMockPlayer();
@@ -338,27 +371,30 @@
                 em.initializeReferences(system, player, ui);
             });
 
+            afterEach(() => restoreRandom());
+
             it('should execute MARKET_SHORTAGE', () => {
-                const initialStock = system.station.market.getAvailableStock('Food');
-                // Force pick Food by mocking random or just checking any change
-                // Since random is mocked in test_harness, we rely on it.
-                // But _pickCommodity uses random.
-                
+                const before = snapshotStocks(system.station.market);
                 em.executeConfiguredEvent('MARKET_SHORTAGE');
-                
-                // Check if any commodity stock decreased
-                const currentStock = system.station.market.getAvailableStock('Food');
-                // It might not be Food that was picked, so check UI message
                 expect(ui.messages.length).toBeGreaterThan(0);
                 expect(ui.messages[0].msg).toContain('shortage');
-                expect(ui.persistentMessages.length).toBe(1);
+                expect(ui.persistentMessages[0].id).toMatch(/SHORTAGE_/);
+                const after = snapshotStocks(system.station.market);
+                const delta = findStockDelta(before, after);
+                expect(delta).toBeDefined();
+                expect(delta.after).toBeLessThan(delta.before);
             });
 
             it('should execute MARKET_SURPLUS', () => {
+                const before = snapshotStocks(system.station.market);
                 em.executeConfiguredEvent('MARKET_SURPLUS');
                 expect(ui.messages.length).toBeGreaterThan(0);
                 expect(ui.messages[0].msg).toContain('oversupply');
-                expect(ui.persistentMessages.length).toBe(1);
+                expect(ui.persistentMessages[0].id).toMatch(/SURPLUS_/);
+                const after = snapshotStocks(system.station.market);
+                const delta = findStockDelta(before, after);
+                expect(delta).toBeDefined();
+                expect(delta.after).toBeGreaterThan(delta.before);
             });
 
             it('should execute BLACK_MARKET_AUCTION', () => {
@@ -370,22 +406,16 @@
             it('should execute SMUGGLING_BUST', () => {
                 em.executeConfiguredEvent('SMUGGLING_BUST');
                 expect(ui.messages[0].msg).toContain('Smuggling bust');
-                // Should spawn police
-                // Note: _spawnAdHocEnemy adds to system.enemies
-                // But wait, _spawnAdHocEnemy calls _selectShipForRole which uses random.
-                // We need to check if enemies were added.
-                // The test harness mock random might return something that causes 0 spawns if not careful?
-                // random(2, 5) -> 2 + rand * 3.
-                // Let's check enemies count.
-                // Wait, SMUGGLING_BUST spawns police.
-                // But it might fail if no illegal goods?
-                // Mock market has illegal goods.
+                expect(system.enemies.length).toBeGreaterThanOrEqual(2);
+                expect(system.enemies.every(e => e.role === AI_ROLE.POLICE)).toBeTruthy();
             });
 
             it('should execute BLOCKADE', () => {
                 em.executeConfiguredEvent('BLOCKADE');
                 expect(system.blockadeExpires).toBeGreaterThan(millis());
                 expect(ui.persistentMessages.find(m => m.id === 'BLOCKADE')).toBeDefined();
+                expect(system.enemies.length).toBeGreaterThanOrEqual(3);
+                expect(system.enemies.every(e => e.role === AI_ROLE.GUARD)).toBeTruthy();
             });
 
             it('should execute DIPLOMATIC_VISIT', () => {
@@ -408,9 +438,11 @@
             });
 
             it('should execute POWER_OUTAGE', () => {
+                const initialComputers = system.station.market.getAvailableStock('Computers');
                 em.executeConfiguredEvent('POWER_OUTAGE');
                 expect(system.station.powerOutageExpires).toBeGreaterThan(millis());
                 expect(ui.persistentMessages.find(m => m.id.startsWith('OUTAGE_'))).toBeDefined();
+                expect(system.station.market.getAvailableStock('Computers')).toBeLessThan(initialComputers);
             });
 
             it('should execute SABOTAGE', () => {
@@ -422,8 +454,13 @@
             });
 
             it('should execute MINING_BOOM', () => {
+                const market = system.station.market;
+                const initialMetals = market.getAvailableStock('Metals');
+                const initialMinerals = market.getAvailableStock('Minerals');
                 em.executeConfiguredEvent('MINING_BOOM');
                 expect(ui.persistentMessages.find(m => m.id.startsWith('BOOM_'))).toBeDefined();
+                expect(market.getAvailableStock('Metals')).toBeGreaterThan(initialMetals);
+                expect(market.getAvailableStock('Minerals')).toBeGreaterThan(initialMinerals);
             });
 
             it('should execute MINE_ACCIDENT', () => {
@@ -464,11 +501,14 @@
             it('should execute SALVAGE_OPPORTUNITY', () => {
                 em.executeConfiguredEvent('SALVAGE_OPPORTUNITY');
                 expect(system.cargo.length).toBeGreaterThan(0);
+                expect(system.cargo.every(c => c.type === 'Metals')).toBeTruthy();
             });
 
             it('should execute BOUNTY_INCREASE', () => {
                 em.executeConfiguredEvent('BOUNTY_INCREASE');
                 expect(ui.persistentMessages.find(m => m.id === 'BOUNTY_INCREASE')).toBeDefined();
+                expect(system.enemies.length).toBeGreaterThanOrEqual(2);
+                expect(system.enemies.every(e => e.role === AI_ROLE.BOUNTY_HUNTER)).toBeTruthy();
             });
 
             it('should execute REPUTATION_SCANDAL', () => {
@@ -481,6 +521,7 @@
             let em, system, player, ui;
 
             beforeEach(() => {
+                setDeterministicRandom();
                 em = new EventManager();
                 system = createMockStarSystem();
                 player = createMockPlayer();
@@ -489,6 +530,8 @@
                 gameStateManager.currentState = 'IN_FLIGHT';
                 window.frameCount = 0;
             });
+
+            afterEach(() => restoreRandom());
 
             it('should initiate warning', () => {
                 em.initiateEventWarning('ASTEROID_CLUSTER');
