@@ -1632,7 +1632,8 @@ class Station {
         // Draw modified main arms
         this._drawMilitaryArms();
         // Draw rings with defense systems
-        this._drawRings();
+        // Use 32 sides to match light count and align better with 16 modules
+        this._drawRing3D(0, 0, this.size * 0.475, this.size * 0.45, 32, 15, color(200, 200, 220));
         // Draw military modules
         this._drawMilitaryModules();
         // Draw weapon turrets instead of solar panels
@@ -1728,13 +1729,17 @@ class Station {
                 rect(-this.size * 0.04, -this.size * 0.46, this.size * 0.08, this.size * 0.02, 1);
             } else if (i % 2 === 0) {
                 // Weapon modules
-                this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, this.size * 0.04, 15, color(70, 80, 100), i * TWO_PI / 16);
+                // Vary height slightly for greeble effect
+                const h = this.size * 0.04 + (i % 3 === 0 ? 0.01 : 0) * this.size;
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, h, 15, color(70, 80, 100), i * TWO_PI / 16);
                 
                 // Weapon barrel
                 this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 10, color(50, 60, 80), i * TWO_PI / 16);
             } else {
                 // Standard modules
-                this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
+                // Vary height for greeble effect
+                const h = this.size * 0.04 + (i % 3 !== 0 ? 0.015 : -0.005) * this.size;
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, h, 15, this.color, i * TWO_PI / 16);
                 
                 // Armored windows
                 fill(100, 150, 200, 150 + sin(this.lightTimer + i)*50);
@@ -1781,7 +1786,8 @@ class Station {
         noStroke();
         const step = TWO_PI / 32;
         const s = this.size;
-        const r = -s * 0.475;
+        // Move to center of ring (ring is 0.45 to 0.475)
+        const r = -s * 0.4625;
         const lt = this.lightTimer;
         for (let i = 0; i < 32; i++) {
             push();
