@@ -93,28 +93,13 @@ class Station {
             const c = this.crateField[i];
             push();
             translate(c.x, c.y);
-            rotate(c.rot + sin(this.lightTimer * 0.5 + i) * 0.02);
-            // base
-            noStroke();
-            fill(c.baseCol[0], c.baseCol[1], c.baseCol[2]);
-            rectMode(CENTER);
-            rect(0, 0, c.s, c.s * 0.9, 2);
-            // outline (thicker for emphasis)
-            stroke(40, 40, 40, 200);
-            strokeWeight(c.strokeW);
-            noFill();
-            rect(0, 0, c.s, c.s * 0.9, 2);
-            // shading / strap or hatch
-            if (c.shading) {
-                noStroke();
-                fill(0, 0, 0, 30);
-                // a subtle offset darker stripe to create shading
-                rect(c.s * 0.08, c.s * 0.02, c.s * 0.36, c.s * 0.16, 1);
-                // a diagonal strap line (cheap single line)
-                stroke(30,20,10,160);
-                strokeWeight(1);
-                line(-c.s*0.35, -c.s*0.35 * 0.9, c.s*0.35, c.s*0.35 * 0.9);
-            }
+            const rot = c.rot + sin(this.lightTimer * 0.5 + i) * 0.02;
+            rotate(rot);
+            
+            const col = color(c.baseCol[0], c.baseCol[1], c.baseCol[2]);
+            const depth = c.s * 0.5;
+            
+            this._drawBox3D(0, 0, c.s, c.s * 0.9, depth, col, rot);
             pop();
         }
     }
@@ -221,6 +206,12 @@ class Station {
         // discontinuities when wrapping, which causes jittery resets.
         this.lightTimer += 0.0012 * (typeof deltaTime !== 'undefined' ? deltaTime : 16) * this.animSpeed;
         
+        // Calculate sun angle in local station space for shading
+        // Sun is at (0,0). Vector to sun is -this.pos
+        // We want the angle of this vector relative to the station's current rotation
+        const sunVecAngle = atan2(-this.pos.y, -this.pos.x);
+        this._localSunAngle = sunVecAngle - this.angle;
+
         push();
         translate(this.pos.x, this.pos.y);
         rotate(this.angle); // Apply rotation to the entire station
@@ -342,18 +333,40 @@ class Station {
             verticesBottom.push({x: vx + dv.x, y: vy + dv.y});
         }
 
-        fill(red(col)*0.7, green(col)*0.7, blue(col)*0.7);
-        stroke(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
         strokeWeight(1);
         
         for (let i = 0; i < sides; i++) {
             const next = (i + 1) % sides;
-            beginShape();
-            vertex(verticesBottom[i].x, verticesBottom[i].y);
-            vertex(verticesBottom[next].x, verticesBottom[next].y);
-            vertex(verticesTop[next].x, verticesTop[next].y);
-            vertex(verticesTop[i].x, verticesTop[i].y);
-            endShape(CLOSE);
+
+            // Calculate shading based on face normal relative to sun
+            // Face normal angle in local space
+            const faceAngle = (i + 0.5) * angleStep - PI/2;
+            
+            // Back-face culling: check if face is visible given the depth vector
+            // Depth vector is dv. Face normal is (cos(faceAngle), sin(faceAngle))
+            // We see the face if normal . dv > 0
+            const nx = cos(faceAngle);
+            const ny = sin(faceAngle);
+            const dot = nx * dv.x + ny * dv.y;
+            
+            if (dot > 0.001) {
+                // Adjust for extra rotation to get angle in current context vs sun in current context
+                // Effective light angle in current context: this._localSunAngle - extraRotation
+                const lightAngle = (this._localSunAngle || 0) - extraRotation;
+                const diff = faceAngle - lightAngle;
+                // Map cosine of difference to brightness (0.4 to 0.9)
+                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                beginShape();
+                vertex(verticesBottom[i].x, verticesBottom[i].y);
+                vertex(verticesBottom[next].x, verticesBottom[next].y);
+                vertex(verticesTop[next].x, verticesTop[next].y);
+                vertex(verticesTop[i].x, verticesTop[i].y);
+                endShape(CLOSE);
+            }
         }
 
         fill(col);
@@ -385,18 +398,33 @@ class Station {
             {x: x - hw, y: y + hh}
         ];
         
-        fill(red(col)*0.7, green(col)*0.7, blue(col)*0.7);
-        stroke(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
         strokeWeight(1);
         
+        const faceAngles = [-PI/2, 0, PI/2, PI]; // Top, Right, Bottom, Left
+
         for (let i = 0; i < 4; i++) {
             const next = (i + 1) % 4;
-            beginShape();
-            vertex(corners[i].x + dv.x, corners[i].y + dv.y);
-            vertex(corners[next].x + dv.x, corners[next].y + dv.y);
-            vertex(corners[next].x, corners[next].y);
-            vertex(corners[i].x, corners[i].y);
-            endShape(CLOSE);
+
+            // Back-face culling
+            const nx = cos(faceAngles[i]);
+            const ny = sin(faceAngles[i]);
+            const dot = nx * dv.x + ny * dv.y;
+
+            if (dot > 0.001) {
+                const lightAngle = (this._localSunAngle || 0) - extraRotation;
+                const diff = faceAngles[i] - lightAngle;
+                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                beginShape();
+                vertex(corners[i].x + dv.x, corners[i].y + dv.y);
+                vertex(corners[next].x + dv.x, corners[next].y + dv.y);
+                vertex(corners[next].x, corners[next].y);
+                vertex(corners[i].x, corners[i].y);
+                endShape(CLOSE);
+            }
         }
         
         fill(col);
@@ -411,24 +439,45 @@ class Station {
      * @param {number} depth - Depth (thickness)
      * @param {p5.Color} col - Base color
      * @param {number} extraRotation - Additional rotation applied to the context
+     * @param {boolean} cull - Whether to enable back-face culling (default: true)
      * @private
      */
-    _drawExtrudedShape(vertices, depth, col, extraRotation = 0) {
+    _drawExtrudedShape(vertices, depth, col, extraRotation = 0, cull = true) {
         const dv = this._getDepthVector(depth, extraRotation);
         
         // Draw sides
-        fill(red(col)*0.7, green(col)*0.7, blue(col)*0.7);
-        stroke(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
         strokeWeight(1);
         
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
+
         for (let i = 0; i < vertices.length; i++) {
             const next = (i + 1) % vertices.length;
-            beginShape();
-            vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
-            vertex(vertices[next].x + dv.x, vertices[next].y + dv.y);
-            vertex(vertices[next].x, vertices[next].y);
-            vertex(vertices[i].x, vertices[i].y);
-            endShape(CLOSE);
+
+            // Calculate normal angle
+            const dx = vertices[next].x - vertices[i].x;
+            const dy = vertices[next].y - vertices[i].y;
+            // Normal is (-dy, dx)
+            const faceAngle = atan2(dx, -dy);
+            
+            // Back-face culling
+            const nx = cos(faceAngle);
+            const ny = sin(faceAngle);
+            const dot = nx * dv.x + ny * dv.y;
+
+            if (!cull || dot > 0.001) {
+                const diff = faceAngle - lightAngle;
+                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                beginShape();
+                vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
+                vertex(vertices[next].x + dv.x, vertices[next].y + dv.y);
+                vertex(vertices[next].x, vertices[next].y);
+                vertex(vertices[i].x, vertices[i].y);
+                endShape(CLOSE);
+            }
         }
         
         // Top
@@ -472,26 +521,58 @@ class Station {
             innerBottom.push({x: x + c * rInner + dv.x, y: y + s * rInner + dv.y});
         }
         
-        fill(red(col)*0.7, green(col)*0.7, blue(col)*0.7);
-        stroke(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
         strokeWeight(1);
         
+        const lightAngle = (this._localSunAngle || 0) - extraRotation;
+
         for (let i = 0; i < sides; i++) {
             const next = (i + 1) % sides;
             
-            beginShape();
-            vertex(outerBottom[i].x, outerBottom[i].y);
-            vertex(outerBottom[next].x, outerBottom[next].y);
-            vertex(outerTop[next].x, outerTop[next].y);
-            vertex(outerTop[i].x, outerTop[i].y);
-            endShape(CLOSE);
+            // Outer face normal
+            const faceAngle = (i + 0.5) * angleStep; // Normal points out
             
-            beginShape();
-            vertex(innerBottom[i].x, innerBottom[i].y);
-            vertex(innerBottom[next].x, innerBottom[next].y);
-            vertex(innerTop[next].x, innerTop[next].y);
-            vertex(innerTop[i].x, innerTop[i].y);
-            endShape(CLOSE);
+            // Back-face culling for outer face
+            const nx = cos(faceAngle);
+            const ny = sin(faceAngle);
+            const dot = nx * dv.x + ny * dv.y;
+
+            if (dot > 0.001) {
+                const diff = faceAngle - lightAngle;
+                const b = map(cos(diff), -1, 1, 0.4, 0.9);
+                
+                fill(red(col)*b, green(col)*b, blue(col)*b);
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                beginShape();
+                vertex(outerBottom[i].x, outerBottom[i].y);
+                vertex(outerBottom[next].x, outerBottom[next].y);
+                vertex(outerTop[next].x, outerTop[next].y);
+                vertex(outerTop[i].x, outerTop[i].y);
+                endShape(CLOSE);
+            }
+            
+            // Inner face normal (points in, so +PI)
+            const innerFaceAngle = faceAngle + PI;
+            
+            // Back-face culling for inner face
+            const nxIn = cos(innerFaceAngle);
+            const nyIn = sin(innerFaceAngle);
+            const dotIn = nxIn * dv.x + nyIn * dv.y;
+
+            if (dotIn > 0.001) {
+                const diffInner = innerFaceAngle - lightAngle;
+                const bInner = map(cos(diffInner), -1, 1, 0.4, 0.9);
+                
+                fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner);
+                stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8);
+
+                beginShape();
+                vertex(innerBottom[i].x, innerBottom[i].y);
+                vertex(innerBottom[next].x, innerBottom[next].y);
+                vertex(innerTop[next].x, innerTop[next].y);
+                vertex(innerTop[i].x, innerTop[i].y);
+                endShape(CLOSE);
+            }
         }
         
         fill(col);
@@ -540,7 +621,7 @@ class Station {
                 {x: this.size * 0.04, y: -this.size * 0.45},
                 {x: this.size * 0.08, y: 0}
             ];
-            this._drawExtrudedShape(armVerts, 15, color(150, 150, 170), i * PI / 2);
+            this._drawExtrudedShape(armVerts, 15, color(150, 150, 170), i * PI / 2, false);
             
             // Structural reinforcements along arm
             stroke(100, 100, 120);
@@ -673,34 +754,40 @@ class Station {
                 // Reinforced docking bay with curved canopy
                 push();
                 translate(0, outerY + this.size * 0.01);
-                fill(200, 200, 200);
-                stroke(110, 75, 40);
-                strokeWeight(1.5);
+                
                 // base platform
-                rect(-this.size * 0.055, -this.size * 0.02, this.size * 0.11, this.size * 0.05, 4);
+                this._drawBox3D(0, -this.size * 0.02, this.size * 0.11, this.size * 0.05, 15, color(200, 200, 200), baseAngle);
+                
                 // curved canopy
-               fill(50, 50, 50);
-                noStroke();
-                ellipse(0, -this.size * 0.005, this.size * 0.09, this.size * 0.04);
+                // Approximate ellipse with 8 vertices
+                const canopyVerts = [];
+                const cw = this.size * 0.045; // half width
+                const ch = this.size * 0.02; // half height
+                for(let k=0; k<8; k++) {
+                    const ang = k * TWO_PI / 8;
+                    canopyVerts.push({x: cos(ang)*cw, y: -this.size * 0.005 + sin(ang)*ch});
+                }
+                this._drawExtrudedShape(canopyVerts, 5, color(50, 50, 50), baseAngle);
+
                 // subtle stripe
-                fill(200, 95, 10);
-                rect(-this.size * 0.02, -this.size * 0.01, this.size * 0.04, this.size * 0.008, 2);
+                this._drawBox3D(0, -this.size * 0.006, this.size * 0.04, this.size * 0.008, 6, color(200, 95, 10), baseAngle);
                 pop();
             } else {
                 // Sleek habitation pod
                 push();
                 translate(0, outerY);
                 rotate(-0.06 + (i % 3) * 0.02);
-                // pod body
-                fill(100, 100, 100);
-                stroke(110, 70, 40);
-                strokeWeight(1);
-                beginShape();
-                vertex(-this.size * 0.045, -this.size * 0.01);
-                bezierVertex(-this.size * 0.03, -this.size * 0.035, this.size * 0.03, -this.size * 0.035, this.size * 0.045, -this.size * 0.01);
-                vertex(this.size * 0.03, this.size * 0.02);
-                vertex(-this.size * 0.03, this.size * 0.02);
-                endShape(CLOSE);
+                
+                // pod body - extruded
+                const podVerts = [
+                    {x: -this.size * 0.045, y: -this.size * 0.01},
+                    {x: -this.size * 0.03, y: -this.size * 0.035},
+                    {x: this.size * 0.03, y: -this.size * 0.035},
+                    {x: this.size * 0.045, y: -this.size * 0.01},
+                    {x: this.size * 0.03, y: this.size * 0.02},
+                    {x: -this.size * 0.03, y: this.size * 0.02}
+                ];
+                this._drawExtrudedShape(podVerts, 10, color(100, 100, 100), baseAngle - 0.06 + (i % 3) * 0.02);
 
                 // glowing window stripe
                 noStroke();
@@ -799,18 +886,17 @@ class Station {
         line(0, s * 0.6, 0, s * 1.6);
 
         // body pack
-        fill(220);
-        stroke(80);
-        rect(-s * 0.33, -s * 0.1, s * 0.66, s * 1.0, s * 0.08);
+        const bodyCol = color(220);
+        this._drawBox3D(0, s * 0.4, s * 0.66, s * 1.0, s * 0.3, bodyCol, 0);
 
         // backpack
-        fill(190);
-        rect(-s * 0.45, -s * 0.05, s * 0.22, s * 0.6, s * 0.06);
+        const packCol = color(190);
+        this._drawBox3D(-s * 0.34, s * 0.25, s * 0.22, s * 0.6, s * 0.2, packCol, 0);
 
         // helmet
-        fill(245);
-        stroke(60);
-        ellipse(0, -s * 0.6, s * 0.9, s * 0.9);
+        const helmetCol = color(245);
+        this._drawPrism(0, -s * 0.6, s * 0.45, 8, s * 0.4, helmetCol, 0);
+        
         // visor
         noStroke();
         fill(20, 100, 160, 220);
@@ -835,13 +921,12 @@ class Station {
         const s = this.size * 0.03 * scale;
 
         // body
-        fill(200);
-        stroke(60);
-        beginShape();
-        vertex(-s * 0.9, s * 0.2);
-        vertex(s * 0.9, s * 0.0);
-        vertex(-s * 0.9, -s * 0.2);
-        endShape(CLOSE);
+        const bodyVerts = [
+            {x: -s * 0.9, y: s * 0.2},
+            {x: s * 0.9, y: s * 0.0},
+            {x: -s * 0.9, y: -s * 0.2}
+        ];
+        this._drawExtrudedShape(bodyVerts, s * 0.2, color(200), 0);
 
         // cockpit
         noStroke();
@@ -867,9 +952,8 @@ class Station {
         push();
         translate(x, y);
         const s = this.size * 0.03 * scale;
-        fill(150, 110, 70);
-        stroke(80, 60, 40);
-        rect(-s * 0.5, -s * 0.5, s, s, 2);
+        const col = color(150, 110, 70);
+        this._drawBox3D(0, 0, s, s, s * 0.5, col, 0);
         // strap lines
         stroke(60, 40, 30);
         line(-s * 0.2, -s * 0.5, -s * 0.2, s * 0.5);
@@ -986,8 +1070,8 @@ class Station {
 
     _drawDockingPylon(x = 0, y = 0) {
         push(); translate(x, y);
-        stroke(100); fill(140);
-        rect(-this.size*0.01, 0, this.size*0.02, -this.size*0.06, 2);
+        const col = color(140);
+        this._drawBox3D(0, -this.size*0.03, this.size*0.02, this.size*0.06, this.size*0.02, col, 0);
         pop();
     }
 
@@ -1001,23 +1085,24 @@ class Station {
 
     _drawCargoSwing(x = 0, y = 0, swing = 1) {
         push(); translate(x, y + sin(this.lightTimer * 0.9 + this.animationOffset) * 4 * swing);
-        stroke(90); fill(160,120,80);
-        rect(-this.size*0.02, -this.size*0.02, this.size*0.04, this.size*0.04, 2);
+        const col = color(160,120,80);
+        this._drawBox3D(0, 0, this.size*0.04, this.size*0.04, this.size*0.02, col, 0);
         pop();
     }
 
     _drawMiniCommsArray(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        stroke(150); fill(120);
-        rect(-this.size*0.02, -this.size*0.03, this.size*0.04, this.size*0.06, 2);
+        const col = color(120);
+        this._drawBox3D(0, 0, this.size*0.04, this.size*0.06, this.size*0.01, col, 0);
         pop();
     }
 
     _drawSolarArraySpinner(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        rotate(this.lightTimer * 0.05 * this.animSpeed + this.animationOffset*0.1);
-        stroke(80); fill(30,60,120);
-        rect(-this.size*0.06, -this.size*0.01, this.size*0.12, this.size*0.02, 2);
+        const rot = this.lightTimer * 0.05 * this.animSpeed + this.animationOffset*0.1;
+        rotate(rot);
+        const col = color(30,60,120);
+        this._drawBox3D(0, 0, this.size*0.12, this.size*0.02, this.size*0.005, col, rot);
         pop();
     }
 
@@ -1058,10 +1143,10 @@ class Station {
             translate(0, -this.size * radius + sin(this.lightTimer * 0.9 + i) * 3);
             push();
             const s = this.size * 0.02 * scale;
-            rotate(ang * 2 + i);
-            fill(160, 140, 120);
-            stroke(90, 80, 70);
-            rect(-s*0.5, -s*0.5, s, s, 2);
+            const rot = ang * 2 + i;
+            rotate(rot);
+            const col = color(160, 140, 120);
+            this._drawBox3D(0, 0, s, s, s * 0.6, col, rot);
             pop();
             pop();
         }
@@ -1290,69 +1375,73 @@ class Station {
         
         switch (style % 4) {
             case 0: // Boxy maintenance bot
-                fill(120, 120, 120);
-                stroke(80, 80, 80);
-                rect(-s * 0.6, -s * 0.6, s * 1.2, s * 1.2, 3);
-                fill(100, 100, 100);
-                rect(-s * 0.4, -s * 0.8, s * 0.8, s * 0.3, 2);
-                fill(0, 255, 0, 200);
+                // Main body
+                this._drawBox3D(0, 0, s * 1.2, s * 1.2, s * 0.6, color(120, 120, 120), 0);
+                // Head
+                this._drawBox3D(0, -s * 0.65, s * 0.8, s * 0.3, s * 0.4, color(100, 100, 100), 0);
+                // Eyes (flat)
+                fill(0, 255, 0, 200); noStroke();
                 ellipse(-s * 0.2, -s * 0.7, s * 0.15, s * 0.15);
                 ellipse(s * 0.2, -s * 0.7, s * 0.15, s * 0.15);
-                fill(80, 80, 80);
-                rect(-s * 0.7, s * 0.4, s * 1.4, s * 0.2, 1);
+                // Feet/Tracks
+                this._drawBox3D(0, s * 0.5, s * 1.4, s * 0.2, s * 0.7, color(80, 80, 80), 0);
+                // Antenna
                 stroke(150, 150, 150);
                 line(0, -s * 0.8, 0, -s * 1.1);
-                fill(255, 255, 0, 180);
+                fill(255, 255, 0, 180); noStroke();
                 ellipse(0, -s * 1.1, s * 0.1, s * 0.1);
                 break;
                 
             case 1: // Tall utility bot
-                fill(110, 110, 130);
-                stroke(70, 70, 90);
-                rect(-s * 0.4, -s * 0.8, s * 0.8, s * 1.6, 2);
-                fill(90, 90, 110);
-                rect(-s * 0.3, -s * 1.0, s * 0.6, s * 0.3, 1);
-                fill(255, 100, 100, 200);
+                // Body
+                this._drawBox3D(0, 0, s * 0.8, s * 1.6, s * 0.5, color(110, 110, 130), 0);
+                // Head
+                this._drawBox3D(0, -s * 0.85, s * 0.6, s * 0.3, s * 0.4, color(90, 90, 110), 0);
+                // Eye
+                fill(255, 100, 100, 200); noStroke();
                 ellipse(0, -s * 0.9, s * 0.12, s * 0.12);
-                fill(60, 60, 80);
-                rect(-s * 0.5, s * 0.6, s, s * 0.15, 1);
+                // Base
+                this._drawBox3D(0, s * 0.675, s, s * 0.15, s * 0.6, color(60, 60, 80), 0);
+                // Antenna
                 stroke(130, 130, 150);
                 line(0, -s * 1.0, 0, -s * 1.3);
-                fill(100, 200, 255, 180);
+                fill(100, 200, 255, 180); noStroke();
                 ellipse(0, -s * 1.3, s * 0.08, s * 0.08);
                 break;
                 
             case 2: // Wide cargo bot
-                fill(130, 120, 100);
-                stroke(90, 80, 60);
-                rect(-s * 0.8, -s * 0.5, s * 1.6, s, 4);
-                fill(110, 100, 80);
-                rect(-s * 0.6, -s * 0.7, s * 1.2, s * 0.3, 3);
-                fill(255, 255, 100, 200);
+                // Body
+                this._drawBox3D(0, 0, s * 1.6, s, s * 0.8, color(130, 120, 100), 0);
+                // Head
+                this._drawBox3D(0, -s * 0.55, s * 1.2, s * 0.3, s * 0.6, color(110, 100, 80), 0);
+                // Eyes
+                fill(255, 255, 100, 200); noStroke();
                 ellipse(-s * 0.3, -s * 0.6, s * 0.1, s * 0.1);
                 ellipse(s * 0.3, -s * 0.6, s * 0.1, s * 0.1);
-                fill(70, 60, 50);
-                rect(-s * 0.9, s * 0.3, s * 1.8, s * 0.25, 2);
+                // Base
+                this._drawBox3D(0, s * 0.425, s * 1.8, s * 0.25, s * 0.9, color(70, 60, 50), 0);
+                // Antenna
                 stroke(120, 110, 90);
                 line(0, -s * 0.7, 0, -s * 0.9);
-                fill(255, 150, 0, 180);
+                fill(255, 150, 0, 180); noStroke();
                 ellipse(0, -s * 0.9, s * 0.12, s * 0.12);
                 break;
                 
             case 3: // Compact repair bot
-                fill(100, 120, 140);
-                stroke(60, 80, 100);
-                rect(-s * 0.5, -s * 0.5, s, s, 1);
-                fill(80, 100, 120);
-                rect(-s * 0.35, -s * 0.7, s * 0.7, s * 0.25, 1);
-                fill(0, 255, 255, 200);
+                // Body
+                this._drawBox3D(0, 0, s, s, s * 0.5, color(100, 120, 140), 0);
+                // Head
+                this._drawBox3D(0, -s * 0.575, s * 0.7, s * 0.25, s * 0.4, color(80, 100, 120), 0);
+                // Eye
+                fill(0, 255, 255, 200); noStroke();
                 ellipse(0, -s * 0.6, s * 0.14, s * 0.14);
-                fill(50, 70, 90);
-                rect(-s * 0.6, s * 0.3, s * 1.2, s * 0.18, 1);
+                // Base
+                this._drawBox3D(0, s * 0.39, s * 1.2, s * 0.18, s * 0.6, color(50, 70, 90), 0);
+                // Antennas
                 stroke(90, 110, 130);
                 line(-s * 0.2, -s * 0.7, -s * 0.2, -s * 0.9);
                 line(s * 0.2, -s * 0.7, s * 0.2, -s * 0.9);
-                fill(255, 0, 255, 180);
+                fill(255, 0, 255, 180); noStroke();
                 ellipse(-s * 0.2, -s * 0.9, s * 0.06, s * 0.06);
                 ellipse(s * 0.2, -s * 0.9, s * 0.06, s * 0.06);
                 break;
@@ -1492,7 +1581,7 @@ class Station {
                 {x: this.size * 0.06, y: -this.size * 0.15},
                 {x: this.size * 0.09, y: 0}
             ];
-            this._drawExtrudedShape(armVerts, 20, color(100, 110, 130), i * PI / 2);
+            this._drawExtrudedShape(armVerts, 20, color(100, 110, 130), i * PI / 2, false);
             
             // Defense turrets along arm
             for (let j = 1; j < 4; j++) {
@@ -1522,9 +1611,7 @@ class Station {
             
             if (i % 4 === 0) {
                 // Launch bays at cardinal points
-                fill(60, 70, 90);
-                stroke(80, 90, 110);
-                rect(-this.size * 0.06, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 2);
+                this._drawBox3D(0, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 20, color(60, 70, 90), i * TWO_PI / 16);
                 
                 // Warning lights
                 fill(sin(this.lightTimer*3 + i) > 0 ? color(255, 50, 0) : color(255, 200, 0));
@@ -1532,18 +1619,13 @@ class Station {
                 rect(-this.size * 0.04, -this.size * 0.46, this.size * 0.08, this.size * 0.02, 1);
             } else if (i % 2 === 0) {
                 // Weapon modules
-                fill(70, 80, 100);
-                stroke(100, 110, 130);
-                rect(-this.size * 0.05, -this.size * 0.47, this.size * 0.1, this.size * 0.04, 2);
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, this.size * 0.04, 15, color(70, 80, 100), i * TWO_PI / 16);
                 
                 // Weapon barrel
-                fill(50, 60, 80);
-                rect(-this.size * 0.01, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 1);
+                this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 10, color(50, 60, 80), i * TWO_PI / 16);
             } else {
                 // Standard modules
-                fill(this.color);
-                stroke(120, 130, 150);
-                rect(-this.size * 0.04, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 1);
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
                 
                 // Armored windows
                 fill(100, 150, 200, 150 + sin(this.lightTimer + i)*50);
@@ -1566,14 +1648,10 @@ class Station {
             rotate(i * PI / 2 + PI / 6);
             
             // Turret mount
-            fill(80, 90, 110);
-            stroke(100, 110, 130);
-            rect(-this.size * 0.03, this.size * 0.12, this.size * 0.06, this.size * 0.06);
+            this._drawBox3D(0, this.size * 0.15, this.size * 0.06, this.size * 0.06, 15, color(80, 90, 110), i * PI / 2 + PI / 6);
             
             // Main cannon
-            fill(60, 70, 90);
-            stroke(100, 110, 130);
-            rect(-this.size * 0.02, this.size * 0.12, this.size * 0.04, this.size * 0.14, 1);
+            this._drawBox3D(0, this.size * 0.19, this.size * 0.04, this.size * 0.14, 10, color(60, 70, 90), i * PI / 2 + PI / 6);
             
             // Cannon details
             stroke(120, 130, 150, 150);
@@ -2182,9 +2260,7 @@ class Station {
         push();
         rotate(0);
         // Base platform on the arm
-        fill(150, 150, 170);
-        stroke(180, 180, 200);
-        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        this._drawBox3D(0, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 10, color(150, 150, 170), 0);
         translate(0, -this.size * 0.35);
         this._drawFerrisWheel(0, 0, 0.8);
         pop();
@@ -2193,9 +2269,7 @@ class Station {
         push();
         rotate(PI / 2);
         // Base platform on the arm
-        fill(150, 150, 170);
-        stroke(180, 180, 200);
-        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        this._drawBox3D(0, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 10, color(150, 150, 170), PI / 2);
         translate(0, -this.size * 0.35);
         this._drawCarousel(0, 0, 0.7);
         pop();
@@ -2204,9 +2278,7 @@ class Station {
         push();
         rotate(PI);
         // Base platform on the arm
-        fill(150, 150, 170);
-        stroke(180, 180, 200);
-        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        this._drawBox3D(0, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 10, color(150, 150, 170), PI);
         translate(0, -this.size * 0.35);
         this._drawSpaceSlide(0, 0, 0.9);
         pop();
@@ -2215,9 +2287,7 @@ class Station {
         push();
         rotate(3 * PI / 2);
         // Base platform on the arm
-        fill(150, 150, 170);
-        stroke(180, 180, 200);
-        rect(-this.size * 0.06, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 2);
+        this._drawBox3D(0, -this.size * 0.39, this.size * 0.12, this.size * 0.06, 10, color(150, 150, 170), 3 * PI / 2);
         translate(0, -this.size * 0.35);
         this._drawRollerCoasterTrack(0, 0, 0.6);
         pop();
@@ -2230,9 +2300,7 @@ class Station {
             push();
             rotate(i * PI / 2 + PI / 4);
             // Small platform extending from the ring
-            fill(150, 150, 170);
-            stroke(180, 180, 200);
-            rect(-this.size * 0.04, -this.size * 0.51, this.size * 0.08, this.size * 0.03, 2);
+            this._drawBox3D(0, -this.size * 0.51, this.size * 0.08, this.size * 0.03, 5, color(150, 150, 170), i * PI / 2 + PI / 4);
             translate(0, -this.size * 0.52);
             this._drawSpaceSlide(0, 0, 0.5);
             pop();
@@ -2265,9 +2333,7 @@ class Station {
             push();
             rotate(i * TWO_PI / 16);
             // main module body
-            fill(this.color);
-            stroke(180, 80, 50);
-            rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 2);
+            this._drawBox3D(0, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 15, this.color, i * TWO_PI / 16);
 
             // clustered tanks at cardinal points with connecting pipes
             if (i % 4 === 0) {
@@ -2280,8 +2346,10 @@ class Station {
                 for (let t = -1; t <= 1; t++) {
                     push();
                     translate(t * this.size * 0.02, 0);
-                    rect(-this.size * 0.01, -this.size * 0.06, this.size * 0.02, this.size * 0.06, 3);
+                    // Use prism for cylindrical tanks
+                    this._drawPrism(0, -this.size * 0.03, this.size * 0.01, 8, 20, color(200, 90, 60), i * TWO_PI / 16);
                     // tank cap
+                    fill(220, 100, 70);
                     ellipse(0, -this.size * 0.06, this.size * 0.02, this.size * 0.01);
                     pop();
                 }
@@ -2294,8 +2362,7 @@ class Station {
                 // short vent / stack with faint smoke puffs
                 push();
                 translate(this.size * 0.035, -this.size * 0.52);
-                fill(90, 90, 90);
-                rect(-this.size * 0.006, -this.size * 0.03, this.size * 0.012, this.size * 0.03, 1);
+                this._drawBox3D(0, -this.size * 0.015, this.size * 0.012, this.size * 0.03, 10, color(90, 90, 90), i * TWO_PI / 16);
                 // smoke puff
                 noStroke();
                 fill(180, 180, 180, 40 + 40 * sin(this.lightTimer * 3 + i));
@@ -2364,9 +2431,9 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            fill(this.color);
-            stroke(100, 180, 230);
-            rect(-this.size * 0.04, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 6);
+            
+            this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
+            
             fill(200, 255, 255, 120 + 40 * sin(this.lightTimer + i));
             noStroke();
             rect(-this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 3);
@@ -2448,12 +2515,11 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            fill(this.color);
-            stroke(180, 160, 60);
-            rect(-this.size * 0.045, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 4);
+            
+            this._drawBox3D(0, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 15, this.color, i * TWO_PI / 16);
+            
             if (i % 4 === 0) {
-                fill(255, 220, 100);
-                rect(-this.size * 0.01, -this.size * 0.51, this.size * 0.02, this.size * 0.06, 2);
+                this._drawBox3D(0, -this.size * 0.51, this.size * 0.02, this.size * 0.06, 20, color(255, 220, 100), i * TWO_PI / 16);
             }
             pop();
         }
@@ -2529,9 +2595,7 @@ class Station {
         translate(0, -this.size * 0.35);
         this._drawAntennaArray(0, 0, 1.2);
         // Add a small platform below
-        fill(150, 120, 100);
-        stroke(100, 80, 60);
-        rect(-this.size * 0.02, this.size * 0.05, this.size * 0.04, this.size * 0.03, 2);
+        this._drawBox3D(0, this.size * 0.05, this.size * 0.04, this.size * 0.03, 10, color(150, 120, 100), PI / 6);
         pop();
 
         // Floating separatist banner/flags on the opposite side
@@ -2554,9 +2618,7 @@ class Station {
         rotate(PI * 5/6); // Another offset angle
         translate(0, -this.size * 0.42);
         // Extra small module
-        fill(180, 120, 80);
-        stroke(120, 80, 40);
-        rect(-this.size * 0.025, -this.size * 0.02, this.size * 0.05, this.size * 0.04, 3);
+        this._drawBox3D(0, -this.size * 0.02, this.size * 0.05, this.size * 0.04, 10, color(180, 120, 80), PI * 5/6);
         // Add a small antenna on top
         stroke(100, 100, 100);
         strokeWeight(1);
