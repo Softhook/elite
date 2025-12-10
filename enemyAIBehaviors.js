@@ -1665,12 +1665,13 @@ class EnemyAIBehaviors {
     }
 
     /**
-     * Lightweight asteroid avoidance: nudge movement target away from the nearest
-     * asteroid intersecting the current path, or slightly slow the ship for a short time.
-     * Low CPU: only checks asteroids within the forward cone and a capped distance.
+     * Lightweight obstacle avoidance: nudge movement target away from the nearest
+     * asteroid or ship intersecting the current path, or slightly slow the ship for a short time.
+     * Low CPU: only checks obstacles within the forward cone and a capped distance.
      */
-    _avoidAsteroidsAndAdjustTarget(system, desiredMovementTargetPos) {
-        if (!system || !Array.isArray(system.asteroids) || !desiredMovementTargetPos) return desiredMovementTargetPos;
+    _avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos) {
+        if (!system || !desiredMovementTargetPos) return desiredMovementTargetPos;
+        
         // Quick guards
         const toX = desiredMovementTargetPos.x - this.pos.x;
         const toY = desiredMovementTargetPos.y - this.pos.y;
@@ -1681,51 +1682,87 @@ class EnemyAIBehaviors {
         const dirX = toX / toDist;
         const dirY = toY / toDist;
 
-        // Only consider asteroids within this forward distance
+        // Only consider obstacles within this forward distance
         const maxCheckDist = Math.min(600, toDist);
 
         let threat = null;
         let threatProj = Infinity;
+        let threatRadius = 0;
 
-        for (const ast of system.asteroids) {
-            if (!ast || ast.destroyed || !ast.pos) continue;
-            const dx = ast.pos.x - this.pos.x;
-            const dy = ast.pos.y - this.pos.y;
+        // Helper to check a single obstacle
+        const checkObstacle = (obj) => {
+            if (!obj || obj === this || obj.destroyed || !obj.pos) return;
+            
+            const dx = obj.pos.x - this.pos.x;
+            const dy = obj.pos.y - this.pos.y;
             const proj = dx * dirX + dy * dirY; // distance along forward vector
-            if (proj <= 0 || proj > maxCheckDist) continue;
+            
+            if (proj <= 0 || proj > maxCheckDist) return;
+            
             // perpendicular squared distance from path
             const perpSq = dx * dx + dy * dy - proj * proj;
-            const r = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+            
+            // Determine radius based on object type
+            let r = 0;
+            if (obj.maxRadius) {
+                r = obj.maxRadius; // Asteroid
+            } else if (obj.size) {
+                r = obj.size * 0.5; // Ship (size is usually diameter)
+            } else {
+                r = 20; // Fallback
+            }
+            
             const safety = Math.max(this.size, 16) + r + 12; // padding
+            
             if (perpSq <= safety * safety) {
                 if (proj < threatProj) {
-                    threat = ast;
+                    threat = obj;
                     threatProj = proj;
+                    threatRadius = r;
                 }
             }
+        };
+
+        // Check asteroids
+        if (Array.isArray(system.asteroids)) {
+            for (const ast of system.asteroids) {
+                checkObstacle(ast);
+            }
+        }
+
+        // Check enemies
+        if (Array.isArray(system.enemies)) {
+            for (const enemy of system.enemies) {
+                checkObstacle(enemy);
+            }
+        }
+
+        // Check player
+        if (system.player) {
+            checkObstacle(system.player);
         }
 
         if (!threat) return desiredMovementTargetPos;
 
         // If threat is very close, prefer to slow briefly rather than sharp steering
-        const closeThresh = Math.max(threat.maxRadius || (threat.size ? threat.size * 0.5 : 20), this.size) + 60;
+        const closeThresh = Math.max(threatRadius, this.size) + 60;
         if (threatProj < closeThresh) {
             // Set a short avoidance timer so we damp velocity for a moment
             this._asteroidAvoidTimer = 0.6;
             return desiredMovementTargetPos; // keep target but slow ship in wrapper
         }
 
-        // Nudge movement target laterally away from asteroid path
+        // Nudge movement target laterally away from obstacle path
         // Perpendicular vector to forward dir
         let perpX = -dirY;
         let perpY = dirX;
-        // choose side that increases distance from asteroid center
+        // choose side that increases distance from obstacle center
         const ax = threat.pos.x - this.pos.x;
         const ay = threat.pos.y - this.pos.y;
         const dot = ax * perpX + ay * perpY;
         if (dot < 0) { perpX = -perpX; perpY = -perpY; }
 
-        const offset = Math.max(threat.maxRadius || (threat.size ? threat.size * 0.5 : 20), this.size) + 48;
+        const offset = Math.max(threatRadius, this.size) + 48;
         return createVector(desiredMovementTargetPos.x + perpX * offset, desiredMovementTargetPos.y + perpY * offset);
     }
 
@@ -1734,7 +1771,7 @@ class EnemyAIBehaviors {
      * Also applies gentle damping while avoidance timer is active.
      */
     performSafeRotationAndThrust(system, desiredMovementTargetPos) {
-        const safeTarget = this._avoidAsteroidsAndAdjustTarget(system, desiredMovementTargetPos);
+        const safeTarget = this._avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos);
         // Delegate to existing movement helper
         try {
             this.performRotationAndThrust(safeTarget);
