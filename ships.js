@@ -1534,20 +1534,26 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle) {
         }
     }
     
-    // 2. Draw Top Face with Radial Gradient at Tip
+    // 2. Draw Top Face — gradient disabled for performance
     let ctx = drawingContext;
     // Gradient center at Tip (maxX)
-    let gx = layerCache.maxX * r;
-    // Gradient extends from tip back
-    let grad = ctx.createRadialGradient(gx, 0, 0, gx, 0, r * 1.5);
-    
-    grad.addColorStop(0, layerCache.highlightStr);
-    grad.addColorStop(0.6, layerCache.mainFillStr);
-    grad.addColorStop(1, layerCache.darkFillStr);
-    
-    ctx.fillStyle = grad;
+    // let gx = layerCache.maxX * r;
+    // Gradient was previously created here (radial/conical shading).
+    // Disabled to improve rendering performance on lower-end systems.
+    // let grad = ctx.createRadialGradient(gx, 0, 0, gx, 0, r * 1.5);
+    // grad.addColorStop(0, layerCache.highlightStr);
+    // grad.addColorStop(0.6, layerCache.mainFillStr);
+    // grad.addColorStop(1, layerCache.darkFillStr);
+
+    // Use a flat fill instead of the gradient
+    try {
+        ctx.fillStyle = layerCache.mainFillStr;
+    } catch (e) {
+        // Fallback: if string isn't set, construct from RGB
+        ctx.fillStyle = `rgb(${Math.round(layerCache.fillRGB.r)}, ${Math.round(layerCache.fillRGB.g)}, ${Math.round(layerCache.fillRGB.b)})`;
+    }
     stroke(layerCache.strokeRGB.r, layerCache.strokeRGB.g, layerCache.strokeRGB.b);
-    
+
     beginShape();
     for (let v of layerCache.vertexData) {
         vertex(v.x * r, v.y * r);
