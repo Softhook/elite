@@ -2369,57 +2369,83 @@ const SpaceObjectRenderers = {
     hydroponicsBay: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Platform base
-        Draw3D.drawBox3D(0, bob + size * 0.22, size * 0.9, size * 0.22, size * 0.05, color(40, 60, 50), obj.angle, sunAngle);
+        // Helper to project "height" (z) along the object's rotation axis
+        const sin = Math.sin(obj.angle || 0);
+        const cos = Math.cos(obj.angle || 0);
+        function getPos(z) {
+            return {
+                x: -z * sin,
+                y: bob - z * cos
+            };
+        }
 
-        // Translucent dome (prism approximation)
-        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.4, 8, size * 0.3, color(200, 235, 250, 80), obj.angle, sunAngle);
+        // 1. Base Platform (Bottom)
+        // Z = -0.2
+        const pBase = getPos(-size * 0.2);
+        Draw3D.drawBox3D(pBase.x, pBase.y, size * 0.8, size * 0.8, size * 0.1, color(50, 60, 55), obj.angle, sunAngle);
 
-        // Grow tray rows
+        // 2. Central Reservoir (Embedded in base)
+        Draw3D.drawBox3D(pBase.x, pBase.y, size * 0.3, size * 0.3, size * 0.12, color(40, 80, 100), obj.angle, sunAngle);
+
+        // 3. Grow Trays (Stacked shelves)
         const rows = 3;
-        const trayW = size * 0.7;
-        const trayH = size * 0.12;
+        const trayW = size * 0.6;
+        const startZ = -size * 0.08;
+        const gapZ = size * 0.12;
+
         for (let r = 0; r < rows; r++) {
-            const ry = -size * 0.04 + bob + r * (trayH * 0.8);
-            // Tray body
-            Draw3D.drawBox3D(0, ry, trayW, trayH, trayH * 0.5, color(40, 60, 50), obj.angle, sunAngle);
+            const z = startZ + r * gapZ;
+            const pTray = getPos(z);
             
-            // Plants
-            for (let p = -2; p <= 2; p++) {
-                const px = p * (trayW * 0.18);
-                const sway = Math.sin((anim ? anim.hydroponicCycle : obj.bobPhase) * 0.9 + p) * 2;
-                
-                // Plant as a small green box/prism
-                Draw3D.drawBox3D(px, ry - trayH * 0.4 + sway, trayH * 0.4, trayH * 0.6, trayH * 0.4, color(80, 200, 120), obj.angle, sunAngle);
+            // Tray body
+            Draw3D.drawBox3D(pTray.x, pTray.y, trayW, trayW, size * 0.05, color(40, 60, 50), obj.angle, sunAngle);
+            
+            // Plants (grid on tray)
+            // Draw slightly above tray surface
+            const pPlants = getPos(z + size * 0.03);
+            
+            for(let px = -1; px <= 1; px++) {
+                for(let py = -1; py <= 1; py++) {
+                    // Calculate local offsets for the grid
+                    const offX = px * (trayW * 0.25);
+                    const offY = py * (trayW * 0.25);
+                    
+                    const sway = Math.sin((anim ? anim.hydroponicCycle : obj.bobPhase) * 0.9 + px + py) * 2;
+                    
+                    // Draw plant box at the offset position
+                    // Note: context is rotated, so (offX, offY) aligns with tray
+                    Draw3D.drawBox3D(pTray.x + offX, pTray.y + offY, size * 0.12, size * 0.12, size * 0.08 + sway, color(80, 200, 120), obj.angle, sunAngle);
+                }
             }
         }
 
-        // Overhead LED grow light bars
+        // 4. Overhead LED Lights (Top)
+        const pLights = getPos(size * 0.28);
+        // Frame
+        Draw3D.drawBox3D(pLights.x, pLights.y, size * 0.7, size * 0.7, size * 0.04, color(110, 120, 110), obj.angle, sunAngle);
+        // Light Emitters
         const lightPhase = (anim ? anim.lightPhase : obj.bobPhase * 0.5);
-        for (let l = -1; l <= 1; l++) {
-            const lx = l * (size * 0.28);
-            const ly = -size * 0.28 + bob;
-            
-            // Support rod
-            Draw3D.drawBox3D(lx, ly + size * 0.09, 4, size * 0.2, 4, color(110, 120, 110), obj.angle, sunAngle);
-            
-            // Light fixture
-            const intensity = 0.6 + 0.4 * Math.sin(lightPhase + l);
-            Draw3D.drawBox3D(lx, ly + size * 0.18, size * 0.2, 6, 6, color(255, 100, 220, 200 * intensity), obj.angle, sunAngle);
-        }
+        const intensity = 0.6 + 0.4 * Math.sin(lightPhase);
+        Draw3D.drawBox3D(pLights.x, pLights.y, size * 0.5, size * 0.5, size * 0.02, color(255, 100, 220, 200 * intensity), obj.angle, sunAngle);
 
-        // Central reservoir
-        Draw3D.drawBox3D(0, size * 0.36 + bob, size * 0.32, size * 0.12, size * 0.1, color(40, 80, 100), obj.angle, sunAngle);
+        // 5. Translucent Dome (Enclosing everything)
+        // Top at Z=0.32, Depth=0.55 (reaching down to -0.23)
+        const pDomeTop = getPos(size * 0.32);
+        const domeColor = color(200, 235, 250, 60);
+        Draw3D.drawPrism(pDomeTop.x, pDomeTop.y, size * 0.55, 8, size * 0.55, domeColor, obj.angle, sunAngle);
+        
+        // Dome Ribs
+        Draw3D.drawRing3D(pDomeTop.x, pDomeTop.y, size * 0.55, size * 0.53, 8, size * 0.02, color(200, 235, 250, 100), obj.angle, sunAngle);
 
-        // Maintenance arm
+        // 6. Maintenance Arm (External, attached to base)
         push();
-        translate(-size * 0.34, -size * 0.06 + bob);
+        translate(pBase.x, pBase.y);
         rotate(Math.sin(anim ? anim.armPhase : obj.bobPhase * 0.002) * 0.45);
         stroke(140, 150, 140); strokeWeight(2);
-        line(0, 0, size * 0.5, 0);
+        line(0, 0, size * 0.65, 0);
         noStroke();
         fill(160, 160, 170);
-        ellipse(size * 0.5, 0, 6, 6);
+        ellipse(size * 0.65, 0, 8, 8);
         pop();
     },
 
