@@ -195,12 +195,16 @@ class EnemyRendering {
         }
         // --- End Info Label ---
 
+        // Calculate sun angle relative to ship's rotation for 3D shading
+        const sunAngle = atan2(-this.pos.y, -this.pos.x);
+        const localSunAngle = sunAngle - this.angle;
+
         rotate(this.angle);
 
         fill(this.p5FillColor); stroke(this.p5StrokeColor);
         strokeWeight(1);
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        try { drawFunc(this.size, showThrust); } // Call specific draw function
+        try { drawFunc(this.size, showThrust, this.angle, localSunAngle); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
 
         // Draw turret if enemy has turret weapon

@@ -1284,8 +1284,14 @@ class Player {
 
         push();
         translate(this.pos.x, this.pos.y);
+
+        // Calculate sun angle relative to ship's rotation for 3D shading
+        // Sun is at (0,0) in world space.
+        const sunAngle = atan2(-this.pos.y, -this.pos.x);
+        const localSunAngle = sunAngle - this.angle;
+
         rotate(this.angle);
-        drawFunc(this.size, this.isThrusting);
+        drawFunc(this.size, this.isThrusting, this.angle, localSunAngle);
 
         // Draw turret if player has turret weapon
         if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {

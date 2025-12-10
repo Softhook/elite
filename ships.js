@@ -1407,13 +1407,122 @@ const SHIP_DEFINITIONS = {
 
 // --- Drawing Helper Functions ---
 
+// Helper to calculate depth vector for 3D extrusion
+function getDepthVector(angle, depth) {
+    // Depth vector is fixed in world space (pointing "down" relative to camera)
+    // In rotated object space, it rotates opposite to the object
+    return {
+        x: depth * Math.sin(angle),
+        y: depth * Math.cos(angle)
+    };
+}
+
+// Helper to draw an extruded polygon (Faux-3D)
+function drawExtrudedPoly(r, vertexData, depth, fillColor, strokeColor, strokeW, angle, localSunAngle) {
+    const dv = getDepthVector(angle, depth);
+    
+    // Ensure colors are valid p5 colors with fallbacks
+    let mainFill = color(fillColor || [100, 100, 100]);
+    let mainStroke = color(strokeColor || [200, 200, 200]);
+    
+    strokeWeight(strokeW || 1);
+    
+    const len = vertexData.length;
+
+    // Find X range for Wedge effect (Front tip tapers to a point)
+    // We assume +X is the "Front" of the ship based on standard definitions
+    let minX = Infinity, maxX = -Infinity;
+    for (let v of vertexData) {
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+    }
+    let xRange = maxX - minX;
+    if (xRange < 0.001) xRange = 1; // Safety
+
+    // Helper to get wedge factor (0 at nose/maxX, 1 at tail/minX)
+    const getWedgeFactor = (x) => {
+        return (maxX - x) / xRange;
+    };
+    
+    // 1. Draw Sides (Only visible sides - Backface Culling)
+    for (let i = 0; i < len; i++) {
+        const next = (i + 1) % len;
+        const v1 = vertexData[i];
+        const v2 = vertexData[next];
+
+        const dx = v2.x - v1.x;
+        const dy = v2.y - v1.y;
+        
+        // Visibility check (Backface Culling)
+        const cp = dx * dv.y - dy * dv.x;
+        
+        if (cp < 0) {
+            // Calculate wedge factors for tapering
+            let t1 = getWedgeFactor(v1.x);
+            let t2 = getWedgeFactor(v2.x);
+
+            // Calculate back vertices (tapered depth)
+            let bx1 = (v1.x * r) + dv.x * t1;
+            let by1 = (v1.y * r) + dv.y * t1;
+            let bx2 = (v2.x * r) + dv.x * t2;
+            let by2 = (v2.y * r) + dv.y * t2;
+            
+            // Front vertices
+            let fx1 = v1.x * r;
+            let fy1 = v1.y * r;
+            let fx2 = v2.x * r;
+            let fy2 = v2.y * r;
+
+            // Calculate simple lighting based on angle relative to "sun"
+            const faceAngle = Math.atan2(dx, -dy);
+            const diff = faceAngle - localSunAngle;
+            const b = map(Math.cos(diff), -1, 1, 0.3, 0.8);
+            
+            // Apply shading
+            fill(red(mainFill)*b, green(mainFill)*b, blue(mainFill)*b);
+            stroke(red(mainStroke)*b*0.8, green(mainStroke)*b*0.8, blue(mainStroke)*b*0.8);
+
+            beginShape();
+            vertex(bx1, by1); // Back 1
+            vertex(bx2, by2); // Back 2
+            vertex(fx2, fy2); // Front 2
+            vertex(fx1, fy1); // Front 1
+            endShape(CLOSE);
+        }
+    }
+    
+    // 2. Draw Top Face with "Curved" effect (Radial Gradient)
+    // We use the native canvas API for the gradient to simulate a curved/conical top surface
+    let ctx = drawingContext;
+    let grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.5);
+    
+    // Highlight color (lighter version of fill)
+    let rVal = red(mainFill), gVal = green(mainFill), bVal = blue(mainFill);
+    let highlight = color(min(255, rVal*1.3), min(255, gVal*1.3), min(255, bVal*1.3));
+    
+    // Gradient: Center (Highlight) -> Edge (Normal Color) -> Darker Edge
+    grad.addColorStop(0, highlight.toString());
+    grad.addColorStop(0.6, mainFill.toString());
+    grad.addColorStop(1, color(rVal*0.8, gVal*0.8, bVal*0.8).toString());
+    
+    ctx.fillStyle = grad;
+    stroke(mainStroke);
+    strokeWeight(strokeW || 1);
+    
+    beginShape();
+    for (let v of vertexData) {
+        vertex(v.x * r, v.y * r);
+    }
+    endShape(CLOSE);
+}
+
 // Enhanced helper function to draw shape from vertex data or layers
+// (Kept for backward compatibility or 2D fallbacks)
 function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrokeColor, defaultStrokeW) {
-    // Check if we have layers array (multi-layer ship)
+    // ... (Implementation omitted, using new 3D logic in drawGenericShip instead)
+    // But we keep this function if custom draw functions use it directly.
     if (Array.isArray(vertexDataOrLayers) && vertexDataOrLayers.length > 0 && 
         vertexDataOrLayers[0].vertexData) {
-        
-        // Draw multiple layers in forward order (top layer first)
         for (let i = 0; i < vertexDataOrLayers.length; i++) {
             const layer = vertexDataOrLayers[i];
             if (layer.vertexData && layer.vertexData.length > 0) {
@@ -1428,7 +1537,6 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
             }
         }
     } else {
-        // Original single-layer logic remains unchanged
         if (defaultFillColor) fill(defaultFillColor); else noFill();
         if (defaultStrokeColor) { 
             stroke(defaultStrokeColor); 
@@ -1444,38 +1552,34 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
     }
 }
 
-// Generic Ship Drawing Function
-function drawGenericShip(def, s, thrusting) {
+// Generic Ship Drawing Function (Updated for 3D)
+function drawGenericShip(def, s, thrusting, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
-    drawShapeFromData(r, def.vertexLayers || def.vertexData, color(def.fillColor), color(def.strokeColor), def.strokeW);
+    let depth = s * 0.15; // Reduced depth scaling as requested
+
+    if (def.vertexLayers) {
+        // Draw layers
+        for (let i = 0; i < def.vertexLayers.length; i++) {
+            let layer = def.vertexLayers[i];
+            // Use layer colors or defaults
+            let fc = layer.fillColor || def.fillColor;
+            let sc = layer.strokeColor || def.strokeColor;
+            let sw = layer.strokeW || def.strokeW;
+            
+            drawExtrudedPoly(r, layer.vertexData, depth, fc, sc, sw, angle, localSunAngle);
+        }
+    } else if (def.vertexData) {
+        // Single layer
+        drawExtrudedPoly(r, def.vertexData, depth, def.fillColor, def.strokeColor, def.strokeW, angle, localSunAngle);
+    }
 }
 
 // --- Custom Drawing Functions (for ships with special effects) ---
 
-// Helper for Faux-3D depth extrusion
+// Helper for Faux-3D depth extrusion (Old simple version - Deprecated/Replaced by drawExtrudedPoly)
+// We can remove or leave it. Let's leave it but unused.
 function drawExtrudedShape(r, vertexData, fillColor, strokeColor, depth, layers = 5) {
-    noStroke();
-    let rVal = red(fillColor), gVal = green(fillColor), bVal = blue(fillColor);
-    
-    // Draw "sides" by stacking darker layers
-    for (let i = 0; i < layers; i++) {
-        let darken = map(i, 0, layers, 0.4, 0.8);
-        fill(rVal * darken, gVal * darken, bVal * darken);
-        push();
-        translate(0, depth * (1 - i/layers)); // Shift down
-        scale(0.95 + (i/layers)*0.05); // Slight taper
-        beginShape();
-        for (let v of vertexData) vertex(v.x * r, v.y * r);
-        endShape(CLOSE);
-        pop();
-    }
-    // Top face
-    fill(fillColor);
-    stroke(strokeColor);
-    strokeWeight(1.5);
-    beginShape();
-    for (let v of vertexData) vertex(v.x * r, v.y * r);
-    endShape(CLOSE);
+   // ...
 }
 
 function drawThargoid(s, thrusting = false) { 
@@ -1877,10 +1981,10 @@ for (const key in SHIP_DEFINITIONS) {
     if (CUSTOM_DRAW_FUNCTIONS[key]) {
         def.drawFunction = CUSTOM_DRAW_FUNCTIONS[key];
     } else {
-        // Create a bound function that matches the signature (s, thrusting)
+        // Create a bound function that matches the signature (s, thrusting, angle, localSunAngle)
         // We use a closure to capture 'def'
-        def.drawFunction = function(s, thrusting) {
-            drawGenericShip(def, s, thrusting);
+        def.drawFunction = function(s, thrusting, angle, localSunAngle) {
+            drawGenericShip(def, s, thrusting, angle, localSunAngle);
         };
     }
 }

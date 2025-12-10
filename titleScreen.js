@@ -522,9 +522,15 @@ class TitleScreen {
             if (ship.def && typeof ship.def.drawFunction === 'function') {
                 push();
                 translate(ship.pos.x, ship.pos.y);
+                
+                // Calculate sun angle for 3D effect (sun at center of screen)
+                const sunAngle = atan2(height/2 - ship.pos.y, width/2 - ship.pos.x);
+                const localSunAngle = sunAngle - ship.angle;
+
                 rotate(ship.angle); // Changed from + to - to rotate 90 degrees counterclockwise 
                 scale(ship.scale);
-                ship.def.drawFunction(ship.def.size, ship.isThrusting, ship.color);
+                // Pass angle and localSunAngle for 3D rendering
+                ship.def.drawFunction(ship.def.size, ship.isThrusting, ship.angle, localSunAngle);
                 pop();
             }
         }
