@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Space Objects Viewer</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body { margin:0; background:#071021; color:#e6eef8; font-family: sans-serif; }
+        #ui { position: absolute; left: 12px; top: 12px; background: rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); }
+        button, select { margin:4px 6px 4px 0; padding:6px 8px; background:#142030; color:#e6eef8; border:1px solid #2a4658; border-radius:4px; }
+        h3 { margin:0 0 8px 0; font-size:14px; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3>Space Objects Viewer</h3>
+        <button id="respawn">Respawn All</button>
+        <button id="shuffle">Shuffle Positions</button>
+        <label>Scale: <select id="scale"><option>0.6</option><option selected>1</option><option>1.4</option><option>2</option></select></label>
+        <div id="info" style="margin-top:8px;font-size:12px;color:#9fb8d6"></div>
+    </div>
+
+    <script>
+        // This viewer relies only on p5 and spaceObjects.js
+        // It will create one instance of each type in `sizeMap` and render them on screen.
+
+        let objects = [];
+        let scaleFactor = 1;
+        let focusedIndex = -1; // -1 = grid view, otherwise index of focused object
+
+        function setup() {
+            createCanvas(window.innerWidth, window.innerHeight);
+            angleMode(RADIANS);
+            // If spaceObjects.js hasn't been loaded it will throw - ensure script tag order
+            spawnAllObjects();
+
+            document.getElementById('respawn').addEventListener('click', spawnAllObjects);
+            document.getElementById('shuffle').addEventListener('click', shufflePositions);
+            document.getElementById('scale').addEventListener('change', (e)=>{ scaleFactor = parseFloat(e.target.value) || 1; arrangeGrid(); updateInfo(); });
+
+            // Keyboard navigation: arrows move through objects; Esc exits focused view
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (objects.length === 0) return;
+                    if (focusedIndex === -1) focusIndex(0);
+                    else focusIndex((focusedIndex + 1) % objects.length);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (objects.length === 0) return;
+                    if (focusedIndex === -1) focusIndex(objects.length - 1);
+                    else focusIndex((focusedIndex - 1 + objects.length) % objects.length);
+                } else if (e.key === 'Escape') {
+                    if (focusedIndex !== -1) clearFocus();
+                }
+            });
+        }
+
+        function windowResized() {
+            resizeCanvas(window.innerWidth, window.innerHeight);
+            arrangeGrid();
+        }
+
+        function spawnAllObjects() {
+            objects = [];
+            // Collect types from sizeMap if available, otherwise fall back to a default list
+            const types = (typeof sizeMap !== 'undefined') ? Object.keys(sizeMap) : [
+                'satellite','telescope','relay','habitat','debris','probe','beacon','solarSail','engineArray','cargoCluster','researchArray','orbitalGarden','decoyBuoy','miningPlatform','ancientRelic','signalFlare','outpost','asteroidMiner','fuelDepot','commDish','solarFarm','iceCrystal','nebulaFragment','alienArtifact','wreckage','observatoryDome','hydroponicsBay','weaponPlatform','shieldGenerator','energyCollector','quantumGate','prison','drugLab','labourColony','undergroundMarket','shipyard'
+            ];
+
+            // Create SpaceObject instances arranged in a grid
+            for (let t of types) {
+                // position temporarily at 0, will be arranged later
+                const obj = new SpaceObject(0, 0, t);
+                // remember a base size so we can restore after temporary scaling
+                obj._viewerBaseSize = (sizeMap && sizeMap[t]) ? sizeMap[t] : (obj.size || 40);
+                objects.push(obj);
+            }
+
+            focusedIndex = -1;
+            arrangeGrid();
+            updateInfo();
+        }
+
+        function arrangeGrid() {
+            const cols = Math.ceil(Math.sqrt(objects.length));
+            const padding = 160 * scaleFactor;
+            const startX = width/2 - (cols-1) * padding / 2;
+            const startY = height/2 - (cols-1) * padding / 2;
+            for (let i=0; i<objects.length; i++) {
+                const col = i % cols;
+                const row = Math.floor(i/cols);
+                objects[i].pos.x = startX + col * padding;
+                objects[i].pos.y = startY + row * padding;
+                // scale visual size for readability (store scaled size but keep base)
+                objects[i].size = (objects[i]._viewerBaseSize) ? objects[i]._viewerBaseSize * 0.8 * scaleFactor : (objects[i].size * scaleFactor);
+            }
+        }
+
+        function shufflePositions() {
+            for (let obj of objects) {
+                obj.pos.x = Math.random() * width * 0.8 + width*0.1;
+                obj.pos.y = Math.random() * height * 0.8 + height*0.1;
+            }
+            updateInfo();
+        }
+
+        function updateInfo() {
+            const info = document.getElementById('info');
+            if (focusedIndex === -1) {
+                info.innerHTML = `Types: ${objects.length} — Use arrow keys to focus an object (enter fullscreen view).`;
+            } else {
+                const obj = objects[focusedIndex];
+                info.innerHTML = `Viewing ${focusedIndex+1}/${objects.length}: ${obj.type} — Use arrows to navigate, Esc to exit.`;
+            }
+        }
+
+        function focusIndex(i) {
+            if (objects.length === 0) return;
+            focusedIndex = (i + objects.length) % objects.length;
+            // try to enter browser fullscreen for immersive view
+            try { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); } catch(e) { /* ignore */ }
+            updateInfo();
+        }
+
+        function clearFocus() {
+            focusedIndex = -1;
+            try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch(e) { /* ignore */ }
+            arrangeGrid();
+            updateInfo();
+        }
+
+        function draw() {
+            background(6,12,20);
+
+            // Sun indicator at top-left to match spaceObjects' sun-angle math (sun at 0,0 world coords)
+            push();
+            noStroke();
+            fill(255,240,180,200);
+            ellipse(40,40,48,48);
+            fill(255,240,180,120);
+            ellipse(40,40,120,120);
+            pop();
+
+            // Draw grid label
+            push(); fill(180); textSize(12); textAlign(LEFT, TOP); text('Sun at (0,0) visualized top-left', 12, 72); pop();
+
+            if (focusedIndex === -1) {
+                // Grid view: draw all objects
+                for (let obj of objects) {
+                    obj.update();
+                    obj.draw();
+                    // draw type label
+                    push(); noStroke(); fill(200); textSize(11); textAlign(CENTER, TOP);
+                    text(obj.type, obj.pos.x, obj.pos.y + (obj.size * 0.6) + 6);
+                    pop();
+                }
+            } else {
+                // Focused fullscreen view: draw only the focused object centered and scaled
+                const obj = objects[focusedIndex];
+                // save old state
+                const oldX = obj.pos.x, oldY = obj.pos.y, oldSize = obj.size;
+
+                obj.pos.x = width/2;
+                obj.pos.y = height/2;
+                // choose a size that fills most of the screen
+                obj.size = Math.floor(Math.min(width, height) * 0.62);
+
+                // update/draw single object
+                obj.update();
+                obj.draw();
+
+                // label and navigation hint
+                push(); fill(230); textSize(18); textAlign(CENTER, TOP);
+                text(`${focusedIndex+1}/${objects.length} — ${obj.type}`, width/2, height/2 + obj.size*0.65 + 10);
+                textSize(12);
+                text('← ↑ : prev   ↓ → : next   Esc : exit', width/2, height - 36);
+                pop();
+
+                // restore
+                obj.pos.x = oldX; obj.pos.y = oldY; obj.size = oldSize;
+            }
+        }
+    </script>
+
+    <script src="../spaceObjects.js"></script>
+</body>
+</html>

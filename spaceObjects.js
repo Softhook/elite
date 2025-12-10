@@ -418,26 +418,79 @@ const Draw3D = {
         const dv = this.getDepthVector(depth, angle, sunAngle);
         const angleStep = TWO_PI / sides;
         const lightAngle = sunAngle;
-        
+
         strokeWeight(1);
 
-        // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
-        beginShape();
-        // Outer loop
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep;
-            vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+        // If beginContour/endContour are available, use the full-capable implementation.
+        // Some p5 builds or contexts may not support contours; detect and fallback.
+        if (typeof beginContour === 'function' && typeof endContour === 'function') {
+            // Some p5 builds expose beginContour/endContour but their internal
+            // implementation can still throw (renderer differences). Try using
+            // the contour API and fall back if it fails at runtime.
+            try {
+                // Draw Bottom Cap using contour for a proper hole
+                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+                beginShape();
+                // Outer loop
+                for (let i = 0; i < sides; i++) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+                }
+                // Inner loop (contour)
+                beginContour();
+                for (let i = sides - 1; i >= 0; i--) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
+                }
+                endContour();
+                endShape(CLOSE);
+            } catch (e) {
+                // Fallback to non-contour implementation when contour calls fail
+                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+                beginShape();
+                for (let i = 0; i < sides; i++) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+                }
+                endShape(CLOSE);
+
+                noStroke();
+                fill(0, 0, 0, 220);
+                beginShape();
+                for (let i = sides - 1; i >= 0; i--) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
+                }
+                endShape(CLOSE);
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            }
+        } else {
+            // Fallback: draw outer cap and then overpaint inner cap to approximate a hole.
+            // This is less correct but prevents runtime errors on p5 builds without contour support.
+            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            beginShape();
+            for (let i = 0; i < sides; i++) {
+                const ang = i * angleStep;
+                vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+            }
+            endShape(CLOSE);
+
+            // Paint small inner disc to fake the hole using background-like fill
+            // Use a very transparent fill so it blends reasonably in most contexts
+            noStroke();
+            fill(0, 0, 0, 220);
+            beginShape();
+            for (let i = sides - 1; i >= 0; i--) {
+                const ang = i * angleStep;
+                vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
+            }
+            endShape(CLOSE);
+            // restore stroke for faces below
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
         }
-        // Inner loop (contour)
-        beginContour();
-        for (let i = sides - 1; i >= 0; i--) {
-            const ang = i * angleStep;
-            vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
-        }
-        endContour();
-        endShape(CLOSE);
         
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep;
@@ -504,20 +557,58 @@ const Draw3D = {
         // Top
         fill(col);
         stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
-        beginShape();
-        // Outer loop
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep;
-            vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
+        if (typeof beginContour === 'function' && typeof endContour === 'function') {
+            try {
+                beginShape();
+                // Outer loop
+                for (let i = 0; i < sides; i++) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
+                }
+                // Inner loop (contour)
+                beginContour();
+                for (let i = sides - 1; i >= 0; i--) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
+                }
+                endContour();
+                endShape(CLOSE);
+            } catch (e) {
+                // Fallback to non-contour top cap
+                beginShape();
+                for (let i = 0; i < sides; i++) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
+                }
+                endShape(CLOSE);
+                noStroke();
+                fill(0,0,0,220);
+                beginShape();
+                for (let i = sides - 1; i >= 0; i--) {
+                    const ang = i * angleStep;
+                    vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
+                }
+                endShape(CLOSE);
+                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+            }
+        } else {
+            // Fallback: draw outer top and overdraw inner with background-ish fill
+            beginShape();
+            for (let i = 0; i < sides; i++) {
+                const ang = i * angleStep;
+                vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
+            }
+            endShape(CLOSE);
+            noStroke();
+            fill(0,0,0,220);
+            beginShape();
+            for (let i = sides - 1; i >= 0; i--) {
+                const ang = i * angleStep;
+                vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
+            }
+            endShape(CLOSE);
+            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
         }
-        // Inner loop (contour)
-        beginContour();
-        for (let i = sides - 1; i >= 0; i--) {
-            const ang = i * angleStep;
-            vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
-        }
-        endContour();
-        endShape(CLOSE);
     },
 
     drawExtrudedRing: function(outerVerts, innerVerts, depth, col, angle, sunAngle) {
@@ -527,17 +618,42 @@ const Draw3D = {
         
         const len = outerVerts.length;
 
-        // Draw Bottom Cap
+        // Draw Bottom Cap (try contour; fallback if not supported or throws)
         fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
         stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
-        beginShape();
-        for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-        beginContour();
-        for (let i = len - 1; i >= 0; i--) {
-            vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+        if (typeof beginContour === 'function' && typeof endContour === 'function') {
+            try {
+                beginShape();
+                for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+                beginContour();
+                for (let i = len - 1; i >= 0; i--) {
+                    vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+                }
+                endContour();
+                endShape(CLOSE);
+            } catch (e) {
+                // Fallback: draw outer cap then overdraw inner hole
+                beginShape();
+                for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+                endShape(CLOSE);
+                noStroke();
+                fill(0,0,0,220);
+                beginShape();
+                for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+                endShape(CLOSE);
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            }
+        } else {
+            beginShape();
+            for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+            endShape(CLOSE);
+            noStroke();
+            fill(0,0,0,220);
+            beginShape();
+            for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+            endShape(CLOSE);
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
         }
-        endContour();
-        endShape(CLOSE);
         
         // Draw sides
         for (let i = 0; i < len; i++) {
@@ -595,14 +711,39 @@ const Draw3D = {
         // Top cap
         fill(col);
         stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
-        beginShape();
-        for (let v of outerVerts) vertex(v.x, v.y);
-        beginContour();
-        for (let i = len - 1; i >= 0; i--) {
-            vertex(innerVerts[i].x, innerVerts[i].y);
+        // Top cap (try contour; fallback if necessary)
+        if (typeof beginContour === 'function' && typeof endContour === 'function') {
+            try {
+                beginShape();
+                for (let v of outerVerts) vertex(v.x, v.y);
+                beginContour();
+                for (let i = len - 1; i >= 0; i--) {
+                    vertex(innerVerts[i].x, innerVerts[i].y);
+                }
+                endContour();
+                endShape(CLOSE);
+            } catch (e) {
+                beginShape();
+                for (let v of outerVerts) vertex(v.x, v.y);
+                endShape(CLOSE);
+                noStroke();
+                fill(0,0,0,220);
+                beginShape();
+                for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x, innerVerts[i].y);
+                endShape(CLOSE);
+                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+            }
+        } else {
+            beginShape();
+            for (let v of outerVerts) vertex(v.x, v.y);
+            endShape(CLOSE);
+            noStroke();
+            fill(0,0,0,220);
+            beginShape();
+            for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x, innerVerts[i].y);
+            endShape(CLOSE);
+            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
         }
-        endContour();
-        endShape(CLOSE);
     }
 };
 
@@ -954,7 +1095,6 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.06, bob + size * 0.02, 3, 3);
 
         pop(); // end swivel
-        pop(); // close swivel push() opened earlier
     },
 
     habitat: function(obj, size, anim, bob) {
@@ -3076,7 +3216,7 @@ const SpaceObjectRenderers = {
 
     labourColony: function(obj, size, anim, bob) {
         // Labour colony: industrial complex with worker modules, mining equipment, processing facilities and transport rails
-        const sunAngle = (obj.pos.x + obj.pos.y) * 0.01;
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base platform with industrial grid
         Draw3D.drawBox3D(0, size * 0.25 + bob, size * 1.0, size * 0.3, size * 0.05, color(30, 30, 35), 0, sunAngle);
@@ -3207,7 +3347,7 @@ const SpaceObjectRenderers = {
 
     quantumGate: function(obj, size, anim, bob) {
         // Enhanced quantum gate: multi-ring shimmer, rotating glyphs, teleport arcs and particle jets
-        const sunAngle = (obj.pos.x + obj.pos.y) * 0.01;
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.gatePhase) ? anim.gatePhase : obj.bobPhase * 0.01;
         const spin = obj.bobPhase * 0.0025;
         const pulse = 0.6 + 0.45 * Math.sin(phase * 1.8);
@@ -3305,7 +3445,7 @@ const SpaceObjectRenderers = {
     // ==========================================================================
     shipyard: function(obj, size, anim, bob) {
         // Animation phases
-        const sunAngle = (obj.pos.x + obj.pos.y) * 0.01;
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
         const cranePhase = (anim && anim.cranePhase) ? anim.cranePhase : obj.bobPhase * 0.0008;
         // Slow down weld animation so sparks are less frantic
