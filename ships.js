@@ -1503,6 +1503,14 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
     const dvx = effDepth * Math.sin(angle);
     const dvy = effDepth * Math.cos(angle);
 
+    // --- BLUNTNESS CONTROL ---
+    // Change this value to control the thickness of the "wedge" tip.
+    // 0.0 = Sharp point (original behavior)
+    // 0.2 = Blunted tip (cheese wedge style)
+    // 1.0 = No taper (block style)
+    const bluntness = 0.3; 
+    // -------------------------
+
     // Disable strokes for ships: use fill-only rendering for performance
     noStroke();
 
@@ -1512,11 +1520,16 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
         // Visibility check (Backface Culling for CW winding)
             if (edge.dx * dvy - edge.dy * dvx < 0) {
             // Back vertices
-                // Back vertices
-                let bx1 = (edge.v1.x * layerR) + dvx * edge.t1;
-                let by1 = (edge.v1.y * layerR) + dvy * edge.t1;
-                let bx2 = (edge.v2.x * layerR) + dvx * edge.t2;
-                let by2 = (edge.v2.y * layerR) + dvy * edge.t2;
+                // Apply bluntness factor to taper
+                // t goes from 0 (nose) to 1 (tail). 
+                // We map 0 -> bluntness, 1 -> 1.
+                const t1_mod = bluntness + (1 - bluntness) * edge.t1;
+                const t2_mod = bluntness + (1 - bluntness) * edge.t2;
+
+                let bx1 = (edge.v1.x * layerR) + dvx * t1_mod;
+                let by1 = (edge.v1.y * layerR) + dvy * t1_mod;
+                let bx2 = (edge.v2.x * layerR) + dvx * t2_mod;
+                let by2 = (edge.v2.y * layerR) + dvy * t2_mod;
 
                 // Front vertices
                 let fx1 = edge.v1.x * layerR;
