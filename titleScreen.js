@@ -425,6 +425,87 @@ class TitleScreen {
         }
     }
 
+    // Build a lightweight layerCache from an array of points (from font.textToPoints)
+    buildLayerCacheFromPoints(points, fillColor) {
+        if (!points || points.length < 3) return null;
+
+        // Compute centroid for normalization
+        let cx = 0, cy = 0;
+        for (let p of points) { cx += p.x; cy += p.y; }
+        cx /= points.length; cy /= points.length;
+
+        // Normalize coordinates relative to centroid and font-size scale (we'll scale later via r)
+        const vertexData = points.map(p => ({ x: p.x - cx, y: p.y - cy }));
+
+        // Compute minX/maxX for t parameters (use raw coords before scaling)
+        let minX = Infinity, maxX = -Infinity;
+        for (let v of vertexData) { if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x; }
+        let xRange = maxX - minX; if (Math.abs(xRange) < 0.0001) xRange = 1;
+
+        // Build edges in sequence (close the loop)
+        const edges = [];
+        for (let i = 0; i < vertexData.length; i++) {
+            const next = (i + 1) % vertexData.length;
+            const v1 = vertexData[i];
+            const v2 = vertexData[next];
+            const t1 = (maxX - v1.x) / xRange;
+            const t2 = (maxX - v2.x) / xRange;
+            edges.push({ v1, v2, dx: v2.x - v1.x, dy: v2.y - v1.y, t1, t2 });
+        }
+
+        // Fill color -> RGB
+        const fillRGB = { r: fillColor[0] || 180, g: fillColor[1] || 180, b: fillColor[2] || 255 };
+
+        return {
+            vertexData: vertexData,
+            minX, maxX, xRange,
+            fillRGB,
+            strokeRGB: fillRGB,
+            strokeW: 1,
+            edges
+        };
+    }
+
+    // Draw extruded text using the ship extrusion helper. Attempts to use the p5 font outlines.
+    drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0,180,255]) {
+        if (!font || typeof font.textToPoints !== 'function' || typeof drawExtrudedPolyOptimized !== 'function') {
+            // fallback to plain text
+            push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop();
+            return;
+        }
+
+        // Sample points for the text at origin (we'll recentre)
+        const pts = font.textToPoints(str, 0, 0, fontSize, { sampleFactor: 0.15 });
+        if (!pts || pts.length < 3) { push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop(); return; }
+
+        // Build layer cache from points
+        const layerCache = this.buildLayerCacheFromPoints(pts, colorRGB);
+        if (!layerCache) { push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop(); return; }
+
+        // Draw sides and top. drawExtrudedPolyOptimized expects normalized coords and a scale r (in pixels)
+        push();
+        translate(cx, cy);
+        // We will use r = 1 here because our vertexData is in font pixel units; pass r = 1 so function multiplies directly by r.
+        // However drawExtrudedPolyOptimized expects coordinates in normalized units; to compensate, pass r = 1 and rely on vertexData being in pixel units.
+        // To approximate ships style extrusion, set layerIndex 0 and mode both.
+        try {
+            // Draw sides first
+            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'sides');
+            // Draw top face
+            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'top');
+
+            // Optionally add a thin stroke on top for clarity
+            noFill(); stroke(0, 100, 200); strokeWeight(1);
+            beginShape();
+            for (let v of layerCache.vertexData) vertex(v.x, v.y);
+            endShape(CLOSE);
+        } catch (e) {
+            // Fallback if anything goes wrong
+            pop(); push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop(); return;
+        }
+        pop();
+    }
+
     fireTitleScreenWeapon(ship) {
         if (!ship.weapon || !ship.def) {
             return;
@@ -537,31 +618,24 @@ class TitleScreen {
 
         // Rest of the drawing code remains unchanged
 
-        // Draw Title Text with glow effect
+        // Draw Title Text using extruded low-poly style (uses same extrusion direction as ships)
         push();
-        textFont(font); 
-        
-        // Glow effect
+        // Glow / soft background layers (draw several light extrusions)
         for (let i = 5; i > 0; i--) {
-            textSize(100 + i);
-            textAlign(CENTER, CENTER);
-            fill(0, 80 + i*20, 155, 50/i);
-            text("SubSpace Elite", width/2 + random(-1, 1), this.titleY + random(-1, 1));
+
+            const size = 200 + i * 2;
+            const depth = 6 + i * 1.5;
+            this.drawExtrudedText("SubSpace Elite", width/2, this.titleY, size, depth, 0, [0, 80 + i*20, 155]);
         }
-        
-        // Main title
-        textSize(100);
-        textAlign(CENTER, CENTER);
-        fill(0, 180, 255, 240);
-        stroke(0, 100, 200, 240);
-        strokeWeight(3);
-        text("SubSpace Elite", width/2, this.titleY);
-        
+
+  
         // Author Credit
+        textFont(font);
         textSize(20);
         fill(200, 200, 255, this.authorAlpha);
         noStroke();
-        text("Christian Nold, Easter 2025", width/2, this.titleY + 80);
+        textAlign(CENTER, CENTER);
+        text("Christian Nold, Easter 2025", width/2, this.titleY + 120);
         pop();
         
         // Draw "Click to Continue" Prompt with pulsing effect
