@@ -752,10 +752,10 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Central bus as a short cylinder (many-sided prism for smooth look)
-        Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.28, color(200, 200, 220), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.28, color(200, 200, 220), obj.angle, sunAngle);
 
         // Slight top cap highlight for readability
-        Draw3D.drawBox3D(0, bob - size * 0.08, size * 0.22, size * 0.10, size * 0.02, color(175, 180, 195), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.08, size * 0.22, size * 0.10, size * 0.02, color(175, 180, 195), obj.angle, sunAngle);
 
         // Enlarged solar sails: move further out and increase length/height
         const panelW = size * 1.4; // longer panels
@@ -763,34 +763,34 @@ const SpaceObjectRenderers = {
         const panelDepth = size * 0.025;
 
         // Thin struts connecting bus to panels (minimal, keep silhouette clean)
-        Draw3D.drawBox3D(-size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), obj.angle, sunAngle);
 
         // Left large panel (extruded plate)
-        Draw3D.drawBox3D(-size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), obj.angle, sunAngle);
         // Add a few bold ribs to sell the panel segmentation
         for (let g = -2; g <= 2; g++) {
             const gy = g * (panelH * 0.25);
-            Draw3D.drawBox3D(-size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), 0, sunAngle);
+            Draw3D.drawBox3D(-size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), obj.angle, sunAngle);
         }
 
         // Right large panel
-        Draw3D.drawBox3D(size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), 0, sunAngle);
+        Draw3D.drawBox3D(size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), obj.angle, sunAngle);
         for (let g = -2; g <= 2; g++) {
             const gy = g * (panelH * 0.25);
-            Draw3D.drawBox3D(size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), 0, sunAngle);
+            Draw3D.drawBox3D(size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), obj.angle, sunAngle);
         }
 
         // Keep only a single small nav/status light
         const flash = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.12);
-        Draw3D.drawBox3D(0, -size * 0.12 + bob, 4, 4, 2, color(255, 120, 100, 255 * flash), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.12 + bob, 4, 4, 2, color(255, 120, 100, 255 * flash), obj.angle, sunAngle);
     },
 
     fuelDepot: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // platform shadow/base
-        Draw3D.drawRing3D(0, size * 0.18 + bob, size * 0.44, size * 0.13, 12, size * 0.02, color(24, 28, 32), 0, sunAngle);
+        Draw3D.drawRing3D(0, size * 0.18 + bob, size * 0.44, size * 0.13, 12, size * 0.02, color(24, 28, 32), obj.angle, sunAngle);
 
         // tanks (three vertical tanks)
         const tankW = size * 0.22;
@@ -800,28 +800,28 @@ const SpaceObjectRenderers = {
             const ty = -size * 0.05 + bob;
             
             // tank body
-            Draw3D.drawPrism(tx, ty, tankW * 0.5, 8, tankH, color(120, 130, 140), 0, sunAngle);
+            Draw3D.drawPrism(tx, ty, tankW * 0.5, 8, tankH, color(120, 130, 140), obj.angle, sunAngle);
             
             // top and bottom caps
-            Draw3D.drawPrism(tx, ty - tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), 0, sunAngle);
-            Draw3D.drawPrism(tx, ty + tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), 0, sunAngle);
+            Draw3D.drawPrism(tx, ty - tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), obj.angle, sunAngle);
+            Draw3D.drawPrism(tx, ty + tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), obj.angle, sunAngle);
 
             // inspection window / gauge
-            Draw3D.drawBox3D(tx, ty - tankH * 0.08, tankW * 0.28, tankH * 0.36, size * 0.02, color(18, 100, 160, 200), 0, sunAngle);
+            Draw3D.drawBox3D(tx, ty - tankH * 0.08, tankW * 0.28, tankH * 0.36, size * 0.02, color(18, 100, 160, 200), obj.angle, sunAngle);
 
             // small status lights
             const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + i);
-            Draw3D.drawBox3D(tx - tankW * 0.25, ty - tankH * 0.25, 4, 4, 2, color(255 * (1 - flash), 255 * flash, 80, 220), 0, sunAngle);
-            Draw3D.drawBox3D(tx + tankW * 0.25, ty + tankH * 0.25, 3, 3, 2, color(255 * (1 - flash), 255 * flash, 80, 220), 0, sunAngle);
+            Draw3D.drawBox3D(tx - tankW * 0.25, ty - tankH * 0.25, 4, 4, 2, color(255 * (1 - flash), 255 * flash, 80, 220), obj.angle, sunAngle);
+            Draw3D.drawBox3D(tx + tankW * 0.25, ty + tankH * 0.25, 3, 3, 2, color(255 * (1 - flash), 255 * flash, 80, 220), obj.angle, sunAngle);
         }
 
         // manifold pipe connecting tanks
-        Draw3D.drawBox3D(0, -size * 0.15 + bob, tankW * 2.5, size * 0.05, size * 0.05, color(90, 90, 100), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.15 + bob, tankW * 2.5, size * 0.05, size * 0.05, color(90, 90, 100), obj.angle, sunAngle);
 
         // glowing manifold indicator
         const phase = (anim && typeof anim.fuelPulse === 'number') ? anim.fuelPulse : obj.bobPhase;
         const glow = 0.6 + 0.4 * Math.sin(phase * 0.006);
-        Draw3D.drawBox3D(0, -size * 0.15 + bob, size * 0.36 * (0.9 + 0.1 * glow), size * 0.12 * (0.9 + 0.1 * glow), size * 0.05, color(80, 200, 220, 80 + 80 * glow), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.15 + bob, size * 0.36 * (0.9 + 0.1 * glow), size * 0.12 * (0.9 + 0.1 * glow), size * 0.05, color(80, 200, 220, 80 + 80 * glow), obj.angle, sunAngle);
 
         // fueling hoses with animated flow particles (simulated with small boxes)
         for (let h = -1; h <= 1; h += 2) {
@@ -836,7 +836,7 @@ const SpaceObjectRenderers = {
                 const t = s / segments;
                 const bx = bezierPoint(hx, hx + h * (size * 0.18), tx - h * (size * 0.12), tx, t);
                 const by = bezierPoint(hy, hy + size * 0.08, ty - size * 0.06, ty, t);
-                Draw3D.drawBox3D(bx, by, 3, 3, 3, color(60, 120, 140, 180), 0, sunAngle);
+                Draw3D.drawBox3D(bx, by, 3, 3, 3, color(60, 120, 140, 180), obj.angle, sunAngle);
             }
 
             // animated flow dots along hose
@@ -845,7 +845,7 @@ const SpaceObjectRenderers = {
                 const t = ( (hosePhase * 0.004) + p * 0.24 ) % 1;
                 const bx = bezierPoint(hx, hx + h * (size * 0.18), tx - h * (size * 0.12), tx, t);
                 const by = bezierPoint(hy, hy + size * 0.08, ty - size * 0.06, ty, t);
-                Draw3D.drawBox3D(bx, by, 3, 2, 3, color(80, 200, 255, 180 - p * 30), 0, sunAngle);
+                Draw3D.drawBox3D(bx, by, 3, 2, 3, color(80, 200, 255, 180 - p * 30), obj.angle, sunAngle);
             }
         }
 
@@ -859,28 +859,28 @@ const SpaceObjectRenderers = {
             fd.ang += 0.0025;
             const dx = Math.cos(fd.ang) * fd.dist;
             const dy = Math.sin(fd.ang) * fd.dist * 0.38 + bob * 0.02;
-            Draw3D.drawBox3D(dx, dy, 6, 4, 4, color(220, 200, 160), 0, sunAngle);
+            Draw3D.drawBox3D(dx, dy, 6, 4, 4, color(220, 200, 160), obj.angle, sunAngle);
             // Trail
-            Draw3D.drawBox3D(dx - Math.cos(fd.ang) * 6, dy - Math.sin(fd.ang) * 4, 3, 2, 2, color(200, 180, 140, 120), 0, sunAngle);
+            Draw3D.drawBox3D(dx - Math.cos(fd.ang) * 6, dy - Math.sin(fd.ang) * 4, 3, 2, 2, color(200, 180, 140, 120), obj.angle, sunAngle);
         }
 
         // landing/warning lights and small markers
         const warn = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.28);
-        Draw3D.drawBox3D(0, size * 0.38 + bob, 6, 4, 4, color(255, 100, 60, 220 * warn), 0, sunAngle);
-        Draw3D.drawBox3D(-size * 0.18, size * 0.36 + bob, 4, 3, 3, color(255, 255, 0, 180 * warn), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.38 + bob, 6, 4, 4, color(255, 100, 60, 220 * warn), obj.angle, sunAngle);
+        Draw3D.drawBox3D(-size * 0.18, size * 0.36 + bob, 4, 3, 3, color(255, 255, 0, 180 * warn), obj.angle, sunAngle);
     },
 
     telescope: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         
         // Main cylindrical body
-        Draw3D.drawPrism(0, bob, size * 0.12, 8, size * 0.8, color(180, 190, 200), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.12, 8, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
         
         // Top cap
-        Draw3D.drawPrism(0, bob - size * 0.4, size * 0.14, 8, size * 0.05, color(160, 170, 180), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.4, size * 0.14, 8, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
         
         // Bottom base
-        Draw3D.drawPrism(0, bob + size * 0.4, size * 0.16, 8, size * 0.1, color(140, 150, 160), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + size * 0.4, size * 0.16, 8, size * 0.1, color(140, 150, 160), obj.angle, sunAngle);
 
         // Deployable parabolic dish
         push();
@@ -890,8 +890,8 @@ const SpaceObjectRenderers = {
         
         // Dish segments (approximated with a flattened cone/prism or just a ring for now)
         // Let's use a ring for the dish rim and a smaller prism for the center
-        Draw3D.drawRing3D(size * 0.08, 0, size * 0.18, size * 0.05, 6, size * 0.05, color(220, 230, 240), dishAng, sunAngle);
-        Draw3D.drawPrism(size * 0.08, 0, size * 0.05, 6, size * 0.05, color(100, 110, 120), dishAng, sunAngle);
+        Draw3D.drawRing3D(size * 0.08, 0, size * 0.18, size * 0.05, 6, size * 0.05, color(220, 230, 240), obj.angle + (dishAng), sunAngle);
+        Draw3D.drawPrism(size * 0.08, 0, size * 0.05, 6, size * 0.05, color(100, 110, 120), obj.angle + (dishAng), sunAngle);
         
         // Support struts
         for (let s = 0; s < 3; s++) {
@@ -908,7 +908,7 @@ const SpaceObjectRenderers = {
             push();
             translate(midX, midY);
             rotate(ang);
-            Draw3D.drawBox3D(0, 0, len, 1, 1, color(120, 130, 140, 150), dishAng + ang, sunAngle);
+            Draw3D.drawBox3D(0, 0, len, 1, 1, color(120, 130, 140, 150), obj.angle + (dishAng + ang), sunAngle);
             pop();
         }
 
@@ -916,33 +916,33 @@ const SpaceObjectRenderers = {
 
         // Solar arrays
         // Left
-        Draw3D.drawBox3D(-size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, size * 0.02, color(40, 70, 120), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, size * 0.02, color(40, 70, 120), obj.angle, sunAngle);
         // Right
-        Draw3D.drawBox3D(size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, size * 0.02, color(40, 70, 120), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.5, bob - size * 0.1, size * 0.4, size * 0.06, size * 0.02, color(40, 70, 120), obj.angle, sunAngle);
 
         // Instrument boom
         push();
         translate(size * 0.2, bob - size * 0.07);
         rotate(PI/4);
-        Draw3D.drawBox3D(0, 0, size * 0.3, size * 0.02, size * 0.02, color(130, 140, 150), PI/4, sunAngle);
+        Draw3D.drawBox3D(0, 0, size * 0.3, size * 0.02, size * 0.02, color(130, 140, 150), obj.angle + (PI/4), sunAngle);
         pop();
         
         // Sensors on boom
-        Draw3D.drawPrism(size * 0.35, bob - size * 0.15, size * 0.04, 6, size * 0.04, color(200, 210, 220), 0, sunAngle);
+        Draw3D.drawPrism(size * 0.35, bob - size * 0.15, size * 0.04, 6, size * 0.04, color(200, 210, 220), obj.angle, sunAngle);
 
         // Antennas
-        Draw3D.drawPrism(-size * 0.08, bob - size * 0.2, size * 0.03, 4, size * 0.1, color(120, 130, 140), 0, sunAngle);
-        Draw3D.drawPrism(size * 0.08, bob - size * 0.2, size * 0.03, 4, size * 0.1, color(120, 130, 140), 0, sunAngle);
+        Draw3D.drawPrism(-size * 0.08, bob - size * 0.2, size * 0.03, 4, size * 0.1, color(120, 130, 140), obj.angle, sunAngle);
+        Draw3D.drawPrism(size * 0.08, bob - size * 0.2, size * 0.03, 4, size * 0.1, color(120, 130, 140), obj.angle, sunAngle);
 
         // Cooling fins
-        Draw3D.drawBox3D(-size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, size * 0.1, color(160, 170, 180, 150), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, size * 0.1, color(160, 170, 180, 150), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.04, bob + size * 0.1, size * 0.02, size * 0.3, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
 
         // Flashing lights
         const flash1 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.12);
-        Draw3D.drawBox3D(-size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(255, 255, 0, 255 * flash1), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(255, 255, 0, 255 * flash1), obj.angle, sunAngle);
         const flash2 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.12 + 1);
-        Draw3D.drawBox3D(size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(0, 255, 255, 255 * flash2), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(0, 255, 255, 255 * flash2), obj.angle, sunAngle);
     },
 
     relay: function(obj, size, anim, bob) {
@@ -953,7 +953,7 @@ const SpaceObjectRenderers = {
         const bobOsc = Math.sin(obj.bobPhase * 0.006) * (size * 0.01);
 
         // Base ring and heavier footprint to ground the object visually
-        Draw3D.drawRing3D(0, bob + bobOsc + size * 0.02, size * 0.52, size * 0.06, 12, size * 0.02, color(110, 120, 130), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob + bobOsc + size * 0.02, size * 0.52, size * 0.06, 12, size * 0.02, color(110, 120, 130), obj.angle, sunAngle);
 
         // Prepare dish geometry so we can draw back faces first, hub, then front faces
         const dishCount = 4;
@@ -975,7 +975,7 @@ const SpaceObjectRenderers = {
             push();
             translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
             rotate(armAng);
-            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(130, 135, 140), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(130, 135, 140), obj.angle, sunAngle);
             pop();
 
             // darker, recessed dish plate
@@ -986,16 +986,16 @@ const SpaceObjectRenderers = {
                 { x: -size * 0.16, y: -size * 0.06 },
                 { x: 0, y: 0 },
                 { x: -size * 0.16, y: size * 0.06 }
-            ], size * 0.05, color(180, 190, 200, 180), 0, sunAngle, true);
+            ], size * 0.05, color(180, 190, 200, 180), obj.angle, sunAngle, true);
             pop();
         }
 
         // Hub core (draw after back dishes so it layers on top)
-        Draw3D.drawPrism(0, bob + bobOsc, size * 0.22, 6, size * 0.18, color(190, 190, 200), 0, sunAngle);
-        Draw3D.drawPrism(0, bob + bobOsc - size * 0.06, size * 0.18, 6, size * 0.06, color(220, 220, 230), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + bobOsc, size * 0.22, 6, size * 0.18, color(190, 190, 200), obj.angle, sunAngle);
+        Draw3D.drawPrism(0, bob + bobOsc - size * 0.06, size * 0.18, 6, size * 0.06, color(220, 220, 230), obj.angle, sunAngle);
 
         // Central spire/antenna
-        Draw3D.drawPrism(0, bob + bobOsc - size * 0.08, size * 0.04, 6, size * 0.12, color(230, 230, 240), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + bobOsc - size * 0.08, size * 0.04, 6, size * 0.12, color(230, 230, 240), obj.angle, sunAngle);
 
         // Draw front-facing dishes (so they overlap the hub correctly)
         for (let dd of dishes) {
@@ -1005,7 +1005,7 @@ const SpaceObjectRenderers = {
             push();
             translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
             rotate(armAng);
-            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(140, 145, 150), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(140, 145, 150), obj.angle, sunAngle);
             pop();
 
             // brighter face dish with slight animated tilt
@@ -1016,11 +1016,11 @@ const SpaceObjectRenderers = {
                 { x: -size * 0.16, y: -size * 0.06 },
                 { x: 0, y: 0 },
                 { x: -size * 0.16, y: size * 0.06 }
-            ], size * 0.05, color(230, 235, 240), 0, sunAngle, true);
+            ], size * 0.05, color(230, 235, 240), obj.angle, sunAngle, true);
 
             // pulsing receiver dot
             const pulse = 0.6 + 0.4 * Math.sin(relayPhase * 1.8 + dd.i);
-            Draw3D.drawBox3D(dd.lx - Math.cos(dd.a) * size * 0.03, bob + bobOsc + dd.ly - Math.sin(dd.a) * size * 0.03, 4 * pulse, 3 * pulse, 2, color(255, 220, 120, 200), 0, sunAngle);
+            Draw3D.drawBox3D(dd.lx - Math.cos(dd.a) * size * 0.03, bob + bobOsc + dd.ly - Math.sin(dd.a) * size * 0.03, 4 * pulse, 3 * pulse, 2, color(255, 220, 120, 200), obj.angle, sunAngle);
             pop();
         }
 
@@ -1029,26 +1029,26 @@ const SpaceObjectRenderers = {
             const a = p * (TWO_PI / 6) + relayPhase * 0.4;
             const lx = Math.cos(a) * size * 0.43;
             const ly = Math.sin(a) * size * 0.12;
-            Draw3D.drawBox3D(lx, ly + bob + bobOsc, 4, 3, 2, color(200, 210, 230), 0, sunAngle);
+            Draw3D.drawBox3D(lx, ly + bob + bobOsc, 4, 3, 2, color(200, 210, 230), obj.angle, sunAngle);
         }
 
         // Status lights (central, readable)
         const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
-        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 6, 6, 3, color(255, 200, 80, 200 * flash), 0, sunAngle);
-        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 3, 3, 3, color(255, 230, 160, 255 * flash), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 6, 6, 3, color(255, 200, 80, 200 * flash), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 3, 3, 3, color(255, 230, 160, 255 * flash), obj.angle, sunAngle);
 
         // Subtle concentric rings for depth/scale reference with slow pulse
         const ringPulse = 0.85 + 0.15 * Math.sin(obj.bobPhase * 0.008);
-        Draw3D.drawRing3D(0, bob + bobOsc, size * 0.5 * ringPulse, size * 0.02, 12, size * 0.01, color(130, 140, 150, 60), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob + bobOsc, size * 0.5 * ringPulse, size * 0.02, 12, size * 0.01, color(130, 140, 150, 60), obj.angle, sunAngle);
     },
 
     commDish: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base pedestal
-        Draw3D.drawBox3D(0, bob + size * 0.18, size * 0.18, size * 0.12, size * 0.1, color(110, 120, 130), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.18, size * 0.18, size * 0.12, size * 0.1, color(110, 120, 130), obj.angle, sunAngle);
         // Pedestal flange
-        Draw3D.drawRing3D(0, bob + size * 0.25, size * 0.28, size * 0.06, 12, size * 0.02, color(90, 95, 100), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob + size * 0.25, size * 0.28, size * 0.06, 12, size * 0.02, color(90, 95, 100), obj.angle, sunAngle);
 
         // Swivel ring (rotating base)
         push();
@@ -1065,9 +1065,9 @@ const SpaceObjectRenderers = {
         translate(0, bob - size * 0.06);
         
         // Main dish surface (using a large ring for the rim and a smaller one inside)
-        Draw3D.drawRing3D(0, 0, size * 0.6, size * 0.1, 12, size * 0.1, color(220, 230, 240), sweepAng, sunAngle);
-        Draw3D.drawRing3D(0, 0, size * 0.4, size * 0.08, 12, size * 0.08, color(200, 210, 220), sweepAng, sunAngle);
-        Draw3D.drawPrism(0, 0, size * 0.2, 8, size * 0.05, color(180, 190, 200), sweepAng, sunAngle);
+        Draw3D.drawRing3D(0, 0, size * 0.6, size * 0.1, 12, size * 0.1, color(220, 230, 240), obj.angle + (sweepAng), sunAngle);
+        Draw3D.drawRing3D(0, 0, size * 0.4, size * 0.08, 12, size * 0.08, color(200, 210, 220), obj.angle + (sweepAng), sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.2, 8, size * 0.05, color(180, 190, 200), obj.angle + (sweepAng), sunAngle);
 
         // Support struts to feed horn
         stroke(140, 150, 160); strokeWeight(1.2);
@@ -1089,8 +1089,8 @@ const SpaceObjectRenderers = {
         translate(0, -size * 0.14);
         const tiltAng = anim ? anim.commDishTilt : 0;
         rotate(tiltAng);
-        Draw3D.drawBox3D(0, 0, size * 0.06, size * 0.1, size * 0.06, color(70, 80, 90), sweepAng + tiltAng, sunAngle);
-        Draw3D.drawPrism(0, -size * 0.06, size * 0.04, 6, size * 0.02, color(200, 210, 220), sweepAng + tiltAng, sunAngle);
+        Draw3D.drawBox3D(0, 0, size * 0.06, size * 0.1, size * 0.06, color(70, 80, 90), obj.angle + (sweepAng + tiltAng), sunAngle);
+        Draw3D.drawPrism(0, -size * 0.06, size * 0.04, 6, size * 0.02, color(200, 210, 220), obj.angle + (sweepAng + tiltAng), sunAngle);
         pop();
 
         // Translucent signal sweep cone (animated)
@@ -1121,11 +1121,11 @@ const SpaceObjectRenderers = {
         const cylH = size * 0.6;
 
         // Main body (cylinder)
-        Draw3D.drawPrism(0, bob, cylW * 0.5, 12, cylH, color(175, 165, 155), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, cylW * 0.5, 12, cylH, color(175, 165, 155), obj.angle, sunAngle);
         
         // End caps
-        Draw3D.drawPrism(0, bob - cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), 0, sunAngle);
-        Draw3D.drawPrism(0, bob + cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), obj.angle, sunAngle);
+        Draw3D.drawPrism(0, bob + cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), obj.angle, sunAngle);
 
         // Windows
         const winCount = 5;
@@ -1136,7 +1136,7 @@ const SpaceObjectRenderers = {
             const flick = 0.5 + 0.5 * Math.sin(anim ? (anim.habitatWindowPhase + i * 0.6) : obj.bobPhase);
             
             // Window frame
-            Draw3D.drawBox3D(wx, wy, size * 0.12, size * 0.2, size * 0.02, color(20, 40, 60), 0, sunAngle);
+            Draw3D.drawBox3D(wx, wy, size * 0.12, size * 0.2, size * 0.02, color(20, 40, 60), obj.angle, sunAngle);
             
             // Window glass (lit)
             fill(30, Math.floor(110 + 90 * flick), Math.floor(180 + 40 * flick), Math.floor(160 * (0.6 + 0.4 * flick)));
@@ -1144,11 +1144,11 @@ const SpaceObjectRenderers = {
         }
 
         // Lifeboat pods
-        Draw3D.drawBox3D(-size * 0.5, -size * 0.06 + bob, size * 0.12, size * 0.06, size * 0.04, color(140, 130, 120), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.5, -size * 0.06 + bob, size * 0.12, size * 0.06, size * 0.04, color(140, 130, 120), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.5, -size * 0.06 + bob, size * 0.12, size * 0.06, size * 0.04, color(140, 130, 120), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.5, -size * 0.06 + bob, size * 0.12, size * 0.06, size * 0.04, color(140, 130, 120), obj.angle, sunAngle);
 
         // Docking ring
-        Draw3D.drawRing3D(0, bob, cylW * 0.55, size * 0.05, 12, size * 0.02, color(120), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob, cylW * 0.55, size * 0.05, 12, size * 0.02, color(120), obj.angle, sunAngle);
 
         // Flashing navigation lights
         const navFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2);
@@ -1162,7 +1162,7 @@ const SpaceObjectRenderers = {
         translate(size * 0.55, bob);
         const panelAng = Math.sin(obj.bobPhase * 0.002) * 0.1;
         rotate(panelAng);
-        Draw3D.drawBox3D(size * 0.1, 0, size * 0.2, size * 0.08, size * 0.01, color(40, 80, 160), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.1, 0, size * 0.2, size * 0.08, size * 0.01, color(40, 80, 160), obj.angle, sunAngle);
         pop();
         
         // Insignia
@@ -1184,7 +1184,7 @@ const SpaceObjectRenderers = {
                 rotate(tumbleAngle);
                 
                 // Draw shard as a prism
-                Draw3D.drawPrism(0, 0, size * 0.12 * sh.rrScale, sh.verts, size * 0.05, color(140, 120, 110), 0, sunAngle);
+                Draw3D.drawPrism(0, 0, size * 0.12 * sh.rrScale, sh.verts, size * 0.05, color(140, 120, 110), obj.angle, sunAngle);
                 
                 pop();
             }
@@ -1227,17 +1227,17 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         
         // Body
-        Draw3D.drawPrism(0, bob, size * 0.18, 4, size * 0.9, color(200, 200, 220), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.18, 4, size * 0.9, color(200, 200, 220), obj.angle, sunAngle);
         
         // Top highlight edge
-        Draw3D.drawPrism(0, bob - size * 0.45, size * 0.16, 4, size * 0.04, color(230, 230, 250), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.45, size * 0.16, 4, size * 0.04, color(230, 230, 250), obj.angle, sunAngle);
         
         // Nose cone (approximated with stacked prisms)
-        Draw3D.drawPrism(0, bob - size * 0.55, size * 0.09, 4, size * 0.15, color(150, 150, 170), 0, sunAngle);
-        Draw3D.drawPrism(0, bob - size * 0.65, size * 0.01, 4, size * 0.1, color(190, 190, 210), 0, sunAngle); // Tip
+        Draw3D.drawPrism(0, bob - size * 0.55, size * 0.09, 4, size * 0.15, color(150, 150, 170), obj.angle, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.65, size * 0.01, 4, size * 0.1, color(190, 190, 210), obj.angle, sunAngle); // Tip
         
         // Solar panel
-        Draw3D.drawBox3D(0, size * 0.28 + bob, size * 0.36, size * 0.08, size * 0.02, color(30, 80, 160), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.28 + bob, size * 0.36, size * 0.08, size * 0.02, color(30, 80, 160), obj.angle, sunAngle);
         
         // Blinking nav light
         const blink = 0.5 + 0.5 * Math.sin(anim ? anim.probeBlink : obj.bobPhase * 0.1);
@@ -1290,10 +1290,10 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main body
-        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.18, size * 0.5, size * 0.18, color(100, 100, 110), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.18, size * 0.5, size * 0.18, color(100, 100, 110), obj.angle, sunAngle);
         
         // Top cap
-        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.16, size * 0.04, size * 0.16, color(130, 130, 140), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.16, size * 0.04, size * 0.16, color(130, 130, 140), obj.angle, sunAngle);
         
         // Volumetric light cone
         const pulse = (Math.sin(obj.bobPhase * 1.6) + 1) * 0.5;
@@ -1349,18 +1349,18 @@ const SpaceObjectRenderers = {
         pop();
         
         // Base
-        Draw3D.drawBox3D(0, bob + size * 0.3, size * 0.1, size * 0.08, size * 0.1, color(80, 80, 90), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.3, size * 0.1, size * 0.08, size * 0.1, color(80, 80, 90), obj.angle, sunAngle);
     },
 
     outpost: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         
         // Central hub (large cylindrical core)
-        Draw3D.drawPrism(0, bob, size * 0.15, 12, size * 0.8, color(180, 190, 200), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.15, 12, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
         
         // Hub end caps
-        Draw3D.drawPrism(0, bob - size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), 0, sunAngle);
-        Draw3D.drawPrism(0, bob + size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
+        Draw3D.drawPrism(0, bob + size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
 
         // Multiple radial modules
         for (let m = 0; m < 6; m++) {
@@ -1375,14 +1375,14 @@ const SpaceObjectRenderers = {
             push();
             translate(cx, cy);
             rotate(ang);
-            Draw3D.drawBox3D(size * 0.05, 0, size * 0.1, size * 0.05, size * 0.05, color(150, 160, 170), 0, sunAngle);
+            Draw3D.drawBox3D(size * 0.05, 0, size * 0.1, size * 0.05, size * 0.05, color(150, 160, 170), obj.angle, sunAngle);
             pop();
 
             // Module body
             push();
             translate(mx, my);
             rotate(ang);
-            Draw3D.drawBox3D(0, 0, size * 0.2, size * 0.12, size * 0.1, color(170, 180, 190), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, size * 0.2, size * 0.12, size * 0.1, color(170, 180, 190), obj.angle, sunAngle);
             
             // Windows/lights
             fill(255, 255, 200, 180);
@@ -1394,20 +1394,20 @@ const SpaceObjectRenderers = {
 
         // Large solar arrays
         // Left
-        Draw3D.drawBox3D(-size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, size * 0.02, color(50, 80, 130), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, size * 0.02, color(50, 80, 130), obj.angle, sunAngle);
         // Right
-        Draw3D.drawBox3D(size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, size * 0.02, color(50, 80, 130), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.8, bob - size * 0.1, size * 0.6, size * 0.08, size * 0.02, color(50, 80, 130), obj.angle, sunAngle);
         // Top
-        Draw3D.drawBox3D(0, bob - size * 0.8, size * 0.08, size * 0.6, size * 0.02, color(50, 80, 130), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.8, size * 0.08, size * 0.6, size * 0.02, color(50, 80, 130), obj.angle, sunAngle);
         // Bottom
-        Draw3D.drawBox3D(0, bob + size * 0.8, size * 0.08, size * 0.6, size * 0.02, color(50, 80, 130), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.8, size * 0.08, size * 0.6, size * 0.02, color(50, 80, 130), obj.angle, sunAngle);
 
         // Communication antennas
         for (let a = 0; a < 4; a++) {
             const aang = a * (TWO_PI / 4) + (anim ? anim.stationAntenna : 0);
             const ax = Math.cos(aang) * size * 0.35;
             const ay = Math.sin(aang) * size * 0.35 + bob;
-            Draw3D.drawPrism(ax, ay, size * 0.04, 6, size * 0.06, color(120, 130, 140), 0, sunAngle);
+            Draw3D.drawPrism(ax, ay, size * 0.04, 6, size * 0.06, color(120, 130, 140), obj.angle, sunAngle);
             // Antenna rods
             stroke(100, 110, 120);
             strokeWeight(1.5);
@@ -1424,7 +1424,7 @@ const SpaceObjectRenderers = {
             push();
             translate(dx, dy);
             rotate(dang);
-            Draw3D.drawBox3D(0, 0, size * 0.15, size * 0.06, size * 0.04, color(140, 150, 160), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, size * 0.15, size * 0.06, size * 0.04, color(140, 150, 160), obj.angle, sunAngle);
             // Docking lights
             fill(0, 255, 0, 200);
             ellipse(-size * 0.05, 0, 4, 4);
@@ -1434,14 +1434,14 @@ const SpaceObjectRenderers = {
         }
 
         // Central radar/comms dome
-        Draw3D.drawPrism(0, bob - size * 0.3, size * 0.06, 8, size * 0.04, color(200, 210, 220), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.3, size * 0.06, 8, size * 0.04, color(200, 210, 220), obj.angle, sunAngle);
 
         // External cargo pods
         for (let p = 0; p < 2; p++) {
             const pang = p * Math.PI + (anim ? anim.stationPods : 0);
             const px = Math.cos(pang) * size * 0.5;
             const py = Math.sin(pang) * size * 0.3 + bob;
-            Draw3D.drawPrism(px, py, size * 0.05, 6, size * 0.08, color(120, 110, 100), 0, sunAngle);
+            Draw3D.drawPrism(px, py, size * 0.05, 6, size * 0.08, color(120, 110, 100), obj.angle, sunAngle);
         }
 
         // Flashing lights
@@ -1454,28 +1454,28 @@ const SpaceObjectRenderers = {
         ellipse(0, size * 0.5 + bob, 5, 5);
 
         // Heat radiators
-        Draw3D.drawBox3D(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
     },
 
     observatoryDome: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main support structure (hexagonal base)
-        Draw3D.drawPrism(0, bob, size * 0.5, 6, size * 0.2, color(120, 130, 140), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.5, 6, size * 0.2, color(120, 130, 140), obj.angle, sunAngle);
 
         // Secondary support rings
-        Draw3D.drawRing3D(0, bob, size * 0.9, size * 0.15, 12, size * 0.05, color(100, 110, 120), 0, sunAngle);
-        Draw3D.drawRing3D(0, bob - size * 0.1, size * 0.8, size * 0.12, 12, size * 0.05, color(100, 110, 120), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob, size * 0.9, size * 0.15, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
+        Draw3D.drawRing3D(0, bob - size * 0.1, size * 0.8, size * 0.12, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
 
         // Central support pillar
-        Draw3D.drawBox3D(0, bob - size * 0.25, size * 0.1, size * 0.5, size * 0.1, color(140, 150, 160), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.25, size * 0.1, size * 0.5, size * 0.1, color(140, 150, 160), obj.angle, sunAngle);
         
         // Elevator car
-        Draw3D.drawBox3D(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, size * 0.06, color(180, 190, 200), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, size * 0.06, color(180, 190, 200), obj.angle, sunAngle);
 
         // Massive observation dome (approximated with a prism/hemisphere)
-        Draw3D.drawPrism(0, bob - size * 0.45, size * 0.4, 12, size * 0.2, color(220, 240, 255, 100), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.45, size * 0.4, 12, size * 0.2, color(220, 240, 255, 100), obj.angle, sunAngle);
         
         // Dome frame
         stroke(90, 100, 110, 180);
@@ -1492,8 +1492,8 @@ const SpaceObjectRenderers = {
         translate(0, bob - size * 0.45);
         const sweepAng = anim ? anim.telescopeSweep : 0;
         rotate(sweepAng);
-        Draw3D.drawBox3D(0, 0, size * 0.12, size * 0.35, size * 0.12, color(60, 70, 80), 0, sunAngle);
-        Draw3D.drawPrism(0, -size * 0.2, size * 0.04, 8, size * 0.02, color(30, 40, 50), 0, sunAngle);
+        Draw3D.drawBox3D(0, 0, size * 0.12, size * 0.35, size * 0.12, color(60, 70, 80), obj.angle, sunAngle);
+        Draw3D.drawPrism(0, -size * 0.2, size * 0.04, 8, size * 0.02, color(30, 40, 50), obj.angle, sunAngle);
         pop();
 
         // Secondary telescope arrays
@@ -1501,7 +1501,7 @@ const SpaceObjectRenderers = {
             const sa = s * TWO_PI / 3;
             const sx = Math.cos(sa) * size * 0.25;
             const sy = Math.sin(sa) * size * 0.25 + bob - size * 0.3;
-            Draw3D.drawBox3D(sx, sy, size * 0.08, size * 0.2, size * 0.08, color(70, 80, 90), 0, sunAngle);
+            Draw3D.drawBox3D(sx, sy, size * 0.08, size * 0.2, size * 0.08, color(70, 80, 90), obj.angle, sunAngle);
         }
 
         // Research modules
@@ -1509,34 +1509,34 @@ const SpaceObjectRenderers = {
             const ma = m * TWO_PI / 4;
             const mx = Math.cos(ma) * size * 0.4;
             const my = Math.sin(ma) * size * 0.4 + bob - size * 0.05;
-            Draw3D.drawBox3D(mx, my, size * 0.12, size * 0.08, size * 0.08, color(160, 170, 180), 0, sunAngle);
+            Draw3D.drawBox3D(mx, my, size * 0.12, size * 0.08, size * 0.08, color(160, 170, 180), obj.angle, sunAngle);
         }
 
         // Observation decks
         for (let d = 0; d < 2; d++) {
             const dy = bob - size * 0.35 + d * size * 0.1;
-            Draw3D.drawRing3D(0, dy, size * 0.5, size * 0.08, 12, size * 0.02, color(180, 190, 200, 150), 0, sunAngle);
+            Draw3D.drawRing3D(0, dy, size * 0.5, size * 0.08, 12, size * 0.02, color(180, 190, 200, 150), obj.angle, sunAngle);
         }
 
         // Solar power arrays
-        Draw3D.drawBox3D(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), obj.angle, sunAngle);
 
         // Communication arrays
-        Draw3D.drawPrism(-size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), 0, sunAngle);
-        Draw3D.drawPrism(size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), 0, sunAngle);
+        Draw3D.drawPrism(-size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), obj.angle, sunAngle);
+        Draw3D.drawPrism(size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), obj.angle, sunAngle);
 
         // Atmospheric sensors
         for (let w = 0; w < 6; w++) {
             const wa = w * TWO_PI / 6;
             const wx = Math.cos(wa) * size * 0.45;
             const wy = Math.sin(wa) * size * 0.45 + bob - size * 0.1;
-            Draw3D.drawPrism(wx, wy, size * 0.015, 4, size * 0.02, color(140, 150, 160), 0, sunAngle);
+            Draw3D.drawPrism(wx, wy, size * 0.015, 4, size * 0.02, color(140, 150, 160), obj.angle, sunAngle);
         }
 
         // Cooling systems
-        Draw3D.drawBox3D(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), obj.angle, sunAngle);
 
         // Lights
         const obsFlash1 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0));
@@ -1554,17 +1554,17 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main armored hull
-        Draw3D.drawBox3D(0, bob, size * 0.8, size * 0.5, size * 0.2, color(60, 60, 70), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.8, size * 0.5, size * 0.2, color(60, 60, 70), obj.angle, sunAngle);
         
         // Armor plating layers
-        Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), obj.angle, sunAngle);
         
         // Reinforced corners
         for (let c = 0; c < 4; c++) {
             const cx = (c % 2 === 0 ? -1 : 1) * size * 0.35;
             const cy = (c < 2 ? -1 : 1) * size * 0.2 + bob;
-            Draw3D.drawPrism(cx, cy, size * 0.05, 6, size * 0.1, color(40, 40, 50), 0, sunAngle);
+            Draw3D.drawPrism(cx, cy, size * 0.05, 6, size * 0.1, color(40, 40, 50), obj.angle, sunAngle);
         }
 
         // Primary turret systems
@@ -1574,14 +1574,14 @@ const SpaceObjectRenderers = {
             const ty = Math.sin(tang) * size * 0.3 + bob;
             
             // Turret base
-            Draw3D.drawPrism(tx, ty, size * 0.075, 8, size * 0.05, color(70, 70, 80), 0, sunAngle);
+            Draw3D.drawPrism(tx, ty, size * 0.075, 8, size * 0.05, color(70, 70, 80), obj.angle, sunAngle);
             
             // Barrels
             push();
             translate(tx, ty);
             rotate(tang);
-            Draw3D.drawBox3D(-size * 0.03, -size * 0.06, size * 0.06, size * 0.15, size * 0.02, color(25, 25, 35), 0, sunAngle);
-            Draw3D.drawBox3D(size * 0.03, -size * 0.06, size * 0.06, size * 0.15, size * 0.02, color(25, 25, 35), 0, sunAngle);
+            Draw3D.drawBox3D(-size * 0.03, -size * 0.06, size * 0.06, size * 0.15, size * 0.02, color(25, 25, 35), obj.angle, sunAngle);
+            Draw3D.drawBox3D(size * 0.03, -size * 0.06, size * 0.06, size * 0.15, size * 0.02, color(25, 25, 35), obj.angle, sunAngle);
             pop();
         }
 
@@ -1590,7 +1590,7 @@ const SpaceObjectRenderers = {
             const mang = m * (TWO_PI / 8);
             const mx = Math.cos(mang) * size * 0.4;
             const my = Math.sin(mang) * size * 0.4 + bob;
-            Draw3D.drawBox3D(mx, my, size * 0.05, size * 0.1, size * 0.05, color(55, 55, 65), 0, sunAngle);
+            Draw3D.drawBox3D(mx, my, size * 0.05, size * 0.1, size * 0.05, color(55, 55, 65), obj.angle, sunAngle);
             // Missile tip
             fill(150, 30, 30);
             ellipse(mx, my - size * 0.05, size * 0.04, size * 0.03);
@@ -1603,7 +1603,7 @@ const SpaceObjectRenderers = {
             const sy = Math.sin(sang) * size * 0.25 + bob - size * 0.2;
 
             // Generator housing
-            Draw3D.drawPrism(sx, sy, size * 0.07, 6, size * 0.05, color(110, 130, 150), 0, sunAngle);
+            Draw3D.drawPrism(sx, sy, size * 0.07, 6, size * 0.05, color(110, 130, 150), obj.angle, sunAngle);
 
             // Pulsing shield visualization
             const basePhase = (anim ? anim.defensePulse : obj.bobPhase * 0.006) + s * 0.9;
@@ -1620,7 +1620,7 @@ const SpaceObjectRenderers = {
         translate(0, bob - size * 0.25);
         const chargeAng = anim ? anim.weaponCharge : 0;
         rotate(chargeAng);
-        Draw3D.drawPrism(0, 0, size * 0.1, 8, size * 0.06, color(100, 110, 120), 0, sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.1, 8, size * 0.06, color(100, 110, 120), obj.angle, sunAngle);
         // Scanning beams
         stroke(150, 200, 255, 120);
         strokeWeight(1.2);
@@ -1638,27 +1638,27 @@ const SpaceObjectRenderers = {
             const pang = p * (TWO_PI / 6);
             const px = Math.cos(pang) * size * 0.35;
             const py = Math.sin(pang) * size * 0.35 + bob + size * 0.1;
-            Draw3D.drawBox3D(px, py, size * 0.06, size * 0.04, size * 0.04, color(65, 65, 75), 0, sunAngle);
+            Draw3D.drawBox3D(px, py, size * 0.06, size * 0.04, size * 0.04, color(65, 65, 75), obj.angle, sunAngle);
             // Defense gun
-            Draw3D.drawBox3D(px, py - size * 0.03, size * 0.02, size * 0.05, size * 0.02, color(30, 30, 40), 0, sunAngle);
+            Draw3D.drawBox3D(px, py - size * 0.03, size * 0.02, size * 0.05, size * 0.02, color(30, 30, 40), obj.angle, sunAngle);
         }
 
         // Command and control center
-        Draw3D.drawBox3D(0, bob - size * 0.1, size * 0.3, size * 0.15, size * 0.1, color(80, 85, 90), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.1, size * 0.3, size * 0.15, size * 0.1, color(80, 85, 90), obj.angle, sunAngle);
         // Viewports
         fill(150, 180, 200, 120);
         for (let v = -1; v <= 1; v++) {
             ellipse(v * size * 0.08, bob - size * 0.1, size * 0.04, size * 0.03);
         }
         // Antenna array
-        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.06, size * 0.04, size * 0.02, color(100, 110, 120), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.06, size * 0.04, size * 0.02, color(100, 110, 120), obj.angle, sunAngle);
 
         // External armor reinforcement plates
         for (let a = 0; a < 12; a++) {
             const aang = a * (TWO_PI / 12);
             const ax = Math.cos(aang) * size * 0.32;
             const ay = Math.sin(aang) * size * 0.32 + bob;
-            Draw3D.drawPrism(ax, ay, size * 0.04, 6, size * 0.02, color(70, 70, 80, 160), 0, sunAngle);
+            Draw3D.drawPrism(ax, ay, size * 0.04, 6, size * 0.02, color(70, 70, 80, 160), obj.angle, sunAngle);
         }
 
         // Power conduits
@@ -1707,8 +1707,8 @@ const SpaceObjectRenderers = {
         }
 
         // Heat dissipation systems
-        Draw3D.drawBox3D(-size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, size * 0.04, color(130, 140, 150, 160), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, size * 0.04, color(130, 140, 150, 160), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, size * 0.04, color(130, 140, 150, 160), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.06, bob + size * 0.18, size * 0.04, size * 0.2, size * 0.04, color(130, 140, 150, 160), obj.angle, sunAngle);
 
         // Orbital maneuvering thrusters
         for (let t = 0; t < 8; t++) {
@@ -1745,8 +1745,8 @@ const SpaceObjectRenderers = {
 
         // Standalone shield generator: visible dome, emitter pylons, pulsing energy field and protective ring
         // Main housing
-        Draw3D.drawBox3D(0, bob, size * 0.36, size * 0.22, size * 0.15, color(110, 125, 140), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob + size * 0.06, size * 0.16, size * 0.08, size * 0.05, color(80, 95, 110), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.36, size * 0.22, size * 0.15, color(110, 125, 140), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.06, size * 0.16, size * 0.08, size * 0.05, color(80, 95, 110), obj.angle, sunAngle);
 
         // Emitter pylons around base
         for (let p = 0; p < 4; p++) {
@@ -1758,11 +1758,11 @@ const SpaceObjectRenderers = {
             push();
             translate(px * 0.9, py - size * 0.06);
             rotate(pa);
-            Draw3D.drawBox3D(0, 0, size * 0.1, size * 0.02, size * 0.02, color(140, 160, 180), pa, sunAngle);
+            Draw3D.drawBox3D(0, 0, size * 0.1, size * 0.02, size * 0.02, color(140, 160, 180), obj.angle + (pa), sunAngle);
             pop();
             
             // Emitter tip
-            Draw3D.drawBox3D(px, py, size * 0.06, size * 0.04, size * 0.04, color(130, 150, 170), 0, sunAngle);
+            Draw3D.drawBox3D(px, py, size * 0.06, size * 0.04, size * 0.04, color(130, 150, 170), obj.angle, sunAngle);
         }
 
         // Pulsing shield visualization (concentric faded rings)
@@ -1797,13 +1797,13 @@ const SpaceObjectRenderers = {
         ellipse(0, size * 0.2 + bob, size * 0.9, size * 0.24);
 
         // main low-slung structure
-        Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.28, size * 0.1, color(30, 30, 38), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.28, size * 0.1, color(30, 30, 38), obj.angle, sunAngle);
 
         // covered cargo crates / cages
         for (let i = -1; i <= 1; i++) {
             const cx = i * size * 0.22;
             const cy = bob + size * 0.06;
-            Draw3D.drawBox3D(cx, cy, size * 0.24, size * 0.16, size * 0.08, color(50, 40, 38), 0, sunAngle);
+            Draw3D.drawBox3D(cx, cy, size * 0.24, size * 0.16, size * 0.08, color(50, 40, 38), obj.angle, sunAngle);
             
             // Cage bars
             stroke(18, 18, 20, 120); strokeWeight(1);
@@ -1814,9 +1814,9 @@ const SpaceObjectRenderers = {
         // neon signage strips (animated pulse)
         const pulse = 0.6 + 0.4 * Math.sin(anim ? (anim.marketPulse || 0) : obj.bobPhase * 0.02);
         // red 'off' neon
-        Draw3D.drawBox3D(-size * 0.18, bob - size * 0.08, size * 0.36, 6, 2, color(160, 24, 24, 160 * pulse), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.18, bob - size * 0.08, size * 0.36, 6, 2, color(160, 24, 24, 160 * pulse), obj.angle, sunAngle);
         // cyan accent
-        Draw3D.drawBox3D(size * 0.18, bob - size * 0.08, size * 0.28, 4, 2, color(24, 180, 200, 140 * (0.6 + 0.4 * Math.cos(obj.bobPhase * 0.02))), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.18, bob - size * 0.08, size * 0.28, 4, 2, color(24, 180, 200, 140 * (0.6 + 0.4 * Math.cos(obj.bobPhase * 0.02))), obj.angle, sunAngle);
 
         // silhouette figures near entrances (tiny human shapes)
         fill(12, 12, 12);
@@ -1828,7 +1828,7 @@ const SpaceObjectRenderers = {
         }
 
         // small security drone(s)
-        Draw3D.drawBox3D(size * 0.38, bob - size * 0.02, 8, 6, 4, color(90, 90, 100), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.38, bob - size * 0.02, 8, 6, 4, color(90, 90, 100), obj.angle, sunAngle);
         stroke(80, 160, 200, 80); strokeWeight(0.8);
         line(size * 0.38, bob - size * 0.02, size * 0.48, bob - size * 0.06);
         noStroke();
@@ -1842,7 +1842,7 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Central bus
-        Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.12, size * 0.1, color(160, 160, 180), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.12, size * 0.1, color(160, 160, 180), obj.angle, sunAngle);
 
         // Sails
         const sailAngle = anim ? (anim.solarSailAngle + Math.sin(obj.bobPhase * 0.002) * anim.solarSailFlutter) : 0;
@@ -1852,8 +1852,8 @@ const SpaceObjectRenderers = {
         rotate(sailAngle);
         
         // Struts
-        // Draw3D.drawPrism(-size * 0.5, bob - size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), Math.PI/2, sunAngle);
-        // Draw3D.drawPrism(-size * 0.5, bob + size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), Math.PI/2, sunAngle);
+        // Draw3D.drawPrism(-size * 0.5, bob - size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), obj.angle + (Math.PI/2), sunAngle);
+        // Draw3D.drawPrism(-size * 0.5, bob + size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), obj.angle + (Math.PI/2), sunAngle);
         
         // Sail fabric (2D with 3D positioning context)
         fill(245, 245, 255, 230);
@@ -1909,7 +1909,7 @@ const SpaceObjectRenderers = {
         stroke(120, 120, 130, 120); strokeWeight(0.8);
         line(0, bob, px, py);
         noStroke();
-        Draw3D.drawBox3D(px, py, size * 0.05, size * 0.05, size * 0.05, color(220, 230, 240), 0, sunAngle);
+        Draw3D.drawBox3D(px, py, size * 0.05, size * 0.05, size * 0.05, color(220, 230, 240), obj.angle, sunAngle);
 
         // Nav lights
         const navFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.2);
@@ -1923,10 +1923,10 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Platform body
-        Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.7, size * 0.28, size * 0.1, color(80, 80, 80), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.7, size * 0.28, size * 0.1, color(80, 80, 80), obj.angle, sunAngle);
         
         // Central pylon
-        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.18, size * 0.46, size * 0.18, color(100, 100, 110), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.18, size * 0.46, size * 0.18, color(100, 100, 110), obj.angle, sunAngle);
 
         // Engines
         for (let i = -1; i <= 1; i++) {
@@ -1939,7 +1939,7 @@ const SpaceObjectRenderers = {
             noStroke();
             
             // Nozzle housing
-            Draw3D.drawPrism(nx, ny, size * 0.09, 8, size * 0.12, color(70, 70, 80), 0, sunAngle);
+            Draw3D.drawPrism(nx, ny, size * 0.09, 8, size * 0.12, color(70, 70, 80), obj.angle, sunAngle);
             
             // Inner glow
             const g = 0.5 + 0.45 * Math.sin((anim ? anim.engineGlow : 0.3) + i * 0.6 + obj.bobPhase * 0.015);
@@ -1972,7 +1972,7 @@ const SpaceObjectRenderers = {
         translate(0, bob + size * 0.1);
         const vaneAng = Math.sin(obj.bobPhase * 0.004) * 0.2;
         rotate(vaneAng);
-        Draw3D.drawBox3D(-size * 0.05, 0, size * 0.1, size * 0.25, size * 0.02, color(120, 130, 140, 150), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.05, 0, size * 0.1, size * 0.25, size * 0.02, color(120, 130, 140, 150), obj.angle, sunAngle);
         pop();
     },
 
@@ -1991,7 +1991,7 @@ const SpaceObjectRenderers = {
                 const y = (r - (rows - 1) / 2) * (ch + 6) + bob;
                 
                 // Container body
-                Draw3D.drawBox3D(x, y, cd, cw, ch, color(120 + r * 10, 110 + c * 8, 100), 0, sunAngle);
+                Draw3D.drawBox3D(x, y, cd, cw, ch, color(120 + r * 10, 110 + c * 8, 100), obj.angle, sunAngle);
                 
                 // Hatch animation
                 const hatch = Math.sin((anim ? anim.cargoHatch : 0) + c * 0.7 + r * 1.1) * 6;
@@ -1999,7 +1999,7 @@ const SpaceObjectRenderers = {
                 push();
                 translate(x, y - ch * 0.5);
                 // rotateX(-hatch * 0.05); // Simple rotation for hatch - disabled as rotateX is 3D only
-                Draw3D.drawBox3D(0, 0, cd * 0.8, cw * 0.8, size * 0.02, color(100, 90, 80), 0, sunAngle);
+                Draw3D.drawBox3D(0, 0, cd * 0.8, cw * 0.8, size * 0.02, color(100, 90, 80), obj.angle, sunAngle);
                 pop();
 
                 // Sticker
@@ -2016,7 +2016,7 @@ const SpaceObjectRenderers = {
                 const dy = Math.sin(d.ang) * (d.dist * 0.32);
                 const w = 6 + Math.sin(d.phase) * 2;
                 
-                Draw3D.drawBox3D(dx, dy + bob - ch * 0.2, w, w, w, color(255, 220, 140), 0, sunAngle);
+                Draw3D.drawBox3D(dx, dy + bob - ch * 0.2, w, w, w, color(255, 220, 140), obj.angle, sunAngle);
                 
                 stroke(255, 200, 120, 120); strokeWeight(0.6);
                 line(dx, dy + bob - ch * 0.2, dx - Math.cos(d.ang) * 6, dy + bob - ch * 0.2 - Math.sin(d.ang) * 6);
@@ -2036,8 +2036,8 @@ const SpaceObjectRenderers = {
         translate(0, bob - ch * 0.5);
         const craneAng = Math.sin(obj.bobPhase * 0.002) * 0.15;
         rotate(craneAng);
-        Draw3D.drawPrism(0, 0, size * 0.02, 4, size * 0.3, color(100, 110, 120), Math.PI/2, sunAngle);
-        Draw3D.drawBox3D(size * 0.25, -size * 0.2, size * 0.05, size * 0.05, size * 0.05, color(120, 130, 140), 0, sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.02, 4, size * 0.3, color(100, 110, 120), obj.angle + (Math.PI/2), sunAngle);
+        Draw3D.drawBox3D(size * 0.25, -size * 0.2, size * 0.05, size * 0.05, size * 0.05, color(120, 130, 140), obj.angle, sunAngle);
         pop();
     },
 
@@ -2045,17 +2045,18 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Low platform
-        Draw3D.drawBox3D(0, bob, size * 0.38, size * 0.38, size * 0.22, color(200, 200, 200), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.38, size * 0.38, size * 0.22, color(200, 200, 200), obj.angle, sunAngle);
         
         // Sensor mast
         push();
         translate(0, bob - size * 0.06);
-        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.08, size * 0.4, color(140, 140, 140), 0, sunAngle);
+        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.08, size * 0.4, color(140, 140, 140), obj.angle, sunAngle);
         
         // Rotating ring sensor
         const ringAng = (anim ? anim.researchArraySweep : 0) * 0.04;
         rotate(ringAng);
-        Draw3D.drawRing3D(0, -size * 0.14, size * 0.13, size * 0.02, color(120, 200, 230), 0, sunAngle);
+        // Correct parameter order: (x,y,rOuter,rInner,sides,depth,col,angle,sunAngle)
+        Draw3D.drawRing3D(0, -size * 0.14, size * 0.13, size * 0.02, 12, size * 0.02, color(120, 200, 230), obj.angle, sunAngle);
         pop();
 
         // Precision dishes
@@ -2068,7 +2069,7 @@ const SpaceObjectRenderers = {
             translate(0, -size * (0.36 + i * 0.05));
             
             // Dish
-            Draw3D.drawPrism(0, 0, size * (0.16 - i * 0.02), 12, size * 0.05, color(235, 235, 235), Math.PI/2, sunAngle);
+            Draw3D.drawPrism(0, 0, size * (0.16 - i * 0.02), 12, size * 0.05, color(235, 235, 235), obj.angle + (Math.PI/2), sunAngle);
             // Dish rim
             noFill(); stroke(180); strokeWeight(0.9);
             ellipse(0, 0, size * (0.28 - i * 0.04), size * (0.16 - i * 0.03));
@@ -2094,7 +2095,7 @@ const SpaceObjectRenderers = {
             const br = size * (0.9 + b * 0.12);
             const bx = Math.cos(ba) * br * 0.6;
             const by = Math.sin(ba) * br * 0.4 + bob * 0.05;
-            Draw3D.drawBox3D(bx, by, size * 0.05, size * 0.08, size * 0.05, color(160, 230, 250, 180), 0, sunAngle);
+            Draw3D.drawBox3D(bx, by, size * 0.05, size * 0.08, size * 0.05, color(160, 230, 250, 180), obj.angle, sunAngle);
         }
         
         // Central pulsing indicator
@@ -2115,7 +2116,7 @@ const SpaceObjectRenderers = {
         translate(size * 0.25, bob - size * 0.1);
         const auxAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
         rotate(auxAng);
-        Draw3D.drawPrism(0, 0, size * 0.07, 8, size * 0.05, color(210, 220, 230), Math.PI/2, sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.07, 8, size * 0.05, color(210, 220, 230), obj.angle + (Math.PI/2), sunAngle);
         pop();
     },
 
@@ -2123,33 +2124,33 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Circular Platform base (Cylinder)
-        Draw3D.drawPrism(0, bob + size * 0.2, size * 0.45, 16, size * 0.15, color(20, 30, 25), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + size * 0.2, size * 0.45, 16, size * 0.15, color(20, 30, 25), obj.angle, sunAngle);
 
         // Terraced planting rings (Concentric Cylinders)
         const rings = [ {c:[50,120,70]}, {c:[70,160,90]}, {c:[100,190,120]} ];
         for (let r = 0; r < rings.length; r++) {
             const rRadius = size * (0.4 - r * 0.08);
             const ry = bob + size * 0.05 - r * (size * 0.05);
-            Draw3D.drawPrism(0, ry, rRadius, 16, size * 0.05, color(rings[r].c[0], rings[r].c[1], rings[r].c[2]), 0, sunAngle);
+            Draw3D.drawPrism(0, ry, rRadius, 16, size * 0.05, color(rings[r].c[0], rings[r].c[1], rings[r].c[2]), obj.angle, sunAngle);
         }
 
         // Central pond
         const centerY = bob - size * 0.15;
-        Draw3D.drawPrism(0, centerY, size * 0.12, 12, size * 0.02, color(24, 48, 80), 0, sunAngle);
+        Draw3D.drawPrism(0, centerY, size * 0.12, 12, size * 0.02, color(24, 48, 80), obj.angle, sunAngle);
         
         // Sculpted tree
-        Draw3D.drawPrism(0, centerY - size * 0.05, size * 0.02, 6, size * 0.1, color(120, 78, 46), 0, sunAngle); // Trunk
+        Draw3D.drawPrism(0, centerY - size * 0.05, size * 0.02, 6, size * 0.1, color(120, 78, 46), obj.angle, sunAngle); // Trunk
         // Foliage (low poly sphere approximation)
-        Draw3D.drawPrism(0, centerY - size * 0.15, size * 0.12, 8, size * 0.12, color(90, 150, 96), 0, sunAngle);
+        Draw3D.drawPrism(0, centerY - size * 0.15, size * 0.12, 8, size * 0.12, color(90, 150, 96), obj.angle, sunAngle);
 
         // Glass dome (hemisphere approximation using stacked prisms)
         const domeColor = color(200, 225, 245, 40);
         // Base ring
-        Draw3D.drawPrism(0, bob, size * 0.42, 16, size * 0.05, domeColor, 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.42, 16, size * 0.05, domeColor, obj.angle, sunAngle);
         // Mid ring
-        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.35, 12, size * 0.15, domeColor, 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.35, 12, size * 0.15, domeColor, obj.angle, sunAngle);
         // Top cap
-        Draw3D.drawPrism(0, bob - size * 0.25, size * 0.2, 8, size * 0.15, domeColor, 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.25, size * 0.2, 8, size * 0.15, domeColor, obj.angle, sunAngle);
 
         // Pollinators
         const phase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.001;
@@ -2167,10 +2168,10 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Platform base
-        Draw3D.drawBox3D(0, bob + size * 0.22, size * 0.9, size * 0.22, size * 0.05, color(40, 60, 50), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.22, size * 0.9, size * 0.22, size * 0.05, color(40, 60, 50), obj.angle, sunAngle);
 
         // Translucent dome (prism approximation)
-        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.4, 8, size * 0.3, color(200, 235, 250, 80), 0, sunAngle);
+        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.4, 8, size * 0.3, color(200, 235, 250, 80), obj.angle, sunAngle);
 
         // Grow tray rows
         const rows = 3;
@@ -2179,7 +2180,7 @@ const SpaceObjectRenderers = {
         for (let r = 0; r < rows; r++) {
             const ry = -size * 0.04 + bob + r * (trayH * 0.8);
             // Tray body
-            Draw3D.drawBox3D(0, ry, trayW, trayH, trayH * 0.5, color(40, 60, 50), 0, sunAngle);
+            Draw3D.drawBox3D(0, ry, trayW, trayH, trayH * 0.5, color(40, 60, 50), obj.angle, sunAngle);
             
             // Plants
             for (let p = -2; p <= 2; p++) {
@@ -2187,7 +2188,7 @@ const SpaceObjectRenderers = {
                 const sway = Math.sin((anim ? anim.hydroponicCycle : obj.bobPhase) * 0.9 + p) * 2;
                 
                 // Plant as a small green box/prism
-                Draw3D.drawBox3D(px, ry - trayH * 0.4 + sway, trayH * 0.4, trayH * 0.6, trayH * 0.4, color(80, 200, 120), 0, sunAngle);
+                Draw3D.drawBox3D(px, ry - trayH * 0.4 + sway, trayH * 0.4, trayH * 0.6, trayH * 0.4, color(80, 200, 120), obj.angle, sunAngle);
             }
         }
 
@@ -2198,15 +2199,15 @@ const SpaceObjectRenderers = {
             const ly = -size * 0.28 + bob;
             
             // Support rod
-            Draw3D.drawBox3D(lx, ly + size * 0.09, 4, size * 0.2, 4, color(110, 120, 110), 0, sunAngle);
+            Draw3D.drawBox3D(lx, ly + size * 0.09, 4, size * 0.2, 4, color(110, 120, 110), obj.angle, sunAngle);
             
             // Light fixture
             const intensity = 0.6 + 0.4 * Math.sin(lightPhase + l);
-            Draw3D.drawBox3D(lx, ly + size * 0.18, size * 0.2, 6, 6, color(255, 100, 220, 200 * intensity), 0, sunAngle);
+            Draw3D.drawBox3D(lx, ly + size * 0.18, size * 0.2, 6, 6, color(255, 100, 220, 200 * intensity), obj.angle, sunAngle);
         }
 
         // Central reservoir
-        Draw3D.drawBox3D(0, size * 0.36 + bob, size * 0.32, size * 0.12, size * 0.1, color(40, 80, 100), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.36 + bob, size * 0.32, size * 0.12, size * 0.1, color(40, 80, 100), obj.angle, sunAngle);
 
         // Maintenance arm
         push();
@@ -2225,7 +2226,7 @@ const SpaceObjectRenderers = {
 
         // small, cheap decoy that pulses and emits short-lived flares
         // Main body
-        Draw3D.drawPrism(0, bob, size * 0.25, 6, size * 0.4, color(140, 160, 220), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.25, 6, size * 0.4, color(140, 160, 220), obj.angle, sunAngle);
         
         const dp = (Math.sin(anim ? anim.decoyPulse : obj.bobPhase * 0.8) + 1) * 0.5;
         
@@ -2252,8 +2253,8 @@ const SpaceObjectRenderers = {
         push();
         const antAng = Math.sin(obj.bobPhase * 0.006) * 0.3;
         rotate(antAng);
-        Draw3D.drawBox3D(0, bob - size * 0.1, size * 0.02, size * 0.02, size * 0.2, color(120, 130, 140), antAng, sunAngle);
-        Draw3D.drawBox3D(0, bob - size * 0.2, size * 0.04, size * 0.04, size * 0.04, color(160, 170, 180), antAng, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.1, size * 0.02, size * 0.02, size * 0.2, color(120, 130, 140), obj.angle + (antAng), sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.2, size * 0.04, size * 0.04, size * 0.04, color(160, 170, 180), obj.angle + (antAng), sunAngle);
         pop();
     },
 
@@ -2261,10 +2262,10 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Wide, flat base - emphasize silhouette like the classic 2D art
-        Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), 0, sunAngle);
+        Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), obj.angle, sunAngle);
 
         // Top deck: a large, shallow plate with bold stripes (2D-inspired decals)
-        Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), obj.angle, sunAngle);
         // Painted hazard stripes on deck (flat 2D look)
         noStroke();
         for (let i = -2; i <= 2; i++) {
@@ -2274,7 +2275,7 @@ const SpaceObjectRenderers = {
         }
 
         // Central control tower — squat and stylized, less depth for 2D feel
-        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.18, size * 0.22, size * 0.32, color(110, 110, 120), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.18, size * 0.22, size * 0.32, color(110, 110, 120), obj.angle, sunAngle);
         // Flat band windows (more graphic, less extruded)
         fill(180, 220, 240);
         for (let k = -1; k <= 1; k++) {
@@ -2303,14 +2304,14 @@ const SpaceObjectRenderers = {
                 { x: hullLen, y: size * 0.14 }
             ];
 
-            Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), 0, sunAngle, true);
+            Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), obj.angle, sunAngle, true);
 
             // actuator piston (oscillating)
             const piston = Math.sin(obj._miningState.armPhase * 1.5 + a) * (size * 0.02);
-            Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), 0, sunAngle);
+            Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), obj.angle, sunAngle);
 
             // Drill housing
-            Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), 0, sunAngle);
+            Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), obj.angle, sunAngle);
 
             // Rotating drill tip (concentric rings for motion)
             push();
@@ -2318,7 +2319,7 @@ const SpaceObjectRenderers = {
             const spin = (anim && typeof anim.miningSpin === 'number' ? anim.miningSpin : 0) + obj._miningState.armPhase * 6 + a * 0.9;
             rotate(spin);
             // drill core
-            Draw3D.drawPrism(0, 0, size * 0.045, 6, size * 0.08, color(150, 130, 100), 0, sunAngle);
+            Draw3D.drawPrism(0, 0, size * 0.045, 6, size * 0.08, color(150, 130, 100), obj.angle, sunAngle);
             // tip highlight rotating
             noStroke(); fill(220, 190, 140, 180);
             ellipse(size * 0.08, 0, size * 0.06, size * 0.02);
@@ -2341,7 +2342,7 @@ const SpaceObjectRenderers = {
 
         // Conveyor: shallow, with graphic moving marks (2D impression)
         const beltY = size * 0.30 + bob;
-        Draw3D.drawBox3D(0, beltY, size * 0.64, size * 0.28, size * 0.03, color(40, 40, 40), 0, sunAngle);
+        Draw3D.drawBox3D(0, beltY, size * 0.64, size * 0.28, size * 0.03, color(40, 40, 40), obj.angle, sunAngle);
         // Moving marks (simple rectangles to read as boxes from afar) — animate with local phase
         if (!obj._miningState) obj._miningState = { armPhase: 0, dronePhase: 0, dust: [] };
         obj._miningState.dronePhase += 0.02;
@@ -2408,7 +2409,7 @@ const SpaceObjectRenderers = {
         const droneAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
         translate(size * 0.38, bob - size * 0.12);
         rotate(droneAng);
-        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.06, size * 0.03, color(200, 170, 140), 0, sunAngle);
+        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.06, size * 0.03, color(200, 170, 140), obj.angle, sunAngle);
         pop();
     },
 
@@ -2418,7 +2419,7 @@ const SpaceObjectRenderers = {
         const pulse = (Math.sin(anim ? anim.relicPulse : obj.bobPhase * 0.001) + 1) * 0.5;
 
         // Pedestal
-        Draw3D.drawPrism(0, bob + size * 0.28, size * 0.36, 12, size * 0.08, color(32, 36, 40), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + size * 0.28, size * 0.36, 12, size * 0.08, color(32, 36, 40), obj.angle, sunAngle);
 
         // Stacked obelisk segments (tapered)
         const layers = 4;
@@ -2427,12 +2428,12 @@ const SpaceObjectRenderers = {
             const r = lerp(size * 0.22, size * 0.08, t);
             const h = lerp(size * 0.22, size * 0.18, t);
             const yOff = bob + (L - (layers/2 - 0.5)) * (size * 0.12);
-            Draw3D.drawPrism(0, yOff - size * 0.06, r, 6, h, color(48, 56, 66), 0, sunAngle);
+            Draw3D.drawPrism(0, yOff - size * 0.06, r, 6, h, color(48, 56, 66), obj.angle, sunAngle);
         }
 
         // Floating ring encircling the mid-section
         const ringY = bob - size * 0.02 + Math.sin(obj.bobPhase * 0.0015) * size * 0.02;
-        Draw3D.drawRing3D(0, ringY, size * 0.42, size * 0.06, 24, size * 0.06, color(60, 180, 200, 120), 0, sunAngle);
+        Draw3D.drawRing3D(0, ringY, size * 0.42, size * 0.06, 24, size * 0.06, color(60, 180, 200, 120), obj.angle, sunAngle);
 
         // Levitation shards (extruded shapes, placed in depth around the relic)
         for (let s = 0; s < 6; s++) {
@@ -2441,7 +2442,7 @@ const SpaceObjectRenderers = {
             const sx = Math.cos(a) * distR;
             const sy = Math.sin(a) * distR * 0.28 + bob - size * 0.04 + Math.sin(obj.bobPhase * 0.003 + s) * size * 0.02;
             // small shard prism
-            Draw3D.drawPrism(sx, sy, size * 0.05, 5, size * 0.12, color(90, 110, 130), 0.2 * s, sunAngle);
+            Draw3D.drawPrism(sx, sy, size * 0.05, 5, size * 0.12, color(90, 110, 130), obj.angle + (0.2 * s), sunAngle);
         }
 
         // Glowing rune circuitry projected on surface
@@ -2473,7 +2474,7 @@ const SpaceObjectRenderers = {
         const glowColor = color(180, 100, 255);
         
         // Main crystal (rotating prism)
-        Draw3D.drawPrism(0, bob, size * 0.15, 6, size * 0.6, crystalColor, phase * 0.2, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.15, 6, size * 0.6, crystalColor, obj.angle + (phase * 0.2), sunAngle);
         
         // Side crystals (tilted)
         for(let i=0; i<3; i++) {
@@ -2483,7 +2484,7 @@ const SpaceObjectRenderers = {
             const cy = Math.sin(ang) * dist + bob;
             
             // We can't easily tilt prisms with Draw3D, so we just place them around
-            Draw3D.drawPrism(cx, cy, size * 0.08, 5, size * 0.4, color(80, 30, 120), ang, sunAngle);
+            Draw3D.drawPrism(cx, cy, size * 0.08, 5, size * 0.4, color(80, 30, 120), obj.angle + (ang), sunAngle);
         }
         
         // Floating Rings (segmented)
@@ -2499,7 +2500,7 @@ const SpaceObjectRenderers = {
                 const sx = Math.cos(sa) * rRad;
                 const sy = Math.sin(sa) * (rRad * 0.35) + bob; // Flattened perspective
                 
-                Draw3D.drawBox3D(sx, sy, size * 0.1, size * 0.04, size * 0.04, color(140, 100, 180), sa, sunAngle);
+                Draw3D.drawBox3D(sx, sy, size * 0.1, size * 0.04, size * 0.04, color(140, 100, 180), obj.angle + (sa), sunAngle);
             }
         }
         
@@ -2533,7 +2534,7 @@ const SpaceObjectRenderers = {
         const col2 = [Math.floor(180 + 60 * hueB), Math.floor(200 * hueA), 120];
 
         // Central core as a cylindrical prism for a more volumetric flare
-        Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.6, color(col1[0], col1[1], col1[2], Math.floor(220 * pulse)), 0, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.6, color(col1[0], col1[1], col1[2], Math.floor(220 * pulse)), obj.angle, sunAngle);
 
         // Layered colorful halos (soft additive feel)
         for (let i = 0; i < 4; i++) {
@@ -2596,7 +2597,7 @@ const SpaceObjectRenderers = {
             if (m.colIdx === 1) { mr = 180; mg = 230; mb = 255; }
             if (m.colIdx === 2) { mr = 255; mg = 150; mb = 200; }
             
-            Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.round(80 * Math.sin(phase * 2 + i))), 0, sunAngle);
+            Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.round(80 * Math.sin(phase * 2 + i))), obj.angle, sunAngle);
         }
 
         // Small auxiliary beacons for readability
@@ -2621,16 +2622,16 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base skid
-        Draw3D.drawBox3D(0, bob + size * 0.20, size * 0.88, size * 0.38, size * 0.1, color(50, 50, 58), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.20, size * 0.88, size * 0.38, size * 0.1, color(50, 50, 58), obj.angle, sunAngle);
 
         // Main hull / tower
-        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.26, size * 0.52, size * 0.26, color(120, 118, 120), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.26, size * 0.52, size * 0.26, color(120, 118, 120), obj.angle, sunAngle);
         
         // Armored plating panels
-        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.28, size * 0.08, size * 0.28, color(100, 98, 100), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.28, size * 0.08, size * 0.28, color(100, 98, 100), obj.angle, sunAngle);
         
         // Grated intake vents
-        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.18, size * 0.06, size * 0.18, color(60, 60, 66), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.18, size * 0.06, size * 0.18, color(60, 60, 66), obj.angle, sunAngle);
 
         // Drill array: three articulated arms with rotating drill heads
         for (let a = 0; a < 3; a++) {
@@ -2651,23 +2652,23 @@ const SpaceObjectRenderers = {
             push();
             translate(mx, my);
             rotate(angle);
-            Draw3D.drawBox3D(0, 0, len, size * 0.05, size * 0.05, color(120, 120, 120), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, len, size * 0.05, size * 0.05, color(120, 120, 120), obj.angle, sunAngle);
             pop();
             
             // Arm joint
-            Draw3D.drawBox3D(size * 0.54, size * 0.18 + bob, size * 0.09, size * 0.07, size * 0.06, color(95, 95, 95), 0, sunAngle);
+            Draw3D.drawBox3D(size * 0.54, size * 0.18 + bob, size * 0.09, size * 0.07, size * 0.06, color(95, 95, 95), obj.angle, sunAngle);
 
             // Drill head assembly
             push(); translate(size * 0.54, size * 0.18 + bob);
             // spinning mandrel
             const spin = (anim ? anim.miningSpin : 0) + obj.bobPhase * 0.003 + a * 0.6;
             rotate(spin);
-            Draw3D.drawBox3D(0, 0, size * 0.14, size * 0.05, size * 0.04, color(120, 110, 90), 0, sunAngle);
+            Draw3D.drawBox3D(0, 0, size * 0.14, size * 0.05, size * 0.04, color(120, 110, 90), obj.angle, sunAngle);
             
             // drill bit layers (concentric triangles)
             for (let d = 0; d < 3; d++) {
                 push(); rotate(d * 0.8);
-                Draw3D.drawPrism(size * (0.12 + d * 0.02), 0, size * 0.04, 3, size * 0.08, color(160 - d * 20, 140 - d * 18, 110 - d * 12), -Math.PI/2, sunAngle);
+                Draw3D.drawPrism(size * (0.12 + d * 0.02), 0, size * 0.04, 3, size * 0.08, color(160 - d * 20, 140 - d * 18, 110 - d * 12), obj.angle + (-Math.PI/2), sunAngle);
                 pop();
             }
             pop();
@@ -2700,7 +2701,7 @@ const SpaceObjectRenderers = {
         const beltY = size * 0.36 + bob;
         
         // Conveyor belt body
-        Draw3D.drawBox3D(0, beltY, size * 0.66, size * 0.12, size * 0.1, color(40), 0, sunAngle);
+        Draw3D.drawBox3D(0, beltY, size * 0.66, size * 0.12, size * 0.1, color(40), obj.angle, sunAngle);
         
         // belt segments (visual motion)
         stroke(28, 28, 32); strokeWeight(1);
@@ -2717,7 +2718,7 @@ const SpaceObjectRenderers = {
             const oreHue = (o % 2 === 0) ? color(200, 140, 80) : color(180, 90, 40);
             
             // Ore chunks as small boxes
-            Draw3D.drawBox3D(ox, beltY - size * 0.02, size * 0.06, size * 0.04, size * 0.04, oreHue, 0, sunAngle);
+            Draw3D.drawBox3D(ox, beltY - size * 0.02, size * 0.06, size * 0.04, size * 0.04, oreHue, obj.angle, sunAngle);
         }
         pop();
 
@@ -2727,7 +2728,7 @@ const SpaceObjectRenderers = {
             const sy = size * 0.46 + bob;
             
             // Storage bins
-            Draw3D.drawBox3D(sx, sy, size * 0.14, size * 0.16, size * 0.14, color(85, 60, 50), 0, sunAngle);
+            Draw3D.drawBox3D(sx, sy, size * 0.14, size * 0.16, size * 0.14, color(85, 60, 50), obj.angle, sunAngle);
             
             stroke(60, 40, 30, 120); strokeWeight(1);
             line(sx - 6, sy - 8, sx + 6, sy - 8);
@@ -2753,7 +2754,7 @@ const SpaceObjectRenderers = {
         const ddy = Math.sin(obj._minerDrone.ang) * (obj._minerDrone.dist * 0.36) + bob * 0.02;
         
         // Drone body
-        Draw3D.drawBox3D(ddx, ddy, 8, 6, 6, color(210, 200, 170), 0, sunAngle);
+        Draw3D.drawBox3D(ddx, ddy, 8, 6, 6, color(210, 200, 170), obj.angle, sunAngle);
         
         // drone tether/arm
         stroke(160, 140, 120, 160); strokeWeight(0.6);
@@ -2770,7 +2771,7 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base dish
-        Draw3D.drawBox3D(0, bob, size * 0.94, size * 0.36, size * 0.1, color(24, 32, 48), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.94, size * 0.36, size * 0.1, color(24, 32, 48), obj.angle, sunAngle);
 
         // Rotating coil layers
         const spin = (anim && typeof anim.collectorSpin === 'number') ? anim.collectorSpin : (obj.bobPhase * 0.0006);
@@ -2784,13 +2785,13 @@ const SpaceObjectRenderers = {
                 const ry = Math.sin(a) * (size * 0.12) + bob;
                 
                 // Coil as a small box
-                Draw3D.drawBox3D(rx, ry, size * (0.10 - layer * 0.02), size * (0.06 - layer * 0.01), size * 0.05, color(90, 200, 240, alphaBase + 40 * Math.sin(obj.bobPhase * 0.01 + i)), 0, sunAngle);
+                Draw3D.drawBox3D(rx, ry, size * (0.10 - layer * 0.02), size * (0.06 - layer * 0.01), size * 0.05, color(90, 200, 240, alphaBase + 40 * Math.sin(obj.bobPhase * 0.01 + i)), obj.angle, sunAngle);
             }
         }
 
         // Central pulsing core
         const pulse = 0.65 + 0.35 * Math.sin(obj.bobPhase * 0.014);
-        Draw3D.drawBox3D(0, bob - size * 0.02, size * 0.30 * (0.85 + pulse * 0.35), size * 0.18 * (0.85 + pulse * 0.35), size * 0.2, color(100, 230, 255, 200 * pulse), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.02, size * 0.30 * (0.85 + pulse * 0.35), size * 0.18 * (0.85 + pulse * 0.35), size * 0.2, color(100, 230, 255, 200 * pulse), obj.angle, sunAngle);
 
         // Flashing indicator lights around the rim
         if (anim && typeof anim.lightPhase === 'number') {
@@ -2802,7 +2803,7 @@ const SpaceObjectRenderers = {
                 const flash = 0.5 + 0.5 * Math.sin(anim.lightPhase + i * 0.7 + obj.bobPhase * 0.003);
                 
                 // LED as small box
-                Draw3D.drawBox3D(lx, ly, 3 + flash * 2, 3 + flash * 1.2, 3, color(180, 255, 200, 180 * flash), 0, sunAngle);
+                Draw3D.drawBox3D(lx, ly, 3 + flash * 2, 3 + flash * 1.2, 3, color(180, 255, 200, 180 * flash), obj.angle, sunAngle);
             }
         }
 
@@ -2814,7 +2815,7 @@ const SpaceObjectRenderers = {
             const py = Math.sin(angle * (0.9 + p * 0.2)) * pr * 0.4 + bob * 0.25;
             
             // Particle as tiny box
-            Draw3D.drawBox3D(px, py, 2 + p * 0.6, 2 + p * 0.3, 2, color(140, 220, 255, 30 + 40 * Math.sin(obj.bobPhase * 0.01 + p)), 0, sunAngle);
+            Draw3D.drawBox3D(px, py, 2 + p * 0.6, 2 + p * 0.3, 2, color(140, 220, 255, 30 + 40 * Math.sin(obj.bobPhase * 0.01 + p)), obj.angle, sunAngle);
         }
     },
 
@@ -2830,7 +2831,7 @@ const SpaceObjectRenderers = {
             const sy = Math.sin(ang) * size * 0.05 + bob;
             
             // Draw a prism for each shard
-            Draw3D.drawPrism(sx, sy, len * 0.2, 4, len, color(200, 235, 255, 220), 0, sunAngle);
+            Draw3D.drawPrism(sx, sy, len * 0.2, 4, len, color(200, 235, 255, 220), obj.angle, sunAngle);
         }
 
         // Tiny drifting shards
@@ -2839,7 +2840,7 @@ const SpaceObjectRenderers = {
             const sy = Math.sin(obj.bobPhase * 0.003 + i) * size * 0.18 + bob * 0.08;
             
             // Tiny shard as a small prism
-            Draw3D.drawPrism(sx, sy, 4, 3, 6, color(180, 220, 255, 120), 0, sunAngle);
+            Draw3D.drawPrism(sx, sy, 4, 3, 6, color(180, 220, 255, 120), obj.angle, sunAngle);
         }
     },
 
@@ -2913,7 +2914,7 @@ const SpaceObjectRenderers = {
             if (m.col === 2) { mr = 255; mg = 150; mb = 220; }
             
             // Mote as small box
-            Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.floor(60 * Math.sin(phase * 2 + mi))), 0, sunAngle);
+            Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.floor(60 * Math.sin(phase * 2 + mi))), obj.angle, sunAngle);
         }
 
         // Tiny sparkles for depth
@@ -2924,7 +2925,7 @@ const SpaceObjectRenderers = {
             const sy = Math.sin(sa) * sr * 0.38 + bob * 0.02;
             
             // Sparkle as tiny box
-            Draw3D.drawBox3D(sx, sy, 2.5 - s * 0.6, 2.5 - s * 0.6, 2, color(255, 255, 255, 140 - s * 30), 0, sunAngle);
+            Draw3D.drawBox3D(sx, sy, 2.5 - s * 0.6, 2.5 - s * 0.6, 2, color(255, 255, 255, 140 - s * 30), obj.angle, sunAngle);
         }
     },
 
@@ -2932,11 +2933,11 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main plate
-        Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.28, size * 0.05, color(120, 110, 100), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.28, size * 0.05, color(120, 110, 100), obj.angle, sunAngle);
         
         // Scattered panels
-        Draw3D.drawBox3D(-size * 0.22, bob - size * 0.12, size * 0.2, size * 0.08, size * 0.04, color(90, 80, 80), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.28, bob + size * 0.1, size * 0.18, size * 0.06, size * 0.04, color(90, 80, 80), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.22, bob - size * 0.12, size * 0.2, size * 0.08, size * 0.04, color(90, 80, 80), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.28, bob + size * 0.1, size * 0.18, size * 0.06, size * 0.04, color(90, 80, 80), obj.angle, sunAngle);
         
         // Small sparks/puffs
         fill(255, 180, 140, 120);
@@ -2948,10 +2949,10 @@ const SpaceObjectRenderers = {
         const a = anim || obj._anim || {};
 
         // Floating frame / base
-        Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.95, size * 0.26, size * 0.05, color(32, 38, 50), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.95, size * 0.26, size * 0.05, color(32, 38, 50), obj.angle, sunAngle);
 
         // Central collector tower
-        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.12, size * 0.32, size * 0.12, color(120, 130, 140), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.12, size * 0.32, size * 0.12, color(120, 130, 140), obj.angle, sunAngle);
         
         // Collector glow
         fill(200, 220, 240, 60);
@@ -2977,7 +2978,7 @@ const SpaceObjectRenderers = {
                 rotate(tilt);
                 
                 // Panel body
-                Draw3D.drawBox3D(0, 0, panelW, panelH, size * 0.01, color(18, 58, 130), 0, sunAngle);
+                Draw3D.drawBox3D(0, 0, panelW, panelH, size * 0.01, color(18, 58, 130), obj.angle, sunAngle);
                 
                 // Grid lines
                 stroke(12, 30, 70, 160); strokeWeight(0.6);
@@ -3000,7 +3001,7 @@ const SpaceObjectRenderers = {
 
         // Wiring bus and pulse glow
         const pulse = 0.6 + 0.4 * Math.sin((a.wiringPulse || obj.bobPhase) * 0.006);
-        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.5, size * 0.04, size * 0.04, color(90, 200, 255, 80 + 80 * pulse), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.5, size * 0.04, size * 0.04, color(90, 200, 255, 80 + 80 * pulse), obj.angle, sunAngle);
         
         // Small power node
         fill(120, 220, 255, 160);
@@ -3025,7 +3026,7 @@ const SpaceObjectRenderers = {
             noStroke();
             
             // Drone body as small box
-            Draw3D.drawBox3D(dx, dy, 6, 4, 4, color(240, 230, 200), 0, sunAngle);
+            Draw3D.drawBox3D(dx, dy, 6, 4, 4, color(240, 230, 200), obj.angle, sunAngle);
             
             // Status light
             fill(100, 220, 160, 220);
@@ -3041,14 +3042,14 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base platform shadow
-        Draw3D.drawBox3D(0, size * 0.22 + bob, size * 0.95, size * 0.28, size * 0.05, color(12, 12, 16, 220), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.22 + bob, size * 0.95, size * 0.28, size * 0.05, color(12, 12, 16, 220), obj.angle, sunAngle);
 
         // Main security compound
-        Draw3D.drawBox3D(0, bob, size * 0.9, size * 0.5, size * 0.3, color(40, 40, 45), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.9, size * 0.5, size * 0.3, color(40, 40, 45), obj.angle, sunAngle);
         
         // Reinforced plating
-        Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), obj.angle, sunAngle);
 
         // Cell block modules (4 wings)
         for (let wing = 0; wing < 4; wing++) {
@@ -3060,7 +3061,7 @@ const SpaceObjectRenderers = {
             else if (wing === 2) { wx = -size * 0.35; wy = 0; ww = size * 0.25; wh = size * 0.12; }
             else if (wing === 3) { wx = 0; wy = -size * 0.35; ww = size * 0.12; wh = size * 0.25; }
             
-            Draw3D.drawBox3D(wx, wy + bob, ww, wh, size * 0.1, color(50, 50, 55), 0, sunAngle);
+            Draw3D.drawBox3D(wx, wy + bob, ww, wh, size * 0.1, color(50, 50, 55), obj.angle, sunAngle);
         }
 
         // Guard towers (corner positions)
@@ -3070,10 +3071,10 @@ const SpaceObjectRenderers = {
             const ty = Math.sin(tangle) * size * 0.42 + bob;
             
             // Tower base
-            Draw3D.drawBox3D(tx, ty, size * 0.1, size * 0.15, size * 0.2, color(45, 45, 50), 0, sunAngle);
+            Draw3D.drawBox3D(tx, ty, size * 0.1, size * 0.15, size * 0.2, color(45, 45, 50), obj.angle, sunAngle);
             
             // Tower top
-            Draw3D.drawBox3D(tx, ty - size * 0.08, size * 0.12, size * 0.04, size * 0.12, color(55, 55, 60), 0, sunAngle);
+            Draw3D.drawBox3D(tx, ty - size * 0.08, size * 0.12, size * 0.04, size * 0.12, color(55, 55, 60), obj.angle, sunAngle);
             
             // Guard light
             fill(200, 180, 100, 180);
@@ -3118,15 +3119,15 @@ const SpaceObjectRenderers = {
         }
 
         // Central command center
-        Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.2, size * 0.15, size * 0.1, color(60, 60, 70), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.2, size * 0.15, size * 0.1, color(60, 60, 70), obj.angle, sunAngle);
         
         // Command windows
         for (let w = -1; w <= 1; w++) {
-            Draw3D.drawBox3D(w * (size * 0.05), bob - size * 0.05, size * 0.025, size * 0.06, size * 0.02, color(150, 150, 200, 120), 0, sunAngle);
+            Draw3D.drawBox3D(w * (size * 0.05), bob - size * 0.05, size * 0.025, size * 0.06, size * 0.02, color(150, 150, 200, 120), obj.angle, sunAngle);
         }
 
         // Antenna array on command center
-        Draw3D.drawBox3D(0, bob - size * 0.13, size * 0.05, size * 0.03, size * 0.1, color(70, 70, 80), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.13, size * 0.05, size * 0.03, size * 0.1, color(70, 70, 80), obj.angle, sunAngle);
         stroke(80, 80, 90);
         strokeWeight(1);
         line(0, bob - size * 0.14, 0, bob - size * 0.2);
@@ -3155,7 +3156,7 @@ const SpaceObjectRenderers = {
             const dy = Math.sin(drone.ang) * drone.dist * 0.5 + bob;
             
             // Drone as small box
-            Draw3D.drawBox3D(dx, dy, 8, 6, 4, color(80, 80, 90), 0, sunAngle);
+            Draw3D.drawBox3D(dx, dy, 8, 6, 4, color(80, 80, 90), obj.angle, sunAngle);
             
             fill(255, 0, 0, 200);
             ellipse(dx + 2, dy, 2, 2);
@@ -3166,14 +3167,14 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Platform shadow
-        Draw3D.drawBox3D(0, size * 0.2 + bob, size * 0.88, size * 0.26, size * 0.05, color(16, 20, 16, 200), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.2 + bob, size * 0.88, size * 0.26, size * 0.05, color(16, 20, 16, 200), obj.angle, sunAngle);
 
         // Main facility housing
-        Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.45, size * 0.25, color(55, 60, 55), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.45, size * 0.25, color(55, 60, 55), obj.angle, sunAngle);
         
         // Worn paneling
-        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), obj.angle, sunAngle);
 
         // Chemical storage tanks (3 large tanks)
         for (let t = -1; t <= 1; t++) {
@@ -3181,11 +3182,11 @@ const SpaceObjectRenderers = {
             const ty = bob - size * 0.08;
             
             // Tank body as a prism (cylinder approximation)
-            Draw3D.drawPrism(tx, ty, size * 0.18, 8, size * 0.35, color(70, 75, 65), 0, sunAngle);
+            Draw3D.drawPrism(tx, ty, size * 0.18, 8, size * 0.35, color(70, 75, 65), obj.angle, sunAngle);
             
             // Liquid level indicator
             // Draw a small box on the side
-            Draw3D.drawBox3D(tx, ty + size * 0.04, size * 0.12, size * 0.16, size * 0.19, color(100, 180, 140, 120), 0, sunAngle);
+            Draw3D.drawBox3D(tx, ty + size * 0.04, size * 0.12, size * 0.16, size * 0.19, color(100, 180, 140, 120), obj.angle, sunAngle);
             
             // Hazard markings - skip for now or simplify
         }
@@ -3196,7 +3197,7 @@ const SpaceObjectRenderers = {
             const cy = bob + size * 0.2;
             
             // Column body
-            Draw3D.drawPrism(cx, cy, size * 0.08, 6, size * 0.25, color(60, 65, 60), 0, sunAngle);
+            Draw3D.drawPrism(cx, cy, size * 0.08, 6, size * 0.25, color(60, 65, 60), obj.angle, sunAngle);
             
             // Coil wrapping - skip for now
             
@@ -3206,9 +3207,9 @@ const SpaceObjectRenderers = {
         }
 
         // Piping network with animated flow
-        Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.6, size * 0.02, size * 0.02, color(65, 70, 65), 0, sunAngle);
-        Draw3D.drawBox3D(-size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.6, size * 0.02, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
+        Draw3D.drawBox3D(-size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
         
         // Flow indicators (glowing particles)
         const flowPhase = (anim && anim.flowPhase) ? anim.flowPhase : obj.bobPhase * 0.005;
@@ -3225,7 +3226,7 @@ const SpaceObjectRenderers = {
             const vy = bob - size * 0.25;
             
             // Fan housing
-            Draw3D.drawBox3D(vx, vy, size * 0.12, size * 0.12, size * 0.05, color(50, 55, 50), 0, sunAngle);
+            Draw3D.drawBox3D(vx, vy, size * 0.12, size * 0.12, size * 0.05, color(50, 55, 50), obj.angle, sunAngle);
             
             // Fan blades
             push();
@@ -3247,7 +3248,7 @@ const SpaceObjectRenderers = {
             const ey = bob + size * 0.25;
             
             // Vent cap
-            Draw3D.drawBox3D(ex, ey, size * 0.08, size * 0.05, size * 0.05, color(65, 70, 65), 0, sunAngle);
+            Draw3D.drawBox3D(ex, ey, size * 0.08, size * 0.05, size * 0.05, color(65, 70, 65), obj.angle, sunAngle);
             
             // Emissions (layered translucent ellipses)
             for (let p = 0; p < 3; p++) {
@@ -3283,7 +3284,7 @@ const SpaceObjectRenderers = {
         const botY = bob + size * 0.3;
         
         // Bot as small box
-        Draw3D.drawBox3D(botX, botY, 10, 6, 4, color(80, 85, 80), 0, sunAngle);
+        Draw3D.drawBox3D(botX, botY, 10, 6, 4, color(80, 85, 80), obj.angle, sunAngle);
         
         fill(100, 200, 150, 150);
         ellipse(botX + 3, botY, 2, 2);
@@ -3294,14 +3295,14 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base platform with industrial grid
-        Draw3D.drawBox3D(0, size * 0.25 + bob, size * 1.0, size * 0.3, size * 0.05, color(30, 30, 35), 0, sunAngle);
+        Draw3D.drawBox3D(0, size * 0.25 + bob, size * 1.0, size * 0.3, size * 0.05, color(30, 30, 35), obj.angle, sunAngle);
 
         // Central processing facility (large industrial structure)
-        Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.4, size * 0.2, color(50, 50, 55), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.4, size * 0.2, color(50, 50, 55), obj.angle, sunAngle);
         
         // Processing windows
         for (let w = -2; w <= 2; w++) {
-            Draw3D.drawBox3D(w * (size * 0.1), bob, size * 0.06, size * 0.25, size * 0.21, color(200, 150, 100), 0, sunAngle);
+            Draw3D.drawBox3D(w * (size * 0.1), bob, size * 0.06, size * 0.25, size * 0.21, color(200, 150, 100), obj.angle, sunAngle);
         }
 
         // Worker habitation modules (rows of small units)
@@ -3310,9 +3311,9 @@ const SpaceObjectRenderers = {
                 const mx = col * (size * 0.14);
                 const my = bob - size * 0.25 + row * (size * 0.08);
                 // Module housing
-                Draw3D.drawBox3D(mx, my, size * 0.12, size * 0.06, size * 0.05, color(60, 60, 65), 0, sunAngle);
+                Draw3D.drawBox3D(mx, my, size * 0.12, size * 0.06, size * 0.05, color(60, 60, 65), obj.angle, sunAngle);
                 // Small window
-                Draw3D.drawBox3D(mx, my, size * 0.04, size * 0.04, size * 0.06, color(150, 150, 180), 0, sunAngle);
+                Draw3D.drawBox3D(mx, my, size * 0.04, size * 0.04, size * 0.06, color(150, 150, 180), obj.angle, sunAngle);
             }
         }
 
@@ -3321,24 +3322,24 @@ const SpaceObjectRenderers = {
             const dx = (d - 0.5) * (size * 0.7);
             const dy = bob + size * 0.15;
             // Drill platform
-            Draw3D.drawBox3D(dx, dy, size * 0.18, size * 0.12, size * 0.05, color(45, 45, 50), 0, sunAngle);
+            Draw3D.drawBox3D(dx, dy, size * 0.18, size * 0.12, size * 0.05, color(45, 45, 50), obj.angle, sunAngle);
             
             // Drill arm
             const drillAngle = Math.sin(obj.bobPhase * 0.002 + d) * 0.15;
             // Approximating rotated arm with a box
-            Draw3D.drawBox3D(dx, dy - size * 0.06, size * 0.04, size * 0.25, size * 0.04, color(55, 55, 60), drillAngle, sunAngle);
+            Draw3D.drawBox3D(dx, dy - size * 0.06, size * 0.04, size * 0.25, size * 0.04, color(55, 55, 60), obj.angle + (drillAngle), sunAngle);
             
             // Drill head
-            Draw3D.drawBox3D(dx, dy + size * 0.19, size * 0.08, size * 0.06, size * 0.06, color(70, 70, 75), drillAngle, sunAngle);
+            Draw3D.drawBox3D(dx, dy + size * 0.19, size * 0.08, size * 0.06, size * 0.06, color(70, 70, 75), obj.angle + (drillAngle), sunAngle);
             
             // Rotating drill bit
             const drillSpin = (anim && anim.drillSpin) ? anim.drillSpin : obj.bobPhase * 0.006;
-            Draw3D.drawPrism(dx, dy + size * 0.25, size * 0.04, size * 0.06, 3, color(90, 90, 95), drillSpin + d * Math.PI, sunAngle);
+            Draw3D.drawPrism(dx, dy + size * 0.25, size * 0.04, size * 0.06, 3, color(90, 90, 95), obj.angle + (drillSpin + d * Math.PI), sunAngle);
         }
 
         // Ore processing conveyors with moving ore chunks
-        Draw3D.drawBox3D(-size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), 0, sunAngle);
+        Draw3D.drawBox3D(-size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), obj.angle, sunAngle);
         
         // Moving ore on conveyors
         const conveyorPhase = (anim && anim.conveyorPhase) ? anim.conveyorPhase : obj.bobPhase * 0.004;
@@ -3346,30 +3347,30 @@ const SpaceObjectRenderers = {
             const cx = (c - 0.5) * (size * 0.5);
             for (let o = 0; o < 4; o++) {
                 const ox = cx + lerp(-size * 0.25, size * 0.25, (conveyorPhase + o * 0.25) % 1);
-                Draw3D.drawBox3D(ox, bob + size * 0.28, size * 0.05, size * 0.04, size * 0.03, color(120, 90, 70), 0, sunAngle);
+                Draw3D.drawBox3D(ox, bob + size * 0.28, size * 0.05, size * 0.04, size * 0.03, color(120, 90, 70), obj.angle, sunAngle);
             }
         }
 
         // Transport rail system (monorail)
-        Draw3D.drawBox3D(0, bob - size * 0.15, size * 1.0, size * 0.02, size * 0.02, color(60, 60, 65), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.15, size * 1.0, size * 0.02, size * 0.02, color(60, 60, 65), obj.angle, sunAngle);
         
         // Rail support pillars
         for (let p = -2; p <= 2; p++) {
             const px = p * (size * 0.25);
-            Draw3D.drawBox3D(px, bob - size * 0.08, size * 0.04, size * 0.15, size * 0.04, color(50, 50, 55), 0, sunAngle);
+            Draw3D.drawBox3D(px, bob - size * 0.08, size * 0.04, size * 0.15, size * 0.04, color(50, 50, 55), obj.angle, sunAngle);
         }
         
         // Transport pod moving along rail
         const podPos = Math.sin(obj.bobPhase * 0.003) * (size * 0.45);
-        Draw3D.drawBox3D(podPos, bob - size * 0.15, size * 0.15, size * 0.08, size * 0.06, color(70, 70, 80), 0, sunAngle);
-        Draw3D.drawBox3D(podPos, bob - size * 0.15, size * 0.06, size * 0.06, size * 0.07, color(100, 120, 140), 0, sunAngle);
+        Draw3D.drawBox3D(podPos, bob - size * 0.15, size * 0.15, size * 0.08, size * 0.06, color(70, 70, 80), obj.angle, sunAngle);
+        Draw3D.drawBox3D(podPos, bob - size * 0.15, size * 0.06, size * 0.06, size * 0.07, color(100, 120, 140), obj.angle, sunAngle);
 
         // Smokestacks with emissions
         for (let s = 0; s < 3; s++) {
             const sx = (s - 1) * (size * 0.22);
             const sy = bob - size * 0.35;
             // Stack structure
-            Draw3D.drawBox3D(sx, sy + size * 0.1, size * 0.06, size * 0.2, size * 0.1, color(55, 55, 60), 0, sunAngle);
+            Draw3D.drawBox3D(sx, sy + size * 0.1, size * 0.06, size * 0.2, size * 0.1, color(55, 55, 60), obj.angle, sunAngle);
             // Smoke particles
             for (let p = 0; p < 3; p++) {
                 const py = sy - p * size * 0.08;
@@ -3384,7 +3385,7 @@ const SpaceObjectRenderers = {
             const gx = (g - 0.5) * (size * 0.4);
             const gy = bob + size * 0.05;
             // Generator housing
-            Draw3D.drawBox3D(gx, gy, size * 0.12, size * 0.1, size * 0.08, color(65, 65, 70), 0, sunAngle);
+            Draw3D.drawBox3D(gx, gy, size * 0.12, size * 0.1, size * 0.08, color(65, 65, 70), obj.angle, sunAngle);
             // Energy core glow
             const glowPhase = obj.bobPhase * 0.005 + g;
             const glow = 0.5 + 0.5 * Math.sin(glowPhase);
@@ -3433,7 +3434,7 @@ const SpaceObjectRenderers = {
         const bC = Math.floor(220 + 20 * Math.sin(phase * 0.9 + 2.3));
         
         // Core as a glowing box
-        Draw3D.drawBox3D(0, bob, size * 0.28 * (0.8 + pulse * 0.35), size * 0.28 * (0.8 + pulse * 0.35), size * 0.28, color(rC, gC, bC, Math.floor(200 * pulse)), spin, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.28 * (0.8 + pulse * 0.35), size * 0.28 * (0.8 + pulse * 0.35), size * 0.28, color(rC, gC, bC, Math.floor(200 * pulse)), obj.angle + (spin), sunAngle);
 
         // layered shimmer rings (approximated with rotating flat boxes)
         for (let ring = 0; ring < 3; ring++) {
@@ -3447,7 +3448,7 @@ const SpaceObjectRenderers = {
                 const ang = i * (TWO_PI / segments) + spin * (1 + ring * 0.2);
                 const rx = Math.cos(ang) * s * 0.5;
                 const ry = Math.sin(ang) * s * 0.5 + bob;
-                Draw3D.drawBox3D(rx, ry, s * 0.2, s * 0.1, s * 0.05, col, ang, sunAngle);
+                Draw3D.drawBox3D(rx, ry, s * 0.2, s * 0.1, s * 0.05, col, obj.angle + (ang), sunAngle);
             }
         }
 
@@ -3461,7 +3462,7 @@ const SpaceObjectRenderers = {
             
             const gw = 4 + 2 * Math.sin(phase * 2 + i);
             // Glyph as a prism
-            Draw3D.drawPrism(gx, gy, gw, gw * 1.5, 3, color(255, 255, 255, 180), ga + phase * 0.5, sunAngle);
+            Draw3D.drawPrism(gx, gy, gw, gw * 1.5, 3, color(255, 255, 255, 180), obj.angle + (ga + phase * 0.5), sunAngle);
         }
 
         // teleport arcs: curved energy strands that sweep across the gate
@@ -3482,7 +3483,7 @@ const SpaceObjectRenderers = {
                 const alpha = Math.floor(180 * (1 - v) * (0.6 + 0.4 * Math.sin(phase * 1.2 + a)));
                 const col = color(Math.floor(lerp(rC, 180, v)), Math.floor(lerp(gC, 220, v)), Math.floor(lerp(bC, 255, v)), alpha);
                 
-                Draw3D.drawBox3D(x, y, size * 0.05, size * 0.05, size * 0.05, col, ang, sunAngle);
+                Draw3D.drawBox3D(x, y, size * 0.05, size * 0.05, size * 0.05, col, obj.angle + (ang), sunAngle);
             }
         }
 
@@ -3510,7 +3511,7 @@ const SpaceObjectRenderers = {
             const pg = Math.floor(lerp(gC, 150, Math.random()));
             const pb = Math.floor(lerp(bC, 200, Math.random()));
             
-            Draw3D.drawBox3D(px, py, p.sz * (0.8 + fade * 1.2), p.sz * 0.6, p.sz, color(pr, pg, pb, Math.floor(160 * fade * pulse)), p.ang, sunAngle);
+            Draw3D.drawBox3D(px, py, p.sz * (0.8 + fade * 1.2), p.sz * 0.6, p.sz, color(pr, pg, pb, Math.floor(160 * fade * pulse)), obj.angle + (p.ang), sunAngle);
         }
     },
 
@@ -3529,23 +3530,23 @@ const SpaceObjectRenderers = {
 
         // Main shipyard hull - large industrial hexagonal structure
         // Background scaffolding/lattice - approximated with a large flat prism
-        Draw3D.drawPrism(0, bob, size * 0.48, size * 0.48, 8, color(60, 80, 100, 120), phase * 0.02, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.48, size * 0.48, 8, color(60, 80, 100, 120), obj.angle + (phase * 0.02), sunAngle);
 
         // Main central hub - industrial gray with blue accents
-        Draw3D.drawPrism(0, bob, size * 0.28, size * 0.28, 6, color(50, 55, 70), -PI/6, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.28, size * 0.28, 6, color(50, 55, 70), obj.angle + (-PI/6), sunAngle);
 
         // Hub inner detail
-        Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.18, size * 0.05, color(70, 80, 100), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob, size * 0.12, size * 0.12, size * 0.08, color(40, 50, 65), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.18, size * 0.05, color(70, 80, 100), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.12, size * 0.12, size * 0.08, color(40, 50, 65), obj.angle, sunAngle);
 
         // Beveled inner plate for the hex hub (adds perceived depth)
-        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 6, color(90, 100, 115), -PI/6, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 6, color(90, 100, 115), obj.angle + (-PI/6), sunAngle);
         // inner darker inset
-        Draw3D.drawPrism(0, bob, size * 0.14, size * 0.14, 6, color(60, 70, 85), -PI/6, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.14, size * 0.14, 6, color(60, 70, 85), obj.angle + (-PI/6), sunAngle);
 
         // Glowing core
         const coreGlow = 150 + 80 * Math.sin(phase * 3);
-        Draw3D.drawBox3D(0, bob, size * 0.06, size * 0.06, size * 0.1, color(100, 180, 255, coreGlow), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.06, size * 0.06, size * 0.1, color(100, 180, 255, coreGlow), obj.angle, sunAngle);
 
         // Four construction bays extending from center (enlarged for visibility)
         for (let bay = 0; bay < 4; bay++) {
@@ -3554,33 +3555,33 @@ const SpaceObjectRenderers = {
             const by = Math.sin(bayAng) * size * 0.44 + bob;
 
             // Bay structure - larger, more detailed arms
-            Draw3D.drawBox3D(bx, by, size * 0.42, size * 0.18, size * 0.1, color(52, 58, 74), bayAng, sunAngle);
+            Draw3D.drawBox3D(bx, by, size * 0.42, size * 0.18, size * 0.1, color(52, 58, 74), obj.angle + (bayAng), sunAngle);
 
             // Bay interior glow (construction activity) - larger and more saturated
             const bayGlow = 110 + 60 * Math.sin(phase * 2 + bay * 1.5);
-            Draw3D.drawBox3D(bx, by, size * 0.34, size * 0.12, size * 0.11, color(255, 210, 120, bayGlow), bayAng, sunAngle);
+            Draw3D.drawBox3D(bx, by, size * 0.34, size * 0.12, size * 0.11, color(255, 210, 120, bayGlow), obj.angle + (bayAng), sunAngle);
             // Ship frame under construction (larger, with hull detail)
             // Approximating ship frame with a box
             const frameX = bx - Math.cos(bayAng) * size * 0.02;
             const frameY = by - Math.sin(bayAng) * size * 0.02;
-            Draw3D.drawBox3D(frameX, frameY, size * 0.3, size * 0.1, size * 0.05, color(36, 42, 52), bayAng, sunAngle);
+            Draw3D.drawBox3D(frameX, frameY, size * 0.3, size * 0.1, size * 0.05, color(36, 42, 52), obj.angle + (bayAng), sunAngle);
             
             // cockpit / bridge
             const cockpitX = frameX + Math.cos(bayAng) * size * 0.06;
             const cockpitY = frameY + Math.sin(bayAng) * size * 0.06;
-            Draw3D.drawBox3D(cockpitX, cockpitY, size * 0.06, size * 0.04, size * 0.06, color(90, 110, 130), bayAng, sunAngle);
+            Draw3D.drawBox3D(cockpitX, cockpitY, size * 0.06, size * 0.04, size * 0.06, color(90, 110, 130), obj.angle + (bayAng), sunAngle);
 
             // Construction crane arm (thicker and more visible)
             const craneSway = Math.sin(cranePhase + bay * 2) * 0.22;
             const craneX = bx + Math.cos(bayAng) * size * 0.06;
             const craneY = by + Math.sin(bayAng) * size * 0.06;
             // Crane arm
-            Draw3D.drawBox3D(craneX, craneY, size * 0.02, size * 0.12, size * 0.02, color(92, 104, 124), bayAng + craneSway, sunAngle);
+            Draw3D.drawBox3D(craneX, craneY, size * 0.02, size * 0.12, size * 0.02, color(92, 104, 124), obj.angle + (bayAng + craneSway), sunAngle);
             
             // Crane hook & cable
             const hookX = craneX + Math.cos(bayAng + craneSway) * size * 0.08;
             const hookY = craneY + Math.sin(bayAng + craneSway) * size * 0.08; // Simplified position
-            Draw3D.drawBox3D(hookX, hookY, size * 0.03, size * 0.03, size * 0.03, color(120, 130, 150), bayAng, sunAngle);
+            Draw3D.drawBox3D(hookX, hookY, size * 0.03, size * 0.03, size * 0.03, color(120, 130, 150), obj.angle + (bayAng), sunAngle);
 
             // Larger welding sparks and directional streaks (animated)
             if (Math.sin(weldPhase * 6 + bay * 2.2) > 0.3) {
@@ -3590,17 +3591,17 @@ const SpaceObjectRenderers = {
                     const sparkX = bx + size * 0.02 + Math.cos(sparkAng) * sparkDist;
                     const sparkY = by + Math.sin(sparkAng) * sparkDist;
                     // streak
-                    Draw3D.drawBox3D(sparkX, sparkY, 3 + Math.random() * 3, 2 + Math.random() * 2, 2, color(255, 220 + Math.random() * 35, 120, 220), sparkAng, sunAngle);
+                    Draw3D.drawBox3D(sparkX, sparkY, 3 + Math.random() * 3, 2 + Math.random() * 2, 2, color(255, 220 + Math.random() * 35, 120, 220), obj.angle + (sparkAng), sunAngle);
                 }
                 // Bright weld point
-                Draw3D.drawBox3D(bx + size * 0.02, by, 6, 6, 6, color(255, 255, 220, 240), 0, sunAngle);
+                Draw3D.drawBox3D(bx + size * 0.02, by, 6, 6, 6, color(255, 255, 220, 240), obj.angle, sunAngle);
             }
 
             // Gantry that traverses the bay (large visible movement)
             const gantryPos = (Math.sin(phase * 0.6 + bay) * 0.45 + 0.5) * (size * 0.16);
             const gantryX = bx - Math.cos(bayAng) * (size * 0.08 - gantryPos);
             const gantryY = by - Math.sin(bayAng) * (size * 0.08 - gantryPos);
-            Draw3D.drawBox3D(gantryX, gantryY, size * 0.12, size * 0.04, size * 0.04, color(120, 125, 140), bayAng, sunAngle);
+            Draw3D.drawBox3D(gantryX, gantryY, size * 0.12, size * 0.04, size * 0.04, color(120, 125, 140), obj.angle + (bayAng), sunAngle);
         }
 
         // External docking arms (2 large ones for finished ships)
@@ -3619,15 +3620,15 @@ const SpaceObjectRenderers = {
             const armY_world = Math.sin(finalAng - PI/2) * armDist + bob;
 
             // Docking arm structure
-            Draw3D.drawBox3D(armX_world, armY_world, size * 0.05, size * 0.1, size * 0.05, color(70, 80, 100), finalAng, sunAngle);
+            Draw3D.drawBox3D(armX_world, armY_world, size * 0.05, size * 0.1, size * 0.05, color(70, 80, 100), obj.angle + (finalAng), sunAngle);
 
             // Docking clamps
-            Draw3D.drawBox3D(armX_world, armY_world - size * 0.11, size * 0.08, size * 0.03, size * 0.04, color(60, 70, 85), finalAng, sunAngle);
+            Draw3D.drawBox3D(armX_world, armY_world - size * 0.11, size * 0.08, size * 0.03, size * 0.04, color(60, 70, 85), obj.angle + (finalAng), sunAngle);
 
             // Docking lights
             const dockLight = (Math.sin(phase * 4 + arm * PI) > 0) ? 255 : 80;
-            Draw3D.drawBox3D(armX_world - size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), finalAng, sunAngle);
-            Draw3D.drawBox3D(armX_world + size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), finalAng, sunAngle);
+            Draw3D.drawBox3D(armX_world - size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), obj.angle + (finalAng), sunAngle);
+            Draw3D.drawBox3D(armX_world + size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), obj.angle + (finalAng), sunAngle);
         }
 
         // Rotating warning beacons on corners
@@ -3637,7 +3638,7 @@ const SpaceObjectRenderers = {
             const beaconY = Math.sin(beaconAng) * size * 0.52 + bob;
             const beaconFlash = Math.sin(phase * 6 + b * 1.5) > 0.5;
             const col = beaconFlash ? color(255, 100, 50, 220) : color(100, 40, 20, 150);
-            Draw3D.drawBox3D(beaconX, beaconY, 6, 6, 6, col, 0, sunAngle);
+            Draw3D.drawBox3D(beaconX, beaconY, 6, 6, 6, col, obj.angle, sunAngle);
         }
 
         // Solar panel arrays on sides
@@ -3647,30 +3648,30 @@ const SpaceObjectRenderers = {
             const py = Math.sin(panelAng) * size * 0.46 + bob;
 
             // Panel arm
-            Draw3D.drawBox3D(px, py, size * 0.08, size * 0.02, size * 0.02, color(80, 90, 100), panelAng, sunAngle);
+            Draw3D.drawBox3D(px, py, size * 0.08, size * 0.02, size * 0.02, color(80, 90, 100), obj.angle + (panelAng), sunAngle);
 
             // Solar panels
             const panelX = px + Math.cos(panelAng) * size * 0.1;
             const panelY = py + Math.sin(panelAng) * size * 0.1;
-            Draw3D.drawBox3D(panelX, panelY, size * 0.06, size * 0.12, size * 0.02, color(30, 40, 80), panelAng, sunAngle);
+            Draw3D.drawBox3D(panelX, panelY, size * 0.06, size * 0.12, size * 0.02, color(30, 40, 80), obj.angle + (panelAng), sunAngle);
             
             // Panel reflection
-            Draw3D.drawBox3D(panelX, panelY, size * 0.05, size * 0.04, size * 0.025, color(100, 150, 255, 40), panelAng, sunAngle);
+            Draw3D.drawBox3D(panelX, panelY, size * 0.05, size * 0.04, size * 0.025, color(100, 150, 255, 40), obj.angle + (panelAng), sunAngle);
         }
 
         // Central control tower
-        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.08, size * 0.16, size * 0.08, color(65, 70, 85), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.08, size * 0.16, size * 0.08, color(65, 70, 85), obj.angle, sunAngle);
 
         // Control tower windows
-        Draw3D.drawBox3D(0, bob - size * 0.14, size * 0.04, size * 0.02, size * 0.09, color(150, 200, 255, 180 * dockingPulse), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.14, size * 0.04, size * 0.02, size * 0.09, color(150, 200, 255, 180 * dockingPulse), obj.angle, sunAngle);
 
         // Antenna array on top
-        Draw3D.drawBox3D(0, bob - size * 0.19, size * 0.01, size * 0.06, size * 0.01, color(100, 110, 130), 0, sunAngle);
-        Draw3D.drawBox3D(0, bob - size * 0.2, size * 0.04, size * 0.01, size * 0.01, color(100, 110, 130), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.19, size * 0.01, size * 0.06, size * 0.01, color(100, 110, 130), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.2, size * 0.04, size * 0.01, size * 0.01, color(100, 110, 130), obj.angle, sunAngle);
 
         // Communication dish
         // Approximating dish with a small box or prism
-        Draw3D.drawBox3D(0, bob - size * 0.22, size * 0.04, size * 0.02, size * 0.04, color(90, 100, 120), 0, sunAngle);
+        Draw3D.drawBox3D(0, bob - size * 0.22, size * 0.04, size * 0.02, size * 0.04, color(90, 100, 120), obj.angle, sunAngle);
 
         // Ambient particle effects (floating debris/sparks)
         if (!obj._shipyardParticles) {
@@ -3708,15 +3709,15 @@ const SpaceObjectRenderers = {
             
             if (p.type === 'drone') {
                 const orient = Math.atan2(py, px) + Math.PI / 2 + (Math.sin(p.ang * 2) * 0.15);
-                Draw3D.drawBox3D(px, py, p.sz * 2.2, p.sz * 1.0, p.sz * 0.8, color(180, 185, 190), orient, sunAngle);
+                Draw3D.drawBox3D(px, py, p.sz * 2.2, p.sz * 1.0, p.sz * 0.8, color(180, 185, 190), obj.angle + (orient), sunAngle);
                 // Blinking light
                 const blink = 0.5 + 0.5 * Math.sin(phase * 3 + p.ang * 4);
-                Draw3D.drawBox3D(px, py, 3, 3, 3, color(255, 100, 100, 200 * blink), orient, sunAngle);
+                Draw3D.drawBox3D(px, py, 3, 3, 3, color(255, 100, 100, 200 * blink), obj.angle + (orient), sunAngle);
             } else if (p.type === 'spark') {
                 const intensity = 160 + Math.sin(weldPhase * 6 + p.ang * 2) * 100;
-                Draw3D.drawBox3D(px, py, p.sz * 1.6, p.sz * 1.2, p.sz, color(255, 230, 160, Math.min(255, intensity)), 0, sunAngle);
+                Draw3D.drawBox3D(px, py, p.sz * 1.6, p.sz * 1.2, p.sz, color(255, 230, 160, Math.min(255, intensity)), obj.angle, sunAngle);
             } else {
-                Draw3D.drawBox3D(px, py, p.sz, p.sz, p.sz, color(80, 90, 100, 120), 0, sunAngle);
+                Draw3D.drawBox3D(px, py, p.sz, p.sz, p.sz, color(80, 90, 100, 120), obj.angle, sunAngle);
             }
         }
     }
@@ -4022,7 +4023,7 @@ class SpaceObject {
         }
         // Render-only sway: small oscillation based on bobPhase and an optional amplitude
         const swayAmp = (typeof this.rotationAmplitude === 'number') ? this.rotationAmplitude : 0.25;
-        this._renderAngle = Math.sin(this.bobPhase * 0.0012) * swayAmp;
+        // this._renderAngle = Math.sin(this.bobPhase * 0.0012) * swayAmp;
         this.bobPhase += 0.0015 * dt;
         if (this.pos && !this.destroyed) {
             this.pos.x += this._drift.x;
@@ -4083,7 +4084,7 @@ class SpaceObject {
         // Use the small render-only sway instead of the full logical `angle` so objects
         // don't visibly spin all the way around and break the 3D look. Fall back to
         // the logical angle if `_renderAngle` is not set.
-        rotate((typeof this._renderAngle === 'number') ? this._renderAngle : this.angle);
+        rotate(this.angle);
         rectMode(CENTER);
 
         // cache size/anim locally for a small speedup and clarity
