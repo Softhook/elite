@@ -98,13 +98,47 @@ class EnemyRendering {
             translate(-baseDvx, -baseDvy); // Move "up" so bottom sits on ship
 
             // Draw Turret Base (Fixed to ship)
+            // Create a local copy of the cached layer and boost its base color
+            const baseLayer = EnemyRendering.TURRET_DEFS.base._cache.layers[0];
+            const baseLayerBoost = Object.assign({}, baseLayer);
+            const baseBoost = 1.5; // stronger contrast
+            baseLayerBoost.fillRGB = {
+                r: Math.min(255, Math.round((baseLayer.fillRGB.r || 100) * baseBoost)),
+                g: Math.min(255, Math.round((baseLayer.fillRGB.g || 100) * baseBoost)),
+                b: Math.min(255, Math.round((baseLayer.fillRGB.b || 100) * baseBoost))
+            };
+
             drawExtrudedPolyOptimized(
                 turretSize * 0.6, // radius
-                EnemyRendering.TURRET_DEFS.base._cache.layers[0],
+                baseLayerBoost,
                 turretBaseDepth,
                 this.angle,
                 localSunAngle
             );
+
+            // Add a subtle specular highlight on the top face toward the light
+            try {
+                const verts = baseLayer.vertexData || [];
+                if (verts.length > 0) {
+                    let sx = 0, sy = 0;
+                    for (let v of verts) { sx += v.x; sy += v.y; }
+                    sx /= verts.length; sy /= verts.length;
+                    // scale by radius used above
+                    const cx = sx * (turretSize * 0.6);
+                    const cy = sy * (turretSize * 0.6);
+
+                    const hOffset = turretSize * 0.08;
+                    const hx = cx + cos(localSunAngle) * hOffset;
+                    const hy = cy + sin(localSunAngle) * hOffset;
+
+                    push();
+                    noStroke();
+                    fill(255, 255, 255, 90);
+                    // small elliptical specular
+                    ellipse(hx, hy, turretSize * 0.12, turretSize * 0.06);
+                    pop();
+                }
+            } catch (e) { /* ignore highlight errors */ }
             
             // --- Draw Barrel ---
             // We want to stack the barrel ON TOP of the base.
@@ -117,18 +151,49 @@ class EnemyRendering {
 
             push(); // Save state for rotation
             rotate(turretAngle);
-            
+
             // Adjust angles for the barrel's rotation
             const barrelWorldAngle = this.angle + turretAngle;
             const barrelLocalSunAngle = sunAngle - barrelWorldAngle;
-            
+
+            // Boost barrel shading slightly less than base
+            const barrelLayer = EnemyRendering.TURRET_DEFS.barrel._cache.layers[0];
+            const barrelLayerBoost = Object.assign({}, barrelLayer);
+            const barrelBoost = 1.35;
+            barrelLayerBoost.fillRGB = {
+                r: Math.min(255, Math.round((barrelLayer.fillRGB.r || 80) * barrelBoost)),
+                g: Math.min(255, Math.round((barrelLayer.fillRGB.g || 80) * barrelBoost)),
+                b: Math.min(255, Math.round((barrelLayer.fillRGB.b || 80) * barrelBoost))
+            };
+
             drawExtrudedPolyOptimized(
                 turretSize, // radius/scale
-                EnemyRendering.TURRET_DEFS.barrel._cache.layers[0],
+                barrelLayerBoost,
                 turretBarrelDepth,
                 barrelWorldAngle,
                 barrelLocalSunAngle
             );
+
+            // Barrel specular
+            try {
+                const verts = barrelLayer.vertexData || [];
+                if (verts.length > 0) {
+                    let sx = 0, sy = 0;
+                    for (let v of verts) { sx += v.x; sy += v.y; }
+                    sx /= verts.length; sy /= verts.length;
+                    const cx = sx * turretSize;
+                    const cy = sy * turretSize;
+                    const hOffset = turretSize * 0.06;
+                    const hx = cx + cos(barrelLocalSunAngle) * hOffset;
+                    const hy = cy + sin(barrelLocalSunAngle) * hOffset;
+
+                    push();
+                    noStroke();
+                    fill(255, 255, 255, 110);
+                    ellipse(hx, hy, turretSize * 0.14, turretSize * 0.06);
+                    pop();
+                }
+            } catch (e) { /* ignore */ }
             pop(); // Restore rotation
             
             pop(); // Restore translation (base + barrel)
