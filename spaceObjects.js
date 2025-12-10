@@ -750,40 +750,40 @@ const Draw3D = {
 const SpaceObjectRenderers = {
     satellite: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
-        // Central bus
-        Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.42, size * 0.3, color(190, 190, 210), 0, sunAngle);
-        
-        // Solar panels
-        // Left
-        Draw3D.drawBox3D(-size * 0.78, bob, size * 0.64, size * 0.22, size * 0.05, color(30, 80, 160), 0, sunAngle);
-        // Grid lines (simulated with thin boxes)
+
+        // Central bus as a short cylinder (many-sided prism for smooth look)
+        Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.28, color(200, 200, 220), 0, sunAngle);
+
+        // Slight top cap highlight for readability
+        Draw3D.drawBox3D(0, bob - size * 0.08, size * 0.22, size * 0.10, size * 0.02, color(175, 180, 195), 0, sunAngle);
+
+        // Enlarged solar sails: move further out and increase length/height
+        const panelW = size * 1.4; // longer panels
+        const panelH = size * 0.32; // taller panels
+        const panelDepth = size * 0.025;
+
+        // Thin struts connecting bus to panels (minimal, keep silhouette clean)
+        Draw3D.drawBox3D(-size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), 0, sunAngle);
+        Draw3D.drawBox3D(size * 0.52, bob, size * 0.06, 3, 3, color(110, 110, 120), 0, sunAngle);
+
+        // Left large panel (extruded plate)
+        Draw3D.drawBox3D(-size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), 0, sunAngle);
+        // Add a few bold ribs to sell the panel segmentation
         for (let g = -2; g <= 2; g++) {
-            const gx = g * (size * 0.64 / 6);
-            Draw3D.drawBox3D(-size * 0.78, bob + gx, size * 0.64, size * 0.01, size * 0.06, color(20, 40, 90, 180), 0, sunAngle);
+            const gy = g * (panelH * 0.25);
+            Draw3D.drawBox3D(-size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), 0, sunAngle);
         }
-        
-        // Right
-        Draw3D.drawBox3D(size * 0.78, bob, size * 0.64, size * 0.22, size * 0.05, color(30, 80, 160), 0, sunAngle);
+
+        // Right large panel
+        Draw3D.drawBox3D(size * 1.2, bob, panelW * 0.5, panelH * 0.9, panelDepth, color(28, 70, 150), 0, sunAngle);
         for (let g = -2; g <= 2; g++) {
-            const gx = g * (size * 0.64 / 6);
-            Draw3D.drawBox3D(size * 0.78, bob + gx, size * 0.64, size * 0.01, size * 0.06, color(20, 40, 90, 180), 0, sunAngle);
+            const gy = g * (panelH * 0.25);
+            Draw3D.drawBox3D(size * 1.2, bob + gy, panelW * 0.46, 2, panelDepth * 1.5, color(14, 32, 70, 200), 0, sunAngle);
         }
-        
-        // Antenna dish
-        push();
-        translate(size * 0.28, -size * 0.12 + bob);
-        // Dish base
-        Draw3D.drawPrism(0, 0, size * 0.04, 6, size * 0.05, color(100), 0, sunAngle);
-        // Dish itself
-        translate(0, -size * 0.05);
-        rotate(-PI/4);
-        Draw3D.drawPrism(0, 0, size * 0.11, 12, size * 0.02, color(140), 0, sunAngle);
-        pop();
-        
-        // Nav lights
-        const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.1);
-        Draw3D.drawBox3D(-size * 0.18, -size * 0.18 + bob, 4, 4, 4, color(255, 90, 80, 255 * flash), 0, sunAngle);
+
+        // Keep only a single small nav/status light
+        const flash = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.12);
+        Draw3D.drawBox3D(0, -size * 0.12 + bob, 4, 4, 2, color(255, 120, 100, 255 * flash), 0, sunAngle);
     },
 
     fuelDepot: function(obj, size, anim, bob) {
@@ -948,80 +948,98 @@ const SpaceObjectRenderers = {
     relay: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const relayPhase = (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06;
-        // Draw hub in stages so antennae can correctly layer behind/in front
-        Draw3D.drawPrismSplit(0, bob, size * 0.36, 8, size * 0.1, color(170), 0, sunAngle, 'bottom');
-        Draw3D.drawPrismSplit(0, bob, size * 0.36, 8, size * 0.1, color(170), 0, sunAngle, 'sides');
-        Draw3D.drawPrismSplit(0, bob, size * 0.1, 8, size * 0.2, color(140, 140, 150), 0, sunAngle, 'sides');
 
-        // Antennae - back side first
-        for (let pass = 0; pass < 2; pass++) {
-            const wantBack = (pass === 0);
-            for (let i = 0; i < 5; i++) {
-                const a = (i / 5) * TWO_PI + relayPhase * (i%2?1:-1);
-                const lx = Math.cos(a) * (size * 0.6);
-                const ly = Math.sin(a) * (size * 0.3);
-                const depth = Math.sin(a + relayPhase * 0.5);
-                const isBack = depth < 0;
-                if (isBack !== wantBack) continue;
+        // Add a little bob to the entire relay to feel alive
+        const bobOsc = Math.sin(obj.bobPhase * 0.006) * (size * 0.01);
 
-                const armLen = Math.sqrt(lx*lx + ly*ly);
-                const armAng = Math.atan2(ly, lx);
-                push();
-                translate(lx/2, bob + ly/2);
-                rotate(armAng);
-                Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(isBack ? 160 : 200), 0, sunAngle);
-                pop();
+        // Base ring and heavier footprint to ground the object visually
+        Draw3D.drawRing3D(0, bob + bobOsc + size * 0.02, size * 0.52, size * 0.06, 12, size * 0.02, color(110, 120, 130), 0, sunAngle);
 
-                // Dish shadow & main dish
-                if (!isBack) {
-                    Draw3D.drawBox3D(lx + size * 0.005, ly + size * 0.005 + bob, size * 0.12, size * 0.08, size * 0.02, color(160, 160, 170), 0, sunAngle);
-                }
-                Draw3D.drawBox3D(lx, ly + bob, size * 0.12, size * 0.08, size * 0.02, color(isBack ? 180 : 200), 0, sunAngle);
-                if (!isBack) {
-                    Draw3D.drawBox3D(lx - size * 0.02, ly - size * 0.01 + bob, size * 0.04, size * 0.03, size * 0.01, color(230, 230, 240), 0, sunAngle);
-                }
-            }
+        // Prepare dish geometry so we can draw back faces first, hub, then front faces
+        const dishCount = 4;
+        const dishes = [];
+        for (let i = 0; i < dishCount; i++) {
+            const a = i * (TWO_PI / dishCount) + relayPhase * 0.5;
+            const dDist = size * 0.62;
+            const lx = Math.cos(a) * dDist;
+            const ly = Math.sin(a) * dDist * 0.28;
+            const depth = Math.sin(a + relayPhase * 0.2);
+            dishes.push({ a, lx, ly, depth, i });
         }
 
-        // Hub top cap
-        Draw3D.drawPrismSplit(0, bob, size * 0.36, 8, size * 0.1, color(170), 0, sunAngle, 'top');
+        // Draw back-facing dishes first (so they appear behind the hub)
+        for (let dd of dishes) {
+            if (dd.depth >= 0) continue;
+            const armLen = Math.sqrt(dd.lx * dd.lx + dd.ly * dd.ly);
+            const armAng = Math.atan2(dd.ly, dd.lx);
+            push();
+            translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
+            rotate(armAng);
+            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(130, 135, 140), 0, sunAngle);
+            pop();
 
-        // Panel decals
-        Draw3D.drawBox3D(-size * 0.06, bob, size * 0.08, size * 0.04, size * 0.01, color(100, 120, 150), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.06, bob, size * 0.08, size * 0.04, size * 0.01, color(100, 120, 150), 0, sunAngle);
-
-        // Rotating decorative pips
-        for (let p = 0; p < 4; p++) {
-            const a = relayPhase + p * (TWO_PI / 4);
-            const lx = Math.cos(a) * (size * 0.46);
-            const ly = Math.sin(a) * (size * 0.14);
-            const depth = Math.sin(a);
-            const isBack = depth < 0;
-            Draw3D.drawBox3D(lx, ly + bob, isBack ? 3 : 4, isBack ? 2 : 3, 2, color(isBack ? 180 : 200, isBack ? 200 : 220, isBack ? 220 : 240, isBack ? 150 : 200), 0, sunAngle);
+            // darker, recessed dish plate
+            push();
+            translate(dd.lx, bob + bobOsc + dd.ly);
+            rotate(armAng + PI / 2 + Math.sin(relayPhase * 0.6 + dd.i) * 0.06);
+            Draw3D.drawExtrudedShape([
+                { x: -size * 0.16, y: -size * 0.06 },
+                { x: 0, y: 0 },
+                { x: -size * 0.16, y: size * 0.06 }
+            ], size * 0.05, color(180, 190, 200, 180), 0, sunAngle, true);
+            pop();
         }
 
-        // Flashing status lights
+        // Hub core (draw after back dishes so it layers on top)
+        Draw3D.drawPrism(0, bob + bobOsc, size * 0.22, 6, size * 0.18, color(190, 190, 200), 0, sunAngle);
+        Draw3D.drawPrism(0, bob + bobOsc - size * 0.06, size * 0.18, 6, size * 0.06, color(220, 220, 230), 0, sunAngle);
+
+        // Central spire/antenna
+        Draw3D.drawPrism(0, bob + bobOsc - size * 0.08, size * 0.04, 6, size * 0.12, color(230, 230, 240), 0, sunAngle);
+
+        // Draw front-facing dishes (so they overlap the hub correctly)
+        for (let dd of dishes) {
+            if (dd.depth < 0) continue;
+            const armLen = Math.sqrt(dd.lx * dd.lx + dd.ly * dd.ly);
+            const armAng = Math.atan2(dd.ly, dd.lx);
+            push();
+            translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
+            rotate(armAng);
+            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(140, 145, 150), 0, sunAngle);
+            pop();
+
+            // brighter face dish with slight animated tilt
+            push();
+            translate(dd.lx, bob + bobOsc + dd.ly);
+            rotate(armAng + PI / 2 + Math.sin(relayPhase * 0.6 + dd.i) * 0.06);
+            Draw3D.drawExtrudedShape([
+                { x: -size * 0.16, y: -size * 0.06 },
+                { x: 0, y: 0 },
+                { x: -size * 0.16, y: size * 0.06 }
+            ], size * 0.05, color(230, 235, 240), 0, sunAngle, true);
+
+            // pulsing receiver dot
+            const pulse = 0.6 + 0.4 * Math.sin(relayPhase * 1.8 + dd.i);
+            Draw3D.drawBox3D(dd.lx - Math.cos(dd.a) * size * 0.03, bob + bobOsc + dd.ly - Math.sin(dd.a) * size * 0.03, 4 * pulse, 3 * pulse, 2, color(255, 220, 120, 200), 0, sunAngle);
+            pop();
+        }
+
+        // Larger decorative pips around hub edge (fewer, bolder — reads well at small sizes)
+        for (let p = 0; p < 6; p++) {
+            const a = p * (TWO_PI / 6) + relayPhase * 0.4;
+            const lx = Math.cos(a) * size * 0.43;
+            const ly = Math.sin(a) * size * 0.12;
+            Draw3D.drawBox3D(lx, ly + bob + bobOsc, 4, 3, 2, color(200, 210, 230), 0, sunAngle);
+        }
+
+        // Status lights (central, readable)
         const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
-        Draw3D.drawBox3D(-size * 0.1, -size * 0.08 + bob, 6, 6, 3, color(255, 255, 0, 80 * flash), 0, sunAngle);
-        Draw3D.drawBox3D(-size * 0.1, -size * 0.08 + bob, 3, 3, 3, color(255, 255, 0, 255 * flash), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 6, 6, 3, color(255, 200, 80, 200 * flash), 0, sunAngle);
+        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 3, 3, 3, color(255, 230, 160, 255 * flash), 0, sunAngle);
 
-        const flash2 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15 + 1);
-        Draw3D.drawBox3D(size * 0.1, -size * 0.08 + bob, 6, 6, 3, color(255, 0, 255, 80 * flash2), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.1, -size * 0.08 + bob, 3, 3, 3, color(255, 0, 255, 255 * flash2), 0, sunAngle);
-
-        // Slow-moving auxiliary antenna
-        push();
-        translate(0, bob);
-        const auxAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
-        rotate(auxAng);
-        Draw3D.drawBox3D(size * 0.2, -size * 0.1, size * 0.45, 2, 2, color(160, 170, 180), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.4 + 1, -size * 0.2 + 1, 6, 4, 2, color(140, 150, 160), 0, sunAngle);
-        Draw3D.drawBox3D(size * 0.4, -size * 0.2, 6, 4, 2, color(160, 170, 180), 0, sunAngle);
-        pop();
-
-        // Decorative concentric rings (simulated with ring3d)
-        Draw3D.drawRing3D(0, bob, size * 0.5, size * 0.02, 12, size * 0.01, color(130, 140, 150, 80), 0, sunAngle);
-        Draw3D.drawRing3D(0, bob, size * 0.6, size * 0.02, 12, size * 0.01, color(140, 150, 160, 60), 0, sunAngle);
+        // Subtle concentric rings for depth/scale reference with slow pulse
+        const ringPulse = 0.85 + 0.15 * Math.sin(obj.bobPhase * 0.008);
+        Draw3D.drawRing3D(0, bob + bobOsc, size * 0.5 * ringPulse, size * 0.02, 12, size * 0.01, color(130, 140, 150, 60), 0, sunAngle);
     },
 
     commDish: function(obj, size, anim, bob) {
@@ -2242,98 +2260,155 @@ const SpaceObjectRenderers = {
     miningPlatform: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Base platform
-        Draw3D.drawRing3D(0, bob + size * 0.08, size * 0.45, size * 0.05, color(90, 90, 90), 0, sunAngle);
+        // Wide, flat base - emphasize silhouette like the classic 2D art
+        Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), 0, sunAngle);
 
-        // Central tower
-        Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.22, size * 0.22, size * 0.6, color(110, 110, 120), 0, sunAngle);
-        
-        // Windows
-        for (let w = -1; w <= 1; w++) {
-            const wy = -size * 0.22 + w * (size * 0.18) + bob * 0.02;
-            Draw3D.drawBox3D(0, wy, size * 0.12, size * 0.08, size * 0.02, color(200, 220, 240), 0, sunAngle);
+        // Top deck: a large, shallow plate with bold stripes (2D-inspired decals)
+        Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), 0, sunAngle);
+        // Painted hazard stripes on deck (flat 2D look)
+        noStroke();
+        for (let i = -2; i <= 2; i++) {
+            const sx = i * (size * 0.12);
+            fill(200, 50, 40, 180);
+            rect(sx - size * 0.06, bob - size * 0.05, size * 0.12, size * 0.36);
         }
 
-        // Drill arms
+        // Central control tower — squat and stylized, less depth for 2D feel
+        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.18, size * 0.22, size * 0.32, color(110, 110, 120), 0, sunAngle);
+        // Flat band windows (more graphic, less extruded)
+        fill(180, 220, 240);
+        for (let k = -1; k <= 1; k++) {
+            rect(-size * 0.06, bob - size * 0.26 + k * (size * 0.08), size * 0.12, size * 0.04);
+        }
+
+        // Mining arms: animated flat plates with rotating drill tips and oscillating actuators
+        if (!obj._miningState) {
+            obj._miningState = { armPhase: Math.random() * TWO_PI, dronePhase: Math.random() * TWO_PI, dust: [] };
+        }
+        obj._miningState.armPhase += 0.018; // arm sweep
+
         for (let a = 0; a < 3; a++) {
-            const ang = -PI / 3 + a * (PI / 3);
+            const baseAng = -PI / 2 + a * (TWO_PI / 3);
+            const armWobble = Math.sin(obj._miningState.armPhase + a * 0.6) * 0.08;
+            const ang = baseAng + armWobble;
+
             push();
-            const armRot = ang + Math.sin(obj.bobPhase * 0.001 + a) * 0.02;
-            rotate(armRot);
-            
-            // Arm shaft
-            // Calculate midpoint and length for the arm
-            const x1 = size * 0.12, y1 = size * 0.02 + bob;
-            const x2 = size * 0.48, y2 = size * 0.18 + bob;
-            const mx = (x1 + x2) / 2;
-            const my = (y1 + y2) / 2;
-            const len = dist(x1, y1, x2, y2);
-            const angle = atan2(y2 - y1, x2 - x1);
-            
+            translate(0, bob - size * 0.04);
+            rotate(ang);
+
+            const hullLen = size * 0.48;
+            const plate = [
+                { x: size * 0.06, y: -size * 0.03 },
+                { x: hullLen * 0.92, y: -size * 0.14 },
+                { x: hullLen, y: size * 0.14 }
+            ];
+
+            Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), 0, sunAngle, true);
+
+            // actuator piston (oscillating)
+            const piston = Math.sin(obj._miningState.armPhase * 1.5 + a) * (size * 0.02);
+            Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), 0, sunAngle);
+
+            // Drill housing
+            Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), 0, sunAngle);
+
+            // Rotating drill tip (concentric rings for motion)
             push();
-            translate(mx, my);
-            rotate(angle);
-            Draw3D.drawBox3D(0, 0, len, size * 0.04, size * 0.04, color(120, 120, 120), armRot + angle, sunAngle);
-            pop();
-            
-            // Joint
-            Draw3D.drawBox3D(size * 0.48, size * 0.18 + bob, size * 0.08, size * 0.08, size * 0.06, color(100, 100, 100), armRot, sunAngle);
-            
-            // Drill head
-            push();
-            translate(size * 0.48, size * 0.18 + bob);
-            const spin = (anim ? anim.miningSpin : 0) + (obj.bobPhase * 0.002) + a * 0.2;
+            translate(hullLen * 1.02, 0);
+            const spin = (anim && typeof anim.miningSpin === 'number' ? anim.miningSpin : 0) + obj._miningState.armPhase * 6 + a * 0.9;
             rotate(spin);
-            Draw3D.drawBox3D(0, 0, size * 0.12, size * 0.12, size * 0.04, color(80, 80, 90), armRot + spin, sunAngle);
-            // Drill tip
-            Draw3D.drawPrism(size * 0.12, 0, size * 0.04, 3, size * 0.1, color(170, 150, 110), armRot + spin - Math.PI/2, sunAngle);
+            // drill core
+            Draw3D.drawPrism(0, 0, size * 0.045, 6, size * 0.08, color(150, 130, 100), 0, sunAngle);
+            // tip highlight rotating
+            noStroke(); fill(220, 190, 140, 180);
+            ellipse(size * 0.08, 0, size * 0.06, size * 0.02);
+            stroke(140, 120, 90); strokeWeight(1);
             pop();
+
+            // Sparks / ore spray at drill head (animated semi-random)
+            const sprayPhase = (obj._miningState.armPhase * 0.8 + a);
+            for (let sp = 0; sp < 3; sp++) {
+                const r = lerp(size * 0.06, size * 0.14, (sp) / 3);
+                const sa = sprayPhase + sp * 1.2;
+                const sx = Math.cos(sa) * (hullLen * 1.05);
+                const sy = Math.sin(sa) * r * 0.25 + (piston * 0.4);
+                fill(200, 160, 100, 140 - sp * 30);
+                ellipse(sx, sy + bob - size * 0.04, 4 + sp * 2, 2 + sp);
+            }
+
             pop();
         }
 
-        // Conveyor belt
-        const beltY = size * 0.32 + bob;
-        Draw3D.drawBox3D(0, beltY, size * 0.6, size * 0.6, size * 0.14, color(50, 50, 50), 0, sunAngle);
-        
-        // Moving boxes
-        const boxOffset = (Math.sin(obj.bobPhase * 0.01) + 1) * 0.5;
-        for (let b = -2; b <= 2; b++) {
-            const bx = b * (size * 0.12) + (boxOffset * size * 0.18);
-            Draw3D.drawBox3D(bx, beltY - size * 0.08, size * 0.08, size * 0.08, size * 0.06, color(120, 100, 90), 0, sunAngle);
+        // Conveyor: shallow, with graphic moving marks (2D impression)
+        const beltY = size * 0.30 + bob;
+        Draw3D.drawBox3D(0, beltY, size * 0.64, size * 0.28, size * 0.03, color(40, 40, 40), 0, sunAngle);
+        // Moving marks (simple rectangles to read as boxes from afar) — animate with local phase
+        if (!obj._miningState) obj._miningState = { armPhase: 0, dronePhase: 0, dust: [] };
+        obj._miningState.dronePhase += 0.02;
+        const boxPhase = (obj._miningState.dronePhase * 0.5) % 1;
+        for (let i = -4; i <= 4; i++) {
+            const px = i * (size * 0.12) + (boxPhase * size * 0.2);
+            fill(140, 115, 95);
+            rect(px - size * 0.04, beltY - size * 0.06, size * 0.08, size * 0.06);
         }
 
-        // Ore sacks
-        for (let s = -2; s <= 2; s++) {
-            const sx = s * (size * 0.22);
-            const sy = size * 0.42 + bob;
+        // Conveyor dust puffs — spawn occasionally
+        if (Math.random() < 0.08) {
+            obj._miningState.dust.push({ x: (Math.random() - 0.5) * size * 0.6, y: beltY - size * 0.02, life: 60 + Math.random() * 80 });
+        }
+        for (let i = obj._miningState.dust.length - 1; i >= 0; i--) {
+            const d = obj._miningState.dust[i];
+            d.life -= 1;
+            d.y -= 0.15;
+            const alpha = map(d.life, 0, 120, 0, 140);
+            fill(160, 140, 120, alpha);
+            ellipse(d.x, d.y + bob, 8, 4);
+            if (d.life <= 0) obj._miningState.dust.splice(i, 1);
+        }
+
+        // Piles of ore — flattened ellipses for a stylized 2D look
+        for (let s = -3; s <= 3; s += 2) {
+            const sx = s * (size * 0.18);
+            const sy = size * 0.44 + bob;
             fill(100, 70, 60);
-            ellipse(sx, sy, size * 0.12, size * 0.16);
-            stroke(60, 40, 30, 120); strokeWeight(1);
-            line(sx - 6, sy - 6, sx + 6, sy - 6);
+            ellipse(sx, sy, size * 0.14, size * 0.10);
+            stroke(60, 40, 30, 140); strokeWeight(1);
+            line(sx - 6, sy - 4, sx + 6, sy - 4);
             noStroke();
         }
 
-        // Warning lights
-        const warn = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.004);
-        fill(255, 120, 100, 200 * warn);
-        ellipse(-size * 0.08, -size * 0.28 + bob, 6, 6);
-        ellipse(size * 0.08, -size * 0.28 + bob, 6, 6);
+        // Occasional falling debris particles near ore piles
+        if (!obj._miningState.particles) obj._miningState.particles = [];
+        if (Math.random() < 0.06) {
+            const px = (Math.random() - 0.5) * size * 0.8;
+            obj._miningState.particles.push({ x: px, y: size * 0.36 + bob - size * 0.02, vy: 0.6 + Math.random() * 1.2, life: 40 + Math.random() * 60 });
+        }
+        for (let i = obj._miningState.particles.length - 1; i >= 0; i--) {
+            const p = obj._miningState.particles[i];
+            p.vy += 0.06; p.y += p.vy; p.life -= 1;
+            fill(140, 110, 80, 160 * (p.life / 100));
+            ellipse(p.x, p.y + bob, 3 + Math.random()*2, 2 + Math.random()*1.5);
+            if (p.life <= 0 || p.y - (size * 0.6) > size) obj._miningState.particles.splice(i, 1);
+        }
 
-        // Status lights
+        // Large, readable warning lights and status indicators (2D pop)
+        const warn = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.006);
+        fill(255, 120, 100, 220 * warn);
+        ellipse(-size * 0.14, -size * 0.28 + bob, 8, 8);
+        ellipse(size * 0.14, -size * 0.28 + bob, 8, 8);
+
         const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45);
-        fill(0, 255, 0, 255 * statusFlash);
-        ellipse(-size * 0.25, bob + size * 0.05, 3, 3);
-        fill(0, 255, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45 + 1)));
-        ellipse(size * 0.25, bob + size * 0.05, 3, 3);
-        
-        // Inspection drone
+        fill(0, 255, 100, 255 * statusFlash);
+        ellipse(-size * 0.28, bob + size * 0.04, 4, 4);
+        fill(0, 200, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45 + 1)));
+        ellipse(size * 0.28, bob + size * 0.04, 4, 4);
+
+        // A single inspection drone (kept simple & flat)
         push();
         const droneAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
+        translate(size * 0.38, bob - size * 0.12);
         rotate(droneAng);
-        Draw3D.drawBox3D(size * 0.35, bob - size * 0.1, size * 0.08, size * 0.08, size * 0.06, color(180, 160, 140), droneAng, sunAngle);
-        stroke(120, 100, 80, 150); strokeWeight(0.6);
-        line(size * 0.35, bob - size * 0.1, size * 0.4, bob - size * 0.15);
-        noStroke();
+        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.06, size * 0.03, color(200, 170, 140), 0, sunAngle);
         pop();
     },
 
