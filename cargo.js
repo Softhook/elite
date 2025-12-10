@@ -18,6 +18,8 @@ class Cargo {
         this.attachedBy = null;    // string marker, e.g. 'harpoon'
         this.lifetime = 1800; // Exists for 30 seconds (60fps * 30)
         this.color = Cargo.determineColor(this.type);
+        // Optional link back to any HUD/minimap event marker created when this cargo was spawned
+        this.eventMarkerId = null;
     }
 
     /**
@@ -106,6 +108,12 @@ class Cargo {
                             this.attachedBy = null;
                         } else {
                             this.collected = true;
+                            // Remove any HUD/minimap marker associated with this cargo
+                            try {
+                                if (this.eventMarkerId && typeof uiManager !== 'undefined' && typeof uiManager.removeEventMarker === 'function') {
+                                    uiManager.removeEventMarker(this.eventMarkerId);
+                                }
+                            } catch (e) { }
                         }
                     } else {
                         // Owner couldn't accept cargo (full etc.) - detach and resume drifting

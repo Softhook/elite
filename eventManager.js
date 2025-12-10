@@ -589,14 +589,21 @@ class EventManager {
                     const t = random(types);
                     spawnedTypes.add(t);
                     const qty = Math.max(1, floor(random(1, 4)));
-                    this.starSystem.addCargo(new Cargo(x, y, t, qty));
-                    // Add HUD marker so player can locate black market caches
+                    // Create cargo and attach a marker id so it can be removed when collected
                     try {
+                        const cargo = new Cargo(x, y, t, qty);
+                        const markerId = `BLACK_MARKET_${frameCount}_${i}`;
+                        cargo.eventMarkerId = markerId;
+                        this.starSystem.addCargo(cargo);
+                        // Add HUD marker so player can locate black market caches
                         const label = `${t} cache`;
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                            this.uiManager.addEventMarker(`BLACK_MARKET_${frameCount}_${i}`, x, y, label, 'purple', this._extendDurationMs(180000));
+                            this.uiManager.addEventMarker(markerId, x, y, label, 'purple', this._extendDurationMs(180000));
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        // Fallback: still add a plain cargo if marker setup fails
+                        try { this.starSystem.addCargo(new Cargo(x, y, t, qty)); } catch (_) { }
+                    }
                 }
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Black market auction seeded ${count} caches (${Array.from(spawnedTypes).join(', ')})`, 'purple');
@@ -733,7 +740,11 @@ class EventManager {
                 const r = random(900, 2200);
                 const x = anchor.x + cos(ang) * r;
                 const y = anchor.y + sin(ang) * r;
-                this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8)))));
+                try {
+                    const c = new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))));
+                    // No HUD marker here by default, but attach if needed later
+                    this.starSystem.addCargo(c);
+                } catch (e) { this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))))); }
                 const descriptor = targetObj ? `${targetObj.type} near ${targetObj.planetName || 'deep orbit'}` : `${this._formatStationLabel(null)} infrastructure`;
                 this._notifyEvent(`Sabotage: ${descriptor} damaged, salvage drifting nearby`, 'crimson');
                 break;
@@ -758,7 +769,19 @@ class EventManager {
                 const qty = Math.max(1, floor(random(1, 6)));
                 const x = this.player.pos.x + cos(ang) * r;
                 const y = this.player.pos.y + sin(ang) * r;
-                this.starSystem.addCargo(new Cargo(x, y, 'Metals', qty));
+                try {
+                    const c2 = new Cargo(x, y, 'Metals', qty);
+                    const markerId = `MINE_ACCIDENT_${frameCount}`;
+                    c2.eventMarkerId = markerId;
+                    this.starSystem.addCargo(c2);
+                    const anchorLabel = this._deriveAnchorLabelForPos(x, y);
+                    const label = `Salvage: ${qty} Metals`;
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this.uiManager.addEventMarker(markerId, x, y, label, 'orange', this._extendDurationMs(180000));
+                    }
+                } catch (e) {
+                    try { this.starSystem.addCargo(new Cargo(x, y, 'Metals', qty)); } catch (_) { }
+                }
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Mine accident spilled ${qty} units of ore — salvage beacons deployed`, 'orange');
                 try {
@@ -1098,16 +1121,22 @@ class EventManager {
 
         for (let i = 0; i < numToSpawn; i++) {
             const cargo = new Cargo(spawnX, spawnY, config.cargoType || 'Unknown', config.quantity || 1);
-            this.starSystem.addCargo(cargo);
-            // Add an HUD marker + notify player where the cargo appeared
+            // Generate a marker id for this spawned cargo so we can remove it when collected
             try {
+                const markerId = `${event.type}_${frameCount}_${i}`;
+                cargo.eventMarkerId = markerId;
+                this.starSystem.addCargo(cargo);
+                // Add an HUD marker + notify player where the cargo appeared
                 const anchorLabel = this._deriveAnchorLabelForPos(spawnX, spawnY);
                 const label = `${config.cargoType || 'Cargo'}`;
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                    this.uiManager.addEventMarker(`${event.type}_${frameCount}_${i}`, spawnX, spawnY, label, 'gold', this._extendDurationMs(180000));
+                    this.uiManager.addEventMarker(markerId, spawnX, spawnY, label, 'gold', this._extendDurationMs(180000));
                 }
                 this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold');
-            } catch (e) {}
+            } catch (e) {
+                // Fallback: if anything goes wrong, still add cargo without marker link
+                try { this.starSystem.addCargo(cargo); } catch (err) { }
+            }
         }
     }
 

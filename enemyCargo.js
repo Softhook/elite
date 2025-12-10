@@ -155,6 +155,23 @@ class EnemyCargo {
 
         if (addResult.added >= desiredQuantity) {
             cargo.collected = true;
+            // Remove any HUD/minimap marker associated with this cargo
+            try {
+                if (cargo.eventMarkerId && typeof uiManager !== 'undefined' && typeof uiManager.removeEventMarker === 'function') {
+                    uiManager.removeEventMarker(cargo.eventMarkerId);
+                }
+            } catch (e) { }
+            // Remove cargo from its containing system if possible
+            try {
+                const sys = this.currentSystem || (typeof this.getSystem === 'function' ? this.getSystem() : null);
+                if (sys && Array.isArray(sys.cargo)) {
+                    const idx = sys.cargo.indexOf(cargo);
+                    if (idx >= 0) {
+                        if (typeof sys._fastRemove === 'function') sys._fastRemove(sys.cargo, idx);
+                        else sys.cargo.splice(idx, 1);
+                    }
+                }
+            } catch (e) { }
             return { added: addResult.added, fullyCollected: true, capacityFull: addResult.added >= capacityBefore };
         }
 
@@ -162,6 +179,21 @@ class EnemyCargo {
         cargo.quantity = remaining > 0 ? remaining : 0;
         if (remaining <= 0) {
             cargo.collected = true;
+            try {
+                if (cargo.eventMarkerId && typeof uiManager !== 'undefined' && typeof uiManager.removeEventMarker === 'function') {
+                    uiManager.removeEventMarker(cargo.eventMarkerId);
+                }
+            } catch (e) { }
+            try {
+                const sys = this.currentSystem || (typeof this.getSystem === 'function' ? this.getSystem() : null);
+                if (sys && Array.isArray(sys.cargo)) {
+                    const idx2 = sys.cargo.indexOf(cargo);
+                    if (idx2 >= 0) {
+                        if (typeof sys._fastRemove === 'function') sys._fastRemove(sys.cargo, idx2);
+                        else sys.cargo.splice(idx2, 1);
+                    }
+                }
+            } catch (e) { }
         } else if (typeof Cargo !== 'undefined' && typeof Cargo.determineColor === 'function') {
             cargo.color = Cargo.determineColor(cargo.type);
         }

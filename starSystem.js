@@ -3073,6 +3073,12 @@ class StarSystem {
 
             if (cargoItem.isExpired && cargoItem.isExpired()) {
                 CARGO_LOG(`[Cargo Expired] Removing ${cargoItem.type}x${cargoItem.quantity} during collection check`);
+                // Remove any HUD/minimap marker associated with this cargo before removing
+                try {
+                    if (cargoItem.eventMarkerId && typeof uiManager !== 'undefined' && typeof uiManager.removeEventMarker === 'function') {
+                        uiManager.removeEventMarker(cargoItem.eventMarkerId);
+                    }
+                } catch (e) { }
                 this._fastRemove(this.cargo, i);
                 continue;
             }
@@ -3117,7 +3123,13 @@ class StarSystem {
                     } else {
                         // Only mark as fully collected if the entire quantity was added
                         cargoItem.collected = true;
-                        // Since it's fully collected, we can remove it immediately
+                        // Remove HUD/minimap marker for this cargo
+                        try {
+                            if (cargoItem.eventMarkerId && typeof uiManager !== 'undefined' && typeof uiManager.removeEventMarker === 'function') {
+                                uiManager.removeEventMarker(cargoItem.eventMarkerId);
+                            }
+                        } catch (e) { }
+                        // Since it's fully collected, remove it immediately from the system
                         this._fastRemove(this.cargo, i);
                         //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
                     }
