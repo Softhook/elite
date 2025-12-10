@@ -1407,110 +1407,149 @@ const SHIP_DEFINITIONS = {
 
 // --- Drawing Helper Functions ---
 
-// Helper to calculate depth vector for 3D extrusion
-function getDepthVector(angle, depth) {
-    // Depth vector is fixed in world space (pointing "down" relative to camera)
-    // In rotated object space, it rotates opposite to the object
-    return {
-        x: depth * Math.sin(angle),
-        y: depth * Math.cos(angle)
-    };
+// Helper to ensure vertices are in Clockwise order (for consistent culling)
+function ensureClockwise(vertices) {
+    let area = 0;
+    for (let i = 0; i < vertices.length; i++) {
+        let j = (i + 1) % vertices.length;
+        area += (vertices[j].x - vertices[i].x) * (vertices[j].y + vertices[i].y);
+    }
+    // In screen coords (y down), negative area is CW. Positive is CCW.
+    // If area > 0, it's CCW, so we reverse.
+    if (area > 0) {
+        vertices.reverse();
+    }
 }
 
-// Helper to draw an extruded polygon (Faux-3D)
-function drawExtrudedPoly(r, vertexData, depth, fillColor, strokeColor, strokeW, angle, localSunAngle) {
-    const dv = getDepthVector(angle, depth);
-    
-    // Ensure colors are valid p5 colors with fallbacks
-    let mainFill = color(fillColor || [100, 100, 100]);
-    let mainStroke = color(strokeColor || [200, 200, 200]);
-    
-    strokeWeight(strokeW || 1);
-    
-    const len = vertexData.length;
-
-    // Find X range for Wedge effect (Front tip tapers to a point)
-    // We assume +X is the "Front" of the ship based on standard definitions
-    let minX = Infinity, maxX = -Infinity;
-    for (let v of vertexData) {
-        if (v.x < minX) minX = v.x;
-        if (v.x > maxX) maxX = v.x;
-    }
-    let xRange = maxX - minX;
-    if (xRange < 0.001) xRange = 1; // Safety
-
-    // Helper to get wedge factor (0 at nose/maxX, 1 at tail/minX)
-    const getWedgeFactor = (x) => {
-        return (maxX - x) / xRange;
+// Initialize Cache for Ship Drawing (Optimization)
+function initShipCache(def) {
+    def._cache = {
+        layers: []
     };
+
+    let layers = def.vertexLayers || [{ 
+        vertexData: def.vertexData, 
+        fillColor: def.fillColor, 
+        strokeColor: def.strokeColor, 
+        strokeW: def.strokeW 
+    }];
+
+    for (let layer of layers) {
+        // 1. Ensure Winding Order (CW)
+        if (layer.vertexData && layer.vertexData.length > 0) {
+            ensureClockwise(layer.vertexData);
+
+            // 2. Pre-calc Bounds (for Gradient & Wedge)
+            let minX = Infinity, maxX = -Infinity;
+            for (let v of layer.vertexData) {
+                if (v.x < minX) minX = v.x;
+                if (v.x > maxX) maxX = v.x;
+            }
+            let xRange = maxX - minX;
+            if (xRange < 0.001) xRange = 1;
+
+            // 3. Pre-calc Colors
+            let cFill = color(layer.fillColor || def.fillColor || [100,100,100]);
+            let cStroke = color(layer.strokeColor || def.strokeColor || [200,200,200]);
+            
+            let fillRGB = { r: red(cFill), g: green(cFill), b: blue(cFill) };
+            let strokeRGB = { r: red(cStroke), g: green(cStroke), b: blue(cStroke) };
+            
+            // Pre-compute gradient strings
+            let highlightStr = color(min(255, fillRGB.r*1.3), min(255, fillRGB.g*1.3), min(255, fillRGB.b*1.3)).toString();
+            let mainFillStr = cFill.toString();
+            let darkFillStr = color(fillRGB.r*0.8, fillRGB.g*0.8, fillRGB.b*0.8).toString();
+
+            // 4. Pre-calc Edges
+            let edges = [];
+            const len = layer.vertexData.length;
+            for (let i = 0; i < len; i++) {
+                const next = (i + 1) % len;
+                const v1 = layer.vertexData[i];
+                const v2 = layer.vertexData[next];
+                
+                let t1 = (maxX - v1.x) / xRange;
+                let t2 = (maxX - v2.x) / xRange;
+
+                edges.push({
+                    v1: v1,
+                    v2: v2,
+                    dx: v2.x - v1.x,
+                    dy: v2.y - v1.y,
+                    t1: t1,
+                    t2: t2
+                });
+            }
+
+            def._cache.layers.push({
+                vertexData: layer.vertexData,
+                minX, maxX, xRange,
+                fillRGB, strokeRGB,
+                highlightStr, mainFillStr, darkFillStr,
+                strokeW: layer.strokeW || def.strokeW || 1,
+                edges: edges
+            });
+        }
+    }
+}
+
+// Optimized Extruded Poly Drawing
+function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle) {
+    const dvx = depth * Math.sin(angle);
+    const dvy = depth * Math.cos(angle);
     
-    // 1. Draw Sides (Only visible sides - Backface Culling)
-    for (let i = 0; i < len; i++) {
-        const next = (i + 1) % len;
-        const v1 = vertexData[i];
-        const v2 = vertexData[next];
-
-        const dx = v2.x - v1.x;
-        const dy = v2.y - v1.y;
-        
-        // Visibility check (Backface Culling)
-        const cp = dx * dv.y - dy * dv.x;
-        
-        if (cp < 0) {
-            // Calculate wedge factors for tapering
-            let t1 = getWedgeFactor(v1.x);
-            let t2 = getWedgeFactor(v2.x);
-
-            // Calculate back vertices (tapered depth)
-            let bx1 = (v1.x * r) + dv.x * t1;
-            let by1 = (v1.y * r) + dv.y * t1;
-            let bx2 = (v2.x * r) + dv.x * t2;
-            let by2 = (v2.y * r) + dv.y * t2;
+    strokeWeight(layerCache.strokeW);
+    
+    // 1. Draw Sides (Optimized)
+    for (let edge of layerCache.edges) {
+        // Visibility check (Backface Culling for CW winding)
+        // cp < 0 means visible
+        if (edge.dx * dvy - edge.dy * dvx < 0) {
+            // Back vertices
+            let bx1 = (edge.v1.x * r) + dvx * edge.t1;
+            let by1 = (edge.v1.y * r) + dvy * edge.t1;
+            let bx2 = (edge.v2.x * r) + dvx * edge.t2;
+            let by2 = (edge.v2.y * r) + dvy * edge.t2;
             
             // Front vertices
-            let fx1 = v1.x * r;
-            let fy1 = v1.y * r;
-            let fx2 = v2.x * r;
-            let fy2 = v2.y * r;
+            let fx1 = edge.v1.x * r;
+            let fy1 = edge.v1.y * r;
+            let fx2 = edge.v2.x * r;
+            let fy2 = edge.v2.y * r;
 
-            // Calculate simple lighting based on angle relative to "sun"
-            const faceAngle = Math.atan2(dx, -dy);
+            // Simple shading
+            const faceAngle = Math.atan2(edge.dx, -edge.dy);
             const diff = faceAngle - localSunAngle;
-            const b = map(Math.cos(diff), -1, 1, 0.3, 0.8);
+            const b = 0.3 + (Math.cos(diff) + 1) * 0.25; // Optimized map
             
-            // Apply shading
-            fill(red(mainFill)*b, green(mainFill)*b, blue(mainFill)*b);
-            stroke(red(mainStroke)*b*0.8, green(mainStroke)*b*0.8, blue(mainStroke)*b*0.8);
+            fill(layerCache.fillRGB.r * b, layerCache.fillRGB.g * b, layerCache.fillRGB.b * b);
+            stroke(layerCache.strokeRGB.r * b * 0.8, layerCache.strokeRGB.g * b * 0.8, layerCache.strokeRGB.b * b * 0.8);
 
             beginShape();
-            vertex(bx1, by1); // Back 1
-            vertex(bx2, by2); // Back 2
-            vertex(fx2, fy2); // Front 2
-            vertex(fx1, fy1); // Front 1
+            vertex(bx1, by1);
+            vertex(bx2, by2);
+            vertex(fx2, fy2);
+            vertex(fx1, fy1);
             endShape(CLOSE);
         }
     }
     
-    // 2. Draw Top Face with "Curved" effect (Radial Gradient)
-    // We use the native canvas API for the gradient to simulate a curved/conical top surface
+    // 2. Draw Top Face with Radial Gradient at Tip
     let ctx = drawingContext;
-    let grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.5);
+    // Gradient center at Tip (maxX)
+    let gx = layerCache.maxX * r;
+    // Gradient extends from tip back
+    let grad = ctx.createRadialGradient(gx, 0, 0, gx, 0, r * 1.5);
     
-    // Highlight color (lighter version of fill)
-    let rVal = red(mainFill), gVal = green(mainFill), bVal = blue(mainFill);
-    let highlight = color(min(255, rVal*1.3), min(255, gVal*1.3), min(255, bVal*1.3));
-    
-    // Gradient: Center (Highlight) -> Edge (Normal Color) -> Darker Edge
-    grad.addColorStop(0, highlight.toString());
-    grad.addColorStop(0.6, mainFill.toString());
-    grad.addColorStop(1, color(rVal*0.8, gVal*0.8, bVal*0.8).toString());
+    grad.addColorStop(0, layerCache.highlightStr);
+    grad.addColorStop(0.6, layerCache.mainFillStr);
+    grad.addColorStop(1, layerCache.darkFillStr);
     
     ctx.fillStyle = grad;
-    stroke(mainStroke);
-    strokeWeight(strokeW || 1);
+    stroke(layerCache.strokeRGB.r, layerCache.strokeRGB.g, layerCache.strokeRGB.b);
     
     beginShape();
-    for (let v of vertexData) {
+    for (let v of layerCache.vertexData) {
         vertex(v.x * r, v.y * r);
     }
     endShape(CLOSE);
@@ -1519,8 +1558,6 @@ function drawExtrudedPoly(r, vertexData, depth, fillColor, strokeColor, strokeW,
 // Enhanced helper function to draw shape from vertex data or layers
 // (Kept for backward compatibility or 2D fallbacks)
 function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrokeColor, defaultStrokeW) {
-    // ... (Implementation omitted, using new 3D logic in drawGenericShip instead)
-    // But we keep this function if custom draw functions use it directly.
     if (Array.isArray(vertexDataOrLayers) && vertexDataOrLayers.length > 0 && 
         vertexDataOrLayers[0].vertexData) {
         for (let i = 0; i < vertexDataOrLayers.length; i++) {
@@ -1552,25 +1589,18 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
     }
 }
 
-// Generic Ship Drawing Function (Updated for 3D)
+// Generic Ship Drawing Function (Updated for 3D & Optimization)
 function drawGenericShip(def, s, thrusting, angle = 0, localSunAngle = -0.785) {
-    let r = s / 2;
-    let depth = s * 0.15; // Reduced depth scaling as requested
+    // Lazy Initialization of Cache
+    if (!def._cache) {
+        initShipCache(def);
+    }
 
-    if (def.vertexLayers) {
-        // Draw layers
-        for (let i = 0; i < def.vertexLayers.length; i++) {
-            let layer = def.vertexLayers[i];
-            // Use layer colors or defaults
-            let fc = layer.fillColor || def.fillColor;
-            let sc = layer.strokeColor || def.strokeColor;
-            let sw = layer.strokeW || def.strokeW;
-            
-            drawExtrudedPoly(r, layer.vertexData, depth, fc, sc, sw, angle, localSunAngle);
-        }
-    } else if (def.vertexData) {
-        // Single layer
-        drawExtrudedPoly(r, def.vertexData, depth, def.fillColor, def.strokeColor, def.strokeW, angle, localSunAngle);
+    let r = s / 2;
+    let depth = s * 0.15; 
+
+    for (let layerCache of def._cache.layers) {
+        drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle);
     }
 }
 
