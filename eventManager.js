@@ -30,6 +30,8 @@ class EventManager {
         
         this.activeEvents = []; // Track active persistent events { id, expires, type }
         this.eventDurationMultiplier = 1; // Standard duration (was 8)
+        // Global multiplier applied to ad-hoc/event-spawned cargo quantities
+        this.cargoQuantityMultiplier = 10;
     }
 
     _initializeShipGroups() {
@@ -588,7 +590,9 @@ class EventManager {
                     const y = this.player.pos.y + sin(angle) * r;
                     const t = random(types);
                     spawnedTypes.add(t);
-                    const qty = Math.max(1, floor(random(1, 4)));
+                    // Scale black market cache quantities up by multiplier
+                    const baseQty = Math.max(1, floor(random(1, 4)));
+                    const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
                     // Create cargo and attach a marker id so it can be removed when collected
                     try {
                         const cargo = new Cargo(x, y, t, qty);
@@ -741,7 +745,9 @@ class EventManager {
                 const x = anchor.x + cos(ang) * r;
                 const y = anchor.y + sin(ang) * r;
                 try {
-                    const c = new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))));
+                    const baseQty = Math.max(1, floor(random(2, 8)));
+                    const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
+                    const c = new Cargo(x, y, 'Metals', qty);
                     // No HUD marker here by default, but attach if needed later
                     this.starSystem.addCargo(c);
                 } catch (e) { this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))))); }
@@ -766,7 +772,8 @@ class EventManager {
             case 'MINE_ACCIDENT': {
                 const ang = random(TWO_PI);
                 const r = random(1200, 2200);
-                const qty = Math.max(1, floor(random(1, 6)));
+                const baseQty = Math.max(1, floor(random(1, 6)));
+                const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
                 const x = this.player.pos.x + cos(ang) * r;
                 const y = this.player.pos.y + sin(ang) * r;
                 try {
@@ -1120,7 +1127,11 @@ class EventManager {
         if (typeof EVENT_LOG === 'function') EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} cargo`);
 
         for (let i = 0; i < numToSpawn; i++) {
-            const cargo = new Cargo(spawnX, spawnY, config.cargoType || 'Unknown', config.quantity || 1);
+            // Increase spawned cargo quantity using configurable multiplier.
+            const baseQty = config.quantity || 1;
+            const multiplier = (typeof config.quantityMultiplier === 'number' && config.quantityMultiplier > 0) ? config.quantityMultiplier : this.cargoQuantityMultiplier;
+            const qty = Math.max(1, Math.floor(baseQty * multiplier));
+            const cargo = new Cargo(spawnX, spawnY, config.cargoType || 'Unknown', qty);
             // Generate a marker id for this spawned cargo so we can remove it when collected
             try {
                 const markerId = `${event.type}_${frameCount}_${i}`;
