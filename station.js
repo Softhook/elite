@@ -348,6 +348,16 @@ class Station {
         
         strokeWeight(1);
         
+        // Draw Bottom Cap
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        beginShape();
+        for (let i = 0; i < sides; i++) {
+            const ang = i * angleStep - PI/2;
+            vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
+        }
+        endShape(CLOSE);
+
         // Draw sides
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep - PI/2;
@@ -415,6 +425,16 @@ class Station {
         
         strokeWeight(1);
 
+        // Draw Bottom Cap
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        beginShape();
+        vertex(x - hw + dv.x, y - hh + dv.y);
+        vertex(x + hw + dv.x, y - hh + dv.y);
+        vertex(x + hw + dv.x, y + hh + dv.y);
+        vertex(x - hw + dv.x, y + hh + dv.y);
+        endShape(CLOSE);
+
         for (let i = 0; i < 4; i++) {
             // Back-face culling
             const nx = Math.cos(faceAngles[i]);
@@ -469,8 +489,17 @@ class Station {
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
         
         strokeWeight(1);
-        
         const len = vertices.length;
+
+        // Draw Bottom Cap
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        beginShape();
+        for (let i = 0; i < len; i++) {
+            vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
+        }
+        endShape(CLOSE);
+        
         for (let i = 0; i < len; i++) {
             const next = (i + 1) % len;
             const v1 = vertices[i];
@@ -532,6 +561,24 @@ class Station {
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
         
         strokeWeight(1);
+
+        // Draw Bottom Cap
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        beginShape();
+        // Outer loop
+        for (let i = 0; i < sides; i++) {
+            const ang = i * angleStep;
+            vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+        }
+        // Inner loop (contour)
+        beginContour();
+        for (let i = sides - 1; i >= 0; i--) {
+            const ang = i * angleStep;
+            vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
+        }
+        endContour();
+        endShape(CLOSE);
         
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep;
@@ -629,6 +676,18 @@ class Station {
         strokeWeight(1);
         
         const len = outerVerts.length;
+
+        // Draw Bottom Cap
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        beginShape();
+        for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+        beginContour();
+        for (let i = len - 1; i >= 0; i--) {
+            vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+        }
+        endContour();
+        endShape(CLOSE);
         
         // Draw sides
         for (let i = 0; i < len; i++) {
@@ -878,7 +937,7 @@ class Station {
                 }
                 this._drawExtrudedShape(canopyVerts, 5, color(50, 50, 50), baseAngle);
 
-                // subtle stripe
+                // subtle stripe - 3D
                 this._drawBox3D(0, -this.size * 0.006, this.size * 0.04, this.size * 0.008, 6, color(200, 95, 10), baseAngle);
                 pop();
             } else {
@@ -898,17 +957,15 @@ class Station {
                 ];
                 this._drawExtrudedShape(podVerts, 10, color(100, 100, 100), baseAngle - 0.06 + (i % 3) * 0.02);
 
-                // glowing window stripe
-                noStroke();
-                fill(255, 230, 140, 140 + sin(this.lightTimer*2 + i) * 60);
-                rect(-this.size * 0.02, -this.size * 0.008, this.size * 0.04, this.size * 0.008, 2);
+                // glowing window stripe - 3D
+                const winCol = color(255, 230, 140, 140 + sin(this.lightTimer*2 + i) * 60);
+                this._drawBox3D(-this.size * 0.02 + this.size * 0.02, -this.size * 0.008, this.size * 0.04, this.size * 0.008, 2, winCol, baseAngle - 0.06 + (i % 3) * 0.02);
                 pop();
             }
 
-            // small accent light to tie into running-lights rhythm
-            noStroke();
-            fill(255, 200, 120, 160 + sin(this.lightTimer*2 + i) * 80);
-            ellipse(0, -this.size * 0.475, 3.2, 3.2);
+            // small accent light to tie into running-lights rhythm - 3D
+            const lightCol = color(255, 200, 120, 160 + sin(this.lightTimer*2 + i) * 80);
+            this._drawPrism(0, -this.size * 0.475, 1.6, 6, 2, lightCol, baseAngle);
 
             pop();
         }
@@ -924,12 +981,9 @@ class Station {
         // Center: (0, -0.45)
         this._drawBox3D(0, -this.size * 0.45, this.size * 0.12, this.size * 0.06, 20, color(80, 80, 100), index * TWO_PI / 16);
         
-        // Docking bay lighting (alternating red/green)
-        // Draw as a flat rect on top (no depth needed for lights)
-        fill(sin(this.lightTimer*2 + index) > 0 ? color(0, 200, 0) : color(200, 0, 0));
-        noStroke();
-        rectMode(CENTER);
-        rect(0, -this.size * 0.45, this.size * 0.06, this.size * 0.02, 2);
+        // Docking bay lighting (alternating red/green) - 3D
+        const lightCol = sin(this.lightTimer*2 + index) > 0 ? color(0, 200, 0) : color(200, 0, 0);
+        this._drawBox3D(0, -this.size * 0.45, this.size * 0.06, this.size * 0.02, 2, lightCol, index * TWO_PI / 16);
     }
 
     /**
@@ -942,12 +996,10 @@ class Station {
         // Center: (0, -0.45)
         this._drawBox3D(0, -this.size * 0.45, this.size * 0.08, this.size * 0.04, 15, this.color, index * TWO_PI / 16);
         
-        // Windows with subtle animation
-        fill(200, 200, 100, 150 + sin(this.lightTimer + index)*50);
-        noStroke();
-        rectMode(CENTER);
+        // Windows with subtle animation - 3D
+        const winCol = color(200, 200, 100, 150 + sin(this.lightTimer + index)*50);
         for (let w = 0; w < 3; w++) {
-            rect(-this.size * 0.03 + w * this.size * 0.03, -this.size * 0.45, this.size * 0.02, this.size * 0.01, 1);
+            this._drawBox3D(-this.size * 0.03 + w * this.size * 0.03, -this.size * 0.45, this.size * 0.02, this.size * 0.01, 2, winCol, index * TWO_PI / 16);
         }
     }
 
@@ -1602,8 +1654,8 @@ class Station {
             rotate(i * TWO_PI / count);
             let c = lightFn(i, this.lightTimer);
             if (c) {
-                fill(c);
-                ellipse(0, -this.size * radius, size, size);
+                // 3D light - small cylinder
+                this._drawPrism(0, -this.size * radius, size/2, 6, 2, c, i * TWO_PI / count);
             }
             pop();
         }
@@ -1697,11 +1749,11 @@ class Station {
             for (let j = 1; j < 4; j++) {
                 let y = -j * this.size * 0.12;
                 
-                // Turret base
-                this._drawPrism(0, y, this.size * 0.025, 6, 25, color(70, 80, 100), i * PI / 2);
+                // Turret base - reduced depth
+                this._drawPrism(0, y, this.size * 0.025, 6, 8, color(70, 80, 100), i * PI / 2);
                 
-                // Turret gun
-                this._drawBox3D(0, y - this.size * 0.02, this.size * 0.02, this.size * 0.04, 30, color(40, 50, 70), i * PI / 2);
+                // Turret gun - reduced depth
+                this._drawBox3D(0, y - this.size * 0.02, this.size * 0.02, this.size * 0.04, 10, color(40, 50, 70), i * PI / 2);
             }
             
             // Connection to outer ring - reinforced
@@ -1721,31 +1773,29 @@ class Station {
             
             if (i % 4 === 0) {
                 // Launch bays at cardinal points
-                this._drawBox3D(0, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 20, color(60, 70, 90), i * TWO_PI / 16);
+                this._drawBox3D(0, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 15, color(60, 70, 90), i * TWO_PI / 16);
                 
-                // Warning lights
-                fill(sin(this.lightTimer*3 + i) > 0 ? color(255, 50, 0) : color(255, 200, 0));
-                noStroke();
-                rect(-this.size * 0.04, -this.size * 0.46, this.size * 0.08, this.size * 0.02, 1);
+                // Warning lights - 3D
+                const lightCol = sin(this.lightTimer*3 + i) > 0 ? color(255, 50, 0) : color(255, 200, 0);
+                this._drawBox3D(-this.size * 0.04 + this.size * 0.04, -this.size * 0.46, this.size * 0.08, this.size * 0.02, 2, lightCol, i * TWO_PI / 16);
             } else if (i % 2 === 0) {
                 // Weapon modules
                 // Vary height slightly for greeble effect
                 const h = this.size * 0.04 + (i % 3 === 0 ? 0.01 : 0) * this.size;
-                this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, h, 15, color(70, 80, 100), i * TWO_PI / 16);
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, h, 10, color(70, 80, 100), i * TWO_PI / 16);
                 
                 // Weapon barrel
-                this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 10, color(50, 60, 80), i * TWO_PI / 16);
+                this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 5, color(50, 60, 80), i * TWO_PI / 16);
             } else {
                 // Standard modules
                 // Vary height for greeble effect
                 const h = this.size * 0.04 + (i % 3 !== 0 ? 0.015 : -0.005) * this.size;
-                this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, h, 15, this.color, i * TWO_PI / 16);
+                this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, h, 10, this.color, i * TWO_PI / 16);
                 
-                // Armored windows
-                fill(100, 150, 200, 150 + sin(this.lightTimer + i)*50);
-                noStroke();
+                // Armored windows - 3D
+                const winCol = color(100, 150, 200, 150 + sin(this.lightTimer + i)*50);
                 for (let w = 0; w < 2; w++) {
-                    rect(-this.size * 0.025 + w * this.size * 0.03, -this.size * 0.465, this.size * 0.015, this.size * 0.01, 1);
+                    this._drawBox3D(-this.size * 0.025 + w * this.size * 0.03, -this.size * 0.465, this.size * 0.015, this.size * 0.01, 2, winCol, i * TWO_PI / 16);
                 }
             }
             pop();
@@ -1794,15 +1844,17 @@ class Station {
             rotate(i * step);
             
             // Military uses yellow lights
+            let lightCol;
             if (i % 8 === 0) {
-                fill(255, 255, 0, 120 + sin(lt * 2 + i) * 100); // Bright yellow
-                ellipse(0, r, 3.5, 3.5);
+                lightCol = color(255, 255, 0, 120 + sin(lt * 2 + i) * 100); // Bright yellow
             } else if (i % 4 === 0) {
-                fill(255, 255, 100, 120 + sin(lt * 2.5 + i) * 100); // Light yellow
-                ellipse(0, r, 3.5, 3.5);
+                lightCol = color(255, 255, 100, 120 + sin(lt * 2.5 + i) * 100); // Light yellow
             } else if (i % 2 === 0) {
-                fill(200, 200, 0, 80 + sin(lt * 3 + i * 0.5) * 80); // Dark yellow
-                ellipse(0, r, 3.5, 3.5);
+                lightCol = color(200, 200, 0, 80 + sin(lt * 3 + i * 0.5) * 80); // Dark yellow
+            }
+            
+            if (lightCol) {
+                this._drawPrism(0, r, 1.75, 6, 2, lightCol, i * step);
             }
             
             pop();
@@ -1954,7 +2006,7 @@ class Station {
                 // Transport portals at specific points
                 this._drawPrism(0, -this.size * 0.48, this.size * 0.04, 8, 10, color(20, 120, 100), rot);
                 
-                // Portal energy
+                // Portal energy - keep 2D glow
                 fill(100, 255, 200, 150 + sin(this.lightTimer * 3 * 0.55 + i + this.animationOffset) * 100);
                 noStroke();
                 ellipse(0, -this.size * 0.48, this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2), this.size * 0.05 * (1 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 0.2));
@@ -1969,14 +2021,13 @@ class Station {
                 }
                 this._drawExtrudedShape(podVerts, 12, color(50, 180, 140), rot);
                 
-                // Bioluminescent spots
-                fill(120, 255, 220, 180 + sin(this.lightTimer + i*2) * 75);
-                noStroke();
+                // Bioluminescent spots - 3D
+                const spotCol = color(120, 255, 220, 180 + sin(this.lightTimer + i*2) * 75);
                 for (let w = 0; w < 2; w++) {
                     let x = (w - 0.5) * this.size * 0.02;
                     let y = -this.size * 0.48;
                     let size = this.size * 0.01 * (1 + sin(this.lightTimer * 3 * 0.55 + i + w + this.animationOffset) * 0.3);
-                    ellipse(x, y, size, size);
+                    this._drawPrism(x, y, size/2, 6, 2, spotCol, rot);
                 }
             }
             pop();
@@ -2039,15 +2090,17 @@ class Station {
             // Alien uses teal, purple and green lights
             // Pulsating light size
             const sz = 2 + sin(lt * 3 + i) * 1;
+            let lightCol;
             if (i % 5 === 0) {
-                fill(0, 255, 200, 80 + sin(lt * 2.5 + i) * 120); // Teal
-                ellipse(0, r, sz, sz);
+                lightCol = color(0, 255, 200, 80 + sin(lt * 2.5 + i) * 120); // Teal
             } else if (i % 3 === 0) {
-                fill(180, 100, 255, 80 + sin(lt * 3 + i * 0.7) * 120); // Purple
-                ellipse(0, r, sz, sz);
+                lightCol = color(180, 100, 255, 80 + sin(lt * 3 + i * 0.7) * 120); // Purple
             } else if (i % 2 === 0) {
-                fill(100, 255, 150, 80 + sin(lt * 1.5 + i * 0.4) * 120); // Green
-                ellipse(0, r, sz, sz);
+                lightCol = color(100, 255, 150, 80 + sin(lt * 1.5 + i * 0.4) * 120); // Green
+            }
+            
+            if (lightCol) {
+                this._drawPrism(0, r, sz/2, 6, 2, lightCol, i * baseStep + sin(i * 0.2) * 0.1);
             }
             
             pop();
@@ -2139,6 +2192,7 @@ class Station {
                 // Large greenhouse domes at cardinal points
                 this._drawPrism(0, -this.size * 0.48, this.size * 0.065, 8, 15, color(120, 200, 120), i * TWO_PI / 16);
                 
+                // Glow can remain 2D as it's light
                 fill(180, 255, 180, 80 + 40 * sin(this.lightTimer + i));
                 noStroke();
                 ellipse(0, -this.size * 0.48, this.size * 0.09, this.size * 0.05);
@@ -2146,10 +2200,9 @@ class Station {
                 // Standard modules with green windows
                 this._drawBox3D(0, -this.size * 0.45, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
                 
-                fill(180, 255, 180, 120 + 40 * sin(this.lightTimer + i));
-                noStroke();
-                rectMode(CENTER);
-                rect(0, -this.size * 0.45, this.size * 0.04, this.size * 0.015, 1);
+                // Windows - 3D
+                const winCol = color(180, 255, 180, 120 + 40 * sin(this.lightTimer + i));
+                this._drawBox3D(0, -this.size * 0.45, this.size * 0.04, this.size * 0.015, 2, winCol, i * TWO_PI / 16);
             }
             pop();
         }
@@ -2169,13 +2222,13 @@ class Station {
         this._drawCargoSwing(-this.size*0.07, -this.size*0.4, 0.9);
         this._drawMaintenancePod(this.size*0.08, -this.size*0.44, 0.9);
 
-        // Yellow/green running lights
+        // Yellow/green running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(180, 255, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Green-yellow
-            ellipse(0, -this.size * 0.475, 3, 3);
+            const lightCol = color(180, 255, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Green-yellow
+            this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
         // agricultural crate clusters (planter boxes, pollinator crates)
@@ -2202,9 +2255,13 @@ class Station {
             if (i % 4 === 0) {
                 this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.04, 25, color(80, 80, 80), i * TWO_PI / 16);
                 
-                fill(180, 180, 180, 80 + 40 * sin(this.lightTimer + i));
+                // Smokestack top cap - 3D
+                this._drawPrism(0, -this.size * 0.53, this.size * 0.015, 8, 2, color(60, 60, 60), i * TWO_PI / 16);
+                
+                // smoke puff (keep 2D)
                 noStroke();
-                ellipse(0, -this.size * 0.53, this.size * 0.03, this.size * 0.01);
+                fill(180, 180, 180, 80 + 40 * sin(this.lightTimer + i));
+                ellipse(0, -this.size * 0.53 - 5, this.size * 0.03, this.size * 0.01);
             }
             pop();
         }
@@ -2230,13 +2287,13 @@ class Station {
         this._drawMaintenanceArm(this.size*0.09, this.size*0.08, 1.8, 1);
         this._drawDockingPylon(-this.size*0.08, -this.size*0.06);
 
-        // Orange/white running lights
+        // Orange/white running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
-            ellipse(0, -this.size * 0.475, 3, 3);
+            const lightCol = color(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
         // industrial crate field
@@ -2451,9 +2508,8 @@ class Station {
                     translate(t * this.size * 0.02, 0);
                     // Use prism for cylindrical tanks
                     this._drawPrism(0, -this.size * 0.03, this.size * 0.01, 8, 20, color(200, 90, 60), i * TWO_PI / 16);
-                    // tank cap
-                    fill(220, 100, 70);
-                    ellipse(0, -this.size * 0.06, this.size * 0.02, this.size * 0.01);
+                    // tank cap - 3D
+                    this._drawPrism(0, -this.size * 0.06, this.size * 0.01, 8, 2, color(220, 100, 70), i * TWO_PI / 16);
                     pop();
                 }
                 // short pipe connecting tanks to module
@@ -2496,14 +2552,14 @@ class Station {
         this._drawFloatingLightBall(this.size*0.07, -this.size*0.03, 1.0);
         this._drawCargoTug(-this.size*0.09, -this.size*0.28, 0.9);
 
-        // Running lights (red/orange) around perimeter
+        // Running lights (red/orange) around perimeter - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
-            if (i % 3 === 0) fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
-            ellipse(0, -this.size * 0.475, 3, 3);
+            let lightCol = color(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
+            if (i % 3 === 0) lightCol = color(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
 
@@ -2537,20 +2593,20 @@ class Station {
             
             this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
             
-            fill(200, 255, 255, 120 + 40 * sin(this.lightTimer + i));
-            noStroke();
-            rect(-this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 3);
+            // Windows - 3D
+            const winCol = color(200, 255, 255, 120 + 40 * sin(this.lightTimer + i));
+            this._drawBox3D(-this.size * 0.02 + this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 2, winCol, i * TWO_PI / 16);
             pop();
         }
         this._drawSolarPanels();
-        // Blue/white running lights
+        // Blue/white running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(100, 200, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Blue
-            if (i % 3 === 0) fill(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
-            ellipse(0, -this.size * 0.475, 3, 3);
+            let lightCol = color(100, 200, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Blue
+            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
 
@@ -2632,13 +2688,14 @@ class Station {
             push();
             rotate(i * TWO_PI / 6 + this.lightTimer * 0.05);
             translate(0, -this.size * 0.52);
-            fill(255, 220, 100, 200);
-            noStroke();
-            beginShape();
-            vertex(0, 0);
-            vertex(-this.size * 0.02, this.size * 0.04);
-            vertex(this.size * 0.02, this.size * 0.04);
-            endShape(CLOSE);
+            
+            // Pennant - 3D
+            const pennantVerts = [
+                {x: 0, y: 0},
+                {x: -this.size * 0.02, y: this.size * 0.04},
+                {x: this.size * 0.02, y: this.size * 0.04}
+            ];
+            this._drawExtrudedShape(pennantVerts, 2, color(255, 220, 100, 200), i * TWO_PI / 6 + this.lightTimer * 0.05);
             pop();
         }
         push();
@@ -2651,14 +2708,14 @@ class Station {
         this._drawBeaconRing(this.size*0.0, -this.size*0.02, 0.9);
         this._drawMiniCommsArray(this.size*0.06, -this.size*0.1, 1);
 
-        // Gold/white running lights
+        // Gold/white running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(255, 220, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Gold
-            if (i % 3 === 0) fill(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
-            ellipse(0, -this.size * 0.475, 3, 3);
+            let lightCol = color(255, 220, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Gold
+            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
         // refinery crate field (smaller accretion near tanks)
@@ -2706,14 +2763,13 @@ class Station {
         rotate(-PI / 4);
         translate(0, -this.size * 0.4);
         this._drawFloatBanner(0, 0, 1.1);
-        // Add a small pennant
-        fill(255, 100, 50, 180);
-        noStroke();
-        beginShape();
-        vertex(0, 0);
-        vertex(-this.size * 0.015, this.size * 0.03);
-        vertex(this.size * 0.015, this.size * 0.03);
-        endShape(CLOSE);
+        // Add a small pennant - 3D
+        const pennantVerts = [
+            {x: 0, y: 0},
+            {x: -this.size * 0.015, y: this.size * 0.03},
+            {x: this.size * 0.015, y: this.size * 0.03}
+        ];
+        this._drawExtrudedShape(pennantVerts, 2, color(255, 100, 50, 180), -PI / 4);
         pop();
 
         // Asymmetrical extension arm with extra modules
@@ -2726,9 +2782,8 @@ class Station {
         stroke(100, 100, 100);
         strokeWeight(1);
         line(0, -this.size * 0.02, 0, -this.size * 0.05);
-        fill(255, 200, 100, 150);
-        noStroke();
-        ellipse(0, -this.size * 0.05, this.size * 0.008, this.size * 0.008);
+        // Antenna light - 3D
+        this._drawPrism(0, -this.size * 0.05, this.size * 0.004, 6, 2, color(255, 200, 100, 150), PI * 5/6);
         pop();
 
         // Orbiting separatist drones (asymmetrical count)
