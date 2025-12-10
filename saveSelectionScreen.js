@@ -211,8 +211,19 @@ class SaveSelectionScreen {
         textSize(48);
         fill(210, 200, 255); // Slightly brighter purple
 
-        fill(210, 200, 255);
-        text("COMMANDER", width/2, height * 0.15);
+        // Prefer the global extruded helper if available, otherwise fall back to titleScreen method or plain text
+        if (typeof drawExtrudedText === 'function') {
+            push();
+            drawExtrudedText("COMMANDER", width/2, height * 0.15, 48, 6, 0, [210, 200, 255]);
+            pop();
+        } else if (typeof titleScreen !== 'undefined' && typeof titleScreen.drawExtrudedText === 'function') {
+            push();
+            titleScreen.drawExtrudedText("COMMANDER", width/2, height * 0.15, 48, 6, 0, [210, 200, 255]);
+            pop();
+        } else {
+            fill(210, 200, 255);
+            text("COMMANDER", width/2, height * 0.15);
+        }
         
         // Subtitle
         textSize(24);

@@ -1085,11 +1085,18 @@ class UIHUD {
 
         push();
 
-        fill(255, 60, 60);
         textAlign(CENTER, CENTER);
         textFont(font);
-        textSize(100);
-        text("GAME OVER", width / 2, height / 2 - 80);
+        // Prefer the global extruded helper for the GAME OVER header
+        if (typeof drawExtrudedText === 'function') {
+            drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, 100, 12, 0, [255, 60, 60]);
+        } else if (typeof titleScreen !== 'undefined' && typeof titleScreen.drawExtrudedText === 'function') {
+            titleScreen.drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, 100, 12, 0, [255, 60, 60]);
+        } else {
+            fill(255, 60, 60);
+            textSize(100);
+            text("GAME OVER", width / 2, height / 2 - 80);
+        }
 
         UIComponents.setTextStyle({ fill: 255, size: 30 });
         text("Click anywhere or press any key to start again", width / 2, height / 2 + 20);

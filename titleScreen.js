@@ -34,6 +34,69 @@ class TitleScreenBeam {
     }
 }
 
+// Expose a global extruded-text helper so other screens can reuse the same rendering.
+// This will prefer the active `titleScreen.drawExtrudedText` implementation if present,
+// otherwise it will attempt to reuse the helper methods defined on `TitleScreen.prototype`.
+function drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0,180,255]) {
+    // If a titleScreen instance exists and provides the method, use it (keeps behaviour consistent)
+    if (typeof titleScreen !== 'undefined' && titleScreen && typeof titleScreen.drawExtrudedText === 'function') {
+        return titleScreen.drawExtrudedText(str, cx, cy, fontSize, depth, angle, colorRGB);
+    }
+
+    // Fallback: if necessary globals are missing, draw plain text
+    if (typeof font === 'undefined' || typeof font.textToPoints !== 'function' || typeof drawExtrudedPolyOptimized !== 'function') {
+        push();
+        textFont(font);
+        textSize(fontSize);
+        fill(colorRGB[0], colorRGB[1], colorRGB[2]);
+        textAlign(CENTER, CENTER);
+        text(str, cx, cy);
+        pop();
+        return;
+    }
+
+    // Build point samples and a layer cache using TitleScreen's helper if available
+    const pts = font.textToPoints(str, 0, 0, fontSize, { sampleFactor: 0.15 });
+    if (!pts || pts.length < 3) {
+        push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop();
+        return;
+    }
+
+    let layerCache = null;
+    if (typeof TitleScreen !== 'undefined' && typeof TitleScreen.prototype.buildLayerCacheFromPoints === 'function') {
+        // buildLayerCacheFromPoints does not depend on instance state, so call with null
+        try {
+            layerCache = TitleScreen.prototype.buildLayerCacheFromPoints.call(null, pts, colorRGB);
+        } catch (e) {
+            layerCache = null;
+        }
+    }
+
+    if (!layerCache) {
+        // As a last resort, draw plain text
+        push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop();
+        return;
+    }
+
+    // Draw using the same approach as the TitleScreen method
+    push();
+    translate(cx, cy);
+    try {
+        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'sides');
+        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'top');
+        noFill(); stroke(0, 100, 200); strokeWeight(1);
+        beginShape();
+        for (let v of layerCache.vertexData) vertex(v.x, v.y);
+        endShape(CLOSE);
+    } catch (e) {
+        pop(); push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop(); return;
+    }
+    pop();
+}
+
+// Also expose on window for code that expects a global on older environments
+if (typeof window !== 'undefined') window.drawExtrudedText = drawExtrudedText;
+
 // Title screen and instruction page for Elite
 
 class TitleScreen {
@@ -666,11 +729,11 @@ class TitleScreen {
         const maxContentWidth = min(1000, width * 0.9);
         const gutter = 40;
 
-        // Title
-        textAlign(CENTER, TOP);
-        textSize(48);
-        fill(0, 180, 255);
-        text("HOW TO PLAY", width / 2, startY);
+        // Title (extruded)
+        push();
+        // Offset a bit so the extruded text's center matches previous TOP alignment
+        this.drawExtrudedText("HOW TO PLAY", width / 2, startY + 24, 48, 6, 0, [0, 180, 255]);
+        pop();
 
         // Layout columns
         const contentTop = startY + 90;
