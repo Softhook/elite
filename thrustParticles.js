@@ -135,7 +135,8 @@ class ThrustManager {
         // Create multiple particles per frame when thrusting
         for (let i = 0; i < thrustCount; i++) {
             // Calculate spawn position at ship's rear
-            const offset = -shipSize * 0.5;
+            // Increased offset to -0.65 to ensure exhaust clears the 3D ship hull
+            const offset = -shipSize * 0.65;
             const spawnPoint = p5.Vector.fromAngle(shipAngle).mult(offset);
 
             // Determine color based on ship type/size

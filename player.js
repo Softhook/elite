@@ -1268,9 +1268,6 @@ class Player {
             return; // Skip drawing the ship
         }
 
-        // Draw thrust particles BEHIND the ship
-        this.thrustManager.draw();
-
         if (isNaN(this.angle)) { return; } // Safety check
 
         // Cache ship definition lookup
@@ -1298,6 +1295,9 @@ class Player {
             this.drawTurret();
         }
         pop();
+
+        // Draw thrust particles ON TOP of the ship
+        this.thrustManager.draw();
 
         // Draw shield effect with improved visuals
         if (this.shield > 0 && !this.shieldsDisabled) {

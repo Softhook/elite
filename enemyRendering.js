@@ -17,6 +17,41 @@ class EnemyRendering {
         // Turret is drawn in ship-local coordinates (already rotated with ship)
         const turretSize = this.size * 0.2; // Small turret relative to ship size
         
+        // Initialize turret definitions if not ready (Static cache on EnemyRendering)
+        if (!EnemyRendering.TURRET_DEFS) {
+            EnemyRendering.TURRET_DEFS = {
+                base: {
+                    vertexData: [],
+                    fillColor: [80, 90, 100],
+                    strokeColor: [120, 130, 140],
+                    strokeW: 1
+                },
+                barrel: {
+                    vertexData: [
+                        {x: 0, y: -0.2},
+                        {x: 0.8, y: -0.2},
+                        {x: 0.8, y: 0.2},
+                        {x: 0, y: 0.2}
+                    ],
+                    fillColor: [60, 70, 80],
+                    strokeColor: [100, 110, 120],
+                    strokeW: 1
+                }
+            };
+            
+            // Create octagon for base
+            for(let i=0; i<8; i++) {
+                let a = i * TWO_PI/8;
+                EnemyRendering.TURRET_DEFS.base.vertexData.push({x: cos(a), y: sin(a)});
+            }
+            
+            // Initialize caches using the global helper from ships.js
+            if (typeof initShipCache === 'function') {
+                initShipCache(EnemyRendering.TURRET_DEFS.base);
+                initShipCache(EnemyRendering.TURRET_DEFS.barrel);
+            }
+        }
+
         // Calculate turret angle
         let turretAngle = 0; // Default: facing forward (ship's direction)
         
@@ -43,25 +78,79 @@ class EnemyRendering {
             }
         }
         
-        // Draw turret base (centered on ship)
-        push();
-        fill(80, 90, 100);
-        stroke(120, 130, 140);
-        strokeWeight(1);
-        ellipse(0, 0, turretSize * 1.2, turretSize * 1.2);
-        
-        // Draw turret barrel (rotates to track target)
-        rotate(turretAngle);
-        fill(60, 70, 80);
-        stroke(100, 110, 120);
-        strokeWeight(1);
-        rect(0, -turretSize * 0.2, turretSize * 0.8, turretSize * 0.4);
-        
-        // Draw barrel tip
-        fill(80, 90, 100);
-        rect(turretSize * 0.8, -turretSize * 0.15, turretSize * 0.2, turretSize * 0.3);
-        
-        pop();
+        // Check if we can use the 3D extrusion method
+        if (typeof drawExtrudedPolyOptimized === 'function' && EnemyRendering.TURRET_DEFS.base._cache) {
+            // Calculate depths
+            const turretBaseDepth = turretSize * 0.4;
+            const turretBarrelDepth = turretSize * 0.3;
+            
+            // Calculate sun angle for lighting
+            const sunAngle = atan2(-this.pos.y, -this.pos.x);
+            const localSunAngle = sunAngle - this.angle;
+
+            // --- Draw Base ---
+            // Calculate extrusion vector for base to offset it "up" (screen Y negative)
+            // In local space (rotated by this.angle), "up" is (-sin(angle), -cos(angle))
+            const baseDvx = turretBaseDepth * sin(this.angle);
+            const baseDvy = turretBaseDepth * cos(this.angle);
+            
+            push(); // Save state before base translation
+            translate(-baseDvx, -baseDvy); // Move "up" so bottom sits on ship
+
+            // Draw Turret Base (Fixed to ship)
+            drawExtrudedPolyOptimized(
+                turretSize * 0.6, // radius
+                EnemyRendering.TURRET_DEFS.base._cache.layers[0],
+                turretBaseDepth,
+                this.angle,
+                localSunAngle
+            );
+            
+            // --- Draw Barrel ---
+            // We want to stack the barrel ON TOP of the base.
+            // So we translate "up" again by the barrel's depth.
+            // We are still in the ship's coordinate system (rotated by this.angle).
+            const barrelOffsetX = turretBarrelDepth * sin(this.angle);
+            const barrelOffsetY = turretBarrelDepth * cos(this.angle);
+            
+            translate(-barrelOffsetX, -barrelOffsetY);
+
+            push(); // Save state for rotation
+            rotate(turretAngle);
+            
+            // Adjust angles for the barrel's rotation
+            const barrelWorldAngle = this.angle + turretAngle;
+            const barrelLocalSunAngle = sunAngle - barrelWorldAngle;
+            
+            drawExtrudedPolyOptimized(
+                turretSize, // radius/scale
+                EnemyRendering.TURRET_DEFS.barrel._cache.layers[0],
+                turretBarrelDepth,
+                barrelWorldAngle,
+                barrelLocalSunAngle
+            );
+            pop(); // Restore rotation
+            
+            pop(); // Restore translation (base + barrel)
+
+        } else {
+            // Fallback to 2D drawing if 3D helpers are missing
+            push();
+            fill(80, 90, 100);
+            stroke(120, 130, 140);
+            strokeWeight(1);
+            ellipse(0, 0, turretSize * 1.2, turretSize * 1.2);
+            
+            rotate(turretAngle);
+            fill(60, 70, 80);
+            stroke(100, 110, 120);
+            strokeWeight(1);
+            rect(0, -turretSize * 0.2, turretSize * 0.8, turretSize * 0.4);
+            
+            fill(80, 90, 100);
+            rect(turretSize * 0.8, -turretSize * 0.15, turretSize * 0.2, turretSize * 0.3);
+            pop();
+        }
     }
 
     /** Draws the enemy ship using its specific draw function and adds UI elements. */
@@ -84,11 +173,6 @@ class EnemyRendering {
             push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop();
             return;
         }
-
-       
-        this.thrustManager.draw();
-
-
 
         // --- Start Ship Drawing Block ---
         push();
@@ -307,6 +391,10 @@ class EnemyRendering {
         // --- End Health Bar ---
 
         pop(); // End Ship Drawing Block
+
+        // Draw thrust particles ON TOP of the ship
+        this.thrustManager.draw();
+
         // --- Draw Jump Fade Overlay (when ship is leaving via jump zone) ---
         if (this._isJumpFading && this._jumpFadeTimer > 0) {
             const phase = this._jumpFadePhase || 'out';
