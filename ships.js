@@ -1494,71 +1494,69 @@ function initShipCache(def) {
 }
 
 // Optimized Extruded Poly Drawing
-function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle) {
-    const dvx = depth * Math.sin(angle);
-    const dvy = depth * Math.cos(angle);
-    
-    strokeWeight(layerCache.strokeW);
-    
+function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, layerIndex = 0, mode = 'both') {
+    // Make upper layers slightly smaller/thinner so they sit on previous layers.
+    const shrinkPerLayer = 0.03;
+    const layerR = r * Math.max(0.85, 1 - layerIndex * shrinkPerLayer);
+    const depthScale = (layerIndex === 0) ? 1.0 : 0.35; // top layers are thin
+    const effDepth = depth * depthScale;
+    const dvx = effDepth * Math.sin(angle);
+    const dvy = effDepth * Math.cos(angle);
+
+    // Disable strokes for ships: use fill-only rendering for performance
+    noStroke();
+
     // 1. Draw Sides (Optimized)
-    for (let edge of layerCache.edges) {
+    if (mode === 'both' || mode === 'sides') {
+        for (let edge of layerCache.edges) {
         // Visibility check (Backface Culling for CW winding)
-        // cp < 0 means visible
-        if (edge.dx * dvy - edge.dy * dvx < 0) {
+            if (edge.dx * dvy - edge.dy * dvx < 0) {
             // Back vertices
-            let bx1 = (edge.v1.x * r) + dvx * edge.t1;
-            let by1 = (edge.v1.y * r) + dvy * edge.t1;
-            let bx2 = (edge.v2.x * r) + dvx * edge.t2;
-            let by2 = (edge.v2.y * r) + dvy * edge.t2;
-            
-            // Front vertices
-            let fx1 = edge.v1.x * r;
-            let fy1 = edge.v1.y * r;
-            let fx2 = edge.v2.x * r;
-            let fy2 = edge.v2.y * r;
+                // Back vertices
+                let bx1 = (edge.v1.x * layerR) + dvx * edge.t1;
+                let by1 = (edge.v1.y * layerR) + dvy * edge.t1;
+                let bx2 = (edge.v2.x * layerR) + dvx * edge.t2;
+                let by2 = (edge.v2.y * layerR) + dvy * edge.t2;
 
-            // Simple shading
-            const faceAngle = Math.atan2(edge.dx, -edge.dy);
-            const diff = faceAngle - localSunAngle;
-            const b = 0.3 + (Math.cos(diff) + 1) * 0.25; // Optimized map
-            
-            fill(layerCache.fillRGB.r * b, layerCache.fillRGB.g * b, layerCache.fillRGB.b * b);
-            stroke(layerCache.strokeRGB.r * b * 0.8, layerCache.strokeRGB.g * b * 0.8, layerCache.strokeRGB.b * b * 0.8);
+                // Front vertices
+                let fx1 = edge.v1.x * layerR;
+                let fy1 = edge.v1.y * layerR;
+                let fx2 = edge.v2.x * layerR;
+                let fy2 = edge.v2.y * layerR;
 
-            beginShape();
-            vertex(bx1, by1);
-            vertex(bx2, by2);
-            vertex(fx2, fy2);
-            vertex(fx1, fy1);
-            endShape(CLOSE);
+                // Lighter shading than before
+                const faceAngle = Math.atan2(edge.dx, -edge.dy);
+                const diff = faceAngle - localSunAngle;
+                const b = 0.5 + (Math.cos(diff) + 1) * 0.25; // range ~0.5 - 1.0
+
+                fill(layerCache.fillRGB.r * b, layerCache.fillRGB.g * b, layerCache.fillRGB.b * b);
+
+                beginShape();
+                vertex(bx1, by1);
+                vertex(bx2, by2);
+                vertex(fx2, fy2);
+                vertex(fx1, fy1);
+                endShape(CLOSE);
+            }
         }
     }
-    
-    // 2. Draw Top Face — gradient disabled for performance
-    let ctx = drawingContext;
-    // Gradient center at Tip (maxX)
-    // let gx = layerCache.maxX * r;
-    // Gradient was previously created here (radial/conical shading).
-    // Disabled to improve rendering performance on lower-end systems.
-    // let grad = ctx.createRadialGradient(gx, 0, 0, gx, 0, r * 1.5);
-    // grad.addColorStop(0, layerCache.highlightStr);
-    // grad.addColorStop(0.6, layerCache.mainFillStr);
-    // grad.addColorStop(1, layerCache.darkFillStr);
 
-    // Use a flat fill instead of the gradient
-    try {
-        ctx.fillStyle = layerCache.mainFillStr;
-    } catch (e) {
-        // Fallback: if string isn't set, construct from RGB
-        ctx.fillStyle = `rgb(${Math.round(layerCache.fillRGB.r)}, ${Math.round(layerCache.fillRGB.g)}, ${Math.round(layerCache.fillRGB.b)})`;
-    }
-    stroke(layerCache.strokeRGB.r, layerCache.strokeRGB.g, layerCache.strokeRGB.b);
+    // 2. Draw Top Face — flat fill, slightly lighter for upper layers
+    if (mode === 'both' || mode === 'top') {
+        let ctx = drawingContext;
+        const topBrightness = (layerIndex === 0) ? 1.0 : 1.05;
+        const fr = Math.min(255, Math.round(layerCache.fillRGB.r * topBrightness));
+        const fg = Math.min(255, Math.round(layerCache.fillRGB.g * topBrightness));
+        const fb = Math.min(255, Math.round(layerCache.fillRGB.b * topBrightness));
+        ctx.fillStyle = `rgb(${fr}, ${fg}, ${fb})`;
+        noStroke();
 
-    beginShape();
-    for (let v of layerCache.vertexData) {
-        vertex(v.x * r, v.y * r);
+        beginShape();
+        for (let v of layerCache.vertexData) {
+            vertex(v.x * layerR, v.y * layerR);
+        }
+        endShape(CLOSE);
     }
-    endShape(CLOSE);
 }
 
 // Enhanced helper function to draw shape from vertex data or layers
@@ -1570,8 +1568,8 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
             const layer = vertexDataOrLayers[i];
             if (layer.vertexData && layer.vertexData.length > 0) {
                 fill(layer.fillColor || defaultFillColor);
-                stroke(layer.strokeColor || defaultStrokeColor);
-                strokeWeight(layer.strokeW || defaultStrokeW || 1);
+                // Draw filled shapes only — disable stroke for ships
+                noStroke();
                 beginShape();
                 for (let v of layer.vertexData) {
                     vertex(v.x * r, v.y * r);
@@ -1581,12 +1579,8 @@ function drawShapeFromData(r, vertexDataOrLayers, defaultFillColor, defaultStrok
         }
     } else {
         if (defaultFillColor) fill(defaultFillColor); else noFill();
-        if (defaultStrokeColor) { 
-            stroke(defaultStrokeColor); 
-            strokeWeight(defaultStrokeW || 1); 
-        } else { 
-            noStroke(); 
-        }
+        // Draw filled shapes only — disable stroke for ships
+        noStroke();
         beginShape();
         for (let v of vertexDataOrLayers) {
             vertex(v.x * r, v.y * r);
@@ -1605,8 +1599,13 @@ function drawGenericShip(def, s, thrusting, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let depth = s * 0.15; 
 
-    for (let layerCache of def._cache.layers) {
-        drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle);
+    // 1) Draw all side faces first (bottom -> top)
+    for (let i = 0; i < def._cache.layers.length; i++) {
+        drawExtrudedPolyOptimized(r, def._cache.layers[i], depth, angle, localSunAngle, i, 'sides');
+    }
+    // 2) Draw top faces after sides to avoid z-fighting / overdraw flicker (bottom -> top)
+    for (let i = 0; i < def._cache.layers.length; i++) {
+        drawExtrudedPolyOptimized(r, def._cache.layers[i], depth, angle, localSunAngle, i, 'top');
     }
 }
 
