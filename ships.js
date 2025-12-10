@@ -1599,9 +1599,9 @@ function drawGenericShip(def, s, thrusting, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let depth = s * 0.15; 
 
-    // 1) Draw all side faces first (bottom -> top)
-    for (let i = 0; i < def._cache.layers.length; i++) {
-        drawExtrudedPolyOptimized(r, def._cache.layers[i], depth, angle, localSunAngle, i, 'sides');
+    // 1) Draw side faces for base layer only (keep secondary layers flat)
+    if (def._cache.layers.length > 0) {
+        drawExtrudedPolyOptimized(r, def._cache.layers[0], depth, angle, localSunAngle, 0, 'sides');
     }
     // 2) Draw top faces after sides to avoid z-fighting / overdraw flicker (bottom -> top)
     for (let i = 0; i < def._cache.layers.length; i++) {
