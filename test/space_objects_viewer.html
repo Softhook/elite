@@ -84,10 +84,32 @@
         }
 
         function arrangeGrid() {
-            const cols = Math.ceil(Math.sqrt(objects.length));
+            if (objects.length === 0) return;
+
+            // If in focused view, ensure canvas fits the window exactly (no scrolling)
+            if (focusedIndex !== -1) {
+                resizeCanvas(window.innerWidth, window.innerHeight);
+                return;
+            }
+
             const padding = 160 * scaleFactor;
+            // Use available width to determine columns, minimum 1
+            let cols = Math.floor((window.innerWidth - 100) / padding);
+            if (cols < 1) cols = 1;
+
+            const rows = Math.ceil(objects.length / cols);
+            const totalGridHeight = (rows - 1) * padding;
+            
+            // Resize canvas if content needs more height than the window provides
+            const requiredHeight = totalGridHeight + 300; // Top/bottom margins
+            if (height < requiredHeight || (height > window.innerHeight && requiredHeight < height)) {
+                resizeCanvas(window.innerWidth, Math.max(window.innerHeight, requiredHeight));
+            }
+
             const startX = width/2 - (cols-1) * padding / 2;
-            const startY = height/2 - (cols-1) * padding / 2;
+            // If content fits easily, center it. Otherwise use fixed top margin.
+            const startY = (height > requiredHeight) ? (height/2 - totalGridHeight/2) : 150;
+
             for (let i=0; i<objects.length; i++) {
                 const col = i % cols;
                 const row = Math.floor(i/cols);
@@ -121,6 +143,8 @@
             focusedIndex = (i + objects.length) % objects.length;
             // try to enter browser fullscreen for immersive view
             try { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); } catch(e) { /* ignore */ }
+            
+            arrangeGrid(); // Ensure canvas is sized correctly for single view
             updateInfo();
         }
 
