@@ -1389,58 +1389,99 @@ class Station {
 
     // --- Tourism-specific attractions ---
     _drawFerrisWheel(x = 0, y = 0, scale = 1) {
+        // Improved low-poly ferris wheel: extruded rim, box spokes, hex/prism cabins
         push(); translate(x, y);
         const s = this.size * 0.08 * scale;
-        // Central hub
-        fill(200, 200, 200);
-        stroke(100, 100, 100);
-        ellipse(0, 0, s * 0.3, s * 0.3);
-        // Rotating wheel
-        rotate(this.lightTimer * 0.1 + this.animationOffset * 0.2);
-        noFill();
-        stroke(150, 150, 150);
-        ellipse(0, 0, s * 2, s * 2);
-        // Spokes and cabins
-        for (let i = 0; i < 8; i++) {
+
+        // Hub
+        this._drawPrism(0, 0, s * 0.12, 8, s * 0.08, color(200,200,200));
+
+        // Rotation (fast CCW)
+        const wheelSpeed = 1.2;
+        const wheelRot = -this.lightTimer * wheelSpeed + this.animationOffset * 0.2;
+
+        // Rim as an extruded ring (fewer sides for a low-poly look)
+        const rimOuter = s * 1.02;
+        const rimInner = s * 0.86;
+        this._drawRing3D(0, 0, rimOuter, rimInner, 18, s * 0.06, color(170,170,180), wheelRot);
+
+        // Spokes (thin boxes) connecting hub to rim
+        const spokeCount = 8;
+        for (let i = 0; i < spokeCount; i++) {
             push();
-            rotate(i * TWO_PI / 8);
-            stroke(120, 120, 120);
-            line(0, 0, 0, s);
-            // Cabin
-            fill(255, 200, 100, 180);
-            noStroke();
-            ellipse(0, s, s * 0.25, s * 0.15);
+            const ang = i * TWO_PI / spokeCount + wheelRot;
+            rotate(ang);
+            const spokeLen = rimInner - s * 0.14;
+            // Center the box along the spoke
+            this._drawBox3D(0, -spokeLen * 0.5 - s * 0.06, s * 0.04, spokeLen, s * 0.01, color(110,110,120), ang);
             pop();
         }
+
+        // Cabins placed on rim and counter-rotated to remain upright; small swing & bob
+        const cabinCount = 8;
+        const cabinRadius = (rimOuter + rimInner) * 0.5;
+        for (let i = 0; i < cabinCount; i++) {
+            const ang = i * TWO_PI / cabinCount + wheelRot;
+            const cx = cos(ang) * cabinRadius;
+            const cy = sin(ang) * cabinRadius;
+            push();
+            translate(cx, cy);
+            // swinging and bobbing
+            const swing = sin(this.lightTimer * 0.9 + i) * 0.12;
+            const bob = sin(this.lightTimer * 1.6 + i) * (s * 0.03);
+            translate(0, bob);
+            rotate(-wheelRot + swing);
+            this._drawPrism(0, 0, s * 0.12, 6, s * 0.06, color(220,180,110));
+            pop();
+        }
+
         pop();
     }
 
     _drawCarousel(x = 0, y = 0, scale = 1) {
+        // Improved low-poly carousel: extruded platform ring and prism horses
         push(); translate(x, y);
         const s = this.size * 0.06 * scale;
-        // Base
-        fill(180, 120, 80);
-        stroke(100, 80, 60);
-        ellipse(0, 0, s * 0.4, s * 0.4);
-        // Rotating platform
-        rotate(this.lightTimer * 0.15 + this.animationOffset * 0.3);
-        noFill();
-        stroke(200, 150, 100);
-        ellipse(0, 0, s * 1.8, s * 1.8);
-        // Horses
-        for (let i = 0; i < 6; i++) {
+
+        // Platform as shallow extruded ring
+        const platOuter = s * 1.0;
+        const platInner = s * 0.5;
+        const platDepth = s * 0.06;
+        const platSides = 14;
+        const platformRot = -this.lightTimer * 1.8 + this.animationOffset * 0.3;
+        this._drawRing3D(0, 0, platOuter, platInner, platSides, platDepth, color(180,130,90), platformRot);
+
+        // Decorative facets (light prisms) around rim
+        const ringR = (platOuter + platInner) * 0.5;
+        for (let i = 0; i < platSides; i++) {
             push();
-            rotate(i * TWO_PI / 6);
-            translate(0, s * 0.9);
-            // Simple horse shape
-            fill(255, 220, 180);
-            noStroke();
-            ellipse(0, 0, s * 0.2, s * 0.15);
-            // Pole
-            stroke(150, 100, 50);
-            line(0, s * 0.075, 0, s * 0.3);
+            const ang = i * TWO_PI / platSides + platformRot;
+            const rx = cos(ang) * ringR;
+            const ry = sin(ang) * ringR;
+            translate(rx, ry);
+            rotate(ang + PI/2);
+            this._drawPrism(0, 0, s * 0.08, 4, s * 0.025, color(200,160,110));
             pop();
         }
+
+        // Horses as small prisms, counter-rotated with bob
+        const horseCount = 6;
+        for (let i = 0; i < horseCount; i++) {
+            const ang = i * TWO_PI / horseCount + platformRot;
+            const hx = cos(ang) * ringR;
+            const hy = sin(ang) * ringR;
+            push();
+            translate(hx, hy);
+            const bob = sin(this.lightTimer * 2 + i) * (s * 0.05);
+            translate(0, bob);
+            rotate(-platformRot + sin(this.lightTimer * 1.2 + i) * 0.04);
+            // horse as a small extruded box/prism
+            this._drawBox3D(0, 0, s * 0.18, s * 0.12, s * 0.05, color(240,220,190), 0);
+            // pole as a thin prism
+            this._drawBox3D(0, -s * 0.18, s * 0.02, s * 0.36, s * 0.02, color(120,90,60), 0);
+            pop();
+        }
+
         pop();
     }
 
