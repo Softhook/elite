@@ -179,8 +179,8 @@ const Draw3D = {
         strokeWeight(1);
         
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
         beginShape();
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep - PI/2;
@@ -210,8 +210,8 @@ const Draw3D = {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
 
                 beginShape();
                 vertex(vx + dv.x, vy + dv.y);
@@ -224,7 +224,7 @@ const Draw3D = {
 
         // Draw Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
         beginShape();
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep - PI/2;
@@ -243,8 +243,8 @@ const Draw3D = {
 
         // Bottom Cap
         if (stage === 'bottom') {
-            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
             beginShape();
             for (let i = 0; i < sides; i++) {
                 const ang = i * angleStep - PI/2;
@@ -270,8 +270,8 @@ const Draw3D = {
                     const nvy = y + Math.sin(nextAng) * r;
                     const diff = faceAngle - lightAngle;
                     const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                    fill(red(col)*b, green(col)*b, blue(col)*b);
-                    stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                    fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
+                    stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
                     beginShape();
                     vertex(vx + dv.x, vy + dv.y);
                     vertex(nvx + dv.x, nvy + dv.y);
@@ -286,7 +286,7 @@ const Draw3D = {
         // Top
         if (stage === 'top') {
             fill(col);
-            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
             beginShape();
             for (let i = 0; i < sides; i++) {
                 const ang = i * angleStep - PI/2;
@@ -308,8 +308,8 @@ const Draw3D = {
         strokeWeight(1);
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
         beginShape();
         vertex(x - hw + dv.x, y - hh + dv.y);
         vertex(x + hw + dv.x, y - hh + dv.y);
@@ -327,8 +327,8 @@ const Draw3D = {
                 const diff = faceAngles[i] - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
 
                 beginShape();
                 let x1, y1, x2, y2;
@@ -351,7 +351,7 @@ const Draw3D = {
         }
         
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
         rectMode(CENTER);
         rect(x, y, w, h);
     },
@@ -364,8 +364,8 @@ const Draw3D = {
         const len = vertices.length;
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
@@ -392,8 +392,8 @@ const Draw3D = {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
 
                 beginShape();
                 vertex(v1.x + dv.x, v1.y + dv.y);
@@ -406,7 +406,7 @@ const Draw3D = {
         
         // Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x, vertices[i].y);
@@ -429,8 +429,8 @@ const Draw3D = {
             // the contour API and fall back if it fails at runtime.
             try {
                 // Draw Bottom Cap using contour for a proper hole
-                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
                 beginShape();
                 // Outer loop
                 for (let i = 0; i < sides; i++) {
@@ -447,8 +447,8 @@ const Draw3D = {
                 endShape(CLOSE);
             } catch (e) {
                 // Fallback to non-contour implementation when contour calls fail
-                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
                 beginShape();
                 for (let i = 0; i < sides; i++) {
                     const ang = i * angleStep;
@@ -464,13 +464,13 @@ const Draw3D = {
                     vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
                 }
                 endShape(CLOSE);
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
             }
         } else {
             // Fallback: draw outer cap and then overpaint inner cap to approximate a hole.
             // This is less correct but prevents runtime errors on p5 builds without contour support.
-            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
             beginShape();
             for (let i = 0; i < sides; i++) {
                 const ang = i * angleStep;
@@ -489,7 +489,7 @@ const Draw3D = {
             }
             endShape(CLOSE);
             // restore stroke for faces below
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
         }
         
         for (let i = 0; i < sides; i++) {
@@ -521,8 +521,8 @@ const Draw3D = {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
                 
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
+                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
 
                 beginShape();
                 vertex(ox1 + dv.x, oy1 + dv.y);
@@ -542,8 +542,8 @@ const Draw3D = {
                 const diffInner = innerFaceAngle - lightAngle;
                 const bInner = map(Math.cos(diffInner), -1, 1, 0.4, 0.9);
                 
-                fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner);
-                stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8);
+                fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner, alpha(col));
+                stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8, alpha(col));
 
                 beginShape();
                 vertex(ix1 + dv.x, iy1 + dv.y);
@@ -556,7 +556,7 @@ const Draw3D = {
         
         // Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
         if (typeof beginContour === 'function' && typeof endContour === 'function') {
             try {
                 beginShape();
@@ -589,7 +589,7 @@ const Draw3D = {
                     vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
                 }
                 endShape(CLOSE);
-                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
             }
         } else {
             // Fallback: draw outer top and overdraw inner with background-ish fill
@@ -607,7 +607,7 @@ const Draw3D = {
                 vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
             }
             endShape(CLOSE);
-            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
         }
     },
 
@@ -2122,45 +2122,247 @@ const SpaceObjectRenderers = {
 
     orbitalGarden: function(obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-
-        // Circular Platform base (Cylinder)
-        Draw3D.drawPrism(0, bob + size * 0.2, size * 0.45, 16, size * 0.15, color(20, 30, 25), obj.angle, sunAngle);
-
-        // Terraced planting rings (Concentric Cylinders)
-        const rings = [ {c:[50,120,70]}, {c:[70,160,90]}, {c:[100,190,120]} ];
-        for (let r = 0; r < rings.length; r++) {
-            const rRadius = size * (0.4 - r * 0.08);
-            const ry = bob + size * 0.05 - r * (size * 0.05);
-            Draw3D.drawPrism(0, ry, rRadius, 16, size * 0.05, color(rings[r].c[0], rings[r].c[1], rings[r].c[2]), obj.angle, sunAngle);
+        
+        // Helper to project "height" (z) along the object's rotation axis
+        // z > 0 is "up" (towards the top of the station), z < 0 is "down"
+        const sin = Math.sin(obj.angle || 0);
+        const cos = Math.cos(obj.angle || 0);
+        function getPos(z) {
+            // "Up" in object space corresponds to moving against the depth vector
+            // The depth vector (down) is (sin, cos). So up is (-sin, -cos).
+            return {
+                x: -z * sin,
+                y: bob - z * cos
+            };
         }
 
-        // Central pond
-        const centerY = bob - size * 0.15;
-        Draw3D.drawPrism(0, centerY, size * 0.12, 12, size * 0.02, color(24, 48, 80), obj.angle, sunAngle);
+        // 1. Base Structure (Industrial/Metallic)
+        // Stack from bottom up
+        // Base Top at z = -0.15s, Depth = 0.15s (Bottom at -0.30s)
+        const pBase = getPos(-size * 0.15);
+        Draw3D.drawPrism(pBase.x, pBase.y, size * 0.4, 12, size * 0.15, color(50, 55, 60), obj.angle, sunAngle);
         
-        // Sculpted tree
-        Draw3D.drawPrism(0, centerY - size * 0.05, size * 0.02, 6, size * 0.1, color(120, 78, 46), obj.angle, sunAngle); // Trunk
-        // Foliage (low poly sphere approximation)
-        Draw3D.drawPrism(0, centerY - size * 0.15, size * 0.12, 8, size * 0.12, color(90, 150, 96), obj.angle, sunAngle);
+        // Ring around base
+        const pRing = getPos(-size * 0.20);
+        Draw3D.drawRing3D(pRing.x, pRing.y, size * 0.5, size * 0.38, 12, size * 0.05, color(70, 75, 80), obj.angle, sunAngle);
 
-        // Glass dome (hemisphere approximation using stacked prisms)
-        const domeColor = color(200, 225, 245, 40);
-        // Base ring
-        Draw3D.drawPrism(0, bob, size * 0.42, 16, size * 0.05, domeColor, obj.angle, sunAngle);
-        // Mid ring
-        Draw3D.drawPrism(0, bob - size * 0.1, size * 0.35, 12, size * 0.15, domeColor, obj.angle, sunAngle);
-        // Top cap
-        Draw3D.drawPrism(0, bob - size * 0.25, size * 0.2, 8, size * 0.15, domeColor, obj.angle, sunAngle);
+        // 2. The Garden (Inside)
+        // Soil Bed: Top at z = -0.10s, Depth = 0.05s (Bottom at -0.15s)
+        const pSoil = getPos(-size * 0.10);
+        Draw3D.drawPrism(pSoil.x, pSoil.y, size * 0.35, 12, size * 0.05, color(60, 40, 20), obj.angle, sunAngle);
 
+        // Lush Vegetation
+        const breeze = (anim ? anim.gardenBreeze : 0) + obj.bobPhase * 0.002;
+        const plantCount = 12;
+        
+        // Plants stand on the soil (z = -0.10s)
+        const soilZ = -size * 0.10;
+        
+        for (let i = 0; i < plantCount; i++) {
+            const angle = i * (TWO_PI / plantCount) + (i * 1.1);
+            const r = size * (0.1 + (i % 3) * 0.08);
+            
+            // Calculate plant position on the circular bed
+            // We need to rotate this offset by obj.angle to match the station's rotation
+            const localX = Math.cos(angle) * r;
+            const localY = Math.sin(angle) * r; // Flat circle on the "floor"
+            
+            // Rotate (localX, localY) by obj.angle
+            // The "floor" plane is perpendicular to the Z axis.
+            // In Draw3D's simple projection, the "side" view compresses the Y axis of the floor circle?
+            // Draw3D usually draws prisms facing the camera.
+            // To place items "on" the prism top face:
+            // The prism top face is drawn at screen (px, py).
+            // A point (r, angle) on that face:
+            // x_screen = px + r * cos(angle)
+            // y_screen = py + r * sin(angle) * perspective_foreshortening?
+            // Draw3D.drawPrism draws a regular polygon. It doesn't squash it into an ellipse (unless sides is large and we interpret it as such).
+            // Actually Draw3D.drawPrism draws a regular polygon at (x,y). It does NOT apply perspective tilt to the face itself, only to the sides (depth).
+            // So the "top" face is facing the camera directly (or is a cross-section).
+            // If the station is a tower, we are looking at it from the side.
+            // So the "floor" is actually a line or a thin ellipse if we had true 3D.
+            // But Draw3D style is "top-down 2.5D" where objects are often drawn "standing up" towards the camera?
+            // No, `drawPrism` draws a shape at x,y and extrudes it by `depth` in direction `angle`.
+            // This implies we are looking "down" at the object, and `depth` is the vertical height (Z).
+            // So the "Top" face is the one closest to the camera.
+            // So the "Soil" is a flat polygon facing the camera.
+            // So plants should be placed on this polygon.
+            
+            const px = pSoil.x + Math.cos(angle) * r;
+            const py = pSoil.y + Math.sin(angle) * r;
+            
+            const sway = Math.sin(breeze + i) * size * 0.02;
+            
+            // Trunk
+            // Trunks grow "up" (towards camera? or along station axis?)
+            // If the station is a tower, trees should grow "out" from the axis? Or "up" along the axis?
+            // Usually "gravity" is centrifugal or linear.
+            // If it's a tower, gravity is likely "down" (towards base). Trees grow "up" (towards top).
+            // So trees should grow along the Z axis (station axis).
+            // So we draw the trunk as a prism starting at (px, py) and extruding "up".
+            // But `drawPrism` extrudes "down" (depth).
+            // So we want the Tree Top at `z_tree_top`.
+            // Tree Base is at `soilZ`.
+            // Tree Height `trunkH`.
+            // Tree Top Z = `soilZ + trunkH`.
+            // But wait, if the floor is facing the camera, then "Up" is towards the camera (Z-buffer).
+            // But `drawPrism` depth is along screen Y (rotated).
+            // This renderer is confusing.
+            // Let's look at `satellite`. It draws a central bus and panels.
+            // It seems `Draw3D` is "Side View" where `depth` is "Thickness away from camera"?
+            // OR `Draw3D` is "Top View" where `depth` is "Height"?
+            // `getDepthVector` uses `sin(theta), cos(theta)`.
+            // If theta=0, dv=(0, depth).
+            // If I draw a rect at 0,0 and another at 0,10.
+            // It looks like a tower viewed from slightly above-side.
+            
+            // If I want trees to stand UP from the soil (perpendicular to the soil face):
+            // Since the soil face is drawn as a flat polygon on screen, "Perpendicular" means "Towards the camera".
+            // But we can't draw "towards the camera" easily with this 2D canvas except by draw order.
+            // AND `drawPrism` extrudes sideways/downwards.
+            
+            // Let's assume the "Soil" face is the ground.
+            // Trees should stick out of it.
+            // If we use `drawBox3D` or `drawPrism` for trees, they will also be extruded along the station axis.
+            // This means trees are "lying down" on the soil?
+            // Or is the station axis the "Up" direction?
+            // If the station axis is "Up", then the soil face is a cross-section.
+            // This means the "Garden" is a slice of the cylinder.
+            // If so, we can't see the "floor" as a circle. We see it as a line/ellipse edge-on.
+            // BUT `drawPrism` draws a full circle (polygon).
+            // This implies the object is viewed "Top Down" (looking down the axis).
+            // BUT `orbitalGarden` (and others) rotate.
+            // When they rotate, the "depth" vector rotates.
+            // This implies the "depth" is the side of the cylinder.
+            // So we are looking at the "Top" of the cylinder, and the "Side" is extruded.
+            // So the "Soil" is the circular floor we see.
+            // So trees should stand up *towards the camera*.
+            // To simulate trees standing up towards the camera, we just draw them on top (draw order) and maybe give them a little "height" effect (parallax?).
+            // Or we just draw them as blobs on the circle.
+            
+            // Let's stick to drawing them as small prisms/boxes on the surface.
+            // If I draw a box at (px, py), it sits on the surface.
+            // To make it look like a tree, maybe just a small circle (top down view of tree).
+            // OR, if we want to simulate the "Cupola" being a dome over it, we are looking into the dome.
+            
+            // Trunk (Top down view = dot)
+            // Foliage (Top down view = larger circle)
+            
+            // Let's try drawing them as simple circles/blobs since we are looking "down" into the garden.
+            
+            const trunkH = size * 0.02; // Not height, but thickness/size
+            // Draw trunk
+            fill(80, 60, 40);
+            ellipse(px, py, size * 0.03, size * 0.03);
+            
+            // Foliage
+            const bushSize = size * (0.08 + (i%3)*0.03);
+            const gVar = (i * 30) % 50;
+            fill(40, 140 + gVar, 60);
+            ellipse(px + sway, py + sway * 0.5, bushSize, bushSize);
+        }
+        
+        // Central Tree (Top down)
+        fill(50, 180, 80);
+        ellipse(pSoil.x, pSoil.y, size * 0.25, size * 0.25);
+
+        // 3. The Cupola (Glass Dome)
+        // Stacked prisms to form a dome shape
+        // We need to draw them "above" the soil.
+        // "Above" means "closer to camera" in Z-order, but also physically "higher" in the stack if it's a tower.
+        // Wait, if `drawPrism` is Top-Down, then "stacking" means drawing smaller concentric shapes?
+        // OR does `drawPrism` simulate a long cylinder lying on the screen?
+        // If `angle` rotates the depth vector, then it's a cylinder lying on the screen.
+        // If `angle=0`, depth is (0, depth). Vertical cylinder.
+        // We see the Top Face at (x,y). We see the Side extending to (x, y+depth).
+        // So we are looking at the Top Face, and the side goes "down" the screen.
+        // So the "Top" face is the "Top" of the station.
+        // So if we want to stack things, we should draw the "Bottom" things first (at y+depth), and "Top" things last (at y).
+        // My `getPos` logic moves "Up" (negative depth).
+        // So `getPos(0)` is the center. `getPos(0.1)` is "higher" (closer to top).
+        // So we should draw from Bottom (negative z) to Top (positive z).
+        // And we should use the painter's algorithm (draw bottom first).
+        
+        // My previous logic:
+        // Base at -0.15.
+        // Soil at -0.10.
+        // Cupola 1 at 0.05.
+        // Cupola 2 at 0.15.
+        // Cupola 3 at 0.22.
+        
+        // This order is correct for Painter's Algorithm if we are looking from the "Top".
+        // (The things "higher" up the stack cover the things "lower" down).
+        
+        const domeColor = color(200, 240, 255, 40);
+        const domeRibColor = color(200, 240, 255, 80);
+        
+        // Cupola Layer 1 (Wide)
+        // Top at z = 0.05s, Depth = 0.15s (Bottom at -0.10s, meets Soil)
+        const pCup1 = getPos(size * 0.05);
+        Draw3D.drawPrism(pCup1.x, pCup1.y, size * 0.42, 16, size * 0.15, domeColor, obj.angle, sunAngle);
+        Draw3D.drawRing3D(pCup1.x, pCup1.y, size * 0.42, size * 0.41, 16, size * 0.01, domeRibColor, obj.angle, sunAngle);
+
+        // Cupola Layer 2 (Mid)
+        // Top at z = 0.15s, Depth = 0.10s (Bottom at 0.05s)
+        const pCup2 = getPos(size * 0.15);
+        Draw3D.drawPrism(pCup2.x, pCup2.y, size * 0.35, 12, size * 0.10, domeColor, obj.angle, sunAngle);
+        Draw3D.drawRing3D(pCup2.x, pCup2.y, size * 0.35, size * 0.34, 12, size * 0.01, domeRibColor, obj.angle, sunAngle);
+
+        // Cupola Layer 3 (Top)
+        // Top at z = 0.22s, Depth = 0.07s (Bottom at 0.15s)
+        const pCup3 = getPos(size * 0.22);
+        Draw3D.drawPrism(pCup3.x, pCup3.y, size * 0.2, 8, size * 0.07, domeColor, obj.angle, sunAngle);
+
+        // 4. External Details
+        // Rotating ring around the base (at z = -0.05 approx)
+        const ringPhase = (anim ? anim.gardenShadeAngle : 0) + obj.bobPhase * 0.001;
+        const pRotRing = getPos(-size * 0.05);
+        push();
+        // We need to rotate the ring around the center pRotRing
+        translate(pRotRing.x, pRotRing.y);
+        rotate(ringPhase);
+        // Draw ring at 0,0 (relative)
+        // Note: DrawRing3D draws at x,y with angle.
+        // If we rotate the context, we rotate the whole drawing.
+        // But we want the ring to spin around the station axis.
+        // Since the station is top-down, spinning is just rotating the polygon.
+        // But Draw3D takes `angle` to rotate the depth vector.
+        // If we rotate the context, we rotate the depth vector too!
+        // We want the depth vector to stay aligned with the station (obj.angle).
+        // So we shouldn't rotate the context if we want the 3D extrusion to look consistent.
+        // Instead, we should pass `obj.angle + ringPhase` to Draw3D?
+        // No, `angle` in Draw3D rotates the extrusion direction.
+        // If we change `angle`, the ring will extrude in a different direction than the station.
+        // That would look broken.
+        // We want the shape to rotate, but the extrusion to stay fixed.
+        // Draw3D doesn't support rotating the shape independently of the extrusion easily.
+        // `drawRing3D` draws vertices based on `i * angleStep`.
+        // We can just add an offset to the vertex angle calculation?
+        // Draw3D doesn't expose that.
+        // Workaround: Rotate context, but counter-rotate the `angle` param?
+        // If we rotate context by `R`, and pass `angle - R`, then `depthVector` direction:
+        // `getDepthVector` uses `angle`.
+        // `dv` will be calculated based on `angle - R`.
+        // Then `dv` is drawn in rotated context.
+        // Rotated `dv` = `dv` rotated by `R`.
+        // `dv(angle - R)` rotated by `R` = `dv(angle)`.
+        // Yes! That works.
+        
+        Draw3D.drawRing3D(0, 0, size * 0.65, size * 0.55, 16, size * 0.02, color(100, 120, 140), obj.angle - ringPhase, sunAngle);
+        pop();
+        
         // Pollinators
-        const phase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.001;
-        for (let m = 0; m < 6; m++) {
-            const a = phase * (0.9 + m * 0.05) + m * 1.05;
-            const r = size * (0.25 + (m % 3) * 0.05);
-            const x = Math.cos(a) * r;
-            const y = Math.sin(a) * r * 0.4 + bob - size * 0.1 + Math.sin(a * 2) * size * 0.05;
-            fill(255, 230, 140, 180);
-            ellipse(x, y, 3, 3);
+        const pollPhase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.002;
+        for(let p=0; p<5; p++) {
+            const pa = pollPhase + p * (TWO_PI/5);
+            const pr = size * 0.5;
+            // Orbiting around the "Garden" level (z = 0)
+            const pCenter = getPos(0);
+            const px = pCenter.x + Math.cos(pa) * pr;
+            const py = pCenter.y + Math.sin(pa) * pr;
+            fill(255, 255, 100);
+            noStroke();
+            ellipse(px, py, 3, 3);
         }
     },
 
