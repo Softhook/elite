@@ -788,7 +788,7 @@ class WeaponSystem {
         }
 
         if (isEnemy) {
-            if (system?.player) {
+            if (system?.player && !system.player.isDockedAndInvulnerable) {
                 const playerRadius = system.player.size ? system.player.size * 0.5 : 0;
                 evaluateTarget(system.player, playerRadius);
             }

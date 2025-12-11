@@ -126,7 +126,7 @@ class Mine {
         }
 
         // Damage player only for non-player mines (keep player safe from their own mines)
-        if (!isPlayerMine && system.player && !system.player.destroyed) {
+        if (!isPlayerMine && system.player && !system.player.destroyed && !system.player.isDockedAndInvulnerable) {
             const distSq = distSqVec(this.pos, system.player.pos);
             if (distSq < blastRadiusSq) {
                 const dist = Math.sqrt(distSq);

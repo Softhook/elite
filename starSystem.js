@@ -2063,6 +2063,9 @@ class StarSystem {
      * @private
      */
     _applyForceWaveDamage(wave, entity, distSq, dx, dy) {
+        // Safety check: if entity is player and is docked/invulnerable, do nothing
+        if (entity === this.player && this.player.isDockedAndInvulnerable) return;
+
         const maxRadiusAdj = wave.maxRadius + entity.size / 2;
         const dist = Math.sqrt(distSq);
         const distRatio = dist / maxRadiusAdj;
@@ -2400,7 +2403,7 @@ class StarSystem {
             }
 
             // Check proximity to player (if enemy's mine)
-            if (!(mine.owner instanceof Player) && this.player) {
+            if (!(mine.owner instanceof Player) && this.player && !this.player.isDockedAndInvulnerable) {
                 if (mine.shouldExplode(this.player)) {
                     mine.explode(this);
                     this._removeMineFromSystem(mine, i);
