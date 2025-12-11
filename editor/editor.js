@@ -20,6 +20,8 @@ let zoomOutButton;
 let descriptionDiv;
 let straightenButton;
 let centerDesignButton; // <-- Add this variable
+let mirrorVButton;
+let mirrorHButton;
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
@@ -109,6 +111,8 @@ function setup() {
     descriptionDiv = select('#shipDescriptionArea');
     straightenButton = select('#straightenButton');
     centerDesignButton = select('#centerDesignButton'); // <-- Get reference
+    mirrorVButton = select('#vmirrorButton');
+    mirrorHButton = select('#hmirrorButton');
     undoButton = select('#undoButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
     compareWeaponsButton = select('#compareWeaponsButton');
@@ -130,6 +134,8 @@ function setup() {
     if (strokeWeightInput) strokeWeightInput.input(updateSelectedShapeStrokeWeight); else console.error("Stroke weight input not found");
     if (straightenButton) straightenButton.mousePressed(handleStraightenClick); else console.error("Straighten button not found");
     if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
+    if (mirrorVButton) mirrorVButton.mousePressed(handleVMirrorClick); else console.error("V Mirror button not found");
+    if (mirrorHButton) mirrorHButton.mousePressed(handleHMirrorClick); else console.error("H Mirror button not found");
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (compareWeaponsButton) compareWeaponsButton.mousePressed(toggleWeaponComparer); else console.error("Compare Weapons button not found");
@@ -803,6 +809,8 @@ function updateUIControls() {
     if (exportButton?.elt) exportButton.elt.disabled = shapes.length === 0 && !isThargoidSelected();
     if (straightenButton?.elt) straightenButton.elt.disabled = !shapeSelected;
     if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes; // <-- Update this button's state
+    if (mirrorVButton?.elt) mirrorVButton.elt.disabled = !shapeSelected;
+    if (mirrorHButton?.elt) mirrorHButton.elt.disabled = !shapeSelected;
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
 
     // Disable editing tools if no editable shape is selected
@@ -1047,6 +1055,61 @@ function centerDesignByBoundingBox() {
             }
         }
     }
+}
+
+// --- Vertical and Horizontal Mirror Functions ---
+function handleVMirrorClick() {
+    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+        console.warn('V Mirror: No selectable shape selected or editor not editable.');
+        return;
+    }
+    mirrorSelectedAcrossVerticalLine();
+}
+
+function handleHMirrorClick() {
+    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+        console.warn('H Mirror: No selectable shape selected or editor not editable.');
+        return;
+    }
+    mirrorSelectedAcrossHorizontalLine();
+}
+
+function mirrorSelectedAcrossVerticalLine() {
+    const srcIndex = selectedShapeIndex;
+    const src = shapes[srcIndex];
+    if (!src || !Array.isArray(src.vertexData) || src.vertexData.length < 3) {
+        console.warn('V Mirror: Source shape invalid.');
+        return;
+    }
+    saveStateForUndo(); // Save before creating new mirrored layer
+
+    const newShape = JSON.parse(JSON.stringify(src));
+    newShape.vertexData = newShape.vertexData.map(v => ({ x: (typeof v.x === 'number' ? -v.x : v.x), y: v.y }));
+
+    shapes.push(newShape);
+    selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    updateUIControls(); updateColorPickersFromSelection();
+    console.log('V Mirror: Created mirrored layer from shape', srcIndex, '->', selectedShapeIndex);
+}
+
+function mirrorSelectedAcrossHorizontalLine() {
+    const srcIndex = selectedShapeIndex;
+    const src = shapes[srcIndex];
+    if (!src || !Array.isArray(src.vertexData) || src.vertexData.length < 3) {
+        console.warn('H Mirror: Source shape invalid.');
+        return;
+    }
+    saveStateForUndo(); // Save before creating new mirrored layer
+
+    const newShape = JSON.parse(JSON.stringify(src));
+    newShape.vertexData = newShape.vertexData.map(v => ({ x: v.x, y: (typeof v.y === 'number' ? -v.y : v.y) }));
+
+    shapes.push(newShape);
+    selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    updateUIControls(); updateColorPickersFromSelection();
+    console.log('H Mirror: Created mirrored layer from shape', srcIndex, '->', selectedShapeIndex);
 }
 
 // Inside editor.js
