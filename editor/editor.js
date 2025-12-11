@@ -24,6 +24,7 @@ let mirrorVButton;
 let mirrorHButton;
 let addCircleButton;
 let addHexButton;
+let addStarButton;
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
@@ -107,6 +108,7 @@ function setup() {
     addVertexButton = select('#addVertexButton');
     addCircleButton = select('#addCircleButton');
     addHexButton = select('#addHexButton');
+    addStarButton = select('#addStarButton');
     fillColorPicker = select('#fillColorPicker');
     strokeColorPicker = select('#strokeColorPicker');
     strokeWeightInput = select('#strokeWeightInput');
@@ -132,6 +134,7 @@ function setup() {
     if (addShapeButton) addShapeButton.mousePressed(addNewShape); else console.error("Add Shape button not found");
     if (addCircleButton) addCircleButton.mousePressed(addCircleShape); else console.error("Add Circle button not found");
     if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
+    if (addStarButton) addStarButton.mousePressed(addStarShape); else console.error("Add Star button not found");
     if (addVertexButton) addVertexButton.mousePressed(toggleAddVertexMode); else console.error("Add Vertex button not found");
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
@@ -819,6 +822,7 @@ function updateUIControls() {
     if (mirrorHButton?.elt) mirrorHButton.elt.disabled = !shapeSelected;
     if (addCircleButton?.elt) addCircleButton.elt.disabled = !editable;
     if (addHexButton?.elt) addHexButton.elt.disabled = !editable;
+    if (addStarButton?.elt) addStarButton.elt.disabled = !editable;
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
 
     // Disable editing tools if no editable shape is selected
@@ -929,6 +933,27 @@ function addHexagonShape() {
         verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
     }
     const shape = { vertexData: verts, fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1 };
+    shapes.push(shape);
+    selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
+    updateUIControls(); updateColorPickersFromSelection();
+}
+
+function addStarShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const points = 5; // 5-point star
+    const outer = 0.24;
+    const inner = 0.10;
+    const verts = [];
+    const total = points * 2;
+    for (let i = 0; i < total; i++) {
+        const theta = i * Math.PI / points; // step = 180/points degrees in radians
+        const r = (i % 2 === 0) ? outer : inner;
+        verts.push({ x: Math.cos(theta) * r, y: Math.sin(theta) * r });
+    }
+    const shape = { vertexData: verts, fillColor: [220, 200, 80], strokeColor: [120, 90, 20], strokeW: 1 };
     shapes.push(shape);
     selectedShapeIndex = shapes.length - 1;
     selectedVertexIndices = [];
