@@ -2,7 +2,7 @@
 
 ## Bugs and Issues
 
-3d cargo
+enemy Ship docking distance at stations should be the same as player docking distance. 
 
 Add faction decals onto the ships 
 
@@ -28,8 +28,6 @@ make events more dramtic bigger cargo drops
 
 
 ## Core Gameplay Enhancements
-
-3d asteroids with simple sun facing facet shading
 
 make space objects explode
 
