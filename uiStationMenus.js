@@ -12,23 +12,23 @@ class UIStationMenus {
         this.repairsHalfButtonArea = {};
         this.repairsBodyguardsButtonArea = {};
         this.repairsBackButtonArea = {};
-        
+
         // Space object repairs button areas
         this.spaceObjectRepairsFullButtonArea = {};
         this.spaceObjectRepairsHalfButtonArea = {};
         this.spaceObjectRepairsBodyguardsButtonArea = {};
         this.spaceObjectRepairsBackButtonArea = {};
-        
+
         // Police button areas
         this.policeButtonAreas = [];
-        
+
         // Shipyard areas
         this.shipyardListAreas = [];
         this.shipyardDetailButtons = {};
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
         this.shipyardScrollbarArea = {};
-        
+
         // Upgrades areas
         this.upgradeListAreas = [];
         this.upgradeDetailButtons = {};
@@ -37,13 +37,13 @@ class UIStationMenus {
         this.upgradeScrollbarArea = {};
         this.weaponSlotButtons = [];
         this.selectedWeaponSlot = 0;
-        
+
         // Protection services
         this.protectionServicesButtons = [];
-        
+
         // Storage areas
         this.storageButtonAreas = [];
-        
+
         // Record areas
         this.recordButtonAreas = [];
         this.recordScrollOffset = 0;
@@ -57,6 +57,7 @@ class UIStationMenus {
 
     /**
      * Draws the News Menu (The Galactic Echo).
+     * Compact 2-line layout: Headline + Body text
      * @param {Player} player
      * @param {Object} panelRect - {x, y, w, h}
      * @param {number} headerHeight
@@ -64,74 +65,144 @@ class UIStationMenus {
     drawNewsMenu(player, panelRect, headerHeight) {
         if (!player) return;
         this.newsButtonAreas = [];
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
         const contentY = pY + headerHeight + 10;
         const contentH = pH - headerHeight - 60;
-        
+
         // Get news items
-        const newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) 
-            ? GameGlobals.newsManager.getNewsItems() 
+        const newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager)
+            ? GameGlobals.newsManager.getNewsItems()
             : [];
-            
-        UIComponents.setTextStyle({ fill: [255, 255, 255], size: 24, align: [LEFT, TOP] });
-        text("The Galactic Echo - Latest Bulletins", pX + 30, contentY);
-        
-        let currentY = contentY + 40;
-        
+
+        // Header with styling
+        push();
+        noStroke();
+        fill(255, 200, 100);
+        textSize(22);
+        textAlign(LEFT, TOP);
+        textStyle(BOLD);
+        text("THE GALACTIC ECHO", pX + 30, contentY);
+        textStyle(NORMAL);
+        fill(180);
+        textSize(14);
+        text("Your Trusted Source Across the Sectors", pX + 30, contentY + 26);
+        pop();
+
+        let currentY = contentY + 55;
+        const availableHeight = contentH - 55;
+
         if (newsItems.length === 0) {
             UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
-            text("No news reports available.", pX + pW/2, currentY + (contentH - 40) / 2);
+            text("No news reports available.", pX + pW / 2, currentY + availableHeight / 2);
         } else {
-            // Calculate scroll
-            // Estimate height per item (title + body + spacing)
-            // This is a bit rough, assuming fixed height for simplicity or dynamic calculation
-            // Let's use a fixed block height for now
-            const itemHeight = 110;
-            const visibleItems = Math.floor(contentH / itemHeight);
+            // Compact 2-line layout: much smaller item height
+            const itemHeight = 58;
+            const visibleItems = Math.floor(availableHeight / itemHeight);
             const totalItems = newsItems.length;
-            
+
             this.newsScrollMax = Math.max(0, totalItems - visibleItems);
             this.newsScrollOffset = constrain(this.newsScrollOffset, 0, this.newsScrollMax);
-            
+
             const startIndex = this.newsScrollOffset;
             const endIndex = Math.min(startIndex + visibleItems, totalItems);
-            
+
             for (let i = startIndex; i < endIndex; i++) {
                 const item = newsItems[i];
                 const itemY = currentY + (i - startIndex) * itemHeight;
-                
-                // Draw item background
-                fill(20, 20, 30);
-                stroke(60);
-                rect(pX + 20, itemY, pW - 40, itemHeight - 10, 5);
-                
-                // Source/Faction indicator
+
+                // Determine border color based on category/priority
+                let borderColor = [60, 60, 80];
+                const category = item.category || 'LOCAL_EVENT';
+                const priority = item.priority || 2;
+
+                if (category === 'PLAYER_ACTION' || priority >= 4) {
+                    borderColor = [200, 100, 100]; // Red for breaking/player action
+                } else if (category === 'GALAXY_NEWS') {
+                    borderColor = [100, 150, 200]; // Blue for galaxy news
+                } else if (category === 'LOCAL_EVENT') {
+                    borderColor = [150, 150, 80]; // Yellow-ish for local
+                }
+
+                // Draw compact item background
+                fill(18, 18, 28);
+                stroke(borderColor);
+                strokeWeight(1);
+                rect(pX + 20, itemY, pW - 40, itemHeight - 6, 4);
                 noStroke();
-                fill(item.sourceColor || [200, 200, 200]);
+
+                // "BREAKING" badge for high priority player actions
+                let headlineStartX = pX + 28;
+                if (priority >= 4) {
+                    // Draw breaking badge
+                    fill(180, 40, 40);
+                    noStroke();
+                    rect(pX + 25, itemY + 6, 60, 16, 3);
+                    fill(255);
+                    textSize(10);
+                    textAlign(CENTER, CENTER);
+                    textStyle(BOLD);
+                    text("BREAKING", pX + 55, itemY + 14);
+                    textStyle(NORMAL);
+                    headlineStartX = pX + 92;
+                }
+
+                // Headline (line 1) - bold, larger
+                const sourceColor = item.sourceColor || [200, 200, 200];
+                fill(255, 230, 120);
+                textSize(15);
+                textAlign(LEFT, TOP);
+                textStyle(BOLD);
+
+                // Truncate headline if too long
+                const headline = item.headline || item.title || "News Update";
+                const maxHeadlineWidth = pW - (headlineStartX - pX) - 100;
+                let displayHeadline = headline;
+                if (textWidth(headline) > maxHeadlineWidth) {
+                    while (textWidth(displayHeadline + "...") > maxHeadlineWidth && displayHeadline.length > 10) {
+                        displayHeadline = displayHeadline.slice(0, -1);
+                    }
+                    displayHeadline += "...";
+                }
+                text(displayHeadline, headlineStartX, itemY + 8);
+                textStyle(NORMAL);
+
+                // Source on right side (line 1)
+                fill(sourceColor);
+                textSize(11);
+                textAlign(RIGHT, TOP);
+                text(item.source || "Echo", pX + pW - 28, itemY + 10);
+
+                // Body text (line 2) - smaller, dimmer, truncated
+                fill(170);
                 textSize(12);
                 textAlign(LEFT, TOP);
-                text(item.source || "Unknown Source", pX + 30, itemY + 10);
-                
-                // Timestamp
-                fill(150);
+
+                const bodyText = item.body || "";
+                const maxBodyWidth = pW - 70;
+                let displayBody = bodyText;
+                if (textWidth(bodyText) > maxBodyWidth) {
+                    while (textWidth(displayBody + "...") > maxBodyWidth && displayBody.length > 10) {
+                        displayBody = displayBody.slice(0, -1);
+                    }
+                    displayBody += "...";
+                }
+                text(displayBody, pX + 28, itemY + 30);
+
+                // Time ago indicator (bottom right, very subtle)
+                fill(100);
+                textSize(10);
                 textAlign(RIGHT, TOP);
-                const timeStr = new Date(item.timestamp).toLocaleTimeString();
-                text(timeStr, pX + pW - 30, itemY + 10);
-                
-                // Title
-                fill(255, 220, 100);
-                textSize(18);
-                textAlign(LEFT, TOP);
-                text(item.title, pX + 30, itemY + 30);
-                
-                // Body
-                fill(220);
-                textSize(14);
-                textLeading(18);
-                text(item.body, pX + 30, itemY + 55, pW - 60, itemHeight - 60);
+                const ageMs = Date.now() - (item.timestamp || Date.now());
+                const ageMins = Math.floor(ageMs / 60000);
+                let ageStr;
+                if (ageMins < 1) ageStr = "just now";
+                else if (ageMins < 60) ageStr = `${ageMins}m ago`;
+                else if (ageMins < 1440) ageStr = `${Math.floor(ageMins / 60)}h ago`;
+                else ageStr = `${Math.floor(ageMins / 1440)}d ago`;
+                text(ageStr, pX + pW - 28, itemY + 32);
             }
-            
+
             // Draw scrollbar if needed
             if (this.newsScrollMax > 0) {
                 this.newsScrollbarArea = UIComponents.drawScrollbar(
@@ -142,9 +213,9 @@ class UIStationMenus {
                 );
             }
         }
-        
+
         // Back button
-        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
         this.newsButtonAreas.push(backBtn);
     }
 
@@ -156,44 +227,44 @@ class UIStationMenus {
      * @returns {Object} Button areas
      */
     _drawRepairsContent(player, panelRect, headerHeight) {
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         // Player ship repair section
         UIComponents.setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP });
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX + pW / 2, pY + headerHeight + 10);
-        
+
         let missing = player.maxHull - player.hull;
         let fullCost = Math.floor(missing * 10);
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
         let btnW = pW * 0.5, btnH = 45, btnX = pX + pW / 2 - btnW / 2;
         let btnY1 = pY + headerHeight + 60, btnY2 = btnY1 + btnH + 20;
-        
+
         const fullButtonArea = UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0, 180, 0], [100, 255, 100]);
         const halfButtonArea = UIComponents.drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180, 180, 0], [220, 220, 100]);
-        
+
         // Bodyguard repair section
         const bodyguardInfo = player.getDamagedBodyguardsInfo ? player.getDamagedBodyguardsInfo() : { count: 0, totalCost: 0 };
         let btnY3 = btnY2 + btnH + 40;
         let bodyguardsButtonArea = {};
-        
+
         if (bodyguardInfo.count > 0) {
             // Draw separator
             strokeWeight(1);
             stroke(255, 180, 100);
             line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
-            
+
             UIComponents.setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP, noStroke: true });
-            
+
             bodyguardsButtonArea = UIComponents.drawButton(
-                btnX, btnY3, btnW, btnH, 
-                `Repair All Guards (${bodyguardInfo.totalCost} cr)`, 
+                btnX, btnY3, btnW, btnH,
+                `Repair All Guards (${bodyguardInfo.totalCost} cr)`,
                 [0, 120, 180], [100, 200, 255]
             );
         }
-        
+
         const backButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
-        
+
         return { full: fullButtonArea, half: halfButtonArea, bodyguards: bodyguardsButtonArea, back: backButtonArea };
     }
 
@@ -207,22 +278,22 @@ class UIStationMenus {
         this.repairsHalfButtonArea = {};
         this.repairsBodyguardsButtonArea = {};
         this.repairsBackButtonArea = {};
-        
+
         if (!player) return;
-        
+
         push();
         uiManager.drawPanelBG(STANDARD_PANEL_BG, [255, 180, 100]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = uiManager.drawStationHeader("Ship Repairs", station, player, system);
         const panelRect = uiManager.getPanelRect();
-        
+
         const buttons = this._drawRepairsContent(player, panelRect, headerHeight, uiManager);
         this.repairsFullButtonArea = buttons.full;
         this.repairsHalfButtonArea = buttons.half;
         this.repairsBodyguardsButtonArea = buttons.bodyguards;
         this.repairsBackButtonArea = buttons.back;
-        
+
         // Sync to UIManager for backward compatibility
         uiManager.repairsFullButtonArea = this.repairsFullButtonArea;
         uiManager.repairsHalfButtonArea = this.repairsHalfButtonArea;
@@ -242,21 +313,21 @@ class UIStationMenus {
         this.spaceObjectRepairsHalfButtonArea = {};
         this.spaceObjectRepairsBodyguardsButtonArea = {};
         this.spaceObjectRepairsBackButtonArea = {};
-        
+
         if (!player) return;
-        
+
         push();
         uiManager.drawPanelBG(STANDARD_PANEL_BG, [255, 180, 100]);
         const system = galaxy?.getCurrentSystem();
         const headerHeight = uiManager.drawSpaceObjectHeader("Ship Repairs", spaceObject, player, system);
         const panelRect = uiManager.getPanelRect();
-        
+
         const buttons = this._drawRepairsContent(player, panelRect, headerHeight, uiManager);
         this.spaceObjectRepairsFullButtonArea = buttons.full;
         this.spaceObjectRepairsHalfButtonArea = buttons.half;
         this.spaceObjectRepairsBodyguardsButtonArea = buttons.bodyguards;
         this.spaceObjectRepairsBackButtonArea = buttons.back;
-        
+
         // Sync to UIManager for backward compatibility
         uiManager.spaceObjectRepairsFullButtonArea = this.spaceObjectRepairsFullButtonArea;
         uiManager.spaceObjectRepairsHalfButtonArea = this.spaceObjectRepairsHalfButtonArea;
@@ -273,91 +344,91 @@ class UIStationMenus {
     drawPoliceMenu(player, uiManager) {
         this.policeButtonAreas = [];
         if (!player) return;
-        
+
         push();
         uiManager.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 200]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = uiManager.drawStationHeader("Police Station", station, player, system);
         const panelRect = uiManager.getPanelRect();
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
-        
+
         if (isAnarchySystem) {
             UIComponents.setTextStyle({ fill: 220, size: 22, alignH: CENTER, alignV: TOP });
             const messageY = pY + headerHeight + 20;
-            text("This anarchy system has no formal police presence.", pX + pW/2, messageY);
+            text("This anarchy system has no formal police presence.", pX + pW / 2, messageY);
             UIComponents.setTextStyle({ fill: [180, 200, 255], size: 18 });
-            text("Local disputes are settled without official intervention.", pX + pW/2, messageY + 35);
-            
-            this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action:'back'}));
-            
+            text("Local disputes are settled without official intervention.", pX + pW / 2, messageY + 35);
+
+            this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
+
             // Sync to UIManager for backward compatibility
             uiManager.policeButtonAreas = this.policeButtonAreas;
             pop();
             return;
         }
-        
+
         UIComponents.setTextStyle({ fill: 255, size: 20, align: [CENTER, TOP] });
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
         const contentY = pY + headerHeight + 10;
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX+pW/2, contentY);
+        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY);
         UIComponents.setTextStyle({ fill: statusColor, size: 24 });
-        text(statusText, pX+pW/2, contentY+30);
-        
+        text(statusText, pX + pW / 2, contentY + 30);
+
         // Display police bounty information
         if (player.isPolice) {
             UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
-            text("Active Bounty: 1,000 cr per Pirate killed, 1,000 cr per Alien killed", pX+pW/2, contentY+65);
+            text("Active Bounty: 1,000 cr per Pirate killed, 1,000 cr per Alien killed", pX + pW / 2, contentY + 65);
         }
-        
+
         // Show police faction kill progress
         try {
             const pk = player.getFactionKillsProgress && player.getFactionKillsProgress('POLICE');
             if (pk) {
                 UIComponents.setTextStyle({ fill: [200], size: 16, align: [CENTER, TOP] });
                 if (pk.nextThreshold) {
-                    text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW/2, contentY + 95);
+                    text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW / 2, contentY + 95);
                 } else {
-                    text(`Police Kills: ${pk.kills} — Max Rank`, pX + pW/2, contentY + 95);
+                    text(`Police Kills: ${pk.kills} — Max Rank`, pX + pW / 2, contentY + 95);
                 }
             }
         } catch (e) { /* fail silently */ }
-        
+
         let fineAmount = 300;
         if (system?.securityLevel === 'High') fineAmount = 1000;
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
         if (player.hasBeenPolice) {
             fineAmount *= 3;
             UIComponents.setTextStyle({ fill: [255, 200, 100], size: 16 });
-            text("Fines tripled for former police officer", pX + pW/2, contentY + 95);
+            text("Fines tripled for former police officer", pX + pW / 2, contentY + 95);
         }
-        
-        let btnW = pW*0.5, btnH = 45;
-        let btnX = pX+pW/2-btnW/2;
+
+        let btnW = pW * 0.5, btnH = 45;
+        let btnX = pX + pW / 2 - btnW / 2;
         let btnY1 = contentY + (player.isPolice ? 100 : (player.hasBeenPolice ? 125 : 90));
-        
+
         if (isWanted) {
             this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0,180,0], [100,255,100], 5, {action:'pay_fine', amount:fineAmount})
+                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount })
             );
         }
-        
+
         const btnY2 = btnY1 + btnH + 20;
         if (!player.isPolice) {
             this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50,50,180], [100,100,255], 5, {action:'join_police'})
+                UIComponents.drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50, 50, 180], [100, 100, 255], 5, { action: 'join_police' })
             );
         } else {
             UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
-            text("You are a member of the Police Force", pX+pW/2, btnY2+btnH/2);
+            text("You are a member of the Police Force", pX + pW / 2, btnY2 + btnH / 2);
         }
-        
-        this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action:'back'}));
-        
+
+        this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
+
         // Sync to UIManager for backward compatibility
         uiManager.policeButtonAreas = this.policeButtonAreas;
         pop();
@@ -373,39 +444,39 @@ class UIStationMenus {
     drawShipyardMenu(player, panelRect, headerHeight, system) {
         if (!player) return;
         this.shipyardListAreas = [];
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         // Calculate trade-in value (70% of current ship's value)
         const currentShipType = player.shipTypeName || "Vulture";
-        
+
         // IMPROVED LOOKUP LOGIC
         let currentShipDef = null;
         if (typeof SHIP_DEFINITIONS !== 'undefined') {
             if (SHIP_DEFINITIONS[currentShipType]) {
                 currentShipDef = SHIP_DEFINITIONS[currentShipType];
             } else {
-                currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship => 
+                currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship =>
                     ship.name === currentShipType
                 );
                 if (!currentShipDef) {
-                    currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship => 
+                    currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship =>
                         ship.name.toLowerCase() === currentShipType.toLowerCase()
                     );
                 }
             }
         }
-        
+
         const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
-        
+
         // Show trade-in info at top
         UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [LEFT, TOP] });
-        text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX+20, pY+headerHeight);
-        
+        text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX + 20, pY + headerHeight);
+
         // FILTER SHIPS based on system properties
         const systemTechLevel = system?.techLevel || 1;
         const isMillitarySystem = system?.economyType === "Military";
-        
+
         const availableShips = typeof SHIP_DEFINITIONS !== 'undefined' ? Object.entries(SHIP_DEFINITIONS).filter(([shipKey, shipData]) => {
             // Never show alien ships
             if (shipData.aiRoles && shipData.aiRoles.includes("ALIEN")) return false;
@@ -415,84 +486,84 @@ class UIStationMenus {
             const shipTechLevel = shipData.techLevel || Math.min(5, Math.ceil(shipData.price / 40000));
             return shipTechLevel <= systemTechLevel;
         }) : [];
-        
+
         // List ships
-        let rowH = 40, startY = pY+headerHeight+30, visibleRows = floor((pH-headerHeight-90)/rowH);
+        let rowH = 40, startY = pY + headerHeight + 30, visibleRows = floor((pH - headerHeight - 90) / rowH);
         let totalRows = availableShips.length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
         this.shipyardScrollOffset = constrain(this.shipyardScrollOffset, 0, this.shipyardScrollMax);
-        
+
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(18);
-        
+
         for (let i = firstRow; i < lastRow; i++) {
             let [shipKey, ship] = availableShips[i];
-            let y = startY + (i-firstRow)*rowH;
-            
-            const isCurrentShip = ship.name === currentShipType || 
-                                (currentShipDef && ship.name === currentShipDef.name);
-            
+            let y = startY + (i - firstRow) * rowH;
+
+            const isCurrentShip = ship.name === currentShipType ||
+                (currentShipDef && ship.name === currentShipDef.name);
+
             const originalPrice = ship.price;
             const finalPrice = originalPrice - currentShipValue;
             const canAfford = finalPrice <= 0 || player.credits >= finalPrice;
-            
+
             // Background
             if (isCurrentShip) {
-                fill(40, 40, 80); 
+                fill(40, 40, 80);
             } else if (!canAfford) {
                 fill(40, 40, 40);
             } else {
                 fill(60, 60, 100);
             }
-            
+
             stroke(canAfford ? 120 : 80, canAfford ? 180 : 100, canAfford ? 255 : 120);
-            rect(pX+20, y, pW-40, rowH-6, 5);
-            
+            rect(pX + 20, y, pW - 40, rowH - 6, 5);
+
             noStroke();
-            
+
             if (isCurrentShip) {
                 fill(100, 150, 255);
                 textAlign(LEFT, CENTER);
                 textSize(18);
-                text(`${ship.name}`, pX+30, y+rowH/2);
+                text(`${ship.name}`, pX + 30, y + rowH / 2);
                 textAlign(RIGHT, CENTER);
                 textSize(16);
                 fill(150, 180, 255);
-                text(`CURRENT SHIP`, pX+pW-30, y+rowH/2);
+                text(`CURRENT SHIP`, pX + pW - 30, y + rowH / 2);
             } else {
                 textAlign(LEFT, CENTER);
                 textSize(16);
                 fill(canAfford ? 255 : 120);
                 const leftText = `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
-                text(leftText, pX+30, y+rowH/2);
-                
+                text(leftText, pX + 30, y + rowH / 2);
+
                 textAlign(RIGHT, CENTER);
                 textSize(16);
                 if (finalPrice > 0) {
                     fill(canAfford ? 255 : 120, canAfford ? 220 : 100, canAfford ? 100 : 50);
-                    text(`${finalPrice} cr`, pX+pW-30, y+rowH/2);
+                    text(`${finalPrice} cr`, pX + pW - 30, y + rowH / 2);
                 } else if (finalPrice < 0) {
                     fill(100, 255, 150);
-                    text(`+${-finalPrice} cr`, pX+pW-30, y+rowH/2);
+                    text(`+${-finalPrice} cr`, pX + pW - 30, y + rowH / 2);
                 } else {
                     fill(150, 255, 150);
-                    text(`EVEN SWAP`, pX+pW-30, y+rowH/2);
+                    text(`EVEN SWAP`, pX + pW - 30, y + rowH / 2);
                 }
-                
+
                 this.shipyardListAreas.push({
-                    x: pX+20, y: y, w: pW-40, h: rowH-6,
+                    x: pX + 20, y: y, w: pW - 40, h: rowH - 6,
                     shipTypeKey: shipKey,
                     shipName: ship.name,
-                    price: finalPrice, 
+                    price: finalPrice,
                     originalPrice: originalPrice,
                     canAfford: canAfford
                 });
             }
         }
-        
+
         // Draw scrollbar if needed
         this.shipyardScrollbarArea = UIComponents.drawScrollbar(
             pX + pW, startY, scrollAreaH,
@@ -500,9 +571,9 @@ class UIStationMenus {
             visibleRows, totalRows,
             [60, 60, 100], [120, 180, 255]
         );
-        
+
         // Back button
-        this.shipyardDetailButtons = {back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH)};
+        this.shipyardDetailButtons = { back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH) };
     }
 
     /**
@@ -515,58 +586,58 @@ class UIStationMenus {
     drawUpgradesMenu(player, panelRect, headerHeight, system) {
         if (!player) return;
         this.upgradeListAreas = [];
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         // Weapon slot selection UI
         const slotPanelY = pY + headerHeight + 15;
         const slotPanelH = 80;
-        
+
         fill(40, 40, 70);
         rect(pX + 10, slotPanelY, pW - 20, slotPanelH, 5);
-        
+
         UIComponents.setTextStyle({ fill: 255, size: 16, align: [CENTER, TOP] });
-        text("Select Weapon Slot", pX + pW/2, slotPanelY + 5);
-        
+        text("Select Weapon Slot", pX + pW / 2, slotPanelY + 5);
+
         // Get available slots from ship's armament array
         const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[player.shipTypeName] : null;
         const availableSlots = shipDef?.armament?.length || 1;
-        
+
         // Draw slot buttons
         this.weaponSlotButtons = [];
         const slotBtnW = min(80, (pW - 40) / availableSlots);
         const slotBtnH = 40;
-        const slotStartX = pX + (pW - (slotBtnW * availableSlots + 10 * (availableSlots-1))) / 2;
-        
+        const slotStartX = pX + (pW - (slotBtnW * availableSlots + 10 * (availableSlots - 1))) / 2;
+
         for (let i = 0; i < availableSlots; i++) {
             const slotX = slotStartX + i * (slotBtnW + 10);
             const slotY = slotPanelY + 30;
             const isSelected = (this.selectedWeaponSlot === i);
-            
+
             fill(isSelected ? 100 : 60, isSelected ? 100 : 60, isSelected ? 150 : 90);
             stroke(isSelected ? 150 : 100, isSelected ? 150 : 100, isSelected ? 255 : 150);
             strokeWeight(1);
             rect(slotX, slotY, slotBtnW, slotBtnH, 4);
-            
+
             noStroke();
             UIComponents.setTextStyle({ fill: 230, size: 20, align: [CENTER, CENTER] });
-            text(`Slot ${i+1}`, slotX + slotBtnW/2, slotY + 10);
+            text(`Slot ${i + 1}`, slotX + slotBtnW / 2, slotY + 10);
             textSize(12);
-            text((i < player.weapons.length) ? player.weapons[i]?.name : "Empty", slotX + slotBtnW/2, slotY + 25);
-            
+            text((i < player.weapons.length) ? player.weapons[i]?.name : "Empty", slotX + slotBtnW / 2, slotY + 25);
+
             this.weaponSlotButtons.push({
-                x: slotX, y: slotY, w: slotBtnW, h: slotBtnH, 
+                x: slotX, y: slotY, w: slotBtnW, h: slotBtnH,
                 slotIndex: i
             });
         }
-        
+
         // FILTER UPGRADES based on system tech level
         const systemTechLevel = system?.techLevel || 1;
         const availableWeapons = typeof WEAPON_UPGRADES !== 'undefined' ? WEAPON_UPGRADES.filter(weapon => {
             const weaponTechLevel = weapon.techLevel || Math.min(5, Math.ceil((weapon.damage * weapon.price) / 5000));
             return weaponTechLevel <= systemTechLevel;
         }) : [];
-        
+
         // Continue with upgrade menu drawing
         let rowH = 40, startY = slotPanelY + slotPanelH + 10;
         let visibleRows = floor((pH - startY - 60) / rowH);
@@ -575,44 +646,44 @@ class UIStationMenus {
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
         if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
         this.upgradeScrollOffset = constrain(this.upgradeScrollOffset, 0, this.upgradeScrollMax);
-        
+
         // Draw visible upgrades
         let firstRow = this.upgradeScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
         textSize(18);
-        
+
         for (let i = firstRow; i < lastRow; i++) {
             let upg = availableWeapons[i];
-            let y = startY + (i-firstRow)*rowH;
-            
+            let y = startY + (i - firstRow) * rowH;
+
             const canAfford = player.credits >= upg.price;
-            
+
             fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
             stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
-            rect(pX+20, y, pW-40, rowH-6, 5);
-            
+            rect(pX + 20, y, pW - 40, rowH - 6, 5);
+
             noStroke();
             textAlign(LEFT, CENTER);
             textSize(16);
             fill(canAfford ? 255 : 120);
             const upgLeft = `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}`;
-            text(upgLeft, pX+30, y+rowH/2);
-            
+            text(upgLeft, pX + 30, y + rowH / 2);
+
             textAlign(RIGHT, CENTER);
             textSize(16);
             fill(canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120);
-            text(`${upg.price} cr`, pX+pW-30, y+rowH/2);
-            
+            text(`${upg.price} cr`, pX + pW - 30, y + rowH / 2);
+
             this.upgradeListAreas.push({
-                x: pX+20,
+                x: pX + 20,
                 y: y,
-                w: pW-40,
-                h: rowH-6,
+                w: pW - 40,
+                h: rowH - 6,
                 upgrade: upg,
                 canAfford: canAfford
             });
         }
-        
+
         // Draw scrollbar if needed
         this.upgradeScrollbarArea = UIComponents.drawScrollbar(
             pX + pW, startY, scrollAreaH,
@@ -620,9 +691,9 @@ class UIStationMenus {
             visibleRows, totalRows,
             [60, 60, 100], [180, 100, 255]
         );
-        
+
         // Back button
-        this.upgradeDetailButtons = {back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH)};
+        this.upgradeDetailButtons = { back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH) };
     }
 
     /**
@@ -634,80 +705,80 @@ class UIStationMenus {
     drawProtectionServicesMenu(player, panelRect, headerHeight) {
         if (!player) return;
         this.protectionServicesButtons = [];
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         // Draw description
         UIComponents.setTextStyle({ fill: 220, size: 24, align: [CENTER, TOP] });
         let descY = pY + headerHeight + 20;
-        text("Hire professional security guards to protect you during your travels.", pX + pW/2, descY);
-        
+        text("Hire professional security guards to protect you during your travels.", pX + pW / 2, descY);
+
         // Show current bodyguard status
         UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20 });
         let statusY = descY + 40;
-        
+
         const activeGuardsCount = player.getActiveGuardsCount ? player.getActiveGuardsCount() : 0;
         const bodyguardLimit = player.bodyguardLimit || 0;
-        text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW/2, statusY);
-        
+        text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW / 2, statusY);
+
         if (activeGuardsCount < bodyguardLimit) {
             UIComponents.setTextStyle({ fill: 230, size: 22, align: [LEFT, TOP] });
             text("Available Guards for Hire:", pX + 40, statusY + 40);
-            
+
             const guardOptions = [
                 { ship: "GladiusFighter", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
                 { ship: "Vulture", name: "Vulture Protector", cost: 12000, description: "Heavy combat protection" },
                 { ship: "WaspAssault", name: "Wasp Security", cost: 6000, description: "Fast response protection" },
                 { ship: "Viper", name: "Viper Guardian", cost: 10000, description: "Agile defender" }
             ];
-            
+
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
-            
+
             if (affordableGuards.length === 0) {
                 UIComponents.setTextStyle({ fill: [255, 150, 150], size: 20, align: [CENTER, CENTER] });
                 text("You don't have enough credits to hire any guards.", pX + pW / 2, statusY + 80);
             } else {
                 let guardY = statusY + 80;
                 textAlign(LEFT, TOP);
-                
+
                 affordableGuards.forEach((guard, i) => {
                     const btnX = pX + 40;
                     const btnY = guardY + i * 80;
                     const btnW = pW - 80;
                     const btnH = 70;
-                    
+
                     fill(40, 60, 100);
                     stroke(100, 140, 200);
                     strokeWeight(1);
                     rect(btnX, btnY, btnW, btnH, 5);
-                    
+
                     noStroke();
                     textSize(20);
                     fill(230);
                     textAlign(LEFT, CENTER);
-                    text(`Slot ${i+1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
-                    
+                    text(`Slot ${i + 1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
+
                     textSize(16);
                     text(guard.description, btnX + 15, btnY + 40);
-                    
+
                     textAlign(RIGHT, TOP);
                     fill(150, 230, 150);
                     text(`${guard.cost.toLocaleString()} Cr`, btnX + btnW - 100, btnY + 15);
-                    
+
                     const hireBtn = UIComponents.drawButton(
-                        btnX + btnW - 90, 
-                        btnY + 10, 
-                        80, 
-                        30, 
-                        "HIRE", 
-                        [50, 100, 50], 
+                        btnX + btnW - 90,
+                        btnY + 10,
+                        80,
+                        30,
+                        "HIRE",
+                        [50, 100, 50],
                         [100, 200, 100]
                     );
-                    
+
                     hireBtn.action = "HIRE_BODYGUARD";
                     hireBtn.shipType = guard.ship;
                     hireBtn.cost = guard.cost;
-                    
+
                     this.protectionServicesButtons.push(hireBtn);
                     textAlign(LEFT, TOP);
                 });
@@ -716,33 +787,33 @@ class UIStationMenus {
             UIComponents.setTextStyle({ fill: [255, 200, 100], size: 20, align: [CENTER, CENTER] });
             text("Maximum number of bodyguards hired.", pX + pW / 2, statusY + 80);
         }
-        
+
         const backY = pY + pH - 30 - 15;
         const dismissBtnY = backY - 50;
-        
+
         // Draw dismiss button if player has active bodyguards
         if (activeGuardsCount > 0) {
             const dismissBtn = UIComponents.drawButton(
-                pX + pW/2 - 100, 
-                dismissBtnY, 
-                200, 
-                40, 
-                "DISMISS ALL GUARDS", 
-                [100, 50, 50], 
+                pX + pW / 2 - 100,
+                dismissBtnY,
+                200,
+                40,
+                "DISMISS ALL GUARDS",
+                [100, 50, 50],
                 [200, 100, 100]
             );
             dismissBtn.action = "DISMISS_BODYGUARDS";
             this.protectionServicesButtons.push(dismissBtn);
         }
-        
+
         // Back button
         const backButton = UIComponents.drawButton(
-            pX + pW/2 - 60, 
-            backY, 
-            120, 
-            40, 
-            "BACK", 
-            [60, 60, 100], 
+            pX + pW / 2 - 60,
+            backY,
+            120,
+            40,
+            "BACK",
+            [60, 60, 100],
             [120, 120, 180]
         );
         backButton.action = "BACK";
@@ -760,35 +831,35 @@ class UIStationMenus {
     drawStorageMenu(station, player, panelRect, headerHeight) {
         if (!player) return;
         this.storageButtonAreas = [];
-        
+
         const activeStation = station || player?.currentSystem?.station || null;
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         if (!activeStation) {
             UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
-            text("No storage services are available in this location.", pX + pW/2, pY + pH/2 - 20);
-            
-            const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
+            text("No storage services are available in this location.", pX + pW / 2, pY + pH / 2 - 20);
+
+            const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
             this.storageButtonAreas.push(backBtn);
             return;
         }
-        
+
         // Ensure the station exposes a mutable storage array
         if (!Array.isArray(activeStation.storage)) {
             activeStation.storage = [];
         }
-        
+
         UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, TOP] });
         const infoY = pY + headerHeight + 10;
-        text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW/2, infoY);
-        
+        text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW / 2, infoY);
+
         // Station storage contents
         UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
         text("Station Storage:", pX + 40, infoY + 40);
-        
+
         const storage = activeStation.storage;
         let storageY = infoY + 70;
-        
+
         if (storage.length === 0) {
             UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
             text("Storage is empty", pX + pW / 2, storageY);
@@ -797,22 +868,22 @@ class UIStationMenus {
             for (let i = 0; i < storage.length; i++) {
                 const item = storage[i];
                 const itemY = storageY + i * 40;
-                
+
                 fill(40, 50, 80);
                 stroke(100, 120, 160);
                 strokeWeight(1);
                 rect(pX + 40, itemY, pW - 80, 35, 3);
-                
+
                 noStroke();
                 fill(220);
                 textAlign(LEFT, CENTER);
                 text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
-                
+
                 const btnW = 95;
                 const btnH = 25;
                 const btnX = pX + pW - 135;
                 const btnY = itemY + 5;
-                
+
                 const retrieveBtn = UIComponents.drawButton(
                     btnX, btnY, btnW, btnH,
                     "Retrieve",
@@ -824,15 +895,15 @@ class UIStationMenus {
                 this.storageButtonAreas.push(retrieveBtn);
             }
         }
-        
+
         // Player cargo section for depositing
         const cargoSectionY = storageY + Math.max(storage.length * 40, 60) + 30;
         UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
         text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
-        
+
         const playerCargo = Array.isArray(player.cargo) ? player.cargo : [];
         let cargoY = cargoSectionY + 35;
-        
+
         if (playerCargo.length === 0) {
             UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
             text("No cargo in hold", pX + pW / 2, cargoY);
@@ -841,22 +912,22 @@ class UIStationMenus {
             for (let i = 0; i < playerCargo.length; i++) {
                 const item = playerCargo[i];
                 const itemY = cargoY + i * 40;
-                
+
                 fill(40, 50, 80);
                 stroke(100, 120, 160);
                 strokeWeight(1);
                 rect(pX + 40, itemY, pW - 80, 35, 3);
-                
+
                 noStroke();
                 fill(220);
                 textAlign(LEFT, CENTER);
                 text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
-                
+
                 const btnW = 95;
                 const btnH = 25;
                 const btnX = pX + pW - 135;
                 const btnY = itemY + 5;
-                
+
                 const depositBtn = UIComponents.drawButton(
                     btnX, btnY, btnW, btnH,
                     "Deposit",
@@ -869,9 +940,9 @@ class UIStationMenus {
                 this.storageButtonAreas.push(depositBtn);
             }
         }
-        
+
         // Back button
-        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
         this.storageButtonAreas.push(backBtn);
     }
 
@@ -885,12 +956,12 @@ class UIStationMenus {
     drawPersonalRecordMenu(player, panelRect, headerHeight, galaxy) {
         if (!player) return;
         this.recordButtonAreas = [];
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
         const contentY = pY + headerHeight + 10;
         const contentH = pH - headerHeight - 60;
         const lineHeight = 22;
-        
+
         const toArray = (candidate) => Array.isArray(candidate) ? candidate : [];
         const systemsVisited = toArray(player.systemsVisited);
         const shipsDestroyed = toArray(player.shipsDestroyed);
@@ -901,14 +972,14 @@ class UIStationMenus {
         const wantedStatusChanges = toArray(player.wantedStatusChanges);
         const shipsPurchased = toArray(player.shipsPurchased);
         const weaponsUpgraded = toArray(player.weaponsUpgraded);
-        
+
         const events = [];
         const appendEvent = (timestamp, type, description) => {
             if (!description) return;
             let safeTs = Number.isFinite(timestamp) ? timestamp : NaN;
             events.push({ timestamp: safeTs, type, description });
         };
-        
+
         const locateSystemByName = (name) => {
             if (!name || !Array.isArray(galaxy?.systems)) return null;
             for (let i = 0; i < galaxy.systems.length; i++) {
@@ -917,19 +988,19 @@ class UIStationMenus {
             }
             return null;
         };
-        
+
         // Build events from player history
         const firstVisit = systemsVisited.length > 0 ? systemsVisited[0] : null;
         const fallbackSystem = player.currentSystem || locateSystemByName(firstVisit?.systemName);
         const startName = firstVisit?.systemName || fallbackSystem?.name || null;
         let startEventInfo = null;
-        
+
         if (startName) {
             const startSystem = locateSystemByName(startName) || fallbackSystem;
             const startType = startSystem?.economyType || startSystem?.systemType || 'Unknown';
             const startSecurity = startSystem?.securityLevel || 'Unknown';
             const baseTimestamp = Number.isFinite(firstVisit?.timestamp) ? firstVisit.timestamp : Date.now();
-            
+
             let deploymentDetails = [];
             if (firstVisit?.economyType && firstVisit.economyType !== 'Unknown') {
                 deploymentDetails.push(firstVisit.economyType);
@@ -941,14 +1012,14 @@ class UIStationMenus {
             } else if (startSecurity !== 'Unknown') {
                 deploymentDetails.push(startSecurity + ' Security');
             }
-            
+
             const detailsStr = deploymentDetails.length > 0 ? ` (${deploymentDetails.join(', ')})` : '';
             startEventInfo = {
                 description: `Deployment at ${startName}${detailsStr}`,
                 baseTimestamp
             };
         }
-        
+
         for (let rec of systemsVisited) {
             let visitDesc = `Visited ${rec.systemName}`;
             if (rec.economyType || rec.securityLevel) {
@@ -959,7 +1030,7 @@ class UIStationMenus {
             }
             appendEvent(rec.timestamp, 'Travel', visitDesc);
         }
-        
+
         for (let rec of shipsDestroyed) {
             let roleText = rec.role || "Unknown";
             if (typeof AI_ROLE !== 'undefined') {
@@ -976,37 +1047,37 @@ class UIStationMenus {
             if (rec.faction) description += ` - ${rec.faction} faction`;
             appendEvent(rec.timestamp, 'Combat', description);
         }
-        
+
         for (let rec of stationsTraded) {
             appendEvent(rec.timestamp, 'Trade', `Traded at ${rec.stationName} (${rec.systemName})`);
         }
-        
+
         for (let rec of factionsJoined) {
             appendEvent(rec.timestamp, 'Faction', `Joined ${rec.factionName} faction`);
         }
-        
+
         for (let rec of eliteStatusChanges) {
             appendEvent(rec.timestamp, 'Elite', `Combat Rating: ${rec.oldRating} → ${rec.newRating} (${rec.kills} kills)`);
         }
-        
+
         for (let rec of missionsCompleted) {
             appendEvent(rec.timestamp, 'Mission', `Completed: ${rec.title} (${rec.type}) - ${rec.reward}cr`);
         }
-        
+
         for (let rec of wantedStatusChanges) {
             const statusText = rec.isWanted ? "WANTED" : "CLEAN";
             appendEvent(rec.timestamp, 'Legal', `Status changed to ${statusText} in ${rec.systemName}`);
         }
-        
+
         for (let rec of shipsPurchased) {
             appendEvent(rec.timestamp, 'Ship', `Purchased ${rec.shipType} for ${rec.price}cr in ${rec.systemName}`);
         }
-        
+
         for (let rec of weaponsUpgraded) {
             const slotText = rec.slotIndex >= 0 ? ` (Slot ${rec.slotIndex + 1})` : '';
             appendEvent(rec.timestamp, 'Weapon', `Upgraded to ${rec.weaponName} (${rec.weaponType})${slotText} for ${rec.price}cr in ${rec.systemName}`);
         }
-        
+
         if (startEventInfo) {
             let startTimestamp = Number.isFinite(startEventInfo.baseTimestamp) ? startEventInfo.baseTimestamp : Infinity;
             for (let e of events) {
@@ -1016,14 +1087,14 @@ class UIStationMenus {
             else startTimestamp -= 1;
             appendEvent(startTimestamp, 'Start', startEventInfo.description);
         }
-        
+
         events.sort((a, b) => {
             const aTs = Number.isFinite(a.timestamp) ? a.timestamp : Infinity;
             const bTs = Number.isFinite(b.timestamp) ? b.timestamp : Infinity;
             if (aTs === bTs) return a.description.localeCompare(b.description);
             return aTs - bTs;
         });
-        
+
         const totalEntries = events.length;
         const visibleLines = Math.max(1, Math.floor(contentH / lineHeight));
         this.recordScrollMax = Math.max(0, totalEntries - visibleLines);
@@ -1035,15 +1106,15 @@ class UIStationMenus {
         } else {
             this.recordScrollOffset = constrain(this.recordScrollOffset, 0, this.recordScrollMax);
         }
-        
+
         let currentY = contentY;
         UIComponents.setTextStyle({ fill: [255, 200, 200], size: 24, align: [LEFT, TOP] });
         text(`Personal Log: ${totalEntries} entries`, pX + 30, currentY);
         currentY += 35;
-        
+
         if (totalEntries === 0) {
             UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
-            text("No activity recorded yet.", pX + pW/2, currentY + (contentH - 35) / 2);
+            text("No activity recorded yet.", pX + pW / 2, currentY + (contentH - 35) / 2);
         } else {
             const startIndex = this.recordScrollOffset;
             let rowsRemaining = visibleLines;
@@ -1059,14 +1130,14 @@ class UIStationMenus {
                 Ship: [255, 150, 50],
                 Weapon: [200, 150, 255]
             };
-            
+
             const formatLogTime = (timestamp) => {
                 if (!Number.isFinite(timestamp)) return "--:--";
                 const date = new Date(timestamp);
                 const pad = (num) => `${num}`.padStart(2, '0');
                 return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
             };
-            
+
             const hasEarlier = startIndex > 0;
             if (hasEarlier && rowsRemaining > 0) {
                 UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
@@ -1074,30 +1145,30 @@ class UIStationMenus {
                 currentY += lineHeight;
                 rowsRemaining--;
             }
-            
+
             for (let i = startIndex; i < events.length && rowsRemaining > 0; i++) {
                 const evt = events[i];
                 const col = typeColors[evt.type] || [200, 200, 200];
-                
+
                 UIComponents.setTextStyle({ fill: col, size: 14, align: [LEFT, TOP] });
-                
+
                 const timeStr = formatLogTime(evt.timestamp);
                 const line = `[${timeStr}] ${evt.description}`;
                 text(line, pX + 30, currentY, pW - 60);
-                
+
                 currentY += lineHeight;
                 rowsRemaining--;
             }
-            
+
             const hasMore = startIndex + visibleLines < totalEntries;
             if (hasMore && rowsRemaining > 0) {
                 UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
                 text("↓ More entries", pX + 50, currentY);
             }
         }
-        
+
         // Back button
-        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
         this.recordButtonAreas.push(backBtn);
     }
 
@@ -1129,7 +1200,7 @@ class UIStationMenus {
             "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
             "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
         };
-        
+
         const config = scrollConfigs[currentState];
         if (config) {
             return this.handleScroll(config[0], config[1], event.deltaY);
@@ -1223,10 +1294,10 @@ class UIStationMenus {
         // Check shipyard list areas
         for (const area of this.shipyardListAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
-            
+
             const finalPrice = area.price; // Can be negative for refunds
             const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
-            
+
             if (finalPrice > 0) {
                 // Player needs to pay
                 if (player.credits >= finalPrice) {
@@ -1247,7 +1318,7 @@ class UIStationMenus {
                 player.applyShipDefinition(area.shipTypeKey);
                 player.recordShipPurchase(area.shipName, finalPrice, systemName);
                 if (typeof saveGame === 'function') saveGame();
-                
+
                 if (finalPrice < 0) {
                     addMessageFn(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
                 } else {
@@ -1257,7 +1328,7 @@ class UIStationMenus {
             }
             return true;
         }
-        
+
         // Back button
         if (this.shipyardDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
@@ -1286,25 +1357,25 @@ class UIStationMenus {
                 }
             }
         }
-        
+
         // Check upgrade list items
         for (const area of this.upgradeListAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
-            
+
             if (player.credits >= area.upgrade.price) {
                 // Check if ship has enough weapon slots
                 const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[player.shipTypeName] : null;
                 const availableSlots = shipDef?.armament?.length || 1;
-                
+
                 if (this.selectedWeaponSlot >= availableSlots) {
                     addMessageFn("Your ship doesn't have that weapon slot!", [255, 100, 100]);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     return true;
                 }
-                
+
                 player.spendCredits(area.upgrade.price);
                 player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
-                
+
                 const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
                 player.recordWeaponUpgrade(
                     area.upgrade.name,
@@ -1313,7 +1384,7 @@ class UIStationMenus {
                     this.selectedWeaponSlot,
                     systemName
                 );
-                
+
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 addMessageFn("You bought the " + area.upgrade.name + "!");
                 if (typeof saveGame === 'function') saveGame();
@@ -1324,7 +1395,7 @@ class UIStationMenus {
             }
             return true;
         }
-        
+
         // Back button
         if (this.upgradeDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
@@ -1345,7 +1416,7 @@ class UIStationMenus {
     handlePoliceClick(mx, my, player, addMessageFn, processFinePaymentFn) {
         for (const area of this.policeButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
-            
+
             if (area.action === 'back') {
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
@@ -1360,7 +1431,7 @@ class UIStationMenus {
                 player.isPolice = true;
                 player.recordFactionJoin("POLICE");
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                
+
                 if (player.currentSystem) {
                     player.currentSystem.playerWanted = false;
                     player.currentSystem.policeAlertSent = false;
@@ -1383,7 +1454,7 @@ class UIStationMenus {
     handleProtectionClick(mx, my, player, addMessageFn) {
         for (const btn of this.protectionServicesButtons) {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;
-            
+
             if (btn.action === "HIRE_BODYGUARD") {
                 const hired = player.hireBodyguard(btn.shipType, btn.cost);
                 if (hired) {
@@ -1426,15 +1497,15 @@ class UIStationMenus {
      */
     handleStorageClick(mx, my, player, station, addMessageFn) {
         if (!Array.isArray(this.storageButtonAreas)) return false;
-        
+
         const stationForStorage = station || player?.currentSystem?.station || null;
         if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
             stationForStorage.storage = [];
         }
-        
+
         for (const btn of this.storageButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;
-            
+
             if (btn.action === "BACK") {
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
@@ -1451,7 +1522,7 @@ class UIStationMenus {
                     if (storageItem) {
                         storageItem.quantity += item.quantity;
                     } else {
-                        stationForStorage.storage.push({name: btn.commodity, quantity: item.quantity});
+                        stationForStorage.storage.push({ name: btn.commodity, quantity: item.quantity });
                     }
                     player.cargo = player.cargo.filter(c => c.name !== btn.commodity);
                     addMessageFn(`Deposited ${item.quantity}t of ${btn.commodity} into storage.`, [100, 255, 100]);
@@ -1470,7 +1541,7 @@ class UIStationMenus {
                 if (storageItem && storageItem.quantity > 0) {
                     const availableSpace = player.cargoCapacity - player.getCargoAmount();
                     const retrieveAmount = Math.min(storageItem.quantity, availableSpace);
-                    
+
                     if (retrieveAmount > 0) {
                         player.addCargo(btn.commodity, retrieveAmount);
                         storageItem.quantity -= retrieveAmount;

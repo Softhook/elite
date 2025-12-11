@@ -323,6 +323,11 @@ function performPeriodicTasks() {
     if (frameCount % 7200 === 0 && communicationSystem) {
         communicationSystem.sendFactionMotivationMessage?.();
     }
+
+    // Update news manager for galaxy-wide news generation (every ~30 seconds)
+    if (frameCount % 1800 === 0 && GameGlobals.newsManager && galaxy) {
+        GameGlobals.newsManager.update(galaxy);
+    }
 }
 
 /**

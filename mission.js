@@ -593,6 +593,45 @@ class Mission {
                 }
                 if (typeof saveGame === 'function') saveGame();
             } catch (e) { MISSION_LOG('Error recording mission completion in Mission.complete():', e); }
+
+            // --- Generate news for mission completions ---
+            try {
+                if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
+                    const systemName = player.currentSystem?.name || this.destinationSystem || 'Unknown';
+
+                    if (this.type === MISSION_TYPE.ASSASSINATION) {
+                        GameGlobals.newsManager.addAssassinationNews(
+                            this.targetName,
+                            systemName
+                        );
+                    } else if (this.type === MISSION_TYPE.SABOTAGE) {
+                        GameGlobals.newsManager.addSabotageNews(
+                            this.targetObjectType,
+                            this.targetPlanetName,
+                            systemName
+                        );
+                    } else if (this.type === MISSION_TYPE.BOUNTY_PIRATE) {
+                        GameGlobals.newsManager.addBountyNews(
+                            'pirate',
+                            this.targetCount || this.progressCount || 1,
+                            systemName
+                        );
+                    } else if (this.type === MISSION_TYPE.BOUNTY_POLICE) {
+                        GameGlobals.newsManager.addBountyNews(
+                            'police',
+                            this.targetCount || this.progressCount || 1,
+                            systemName
+                        );
+                    } else if (this.type === MISSION_TYPE.BOUNTY_ALIEN) {
+                        GameGlobals.newsManager.addBountyNews(
+                            'alien',
+                            this.targetCount || this.progressCount || 1,
+                            systemName
+                        );
+                    }
+                }
+            } catch (e) { MISSION_LOG('Error generating news for mission completion:', e); }
+
             // Apply consequences for illegal assassinations (mark player wanted locally)
             try {
                 if (this.isIllegal) {
