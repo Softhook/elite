@@ -35,9 +35,9 @@ const sizeMap = {
     engineArray: 150,
     cargoCluster: 200,
     researchArray: 176,
-    orbitalGarden: 260,
+    orbitalGarden: 210,
     decoyBuoy: 40,
-    miningPlatform: 200,
+    miningPlatform: 150,
     ancientRelic: 150,
     signalFlare: 60,
     outpost: 200,
@@ -49,8 +49,8 @@ const sizeMap = {
     nebulaFragment: 150,
     alienArtifact: 80,
     wreckage: 95,
-    observatoryDome: 150,
-    hydroponicsBay: 200,
+    observatoryDome: 120,
+    hydroponicsBay: 170,
     weaponPlatform: 200,
     shieldGenerator: 180,
     energyCollector: 130,
@@ -111,10 +111,10 @@ const ANIM_RATES = [
     ['habitatWindowPhase', 0.002],
     ['probeBlink', 0.001],
     ['solarSailAngle', 0.00004],
-    ['engineGlow', 0.0045],
-    ['engineParticlePhase', 0.005],
+    ['engineGlow', 0.001],
+    ['engineParticlePhase', 0.0001],
     ['cargoHatch', 0.0035],
-    ['researchArraySweep', 0.00225],
+    ['researchArraySweep', 0.00025],
     ['researchPing', 0.003],
     ['gardenBreeze', 0.00175],
     ['gardenShadeAngle', 0.00012],
@@ -127,7 +127,7 @@ const ANIM_RATES = [
     ['decoyPulse', 0.002],
     ['miningSpin', 0.002],
     ['relicPulse', 0.00225],
-    ['artifactPhase', 0.0035],
+    ['artifactPhase', 0.0015],
     ['flarePhase', 0.003],
     ['stationLights', 0.004],
     ['dockingRing', 0.001],
@@ -148,7 +148,7 @@ const ANIM_RATES = [
     ['hosePhase', 0.004],
     ['nebulaPhase', 0.008],
     ['gatePhase', 0.01],
-    ['searchlightPhase', 0.002],
+    ['searchlightPhase', 0.0006],
     ['barrierPulse', 0.0025],
     ['flowPhase', 0.003],
     ['fanRotation', 0.004],
@@ -414,7 +414,7 @@ const Draw3D = {
         endShape(CLOSE);
     },
 
-    drawRing3D: function(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle) {
+    drawRing3D: function(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
         const dv = this.getDepthVector(depth, angle, sunAngle);
         const angleStep = TWO_PI / sides;
         const lightAngle = sunAngle;
@@ -434,13 +434,13 @@ const Draw3D = {
                 beginShape();
                 // Outer loop
                 for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep;
+                    const ang = i * angleStep + shapeRotation;
                     vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
                 }
                 // Inner loop (contour)
                 beginContour();
                 for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep;
+                    const ang = i * angleStep + shapeRotation;
                     vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
                 }
                 endContour();
@@ -493,8 +493,8 @@ const Draw3D = {
         }
         
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep;
-            const nextAng = (i + 1) * angleStep;
+            const ang = i * angleStep + shapeRotation;
+            const nextAng = (i + 1) * angleStep + shapeRotation;
             
             const c = Math.cos(ang);
             const s = Math.sin(ang);
@@ -1104,6 +1104,7 @@ const SpaceObjectRenderers = {
         vertex(Math.cos(-0.32) * size * 1.4, Math.sin(-0.32) * size * 1.4);
         vertex(Math.cos(0.32) * size * 1.4, Math.sin(0.32) * size * 1.4);
         endShape(CLOSE);
+        pop();
         pop();
 
         // Small status lights on mast
@@ -2491,7 +2492,7 @@ const SpaceObjectRenderers = {
 
         // Wide, flat base - emphasize silhouette like the classic 2D art
         Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), obj.angle, sunAngle);
-
+        
         // Top deck: a large, shallow plate with bold stripes (2D-inspired decals)
         Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), obj.angle, sunAngle);
         // Painted hazard stripes on deck (flat 2D look)
@@ -2520,11 +2521,11 @@ const SpaceObjectRenderers = {
             const baseAng = -PI / 2 + a * (TWO_PI / 3);
             const armWobble = Math.sin(obj._miningState.armPhase + a * 0.6) * 0.08;
             const ang = baseAng + armWobble;
-
+            
             push();
             translate(0, bob - size * 0.04);
             rotate(ang);
-
+            
             const hullLen = size * 0.48;
             const plate = [
                 { x: size * 0.06, y: -size * 0.03 },
@@ -2533,14 +2534,14 @@ const SpaceObjectRenderers = {
             ];
 
             Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), obj.angle, sunAngle, true);
-
+            
             // actuator piston (oscillating)
             const piston = Math.sin(obj._miningState.armPhase * 1.5 + a) * (size * 0.02);
             Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), obj.angle, sunAngle);
-
+            
             // Drill housing
             Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), obj.angle, sunAngle);
-
+            
             // Rotating drill tip (concentric rings for motion)
             push();
             translate(hullLen * 1.02, 0);
@@ -2991,8 +2992,6 @@ const SpaceObjectRenderers = {
         // drone nav light
         fill(255, 120, 80, 220);
         ellipse(ddx - 4, ddy - 2, 3, 3);
-
-        pop();
     },
 
     energyCollector: function(obj, size, anim, bob) {
@@ -3260,10 +3259,6 @@ const SpaceObjectRenderers = {
             fill(100, 220, 160, 220);
             ellipse(dx + 3, dy - 1, 2, 2);
         }
-
-        // Subtle shadow under the farm
-        fill(0, 0, 0, 40);
-        ellipse(0, bob + size * 0.22, size * 0.9, size * 0.18);
     },
 
     prison: function(obj, size, anim, bob) {
