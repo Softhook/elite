@@ -48,6 +48,7 @@ const STATION_STATES = [
     "VIEWING_MILITARY_RECRUITMENT", 
     "VIEWING_STORAGE", 
     "VIEWING_RECORD", 
+    "VIEWING_NEWS",
     "DOCKED_SPACE_OBJECT", 
     "VIEWING_SPACE_OBJECT_MARKET", 
     "VIEWING_SPACE_OBJECT_REPAIRS",
@@ -666,6 +667,7 @@ class GameStateManager {
             case "VIEWING_MILITARY_RECRUITMENT":
             case "VIEWING_STORAGE":
             case "VIEWING_RECORD":
+            case "VIEWING_NEWS":
                 if (!player) break;
                 try {
                     // Keep player completely stationary while docked
@@ -1055,6 +1057,7 @@ class GameStateManager {
             case "VIEWING_MILITARY_RECRUITMENT":
             case "VIEWING_STORAGE":
             case "VIEWING_RECORD":
+            case "VIEWING_NEWS":
                 this._drawStationMenu(player, currentSystem);
                 break;
                 
@@ -1434,6 +1437,9 @@ class GameStateManager {
                     break;
                 case "VIEWING_RECORD":
                     uiManager.drawPersonalRecordMenu(player);
+                    break;
+                case "VIEWING_NEWS":
+                    uiManager.drawNewsMenu(player);
                     break;
             }
         } catch(e) {

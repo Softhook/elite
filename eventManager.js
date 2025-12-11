@@ -549,7 +549,7 @@ class EventManager {
                 const removed = station.market.consumeStockForNPC(commodity.name, request, { allowPartial: true });
                 if (removed > 0) {
                     const msg = `${station.name}: ${commodity.name} shortage (-${removed} units)`;
-                    this._notifyEvent(msg, 'orange');
+                    this._notifyEvent(msg, 'orange', 4000, 'MARKET_SHORTAGE', { stationName: station.name, commodity: commodity.name });
                     this._addPersistentEvent(`SHORTAGE_${station.name}`, `${station.name}: ${commodity.name} Shortage (High Prices)`, 'orange', this._extendDurationMs(180000));
                     try {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
@@ -569,7 +569,7 @@ class EventManager {
                 const added = station.market.addStockFromNPC(commodity.name, grant);
                 if (added > 0) {
                     const msg = `${station.name}: ${commodity.name} oversupply (+${added} units)`;
-                    this._notifyEvent(msg, 'green');
+                    this._notifyEvent(msg, 'green', 4000, 'MARKET_SURPLUS', { stationName: station.name, commodity: commodity.name });
                     this._addPersistentEvent(`SURPLUS_${station.name}`, `${station.name}: ${commodity.name} Surplus (Low Prices)`, 'green', this._extendDurationMs(180000));
                     try {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
@@ -638,7 +638,7 @@ class EventManager {
                     });
                 }
                 const seizedText = seizedAmount > 0 && seizedName ? `${seizedAmount} ${seizedName} seized` : 'Contraband routes disrupted';
-                this._notifyEvent(`${station.name}: Smuggling bust (${seizedText}; ${spawnCount} patrol ships dispatched)`, 'red');
+                this._notifyEvent(`${station.name}: Smuggling bust (${seizedText}; ${spawnCount} patrol ships dispatched)`, 'red', 4000, 'SMUGGLING_BUST', { stationName: station.name });
                 try {
                     const anchorLabel = this._formatStationLabel(station);
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
@@ -760,7 +760,7 @@ class EventManager {
                 if (!station) return;
                 const metals = station.market.addStockFromNPC('Metals', Math.max(15, Math.floor(random(20, 40))));
                 const minerals = station.market.addStockFromNPC('Minerals', Math.max(15, Math.floor(random(20, 40))));
-                this._notifyEvent(`${station.name}: Mining boom (+${metals} Metals, +${minerals} Minerals)`, 'olive');
+                this._notifyEvent(`${station.name}: Mining boom (+${metals} Metals, +${minerals} Minerals)`, 'olive', 4000, 'MINING_BOOM', { stationName: station.name });
                 this._addPersistentEvent(`BOOM_${station.name}`, `${station.name}: Mining Boom (High Supply)`, 'olive', this._extendDurationMs(180000));
                 try {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
@@ -1173,9 +1173,19 @@ class EventManager {
         return 'Sidewinder'; // Ultimate fallback
     }
 
-    _notifyEvent(message, color = 'white', durationMs = 4000) {
+    _notifyEvent(message, color = 'white', durationMs = 4000, type = 'GENERAL', details = {}) {
         if (!this.uiManager || !message) return;
         this.uiManager.addMessage(message, color, durationMs);
+
+        if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
+            GameGlobals.newsManager.addNewsItem({
+                type: type,
+                text: message,
+                systemName: this.starSystem?.name || 'Unknown System',
+                stationName: details.stationName || 'Unknown Station',
+                commodity: details.commodity || null
+            });
+        }
     }
 
     _pickStationWithMarket() {

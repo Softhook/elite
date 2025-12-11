@@ -48,6 +48,104 @@ class UIStationMenus {
         this.recordButtonAreas = [];
         this.recordScrollOffset = 0;
         this.recordScrollMax = 0;
+
+        // News areas
+        this.newsButtonAreas = [];
+        this.newsScrollOffset = 0;
+        this.newsScrollMax = 0;
+    }
+
+    /**
+     * Draws the News Menu (The Galactic Echo).
+     * @param {Player} player
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     */
+    drawNewsMenu(player, panelRect, headerHeight) {
+        if (!player) return;
+        this.newsButtonAreas = [];
+        
+        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+        const contentY = pY + headerHeight + 10;
+        const contentH = pH - headerHeight - 60;
+        
+        // Get news items
+        const newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) 
+            ? GameGlobals.newsManager.getNewsItems() 
+            : [];
+            
+        UIComponents.setTextStyle({ fill: [255, 255, 255], size: 24, align: [LEFT, TOP] });
+        text("The Galactic Echo - Latest Bulletins", pX + 30, contentY);
+        
+        let currentY = contentY + 40;
+        
+        if (newsItems.length === 0) {
+            UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
+            text("No news reports available.", pX + pW/2, currentY + (contentH - 40) / 2);
+        } else {
+            // Calculate scroll
+            // Estimate height per item (title + body + spacing)
+            // This is a bit rough, assuming fixed height for simplicity or dynamic calculation
+            // Let's use a fixed block height for now
+            const itemHeight = 110;
+            const visibleItems = Math.floor(contentH / itemHeight);
+            const totalItems = newsItems.length;
+            
+            this.newsScrollMax = Math.max(0, totalItems - visibleItems);
+            this.newsScrollOffset = constrain(this.newsScrollOffset, 0, this.newsScrollMax);
+            
+            const startIndex = this.newsScrollOffset;
+            const endIndex = Math.min(startIndex + visibleItems, totalItems);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = newsItems[i];
+                const itemY = currentY + (i - startIndex) * itemHeight;
+                
+                // Draw item background
+                fill(20, 20, 30);
+                stroke(60);
+                rect(pX + 20, itemY, pW - 40, itemHeight - 10, 5);
+                
+                // Source/Faction indicator
+                noStroke();
+                fill(item.sourceColor || [200, 200, 200]);
+                textSize(12);
+                textAlign(LEFT, TOP);
+                text(item.source || "Unknown Source", pX + 30, itemY + 10);
+                
+                // Timestamp
+                fill(150);
+                textAlign(RIGHT, TOP);
+                const timeStr = new Date(item.timestamp).toLocaleTimeString();
+                text(timeStr, pX + pW - 30, itemY + 10);
+                
+                // Title
+                fill(255, 220, 100);
+                textSize(18);
+                textAlign(LEFT, TOP);
+                text(item.title, pX + 30, itemY + 30);
+                
+                // Body
+                fill(220);
+                textSize(14);
+                textLeading(18);
+                text(item.body, pX + 30, itemY + 55, pW - 60, itemHeight - 60);
+            }
+            
+            // Draw scrollbar if needed
+            if (this.newsScrollMax > 0) {
+                this.newsScrollbarArea = UIComponents.drawScrollbar(
+                    pX + pW, currentY, visibleItems * itemHeight,
+                    this.newsScrollOffset, this.newsScrollMax,
+                    visibleItems, totalItems,
+                    [60, 60, 100], [120, 180, 255]
+                );
+            }
+        }
+        
+        // Back button
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: "BACK"});
+        this.newsButtonAreas.push(backBtn);
     }
 
     /**
@@ -1028,7 +1126,8 @@ class UIStationMenus {
         const scrollConfigs = {
             "VIEWING_SHIPYARD": ["shipyardScrollOffset", "shipyardScrollMax"],
             "VIEWING_UPGRADES": ["upgradeScrollOffset", "upgradeScrollMax"],
-            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"]
+            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
+            "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
         };
         
         const config = scrollConfigs[currentState];

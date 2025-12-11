@@ -103,6 +103,9 @@ class UIManager {
         this.recordButtonAreas = [];
         this.recordScrollOffset = 0;
         this.recordScrollMax = 0;
+        this.newsButtonAreas = [];
+        this.newsScrollOffset = 0;
+        this.newsScrollMax = 0;
         // Space object dock/market button areas
         this.spaceObjectMenuButtonAreas = [];
         this.spaceObjectMarketButtonAreas = [];
@@ -316,14 +319,15 @@ class UIManager {
             { text: "Repairs", state: "VIEWING_REPAIRS" },
             { text: "Protection Services", state: "VIEWING_PROTECTION" },
             { text: "Storage Locker", state: "VIEWING_STORAGE" },
-            { text: "Personal Record", state: "VIEWING_RECORD" }
+            { text: "Personal Record", state: "VIEWING_RECORD" },
+            { text: "News", state: "VIEWING_NEWS" }
         ];
         if (factionOption) {
             menuOpts.push(factionOption);
         }
         menuOpts.push({ text: "Undock", action: "UNDOCK" });
         
-        const btnW = pW * 0.6, btnH = 45, btnSpacing = btnH + 15;
+        const btnW = pW * 0.6, btnH = 40, btnSpacing = btnH + 10;
         this.stationMenuButtonAreas = this._drawMenuButtonList(
             menuOpts, pY + headerHeight, btnW, btnH, btnSpacing, [50, 50, 90], [150, 150, 200]
         );
@@ -539,7 +543,7 @@ class UIManager {
             "IN_FLIGHT","DOCKED","VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD",
             "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
-            "VIEWING_STORAGE","VIEWING_RECORD",
+            "VIEWING_STORAGE","VIEWING_RECORD","VIEWING_NEWS",
             "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS",
             "VIEWING_SPACE_OBJECT_SHIPYARD","VIEWING_SPACE_OBJECT_UPGRADES"
         ];
@@ -775,7 +779,20 @@ class UIManager {
             }
             return false;
         }
+        // --- VIEWING_NEWS State ---
+        else if (currentState === "VIEWING_NEWS") {
+            for (const btn of this.newsButtonAreas) {
+                if (this.isClickInArea(mx, my, btn)) {
+                    if (btn.action === "BACK") {
+                        gameStateManager.setState("DOCKED");
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
 
+        // --- 
         // --- GALAXY_MAP State ---
         else if (currentState === "GALAXY_MAP") { 
             return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
@@ -947,7 +964,8 @@ class UIManager {
         const scrollConfigs = {
             "VIEWING_SHIPYARD": ["shipyardScrollOffset", "shipyardScrollMax"],
             "VIEWING_UPGRADES": ["upgradeScrollOffset", "upgradeScrollMax"],
-            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"]
+            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
+            "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
         };
         
         const config = scrollConfigs[currentState];
@@ -1121,12 +1139,37 @@ class UIManager {
         this.stationMenus.recordScrollOffset = this.recordScrollOffset;
         
         // Delegate rendering
-        this.stationMenus.drawPersonalRecordMenu(player, panelRect, headerHeight, galaxy);
+        this.stationMenus.drawPersonalRecordMenu(player, panelRect, headerHeight);
         
         // Sync state back
         this.recordButtonAreas = this.stationMenus.recordButtonAreas;
         this.recordScrollMax = this.stationMenus.recordScrollMax;
         this.recordScrollOffset = this.stationMenus.recordScrollOffset;
+        pop();
+    }
+
+    /** Draws the News menu - delegated to stationMenus module */
+    drawNewsMenu(player) {
+        if (!player) return;
+        
+        push();
+        const panelRect = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
+        
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Galactic Echo", station, player, system);
+        
+        // Sync scroll state to module
+        this.stationMenus.newsScrollOffset = this.newsScrollOffset;
+        
+        // Delegate rendering
+        this.stationMenus.drawNewsMenu(player, panelRect, headerHeight);
+        
+        // Sync state back
+        this.newsButtonAreas = this.stationMenus.newsButtonAreas;
+        this.newsScrollMax = this.stationMenus.newsScrollMax;
+        this.newsScrollOffset = this.stationMenus.newsScrollOffset;
         pop();
     }
 

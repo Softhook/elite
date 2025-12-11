@@ -19,6 +19,7 @@ const GameGlobals = {
     inventoryScreen: null,
     eventManager: null,
     communicationSystem: null,
+    newsManager: null,
     font: null,
     loadGameWasSuccessful: false,
     globalSessionSeed: null
@@ -125,7 +126,7 @@ function initializeGameObjects() {
     inventoryScreen = new InventoryScreen();
     saveSelectionScreen = new SaveSelectionScreen();
     communicationSystem = new CommunicationSystem();
-    communicationSystem.initialize({ uiManager, player });
+    const newsManager = new NewsManager();
 
     Object.assign(GameGlobals, {
         gameStateManager,
@@ -135,6 +136,8 @@ function initializeGameObjects() {
         titleScreen,
         inventoryScreen,
         saveSelectionScreen,
+        communicationSystem,
+        newsManager,
         communicationSystem
     });
 }
