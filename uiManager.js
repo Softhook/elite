@@ -7,21 +7,21 @@ const UI_MANAGER_CONFIG = {
     // Space object trading prices - relative to station prices
     SPACE_OBJECT_PRODUCE_DISCOUNT: 0.60,  // 60% of station buy price
     SPACE_OBJECT_DEMAND_PREMIUM: 1.50,    // 150% of station sell price
-    
+
     // Message display settings
     MESSAGE_DISPLAY_TIME: 4000,
     MAX_MESSAGES_TO_SHOW: 4,
     COMMUNICATION_DISPLAY_TIME: 15000,
     MAX_COMMUNICATION_MESSAGES: 5,
     COMMUNICATION_QUEUE_LIMIT: 12,
-    
+
     // Button interaction
     BUTTON_REPEAT_DELAY: 150,
-    
+
     // FPS tracking
     FPS_MAX_SAMPLES: 30,
     FPS_UPDATE_INTERVAL: 10,
-    
+
     // Minimap
     MINIMAP_DEFAULT_SIZE: 200,
     MINIMAP_EXPANDED_SIZE: 360,
@@ -51,11 +51,11 @@ class UIManager {
     // =========================================================================
     // CONSTRUCTOR & INITIALIZATION
     // =========================================================================
-    
+
     constructor() {
         // Instantiate UI Modules
         this._initModules();
-        
+
         // Initialize state
         this._initUIAreas();
         this.lockedDestinationIndex = -1;
@@ -63,15 +63,15 @@ class UIManager {
         this._initShopAreas();
         this._initFPSTracking();
         this._initMessages();
-        
+
         // Weapon/Combat state
         this.selectedWeaponSlot = 0;
         this.weaponSlotButtons = [];
-        
+
         // Panel defaults
         this.setPanelDefaults();
     }
-    
+
     /**
      * Initializes UI module instances
      * @private
@@ -211,9 +211,9 @@ class UIManager {
 
     /** Draws a standardized panel background */
     drawPanelBG(fillCol, strokeCol) {
-        const {x, y, w, h} = this.getPanelRect();
+        const { x, y, w, h } = this.getPanelRect();
         UIComponents.drawPanelBG(x, y, w, h, fillCol, strokeCol);
-        
+
         // Draw docked station or space object in the background
         const system = galaxy?.getCurrentSystem();
         UIComponents.drawDockedObjectBackground(x, y, w, h, {
@@ -236,7 +236,7 @@ class UIManager {
      * @returns {Array} Array of button area objects with {x, y, w, h, state?, action?}
      */
     _drawMenuButtonList(options, startY, btnW, btnH, btnSpacing, fillCol, strokeCol) {
-        const {x: pX, w: pW} = this.getPanelRect();
+        const { x: pX, w: pW } = this.getPanelRect();
         return UIComponents.drawMenuButtonList(options, startY, pX, pW, btnW, btnH, btnSpacing, fillCol, strokeCol);
     }
 
@@ -288,14 +288,14 @@ class UIManager {
     drawStationMainMenu(station, player) {
         this._initButtonAreas(['stationMenuButtonAreas']);
         if (!station || !player) { console.warn("drawStationMainMenu missing station or player"); return; }
-        
+
         push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        const { x: pX, y: pY, w: pW, h: pH } = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 100, 255]);
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Station Services", station, player, system);
         textFont(font);
-        
+
         // Determine faction recruitment option based on system economy type
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
         let factionOption = null;
@@ -326,7 +326,7 @@ class UIManager {
             menuOpts.push(factionOption);
         }
         menuOpts.push({ text: "Undock", action: "UNDOCK" });
-        
+
         const btnW = pW * 0.6, btnH = 40, btnSpacing = btnH + 10;
         this.stationMenuButtonAreas = this._drawMenuButtonList(
             menuOpts, pY + headerHeight, btnW, btnH, btnSpacing, [50, 50, 90], [150, 150, 200]
@@ -343,38 +343,38 @@ class UIManager {
      */
     drawSpaceObjectDockMenu(spaceObject, player) {
         this._initButtonAreas(['spaceObjectMenuButtonAreas']);
-        if (!spaceObject || !player) { 
-            console.warn("drawSpaceObjectDockMenu missing spaceObject or player"); 
-            return; 
+        if (!spaceObject || !player) {
+            console.warn("drawSpaceObjectDockMenu missing spaceObject or player");
+            return;
         }
-        
+
         push();
-        const {x: pX, y: pY, w: pW, h: pH} = this.getPanelRect();
+        const { x: pX, y: pY, w: pW, h: pH } = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 100, 255]);
-        
+
         const system = galaxy?.getCurrentSystem();
-        const displayName = (typeof spaceObject.getDisplayName === 'function') 
-            ? spaceObject.getDisplayName() 
+        const displayName = (typeof spaceObject.getDisplayName === 'function')
+            ? spaceObject.getDisplayName()
             : (spaceObject.type || 'Space Object');
         const headerHeight = this.drawSpaceObjectHeader(displayName + " Services", spaceObject, player, system);
-        
+
         textFont(font);
-        
+
         // Build menu options based on space object type
         const menuOpts = [
             { text: "Commodity Market", state: "VIEWING_SPACE_OBJECT_MARKET" }
         ];
-        
+
         // Shipyard type space objects get shipyard and upgrades screens
         if (spaceObject.type === 'shipyard') {
             menuOpts.push({ text: "Shipyard", state: "VIEWING_SPACE_OBJECT_SHIPYARD" });
             menuOpts.push({ text: "Upgrades", state: "VIEWING_SPACE_OBJECT_UPGRADES" });
         }
-        
+
         menuOpts.push({ text: "Repairs", state: "VIEWING_SPACE_OBJECT_REPAIRS" });
         menuOpts.push({ text: "Personal Record", state: "VIEWING_RECORD" });
         menuOpts.push({ text: "Undock", action: "UNDOCK" });
-        
+
         const btnW = pW * 0.6, btnH = 45, btnSpacing = btnH + 15;
         this.spaceObjectMenuButtonAreas = this._drawMenuButtonList(
             menuOpts, pY + headerHeight, btnW, btnH, btnSpacing, [50, 50, 90], [150, 150, 200]
@@ -392,11 +392,11 @@ class UIManager {
      */
     drawSpaceObjectHeader(title, spaceObject, player, system) {
         if (!spaceObject || !player) return 0;
-        
-        const displayName = (typeof spaceObject.getDisplayName === 'function') 
-            ? spaceObject.getDisplayName() 
+
+        const displayName = (typeof spaceObject.getDisplayName === 'function')
+            ? spaceObject.getDisplayName()
             : (spaceObject.type || 'Space Object');
-        
+
         return this._drawGenericHeader(
             title,
             displayName,
@@ -444,21 +444,21 @@ class UIManager {
     /** Draws the Mission Board screen - delegated to missions module */
     drawMissionBoard(missions, selectedIndex, player) {
         if (!player) { console.warn("drawMissionBoard missing player"); return; }
-        
+
         const currentSystem = galaxy?.getCurrentSystem();
         const currentStation = currentSystem?.station;
         const panelRect = this.getPanelRect();
-        
+
         push();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 255, 100]);
         const headerHeight = this.drawStationHeader("Mission Board", currentStation, player, currentSystem);
-        
+
         // Sync inactive mission IDs to the missions module
         this.missions.inactiveMissionIds = this.inactiveMissionIds;
-        
+
         // Delegate rendering
         this.missions.drawMissionBoard(missions, selectedIndex, player, panelRect, headerHeight, currentSystem, currentStation);
-        
+
         // Sync button areas back from the module
         this.missionListButtonAreas = this.missions.missionListButtonAreas;
         this.missionDetailButtonAreas = this.missions.missionDetailButtonAreas;
@@ -468,14 +468,14 @@ class UIManager {
     /** Draws the Galaxy Map screen - delegated to galaxyMap module */
     drawGalaxyMap(galaxy, player) {
         if (!galaxy || !player) { console.warn("drawGalaxyMap missing galaxy or player"); return; }
-        
+
         // Sync locked destination to the module
         this.galaxyMap.lockedDestinationIndex = this.lockedDestinationIndex;
         this.galaxyMap.marketOverlaySystemIndex = this.marketOverlaySystemIndex;
-        
+
         // Delegate rendering
         this.galaxyMap.drawGalaxyMap(galaxy, player, isPlayerInJumpZone);
-        
+
         // Sync state back from the module
         this.galaxyMapNodeAreas = this.galaxyMap.galaxyMapNodeAreas;
         this.galaxyMapMarketButtonAreas = this.galaxyMap.galaxyMapMarketButtonAreas;
@@ -487,24 +487,24 @@ class UIManager {
     /** Handles clicks on the galaxy map - delegates to galaxyMap module */
     handleGalaxyMapClicks(mouseX, mouseY, galaxy, player, gameStateManager) {
         if (!galaxy || !player) return false;
-        
+
         // Sync state to module
         this.galaxyMap.lockedDestinationIndex = this.lockedDestinationIndex;
         this.galaxyMap.marketOverlaySystemIndex = this.marketOverlaySystemIndex;
         this.galaxyMap.galaxyMapNodeAreas = this.galaxyMapNodeAreas;
         this.galaxyMap.galaxyMapMarketButtonAreas = this.galaxyMapMarketButtonAreas;
         this.galaxyMap.marketOverlayArea = this.marketOverlayArea;
-        
+
         // Delegate click handling
         const handled = this.galaxyMap.handleGalaxyMapClicks(
             mouseX, mouseY, galaxy, player,
             (msg, col) => this.addMessage(msg, color(...col))
         );
-        
+
         // Sync state back from module
         this.lockedDestinationIndex = this.galaxyMap.lockedDestinationIndex;
         this.marketOverlaySystemIndex = this.galaxyMap.marketOverlaySystemIndex;
-        
+
         return handled;
     }
 
@@ -517,7 +517,7 @@ class UIManager {
     drawMinimap(player, system) {
         this.minimap.draw(player, system, this);
     }
-    
+
     /** Draws the current framerate in the bottom left corner with averaging - delegates to HUD module */
     drawFramerate() {
         // Update FPS tracking
@@ -532,20 +532,20 @@ class UIManager {
             this.fpsAverage = Math.round(sum / this.fpsValues.length);
             this.fpsFrameCount = 0;
         }
-        
+
         this.hud.drawFramerate(this.fpsAverage);
     }
-    
+
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
         // Only access galaxy/system in states where it's expected to exist
         const statesExpectingSystem = [
-            "IN_FLIGHT","DOCKED","VIEWING_MARKET","VIEWING_MISSIONS","VIEWING_SHIPYARD",
-            "VIEWING_UPGRADES","VIEWING_REPAIRS","VIEWING_PROTECTION","VIEWING_POLICE",
-            "VIEWING_IMPERIAL_RECRUITMENT","VIEWING_SEPARATIST_RECRUITMENT","VIEWING_MILITARY_RECRUITMENT",
-            "VIEWING_STORAGE","VIEWING_RECORD","VIEWING_NEWS",
-            "GALAXY_MAP","JUMPING","DOCKED_SPACE_OBJECT","VIEWING_SPACE_OBJECT_MARKET","VIEWING_SPACE_OBJECT_REPAIRS",
-            "VIEWING_SPACE_OBJECT_SHIPYARD","VIEWING_SPACE_OBJECT_UPGRADES"
+            "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
+            "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
+            "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT",
+            "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS",
+            "GALAXY_MAP", "JUMPING", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS",
+            "VIEWING_SPACE_OBJECT_SHIPYARD", "VIEWING_SPACE_OBJECT_UPGRADES"
         ];
         if (!statesExpectingSystem.includes(currentState)) {
             return false;
@@ -574,9 +574,9 @@ class UIManager {
         if (currentState === "DOCKED_SPACE_OBJECT") {
             const btn = this._findClickedButton(mx, my, this.spaceObjectMenuButtonAreas);
             if (btn) {
-                return this._handleStandardMenuClick(btn, { 
-                    backState: 'IN_FLIGHT', 
-                    recordReturnState: 'DOCKED_SPACE_OBJECT' 
+                return this._handleStandardMenuClick(btn, {
+                    backState: 'IN_FLIGHT',
+                    recordReturnState: 'DOCKED_SPACE_OBJECT'
                 });
             }
             return false;
@@ -590,16 +590,16 @@ class UIManager {
                 if (gameStateManager) gameStateManager.setState("DOCKED_SPACE_OBJECT");
                 return true;
             }
-            
+
             // Handle commodity buttons
             const btn = this._findClickedButton(mx, my, this.spaceObjectMarketButtonAreas);
             if (btn) {
                 const spaceObject = gameStateManager?.currentDockedSpaceObject;
-                const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function') 
-                    ? spaceObject.getDisplayName() 
+                const displayName = (spaceObject && typeof spaceObject.getDisplayName === 'function')
+                    ? spaceObject.getDisplayName()
                     : (spaceObject?.type || 'Space Object');
                 const systemName = galaxy?.getCurrentSystem()?.name || 'Unknown System';
-                
+
                 // Delegate to market module for space object trading
                 return this.market.handleSpaceObjectTrade(btn, player, {
                     locationName: displayName,
@@ -612,9 +612,9 @@ class UIManager {
         // --- VIEWING_SPACE_OBJECT_REPAIRS State ---
         if (currentState === "VIEWING_SPACE_OBJECT_REPAIRS") {
             // Reuse repair click handling with space object button areas
-            if (this._handleRepairClick(mx, my, player, 
-                this.spaceObjectRepairsFullButtonArea, 
-                this.spaceObjectRepairsHalfButtonArea, 
+            if (this._handleRepairClick(mx, my, player,
+                this.spaceObjectRepairsFullButtonArea,
+                this.spaceObjectRepairsHalfButtonArea,
                 this.spaceObjectRepairsBodyguardsButtonArea)) {
                 return true;
             }
@@ -661,36 +661,48 @@ class UIManager {
             // Handle Detail Buttons FIRST (Complete, Abandon, Accept, Back)
             // These depend on what was DRAWN by drawMissionBoard
             if (this.missionDetailButtonAreas['back'] && this.isClickInArea(mx, my, this.missionDetailButtonAreas['back'])) {
-                if(gameStateManager) gameStateManager.setState("DOCKED");
+                if (gameStateManager) gameStateManager.setState("DOCKED");
                 return true;
             }
             else if (this.missionDetailButtonAreas['accept'] && !activeMission && this.isClickInArea(mx, my, this.missionDetailButtonAreas['accept'])) {
-                 // Accept logic: find the currently SELECTED mission from the list
-                 if (gameStateManager?.selectedMissionIndex !== -1) {
-                      let missionToAccept = gameStateManager.currentStationMissions[gameStateManager.selectedMissionIndex];
-                      if(missionToAccept && player.acceptMission(missionToAccept)){
-                           if(gameStateManager) gameStateManager.setState("DOCKED"); // Go back to main menu after accepting
-                      } else {
-                           // Accept failed (e.g., no cargo space) - stay on mission board
-                      }
-                 }
-                 return true;
+                // Accept logic: find the currently SELECTED mission from the list
+                if (gameStateManager?.selectedMissionIndex !== -1) {
+                    let missionToAccept = gameStateManager.currentStationMissions[gameStateManager.selectedMissionIndex];
+                    if (missionToAccept && player.acceptMission(missionToAccept)) {
+                        if (gameStateManager) gameStateManager.setState("DOCKED"); // Go back to main menu after accepting
+                    } else {
+                        // Accept failed (e.g., no cargo space) - stay on mission board
+                    }
+                }
+                return true;
             }
             else if (this.missionDetailButtonAreas['complete']
-                     && activeMission
-                     && this.isClickInArea(mx, my, this.missionDetailButtonAreas['complete'])) {
+                && activeMission
+                && this.isClickInArea(mx, my, this.missionDetailButtonAreas['complete'])) {
                 if (player.completeMission(currentSystem, currentStation)) {
-                    // mark it inactive and keep list intact
-                    this.inactiveMissionIds.add(activeMission.id);
+                    // Reset selection so player can select new missions
+                    if (gameStateManager) {
+                        gameStateManager.selectedMissionIndex = -1;
+                        // Force mission list refresh on next draw
+                        gameStateManager.currentStationMissions = null;
+                    }
+                    // Clear inactive IDs since missions will be regenerated
+                    this.inactiveMissionIds.clear();
                 }
                 return true;
             }
             else if (this.missionDetailButtonAreas['abandon']
-                     && activeMission
-                     && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) {
+                && activeMission
+                && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) {
                 player.abandonMission();
-                // grey out this mission
-                this.inactiveMissionIds.add(activeMission.id);
+                // Reset selection so player can select new missions
+                if (gameStateManager) {
+                    gameStateManager.selectedMissionIndex = -1;
+                    // Force mission list refresh on next draw
+                    gameStateManager.currentStationMissions = null;
+                }
+                // Clear inactive IDs since missions will be regenerated
+                this.inactiveMissionIds.clear();
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof saveGame === 'function') saveGame();
                 return true;
@@ -700,7 +712,7 @@ class UIManager {
             for (const btn of this.missionListButtonAreas) {
                 if (this.isClickInArea(mx, my, btn)) {
                     // Always update the selectedIndex for visual highlighting
-                    if(gameStateManager) gameStateManager.selectedMissionIndex = btn.index;
+                    if (gameStateManager) gameStateManager.selectedMissionIndex = btn.index;
                     if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                     // Clicking the list doesn't change the *detail view* if an active mission is present
                     // It just updates the highlight
@@ -725,9 +737,9 @@ class UIManager {
         // --- VIEWING_REPAIRS State ---
         else if (currentState === "VIEWING_REPAIRS") {
             // Reuse repair click handling with station button areas
-            if (this._handleRepairClick(mx, my, player, 
-                this.repairsFullButtonArea, 
-                this.repairsHalfButtonArea, 
+            if (this._handleRepairClick(mx, my, player,
+                this.repairsFullButtonArea,
+                this.repairsHalfButtonArea,
                 this.repairsBodyguardsButtonArea)) {
                 return true;
             }
@@ -754,16 +766,16 @@ class UIManager {
 
         // --- VIEWING_IMPERIAL_RECRUITMENT, VIEWING_SEPARATIST_RECRUITMENT, VIEWING_MILITARY_RECRUITMENT States ---
         else if (currentState === "VIEWING_IMPERIAL_RECRUITMENT" ||
-                 currentState === "VIEWING_SEPARATIST_RECRUITMENT" ||
-                 currentState === "VIEWING_MILITARY_RECRUITMENT") {
+            currentState === "VIEWING_SEPARATIST_RECRUITMENT" ||
+            currentState === "VIEWING_MILITARY_RECRUITMENT") {
             return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
-        
+
         // --- VIEWING_STORAGE State ---
         else if (currentState === "VIEWING_STORAGE") {
             return this.stationMenus.handleStorageClick(mx, my, player, currentStation, (msg, col) => this.addMessage(msg, col));
         }
-        
+
         // --- VIEWING_RECORD State ---
         else if (currentState === "VIEWING_RECORD") {
             for (const btn of this.recordButtonAreas) {
@@ -794,11 +806,11 @@ class UIManager {
 
         // --- 
         // --- GALAXY_MAP State ---
-        else if (currentState === "GALAXY_MAP") { 
-            return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager); 
+        else if (currentState === "GALAXY_MAP") {
+            return this.handleGalaxyMapClicks(mx, my, galaxy, player, gameStateManager);
         }
         // --- GAME_OVER State ---
-        else if (currentState === "GAME_OVER") { 
+        else if (currentState === "GAME_OVER") {
             // Call global resetGame function to restart the game
             if (typeof resetGame === 'function') {
                 resetGame();
@@ -806,7 +818,7 @@ class UIManager {
                 console.error("resetGame function not found, falling back to reload");
                 window.location.reload();
             }
-            return true; 
+            return true;
         }
 
         return false; // Click not handled by any relevant UI state
@@ -845,21 +857,21 @@ class UIManager {
      */
     _handleStandardMenuClick(btn, options = {}) {
         if (!btn) return false;
-        
+
         const { backState = 'DOCKED', recordReturnState = null } = options;
-        
+
         if (btn.action === 'UNDOCK') {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             if (gameStateManager) gameStateManager.setState('IN_FLIGHT');
             return true;
         }
-        
+
         if (btn.action === 'back' || btn.action === 'BACK') {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             if (gameStateManager) gameStateManager.setState(backState);
             return true;
         }
-        
+
         if (btn.state) {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             if (gameStateManager) {
@@ -871,7 +883,7 @@ class UIManager {
             }
             return true;
         }
-        
+
         return false;
     }
 
@@ -892,20 +904,20 @@ class UIManager {
     /** Draws the Shipyard Menu - delegated to stationMenus module */
     drawShipyardMenu(player) {
         if (!player) return;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [220, 190, 90]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
-        
+
         // Sync scroll state to module
         this.stationMenus.shipyardScrollOffset = this.shipyardScrollOffset;
-        
+
         // Delegate rendering
         this.stationMenus.drawShipyardMenu(player, panelRect, headerHeight, system);
-        
+
         // Sync state back from module
         this.shipyardListAreas = this.stationMenus.shipyardListAreas;
         this.shipyardDetailButtons = this.stationMenus.shipyardDetailButtons;
@@ -918,21 +930,21 @@ class UIManager {
     /** Draws the Upgrades Menu - delegated to stationMenus module */
     drawUpgradesMenu(player) {
         if (!player) return;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [200, 100, 255]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Upgrades", station, player, system);
-        
+
         // Sync scroll state to module
         this.stationMenus.upgradeScrollOffset = this.upgradeScrollOffset;
         this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
-        
+
         // Delegate rendering
         this.stationMenus.drawUpgradesMenu(player, panelRect, headerHeight, system);
-        
+
         // Sync state back from module
         this.upgradeListAreas = this.stationMenus.upgradeListAreas;
         this.upgradeDetailButtons = this.stationMenus.upgradeDetailButtons;
@@ -967,7 +979,7 @@ class UIManager {
             "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
             "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
         };
-        
+
         const config = scrollConfigs[currentState];
         if (config) {
             return this._handleScroll(config[0], config[1], event.deltaY);
@@ -1030,7 +1042,7 @@ class UIManager {
     /** Draws a standardized header for all station UI screens */
     drawStationHeader(title, station, player, system) {
         if (!station || !player) return 0;
-        
+
         return this._drawGenericHeader(
             title,
             station.name || "Unknown Station",
@@ -1054,7 +1066,7 @@ class UIManager {
      * @returns {number} Height of the header
      */
     _drawGenericHeader(title, locationName, systemName, economyType, techLevel, securityLevel, player) {
-        const {x: pX, y: pY, w: pW} = this.getPanelRect();
+        const { x: pX, y: pY, w: pW } = this.getPanelRect();
         return UIComponents.drawStandardHeader({
             title, locationName, systemName, economyType, techLevel, securityLevel, player,
             panelX: pX, panelY: pY, panelW: pW
@@ -1064,17 +1076,17 @@ class UIManager {
     /** Draws the Protection Services menu - delegated to stationMenus module */
     drawProtectionServicesMenu(player) {
         if (!player) return;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [80, 120, 180]);
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Protection Services", station, player, system);
-        
+
         // Delegate rendering
         this.stationMenus.drawProtectionServicesMenu(player, panelRect, headerHeight);
-        
+
         // Sync button areas back
         this.protectionServicesButtons = this.stationMenus.protectionServicesButtons;
         pop();
@@ -1083,34 +1095,34 @@ class UIManager {
     /** Draws the Storage Locker menu - delegated to stationMenus module */
     drawStorageMenu(station, player) {
         if (!player) return;
-        
+
         const activeStation = station || player?.currentSystem?.station || null;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
-        
+
         if (!activeStation) {
             textFont(font);
             UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
-            text("No storage services are available in this location.", panelRect.x + panelRect.w/2, panelRect.y + panelRect.h/2 - 20);
-            const backBtn = UIComponents.drawCenteredBackButton(panelRect.x, panelRect.y, panelRect.w, panelRect.h, {action: "BACK"});
+            text("No storage services are available in this location.", panelRect.x + panelRect.w / 2, panelRect.y + panelRect.h / 2 - 20);
+            const backBtn = UIComponents.drawCenteredBackButton(panelRect.x, panelRect.y, panelRect.w, panelRect.h, { action: "BACK" });
             this.storageButtonAreas = [backBtn];
             pop();
             return;
         }
-        
+
         // Ensure storage array exists
         if (!Array.isArray(activeStation.storage)) {
             activeStation.storage = [];
         }
-        
+
         const system = galaxy?.getCurrentSystem();
         const headerHeight = this.drawStationHeader("Storage Locker", activeStation, player, system);
-        
+
         // Delegate rendering
         this.stationMenus.drawStorageMenu(activeStation, player, panelRect, headerHeight);
-        
+
         // Sync button areas back
         this.storageButtonAreas = this.stationMenus.storageButtonAreas;
         pop();
@@ -1119,14 +1131,14 @@ class UIManager {
     /** Draws the Personal Record menu - delegated to stationMenus module */
     drawPersonalRecordMenu(player) {
         if (!player) return;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
-        
+
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
-        
+
         // Use appropriate header based on dock state
         let headerHeight;
         if (gameStateManager?._returnFromRecordState === "DOCKED_SPACE_OBJECT" && gameStateManager?.currentDockedSpaceObject) {
@@ -1134,13 +1146,13 @@ class UIManager {
         } else {
             headerHeight = this.drawStationHeader("Personal Record", station, player, system);
         }
-        
+
         // Sync scroll state to module
         this.stationMenus.recordScrollOffset = this.recordScrollOffset;
-        
+
         // Delegate rendering
         this.stationMenus.drawPersonalRecordMenu(player, panelRect, headerHeight);
-        
+
         // Sync state back
         this.recordButtonAreas = this.stationMenus.recordButtonAreas;
         this.recordScrollMax = this.stationMenus.recordScrollMax;
@@ -1151,21 +1163,21 @@ class UIManager {
     /** Draws the News menu - delegated to stationMenus module */
     drawNewsMenu(player) {
         if (!player) return;
-        
+
         push();
         const panelRect = this.getPanelRect();
         this.drawPanelBG(STANDARD_PANEL_BG, [100, 150, 255]);
-        
+
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Galactic Echo", station, player, system);
-        
+
         // Sync scroll state to module
         this.stationMenus.newsScrollOffset = this.newsScrollOffset;
-        
+
         // Delegate rendering
         this.stationMenus.drawNewsMenu(player, panelRect, headerHeight);
-        
+
         // Sync state back
         this.newsButtonAreas = this.stationMenus.newsButtonAreas;
         this.newsScrollMax = this.stationMenus.newsScrollMax;
@@ -1181,9 +1193,9 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Imperial Navy", station, player, system);
-        
+
         this.factionRecruitment.drawImperialRecruitmentMenu(player, panelRect, headerHeight, system, this);
-        
+
         // Sync button areas - factionRecruitmentButtonAreas is the common array for all factions
         this.factionRecruitmentButtonAreas = this.factionRecruitment.factionRecruitmentButtonAreas;
         pop();
@@ -1197,9 +1209,9 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Separatist Forces", station, player, system);
-        
+
         this.factionRecruitment.drawSeparatistRecruitmentMenu(player, panelRect, headerHeight, system, this);
-        
+
         // Sync button areas - factionRecruitmentButtonAreas is the common array for all factions
         this.factionRecruitmentButtonAreas = this.factionRecruitment.factionRecruitmentButtonAreas;
         pop();
@@ -1213,14 +1225,14 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Military Forces", station, player, system);
-        
+
         this.factionRecruitment.drawMilitaryRecruitmentMenu(player, panelRect, headerHeight, system, this);
-        
+
         // Sync button areas - factionRecruitmentButtonAreas is the common array for all factions
         this.factionRecruitmentButtonAreas = this.factionRecruitment.factionRecruitmentButtonAreas;
         pop();
     }
-    
+
     /** Centralized fine payment handling used by Police and Recruitment screens */
     _processFinePayment(player, amount) {
         if (!player || !player.currentSystem) return false;
