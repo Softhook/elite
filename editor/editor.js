@@ -112,7 +112,8 @@ function setup() {
     addCircleButton = select('#addCircleButton');
     addHexButton = select('#addHexButton');
     addStarButton = select('#addStarButton');
-    addSkullButton = select('#addSkullButton');
+    // Prefer new shield button id, fall back to existing skull id for compatibility
+    addSkullButton = select('#addShieldButton') || select('#addSkullButton');
     fillColorPicker = select('#fillColorPicker');
     strokeColorPicker = select('#strokeColorPicker');
     strokeWeightInput = select('#strokeWeightInput');
@@ -141,7 +142,7 @@ function setup() {
     if (addCircleButton) addCircleButton.mousePressed(addCircleShape); else console.error("Add Circle button not found");
     if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
     if (addStarButton) addStarButton.mousePressed(addStarShape); else console.error("Add Star button not found");
-    if (addSkullButton) addSkullButton.mousePressed(addSkullShape); else console.error("Add Skull button not found");
+    if (addSkullButton) addSkullButton.mousePressed(addShieldShape); else console.error("Add Shield button not found");
     if (addVertexButton) addVertexButton.mousePressed(toggleAddVertexMode); else console.error("Add Vertex button not found");
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
@@ -990,12 +991,11 @@ function addStarShape() {
     updateUIControls(); updateColorPickersFromSelection();
 }
 
-function addSkullShape() {
+function addShieldShape() {
     if (!isEditable()) return;
     saveStateForUndo();
     const startIndex = shapes.length;
-    // Simplified angular skull as a single black polygon with holes for eyes/nose
-    // More angular, lower-vertex skull (single black polygon with negative-space holes)
+    // Reuse the skull's external vertex outline but do not add any holes (no negative space)
     const outer = [
         { x: -0.30, y: -0.18 },
         { x: -0.18, y: -0.34 },
@@ -1008,28 +1008,9 @@ function addSkullShape() {
         { x: -0.22, y: -0.02 }
     ];
 
-    // Angular eye holes (negative space) and triangular nose — reversed winding for contours
-    const leftEye = [
-        { x: -0.12, y: -0.12 },
-        { x: -0.06, y: -0.10 },
-        { x: -0.10, y: -0.02 },
-        { x: -0.18, y: -0.06 }
-    ].reverse();
-    const rightEye = [
-        { x: 0.18, y: -0.06 },
-        { x: 0.10, y: -0.02 },
-        { x: 0.06, y: -0.10 },
-        { x: 0.12, y: -0.12 }
-    ].reverse();
-    // Nose as a downward-pointing triangle centered between the eyes
-    const nose = [
-        { x: 0.00, y: 0.04 },
-        { x: -0.05, y: -0.06 },
-        { x: 0.05, y: -0.06 }
-    ].reverse();
-
-    shapes.push({ vertexData: outer, holes: [leftEye, rightEye, nose], fillColor: [0, 0, 0], strokeColor: [0, 0, 0], strokeW: 1 });
-    selectedShapeIndex = startIndex; // select the skull shape
+    // Add as a single solid polygon (no holes)
+    shapes.push({ vertexData: outer, fillColor: [0, 0, 0], strokeColor: [0, 0, 0], strokeW: 1 });
+    selectedShapeIndex = startIndex; // select the shield shape
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();

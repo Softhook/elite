@@ -20,6 +20,12 @@ const SHIP_DEFINITIONS = {
                 fillColor: [100, 150, 200],
                 strokeColor: [151, 181, 196],
                 strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 } ],
+                fillColor: [101, 171, 236],
+                strokeColor: [0, 0, 0],
+                strokeW: 1.00
             }
         ],
         fillColor: [100, 150, 200],
@@ -154,6 +160,12 @@ const SHIP_DEFINITIONS = {
                 fillColor: [100, 150, 200],
                 strokeColor: [200, 220, 255],
                 strokeW: 1.50
+            },
+            {
+                vertexData: [ { x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: -0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 } ],
+                fillColor: [101, 171, 236],
+                strokeColor: [0, 0, 0],
+                strokeW: 1.00
             }
         ],
         fillColor: [100, 150, 200],
@@ -799,6 +811,12 @@ const SHIP_DEFINITIONS = {
                 fillColor: [210, 210, 220],
                 strokeColor: [100, 100, 150],
                 strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 } ],
+                fillColor: [154, 200, 244],
+                strokeColor: [0, 0, 0],
+                strokeW: 1.00
             }
         ],
         fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
@@ -1133,7 +1151,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
         armament: ["Pulse Laser"],
         costCategory: "Low", description: "A small, expendable fighter used by Separatist militias.",
-        vertexData: [ {x:0.9,y:0}, {x:-0.7,y:0.5}, {x:-0.9,y:0}, {x:-0.7,y:-0.5} ], // Simple dart
+        vertexLayers: [
+            {
+                vertexData: [ { x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 } ],
+                fillColor: [80, 80, 60],
+                strokeColor: [120, 120, 100],
+                strokeW: 0.80
+            },
+            {
+                vertexData: [ { x: -0.2265, y: 0.0000 }, { x: -0.3365, y: 0.1905 }, { x: -0.5565, y: 0.1905 }, { x: -0.6665, y: 0.0000 }, { x: -0.5565, y: -0.1905 }, { x: -0.3365, y: -0.1905 } ],
+                fillColor: [182, 17, 17],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [80, 80, 60], strokeColor: [120, 120, 100], strokeW: 0.8, // Muddy Yellow
         typicalCargo: [], price: 28000, techLevel: 2,
         aiRoles: ["COMBAT","SEPARATIST", "GUARD"]
@@ -1144,7 +1175,32 @@ const SHIP_DEFINITIONS = {
         baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
         armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile","Barrier Field"],
         costCategory: "Very High", description: "A heavily fortified Separatist ship, slow but incredibly tough.",
-        vertexData: [ {x:1,y:0.7}, {x:0.7,y:1}, {x:-0.7,y:1}, {x:-1,y:0.7}, {x:-1,y:-0.7}, {x:-0.7,y:-1}, {x:0.7,y:-1}, {x:1,y:-0.7} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.7000 }, { x: 0.7000, y: 1.0000 }, { x: -0.7000, y: 1.0000 }, { x: -1.0000, y: 0.7000 }, { x: -1.0000, y: -0.7000 }, { x: -0.7000, y: -1.0000 }, { x: 0.7000, y: -1.0000 }, { x: 1.0000, y: -0.7000 } ],
+                fillColor: [52, 65, 64],
+                strokeColor: [90, 90, 100],
+                strokeW: 3.00
+            },
+            {
+                vertexData: [ { x: -0.2512, y: -0.1969 }, { x: -0.3612, y: -0.0064 }, { x: -0.5812, y: -0.0064 }, { x: -0.6912, y: -0.1969 }, { x: -0.5812, y: -0.3874 }, { x: -0.3612, y: -0.3874 } ],
+                fillColor: [212, 12, 42],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.2512, y: 0.1969 }, { x: -0.3612, y: 0.0064 }, { x: -0.5812, y: 0.0064 }, { x: -0.6912, y: 0.1969 }, { x: -0.5812, y: 0.3874 }, { x: -0.3612, y: 0.3874 } ],
+                fillColor: [212, 12, 42],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.3522, y: 0.0016 }, { x: -0.2422, y: 0.1922 }, { x: -0.0222, y: 0.1922 }, { x: 0.0878, y: 0.0016 }, { x: -0.0222, y: -0.1889 }, { x: -0.2422, y: -0.1889 } ],
+                fillColor: [212, 12, 42],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [40, 40, 50], strokeColor: [90, 90, 100], strokeW: 3.0,
         typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
         aiRoles: ["COMBAT","SEPARATIST"]
