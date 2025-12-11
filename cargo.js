@@ -140,38 +140,112 @@ class Cargo {
 
     draw() {
         if (this.collected) return;
+
+        // Initialize geometry cache if needed (Static property on Cargo class)
+        if (!Cargo.geometry) {
+            const vertices = [
+                { x: -0.6, y: -0.6 },
+                { x: 0.6, y: -0.6 },
+                { x: 0.6, y: 0.6 },
+                { x: -0.6, y: 0.6 }
+            ];
+            const edges = [];
+            for (let i = 0; i < vertices.length; i++) {
+                const next = (i + 1) % vertices.length;
+                edges.push({
+                    v1: vertices[i],
+                    v2: vertices[next],
+                    dx: vertices[next].x - vertices[i].x,
+                    dy: vertices[next].y - vertices[i].y
+                });
+            }
+            Cargo.geometry = { vertices, edges };
+        }
+
         push();
         translate(this.pos.x, this.pos.y);
         rotate(this.rotation);
-        fill(this.color);
-        stroke(min(255, this.color[0] * 0.7), min(255, this.color[1] * 0.7), min(255, this.color[2] * 0.7));
-        strokeWeight(1);
-        // Draw container
-        beginShape();
-        vertex(-this.size / 1.5, -this.size / 1.5);
-        vertex(this.size / 1.5, -this.size / 1.5);
-        vertex(this.size / 1.5, this.size / 1.5);
-        vertex(-this.size / 1.5, this.size / 1.5);
-        endShape(CLOSE);
-        // Draw details (packaging lines)
-        stroke(min(255, this.color[0] * 0.6), min(255, this.color[1] * 0.6), min(255, this.color[2] * 0.6));
-        line(-this.size / 1.5, 0, this.size / 1.5, 0);
-        line(0, -this.size / 1.5, 0, this.size / 1.5);
-        // Asymmetrical mark for rotation visibility
-        fill(255, 255, 255, 120);
+
+        // 3D Extrusion Logic
+        const depth = this.size * 0.6;
+        // Calculate extrusion vector based on rotation to simulate fixed light/view source
+        // Matches the logic in ships.js/enemyRendering.js
+        const dvx = depth * sin(this.rotation);
+        const dvy = depth * cos(this.rotation);
+
+        // Sun angle for shading
+        const sunAngle = atan2(-this.pos.y, -this.pos.x);
+        const localSunAngle = sunAngle - this.rotation;
+
+        const col = this.color;
+        const r = col[0], g = col[1], b = col[2];
+
         noStroke();
+
+        // Draw Sides
+        for (let edge of Cargo.geometry.edges) {
+            // Visibility check (Backface Culling)
+            if (edge.dx * dvy - edge.dy * dvx < 0) {
+                const v1 = edge.v1;
+                const v2 = edge.v2;
+                
+                const fx1 = v1.x * this.size;
+                const fy1 = v1.y * this.size;
+                const fx2 = v2.x * this.size;
+                const fy2 = v2.y * this.size;
+                
+                const bx1 = fx1 + dvx;
+                const by1 = fy1 + dvy;
+                const bx2 = fx2 + dvx;
+                const by2 = fy2 + dvy;
+                
+                const faceAngle = Math.atan2(edge.dx, -edge.dy);
+                const diff = faceAngle - localSunAngle;
+                const shade = 0.5 + (Math.cos(diff) + 1) * 0.25;
+                
+                fill(r * shade, g * shade, b * shade);
+                
+                beginShape();
+                vertex(bx1, by1);
+                vertex(bx2, by2);
+                vertex(fx2, fy2);
+                vertex(fx1, fy1);
+                endShape(CLOSE);
+            }
+        }
+
+        // Draw Top Face
+        fill(r, g, b);
+        beginShape();
+        for (let v of Cargo.geometry.vertices) {
+            vertex(v.x * this.size, v.y * this.size);
+        }
+        endShape(CLOSE);
+
+        // Details
+        stroke(min(255, r * 0.6), min(255, g * 0.6), min(255, b * 0.6));
+        strokeWeight(1);
+        // Packaging lines
+        line(-this.size * 0.4, 0, this.size * 0.4, 0);
+        line(0, -this.size * 0.4, 0, this.size * 0.4);
+        
+        // Rotation mark
+        noStroke();
+        fill(255, 255, 255, 80);
         triangle(
-            -this.size / 2.5, -this.size / 2.5,
-            -this.size / 1.8, -this.size / 2.5,
-            -this.size / 2.5, -this.size / 1.8
+            -this.size * 0.3, -this.size * 0.3,
+            -this.size * 0.5, -this.size * 0.3,
+            -this.size * 0.3, -this.size * 0.5
         );
-        // Glint for valuable content
+
+        // Glint
         if (this.lifetime % 60 < 15) {
             fill(255, 255, 255, 180);
-            noStroke();
-            ellipse(this.size / 3, -this.size / 3, 2, 2);
+            ellipse(this.size * 0.3, -this.size * 0.3, 2, 2);
         }
+
         pop();
+
         // Fading effect when lifetime is low
         if (this.lifetime < 120) {
             const fadeOpacity = map(this.lifetime, 0, 120, 0, 255);

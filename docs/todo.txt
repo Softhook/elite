@@ -4,6 +4,8 @@
 
 3d cargo
 
+Add faction decals onto the ships 
+
 Make the quantum gate. Teleport the player to a random star system 
 
 centralise 3d drawing?
