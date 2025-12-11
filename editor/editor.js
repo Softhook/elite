@@ -22,9 +22,12 @@ let straightenButton;
 let centerDesignButton; // <-- Add this variable
 let mirrorVButton;
 let mirrorHButton;
+let rotatePlus90Button;
+let rotateMinus90Button;
 let addCircleButton;
 let addHexButton;
 let addStarButton;
+let addSkullButton;
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
@@ -109,6 +112,7 @@ function setup() {
     addCircleButton = select('#addCircleButton');
     addHexButton = select('#addHexButton');
     addStarButton = select('#addStarButton');
+    addSkullButton = select('#addSkullButton');
     fillColorPicker = select('#fillColorPicker');
     strokeColorPicker = select('#strokeColorPicker');
     strokeWeightInput = select('#strokeWeightInput');
@@ -119,6 +123,8 @@ function setup() {
     centerDesignButton = select('#centerDesignButton'); // <-- Get reference
     mirrorVButton = select('#vmirrorButton');
     mirrorHButton = select('#hmirrorButton');
+    rotatePlus90Button = select('#rotatePlus90Button');
+    rotateMinus90Button = select('#rotateMinus90Button');
     undoButton = select('#undoButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
     compareWeaponsButton = select('#compareWeaponsButton');
@@ -135,6 +141,7 @@ function setup() {
     if (addCircleButton) addCircleButton.mousePressed(addCircleShape); else console.error("Add Circle button not found");
     if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
     if (addStarButton) addStarButton.mousePressed(addStarShape); else console.error("Add Star button not found");
+    if (addSkullButton) addSkullButton.mousePressed(addSkullShape); else console.error("Add Skull button not found");
     if (addVertexButton) addVertexButton.mousePressed(toggleAddVertexMode); else console.error("Add Vertex button not found");
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
@@ -145,6 +152,8 @@ function setup() {
     if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
     if (mirrorVButton) mirrorVButton.mousePressed(handleVMirrorClick); else console.error("V Mirror button not found");
     if (mirrorHButton) mirrorHButton.mousePressed(handleHMirrorClick); else console.error("H Mirror button not found");
+    if (rotatePlus90Button) rotatePlus90Button.mousePressed(() => rotateSelectedByDegrees(90)); else console.error("Rotate +90 button not found");
+    if (rotateMinus90Button) rotateMinus90Button.mousePressed(() => rotateSelectedByDegrees(-90)); else console.error("Rotate -90 button not found");
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (compareWeaponsButton) compareWeaponsButton.mousePressed(toggleWeaponComparer); else console.error("Compare Weapons button not found");
@@ -363,9 +372,26 @@ function draw() {
                         strokeWeight(max(1, scaledStrokeW) + 2); stroke(0, 150, 255, 200);
                     }
                     beginShape();
+                    // Support holes via `shape.holes` (array of vertex arrays) using beginContour()/endContour()
                     for (let v of shape.vertexData) {
                         if (typeof v?.x === 'number' && typeof v?.y === 'number') {
                             vertex(v.x * drawing_r, v.y * drawing_r); // Scale relative coords
+                        }
+                    }
+                    if (Array.isArray(shape.holes)) {
+                        for (let hole of shape.holes) {
+                            try {
+                                beginContour();
+                                for (let hv of hole) {
+                                    if (typeof hv?.x === 'number' && typeof hv?.y === 'number') {
+                                        vertex(hv.x * drawing_r, hv.y * drawing_r);
+                                    }
+                                }
+                                endContour();
+                            } catch (e) {
+                                // If beginContour/endContour are not supported, skip holes
+                                console.warn('Contour not supported, skipping hole rendering', e);
+                            }
                         }
                     }
                     endShape(CLOSE);
@@ -820,9 +846,12 @@ function updateUIControls() {
     if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes; // <-- Update this button's state
     if (mirrorVButton?.elt) mirrorVButton.elt.disabled = !shapeSelected;
     if (mirrorHButton?.elt) mirrorHButton.elt.disabled = !shapeSelected;
+    if (rotatePlus90Button?.elt) rotatePlus90Button.elt.disabled = !shapeSelected;
+    if (rotateMinus90Button?.elt) rotateMinus90Button.elt.disabled = !shapeSelected;
     if (addCircleButton?.elt) addCircleButton.elt.disabled = !editable;
     if (addHexButton?.elt) addHexButton.elt.disabled = !editable;
     if (addStarButton?.elt) addStarButton.elt.disabled = !editable;
+    if (addSkullButton?.elt) addSkullButton.elt.disabled = !editable;
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
 
     // Disable editing tools if no editable shape is selected
@@ -956,6 +985,51 @@ function addStarShape() {
     const shape = { vertexData: verts, fillColor: [220, 200, 80], strokeColor: [120, 90, 20], strokeW: 1 };
     shapes.push(shape);
     selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
+    updateUIControls(); updateColorPickersFromSelection();
+}
+
+function addSkullShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const startIndex = shapes.length;
+    // Simplified angular skull as a single black polygon with holes for eyes/nose
+    // More angular, lower-vertex skull (single black polygon with negative-space holes)
+    const outer = [
+        { x: -0.30, y: -0.18 },
+        { x: -0.18, y: -0.34 },
+        { x: 0.18, y: -0.34 },
+        { x: 0.30, y: -0.18 },
+        { x: 0.22, y: -0.02 },
+        { x: 0.12, y: 0.18 },
+        { x: 0.00, y: 0.30 },
+        { x: -0.12, y: 0.18 },
+        { x: -0.22, y: -0.02 }
+    ];
+
+    // Angular eye holes (negative space) and triangular nose — reversed winding for contours
+    const leftEye = [
+        { x: -0.12, y: -0.12 },
+        { x: -0.06, y: -0.10 },
+        { x: -0.10, y: -0.02 },
+        { x: -0.18, y: -0.06 }
+    ].reverse();
+    const rightEye = [
+        { x: 0.18, y: -0.06 },
+        { x: 0.10, y: -0.02 },
+        { x: 0.06, y: -0.10 },
+        { x: 0.12, y: -0.12 }
+    ].reverse();
+    // Nose as a downward-pointing triangle centered between the eyes
+    const nose = [
+        { x: 0.00, y: 0.04 },
+        { x: -0.05, y: -0.06 },
+        { x: 0.05, y: -0.06 }
+    ].reverse();
+
+    shapes.push({ vertexData: outer, holes: [leftEye, rightEye, nose], fillColor: [0, 0, 0], strokeColor: [0, 0, 0], strokeW: 1 });
+    selectedShapeIndex = startIndex; // select the skull shape
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
@@ -1179,6 +1253,43 @@ function mirrorSelectedAcrossHorizontalLine() {
     selectedVertexIndices = [];
     updateUIControls(); updateColorPickersFromSelection();
     console.log('H Mirror: Created mirrored layer from shape', srcIndex, '->', selectedShapeIndex);
+}
+
+// --- Rotation Functions ---
+function rotateSelectedByDegrees(angleDeg) {
+    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+        console.warn('Rotate: No selectable shape selected or editor not editable.');
+        return;
+    }
+    const shape = shapes[selectedShapeIndex];
+    if (!shape || !Array.isArray(shape.vertexData) || shape.vertexData.length < 1) {
+        console.warn('Rotate: Source shape invalid.');
+        return;
+    }
+    saveStateForUndo(); // Save before rotating
+    const rad = angleDeg * Math.PI / 180;
+    const cosA = Math.cos(rad), sinA = Math.sin(rad);
+    try {
+        shape.vertexData = shape.vertexData.map(v => {
+            if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
+            const nx = v.x * cosA - v.y * sinA;
+            const ny = v.x * sinA + v.y * cosA;
+            return { x: nx, y: ny };
+        });
+        // Rotate holes if present
+        if (Array.isArray(shape.holes)) {
+            shape.holes = shape.holes.map(hole => hole.map(v => {
+                if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
+                const nx = v.x * cosA - v.y * sinA;
+                const ny = v.x * sinA + v.y * cosA;
+                return { x: nx, y: ny };
+            }));
+        }
+        console.log(`Rotate: Rotated shape ${selectedShapeIndex} by ${angleDeg}°.`);
+        updateUIControls(); updateColorPickersFromSelection();
+    } catch (e) {
+        console.error('Rotate failed:', e);
+    }
 }
 
 // Inside editor.js
