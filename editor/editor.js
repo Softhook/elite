@@ -22,6 +22,8 @@ let straightenButton;
 let centerDesignButton; // <-- Add this variable
 let mirrorVButton;
 let mirrorHButton;
+let addCircleButton;
+let addHexButton;
 let undoButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
@@ -103,6 +105,8 @@ function setup() {
     exportButton = select('#exportButton');
     addShapeButton = select('#addShapeButton');
     addVertexButton = select('#addVertexButton');
+    addCircleButton = select('#addCircleButton');
+    addHexButton = select('#addHexButton');
     fillColorPicker = select('#fillColorPicker');
     strokeColorPicker = select('#strokeColorPicker');
     strokeWeightInput = select('#strokeWeightInput');
@@ -126,6 +130,8 @@ function setup() {
     shipSelector.changed(handleShipSelection);
     if (exportButton) exportButton.mousePressed(exportDrawFunctionCode); else console.error("Export button not found");
     if (addShapeButton) addShapeButton.mousePressed(addNewShape); else console.error("Add Shape button not found");
+    if (addCircleButton) addCircleButton.mousePressed(addCircleShape); else console.error("Add Circle button not found");
+    if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
     if (addVertexButton) addVertexButton.mousePressed(toggleAddVertexMode); else console.error("Add Vertex button not found");
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
@@ -811,6 +817,8 @@ function updateUIControls() {
     if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes; // <-- Update this button's state
     if (mirrorVButton?.elt) mirrorVButton.elt.disabled = !shapeSelected;
     if (mirrorHButton?.elt) mirrorHButton.elt.disabled = !shapeSelected;
+    if (addCircleButton?.elt) addCircleButton.elt.disabled = !editable;
+    if (addHexButton?.elt) addHexButton.elt.disabled = !editable;
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
 
     // Disable editing tools if no editable shape is selected
@@ -889,6 +897,42 @@ function addNewShape() {
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') {
         currentShipKey = '--- New Blank ---'; currentShipDef = null;
     }
+    updateUIControls(); updateColorPickersFromSelection();
+}
+
+function addCircleShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const segments = 24; // approximates a circle
+    const radius = 0.22;
+    const verts = [];
+    for (let i = 0; i < segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
+    }
+    const shape = { vertexData: verts, fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1 };
+    shapes.push(shape);
+    selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
+    updateUIControls(); updateColorPickersFromSelection();
+}
+
+function addHexagonShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const segments = 6;
+    const radius = 0.22;
+    const verts = [];
+    for (let i = 0; i < segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
+    }
+    const shape = { vertexData: verts, fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1 };
+    shapes.push(shape);
+    selectedShapeIndex = shapes.length - 1;
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
 }
 
