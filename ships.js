@@ -1171,10 +1171,16 @@ const SHIP_DEFINITIONS = {
         costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
         vertexLayers: [
             {
-                vertexData: [ { x: 0.6888, y: 0.0813 }, { x: 0.2340, y: 0.3191 }, { x: -0.5170, y: 0.3732 }, { x: -0.7275, y: 0.6322 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.7275, y: -0.6322 }, { x: -0.5170, y: -0.3732 }, { x: 0.2340, y: -0.3191 }, { x: 0.6888, y: -0.0813 } ],
+                vertexData: [ { x: 0.8444, y: 0.0813 }, { x: 0.3896, y: 0.3191 }, { x: -0.3614, y: 0.3732 }, { x: -0.5719, y: 0.6322 }, { x: -0.8444, y: 0.5000 }, { x: -0.8444, y: -0.5000 }, { x: -0.5719, y: -0.6322 }, { x: -0.3614, y: -0.3732 }, { x: 0.3896, y: -0.3191 }, { x: 0.8444, y: -0.0813 } ],
                 fillColor: [240, 240, 250],
                 strokeColor: [180, 180, 100],
                 strokeW: 2.00
+            },
+            {
+                vertexData: [ { x: -0.3352, y: 0.0041 }, { x: -0.4943, y: 0.0629 }, { x: -0.5010, y: 0.2323 }, { x: -0.6061, y: 0.0992 }, { x: -0.7693, y: 0.1452 }, { x: -0.6752, y: 0.0041 }, { x: -0.7693, y: -0.1370 }, { x: -0.6061, y: -0.0910 }, { x: -0.5010, y: -0.2242 }, { x: -0.4943, y: -0.0547 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
             }
         ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
@@ -1228,7 +1234,22 @@ const SHIP_DEFINITIONS = {
         baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
         armament: ["Mini-Turret", "Pulse Laser"],
         costCategory: "High", description: "An unarmed or lightly armed Imperial ship for diplomatic missions, fast and well-shielded.",
-        vertexData: [ {x:1.1,y:0}, {x:0.8,y:0.3}, {x:-0.8,y:0.4}, {x:-1.1,y:0}, {x:-0.8,y:-0.4}, {x:0.8,y:-0.3} ],
+
+                vertexLayers: [
+            {
+                vertexData: [ { x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.3000 }, { x: -0.8000, y: 0.4000 }, { x: -1.1000, y: 0.0000 }, { x: -0.8000, y: -0.4000 }, { x: 0.8000, y: -0.3000 } ],
+                fillColor: [250, 250, 255],
+                strokeColor: [200, 180, 120],
+                strokeW: 1.50
+            },
+            {
+                vertexData: [ { x: -0.4994, y: 0.0000 }, { x: -0.6585, y: 0.0588 }, { x: -0.6652, y: 0.2283 }, { x: -0.7703, y: 0.0951 }, { x: -0.9336, y: 0.1411 }, { x: -0.8394, y: 0.0000 }, { x: -0.9336, y: -0.1411 }, { x: -0.7703, y: -0.0951 }, { x: -0.6652, y: -0.2283 }, { x: -0.6585, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
+        
         fillColor: [250, 250, 255], strokeColor: [200, 180, 120], strokeW: 1.5,
         typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
         aiRoles: ["IMPERIAL"]
