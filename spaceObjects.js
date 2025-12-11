@@ -1794,8 +1794,7 @@ const SpaceObjectRenderers = {
 
         // Dark, low-profile black market hub with neon signage and covered cargo crates
         // base platform shadow
-        fill(10, 12, 14);
-        ellipse(0, size * 0.2 + bob, size * 0.9, size * 0.24);
+
 
         // main low-slung structure
         Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.28, size * 0.1, color(30, 30, 38), obj.angle, sunAngle);
@@ -1834,9 +1833,7 @@ const SpaceObjectRenderers = {
         line(size * 0.38, bob - size * 0.02, size * 0.48, bob - size * 0.06);
         noStroke();
 
-        // faint glow under structure for atmosphere
-        fill(24, 40, 50, 28);
-        ellipse(0, bob + size * 0.36, size * 0.8, size * 0.12);
+
     },
 
     solarSail: function(obj, size, anim, bob) {
