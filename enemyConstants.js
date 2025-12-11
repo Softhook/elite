@@ -70,9 +70,14 @@ const TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
 const TARGET_SCORE_PIRATE_PREY_HAULER = 40; // Score for targeting haulers/transports
 const TARGET_SCORE_RETALIATION_PIRATE = 60; // Bonus for pirate retaliation
 const TARGET_SCORE_RETALIATION_HAULER = 40; // Score for hauler/transport retaliation
-const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.05; // Multiplier for distance penalty
-const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20; // Max bonus score for damaged hull
-const TARGET_SCORE_HULL_DAMAGE_MULT = 20; // Multiplier for hull damage bonus calculation
+const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.08; // Multiplier for distance penalty (increased from 0.05)
+const TARGET_SCORE_DISTANCE_PENALTY_CAP = 80;    // Max distance penalty (increased from 40)
+const TARGET_SCORE_ALLY_ENGAGED_PENALTY = 25;    // Penalty per ally already targeting same enemy
+const TARGET_SCORE_ALLY_ENGAGED_CAP = 75;        // Max penalty from ally engagement
+const TARGET_SCORE_PROXIMITY_BONUS_MAX = 30;     // Bonus for very close targets
+const TARGET_SCORE_PROXIMITY_THRESHOLD = 300;    // Distance threshold for proximity bonus
+const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20;   // Max bonus score for damaged hull
+const TARGET_SCORE_HULL_DAMAGE_MULT = 20;        // Multiplier for hull damage bonus calculation
 
 // -------------------------
 // --- Combat Role Targeting Scores ---

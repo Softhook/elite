@@ -20,8 +20,6 @@ event text on map
 
 event text dissapers when cargo collected
 
-when player has accepted a mission make abandon mission button always visible if the mission is not complete
-
 make events less often
 
 make events more dramtic bigger cargo drops

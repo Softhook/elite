@@ -252,12 +252,12 @@ class EnemyTargeting {
                 bestTarget = playerRef;
             }
         }
-        
+
         // Evaluate other enemies (no debug)
         const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.COMBAT);
         if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
             const isAlien = this.role === AI_ROLE.ALIEN;
-            
+
             for (let i = 0, len = system.enemies.length; i < len; i++) {
                 const otherEnemy = system.enemies[i];
                 if (otherEnemy === this || otherEnemy === bestTarget) {
@@ -295,7 +295,7 @@ class EnemyTargeting {
         // Final target decision
         if (bestTarget && bestScore > 0) {
             const scoreThresholdForChange = 25;
-            
+
             if (bestTarget !== this.target) {
                 // Switching to a different target
                 // Allow immediate switch if we have no target, otherwise require cooldown + score threshold
@@ -306,9 +306,9 @@ class EnemyTargeting {
                     if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
                         communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'initial' });
                     }
-                    
+
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
-                    if (this.role === AI_ROLE.GUARD && this.principal && 
+                    if (this.role === AI_ROLE.GUARD && this.principal &&
                         bestTarget === this.principal.lastAttacker) {
                         this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
                     }
@@ -320,9 +320,9 @@ class EnemyTargeting {
                     if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
                         communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'retarget' });
                     }
-                    
+
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
-                    if (this.role === AI_ROLE.GUARD && this.principal && 
+                    if (this.role === AI_ROLE.GUARD && this.principal &&
                         bestTarget === this.principal.lastAttacker) {
                         this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
                     }
@@ -349,12 +349,12 @@ class EnemyTargeting {
      */
     evaluateTargetScore(target, system) {
         // Use an immediately-invoked function expression (IIFE) for complete scope isolation
-        return (function(enemy, target, system) {
+        return (function (enemy, target, system) {
             // Basic validity check
             if (!enemy.isTargetValid(target) || target === enemy) {
                 return TARGET_SCORE_INVALID;
             }
-            
+
             // Never target asteroids - collisions with asteroids should not trigger combat
             if (target && target.constructor && target.constructor.name === 'Asteroid') {
                 return TARGET_SCORE_INVALID;
@@ -366,12 +366,12 @@ class EnemyTargeting {
                 if (target === enemy.principal) {
                     return TARGET_SCORE_INVALID;
                 }
-                
+
                 // FRIENDLY FIRE PREVENTION: Never target fellow guards protecting same principal
                 if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
                     return TARGET_SCORE_INVALID;
                 }
-                
+
                 // CRITICAL FIX: Check if we're currently locked onto THIS target
                 // This prevents flickering when principal.lastAttacker changes or becomes invalid
                 const isLockedOn = enemy.guardEngagementLock > 0 && target === enemy.target;
@@ -380,22 +380,22 @@ class EnemyTargeting {
                     // This keeps the guard committed to the threat even if principal's reference changes
                     return 2500; // Higher than initial engagement to prevent target loss/switching
                 }
-                
+
                 // High priority for principal's attacker (initial engagement)
-                const isPrincipalAttacker = target === enemy.principal.lastAttacker && 
-                    enemy.isTargetValid(target) && 
+                const isPrincipalAttacker = target === enemy.principal.lastAttacker &&
+                    enemy.isTargetValid(target) &&
                     (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000);
-                
+
                 if (isPrincipalAttacker) {
                     //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
                     return 2000; // Very high score to engage principal's attacker
                 }
-                
+
                 // Self-defense: if this guard was attacked, can engage the attacker
                 if (target === enemy.lastAttacker) {
                     return 1500; // High score for self-defense, but lower than principal defense
                 }
-                
+
                 // Otherwise, guards don't pick fights - return invalid
                 return TARGET_SCORE_INVALID;
             }
@@ -417,14 +417,14 @@ class EnemyTargeting {
             // --- END BOUNTY HUNTER ---
 
             // Create completely private scoring variables
-            let _score = 0; 
+            let _score = 0;
             let _interesting = false;
             const isPlayer = target instanceof Player;
-            
+
             if (isPlayer) {
                 //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
             }
-            
+
             // Check if target is attacker
             let isAttacker = target === enemy.lastAttacker;
             if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
@@ -433,7 +433,7 @@ class EnemyTargeting {
                     //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
                 }
             }
-            
+
             // Add attacker bonus
             if (isAttacker && isPlayer) {
                 _score += TARGET_SCORE_RETALIATION_PIRATE;
@@ -443,17 +443,17 @@ class EnemyTargeting {
                 _score += TARGET_SCORE_RETALIATION_PIRATE;
                 _interesting = true;
             }
-            
+
             // --- FACTION CHECK: Apply large penalty for same-faction targeting ---
             // This prevents friendly fire between ships of the same faction
             // Exception: Allow brief retaliation if same-faction ship attacked us
             if (enemy._getShipFaction) {
                 const myFaction = enemy._getShipFaction(enemy);
                 // For Player targets, use their actual faction, not their ship's faction
-                const targetFaction = (target instanceof Player && target.playerFaction) 
-                    ? target.playerFaction 
+                const targetFaction = (target instanceof Player && target.playerFaction)
+                    ? target.playerFaction
                     : enemy._getShipFaction(target);
-                
+
                 // Only apply faction logic if both have known factions (not UNKNOWN)
                 if (myFaction !== 'UNKNOWN' && targetFaction !== 'UNKNOWN' && myFaction === targetFaction) {
                     // Same faction - apply large penalty to discourage targeting
@@ -470,13 +470,13 @@ class EnemyTargeting {
                 }
             }
             // --- END FACTION CHECK ---
-            
+
             // Role-specific scoring - add based on enemy role
             switch (enemy.role) {
                 case AI_ROLE.PIRATE:
                     if (isPlayer) {
                         _interesting = true;
-                        
+
                         // Add cargo bonus
                         const cargoAmount = target.getCargoAmount ? target.getCargoAmount() : (target.cargo?.length || 0);
                         if (cargoAmount > 5) {
@@ -491,7 +491,7 @@ class EnemyTargeting {
                         return TARGET_SCORE_INVALID;
                     }
                     break;
-                    
+
                 case AI_ROLE.POLICE:
                     if (isPlayer && system?.isPlayerWanted()) {
                         _score += TARGET_SCORE_BASE_WANTED;
@@ -505,16 +505,16 @@ class EnemyTargeting {
                         }
                     }
                     break;
-                
-                    
+
+
                 case AI_ROLE.ALIEN:
                     if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
                         _score += 50; // Base score for any non-alien target (human ships)
                         _interesting = true;
-                        
+
                         // Bonus against military ships - check player's actual faction
-                        const targetFaction = (target instanceof Player && target.playerFaction) 
-                            ? target.playerFaction 
+                        const targetFaction = (target instanceof Player && target.playerFaction)
+                            ? target.playerFaction
                             : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
                         if (targetFaction === 'MILITARY') {
                             _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military targets
@@ -528,7 +528,7 @@ class EnemyTargeting {
                         //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} evaluating player as attacker`, 'color:green');
                         _score += TARGET_SCORE_RETALIATION_HAULER;
                         _interesting = true;
-                        
+
                         if (enemy.hull < enemy.maxHull * 0.5) {
                             _score -= 20;
                             //console.log(`%c🔍 HAULER TARGETING PLAYER: ${enemy.shipTypeName} damaged - may flee instead, score now ${_score}`, 'color:orange');
@@ -539,15 +539,15 @@ class EnemyTargeting {
                         if (enemy.hull < enemy.maxHull * 0.5) _score -= 20;
                     }
                     break;
-                    
+
                 case AI_ROLE.COMBAT:
                     // Combat ships prioritize based on faction
                     const myFaction = enemy._getShipFaction ? enemy._getShipFaction(enemy) : 'UNKNOWN';
                     // For Player targets, use their actual faction, not their ship's faction
-                    const targetFaction = (target instanceof Player && target.playerFaction) 
-                        ? target.playerFaction 
+                    const targetFaction = (target instanceof Player && target.playerFaction)
+                        ? target.playerFaction
                         : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
-                    
+
                     // Military ships prioritize aliens with significant bonus
                     if (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
                         _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military vs aliens
@@ -555,7 +555,7 @@ class EnemyTargeting {
                     }
                     // Imperial and Separatist ships prioritize each other with strong bonus
                     else if ((myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
-                             (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
+                        (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
                         _score += TARGET_SCORE_COMBAT_RIVALRY_BONUS; // Strong bonus for faction rivalry
                         _interesting = true;
                     }
@@ -571,25 +571,25 @@ class EnemyTargeting {
                     }
                     break;
             }
-            
+
             // Log before distance penalties
             if (isPlayer) {
                 //console.log(`%c🔍 DEBUG: Before distance penalties, score is ${_score}`, 'color:purple');
             }
-            
+
             // Distance penalties - Only if interesting
             if (_interesting) {
                 const distance = enemy.distanceTo(target);
-                
-                // Reduced penalty for important targets
+
+                // 1. Base distance penalty (stronger than before)
                 let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;
                 if (isAttacker || isPlayer) {
-                    distancePenaltyMult *= 0.5;
+                    distancePenaltyMult *= 0.6; // Reduced penalty for important targets
                 }
-                
-                // Calculate penalty with cap
-                const distancePenalty = Math.min(40, distance * distancePenaltyMult);
-                
+
+                // Calculate penalty with higher cap
+                const distancePenalty = Math.min(TARGET_SCORE_DISTANCE_PENALTY_CAP, distance * distancePenaltyMult);
+
                 // Apply penalty with protection for important targets
                 if ((isAttacker || isPlayer) && isPlayer) {
                     const minScoreAfterPenalty = 10;
@@ -599,25 +599,58 @@ class EnemyTargeting {
                 } else {
                     _score -= distancePenalty;
                 }
-                
+
+                // 2. Proximity bonus - reward targeting nearby enemies
+                if (distance < TARGET_SCORE_PROXIMITY_THRESHOLD) {
+                    const proximityFactor = 1 - (distance / TARGET_SCORE_PROXIMITY_THRESHOLD);
+                    const proximityBonus = proximityFactor * TARGET_SCORE_PROXIMITY_BONUS_MAX;
+                    _score += proximityBonus;
+                }
+
+                // 3. Ally engagement penalty - encourage target distribution
+                // Count same-faction allies already targeting this same target
+                if (system?.enemies && enemy._getShipFaction) {
+                    const myFaction = enemy._getShipFaction(enemy);
+                    let alliesTargetingSame = 0;
+
+                    for (let i = 0, len = system.enemies.length; i < len; i++) {
+                        const ally = system.enemies[i];
+                        if (ally === enemy || !ally.target) continue;
+                        if (ally.target === target) {
+                            const allyFaction = enemy._getShipFaction(ally);
+                            if (allyFaction === myFaction && myFaction !== 'UNKNOWN') {
+                                alliesTargetingSame++;
+                            }
+                        }
+                    }
+
+                    if (alliesTargetingSame > 0) {
+                        const allyPenalty = Math.min(
+                            TARGET_SCORE_ALLY_ENGAGED_CAP,
+                            alliesTargetingSame * TARGET_SCORE_ALLY_ENGAGED_PENALTY
+                        );
+                        _score -= allyPenalty;
+                    }
+                }
+
                 // Add hull damage bonus
                 if (target.hull !== undefined && target.maxHull !== undefined) {
                     const damagePercent = 1 - (target.hull / target.maxHull);
                     const damageBonus = Math.min(TARGET_SCORE_HULL_DAMAGE_MAX_BONUS, damagePercent * TARGET_SCORE_HULL_DAMAGE_MULT);
                     _score += damageBonus;
-                    
+
                     if (isPlayer && damageBonus > 0) {
                         //console.log(`%c🔍 DEBUG: Added damage bonus ${damageBonus.toFixed(1)}, score now ${_score.toFixed(1)}`, 'color:purple');
                     }
                 }
             }
-            
+
             // Safety check
             if (_score < -1000) {
                 //console.error(`🚨 CORRUPT SCORE DETECTED: ${_score}, resetting to 10`);
                 _score = 10;
             }
-            
+
             // Mark uninteresting if score too low
             if (_interesting && _score <= 0) {
                 if (isPlayer) {
@@ -625,17 +658,17 @@ class EnemyTargeting {
                 }
                 _interesting = false;
             }
-            
+
             // Final debug log
             if (isPlayer) {
                 //console.log(`%c🔍 FINAL PLAYER SCORE: ${enemy.shipTypeName} rates player at ${_score.toFixed(1)} (interesting: ${_interesting})`, _interesting ? 'color:green; font-weight:bold' : 'color:orange');
             }
-            
+
             // Return appropriate final score
             if (!_interesting) {
                 return TARGET_SCORE_INVALID;
             }
-            
+
             return _score;
         })(this, target, system); // Pass current context to IIFE
     }
@@ -648,7 +681,7 @@ function applyEnemyTargetingMethods() {
         console.error('Enemy class not found - cannot apply targeting methods');
         return;
     }
-    
+
     // Copy all methods from EnemyTargeting to Enemy prototype
     Object.getOwnPropertyNames(EnemyTargeting.prototype).forEach(methodName => {
         if (methodName !== 'constructor') {
