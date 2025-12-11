@@ -1222,6 +1222,12 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 255],
                 strokeColor: [50, 50, 60],
                 strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.3938, y: 0.0000 }, { x: -0.5529, y: 0.0588 }, { x: -0.5596, y: 0.2283 }, { x: -0.6647, y: 0.0951 }, { x: -0.8279, y: 0.1411 }, { x: -0.7338, y: 0.0000 }, { x: -0.8279, y: -0.1411 }, { x: -0.6647, y: -0.0951 }, { x: -0.5596, y: -0.2283 }, { x: -0.5529, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
             }
         ],
         fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
@@ -1271,7 +1277,22 @@ const SHIP_DEFINITIONS = {
         baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
         armament: ["Twin Pulse", "Beam Laser"],
         costCategory: "Medium", description: "An upgraded version of the classic Eagle, exclusive to Imperial pilots. Even faster and better shielded.",
-        vertexData: [ {x:1,y:0}, {x:-0.6,y:0.4}, {x:-0.9,y:0.2}, {x:-0.9,y:-0.2}, {x:-0.6,y:-0.4} ],
+
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.4000 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.4000 } ],
+                fillColor: [230, 230, 245],
+                strokeColor: [150, 150, 220],
+                strokeW: 1.10
+            },
+            {
+                vertexData: [ { x: -0.3680, y: 0.0000 }, { x: -0.5271, y: 0.0588 }, { x: -0.5338, y: 0.2283 }, { x: -0.6389, y: 0.0951 }, { x: -0.8022, y: 0.1411 }, { x: -0.7080, y: 0.0000 }, { x: -0.8022, y: -0.1411 }, { x: -0.6389, y: -0.0951 }, { x: -0.5338, y: -0.2283 }, { x: -0.5271, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
+
         fillColor: [230, 230, 245], strokeColor: [150, 150, 220], strokeW: 1.1,
         typicalCargo: [], price: 58000, techLevel: 3,
         aiRoles: ["COMBAT","IMPERIAL", "GUARD"]
