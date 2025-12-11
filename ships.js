@@ -426,6 +426,12 @@ const SHIP_DEFINITIONS = {
                 fillColor: [150, 150, 180],
                 strokeColor: [50, 50, 60],
                 strokeW: 0.50
+            },
+            {
+                vertexData: [ { x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
             }
         ],
         fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
@@ -1063,7 +1069,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
         armament: ["Multi-Cannon", "Burst Blaster"],
         costCategory: "Medium", description: "Core fighter of Separatist cells, rugged and reliable.",
-        vertexData: [ {x:1,y:0}, {x:-0.6,y:0.6}, {x:-1,y:0.2}, {x:-1,y:-0.2}, {x:-0.6,y:-0.6} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.6000, y: -0.6000 } ],
+                fillColor: [100, 40, 40],
+                strokeColor: [160, 100, 100],
+                strokeW: 1.20
+            },
+            {
+                vertexData: [ { x: 0.2200, y: 0.0000 }, { x: 0.1100, y: 0.1905 }, { x: -0.1100, y: 0.1905 }, { x: -0.2200, y: 0.0000 }, { x: -0.1100, y: -0.1905 }, { x: 0.1100, y: -0.1905 } ],
+                fillColor: [150, 150, 180],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [100, 40, 40], strokeColor: [160, 100, 100], strokeW: 1.2,
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
         aiRoles: ["SEPARATIST"]
@@ -1158,7 +1177,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
         armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
         costCategory: "Medium-High", description: "A common Imperial patrol ship, faster than the ACAB, well-shielded.",
-        vertexData: [ {x:1,y:0}, {x:0.5,y:0.4}, {x:-0.5,y:0.7}, {x:-1,y:0.3}, {x:-1,y:-0.3}, {x:-0.5,y:-0.7}, {x:0.5,y:-0.4} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.5000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.7000 }, { x: 0.5000, y: -0.4000 } ],
+                fillColor: [220, 220, 240],
+                strokeColor: [100, 120, 200],
+                strokeW: 1.50
+            },
+            {
+                vertexData: [ { x: -0.4091, y: 0.0000 }, { x: -0.5682, y: 0.0588 }, { x: -0.5750, y: 0.2283 }, { x: -0.6800, y: 0.0951 }, { x: -0.8433, y: 0.1411 }, { x: -0.7491, y: 0.0000 }, { x: -0.8433, y: -0.1411 }, { x: -0.6800, y: -0.0951 }, { x: -0.5750, y: -0.2283 }, { x: -0.5682, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [220, 220, 240], strokeColor: [100, 120, 200], strokeW: 1.5,
         typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
         aiRoles: ["COMBAT","IMPERIAL"]
@@ -1193,7 +1225,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
         armament: ["Twin Pulse", "Sniper Rail"],
         costCategory: "Medium", description: "A high-speed Imperial interceptor designed for surgical strikes.",
-        vertexData: [ {x:1,y:0}, {x:-0.5,y:0.3}, {x:-1,y:0.1}, {x:-1,y:-0.1}, {x:-0.5,y:-0.3} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.3000 }, { x: -1.0000, y: 0.1000 }, { x: -1.0000, y: -0.1000 }, { x: -0.5000, y: -0.3000 } ],
+                fillColor: [200, 210, 230],
+                strokeColor: [80, 100, 180],
+                strokeW: 1.00
+            },
+            {
+                vertexData: [ { x: -0.3304, y: 0.0000 }, { x: -0.4895, y: 0.0588 }, { x: -0.4962, y: 0.2283 }, { x: -0.6013, y: 0.0951 }, { x: -0.7645, y: 0.1411 }, { x: -0.6704, y: 0.0000 }, { x: -0.7645, y: -0.1411 }, { x: -0.6013, y: -0.0951 }, { x: -0.4962, y: -0.2283 }, { x: -0.4895, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
         typicalCargo: [], price: 62000, techLevel: 4,
         aiRoles: ["COMBAT","IMPERIAL", "GUARD"]
@@ -1266,7 +1311,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
         armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
         costCategory: "High", description: "A dedicated Imperial corvette for long-duration border patrols and customs enforcement.",
-        vertexData: [ {x:1,y:0.3}, {x:0.4,y:0.6}, {x:-0.4,y:0.8}, {x:-1,y:0.6}, {x:-1,y:-0.6}, {x:-0.4,y:-0.8}, {x:0.4,y:-0.6}, {x:1,y:-0.3} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.0000, y: 0.3000 }, { x: 0.4000, y: 0.6000 }, { x: -0.4000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.4000, y: -0.8000 }, { x: 0.4000, y: -0.6000 }, { x: 1.0000, y: -0.3000 } ],
+                fillColor: [210, 215, 225],
+                strokeColor: [90, 110, 170],
+                strokeW: 1.90
+            },
+            {
+                vertexData: [ { x: -0.3762, y: 0.0000 }, { x: -0.5353, y: 0.0588 }, { x: -0.5420, y: 0.2283 }, { x: -0.6471, y: 0.0951 }, { x: -0.8103, y: 0.1411 }, { x: -0.7162, y: 0.0000 }, { x: -0.8103, y: -0.1411 }, { x: -0.6471, y: -0.0951 }, { x: -0.5420, y: -0.2283 }, { x: -0.5353, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [210, 215, 225], strokeColor: [90, 110, 170], strokeW: 1.9,
         typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
         aiRoles: ["COMBAT","IMPERIAL"]
@@ -1303,7 +1361,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 200, baseShield: 280, shieldRecharge: 1.6, cargoCapacity: 150,
         armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
         costCategory: "High", description: "A smaller, more agile version of the Cutter, still capable of significant cargo and defense.",
-        vertexData: [ {x:1.1,y:0}, {x:0.7,y:0.25}, {x:0,y:0.7}, {x:-0.9,y:0.6}, {x:-1.1,y:0.3}, {x:-1.1,y:-0.3}, {x:-0.9,y:-0.6}, {x:0,y:-0.7}, {x:0.7,y:-0.25} ],
+        vertexLayers: [
+            {
+                vertexData: [ { x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2500 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.6000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.9000, y: -0.6000 }, { x: 0.0000, y: -0.7000 }, { x: 0.7000, y: -0.2500 } ],
+                fillColor: [225, 230, 240],
+                strokeColor: [120, 160, 210],
+                strokeW: 1.70
+            },
+            {
+                vertexData: [ { x: -0.4765, y: 0.0000 }, { x: -0.6356, y: 0.0588 }, { x: -0.6423, y: 0.2283 }, { x: -0.7474, y: 0.0951 }, { x: -0.9107, y: 0.1411 }, { x: -0.8165, y: 0.0000 }, { x: -0.9107, y: -0.1411 }, { x: -0.7474, y: -0.0951 }, { x: -0.6423, y: -0.2283 }, { x: -0.6356, y: -0.0588 } ],
+                fillColor: [220, 200, 80],
+                strokeColor: [120, 90, 20],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
