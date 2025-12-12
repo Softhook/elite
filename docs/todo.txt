@@ -2,15 +2,12 @@
 
 ## Bugs and Issues
 
-some big ships Engage two ships at the same time. that means shooting two weapons imultaneously
-
 enemy Ship docking distance at stations should be the same as player docking distance. 
 
 Add faction decals onto the ships 
 
 Make the quantum gate. Teleport the player to a random star system 
 
-centralise 3d drawing?
 
 war event change sapwn drencency
 
@@ -20,7 +17,7 @@ ship space object collission
 
 event text on map
 
-event text dissapers when cargo collected
+event text dissapers when cargo expired on its own
 
 make events less often
 
@@ -33,16 +30,11 @@ make space objects explode
 
 reduce the ship spawn number and only increase for specific states like war
 
-all the ships go towards a particulr enemy instead of spliting up by distance to go for a few
-
-
 new kind of nebula and storm which slows down ship movement
 
 create a builder ship that errects space objects near planets
 
 Make space objects belong to different factions. Destroying a space object makes the player wanted. 
-
-local deliveries actually trade goods at planets/ space objects
 
 spawn ships depengin on which systems are connected
 

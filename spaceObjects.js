@@ -3787,6 +3787,13 @@ class SpaceObject {
         if (this.health <= 0) {
             this.health = 0;
             this.destroyed = true;
+
+            // Create explosion effect on destruction
+            if (system && typeof system.addExplosion === 'function') {
+                // Scale explosion size based on object size
+                const explosionSize = Math.max(30, this.size * 0.8);
+                system.addExplosion(this.pos.x, this.pos.y, explosionSize, [100, 150, 255]);
+            }
         }
     }
 

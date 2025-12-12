@@ -2579,6 +2579,51 @@ class StarSystem {
         this._applyCollisionPhysics(ship, asteroid);
     }
 
+    /**
+     * Handles asteroid-to-asteroid collision (gentle physics, no damage)
+     * @private
+     */
+    _handleAsteroidAsteroidCollision(asteroid1, asteroid2) {
+        const dx = asteroid2.pos.x - asteroid1.pos.x;
+        const dy = asteroid2.pos.y - asteroid1.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq) || 0.001;
+
+        // Calculate overlap
+        const r1 = asteroid1.maxRadius || asteroid1.size / 2;
+        const r2 = asteroid2.maxRadius || asteroid2.size / 2;
+        const minDist = r1 + r2;
+        const overlap = minDist - dist;
+
+        if (overlap <= 0) return; // No actual overlap
+
+        // Normalized collision vector
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Separate asteroids to prevent overlap (push each apart by half the overlap)
+        const separationFactor = 0.5;
+        asteroid1.pos.x -= nx * overlap * separationFactor;
+        asteroid1.pos.y -= ny * overlap * separationFactor;
+        asteroid2.pos.x += nx * overlap * separationFactor;
+        asteroid2.pos.y += ny * overlap * separationFactor;
+
+        // Apply very gentle impulse based on mass (much softer than ship collisions)
+        const mass1 = asteroid1.size * asteroid1.size;
+        const mass2 = asteroid2.size * asteroid2.size;
+        const totalMass = mass1 + mass2;
+
+        // Gentle impulse factor (0.3 instead of 3 used for ships)
+        const impulseFactor = 0.3;
+        const impulse1 = impulseFactor * (mass2 / totalMass);
+        const impulse2 = impulseFactor * (mass1 / totalMass);
+
+        asteroid1.vel.x -= nx * impulse1;
+        asteroid1.vel.y -= ny * impulse1;
+        asteroid2.vel.x += nx * impulse2;
+        asteroid2.vel.y += ny * impulse2;
+    }
+
     /** Handles all collision detection and responses in the system. */
     checkCollisions() {
         // Early exit if no player
@@ -2627,6 +2672,21 @@ class StarSystem {
                 }
             }
 
+            // Asteroid vs Asteroid collisions - only check each pair once
+            for (let i = 0; i < asteroidCount - 1; i++) {
+                const asteroid1 = this.asteroids[i];
+                if (!asteroid1 || !asteroid1.pos || asteroid1.isDestroyed()) continue;
+
+                for (let j = i + 1; j < asteroidCount; j++) {
+                    const asteroid2 = this.asteroids[j];
+                    if (!asteroid2 || !asteroid2.pos || asteroid2.isDestroyed()) continue;
+
+                    if (asteroid1.checkCollision(asteroid2)) {
+                        this._handleAsteroidAsteroidCollision(asteroid1, asteroid2);
+                    }
+                }
+            }
+
 
         } catch (e) {
             console.error("Error in checkCollisions:", e);
@@ -2657,7 +2717,7 @@ class StarSystem {
             if (!asteroid || asteroid.isDestroyed()) continue;
 
             if (this._checkProjectileBroadphase(proj, asteroid, distCheckVector) && asteroid.checkCollision(proj)) {
-                asteroid.takeDamage(proj.damage || 1);
+                asteroid.takeDamage(proj.damage || 1, proj.owner, this);
                 this.removeProjectile(i);
                 this.addExplosion(proj.pos.x, proj.pos.y, 10, [255, 120, 20]);
                 return true;
@@ -2839,22 +2899,22 @@ class StarSystem {
                             continue;
                         }
 
-                            try {
-                                if (typeof Harpoon !== 'undefined') {
-                                    if (!harpoonExists(owner, target)) {
-                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
-                                        if (!this.harpoons) this.harpoons = [];
-                                        this.harpoons.push(har);
-                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-                                            console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
-                                        }
-                                    } else {
-                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (enemy->player)', { owner: owner && (owner.shipTypeName || owner.id), target: 'player' });
+                        try {
+                            if (typeof Harpoon !== 'undefined') {
+                                if (!harpoonExists(owner, target)) {
+                                    const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                    if (!this.harpoons) this.harpoons = [];
+                                    this.harpoons.push(har);
+                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
+                                        console.log('Harpoon spawned (enemy->player)', { owner: owner.constructor ? owner.constructor.name : owner, target: 'player' });
                                     }
+                                } else {
+                                    if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (enemy->player)', { owner: owner && (owner.shipTypeName || owner.id), target: 'player' });
                                 }
-                                // small impact visual and sound
-                                this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
-                            } catch (e) { console.error('Failed to create Harpoon', e); }
+                            }
+                            // small impact visual and sound
+                            this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                        } catch (e) { console.error('Failed to create Harpoon', e); }
                         this.removeProjectile(i);
                         continue;
                     }

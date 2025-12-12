@@ -65,14 +65,14 @@ class Mine {
      */
     shouldExplode(target) {
         if (!this.armed || this.destroyed || !target || !target.pos) return false;
-        
+
         // Don't explode for owner
         if (target === this.owner) return false;
 
         // Check distance
         const distSq = distSqVec(this.pos, target.pos);
         const triggerDistSq = this.triggerRadius * this.triggerRadius;
-        
+
         return distSq < triggerDistSq;
     }
 
@@ -82,7 +82,7 @@ class Mine {
      */
     explode(system) {
         if (this.destroyed) return;
-        
+
         this.destroyed = true;
 
         // Create explosion visual effect
@@ -142,15 +142,15 @@ class Mine {
         if (system.asteroids) {
             for (let asteroid of system.asteroids) {
                 if (!asteroid) continue;
-                
+
                 const distSq = distSqVec(this.pos, asteroid.pos);
                 if (distSq < blastRadiusSq) {
                     const dist = Math.sqrt(distSq);
                     const falloff = 1 - (dist / this.blastRadius);
                     const effectiveDamage = this.damage * Math.max(0.3, falloff);
-                    
+
                     if (typeof asteroid.takeDamage === 'function') {
-                        asteroid.takeDamage(effectiveDamage);
+                        asteroid.takeDamage(effectiveDamage, this.owner, system);
                     }
                 }
             }
@@ -167,7 +167,7 @@ class Mine {
         if (this.destroyed) return;
 
         this.health -= damage;
-        
+
         if (this.health <= 0) {
             // Mine destroyed - explode
             this.explode(system);
@@ -268,7 +268,7 @@ class Mine {
 
     static fromJSON(data) {
         if (!data) return null;
-        const m = new Mine((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, null, data.damage || 80, data.blastRadius || 150, data.triggerRadius || 80, data.color || [255,100,0], data.maxHealth || 30);
+        const m = new Mine((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, null, data.damage || 80, data.blastRadius || 150, data.triggerRadius || 80, data.color || [255, 100, 0], data.maxHealth || 30);
         m.health = (typeof data.health === 'number') ? data.health : m.health;
         m.armed = !!data.armed;
         m.armingTimer = (typeof data.armingTimer === 'number') ? data.armingTimer : m.armingTimer;

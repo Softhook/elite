@@ -36,7 +36,7 @@ class Asteroid {
 
         // Generate vertices in strict clockwise order
         this.vertices = this._generateVertices();
-        
+
         // Generate irregular facets for Voronoi-like look
         this.facets = this._generateFacets();
 
@@ -91,7 +91,7 @@ class Asteroid {
                 // Pick a random point inside, spread out a bit
                 c = p5.Vector.random2D().mult(random(this.size * 0.1, this.size * 0.4));
                 attempts++;
-                
+
                 // Check distance against existing centers to ensure spread
                 let tooClose = false;
                 for (let existing of centers) {
@@ -163,14 +163,14 @@ class Asteroid {
         rotate(this.angle);
 
         // --- Faux 3D Faceted Rendering ---
-        
+
         // Calculate Sun direction in local space
         // Sun is at (0,0) in world space. Vector to sun is -this.pos
         let sunDirX = -this.pos.x;
         let sunDirY = -this.pos.y;
-        
+
         // Normalize sun vector
-        let mag = Math.sqrt(sunDirX*sunDirX + sunDirY*sunDirY);
+        let mag = Math.sqrt(sunDirX * sunDirX + sunDirY * sunDirY);
         if (mag > 0) {
             sunDirX /= mag;
             sunDirY /= mag;
@@ -210,18 +210,18 @@ class Asteroid {
                 // Let's use the face center direction relative to asteroid center (0,0).
                 let cx = (v1.x + v2.x + v3.x) / 3;
                 let cy = (v1.y + v2.y + v3.y) / 3;
-                
+
                 // Normalize center vector
-                let mag = Math.sqrt(cx*cx + cy*cy);
+                let mag = Math.sqrt(cx * cx + cy * cy);
                 if (mag > 0) { cx /= mag; cy /= mag; }
 
                 // Dot product with local sun direction
                 let dot = cx * localSunX + cy * localSunY;
-                
+
                 // Map dot (-1 to 1) to brightness multiplier
                 // -1 (facing away) -> 0.4
                 // 1 (facing sun) -> 1.2
-                let brightness = 0.4 + 0.8 * ((dot + 1) / 2); 
+                let brightness = 0.4 + 0.8 * ((dot + 1) / 2);
 
                 // Add some random variation per facet for "rocky" texture
                 // Use a pseudo-random based on vertex coords to be consistent
@@ -233,7 +233,7 @@ class Asteroid {
 
                 fill(colVal);
                 noStroke(); // Remove stroke as requested
-                
+
                 triangle(v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
             }
         } else {
@@ -244,10 +244,10 @@ class Asteroid {
                 // ... (Simple lighting logic from before)
                 let mx = (v1.x + v2.x) * 0.5;
                 let my = (v1.y + v2.y) * 0.5;
-                let mMag = Math.sqrt(mx*mx + my*my);
+                let mMag = Math.sqrt(mx * mx + my * my);
                 if (mMag > 0) { mx /= mMag; my /= mMag; }
                 let dot = mx * localSunX + my * localSunY;
-                let brightness = 0.4 + 0.8 * ((dot + 1) / 2); 
+                let brightness = 0.4 + 0.8 * ((dot + 1) / 2);
                 let colVal = baseGray * brightness;
                 fill(colVal);
                 noStroke();
@@ -322,7 +322,7 @@ class Asteroid {
     }
 
     /** Applies damage to the asteroid's health. */
-    takeDamage(amount) {
+    takeDamage(amount, attacker = null, system = null) {
         if (this.destroyed || amount <= 0) return;
         this.health -= amount;
         if (this.health <= 0) {
@@ -369,7 +369,7 @@ class Asteroid {
             vertices: Array.isArray(this.vertices) ? this.vertices.map(v => ({ x: v.x, y: v.y })) : null,
             // Serialize facets as flat array of points to save space/complexity
             // Each facet is 3 points. 
-            facets: this.facets ? this.facets.map(f => [ {x:f[0].x, y:f[0].y}, {x:f[1].x, y:f[1].y}, {x:f[2].x, y:f[2].y} ]) : null,
+            facets: this.facets ? this.facets.map(f => [{ x: f[0].x, y: f[0].y }, { x: f[1].x, y: f[1].y }, { x: f[2].x, y: f[2].y }]) : null,
             color: this.color && this.color.levels ? this.color.levels.slice(0, 3) : null,
             seamColor: this.seamColor && this.seamColor.levels ? this.seamColor.levels.slice(0, 4) : null,
             destroyed: !!this.destroyed
@@ -403,7 +403,7 @@ class Asteroid {
             // Legacy save support: generate facets from vertices
             a.facets = a._generateFacets();
         }
-        
+
         if (Array.isArray(data.color)) a.color = color(data.color[0], data.color[1], data.color[2]);
         if (Array.isArray(data.seamColor)) a.seamColor = color(data.seamColor[0], data.seamColor[1], data.seamColor[2], data.seamColor[3] || 180);
         a.destroyed = !!data.destroyed;
