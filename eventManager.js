@@ -20,18 +20,29 @@ class EventManager {
             ALIEN: [],
             MINER: [],
             MILITARY: [], // Maps to COMBAT/MILITARY
-            BOUNTY_HUNTER: []
+            BOUNTY_HUNTER: [],
+            SEPARATIST: [],
+            IMPERIAL: []
         };
 
         // We initialize groups and events immediately, but SHIP_DEFINITIONS might not be fully populated 
         // if this runs too early. However, in the current load order, ships.js is before sketch.js/eventManager.
         this._initializeShipGroups();
         this._initializeEvents();
-        
+
         this.activeEvents = []; // Track active persistent events { id, expires, type }
         this.eventDurationMultiplier = 1; // Standard duration (was 8)
         // Global multiplier applied to ad-hoc/event-spawned cargo quantities
         this.cargoQuantityMultiplier = 10;
+
+        // War state tracking - affects NPC spawn distribution
+        this.activeWarState = {
+            isActive: false,
+            intensity: 'PEACE',    // 'PEACE', 'SKIRMISH', 'FULL_WAR'
+            factions: null,        // 'SEPARATIST_VS_IMPERIAL', 'ALIEN_VS_MILITARY'
+            expires: 0,
+            spawnModifiers: null   // Faction spawn percentage overrides
+        };
     }
 
     _initializeShipGroups() {
@@ -50,6 +61,8 @@ class EventManager {
             if (def.aiRoles.includes("MINER")) this.shipGroups.MINER.push(key);
             if (def.aiRoles.includes("MILITARY") || def.aiRoles.includes("COMBAT")) this.shipGroups.MILITARY.push(key);
             if (def.aiRoles.includes("BOUNTY_HUNTER")) this.shipGroups.BOUNTY_HUNTER.push(key);
+            if (def.aiRoles.includes("SEPARATIST")) this.shipGroups.SEPARATIST.push(key);
+            if (def.aiRoles.includes("IMPERIAL")) this.shipGroups.IMPERIAL.push(key);
         }
 
         // Fallbacks to ensure lists aren't empty
@@ -59,6 +72,8 @@ class EventManager {
         if (this.shipGroups.ALIEN.length === 0) this.shipGroups.ALIEN.push('Thargoid');
         if (this.shipGroups.MILITARY.length === 0) this.shipGroups.MILITARY.push('Viper');
         if (this.shipGroups.BOUNTY_HUNTER.length === 0) this.shipGroups.BOUNTY_HUNTER.push('Viper');
+        if (this.shipGroups.SEPARATIST.length === 0) this.shipGroups.SEPARATIST.push('Sidewinder');
+        if (this.shipGroups.IMPERIAL.length === 0) this.shipGroups.IMPERIAL.push('Viper');
 
         console.log("EventManager: Ship groups initialized.", this.shipGroups);
     }
@@ -411,7 +426,12 @@ class EventManager {
             { type: "HACKER_ATTACK", probabilityPerFrame: 0.000009, minCooldownFrames: 36 * 60 * 60, warningDurationFrames: 240, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." } },
             { type: "SALVAGE_OPPORTUNITY", probabilityPerFrame: 0.00002, minCooldownFrames: 12 * 60 * 60, warningDurationFrames: 240, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 3, spawnRadiusMin: 1600, spawnRadiusMax: 3000, cargoType: 'Metals', quantity: 2 } },
             { type: "BOUNTY_INCREASE", probabilityPerFrame: 0.000015, minCooldownFrames: 28 * 60 * 60, warningDurationFrames: 300, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." } },
-            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.000007, minCooldownFrames: 40 * 60 * 60, warningDurationFrames: 360, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } }
+            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.000007, minCooldownFrames: 40 * 60 * 60, warningDurationFrames: 360, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } },
+            // === War Events ===
+            { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000015, minCooldownFrames: 30 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
+            { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.00001, minCooldownFrames: 35 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
+            { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000008, minCooldownFrames: 60 * 60 * 60, warningDurationFrames: 900, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
+            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000006, minCooldownFrames: 70 * 60 * 60, warningDurationFrames: 900, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } }
         );
     }
 
@@ -456,6 +476,18 @@ class EventManager {
                 this.activeEvents.splice(i, 1);
             }
         }
+
+        // Check war state expiration
+        if (this.activeWarState.isActive && now >= this.activeWarState.expires) {
+            this.activeWarState = {
+                isActive: false,
+                intensity: 'PEACE',
+                factions: null,
+                expires: 0,
+                spawnModifiers: null
+            };
+            console.log('EventManager: War state ended, returning to peace.');
+        }
     }
 
     _extendDurationMs(baseMs) {
@@ -466,12 +498,12 @@ class EventManager {
     _addPersistentEvent(id, message, color, durationMs) {
         if (!this.uiManager) return;
         this.uiManager.addPersistentMessage(id, message, color);
-        
+
         const existingIdx = this.activeEvents.findIndex(e => e.id === id);
         if (existingIdx >= 0) {
             this.activeEvents.splice(existingIdx, 1);
         }
-        
+
         this.activeEvents.push({
             id: id,
             expires: millis() + durationMs,
@@ -555,7 +587,7 @@ class EventManager {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                             this.uiManager.addEventMarker(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Shortage`, 'orange', this._extendDurationMs(180000));
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
                 break;
             }
@@ -575,7 +607,7 @@ class EventManager {
                         if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                             this.uiManager.addEventMarker(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Surplus`, 'green', this._extendDurationMs(180000));
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
                 break;
             }
@@ -644,7 +676,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this.uiManager.addEventMarker(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(120000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'BLOCKADE': {
@@ -673,7 +705,7 @@ class EventManager {
                         const ay = anchor.y || this.player.pos.y;
                         this.uiManager.addEventMarker(`BLOCKADE_${frameCount}`, ax, ay, `Blockade`, 'blue', durationMs);
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'DIPLOMATIC_VISIT': {
@@ -686,7 +718,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'TECH_BREAKTHROUGH': {
@@ -698,7 +730,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'STATION_STRIKE': {
@@ -712,7 +744,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(120000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'POWER_OUTAGE': {
@@ -734,7 +766,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`OUTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Power Outage`, 'yellow', outageDuration);
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'SABOTAGE': {
@@ -766,7 +798,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`BOOM_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Mining Boom`, 'olive', this._extendDurationMs(180000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'MINE_ACCIDENT': {
@@ -797,7 +829,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this.uiManager.addEventMarker(`MINE_ACCIDENT_${frameCount}`, x, y, label, 'orange', this._extendDurationMs(180000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'SOLAR_FLARE': {
@@ -828,7 +860,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', this._extendDurationMs(180000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'REFUGEE_INFLUX': {
@@ -865,7 +897,7 @@ class EventManager {
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
                         this.uiManager.addEventMarker(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
                     }
-                } catch (e) {}
+                } catch (e) { }
                 break;
             }
             case 'BOUNTY_INCREASE': {
@@ -900,9 +932,141 @@ class EventManager {
                 this._addPersistentEvent(`SCANDAL_${station.name}`, `${station.name}: Reputation Scandal (Market Volatility)`, 'pink', this._extendDurationMs(180000));
                 break;
             }
+            // === War Event Handlers ===
+            case 'SKIRMISH_SEPARATIST_IMPERIAL': {
+                this._executeWarEvent('SKIRMISH', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(5 * 60 * 1000)); // 5 minutes
+                break;
+            }
+            case 'SKIRMISH_ALIEN_MILITARY': {
+                this._executeWarEvent('SKIRMISH', 'ALIEN_VS_MILITARY', this._extendDurationMs(5 * 60 * 1000));
+                break;
+            }
+            case 'WAR_SEPARATIST_IMPERIAL': {
+                this._executeWarEvent('FULL_WAR', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(15 * 60 * 1000)); // 15 minutes
+                break;
+            }
+            case 'WAR_ALIEN_MILITARY': {
+                this._executeWarEvent('FULL_WAR', 'ALIEN_VS_MILITARY', this._extendDurationMs(15 * 60 * 1000));
+                break;
+            }
             default:
                 console.warn(`EventManager: Unknown custom event type ${eventType}.`);
         }
+    }
+
+    /**
+     * Executes a war event, setting the active war state and spawn modifiers.
+     * @param {string} intensity - 'SKIRMISH' or 'FULL_WAR'
+     * @param {string} factions - 'SEPARATIST_VS_IMPERIAL' or 'ALIEN_VS_MILITARY'
+     * @param {number} durationMs - Duration in milliseconds
+     * @private
+     */
+    _executeWarEvent(intensity, factions, durationMs) {
+        // Set spawn modifiers based on factions
+        const modifiers = this._getWarSpawnModifiers(factions);
+
+        this.activeWarState = {
+            isActive: true,
+            intensity: intensity,
+            factions: factions,
+            expires: millis() + durationMs,
+            spawnModifiers: modifiers
+        };
+
+        // Add persistent UI message
+        const label = intensity === 'FULL_WAR' ? 'FULL SCALE WAR' : 'SKIRMISH';
+        const factionLabel = factions === 'SEPARATIST_VS_IMPERIAL'
+            ? 'Separatist vs Imperial'
+            : 'Alien vs Military';
+
+        const color = intensity === 'FULL_WAR' ? 'red' : 'orange';
+        this._addPersistentEvent(
+            `WAR_${factions}`,
+            `⚔️ ${label}: ${factionLabel}`,
+            color,
+            durationMs
+        );
+
+        // Spawn initial wave of combatants
+        this._spawnWarCombatants(intensity, factions);
+
+        const systemLabel = this.starSystem?.name || 'Local sector';
+        this._notifyEvent(`${systemLabel}: ${label} erupts — ${factionLabel}!`, color, 6000);
+
+        // Add to news system
+        if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
+            GameGlobals.newsManager.addWarNews(intensity, factions, systemLabel);
+        }
+
+        console.log(`EventManager: War state activated - ${intensity} (${factions}) for ${durationMs}ms`);
+    }
+
+    /**
+     * Gets spawn modifiers for war factions.
+     * @private
+     */
+    _getWarSpawnModifiers(factions) {
+        switch (factions) {
+            case 'SEPARATIST_VS_IMPERIAL':
+                return {
+                    SEPARATIST: 0.35,  // 35% of spawns
+                    IMPERIAL: 0.35,    // 35% of spawns
+                    OTHER: 0.30        // Remaining 30% normal mix
+                };
+            case 'ALIEN_VS_MILITARY':
+                return {
+                    ALIEN: 0.40,
+                    MILITARY: 0.40,
+                    OTHER: 0.20
+                };
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Spawns an initial wave of combatants for war events.
+     * @private
+     */
+    _spawnWarCombatants(intensity, factions) {
+        if (!this.starSystem || !this.player) return;
+
+        const baseCount = intensity === 'FULL_WAR' ? 6 : 3;
+        const rankFactor = this._getEliteRankFactor();
+        const count = Math.floor(baseCount + rankFactor * 4);
+
+        const halfCount = Math.floor(count / 2);
+
+        // Spawn combatants from each faction
+        if (factions === 'SEPARATIST_VS_IMPERIAL') {
+            for (let i = 0; i < halfCount; i++) {
+                this._spawnWarShip(this.shipGroups.SEPARATIST, AI_ROLE.COMBAT);
+                this._spawnWarShip(this.shipGroups.IMPERIAL, AI_ROLE.COMBAT);
+            }
+        } else if (factions === 'ALIEN_VS_MILITARY') {
+            for (let i = 0; i < halfCount; i++) {
+                this._spawnWarShip(this.shipGroups.ALIEN, AI_ROLE.ALIEN);
+                this._spawnWarShip(this.shipGroups.MILITARY, AI_ROLE.COMBAT);
+            }
+        }
+    }
+
+    /**
+     * Spawns a single war combatant ship.
+     * @private
+     */
+    _spawnWarShip(shipList, role) {
+        if (!shipList || shipList.length === 0) return;
+
+        const shipType = random(shipList);
+        const angle = random(TWO_PI);
+        const dist = random(1500, 2500);
+        const x = this.player.pos.x + cos(angle) * dist;
+        const y = this.player.pos.y + sin(angle) * dist;
+
+        this._spawnAdHocEnemy(x, y, role, (enemy) => {
+            enemy.currentState = AI_STATE.PATROLLING;
+        }, shipType);
     }
 
     _getEliteRankFactor() {
@@ -961,7 +1125,7 @@ class EventManager {
             default:
                 shipTypeToSpawn = selectionConfig.fallbackShip;
         }
-        
+
         if (!SHIP_DEFINITIONS[shipTypeToSpawn]) {
             console.warn(`EventManager: Selected ship ${shipTypeToSpawn} invalid. Using fallback ${selectionConfig.fallbackShip}.`);
             shipTypeToSpawn = selectionConfig.fallbackShip;
@@ -985,20 +1149,20 @@ class EventManager {
         // Add a single HUD marker for the cluster so player can find it quickly
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
-            const clusterLabel = `${event.type.replace(/_/g,' ')}`;
+            const clusterLabel = `${event.type.replace(/_/g, ' ')}`;
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                 this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, clusterLabel, 'orange', this._extendDurationMs(180000));
             }
-            this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${event.type.replace(/_/g,' ')} detected near ${anchorLabel}`, 'orange');
-        } catch (e) {}
+            this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${event.type.replace(/_/g, ' ')} detected near ${anchorLabel}`, 'orange');
+        } catch (e) { }
 
         for (let i = 0; i < numToSpawn; i++) {
             const offsetX = random(-config.clusterSpreadRadius, config.clusterSpreadRadius);
             const offsetY = random(-config.clusterSpreadRadius, config.clusterSpreadRadius);
             const asteroidSize = random(config.asteroidSizeMin, config.asteroidSizeMax);
-            
+
             const asteroid = new Asteroid(baseSpawnX + offsetX, baseSpawnY + offsetY, asteroidSize);
-            
+
             if (config.isComet && asteroid) {
                 asteroid.isComet = true;
                 try {
@@ -1023,9 +1187,9 @@ class EventManager {
                         this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, label, 'yellow', this._extendDurationMs(240000));
                     }
                     this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Comet detected near ${anchorLabel}`, 'yellow');
-                } catch (e) {}
+                } catch (e) { }
             }
-            
+
             this.starSystem.asteroids.push(asteroid);
         }
     }
@@ -1052,19 +1216,19 @@ class EventManager {
             if (config.spawnAngleSpreadFactor !== 0) {
                 if (event.type === "PIRATE_SWARM" || event.type === "ALIEN_RAID") {
                     currentSpawnAngle += random(-config.spawnAngleSpreadFactor, config.spawnAngleSpreadFactor);
-                } else if (event.type === "BOUNTY_HUNTER_AMBUSH" && numToSpawn > 1) { 
+                } else if (event.type === "BOUNTY_HUNTER_AMBUSH" && numToSpawn > 1) {
                     const angleOffset = (i - (numToSpawn - 1) / 2) * config.spawnAngleSpreadFactor;
                     currentSpawnAngle += angleOffset;
                 }
             }
-            
+
             if (config.positionRandomnessFactor !== 0) {
                 currentSpawnRadius += random(-config.positionRandomnessFactor, config.positionRandomnessFactor);
             }
 
             const offsetX = cos(currentSpawnAngle) * currentSpawnRadius;
             const offsetY = sin(currentSpawnAngle) * currentSpawnRadius;
-            
+
             const spawnX = this.player.pos.x + offsetX;
             const spawnY = this.player.pos.y + offsetY;
 
@@ -1083,7 +1247,7 @@ class EventManager {
             if (typeof config.additionalEnemySetup === 'function') {
                 config.additionalEnemySetup(newEnemy, this.player, this.starSystem);
             }
-            
+
             this.starSystem.addEnemy(newEnemy);
         }
     }
@@ -1110,7 +1274,7 @@ class EventManager {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
                 }
                 this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan');
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -1254,7 +1418,7 @@ class EventManager {
                     const dd = dist(x, y, p.pos.x, p.pos.y);
                     if (dd < nd) { nd = dd; nearest = p; }
                 }
-                if (nearest && nd < 3000) return nearest.name || (`Planet ${nearest.index != null ? nearest.index+1 : ''}`);
+                if (nearest && nd < 3000) return nearest.name || (`Planet ${nearest.index != null ? nearest.index + 1 : ''}`);
             }
             return this.starSystem.name ? `${this.starSystem.name} sector` : 'local grid';
         } catch (e) {

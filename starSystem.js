@@ -36,7 +36,9 @@ const STARFIELD_CONFIG = {
 const SPAWN_CONFIG = {
     ENEMY_SPAWN_INTERVAL: 5000,    // ms
     ASTEROID_SPAWN_INTERVAL: 3000, // ms
-    MAX_ENEMIES: 30,
+    MAX_ENEMIES_BASE: 15,          // Normal peace-time limit
+    MAX_ENEMIES_SKIRMISH: 22,      // During skirmishes
+    MAX_ENEMIES_WAR: 30,           // During full war
     MAX_ASTEROIDS: 45,
     DEFAULT_DESPAWN_RADIUS: 5000,
     SPAWN_DISTANCE_MIN: 800,
@@ -298,7 +300,7 @@ class StarSystem {
         // === Spawn Configuration ===
         this.enemySpawnTimer = 0;
         this.enemySpawnInterval = SPAWN_CONFIG.ENEMY_SPAWN_INTERVAL;
-        this.maxEnemies = SPAWN_CONFIG.MAX_ENEMIES;
+        this.maxEnemies = SPAWN_CONFIG.MAX_ENEMIES_BASE; // Base limit, dynamically increased during war
         this.asteroidSpawnTimer = 0;
         this.asteroidSpawnInterval = SPAWN_CONFIG.ASTEROID_SPAWN_INTERVAL;
         this.maxTotalAsteroids = SPAWN_CONFIG.MAX_ASTEROIDS;
@@ -1119,6 +1121,7 @@ class StarSystem {
 
     /**
      * Selects appropriate ship type based on system economy and security level.
+     * During active wars, spawn distribution shifts toward the conflicting factions.
      * 
      * @param {string} economy - System economy type
      * @param {string} security - System security level
@@ -1126,6 +1129,13 @@ class StarSystem {
      * @private
      */
     _selectShipForEconomy(economy, security) {
+        // Check for active war state - influences spawn distribution
+        const em = typeof eventManager !== 'undefined' ? eventManager : null;
+        if (em && em.activeWarState && em.activeWarState.isActive && em.activeWarState.spawnModifiers) {
+            const warSelection = this._selectWarInfluencedShip(em.activeWarState);
+            if (warSelection) return warSelection;
+        }
+
         const econ = (economy || "").toLowerCase();
 
         // Economy-specific spawn logic
@@ -1144,6 +1154,37 @@ class StarSystem {
 
         // Standard spawn logic based on security
         return this._selectStandardShip(security);
+    }
+
+    /**
+     * Selects a ship based on active war state spawn modifiers.
+     * @param {Object} warState - Active war state with spawnModifiers
+     * @returns {{role: string, ship: string}|null} Selected ship or null for standard selection
+     * @private
+     */
+    _selectWarInfluencedShip(warState) {
+        const mods = warState.spawnModifiers;
+        const rand = random();
+
+        if (warState.factions === 'SEPARATIST_VS_IMPERIAL') {
+            if (rand < mods.SEPARATIST && SEPARATIST_SHIPS.length > 0) {
+                return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
+            } else if (rand < mods.SEPARATIST + mods.IMPERIAL && IMPERIAL_SHIPS.length > 0) {
+                return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
+            }
+            // Fall through to normal selection for 'OTHER' percentage
+            return null;
+        } else if (warState.factions === 'ALIEN_VS_MILITARY') {
+            if (rand < mods.ALIEN && ALIEN_SHIPS.length > 0) {
+                return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
+            } else if (rand < mods.ALIEN + mods.MILITARY && MILITARY_SHIPS.length > 0) {
+                return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS) };
+            }
+            // Fall through to normal selection for 'OTHER' percentage
+            return null;
+        }
+
+        return null;
     }
 
     /**
@@ -1289,7 +1330,18 @@ class StarSystem {
      * - Standard: Based on security level (pirates vs police ratio)
      */
     trySpawnNPC() {
-        if (!this.player?.pos || this.enemies.length >= this.maxEnemies) return;
+        if (!this.player?.pos) return;
+
+        // Calculate dynamic max enemies based on war state
+        let maxEnemies = SPAWN_CONFIG.MAX_ENEMIES_BASE;
+        const em = typeof eventManager !== 'undefined' ? eventManager : null;
+        if (em && em.activeWarState && em.activeWarState.isActive) {
+            maxEnemies = em.activeWarState.intensity === 'FULL_WAR'
+                ? SPAWN_CONFIG.MAX_ENEMIES_WAR
+                : SPAWN_CONFIG.MAX_ENEMIES_SKIRMISH;
+        }
+
+        if (this.enemies.length >= maxEnemies) return;
 
         // Select ship based on economy
         let selection = this._selectShipForEconomy(this.economyType, this.securityLevel);
@@ -1943,16 +1995,25 @@ class StarSystem {
     _updateCargo() {
         if (!this.cargo || this.cargo.length === 0) return;
 
-        // Clean up invalid/expired cargo
+        // Clean up invalid/expired cargo - with marker cleanup callback
         this._updateEntities(
             this.cargo,
             (c) => { if (c && typeof c.update === 'function') c.update(); },
-            (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired())
+            (c) => !c || !c.pos || !c.type || c.collected || (c.isExpired && c.isExpired()),
+            (cargoItem) => {
+                // Remove HUD/minimap marker when cargo expires
+                if (cargoItem && cargoItem.eventMarkerId &&
+                    typeof uiManager !== 'undefined' &&
+                    typeof uiManager.removeEventMarker === 'function') {
+                    uiManager.removeEventMarker(cargoItem.eventMarkerId);
+                }
+            }
         );
 
         // Check for player collection
         this.handleCargoCollection();
     }
+
 
     /**
      * Updates beam weapons.

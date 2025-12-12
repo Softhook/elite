@@ -173,6 +173,22 @@ class NewsManager {
                 "STATION DISASTER CLAIMS LIVES IN {SYSTEM}",
                 "ASTEROID IMPACT DEVASTATES {SYSTEM} COLONY",
                 "PLAGUE OUTBREAK REPORTED IN {SYSTEM}"
+            ],
+
+            // War event headlines
+            WAR_SKIRMISH: [
+                "⚔️ MILITARY SKIRMISH ERUPTS IN {SYSTEM}",
+                "⚔️ ARMED CONFLICT BREAKS OUT NEAR {SYSTEM}",
+                "⚔️ FACTION FORCES CLASH IN {SYSTEM} SECTOR",
+                "⚔️ BORDER SKIRMISH REPORTED IN {SYSTEM}",
+                "⚔️ HOSTILE ENGAGEMENT DETECTED IN {SYSTEM}"
+            ],
+            WAR_FULL: [
+                "🔥 FULL SCALE WAR ERUPTS IN {SYSTEM}",
+                "🔥 ALL-OUT CONFLICT ENGULFS {SYSTEM}",
+                "🔥 MASSIVE BATTLE UNDERWAY IN {SYSTEM}",
+                "🔥 WAR DECLARED IN {SYSTEM} SECTOR",
+                "🔥 SECTOR-WIDE HOSTILITIES BEGIN IN {SYSTEM}"
             ]
         };
 
@@ -197,6 +213,16 @@ class NewsManager {
                 IMPERIAL: "Criminal anarchy threatens Imperial supply lines. Naval response authorized.",
                 SEPARATIST: "The desperate strike back against monopoly rule. Who can blame them?",
                 INDEPENDENT: "High risk means high reward—but triple-check your insurance."
+            },
+            WAR_SEPARATIST_VS_IMPERIAL: {
+                IMPERIAL: "Separatist terrorists have initiated unprovoked aggression. Order will be restored.",
+                SEPARATIST: "The revolution has begun! Death to the corporate oppressors!",
+                INDEPENDENT: "Traders advised to avoid conflict zones. War profiteering opportunities abound."
+            },
+            WAR_ALIEN_VS_MILITARY: {
+                IMPERIAL: "Xeno threat requires unified military response. All personnel mobilized.",
+                SEPARATIST: "The aliens strike the heart of Imperial tyranny. Interesting times ahead.",
+                INDEPENDENT: "Alien technology salvage could be highly profitable. Proceed with caution."
             }
         };
 
@@ -411,6 +437,42 @@ class NewsManager {
             sourceColor: this.factions.IMPERIAL.color,
             category: NEWS_CATEGORY.PLAYER_ACTION,
             priority: NEWS_PRIORITY.HIGH
+        });
+    }
+
+    /**
+     * Report war/conflict events
+     * @param {string} intensity - 'SKIRMISH' or 'FULL_WAR'
+     * @param {string} factions - 'SEPARATIST_VS_IMPERIAL' or 'ALIEN_VS_MILITARY'
+     * @param {string} systemName - System where war is occurring
+     */
+    addWarNews(intensity, factions, systemName) {
+        const isFullWar = intensity === 'FULL_WAR';
+        const templates = isFullWar ? this.headlineTemplates.WAR_FULL : this.headlineTemplates.WAR_SKIRMISH;
+
+        const headline = this._fillTemplate(templates, {
+            SYSTEM: systemName || 'Local Sector'
+        });
+
+        // Select body based on factions and random faction perspective
+        const bodyKey = `WAR_${factions}`;
+        const faction = this._selectFaction();
+        const body = (this.bodyTemplates[bodyKey] && this.bodyTemplates[bodyKey][faction.key]) ||
+            `Armed conflict underway. All pilots advised to exercise extreme caution.`;
+
+        // War faction determines source color
+        let sourceColor = faction.color;
+        if (factions === 'SEPARATIST_VS_IMPERIAL') {
+            sourceColor = Math.random() < 0.5 ? this.factions.IMPERIAL.color : this.factions.SEPARATIST.color;
+        }
+
+        this._addNews({
+            headline,
+            body,
+            source: faction.name,
+            sourceColor: sourceColor,
+            category: NEWS_CATEGORY.LOCAL_EVENT,
+            priority: isFullWar ? NEWS_PRIORITY.BREAKING : NEWS_PRIORITY.HIGH
         });
     }
 
