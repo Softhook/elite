@@ -374,6 +374,8 @@ class EnemyTargeting {
 
                 // CRITICAL FIX: Check if we're currently locked onto THIS target
                 // This prevents flickering when principal.lastAttacker changes or becomes invalid
+                // NOTE: The friendly fire checks above already returned INVALID for principal/fellow guards
+                // so if we reach here with a lock, it's a valid hostile target
                 const isLockedOn = enemy.guardEngagementLock > 0 && target === enemy.target;
                 if (isLockedOn) {
                     // Maintain lock with consistent high score regardless of lastAttacker status
@@ -392,7 +394,16 @@ class EnemyTargeting {
                 }
 
                 // Self-defense: if this guard was attacked, can engage the attacker
+                // BUT NOT if the attacker is the principal or a fellow guard (friendly fire prevention)
                 if (target === enemy.lastAttacker) {
+                    // Don't retaliate against principal
+                    if (target === enemy.principal) {
+                        return TARGET_SCORE_INVALID;
+                    }
+                    // Don't retaliate against fellow guards protecting the same principal
+                    if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
+                        return TARGET_SCORE_INVALID;
+                    }
                     return 1500; // High score for self-defense, but lower than principal defense
                 }
 

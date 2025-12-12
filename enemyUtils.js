@@ -13,10 +13,10 @@ class EnemyUtils {
      */
     predictTargetPosition() {
         if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
-        
+
         // Reuse the temp vector instead of creating new ones
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
-        let pf = this.predictionTime * (deltaTime ? (60 / (1000/deltaTime)) : 60);
+        let pf = this.predictionTime * (deltaTime ? (60 / (1000 / deltaTime)) : 60);
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
         return this.tempVector;
@@ -71,9 +71,9 @@ class EnemyUtils {
         if (target && target.isDockedAndInvulnerable) {
             return false;
         }
-        return target && target.pos && 
-               ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) && 
-               (target.destroyed === undefined || !target.destroyed);
+        return target && target.pos &&
+            ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) &&
+            (target.destroyed === undefined || !target.destroyed);
     }
 
     /**
@@ -91,13 +91,13 @@ class EnemyUtils {
      */
     rotateTowards(targetAngleRadians) {
         if (isNaN(targetAngleRadians)) return 0;
-        
+
         let diff = this.getAngleDifference(targetAngleRadians);
-        
+
         const rotationThreshold = 0.02;
         if (abs(diff) > rotationThreshold) {
             // Use Math.sign for browser compatibility 
-            const rotationAmount = Math.sign(diff) * 
+            const rotationAmount = Math.sign(diff) *
                 Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
             this.angle += rotationAmount;
         }
@@ -121,11 +121,13 @@ class EnemyUtils {
         this.thrustVector.set(cos(this.angle), sin(this.angle));
         this.thrustVector.mult(this.thrustForce * multiplier);
         this.vel.add(this.thrustVector);
-        
+
         this.isThrusting = true;
-        
+
         // Create visual thrust particles (using the pool via thrustManager)
-        if (createParticles && this.thrustManager) {
+        // Skip for alien ships - they use different propulsion
+        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
+        if (createParticles && this.thrustManager && !isAlien) {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
     }
@@ -189,11 +191,11 @@ class EnemyUtils {
     applyDragEffect(duration = 5.0, multiplier = 10.0) {
         // Use higher value if already affected
         this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
-        
+
         // ENHANCED: Extend duration for consecutive hits
-        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) + 
-                            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
-        
+        this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) +
+            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+
         // Visual effect timestamp
         this.tangleEffectTime = millis();
     }
@@ -202,8 +204,8 @@ class EnemyUtils {
      * Checks if ship has been destroyed
      * @return {boolean} Whether ship is destroyed
      */
-    isDestroyed() { 
-        return this.destroyed; 
+    isDestroyed() {
+        return this.destroyed;
     }
 
     /**
@@ -211,10 +213,10 @@ class EnemyUtils {
      * @param {Object} target - Entity to check collision with
      * @return {boolean} Whether collision occurred
      */
-    checkCollision(target) { 
-        if (!target?.pos || target.size === undefined) return false; 
-        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y); 
-        let sumRadii = (target.size / 2) + (this.size / 2); 
+    checkCollision(target) {
+        if (!target?.pos || target.size === undefined) return false;
+        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
+        let sumRadii = (target.size / 2) + (this.size / 2);
         return dSq < sq(sumRadii);
     }
 
@@ -225,12 +227,12 @@ class EnemyUtils {
      */
     _getShipFaction(ship) {
         if (!ship) return 'UNKNOWN';
-        
+
         // Check if this is a player with a faction
         if (ship.playerFaction) {
             return ship.playerFaction;
         }
-        
+
         // Check ship definition for faction in aiRoles
         if (ship.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined') {
             const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
@@ -240,7 +242,7 @@ class EnemyUtils {
                 if (shipDef.aiRoles.includes('MILITARY')) return 'MILITARY';
             }
         }
-        
+
         return 'UNKNOWN';
     }
 }
@@ -252,7 +254,7 @@ function applyEnemyUtilityMethods() {
         console.error('Enemy class not found - cannot apply utility methods');
         return;
     }
-    
+
     // Copy all methods from EnemyUtils to Enemy prototype
     Object.getOwnPropertyNames(EnemyUtils.prototype).forEach(methodName => {
         if (methodName !== 'constructor') {

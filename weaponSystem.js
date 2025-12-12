@@ -60,6 +60,37 @@ class WeaponSystem {
         const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
         return d > 0.15; // disable auto-target/locks when notable disruption
     }
+
+    /**
+     * Calculate spawn position at ship's forward edge.
+     * Uses ship's facing angle (owner.angle) for spawn position, not firing angle.
+     * This ensures projectiles emerge from visible ship edge.
+     * @param {Object} owner - Entity firing the weapon
+     * @param {number} firingAngle - Angle projectile will travel (fallback if no owner.angle)
+     * @param {boolean} fromCenter - If true, spawn from center (for turrets/force weapons)
+     * @returns {Object} {x, y} spawn position
+     */
+    static _getSpawnPosition(owner, firingAngle, fromCenter = false) {
+        if (!owner?.pos) {
+            return { x: 0, y: 0 };
+        }
+
+        // For turrets and force weapons, spawn from center
+        if (fromCenter || !owner.size) {
+            return { x: owner.pos.x, y: owner.pos.y };
+        }
+
+        // Spawn at ship's forward edge using ship's facing angle
+        // Use owner.angle if available (ship facing), else fall back to firing angle
+        const spawnAngle = (owner.angle !== undefined && !isNaN(owner.angle)) ? owner.angle : firingAngle;
+        const offset = owner.size * 0.55; // Just past visible ship edge
+
+        return {
+            x: owner.pos.x + Math.cos(spawnAngle) * offset,
+            y: owner.pos.y + Math.sin(spawnAngle) * offset
+        };
+    }
+
     // Static regex for parsing weapon count from type string
     static _countRegex = /(\d+)$/;
 
@@ -422,27 +453,31 @@ class WeaponSystem {
      * @param {Object} owner - Entity firing the weapon
      * @param {Object} system - Current star system
      * @param {number} angle - Firing angle in radians
+     * @param {boolean} fromCenter - Spawn from center (for turrets)
      */
-    static fireProjectile(owner, system, angle) {
+    static fireProjectile(owner, system, angle, fromCenter = false) {
         if (!owner?.currentWeapon) return;
 
         const weapon = owner.currentWeapon;
         const speed = weapon.speed || 8; // Use defined speed with fallback
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
+
+        // Get spawn position at ship's forward edge (or center for turrets)
+        const spawnPos = this._getSpawnPosition(owner, angle, fromCenter);
+        const spawnX = spawnPos.x;
+        const spawnY = spawnPos.y;
         let proj;
 
         // Use the speed variable instead of hardcoded 8
         if (this.projectilePool) {
             proj = this.projectilePool.get(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
 
         if (!proj) {
             proj = new Projectile(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color
             );
             proj.system = system;
@@ -462,7 +497,7 @@ class WeaponSystem {
             } else if (wType === WEAPON_TYPE.PROJECTILE || wType === WEAPON_TYPE.SPREAD || wType === WEAPON_TYPE.STRAIGHT) {
                 soundName = 'laser';
             }
-            soundManager.playWorldSound(soundName, ownerX, ownerY, player.pos);
+            soundManager.playWorldSound(soundName, spawnX, spawnY, player.pos);
         }
     }
 
@@ -474,8 +509,11 @@ class WeaponSystem {
         // Apply jitter to initial heading under disruption
         angle = this._applyAngleJitter(owner, angle);
         const weapon = owner.currentWeapon;
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
+
+        // Get spawn position at ship's forward edge
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        const spawnX = spawnPos.x;
+        const spawnY = spawnPos.y;
         let proj;
 
         // Get missile-specific properties from the weapon definition
@@ -489,14 +527,14 @@ class WeaponSystem {
         if (this.projectilePool) {
             // Pass all necessary parameters including target, lifespan, turnRate, missileSpeed, and system
             proj = this.projectilePool.get(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, damage, color, weaponType, target, lifespan, turnRate, speed, 5.0, 10.0, 0.1, system
             );
         }
 
         if (!proj) {
             proj = new Projectile(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, damage, color, weaponType, target, lifespan, turnRate, speed
             );
             proj.system = system;
@@ -509,7 +547,7 @@ class WeaponSystem {
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
-            soundManager.playWorldSound('missileLaunch', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos);
         }
     }
 
@@ -561,17 +599,18 @@ class WeaponSystem {
         const damage = weapon.damage;
         const color = weapon.color;
 
-        // Cache owner position for faster access
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
+        // Get base spawn position at ship's forward edge
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        const baseX = spawnPos.x;
+        const baseY = spawnPos.y;
 
         for (let i = 0; i < count; i++) {
             const offset = (i - mid) * spacing;
-            // Calculate the position with minimal vector allocations
-            const x = ownerX + perpDirX * offset;
-            const y = ownerY + perpDirY * offset;
+            // Calculate the position with minimal vector allocations (offset from ship edge)
+            const x = baseX + perpDirX * offset;
+            const y = baseY + perpDirY * offset;
 
-            // FIXED: Create projectile at the correct offset position
+            // Create projectile at the correct offset position
             let proj;
             if (this.projectilePool) {
                 proj = this.projectilePool.get(
@@ -590,7 +629,7 @@ class WeaponSystem {
 
         // Play sound once for all projectiles
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('laser', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('laser', baseX, baseY, player.pos);
         }
     }
 
@@ -615,9 +654,10 @@ class WeaponSystem {
 
         // Get beam properties and cache position
         const beamLength = 1200;
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
-        start.set(ownerX, ownerY);
+
+        // Start beam at ship's forward edge, not center
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        start.set(spawnPos.x, spawnPos.y);
 
         // Note: Player beam aiming is handled in player.fireWeapon() before calling WeaponSystem.fire()
         // The angle passed in is already calculated to point at the mouse cursor
@@ -669,9 +709,8 @@ class WeaponSystem {
         }
 
         // Play sound using playWorldSound
-        // Play sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('beam', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('beam', spawnPos.x, spawnPos.y, player.pos);
         }
 
         if (weapon?.type === WEAPON_TYPE.BEAM) {
@@ -870,8 +909,12 @@ class WeaponSystem {
         if (!owner?.currentWeapon) return;
 
         const weapon = owner.currentWeapon;
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
+
+        // Get spawn position at ship's forward edge
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        const spawnX = spawnPos.x;
+        const spawnY = spawnPos.y;
+
         const speed = weapon.speed || 6; // Slower than regular projectiles
         const tangleDuration = weapon.tangleDuration || 5.0;
         const dragMultiplier = weapon.dragMultiplier || 10.0;
@@ -882,7 +925,7 @@ class WeaponSystem {
         // Create projectile with tangle properties using unified duration
         if (this.projectilePool) {
             proj = this.projectilePool.get(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color,
                 "tangle", null, 60, 0, 0,
                 tangleDuration, dragMultiplier,
@@ -890,7 +933,7 @@ class WeaponSystem {
             );
         } else {
             proj = new Projectile(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color,
                 "tangle", null, 60, 0, 0,
                 tangleDuration, dragMultiplier,
@@ -909,7 +952,7 @@ class WeaponSystem {
 
         // Play tangle sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('tangleCast', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos);
         }
     }
 
@@ -919,27 +962,31 @@ class WeaponSystem {
     static fireHarpoon(owner, system, angle) {
         if (!owner?.currentWeapon || !system) return;
         const weapon = owner.currentWeapon;
-        const ownerX = owner.pos.x;
-        const ownerY = owner.pos.y;
+
+        // Get spawn position at ship's forward edge
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        const spawnX = spawnPos.x;
+        const spawnY = spawnPos.y;
+
         const speed = weapon.speed || 30; // increased default harpoon projectile speed to fly quickly
 
         let proj;
         if (this.projectilePool) {
             proj = this.projectilePool.get(
-                ownerX, ownerY, angle, owner,
+                spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color, "harpoon", null, 120, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
         if (!proj) {
-            proj = new Projectile(ownerX, ownerY, angle, owner, speed, weapon.damage, weapon.color, "harpoon");
+            proj = new Projectile(spawnX, spawnY, angle, owner, speed, weapon.damage, weapon.color, "harpoon");
             proj.system = system;
         }
         proj.size = weapon.projectileSize || 6;
-            if (system && typeof system.addProjectile === 'function') {
-                system.addProjectile(proj);
-            } else if (system && Array.isArray(system.projectiles)) {
-                system.projectiles.push(proj);
-            }
+        if (system && typeof system.addProjectile === 'function') {
+            system.addProjectile(proj);
+        } else if (system && Array.isArray(system.projectiles)) {
+            system.projectiles.push(proj);
+        }
 
         // Mark owner as having an outgoing harpoon to prevent immediate re-fire
         try {
@@ -948,11 +995,11 @@ class WeaponSystem {
         } catch (e) { /* defensive */ }
 
         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
-            WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, ownerX, ownerY, speed, weaponName: weapon?.name });
+            WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, spawnX, spawnY, speed, weaponName: weapon?.name });
         }
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            try { soundManager.playWorldSound('harpoonFire', ownerX, ownerY, player.pos); } catch (_) { }
+            try { soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos); } catch (_) { }
         }
     }
 
@@ -1039,7 +1086,8 @@ class WeaponSystem {
 
         // If still no valid target, fire forward
         if (!target?.pos) {
-            this.fireProjectile(owner, system, owner.angle);
+            // Turrets spawn from center (they sit on top of ship, can fire any direction)
+            this.fireProjectile(owner, system, owner.angle, true);
             return;
         }
 
@@ -1051,8 +1099,8 @@ class WeaponSystem {
         // Update turret firing angle for visual sync
         owner.lastTurretFiringAngle = angleToTarget;
 
-        // Fire the projectile at the calculated angle
-        this.fireProjectile(owner, system, angleToTarget);
+        // Fire the projectile at the calculated angle (from center for turrets)
+        this.fireProjectile(owner, system, angleToTarget, true);
     }
 
     /**

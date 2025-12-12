@@ -90,12 +90,7 @@ class Projectile {
 
         // Type will be determined from weapon or parameter below
         // Cache type checks will be set after finalizing this.type
-
-        // Apply spawn offset (reuse velocity vector temporarily)
-        if (owner && owner.size) {
-            this.vel.set(1, 0).rotate(angle).mult(owner.size * 1.2);
-            this.pos.add(this.vel);
-        }
+        // NOTE: Spawn offset is now handled by WeaponSystem._getSpawnPosition()
 
         // Use weapon upgrade if owner has a weapon
         if (owner && owner.currentWeapon) {

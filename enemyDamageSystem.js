@@ -59,16 +59,35 @@ class EnemyDamageSystem {
             }
             // Record attacker, but skip non-combat objects like asteroids and cargo
             // (collisions with these shouldn't trigger combat behavior)
-            const isNonCombatObject = attacker?.constructor?.name === 'Asteroid' || 
-                                      attacker?.constructor?.name === 'Cargo';
-            if (!isNonCombatObject) {
+            const isNonCombatObject = attacker?.constructor?.name === 'Asteroid' ||
+                attacker?.constructor?.name === 'Cargo';
+
+            // FRIENDLY FIRE PREVENTION: Don't record friendly fire as lastAttacker
+            // Guards should not retaliate against their principal or fellow guards
+            let isFriendlyFire = false;
+            if (this.role === AI_ROLE.GUARD && this.principal) {
+                // Guard hit by their own principal
+                if (attacker === this.principal) {
+                    isFriendlyFire = true;
+                }
+                // Guard hit by a fellow guard protecting the same principal
+                if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this.principal) {
+                    isFriendlyFire = true;
+                }
+            }
+            // Principal (any role) hit by their own guard
+            if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this) {
+                isFriendlyFire = true;
+            }
+
+            if (!isNonCombatObject && !isFriendlyFire) {
                 this.lastAttacker = attacker;
                 this.lastAttackTime = millis();
             }
-            
+
             // Debug log for tracking
             DAMAGE_LOG(`🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`);
-            
+
             // Don't retarget if in SNIPING state (target lock)
             if (this.currentState === AI_STATE.SNIPING) {
                 TARGETING_LOGF(() => {
@@ -81,11 +100,11 @@ class EnemyDamageSystem {
                         }
                     } catch (e) { /* p5 dist might be unavailable briefly; ignore */ }
                     return `   → SNIPING: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] holding lock on ${nameOf(this.target)}; ignoring attacker ${attackerName}` +
-                           (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+                        (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
                 });
                 return;
             }
-            
+
             // Always update targeting for any attacker
             const resolvedSystem = system || this.getSystem();
             if (resolvedSystem) {
@@ -93,7 +112,7 @@ class EnemyDamageSystem {
                 if (attacker instanceof Player) {
                     DAMAGE_LOG(`🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`);
                 }
-                
+
                 // Update targeting immediately for all attackers
                 const prevTarget = this.target;
                 const targetResult = this.updateTargeting(resolvedSystem);
@@ -110,7 +129,7 @@ class EnemyDamageSystem {
                     } catch (e) { /* ignore */ }
                     const validNow = this.isTargetValid?.(newTarget);
                     return `   → Targeting: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] ${changed ? 'switched' : 'kept'} target: ${nameOf(prevTarget)} -> ${nameOf(newTarget)} (valid=${validNow ? 'yes' : 'no'}, result=${!!targetResult}) after hit by ${attackerName}` +
-                           (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+                        (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
                 });
 
                 // Immediate combat reaction for aggressive roles when idle
@@ -232,7 +251,7 @@ class EnemyDamageSystem {
         AI_LOG(`BEFORE: Player kills = ${system.player.kills}`);
         system.player.addKill(this);
         AI_LOG(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
-        
+
 
         // Update mission progress
         if (attacker.activeMission) {
@@ -244,7 +263,7 @@ class EnemyDamageSystem {
                 if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
                     AI_LOG("Pirate bounty mission target count met! Completing mission...");
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
-               }
+                }
             }
             // Police bounty missions
             else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_POLICE &&
@@ -254,7 +273,7 @@ class EnemyDamageSystem {
                 if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
                     AI_LOG("Police bounty mission target count met! Completing mission...");
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
-               }
+                }
             }
             // Alien bounty missions
             else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN &&
@@ -264,7 +283,7 @@ class EnemyDamageSystem {
                 if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
                     AI_LOG("Alien bounty mission target count met! Completing mission...");
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
-               }
+                }
             }
         }
 
@@ -353,9 +372,9 @@ class EnemyDamageSystem {
      */
     _isImperialShip() {
         // Check if this ship type is in the IMPERIAL_SHIPS array
-        return typeof IMPERIAL_SHIPS !== 'undefined' && 
-               Array.isArray(IMPERIAL_SHIPS) && 
-               IMPERIAL_SHIPS.includes(this.shipTypeName);
+        return typeof IMPERIAL_SHIPS !== 'undefined' &&
+            Array.isArray(IMPERIAL_SHIPS) &&
+            IMPERIAL_SHIPS.includes(this.shipTypeName);
     }
 
     /**
@@ -364,9 +383,9 @@ class EnemyDamageSystem {
      */
     _isSeparatistShip() {
         // Check if this ship type is in the SEPARATIST_SHIPS array
-        return typeof SEPARATIST_SHIPS !== 'undefined' && 
-               Array.isArray(SEPARATIST_SHIPS) && 
-               SEPARATIST_SHIPS.includes(this.shipTypeName);
+        return typeof SEPARATIST_SHIPS !== 'undefined' &&
+            Array.isArray(SEPARATIST_SHIPS) &&
+            SEPARATIST_SHIPS.includes(this.shipTypeName);
     }
 
     /**
