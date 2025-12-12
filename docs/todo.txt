@@ -2,6 +2,8 @@
 
 ## Bugs and Issues
 
+some big ships Engage two ships at the same time. that means shooting two weapons imultaneously
+
 enemy Ship docking distance at stations should be the same as player docking distance. 
 
 Add faction decals onto the ships 
