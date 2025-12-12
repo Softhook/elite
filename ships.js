@@ -1613,11 +1613,6 @@ function drawThargoid(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     drawExtrudedPolySymmetric(r * pulse, def._thargoidCache, depth, worldDownAngle, localSunAngle, 0, 'both');
     pop();
 
-    // Organic pulsing glow overlay
-    noStroke();
-    fill(100, 255, 100, 30);
-    ellipse(0, 0, s * 0.9 * pulse);
-
     // Central Eye
     fill(255, 255, 255);
     noStroke();
