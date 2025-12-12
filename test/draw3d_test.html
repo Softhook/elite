@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Draw3D Performance Test</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #071021;
+            color: #e6eef8;
+            font-family: sans-serif;
+        }
+
+        #ui {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            min-width: 300px;
+        }
+
+        button {
+            margin: 4px 6px 4px 0;
+            padding: 8px 12px;
+            background: #142030;
+            color: #e6eef8;
+            border: 1px solid #2a4658;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1a3040;
+        }
+
+        h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            border-bottom: 1px solid #2a4658;
+            padding-bottom: 8px;
+        }
+
+        .stats {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .stat-label {
+            color: #9fb8d6;
+        }
+
+        .stat-value {
+            color: #6fef6f;
+            font-family: monospace;
+        }
+
+        .stat-value.warning {
+            color: #efef6f;
+        }
+
+        .stat-value.bad {
+            color: #ef6f6f;
+        }
+
+        .section-title {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #6fb8ef;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <h3>Draw3D Performance Test</h3>
+        <div class="stats">
+            <div class="stat-row"><span class="stat-label">FPS:</span><span id="fps" class="stat-value">--</span></div>
+            <div class="stat-row"><span class="stat-label">Frame Time:</span><span id="frameTime" class="stat-value">--
+                    ms</span></div>
+            <div class="stat-row"><span class="stat-label">Draw Calls:</span><span id="drawCalls"
+                    class="stat-value">--</span></div>
+
+            <div class="section-title">Test Configuration</div>
+            <div class="stat-row"><span class="stat-label">Prisms:</span><span id="prismCount"
+                    class="stat-value">20</span></div>
+            <div class="stat-row"><span class="stat-label">Boxes:</span><span id="boxCount" class="stat-value">20</span>
+            </div>
+            <div class="stat-row"><span class="stat-label">Ships:</span><span id="shipCount"
+                    class="stat-value">10</span></div>
+
+            <div class="section-title">Shading Performance</div>
+            <div class="stat-row"><span class="stat-label">Lookup (1M calls):</span><span id="lookupTime"
+                    class="stat-value">--</span></div>
+            <div class="stat-row"><span class="stat-label">Direct (1M calls):</span><span id="directTime"
+                    class="stat-value">--</span></div>
+            <div class="stat-row"><span class="stat-label">Speedup:</span><span id="speedup"
+                    class="stat-value">--</span></div>
+        </div>
+        <div style="margin-top: 12px;">
+            <button id="runBenchmark">Run Shading Benchmark</button>
+            <button id="addMore">Add More Objects</button>
+            <button id="reset">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        // Test state
+        let prisms = [];
+        let boxes = [];
+        let ships = [];
+        let frameTimeHistory = [];
+        let drawCallCount = 0;
+
+        // Config
+        let prismCount = 20;
+        let boxCount = 20;
+        let shipCount = 10;
+
+        function setup() {
+            createCanvas(window.innerWidth, window.innerHeight);
+            angleMode(RADIANS);
+            spawnTestObjects();
+
+            document.getElementById('runBenchmark').addEventListener('click', runShadingBenchmark);
+            document.getElementById('addMore').addEventListener('click', () => {
+                prismCount += 10;
+                boxCount += 10;
+                shipCount += 5;
+                spawnTestObjects();
+            });
+            document.getElementById('reset').addEventListener('click', () => {
+                prismCount = 20;
+                boxCount = 20;
+                shipCount = 10;
+                spawnTestObjects();
+            });
+        }
+
+        function windowResized() {
+            resizeCanvas(window.innerWidth, window.innerHeight);
+        }
+
+        function spawnTestObjects() {
+            prisms = [];
+            boxes = [];
+            ships = [];
+
+            // Create test prisms
+            for (let i = 0; i < prismCount; i++) {
+                prisms.push({
+                    x: random(100, width - 100),
+                    y: random(100, height - 100),
+                    r: random(15, 40),
+                    sides: floor(random(4, 10)),
+                    depth: random(10, 30),
+                    col: color(random(100, 255), random(100, 255), random(100, 255)),
+                    angle: 0,
+                    rotSpeed: random(-0.02, 0.02)
+                });
+            }
+
+            // Create test boxes
+            for (let i = 0; i < boxCount; i++) {
+                boxes.push({
+                    x: random(100, width - 100),
+                    y: random(100, height - 100),
+                    w: random(20, 60),
+                    h: random(20, 60),
+                    depth: random(10, 30),
+                    col: color(random(100, 255), random(100, 255), random(100, 255)),
+                    angle: 0,
+                    rotSpeed: random(-0.02, 0.02)
+                });
+            }
+
+            // Create test ships (if SHIP_DEFINITIONS available)
+            if (typeof SHIP_DEFINITIONS !== 'undefined') {
+                const keys = Object.keys(SHIP_DEFINITIONS);
+                for (let i = 0; i < shipCount && keys.length > 0; i++) {
+                    const key = keys[i % keys.length];
+                    const def = SHIP_DEFINITIONS[key];
+                    ships.push({
+                        def: def,
+                        x: random(100, width - 100),
+                        y: random(100, height - 100),
+                        size: random(40, 80),
+                        angle: random(TWO_PI)
+                    });
+                }
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('prismCount').textContent = prismCount;
+            document.getElementById('boxCount').textContent = boxCount;
+            document.getElementById('shipCount').textContent = ships.length;
+        }
+
+        function runShadingBenchmark() {
+            const iterations = 1000000;
+            const angles = [];
+            for (let i = 0; i < iterations; i++) {
+                angles.push(Math.random() * Math.PI * 4 - Math.PI * 2);
+            }
+
+            // Test lookup method
+            let startLookup = performance.now();
+            let sumLookup = 0;
+            for (let i = 0; i < iterations; i++) {
+                sumLookup += getShading(angles[i]);
+            }
+            let lookupTime = performance.now() - startLookup;
+
+            // Test direct method
+            let startDirect = performance.now();
+            let sumDirect = 0;
+            for (let i = 0; i < iterations; i++) {
+                sumDirect += computeShading(angles[i]);
+            }
+            let directTime = performance.now() - startDirect;
+
+            // Display results
+            document.getElementById('lookupTime').textContent = lookupTime.toFixed(1) + ' ms';
+            document.getElementById('directTime').textContent = directTime.toFixed(1) + ' ms';
+            document.getElementById('speedup').textContent = (directTime / lookupTime).toFixed(2) + 'x';
+
+            console.log(`Shading Benchmark Results (${iterations.toLocaleString()} iterations):`);
+            console.log(`  Lookup: ${lookupTime.toFixed(1)} ms (checksum: ${sumLookup.toFixed(2)})`);
+            console.log(`  Direct: ${directTime.toFixed(1)} ms (checksum: ${sumDirect.toFixed(2)})`);
+            console.log(`  Speedup: ${(directTime / lookupTime).toFixed(2)}x`);
+        }
+
+        function draw() {
+            let frameStart = performance.now();
+            drawCallCount = 0;
+
+            background(10, 18, 30);
+
+            // Draw sun indicator
+            push();
+            noStroke();
+            fill(255, 240, 180, 200);
+            ellipse(40, 40, 60, 60);
+            fill(255, 240, 180, 80);
+            ellipse(40, 40, 150, 150);
+            pop();
+
+            const sunAngle = Math.atan2(-height / 2, -width / 2);
+
+            // Draw prisms
+            for (let p of prisms) {
+                p.angle += p.rotSpeed;
+                if (typeof Draw3D !== 'undefined' && typeof Draw3D.drawPrism === 'function') {
+                    Draw3D.drawPrism(p.x, p.y, p.r, p.sides, p.depth, p.col, p.angle, sunAngle);
+                    drawCallCount++;
+                }
+            }
+
+            // Draw boxes
+            for (let b of boxes) {
+                b.angle += b.rotSpeed;
+                if (typeof Draw3D !== 'undefined' && typeof Draw3D.drawBox3D === 'function') {
+                    Draw3D.drawBox3D(b.x, b.y, b.w, b.h, b.depth, b.col, b.angle, sunAngle);
+                    drawCallCount++;
+                }
+            }
+
+            // Draw ships
+            for (let s of ships) {
+                push();
+                translate(s.x, s.y);
+                rotate(s.angle);
+                if (s.def && s.def.drawFunction) {
+                    try {
+                        s.def.drawFunction(s.size, false, 0, sunAngle);
+                    } catch (e) { }
+                } else if (typeof drawGenericShip === 'function' && s.def) {
+                    try {
+                        drawGenericShip(s.def, s.size, false, 0, sunAngle);
+                    } catch (e) { }
+                }
+                pop();
+                drawCallCount++;
+            }
+
+            // Update frame time stats
+            let frameEnd = performance.now();
+            let frameTime = frameEnd - frameStart;
+            frameTimeHistory.push(frameTime);
+            if (frameTimeHistory.length > 60) frameTimeHistory.shift();
+
+            let avgFrameTime = frameTimeHistory.reduce((a, b) => a + b, 0) / frameTimeHistory.length;
+            let fps = 1000 / avgFrameTime;
+
+            // Update display
+            document.getElementById('fps').textContent = fps.toFixed(1);
+            document.getElementById('fps').className = 'stat-value' + (fps < 30 ? ' bad' : fps < 50 ? ' warning' : '');
+            document.getElementById('frameTime').textContent = avgFrameTime.toFixed(1) + ' ms';
+            document.getElementById('frameTime').className = 'stat-value' + (avgFrameTime > 33 ? ' bad' : avgFrameTime > 20 ? ' warning' : '');
+            document.getElementById('drawCalls').textContent = drawCallCount;
+        }
+    </script>
+
+    <script src="../draw3d.js"></script>
+    <script src="../ships.js"></script>
+</body>
+
+</html>

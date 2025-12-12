@@ -1,23 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Space Objects Viewer</title>
     <script src="../libraries/p5.min.js"></script>
     <style>
-        body { margin:0; background:#071021; color:#e6eef8; font-family: sans-serif; }
-        #ui { position: absolute; left: 12px; top: 12px; background: rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); }
-        button, select { margin:4px 6px 4px 0; padding:6px 8px; background:#142030; color:#e6eef8; border:1px solid #2a4658; border-radius:4px; }
-        h3 { margin:0 0 8px 0; font-size:14px; }
+        body {
+            margin: 0;
+            background: #071021;
+            color: #e6eef8;
+            font-family: sans-serif;
+        }
+
+        #ui {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        button,
+        select {
+            margin: 4px 6px 4px 0;
+            padding: 6px 8px;
+            background: #142030;
+            color: #e6eef8;
+            border: 1px solid #2a4658;
+            border-radius: 4px;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
     </style>
 </head>
+
 <body>
     <div id="ui">
         <h3>Space Objects Viewer</h3>
         <button id="respawn">Respawn All</button>
         <button id="shuffle">Shuffle Positions</button>
-        <label>Scale: <select id="scale"><option>0.6</option><option selected>1</option><option>1.4</option><option>2</option></select></label>
+        <label>Scale: <select id="scale">
+                <option>0.6</option>
+                <option selected>1</option>
+                <option>1.4</option>
+                <option>2</option>
+            </select></label>
         <div id="info" style="margin-top:8px;font-size:12px;color:#9fb8d6"></div>
     </div>
 
@@ -37,7 +71,7 @@
 
             document.getElementById('respawn').addEventListener('click', spawnAllObjects);
             document.getElementById('shuffle').addEventListener('click', shufflePositions);
-            document.getElementById('scale').addEventListener('change', (e)=>{ scaleFactor = parseFloat(e.target.value) || 1; arrangeGrid(); updateInfo(); });
+            document.getElementById('scale').addEventListener('change', (e) => { scaleFactor = parseFloat(e.target.value) || 1; arrangeGrid(); updateInfo(); });
 
             // Keyboard navigation: arrows move through objects; Esc exits focused view
             window.addEventListener('keydown', (e) => {
@@ -66,7 +100,7 @@
             objects = [];
             // Collect types from sizeMap if available, otherwise fall back to a default list
             const types = (typeof sizeMap !== 'undefined') ? Object.keys(sizeMap) : [
-                'satellite','telescope','relay','habitat','debris','probe','beacon','solarSail','engineArray','cargoCluster','researchArray','orbitalGarden','decoyBuoy','miningPlatform','ancientRelic','signalFlare','outpost','asteroidMiner','fuelDepot','commDish','solarFarm','iceCrystal','nebulaFragment','alienArtifact','wreckage','observatoryDome','hydroponicsBay','weaponPlatform','shieldGenerator','energyCollector','quantumGate','prison','drugLab','labourColony','undergroundMarket','shipyard'
+                'satellite', 'telescope', 'relay', 'habitat', 'debris', 'probe', 'beacon', 'solarSail', 'engineArray', 'cargoCluster', 'researchArray', 'orbitalGarden', 'decoyBuoy', 'miningPlatform', 'ancientRelic', 'signalFlare', 'outpost', 'asteroidMiner', 'fuelDepot', 'commDish', 'solarFarm', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'wreckage', 'observatoryDome', 'hydroponicsBay', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'quantumGate', 'prison', 'drugLab', 'labourColony', 'undergroundMarket', 'shipyard'
             ];
 
             // Create SpaceObject instances arranged in a grid
@@ -99,20 +133,20 @@
 
             const rows = Math.ceil(objects.length / cols);
             const totalGridHeight = (rows - 1) * padding;
-            
+
             // Resize canvas if content needs more height than the window provides
             const requiredHeight = totalGridHeight + 300; // Top/bottom margins
             if (height < requiredHeight || (height > window.innerHeight && requiredHeight < height)) {
                 resizeCanvas(window.innerWidth, Math.max(window.innerHeight, requiredHeight));
             }
 
-            const startX = width/2 - (cols-1) * padding / 2;
+            const startX = width / 2 - (cols - 1) * padding / 2;
             // If content fits easily, center it. Otherwise use fixed top margin.
-            const startY = (height > requiredHeight) ? (height/2 - totalGridHeight/2) : 150;
+            const startY = (height > requiredHeight) ? (height / 2 - totalGridHeight / 2) : 150;
 
-            for (let i=0; i<objects.length; i++) {
+            for (let i = 0; i < objects.length; i++) {
                 const col = i % cols;
-                const row = Math.floor(i/cols);
+                const row = Math.floor(i / cols);
                 objects[i].pos.x = startX + col * padding;
                 objects[i].pos.y = startY + row * padding;
                 // scale visual size for readability (store scaled size but keep base)
@@ -122,8 +156,8 @@
 
         function shufflePositions() {
             for (let obj of objects) {
-                obj.pos.x = Math.random() * width * 0.8 + width*0.1;
-                obj.pos.y = Math.random() * height * 0.8 + height*0.1;
+                obj.pos.x = Math.random() * width * 0.8 + width * 0.1;
+                obj.pos.y = Math.random() * height * 0.8 + height * 0.1;
             }
             updateInfo();
         }
@@ -134,7 +168,7 @@
                 info.innerHTML = `Types: ${objects.length} — Use arrow keys to focus an object (enter fullscreen view).`;
             } else {
                 const obj = objects[focusedIndex];
-                info.innerHTML = `Viewing ${focusedIndex+1}/${objects.length}: ${obj.type} — Use arrows to navigate, Esc to exit.`;
+                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type} — Use arrows to navigate, Esc to exit.`;
             }
         }
 
@@ -142,29 +176,29 @@
             if (objects.length === 0) return;
             focusedIndex = (i + objects.length) % objects.length;
             // try to enter browser fullscreen for immersive view
-            try { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); } catch(e) { /* ignore */ }
-            
+            try { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); } catch (e) { /* ignore */ }
+
             arrangeGrid(); // Ensure canvas is sized correctly for single view
             updateInfo();
         }
 
         function clearFocus() {
             focusedIndex = -1;
-            try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch(e) { /* ignore */ }
+            try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch (e) { /* ignore */ }
             arrangeGrid();
             updateInfo();
         }
 
         function draw() {
-            background(6,12,20);
+            background(6, 12, 20);
 
             // Sun indicator at top-left to match spaceObjects' sun-angle math (sun at 0,0 world coords)
             push();
             noStroke();
-            fill(255,240,180,200);
-            ellipse(40,40,48,48);
-            fill(255,240,180,120);
-            ellipse(40,40,120,120);
+            fill(255, 240, 180, 200);
+            ellipse(40, 40, 48, 48);
+            fill(255, 240, 180, 120);
+            ellipse(40, 40, 120, 120);
             pop();
 
             // Draw grid label
@@ -186,8 +220,8 @@
                 // save old state
                 const oldX = obj.pos.x, oldY = obj.pos.y, oldSize = obj.size;
 
-                obj.pos.x = width/2;
-                obj.pos.y = height/2;
+                obj.pos.x = width / 2;
+                obj.pos.y = height / 2;
                 // choose a size that fills most of the screen
                 obj.size = Math.floor(Math.min(width, height) * 0.62);
 
@@ -197,9 +231,9 @@
 
                 // label and navigation hint
                 push(); fill(230); textSize(18); textAlign(CENTER, TOP);
-                text(`${focusedIndex+1}/${objects.length} — ${obj.type}`, width/2, height/2 + obj.size*0.65 + 10);
+                text(`${focusedIndex + 1}/${objects.length} — ${obj.type}`, width / 2, height / 2 + obj.size * 0.65 + 10);
                 textSize(12);
-                text('← ↑ : prev   ↓ → : next   Esc : exit', width/2, height - 36);
+                text('← ↑ : prev   ↓ → : next   Esc : exit', width / 2, height - 36);
                 pop();
 
                 // restore
@@ -208,6 +242,8 @@
         }
     </script>
 
+    <script src="../draw3d.js"></script>
     <script src="../spaceObjects.js"></script>
 </body>
+
 </html>

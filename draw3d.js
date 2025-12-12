@@ -38,6 +38,37 @@ function computeShading(angleDiff) {
 // ============================================================================
 // DRAW3D OBJECT - Centralized 3D rendering helpers
 // ============================================================================
+
+// Pre-computed trig tables for common polygon sides (4-16 sides)
+const _trigCache = {};
+function getTrigCache(sides) {
+    if (!_trigCache[sides]) {
+        const angleStep = (Math.PI * 2) / sides;
+        const cache = { cos: new Float32Array(sides), sin: new Float32Array(sides) };
+        for (let i = 0; i < sides; i++) {
+            const ang = i * angleStep - Math.PI / 2;
+            cache.cos[i] = Math.cos(ang);
+            cache.sin[i] = Math.sin(ang);
+        }
+        _trigCache[sides] = cache;
+    }
+    return _trigCache[sides];
+}
+
+// Color component cache to avoid repeated p5 color() calls
+const _colorCache = new WeakMap();
+function getColorComponents(col) {
+    if (_colorCache.has(col)) return _colorCache.get(col);
+    const components = {
+        r: red(col),
+        g: green(col),
+        b: blue(col),
+        a: alpha(col)
+    };
+    _colorCache.set(col, components);
+    return components;
+}
+
 const Draw3D = {
 
     /**
@@ -53,45 +84,46 @@ const Draw3D = {
         };
     },
 
+
     /**
      * Draw an extruded regular prism (polygon with depth)
      */
     drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle) {
         const dv = this.getDepthVector(depth, angle);
-        const angleStep = TWO_PI / sides;
+        const trig = getTrigCache(sides);
+        const cc = getColorComponents(col);
+        const angleStep = (Math.PI * 2) / sides;
 
         strokeWeight(1);
 
-        // Draw Bottom Cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+        // Draw Bottom Cap - use cached colors
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI / 2;
-            vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
+            vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
         }
         endShape(CLOSE);
 
         // Draw sides with backface culling
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI / 2;
-            const nextAng = (i + 1) * angleStep - PI / 2;
-            const faceAngle = (i + 0.5) * angleStep - PI / 2;
+            const next = (i + 1) % sides;
+            const faceAngle = (i + 0.5) * angleStep - Math.PI / 2;
 
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
-                const vx = x + Math.cos(ang) * r;
-                const vy = y + Math.sin(ang) * r;
-                const nvx = x + Math.cos(nextAng) * r;
-                const nvy = y + Math.sin(nextAng) * r;
+                const vx = x + trig.cos[i] * r;
+                const vy = y + trig.sin[i] * r;
+                const nvx = x + trig.cos[next] * r;
+                const nvy = y + trig.sin[next] * r;
 
                 const b = getShading(faceAngle - sunAngle);
 
-                fill(red(col) * b, green(col) * b, blue(col) * b, alpha(col));
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8, alpha(col));
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
                 beginShape();
                 vertex(vx + dv.x, vy + dv.y);
@@ -104,11 +136,10 @@ const Draw3D = {
 
         // Draw Top
         fill(col);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI / 2;
-            vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+            vertex(x + trig.cos[i] * r, y + trig.sin[i] * r);
         }
         endShape(CLOSE);
     },
@@ -181,16 +212,18 @@ const Draw3D = {
      */
     drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle) {
         const dv = this.getDepthVector(depth, angle);
+        const cc = getColorComponents(col);
         const hw = w / 2;
         const hh = h / 2;
 
-        const faceAngles = [-PI / 2, 0, PI / 2, PI];
+        // Pre-computed face angles and normals for box
+        const faceAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
 
         strokeWeight(1);
 
         // Bottom Cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
         vertex(x - hw + dv.x, y - hh + dv.y);
         vertex(x + hw + dv.x, y - hh + dv.y);
@@ -207,8 +240,8 @@ const Draw3D = {
             if (dot > 0.001) {
                 const b = getShading(faceAngles[i] - sunAngle);
 
-                fill(red(col) * b, green(col) * b, blue(col) * b, alpha(col));
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8, alpha(col));
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
                 beginShape();
                 let x1, y1, x2, y2;
@@ -227,7 +260,7 @@ const Draw3D = {
 
         // Top
         fill(col);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         rectMode(CENTER);
         rect(x, y, w, h);
     },
