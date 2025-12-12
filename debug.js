@@ -7,7 +7,7 @@
 
   // Default flags (quiet by default)
   const defaults = {
-    DEBUG_AI: false,           // AI flow/state/combat
+    DEBUG_AI: true,           // AI flow/state/combat
     DEBUG_ENEMY_BEHAVIORS: false, // Enemy-specific AI behavior logs (enemyAIBehaviors.js)
     DEBUG_TARGETING: false,    // Target selection/scoring
     DEBUG_DAMAGE: false,       // Damage/hit/barrier
@@ -187,7 +187,7 @@
     }
     try {
       global.localStorage?.setItem(STORE_KEY, JSON.stringify(api.get()));
-    } catch (e) {}
+    } catch (e) { }
     return api.get();
   };
 

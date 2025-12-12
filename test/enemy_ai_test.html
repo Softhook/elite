@@ -785,6 +785,69 @@
             });
         });
 
+        // ============================================
+        // Dual-Target Engagement Tests
+        // ============================================
+        describe('Dual-Target Engagement', () => {
+            it('Destroyer should have canDualEngage capability', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'Destroyer', AI_ROLE.COMBAT);
+                expect(typeof enemy.canDualEngage).toBe('function');
+                expect(enemy.canDualEngage()).toBe(true);
+            });
+
+            it('SeparatistBulwark should have canDualEngage capability', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'SeparatistBulwark', AI_ROLE.COMBAT);
+                expect(enemy.canDualEngage()).toBe(true);
+            });
+
+            it('ImperialPaladin should have canDualEngage capability', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'ImperialPaladin', AI_ROLE.COMBAT);
+                expect(enemy.canDualEngage()).toBe(true);
+            });
+
+            it('Regular ships should NOT have canDualEngage capability', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                expect(enemy.canDualEngage()).toBe(false);
+            });
+
+            it('should have findSecondaryTarget method', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'Destroyer', AI_ROLE.COMBAT);
+                expect(typeof enemy.findSecondaryTarget).toBe('function');
+            });
+
+            it('should find secondary target when multiple enemies exist', () => {
+                const mockPlayer = createMockPlayer({ x: 500, y: 500 });
+                const enemy = new Enemy(0, 0, mockPlayer, 'Destroyer', AI_ROLE.COMBAT);
+                enemy.firingRange = 600;
+                enemy.visualFiringRange = 600;
+
+                // Create other enemies in range
+                const target1 = new Enemy(100, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                const target2 = new Enemy(200, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+
+                const system = createMockSystem({
+                    enemies: [enemy, target1, target2]
+                });
+
+                enemy.target = target1;
+                const secondaryTarget = enemy.findSecondaryTarget(system, target1);
+
+                // Should find target2 as secondary (not target1 which is primary)
+                expect(secondaryTarget).toBe(target2);
+            });
+
+            it('should have performSecondaryFiring method', () => {
+                const mockPlayer = createMockPlayer();
+                const enemy = new Enemy(0, 0, mockPlayer, 'Destroyer', AI_ROLE.COMBAT);
+                expect(typeof enemy.performSecondaryFiring).toBe('function');
+            });
+        });
+
         runTests();
     </script>
 </body>

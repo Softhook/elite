@@ -45,9 +45,9 @@ class EnemyCombat {
         let currentWeaponScore = -1;
 
         // Check if target is already entangled (tangle effect) or currently harpooned by any active harpoon
-        const targetAlreadyEntangled = target && 
-                        target.dragMultiplier > 1.0 && 
-                        target.dragEffectTimer > 0;
+        const targetAlreadyEntangled = target &&
+            target.dragMultiplier > 1.0 &&
+            target.dragEffectTimer > 0;
 
         // Detect whether the target is currently part of an active Harpoon tether in the system
         // Use a simple counter on the entity for O(1) checks (set when harpoon is created/broken)
@@ -57,7 +57,7 @@ class EnemyCombat {
         // an outgoing harpoon projectile. If the ship already has a tether out or a pending
         // shot, it should not attempt to fire another one.
         const ownerHarpooned = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
-        
+
         for (const weapon of this.weapons) {
             let score = 0;
 
@@ -78,12 +78,12 @@ class EnemyCombat {
             const isMediumRange = distanceToTarget > effectiveRange * CLOSE_RANGE_MULT && distanceToTarget <= effectiveRange * MEDIUM_RANGE_MULT;
             const isShortRange = distanceToTarget <= effectiveRange * CLOSE_RANGE_MULT;
             const isVeryCloseRange = distanceToTarget <= effectiveRange * 0.2; // Very close = 20% of firing range
-            
+
             // --- FORCE WEAPON LOGIC ---
             // Force weapons are area-of-effect weapons effective up to their maxRadius
             if (baseType === WEAPON_TYPE.FORCE) {
                 const forceMaxRadius = weapon.maxRadius || 500; // Default to 500 if not specified
-                
+
                 // Force weapons are most effective when target is within 60% of maxRadius
                 // and should be prioritized when within the actual blast radius
                 if (distanceToTarget <= forceMaxRadius * 0.6) {
@@ -104,12 +104,12 @@ class EnemyCombat {
                     // Extra effective against very fast targets
                     if (target.maxSpeed > 6.5) {
                         score += 5; // Highest priority for very fast targets
-                    } 
+                    }
                     // Good for fast targets
                     else if (target.maxSpeed > 5) {
                         score += 3;
                         if (isMediumRange) score += 1; // small bump at medium range vs fast targets
-                    } 
+                    }
                 } else {
                     // Target is already entangled - significant penalty
                     score -= 10; // Strong negative score to discourage selection
@@ -124,8 +124,8 @@ class EnemyCombat {
                     score -= 10;
                 } else {
                     // Prefer harpoon when the target is faster than us or generally fast
-                    const targetSpeed = target.maxSpeed || (target.vel ? Math.sqrt((target.vel.x||0)*(target.vel.x||0) + (target.vel.y||0)*(target.vel.y||0)) : 0);
-                    const ourSpeed = this.maxSpeed || (this.vel ? Math.sqrt((this.vel.x||0)*(this.vel.x||0) + (this.vel.y||0)*(this.vel.y||0)) : 0);
+                    const targetSpeed = target.maxSpeed || (target.vel ? Math.sqrt((target.vel.x || 0) * (target.vel.x || 0) + (target.vel.y || 0) * (target.vel.y || 0)) : 0);
+                    const ourSpeed = this.maxSpeed || (this.vel ? Math.sqrt((this.vel.x || 0) * (this.vel.x || 0) + (this.vel.y || 0) * (this.vel.y || 0)) : 0);
 
                     // High priority when target is significantly faster or very fast in general
                     if (targetSpeed > ourSpeed + 1.5 || targetSpeed > 6) {
@@ -184,7 +184,7 @@ class EnemyCombat {
             } else if (baseType === WEAPON_TYPE.BEAM && isShortRange) {
                 score += 1;
             }
-            
+
             if (baseType === WEAPON_TYPE.SPREAD && isShortRange) {
                 score += 3; // now catches spread2/3/4/5
             } else if (baseType === WEAPON_TYPE.STRAIGHT && isMediumRange) {
@@ -192,23 +192,23 @@ class EnemyCombat {
             } else if (baseType === WEAPON_TYPE.STRAIGHT && isLongRange) {
                 score += 1;
             }
-            
+
             if (baseType === WEAPON_TYPE.MISSILE && (isMediumRange || isLongRange)) {
                 score += 3; // Missiles are best at medium to long range
             } else if (baseType === WEAPON_TYPE.MISSILE && isShortRange) {
                 score += 1;
             }
-            
+
             if (baseType === WEAPON_TYPE.TURRET) {
                 score += 2; // Turrets are flexible at any range
             }
-            
+
             // Target-specific considerations
             if (target) {
                 // Against fast targets, prefer wide-angle weapons like spread
                 if (target.maxSpeed > 5 && baseType === WEAPON_TYPE.SPREAD) {
                     score += 3;
-                }    
+                }
                 // Against slow targets, prefer missile weapons
                 if (target.maxSpeed < 5 && baseType === WEAPON_TYPE.MISSILE) {
                     score += 2;
@@ -217,9 +217,9 @@ class EnemyCombat {
                 if (target.size > 50 && weapon.damage > 10) {
                     score += 2;
                 }
-                
+
             }
-            
+
             // If this weapon scores better, select it
             if (weapon === this.currentWeapon) {
                 currentWeaponScore = score;
@@ -229,13 +229,13 @@ class EnemyCombat {
                 bestWeapon = weapon;
             }
         }
-        
+
         // Only change weapons if the selected one is different and better by a threshold
         const improvement = (bestWeapon !== this.currentWeapon) ? (bestScore - (currentWeaponScore >= 0 ? currentWeaponScore : 0)) : 0;
         if (bestWeapon !== this.currentWeapon && improvement >= 0) {
             return bestWeapon;
         }
-        
+
         // Otherwise stick with current weapon
         return this.currentWeapon;
     }
@@ -246,10 +246,10 @@ class EnemyCombat {
      */
     selectBestWeapon(distanceToTarget) {
         if (!this.weapons || this.weapons.length <= 1) return;
-        
+
         // Use our new optimal weapon selection algorithm
         const optimalWeapon = this.selectOptimalWeapon(distanceToTarget, this.target);
-        
+
         // If we got a different weapon, switch to it
         if (optimalWeapon !== this.currentWeapon) {
             // Find the index of the optimal weapon
@@ -260,9 +260,9 @@ class EnemyCombat {
                 this.fireRate = this.currentWeapon.fireRate;
                 // Reset cooldown when switching weapons (half normal delay)
                 this.fireCooldown = this.computeCooldown(this.fireRate * 0.5);
-                
+
                 // Log weapon change for debugging
-                if (this.lastWeaponSwitch === undefined || 
+                if (this.lastWeaponSwitch === undefined ||
                     millis() - this.lastWeaponSwitch > 2000) {
                     AI_LOG(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
                     this.lastWeaponSwitch = millis();
@@ -441,27 +441,27 @@ class EnemyCombat {
         if (this.target && this.target.constructor && this.target.constructor.name === 'Cargo') {
             return;
         }
-        
+
         // Only debug firing decisions against player
         const targetingPlayer = this.target instanceof Player;
-        
+
         // Check if Hauler is in a valid combat state to fire
-        const isHaulerInValidCombatState = this.role !== AI_ROLE.HAULER || 
-            (this.currentState === AI_STATE.APPROACHING || 
-             this.currentState === AI_STATE.ATTACK_PASS || 
-             this.currentState === AI_STATE.REPOSITIONING ||
-             this.currentState === AI_STATE.SNIPING);
-        
+        const isHaulerInValidCombatState = this.role !== AI_ROLE.HAULER ||
+            (this.currentState === AI_STATE.APPROACHING ||
+                this.currentState === AI_STATE.ATTACK_PASS ||
+                this.currentState === AI_STATE.REPOSITIONING ||
+                this.currentState === AI_STATE.SNIPING);
+
         // Don't proceed with firing logic if Hauler is not in valid combat state
         if (!isHaulerInValidCombatState) {
             return;
         }
-        
+
         // Select best weapon (no debug)
         this.selectBestWeapon(distanceToTarget);
 
         // If the target is currently attached to an active Harpoon tether, avoid holding/firing a harpoon against it
-            try {
+        try {
             const targetIsHarpooned = !!(this.target && (((this.target._harpoonCount || 0) + (this.target._harpoonPending || 0)) > 0));
             const ownerHasHarpoon = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
             if ((targetIsHarpooned || ownerHasHarpoon) && this.currentWeapon) {
@@ -479,10 +479,10 @@ class EnemyCombat {
         } catch (e) {
             // defensive: ignore unexpected structure
         }
-        
+
         // Safety: unarmed ships should not reach here, but guard anyway
         if (!this.currentWeapon) return;
-        
+
         // Adjust firing range based on weapon type
         let effectiveFiringRange = this.firingRange;
         if (this.currentWeapon) {
@@ -492,9 +492,9 @@ class EnemyCombat {
                 case WEAPON_TYPE.BEAM: effectiveFiringRange *= 1.2; break;
                 case WEAPON_TYPE.MISSILE: effectiveFiringRange *= 1.8; break;
                 case WEAPON_TYPE.TURRET: effectiveFiringRange *= 0.8; break;
-                case WEAPON_TYPE.FORCE: 
+                case WEAPON_TYPE.FORCE:
                     // Force weapons should use their actual maxRadius as effective range
-                    effectiveFiringRange = this.currentWeapon.maxRadius || this.firingRange; 
+                    effectiveFiringRange = this.currentWeapon.maxRadius || this.firingRange;
                     break;
             }
         }
@@ -526,24 +526,39 @@ class EnemyCombat {
                     // Fallback if no weapon defined
                     this.fireWeapon(shootingAngle);
                 }
+
+                // DUAL-ENGAGE: Large ships can fire at a secondary target simultaneously
+                if (typeof this.canDualEngage === 'function' && this.canDualEngage() &&
+                    this.weapons && this.weapons.length >= 2) {
+                    const secondaryTarget = this.findSecondaryTarget(system, this.target);
+                    if (secondaryTarget) {
+                        this.performSecondaryFiring(system, secondaryTarget);
+                    }
+                }
             } else if (targetingPlayer && this.currentState === AI_STATE.IDLE) {
                 // Debug when IDLE pirates spot player
-                        AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`);
+                AI_LOG(`🔫 PLAYER SPOTTED: ${this.shipTypeName} spotted player in range but can't fire yet`);
             }
+        }
+
+        // Update secondary fire cooldown (decrement each frame)
+        if (this._secondaryFireCooldown > 0) {
+            const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+            this._secondaryFireCooldown = Math.max(0, this._secondaryFireCooldown - dtSeconds);
         }
     }
 
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
         // Allow haulers to fire if they're in a defensive combat mode
-        if (this.role === AI_ROLE.HAULER && 
-            !(this.currentState === AI_STATE.APPROACHING || 
-              this.currentState === AI_STATE.ATTACK_PASS || 
-              this.currentState === AI_STATE.REPOSITIONING ||
-              this.currentState === AI_STATE.SNIPING)) {
+        if (this.role === AI_ROLE.HAULER &&
+            !(this.currentState === AI_STATE.APPROACHING ||
+                this.currentState === AI_STATE.ATTACK_PASS ||
+                this.currentState === AI_STATE.REPOSITIONING ||
+                this.currentState === AI_STATE.SNIPING)) {
             return; // Only block firing when not in combat states
         }
-        
+
         if (!system) { return; }
         if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
         const type = this.currentWeapon?.type || WEAPON_TYPE.PROJECTILE;
@@ -596,8 +611,8 @@ class EnemyCombat {
                 this.barrierCooldown = this.currentWeapon.fireRate; // Set cooldown for the barrier
 
                 // Log barrier activation, similar to player's UI message
-                        AI_LOG(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
-                
+                AI_LOG(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
+
                 // Sound effect for barrier activation (parity with player)
                 if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp'); }
 
@@ -615,7 +630,7 @@ class EnemyCombat {
 
         // Prevent firing a second harpoon if either we already have an active tether
         // or the target is already attached to a harpoon. Cycle to another weapon instead.
-            if (weaponType === WEAPON_TYPE.HARPOON) {
+        if (weaponType === WEAPON_TYPE.HARPOON) {
             const ownerHasHarpoon = !!((((this._harpoonCount || 0) + (this._harpoonPending || 0)) > 0));
             const targetHasHarpoon = !!(targetToPass && (((targetToPass._harpoonCount || 0) + (targetToPass._harpoonPending || 0)) > 0));
             if (ownerHasHarpoon || targetHasHarpoon) {
@@ -638,9 +653,9 @@ class EnemyCombat {
 
         // Default firing angle (ship's current heading)
         let fireAngle = (preferredAngle !== null && isFinite(preferredAngle)) ? preferredAngle : this.angle;
-    
+
         // Check if target is stationary or very slow-moving
-        if (preferredAngle === null && targetToPass && targetToPass.vel && 
+        if (preferredAngle === null && targetToPass && targetToPass.vel &&
             targetToPass.vel.magSq() < 0.25) { // threshold for "almost stationary"
             // Aim directly at the target's current position instead of predicted position
             fireAngle = atan2(
@@ -648,7 +663,7 @@ class EnemyCombat {
                 targetToPass.pos.x - this.pos.x
             );
         }
-        
+
         // Handle mine weapon - drop and switch to another weapon
         if (weaponType === WEAPON_TYPE.MINE) {
             const firedMine = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
@@ -660,24 +675,24 @@ class EnemyCombat {
             this.cycleWeapon();
             return;
         }
-        
+
         // Rest of existing code remains unchanged
         if (weaponType === WEAPON_TYPE.MISSILE) {
             // Block missiles against invalid or non-hostile targets like cargo
             if (!targetToPass ||
                 targetToPass.destroyed ||
-                (targetToPass.hull !== undefined && targetToPass.hull <=0) ||
+                (targetToPass.hull !== undefined && targetToPass.hull <= 0) ||
                 (targetToPass.constructor && targetToPass.constructor.name === 'Cargo')) {
                 return; // Don't fire missile without a valid target
             }
         }
-        
+
         // Check if weapons are disabled by EMP nebula
         if (this.weaponsDisabled) {
             // Silently fail - no console spam for enemies
             return;
         }
-    
+
         // Extra safety: prevent firing at cargo with any weapon type
         if (targetToPass && targetToPass.constructor && targetToPass.constructor.name === 'Cargo') {
             return;
@@ -694,9 +709,9 @@ class EnemyCombat {
                 const s = (this.currentWeapon && this.currentWeapon.speed) ? this.currentWeapon.speed : 30;
 
                 // Solve quadratic for interception time: (tv^2 - s^2) t^2 + 2*(r·v) t + r^2 = 0
-                const a = (tvx*tvx + tvy*tvy) - (s*s);
-                const b = 2 * (tx*tvx + ty*tvy);
-                const c = tx*tx + ty*ty;
+                const a = (tvx * tvx + tvy * tvy) - (s * s);
+                const b = 2 * (tx * tvx + ty * tvy);
+                const c = tx * tx + ty * ty;
                 let t = null;
                 if (Math.abs(a) < 1e-6) {
                     // Degenerate to linear: b t + c = 0 -> t = -c/b
@@ -705,13 +720,13 @@ class EnemyCombat {
                         if (tl > 0) t = tl;
                     }
                 } else {
-                    const disc = b*b - 4*a*c;
+                    const disc = b * b - 4 * a * c;
                     if (disc >= 0) {
                         const sqrtD = Math.sqrt(disc);
-                        const t1 = (-b - sqrtD) / (2*a);
-                        const t2 = (-b + sqrtD) / (2*a);
+                        const t1 = (-b - sqrtD) / (2 * a);
+                        const t2 = (-b + sqrtD) / (2 * a);
                         // pick smallest positive time
-                        const candidates = [t1, t2].filter(v => v > 0).sort((A,B)=>A-B);
+                        const candidates = [t1, t2].filter(v => v > 0).sort((A, B) => A - B);
                         if (candidates.length) t = candidates[0];
                     }
                 }
@@ -730,7 +745,7 @@ class EnemyCombat {
         if (fired) {
             this.fireCooldown = this.computeCooldown(this.fireRate); // General weapon fire cooldown
         } else if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined' &&
-               WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
+            WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
             this._switchWeaponAfterBeamOverheat();
         }
 
@@ -741,29 +756,29 @@ class EnemyCombat {
     /** Cycles to the next available weapon */
     cycleWeapon() {
         if (!this.weapons || this.weapons.length <= 1) return;
-        
+
         const originalIndex = this.weaponIndex;
         let attempts = 0;
-        
+
         do {
             this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
             const candidate = this.weapons[this.weaponIndex];
-            
+
             // Skip overheated beams
-            if (candidate && candidate.type === WEAPON_TYPE.BEAM && 
-                typeof WeaponSystem !== 'undefined' && 
+            if (candidate && candidate.type === WEAPON_TYPE.BEAM &&
+                typeof WeaponSystem !== 'undefined' &&
                 WeaponSystem.isBeamOverheated(this, candidate)) {
                 attempts++;
                 continue;
             }
-            
+
             // Found a usable weapon
             this.currentWeapon = candidate;
             this.fireRate = candidate.fireRate;
             return;
-            
+
         } while (this.weaponIndex !== originalIndex && attempts < this.weapons.length);
-        
+
         // If all weapons are overheated/unavailable, stay on current
         // (should rarely happen, but prevents infinite loop)
     }
@@ -804,16 +819,242 @@ class EnemyCombat {
     isArmed() {
         return !!this.currentWeapon;
     }
-    
+
     /**
      * Check if currently in a combat state
      * @return {boolean} Whether ship is in a combat-related state
      */
     isInCombatState() {
-        return this.currentState === AI_STATE.APPROACHING || 
-               this.currentState === AI_STATE.ATTACK_PASS || 
-               this.currentState === AI_STATE.REPOSITIONING ||
-               this.currentState === AI_STATE.SNIPING;
+        return this.currentState === AI_STATE.APPROACHING ||
+            this.currentState === AI_STATE.ATTACK_PASS ||
+            this.currentState === AI_STATE.REPOSITIONING ||
+            this.currentState === AI_STATE.SNIPING;
+    }
+
+    /**
+     * Check if this ship can engage two targets simultaneously
+     * @return {boolean} Whether ship has dual-engage capability
+     */
+    canDualEngage() {
+        // Check ship definition for canDualEngage property
+        if (this.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined') {
+            const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
+            return !!(shipDef && shipDef.canDualEngage);
+        }
+        return false;
+    }
+
+    /**
+     * Find a secondary target for dual-engage capable ships
+     * @param {Object} system - The current star system
+     * @param {Object} primaryTarget - The current primary target to exclude
+     * @return {Object|null} A secondary target or null if none found
+     */
+    findSecondaryTarget(system, primaryTarget) {
+        if (!system || !this.pos) return null;
+
+        const candidates = [];
+        const firingRange = this.visualFiringRange || this.firingRange || 500;
+
+        // Check enemies as potential secondary targets
+        if (Array.isArray(system.enemies)) {
+            for (const enemy of system.enemies) {
+                // Skip self, primary target, destroyed, or invalid targets
+                if (!enemy || enemy === this || enemy === primaryTarget) continue;
+                if (enemy.destroyed || enemy.hull <= 0) continue;
+                if (!enemy.pos) continue;
+
+                // Skip same-faction targets
+                if (typeof this._getShipFaction === 'function') {
+                    const ourFaction = this._getShipFaction(this);
+                    const theirFaction = this._getShipFaction(enemy);
+                    if (ourFaction && theirFaction && ourFaction === theirFaction) continue;
+                }
+
+                // Check if within firing range
+                const dx = enemy.pos.x - this.pos.x;
+                const dy = enemy.pos.y - this.pos.y;
+                const distSq = dx * dx + dy * dy;
+                const rangeSq = firingRange * firingRange;
+
+                if (distSq <= rangeSq) {
+                    candidates.push({
+                        target: enemy,
+                        distSq: distSq
+                    });
+                }
+            }
+        }
+
+        // Check player as potential secondary target
+        if (system.player && system.player !== primaryTarget) {
+            const player = system.player;
+            if (player.pos && !player.destroyed && player.hull > 0) {
+                // Only target player if they're hostile (wanted, attacked us, etc.)
+                const shouldTargetPlayer = (
+                    (typeof system.isPlayerWanted === 'function' && system.isPlayerWanted()) ||
+                    this.lastAttacker === player ||
+                    (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN)
+                );
+
+                if (shouldTargetPlayer) {
+                    const dx = player.pos.x - this.pos.x;
+                    const dy = player.pos.y - this.pos.y;
+                    const distSq = dx * dx + dy * dy;
+                    const rangeSq = firingRange * firingRange;
+
+                    if (distSq <= rangeSq) {
+                        candidates.push({
+                            target: player,
+                            distSq: distSq
+                        });
+                    }
+                }
+            }
+        }
+
+        // Return closest secondary target
+        if (candidates.length === 0) return null;
+        candidates.sort((a, b) => a.distSq - b.distSq);
+        return candidates[0].target;
+    }
+
+    /**
+     * Perform firing at a secondary target for dual-engage ships
+     * Uses a different weapon than primary if multiple weapons available
+     * @param {Object} system - The current star system
+     * @param {Object} secondaryTarget - The secondary target to fire at
+     */
+    performSecondaryFiring(system, secondaryTarget) {
+        // Debug: track entry
+        const debugDualFire = false; // Set to true to enable verbose debug logging
+
+        if (!secondaryTarget || !secondaryTarget.pos || !this.pos) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Exit - invalid target or position`);
+            return;
+        }
+        if (!this.weapons || this.weapons.length < 2) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Exit - not enough weapons (${this.weapons?.length || 0})`);
+            return;
+        }
+
+        // Calculate distance and angle to secondary target
+        const dx = secondaryTarget.pos.x - this.pos.x;
+        const dy = secondaryTarget.pos.y - this.pos.y;
+        const distanceToSecondary = Math.sqrt(dx * dx + dy * dy);
+        const angleToSecondary = atan2(dy, dx);
+
+        // Check if secondary target is in range
+        const effectiveRange = this.visualFiringRange || this.firingRange || 500;
+        if (distanceToSecondary > effectiveRange) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Exit - secondary target out of range (${distanceToSecondary.toFixed(0)} > ${effectiveRange.toFixed(0)})`);
+            return;
+        }
+
+        // Check clear shot to secondary target
+        if (!this._hasClearShotToTarget(system, secondaryTarget.pos, distanceToSecondary)) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Exit - no clear shot to secondary target`);
+            return;
+        }
+
+        // Find a secondary weapon (different from current weapon)
+        // Priority: Turrets > Beams > Missiles > Projectile weapons
+        let secondaryWeapon = null;
+        let secondaryWeaponIndex = -1;
+        const primaryWeaponIndex = this.weaponIndex || 0;
+
+        // First pass: look for turrets (best for secondary fire - can aim independently)
+        for (let i = 0; i < this.weapons.length; i++) {
+            if (i === primaryWeaponIndex) continue;
+            const weapon = this.weapons[i];
+            if (!weapon) continue;
+
+            const baseType = getBaseWeaponType(weapon.type);
+
+            // Skip special weapons that shouldn't be used as secondary
+            if (baseType === WEAPON_TYPE.BARRIER ||
+                baseType === WEAPON_TYPE.MINE ||
+                baseType === WEAPON_TYPE.HARPOON) continue;
+
+            if (baseType === WEAPON_TYPE.TURRET) {
+                secondaryWeapon = weapon;
+                secondaryWeaponIndex = i;
+                break;
+            }
+        }
+
+        // Second pass: if no turret, look for beams or missiles
+        if (!secondaryWeapon) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (i === primaryWeaponIndex) continue;
+                const weapon = this.weapons[i];
+                if (!weapon) continue;
+
+                const baseType = getBaseWeaponType(weapon.type);
+
+                if (baseType === WEAPON_TYPE.BARRIER ||
+                    baseType === WEAPON_TYPE.MINE ||
+                    baseType === WEAPON_TYPE.HARPOON) continue;
+
+                // Skip overheated beams
+                if (baseType === WEAPON_TYPE.BEAM &&
+                    typeof WeaponSystem !== 'undefined' &&
+                    WeaponSystem.isBeamOverheated(this, weapon)) continue;
+
+                if (baseType === WEAPON_TYPE.BEAM || baseType === WEAPON_TYPE.MISSILE) {
+                    secondaryWeapon = weapon;
+                    secondaryWeaponIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // Third pass: take any available weapon
+        if (!secondaryWeapon) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (i === primaryWeaponIndex) continue;
+                const weapon = this.weapons[i];
+                if (!weapon) continue;
+
+                const baseType = getBaseWeaponType(weapon.type);
+
+                if (baseType === WEAPON_TYPE.BARRIER ||
+                    baseType === WEAPON_TYPE.MINE ||
+                    baseType === WEAPON_TYPE.HARPOON) continue;
+
+                secondaryWeapon = weapon;
+                secondaryWeaponIndex = i;
+                break;
+            }
+        }
+
+        if (!secondaryWeapon) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Exit - no suitable secondary weapon found`);
+            return;
+        }
+
+        // Check secondary cooldown (separate from primary)
+        if (this._secondaryFireCooldown === undefined) this._secondaryFireCooldown = 0;
+        if (this._secondaryFireCooldown > 0) {
+            if (debugDualFire && this._secondaryFireCooldown > 0.5) {
+                AI_LOG(`${this.shipTypeName} DUAL FIRE: On cooldown (${this._secondaryFireCooldown.toFixed(2)}s remaining)`);
+            }
+            return;
+        }
+
+        // Fire the secondary weapon at secondary target
+        const secondaryType = secondaryWeapon.type || WEAPON_TYPE.PROJECTILE;
+
+        if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Attempting fire with ${secondaryWeapon.name} at ${secondaryTarget.shipTypeName || 'target'}`);
+
+        const fired = WeaponSystem.fire(this, system, angleToSecondary, secondaryType, secondaryTarget);
+
+        if (fired) {
+            this._secondaryFireCooldown = this.computeCooldown(secondaryWeapon.fireRate || 0.5);
+            AI_LOG(`${this.shipTypeName} DUAL FIRE SUCCESS: ${secondaryWeapon.name} at ${secondaryTarget.shipTypeName || 'target'}, cooldown set to ${this._secondaryFireCooldown.toFixed(2)}s`);
+        } else {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: WeaponSystem.fire returned false for ${secondaryWeapon.name}`);
+        }
     }
 }
 

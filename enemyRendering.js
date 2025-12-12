@@ -16,7 +16,7 @@ class EnemyRendering {
     drawTurret() {
         // Turret is drawn in ship-local coordinates (already rotated with ship)
         const turretSize = this.size * 0.2; // Small turret relative to ship size
-        
+
         // Initialize turret definitions if not ready (Static cache on EnemyRendering)
         if (!EnemyRendering.TURRET_DEFS) {
             EnemyRendering.TURRET_DEFS = {
@@ -28,23 +28,23 @@ class EnemyRendering {
                 },
                 barrel: {
                     vertexData: [
-                        {x: 0, y: -0.2},
-                        {x: 0.8, y: -0.2},
-                        {x: 0.8, y: 0.2},
-                        {x: 0, y: 0.2}
+                        { x: 0, y: -0.2 },
+                        { x: 0.8, y: -0.2 },
+                        { x: 0.8, y: 0.2 },
+                        { x: 0, y: 0.2 }
                     ],
                     fillColor: [60, 70, 80],
                     strokeColor: [100, 110, 120],
                     strokeW: 1
                 }
             };
-            
+
             // Create octagon for base
-            for(let i=0; i<8; i++) {
-                let a = i * TWO_PI/8;
-                EnemyRendering.TURRET_DEFS.base.vertexData.push({x: cos(a), y: sin(a)});
+            for (let i = 0; i < 8; i++) {
+                let a = i * TWO_PI / 8;
+                EnemyRendering.TURRET_DEFS.base.vertexData.push({ x: cos(a), y: sin(a) });
             }
-            
+
             // Initialize caches using the global helper from ships.js
             if (typeof initShipCache === 'function') {
                 initShipCache(EnemyRendering.TURRET_DEFS.base);
@@ -54,7 +54,7 @@ class EnemyRendering {
 
         // Calculate turret angle
         let turretAngle = 0; // Default: facing forward (ship's direction)
-        
+
         // If this is the selected weapon and we have a target, track it
         if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
             if (this.lastTurretFiringAngle !== null) {
@@ -63,13 +63,13 @@ class EnemyRendering {
             } else {
                 // Find nearest target for initial tracking
                 const target = WeaponSystem.findNearestTarget(this, this.currentSystem);
-                
+
                 if (target && target.pos) {
                     // Calculate angle to target in world space
                     const dx = target.pos.x - this.pos.x;
                     const dy = target.pos.y - this.pos.y;
                     const angleToTarget = atan2(dy, dx);
-                    
+
                     // Convert to ship-local angle (subtract ship's angle since we're already rotated)
                     turretAngle = angleToTarget - this.angle;
                     // Set it for future use
@@ -77,13 +77,13 @@ class EnemyRendering {
                 }
             }
         }
-        
+
         // Check if we can use the 3D extrusion method
         if (typeof drawExtrudedPolyOptimized === 'function' && EnemyRendering.TURRET_DEFS.base._cache) {
             // Calculate depths
             const turretBaseDepth = turretSize * 0.4;
             const turretBarrelDepth = turretSize * 0.3;
-            
+
             // Calculate sun angle for lighting
             const sunAngle = atan2(-this.pos.y, -this.pos.x);
             const localSunAngle = sunAngle - this.angle;
@@ -93,7 +93,7 @@ class EnemyRendering {
             // In local space (rotated by this.angle), "up" is (-sin(angle), -cos(angle))
             const baseDvx = turretBaseDepth * sin(this.angle);
             const baseDvy = turretBaseDepth * cos(this.angle);
-            
+
             push(); // Save state before base translation
             translate(-baseDvx, -baseDvy); // Move "up" so bottom sits on ship
 
@@ -139,14 +139,14 @@ class EnemyRendering {
                     pop();
                 }
             } catch (e) { /* ignore highlight errors */ }
-            
+
             // --- Draw Barrel ---
             // We want to stack the barrel ON TOP of the base.
             // So we translate "up" again by the barrel's depth.
             // We are still in the ship's coordinate system (rotated by this.angle).
             const barrelOffsetX = turretBarrelDepth * sin(this.angle);
             const barrelOffsetY = turretBarrelDepth * cos(this.angle);
-            
+
             translate(-barrelOffsetX, -barrelOffsetY);
 
             push(); // Save state for rotation
@@ -195,7 +195,7 @@ class EnemyRendering {
                 }
             } catch (e) { /* ignore */ }
             pop(); // Restore rotation
-            
+
             pop(); // Restore translation (base + barrel)
 
         } else {
@@ -205,13 +205,13 @@ class EnemyRendering {
             stroke(120, 130, 140);
             strokeWeight(1);
             ellipse(0, 0, turretSize * 1.2, turretSize * 1.2);
-            
+
             rotate(turretAngle);
             fill(60, 70, 80);
             stroke(100, 110, 120);
             strokeWeight(1);
             rect(0, -turretSize * 0.2, turretSize * 0.8, turretSize * 0.4);
-            
+
             fill(80, 90, 100);
             rect(turretSize * 0.8, -turretSize * 0.15, turretSize * 0.2, turretSize * 0.3);
             pop();
@@ -235,7 +235,7 @@ class EnemyRendering {
         const drawFunc = shipDef?.drawFunction;
         if (typeof drawFunc !== 'function') {
             console.error(`Enemy draw: No draw function for ${this.shipTypeName}`);
-            push(); translate(this.pos.x, this.pos.y); fill(255,0,0, 150); noStroke(); ellipse(0,0,this.size,this.size); pop();
+            push(); translate(this.pos.x, this.pos.y); fill(255, 0, 0, 150); noStroke(); ellipse(0, 0, this.size, this.size); pop();
             return;
         }
 
@@ -265,52 +265,52 @@ class EnemyRendering {
                     targetLabel = "Patrol Point"; // Or just "Patrolling"
                 }
             } else if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
-                 // Check if patrol target is the jump zone
-                 if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
-                     this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
-                     targetLabel = "Jump Zone";
-                 } else {
-                     targetLabel = "System Edge"; // Fallback if jump zone unknown/not targeted
-                 }
+                // Check if patrol target is the jump zone
+                if (this.patrolTargetPos && this.currentSystem?.jumpZoneCenter &&
+                    this.patrolTargetPos.dist(this.currentSystem.jumpZoneCenter) < 50) {
+                    targetLabel = "Jump Zone";
+                } else {
+                    targetLabel = "System Edge"; // Fallback if jump zone unknown/not targeted
+                }
             } else if (this.currentState === AI_STATE.TRANSPORTING) {
-                 // Attempt to resolve the destination name (routePoints or patrolTargetPos)
-                 let destName = null;
-                 let destPos = null;
-                 if (this.routePoints && Number.isFinite(this.currentRouteIndex)) {
-                     destPos = this.routePoints[this.currentRouteIndex];
-                 } else if (this.patrolTargetPos) {
-                     destPos = this.patrolTargetPos;
-                 }
+                // Attempt to resolve the destination name (routePoints or patrolTargetPos)
+                let destName = null;
+                let destPos = null;
+                if (this.routePoints && Number.isFinite(this.currentRouteIndex)) {
+                    destPos = this.routePoints[this.currentRouteIndex];
+                } else if (this.patrolTargetPos) {
+                    destPos = this.patrolTargetPos;
+                }
 
-                 if (destPos && this.currentSystem) {
-                     // Check station first
-                     if (this.currentSystem.station && this.currentSystem.station.pos && destPos.dist && destPos.dist(this.currentSystem.station.pos) < 60) {
-                         destName = this.currentSystem.station.name || "Station";
-                     } else if (Array.isArray(this.currentSystem.planets)) {
-                         for (let p of this.currentSystem.planets) {
-                             if (p && p.pos && destPos.dist && destPos.dist(p.pos) < 60) {
-                                 destName = p.name || "Planet";
-                                 break;
-                             }
-                         }
-                     }
-                 }
+                if (destPos && this.currentSystem) {
+                    // Check station first
+                    if (this.currentSystem.station && this.currentSystem.station.pos && destPos.dist && destPos.dist(this.currentSystem.station.pos) < 60) {
+                        destName = this.currentSystem.station.name || "Station";
+                    } else if (Array.isArray(this.currentSystem.planets)) {
+                        for (let p of this.currentSystem.planets) {
+                            if (p && p.pos && destPos.dist && destPos.dist(p.pos) < 60) {
+                                destName = p.name || "Planet";
+                                break;
+                            }
+                        }
+                    }
+                }
 
-                 // If the transporter has an explicit destination object (SpaceObject), prefer that display
-                 if (!destName && this.destinationObject && typeof this.destinationObject.getDisplayName === 'function') {
-                     let planetName = null;
-                     try {
-                         if (typeof this.destinationObject.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets)) {
-                             const p = this.currentSystem.planets[this.destinationObject.planetIndex];
-                             if (p) planetName = p.name;
-                         }
-                     } catch (e) { /* ignore */ }
-                     const soName = this.destinationObject.getDisplayName();
-                     destName = planetName ? `${soName} @ ${planetName}` : soName;
-                 }
+                // If the transporter has an explicit destination object (SpaceObject), prefer that display
+                if (!destName && this.destinationObject && typeof this.destinationObject.getDisplayName === 'function') {
+                    let planetName = null;
+                    try {
+                        if (typeof this.destinationObject.planetIndex === 'number' && Array.isArray(this.currentSystem?.planets)) {
+                            const p = this.currentSystem.planets[this.destinationObject.planetIndex];
+                            if (p) planetName = p.name;
+                        }
+                    } catch (e) { /* ignore */ }
+                    const soName = this.destinationObject.getDisplayName();
+                    destName = planetName ? `${soName} @ ${planetName}` : soName;
+                }
 
-                 if (destName) targetLabel = `Delivery to ${destName}`;
-                 else targetLabel = "Delivery";
+                if (destName) targetLabel = `Delivery to ${destName}`;
+                else targetLabel = "Delivery";
             }
             // --- End State-Based Labeling ---
 
@@ -324,7 +324,7 @@ class EnemyRendering {
                 } else if (this.target instanceof Enemy && this.target.shipTypeName) {
                     targetLabel = this.target.shipTypeName;
                 } else if (this.target instanceof Cargo) {
-                     targetLabel = `Cargo (${this.target.type})`;
+                    targetLabel = `Cargo (${this.target.type})`;
                 } else {
                     // Check for Station/Planet if targeted directly (less common now)
                     if (this.target.constructor.name === 'Station') targetLabel = "Station";
@@ -333,11 +333,37 @@ class EnemyRendering {
                 }
             } // targetLabel remains "None" if this.target is null and no state-based label applied
 
+            // DUAL-ENGAGE: Check for secondary target and add to label
+            let secondaryTargetLabel = null;
+            if (typeof this.canDualEngage === 'function' && this.canDualEngage() &&
+                this.currentSystem && this.target &&
+                typeof this.findSecondaryTarget === 'function') {
+                const secondaryTarget = this.findSecondaryTarget(this.currentSystem, this.target);
+                if (secondaryTarget) {
+                    if (secondaryTarget instanceof Player) {
+                        secondaryTargetLabel = "Player";
+                    } else if (secondaryTarget instanceof Enemy && secondaryTarget.shipTypeName) {
+                        secondaryTargetLabel = secondaryTarget.shipTypeName;
+                    } else if (secondaryTarget.name) {
+                        secondaryTargetLabel = secondaryTarget.name;
+                    } else {
+                        secondaryTargetLabel = "Target";
+                    }
+                }
+            }
+
             // UPDATED: Add system name to label (unused system reference removed for perf)
-            
+
             const baseShipName = shipDef?.name || this.shipTypeName;
             const namePrefix = this.displayName ? `${this.displayName} • ${baseShipName}` : baseShipName;
-            let label = `${namePrefix}  Target: ${targetLabel}`;
+
+            // Build label with primary target (and secondary if applicable)
+            let label;
+            if (secondaryTargetLabel) {
+                label = `${namePrefix}  Targets: ${targetLabel} + ${secondaryTargetLabel}`;
+            } else {
+                label = `${namePrefix}  Target: ${targetLabel}`;
+            }
             text(label, 0, -this.size / 2 - 15);
 
             pop();
@@ -354,7 +380,7 @@ class EnemyRendering {
         strokeWeight(1);
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
         try { drawFunc(this.size, showThrust, this.angle, localSunAngle); } // Call specific draw function
-        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0,0,this.size, this.size); } // Fallback
+        catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0, 0, this.size, this.size); } // Fallback
 
         // Draw turret if enemy has turret weapon
         if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
@@ -366,21 +392,21 @@ class EnemyRendering {
             // Simply check if we still have drag effect time remaining
             if (this.dragEffectTimer > 0) {
                 // Calculate opacity - fade out during last second
-                const opacity = this.dragEffectTimer < 1.0 ? 
-                    map(this.dragEffectTimer, 0, 1.0, 0, 180) : 
+                const opacity = this.dragEffectTimer < 1.0 ?
+                    map(this.dragEffectTimer, 0, 1.0, 0, 180) :
                     180;
-                
+
                 // Draw energy tethers with proper opacity
                 noFill();
                 //stroke(30, 220, 120, opacity);
                 stroke(200, 180);
                 strokeWeight(2);
-                
+
                 for (let i = 0; i < 6; i++) {
                     let angle = frameCount * 0.03 + i * TWO_PI / 6;
                     let innerRadius = this.size * 0.6;
                     let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
-                    
+
                     beginShape();
                     for (let j = 0; j < 5; j++) {
                         let r = map(j % 2, 0, 1, innerRadius, outerRadius);
@@ -518,7 +544,7 @@ class EnemyRendering {
             // Alpha fades as duration runs out
             const barrierDuration = this.currentWeapon?.duration || 5;
             const barrierAlpha = map(this.barrierDurationTimer, 0, barrierDuration, 50, 150);
-            
+
             const activeBarrierColor = this.barrierColor || [100, 100, 255];
 
             strokeWeight(2 + barrierPulse * 1.5); // Thicker and pulsating stroke
@@ -568,8 +594,8 @@ class EnemyRendering {
         // Weapon range indicator
         if (this.currentWeapon && this.target && this.isTargetValid(this.target) &&
             (this.currentState === AI_STATE.APPROACHING ||
-             this.currentState === AI_STATE.ATTACK_PASS ||
-             this.currentState === AI_STATE.REPOSITIONING)) {
+                this.currentState === AI_STATE.ATTACK_PASS ||
+                this.currentState === AI_STATE.REPOSITIONING)) {
             push();
             stroke(200, 200, 0, 100); noFill(); strokeWeight(1);
             circle(this.pos.x, this.pos.y, this.visualFiringRange * 2); // Use absolute position
@@ -588,26 +614,26 @@ class EnemyRendering {
      */
     _drawTargetLockOnEffect() {
         const conditionsMetForLine = this.isTargetValid(this.target) &&
-                                     this.role !== AI_ROLE.HAULER &&
-                                     (this.currentState === AI_STATE.APPROACHING ||
-                                      this.currentState === AI_STATE.ATTACK_PASS ||
-                                      this.role === AI_ROLE.ALIEN);
+            this.role !== AI_ROLE.HAULER &&
+            (this.currentState === AI_STATE.APPROACHING ||
+                this.currentState === AI_STATE.ATTACK_PASS ||
+                this.role === AI_ROLE.ALIEN);
 
         if (conditionsMetForLine) {
-            
-        // --- Sound Logic: Play only when target is Player and sound hasn't been played for this lock ---
-        if (this.target instanceof Player) { // Check if the current target is the player
-            if (!this.hasPlayedLockOnSound) {
-                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                    soundManager.playSound('targetlock'); // Ensure 'targetlock' (or 'targetLock') sound is loaded
+
+            // --- Sound Logic: Play only when target is Player and sound hasn't been played for this lock ---
+            if (this.target instanceof Player) { // Check if the current target is the player
+                if (!this.hasPlayedLockOnSound) {
+                    if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                        soundManager.playSound('targetlock'); // Ensure 'targetlock' (or 'targetLock') sound is loaded
+                    }
+                    this.hasPlayedLockOnSound = true; // Mark sound as played for this player lock-on period
                 }
-                this.hasPlayedLockOnSound = true; // Mark sound as played for this player lock-on period
+            } else {
+                // If target is not the player (or no target), reset the sound flag.
+                // This allows the sound to play again if the player is re-acquired.
+                this.hasPlayedLockOnSound = false;
             }
-        } else {
-            // If target is not the player (or no target), reset the sound flag.
-            // This allows the sound to play again if the player is re-acquired.
-            this.hasPlayedLockOnSound = false;
-        }
 
             // Always draw the line if conditions are met
             // Avoid mutating shared p5 color instance; use raw RGBA values

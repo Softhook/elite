@@ -228,7 +228,8 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 69700,
         aiRoles: ["MILITARY"],
-        techLevel: 4 // Advanced
+        techLevel: 4, // Advanced
+        canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
@@ -1216,7 +1217,8 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [40, 40, 50], strokeColor: [90, 90, 100], strokeW: 3.0,
         typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
-        aiRoles: ["COMBAT", "SEPARATIST"]
+        aiRoles: ["COMBAT", "SEPARATIST"],
+        canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "SeparatistShadow": {
         name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
@@ -1286,7 +1288,8 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        aiRoles: ["COMBAT", "IMPERIAL"],
+        canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "ImperialLancer": {
         name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
