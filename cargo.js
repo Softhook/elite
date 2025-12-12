@@ -188,23 +188,23 @@ class Cargo {
             if (edge.dx * dvy - edge.dy * dvx < 0) {
                 const v1 = edge.v1;
                 const v2 = edge.v2;
-                
+
                 const fx1 = v1.x * this.size;
                 const fy1 = v1.y * this.size;
                 const fx2 = v2.x * this.size;
                 const fy2 = v2.y * this.size;
-                
+
                 const bx1 = fx1 + dvx;
                 const by1 = fy1 + dvy;
                 const bx2 = fx2 + dvx;
                 const by2 = fy2 + dvy;
-                
+
                 const faceAngle = Math.atan2(edge.dx, -edge.dy);
-                const diff = faceAngle - localSunAngle;
-                const shade = 0.5 + (Math.cos(diff) + 1) * 0.25;
-                
+                // Use centralized shading function from draw3d.js
+                const shade = getShading(faceAngle - localSunAngle);
+
                 fill(r * shade, g * shade, b * shade);
-                
+
                 beginShape();
                 vertex(bx1, by1);
                 vertex(bx2, by2);
@@ -228,7 +228,7 @@ class Cargo {
         // Packaging lines
         line(-this.size * 0.4, 0, this.size * 0.4, 0);
         line(0, -this.size * 0.4, 0, this.size * 0.4);
-        
+
         // Rotation mark
         noStroke();
         fill(255, 255, 255, 80);

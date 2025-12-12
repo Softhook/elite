@@ -65,23 +65,23 @@ const sizeMap = {
 // Mapping of what each SpaceObject type typically produces and what it will buy
 // NOTE: Entries use canonical commodity names defined in `market.js`.
 const SPACE_OBJECT_COMMODITIES = {
-    miningPlatform: { produces: ['Metals','Minerals'], buys: ['Food','Chemicals','Machinery'] },
-    asteroidMiner: { produces: ['Metals','Minerals'], buys: ['Chemicals'] },
-    cargoCluster: { produces: ['Textiles','Machinery','Metals'], buys: ['Food','Chemicals'] },
-    hydroponicsBay: { produces: ['Food'], buys: ['Metals','Chemicals','Machinery'] },
-    orbitalGarden: { produces: ['Food'], buys: ['Chemicals','Machinery'] },
-    fuelDepot: { produces: ['Chemicals'], buys: ['Metals','Machinery'] },
-    researchArray: { produces: ['Adv Components','Computers'], buys: ['Food','Chemicals'] },
-    outpost: { produces: ['Food','Textiles','Machinery','Chemicals'], buys: ['Metals','Adv Components'] },
-    solarFarm: { produces: ['Metals','Adv Components'], buys: ['Machinery'] },
-    energyCollector: { produces: ['Metals','Adv Components'], buys: ['Chemicals'] },
+    miningPlatform: { produces: ['Metals', 'Minerals'], buys: ['Food', 'Chemicals', 'Machinery'] },
+    asteroidMiner: { produces: ['Metals', 'Minerals'], buys: ['Chemicals'] },
+    cargoCluster: { produces: ['Textiles', 'Machinery', 'Metals'], buys: ['Food', 'Chemicals'] },
+    hydroponicsBay: { produces: ['Food'], buys: ['Metals', 'Chemicals', 'Machinery'] },
+    orbitalGarden: { produces: ['Food'], buys: ['Chemicals', 'Machinery'] },
+    fuelDepot: { produces: ['Chemicals'], buys: ['Metals', 'Machinery'] },
+    researchArray: { produces: ['Adv Components', 'Computers'], buys: ['Food', 'Chemicals'] },
+    outpost: { produces: ['Food', 'Textiles', 'Machinery', 'Chemicals'], buys: ['Metals', 'Adv Components'] },
+    solarFarm: { produces: ['Metals', 'Adv Components'], buys: ['Machinery'] },
+    energyCollector: { produces: ['Metals', 'Adv Components'], buys: ['Chemicals'] },
     observatoryDome: { produces: ['Computers'], buys: ['Chemicals'] },
     ancientRelic: { produces: ['Luxury Goods'], buys: [] },
     alienArtifact: { produces: ['Luxury Goods'], buys: [] },
     satellite: { produces: ['Computers'], buys: ['Metals'] },
-    telescope: { produces: ['Computers','Adv Components'], buys: ['Metals'] },
+    telescope: { produces: ['Computers', 'Adv Components'], buys: ['Metals'] },
     relay: { produces: ['Computers'], buys: ['Metals'] },
-    habitat: { produces: ['Textiles','Food'], buys: ['Machinery','Metals'] },
+    habitat: { produces: ['Textiles', 'Food'], buys: ['Machinery', 'Metals'] },
     debris: { produces: ['Metals'], buys: [] },
     probe: { produces: ['Computers'], buys: [] },
     beacon: { produces: ['Metals'], buys: [] },
@@ -93,14 +93,14 @@ const SPACE_OBJECT_COMMODITIES = {
     iceCrystal: { produces: ['Minerals'], buys: ['Food'] },
     nebulaFragment: { produces: [], buys: [] },
     wreckage: { produces: ['Metals'], buys: [] },
-    weaponPlatform: { produces: ['Weapons'], buys: ['Metals','Machinery'] },
+    weaponPlatform: { produces: ['Weapons'], buys: ['Metals', 'Machinery'] },
     shieldGenerator: { produces: ['Adv Components'], buys: ['Metals'] },
-    quantumGate: { produces: ['Adv Components','Computers'], buys: ['Metals'] },
-    prison: { produces: ['Slaves'], buys: ['Food','Textiles','Machinery'] },
-    drugLab: { produces: ['Narcotics','Medicine'], buys: ['Food','Chemicals'] },
-    labourColony: { produces: ['Slaves','Metals','Textiles','Machinery'], buys: ['Food'] },
-    undergroundMarket: { produces: [], buys: ['Slaves','Narcotics','Weapons'] },
-    shipyard: { produces: [], buys: ['Food','Machinery','Adv Components','Computers'] },
+    quantumGate: { produces: ['Adv Components', 'Computers'], buys: ['Metals'] },
+    prison: { produces: ['Slaves'], buys: ['Food', 'Textiles', 'Machinery'] },
+    drugLab: { produces: ['Narcotics', 'Medicine'], buys: ['Food', 'Chemicals'] },
+    labourColony: { produces: ['Slaves', 'Metals', 'Textiles', 'Machinery'], buys: ['Food'] },
+    undergroundMarket: { produces: [], buys: ['Slaves', 'Narcotics', 'Weapons'] },
+    shipyard: { produces: [], buys: ['Food', 'Machinery', 'Adv Components', 'Computers'] },
     default: { produces: [], buys: [] }
 };
 
@@ -157,598 +157,10 @@ const ANIM_RATES = [
 ];
 
 // Static renderers for each object type to replace the monolithic draw() switch
-// Helper object for 3D-style rendering
-const Draw3D = {
-    baseRotation: 0,
-    getDepthVector: function(depth, angle, sunAngle) {
-        const theta = (angle || 0);
-        // v = (0, depth) rotated by -theta
-        // x = depth * sin(theta)
-        // y = depth * cos(theta)
-        return {
-            x: depth * Math.sin(theta),
-            y: depth * Math.cos(theta)
-        };
-    },
-
-    drawPrism: function(x, y, r, sides, depth, col, angle, sunAngle) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const angleStep = TWO_PI / sides;
-        const lightAngle = sunAngle;
-        
-        strokeWeight(1);
-        
-        // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-        beginShape();
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
-            vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
-        }
-        endShape(CLOSE);
-
-        // Draw sides
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
-            const nextAng = (i + 1) * angleStep - PI/2;
-            
-            // Face normal angle
-            const faceAngle = (i + 0.5) * angleStep - PI/2;
-            
-            // Back-face culling
-            const nx = Math.cos(faceAngle);
-            const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
-            
-            if (dot > 0.001) {
-                const vx = x + Math.cos(ang) * r;
-                const vy = y + Math.sin(ang) * r;
-                const nvx = x + Math.cos(nextAng) * r;
-                const nvy = y + Math.sin(nextAng) * r;
-                
-                const diff = faceAngle - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
-
-                beginShape();
-                vertex(vx + dv.x, vy + dv.y);
-                vertex(nvx + dv.x, nvy + dv.y);
-                vertex(nvx, nvy);
-                vertex(vx, vy);
-                endShape(CLOSE);
-            }
-        }
-
-        // Draw Top
-        fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-        beginShape();
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
-            vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
-        }
-        endShape(CLOSE);
-    },
-
-    // Draw a prism in stages so callers can layer other objects between bottom/sides/top
-    drawPrismSplit: function(x, y, r, sides, depth, col, angle, sunAngle, stage) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const angleStep = TWO_PI / sides;
-        const lightAngle = sunAngle;
-
-        strokeWeight(1);
-
-        // Bottom Cap
-        if (stage === 'bottom') {
-            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI/2;
-                vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
-            }
-            endShape(CLOSE);
-            return;
-        }
-
-        // Sides
-        if (stage === 'sides') {
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI/2;
-                const nextAng = (i + 1) * angleStep - PI/2;
-                const faceAngle = (i + 0.5) * angleStep - PI/2;
-                const nx = Math.cos(faceAngle);
-                const ny = Math.sin(faceAngle);
-                const dot = nx * dv.x + ny * dv.y;
-                if (dot > 0.001) {
-                    const vx = x + Math.cos(ang) * r;
-                    const vy = y + Math.sin(ang) * r;
-                    const nvx = x + Math.cos(nextAng) * r;
-                    const nvy = y + Math.sin(nextAng) * r;
-                    const diff = faceAngle - lightAngle;
-                    const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                    fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
-                    stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
-                    beginShape();
-                    vertex(vx + dv.x, vy + dv.y);
-                    vertex(nvx + dv.x, nvy + dv.y);
-                    vertex(nvx, nvy);
-                    vertex(vx, vy);
-                    endShape(CLOSE);
-                }
-            }
-            return;
-        }
-
-        // Top
-        if (stage === 'top') {
-            fill(col);
-            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI/2;
-                vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
-            }
-            endShape(CLOSE);
-            return;
-        }
-    },
-
-    drawBox3D: function(x, y, w, h, depth, col, angle, sunAngle) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const hw = w/2;
-        const hh = h/2;
-        
-        const faceAngles = [-PI/2, 0, PI/2, PI]; 
-        const lightAngle = sunAngle;
-        
-        strokeWeight(1);
-
-        // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-        beginShape();
-        vertex(x - hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y + hh + dv.y);
-        vertex(x - hw + dv.x, y + hh + dv.y);
-        endShape(CLOSE);
-
-        for (let i = 0; i < 4; i++) {
-            // Back-face culling
-            const nx = Math.cos(faceAngles[i]);
-            const ny = Math.sin(faceAngles[i]);
-            const dot = nx * dv.x + ny * dv.y;
-
-            if (dot > 0.001) {
-                const diff = faceAngles[i] - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
-
-                beginShape();
-                let x1, y1, x2, y2;
-                if (i === 0) { // Top: TL -> TR
-                    x1 = x - hw; y1 = y - hh; x2 = x + hw; y2 = y - hh;
-                } else if (i === 1) { // Right: TR -> BR
-                    x1 = x + hw; y1 = y - hh; x2 = x + hw; y2 = y + hh;
-                } else if (i === 2) { // Bottom: BR -> BL
-                    x1 = x + hw; y1 = y + hh; x2 = x - hw; y2 = y + hh;
-                } else { // Left: BL -> TL
-                    x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh;
-                }
-                
-                vertex(x1 + dv.x, y1 + dv.y);
-                vertex(x2 + dv.x, y2 + dv.y);
-                vertex(x2, y2);
-                vertex(x1, y1);
-                endShape(CLOSE);
-            }
-        }
-        
-        fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-        rectMode(CENTER);
-        rect(x, y, w, h);
-    },
-
-    drawExtrudedShape: function(vertices, depth, col, angle, sunAngle, cull = true) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const lightAngle = sunAngle;
-        
-        strokeWeight(1);
-        const len = vertices.length;
-
-        // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-        beginShape();
-        for (let i = 0; i < len; i++) {
-            vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
-        }
-        endShape(CLOSE);
-        
-        for (let i = 0; i < len; i++) {
-            const next = (i + 1) % len;
-            const v1 = vertices[i];
-            const v2 = vertices[next];
-
-            // Calculate normal angle
-            const dx = v2.x - v1.x;
-            const dy = v2.y - v1.y;
-            // Normal is (-dy, dx)
-            const faceAngle = Math.atan2(dx, -dy);
-            
-            // Back-face culling
-            const nx = Math.cos(faceAngle);
-            const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
-
-            if (!cull || dot > 0.001) {
-                const diff = faceAngle - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
-
-                beginShape();
-                vertex(v1.x + dv.x, v1.y + dv.y);
-                vertex(v2.x + dv.x, v2.y + dv.y);
-                vertex(v2.x, v2.y);
-                vertex(v1.x, v1.y);
-                endShape(CLOSE);
-            }
-        }
-        
-        // Top
-        fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-        beginShape();
-        for (let i = 0; i < len; i++) {
-            vertex(vertices[i].x, vertices[i].y);
-        }
-        endShape(CLOSE);
-    },
-
-    drawRing3D: function(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const angleStep = TWO_PI / sides;
-        const lightAngle = sunAngle;
-
-        strokeWeight(1);
-
-        // If beginContour/endContour are available, use the full-capable implementation.
-        // Some p5 builds or contexts may not support contours; detect and fallback.
-        if (typeof beginContour === 'function' && typeof endContour === 'function') {
-            // Some p5 builds expose beginContour/endContour but their internal
-            // implementation can still throw (renderer differences). Try using
-            // the contour API and fall back if it fails at runtime.
-            try {
-                // Draw Bottom Cap using contour for a proper hole
-                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-                beginShape();
-                // Outer loop
-                for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep + shapeRotation;
-                    vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
-                }
-                // Inner loop (contour)
-                beginContour();
-                for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep + shapeRotation;
-                    vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
-                }
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
-                // Fallback to non-contour implementation when contour calls fail
-                fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-                beginShape();
-                for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
-                }
-                endShape(CLOSE);
-
-                noStroke();
-                fill(0, 0, 0, 220);
-                beginShape();
-                for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
-                }
-                endShape(CLOSE);
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-            }
-        } else {
-            // Fallback: draw outer cap and then overpaint inner cap to approximate a hole.
-            // This is less correct but prevents runtime errors on p5 builds without contour support.
-            fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5, alpha(col));
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep;
-                vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
-            }
-            endShape(CLOSE);
-
-            // Paint small inner disc to fake the hole using background-like fill
-            // Use a very transparent fill so it blends reasonably in most contexts
-            noStroke();
-            fill(0, 0, 0, 220);
-            beginShape();
-            for (let i = sides - 1; i >= 0; i--) {
-                const ang = i * angleStep;
-                vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
-            }
-            endShape(CLOSE);
-            // restore stroke for faces below
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4, alpha(col));
-        }
-        
-        for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep + shapeRotation;
-            const nextAng = (i + 1) * angleStep + shapeRotation;
-            
-            const c = Math.cos(ang);
-            const s = Math.sin(ang);
-            const nc = Math.cos(nextAng);
-            const ns = Math.sin(nextAng);
-            
-            const ox1 = x + c * rOuter;
-            const oy1 = y + s * rOuter;
-            const ox2 = x + nc * rOuter;
-            const oy2 = y + ns * rOuter;
-            
-            const ix1 = x + c * rInner;
-            const iy1 = y + s * rInner;
-            const ix2 = x + nc * rInner;
-            const iy2 = y + ns * rInner;
-            
-            // Outer face
-            const faceAngle = (i + 0.5) * angleStep;
-            const nx = Math.cos(faceAngle);
-            const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
-
-            if (dot > 0.001) {
-                const diff = faceAngle - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b, alpha(col));
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8, alpha(col));
-
-                beginShape();
-                vertex(ox1 + dv.x, oy1 + dv.y);
-                vertex(ox2 + dv.x, oy2 + dv.y);
-                vertex(ox2, oy2);
-                vertex(ox1, oy1);
-                endShape(CLOSE);
-            }
-            
-            // Inner face
-            const innerFaceAngle = faceAngle + PI;
-            const nxIn = Math.cos(innerFaceAngle);
-            const nyIn = Math.sin(innerFaceAngle);
-            const dotIn = nxIn * dv.x + nyIn * dv.y;
-
-            if (dotIn > 0.001) {
-                const diffInner = innerFaceAngle - lightAngle;
-                const bInner = map(Math.cos(diffInner), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner, alpha(col));
-                stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8, alpha(col));
-
-                beginShape();
-                vertex(ix1 + dv.x, iy1 + dv.y);
-                vertex(ix2 + dv.x, iy2 + dv.y);
-                vertex(ix2, iy2);
-                vertex(ix1, iy1);
-                endShape(CLOSE);
-            }
-        }
-        
-        // Top
-        fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-        if (typeof beginContour === 'function' && typeof endContour === 'function') {
-            try {
-                beginShape();
-                // Outer loop
-                for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
-                }
-                // Inner loop (contour)
-                beginContour();
-                for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
-                }
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
-                // Fallback to non-contour top cap
-                beginShape();
-                for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
-                }
-                endShape(CLOSE);
-                noStroke();
-                fill(0,0,0,220);
-                beginShape();
-                for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep;
-                    vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
-                }
-                endShape(CLOSE);
-                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-            }
-        } else {
-            // Fallback: draw outer top and overdraw inner with background-ish fill
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep;
-                vertex(x + Math.cos(ang) * rOuter, y + Math.sin(ang) * rOuter);
-            }
-            endShape(CLOSE);
-            noStroke();
-            fill(0,0,0,220);
-            beginShape();
-            for (let i = sides - 1; i >= 0; i--) {
-                const ang = i * angleStep;
-                vertex(x + Math.cos(ang) * rInner, y + Math.sin(ang) * rInner);
-            }
-            endShape(CLOSE);
-            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8, alpha(col));
-        }
-    },
-
-    drawExtrudedRing: function(outerVerts, innerVerts, depth, col, angle, sunAngle) {
-        const dv = this.getDepthVector(depth, angle, sunAngle);
-        const lightAngle = sunAngle;
-        strokeWeight(1);
-        
-        const len = outerVerts.length;
-
-        // Draw Bottom Cap (try contour; fallback if not supported or throws)
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
-        if (typeof beginContour === 'function' && typeof endContour === 'function') {
-            try {
-                beginShape();
-                for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-                beginContour();
-                for (let i = len - 1; i >= 0; i--) {
-                    vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
-                }
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
-                // Fallback: draw outer cap then overdraw inner hole
-                beginShape();
-                for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-                endShape(CLOSE);
-                noStroke();
-                fill(0,0,0,220);
-                beginShape();
-                for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
-                endShape(CLOSE);
-                stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
-            }
-        } else {
-            beginShape();
-            for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-            endShape(CLOSE);
-            noStroke();
-            fill(0,0,0,220);
-            beginShape();
-            for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
-            endShape(CLOSE);
-            stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
-        }
-        
-        // Draw sides
-        for (let i = 0; i < len; i++) {
-            const next = (i + 1) % len;
-            
-            // Outer face
-            const v1 = outerVerts[i];
-            const v2 = outerVerts[next];
-            const dx = v2.x - v1.x;
-            const dy = v2.y - v1.y;
-            const faceAngle = Math.atan2(dx, -dy);
-            
-            const nx = Math.cos(faceAngle);
-            const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
-            
-            if (dot > 0.001) {
-                const diff = faceAngle - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
-                beginShape();
-                vertex(v1.x + dv.x, v1.y + dv.y);
-                vertex(v2.x + dv.x, v2.y + dv.y);
-                vertex(v2.x, v2.y);
-                vertex(v1.x, v1.y);
-                endShape(CLOSE);
-            }
-            
-            // Inner face
-            const iv1 = innerVerts[i];
-            const iv2 = innerVerts[next];
-            const idx = iv2.x - iv1.x;
-            const idy = iv2.y - iv1.y;
-            const innerFaceAngle = Math.atan2(idx, -idy) + PI;
-            
-            const inx = Math.cos(innerFaceAngle);
-            const iny = Math.sin(innerFaceAngle);
-            const idot = inx * dv.x + iny * dv.y;
-            
-            if (idot > 0.001) {
-                const diff = innerFaceAngle - lightAngle;
-                const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
-                beginShape();
-                vertex(iv1.x + dv.x, iv1.y + dv.y);
-                vertex(iv2.x + dv.x, iv2.y + dv.y);
-                vertex(iv2.x, iv2.y);
-                vertex(iv1.x, iv1.y);
-                endShape(CLOSE);
-            }
-        }
-        
-        // Top cap
-        fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
-        // Top cap (try contour; fallback if necessary)
-        if (typeof beginContour === 'function' && typeof endContour === 'function') {
-            try {
-                beginShape();
-                for (let v of outerVerts) vertex(v.x, v.y);
-                beginContour();
-                for (let i = len - 1; i >= 0; i--) {
-                    vertex(innerVerts[i].x, innerVerts[i].y);
-                }
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
-                beginShape();
-                for (let v of outerVerts) vertex(v.x, v.y);
-                endShape(CLOSE);
-                noStroke();
-                fill(0,0,0,220);
-                beginShape();
-                for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x, innerVerts[i].y);
-                endShape(CLOSE);
-                stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
-            }
-        } else {
-            beginShape();
-            for (let v of outerVerts) vertex(v.x, v.y);
-            endShape(CLOSE);
-            noStroke();
-            fill(0,0,0,220);
-            beginShape();
-            for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x, innerVerts[i].y);
-            endShape(CLOSE);
-            stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
-        }
-    }
-};
+// NOTE: Draw3D object is now in draw3d.js (loaded before this file)
 
 const SpaceObjectRenderers = {
-    satellite: function(obj, size, anim, bob) {
+    satellite: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Central bus as a short cylinder (many-sided prism for smooth look)
@@ -786,7 +198,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(0, -size * 0.12 + bob, 4, 4, 2, color(255, 120, 100, 255 * flash), obj.angle, sunAngle);
     },
 
-    fuelDepot: function(obj, size, anim, bob) {
+    fuelDepot: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // platform shadow/base
@@ -798,10 +210,10 @@ const SpaceObjectRenderers = {
         for (let i = -1; i <= 1; i++) {
             const tx = i * (tankW * 1.25);
             const ty = -size * 0.05 + bob;
-            
+
             // tank body
             Draw3D.drawPrism(tx, ty, tankW * 0.5, 8, tankH, color(120, 130, 140), obj.angle, sunAngle);
-            
+
             // top and bottom caps
             Draw3D.drawPrism(tx, ty - tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), obj.angle, sunAngle);
             Draw3D.drawPrism(tx, ty + tankH * 0.5, tankW * 0.45, 8, tankH * 0.1, color(150, 160, 170), obj.angle, sunAngle);
@@ -829,10 +241,10 @@ const SpaceObjectRenderers = {
             const hy = -size * 0.15 + bob;
             const tx = hx + h * (size * 0.7);
             const ty = hy + size * 0.18;
-            
+
             // hose curve approximated by segments
             const segments = 8;
-            for(let s=0; s<segments; s++) {
+            for (let s = 0; s < segments; s++) {
                 const t = s / segments;
                 const bx = bezierPoint(hx, hx + h * (size * 0.18), tx - h * (size * 0.12), tx, t);
                 const by = bezierPoint(hy, hy + size * 0.08, ty - size * 0.06, ty, t);
@@ -842,7 +254,7 @@ const SpaceObjectRenderers = {
             // animated flow dots along hose
             const hosePhase = (anim && typeof anim.hosePhase === 'number') ? anim.hosePhase : obj.bobPhase;
             for (let p = 0; p < 4; p++) {
-                const t = ( (hosePhase * 0.004) + p * 0.24 ) % 1;
+                const t = ((hosePhase * 0.004) + p * 0.24) % 1;
                 const bx = bezierPoint(hx, hx + h * (size * 0.18), tx - h * (size * 0.12), tx, t);
                 const by = bezierPoint(hy, hy + size * 0.08, ty - size * 0.06, ty, t);
                 Draw3D.drawBox3D(bx, by, 3, 2, 3, color(80, 200, 255, 180 - p * 30), obj.angle, sunAngle);
@@ -870,15 +282,15 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(-size * 0.18, size * 0.36 + bob, 4, 3, 3, color(255, 255, 0, 180 * warn), obj.angle, sunAngle);
     },
 
-    telescope: function(obj, size, anim, bob) {
+    telescope: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
+
         // Main cylindrical body
         Draw3D.drawPrism(0, bob, size * 0.12, 8, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
-        
+
         // Top cap
         Draw3D.drawPrism(0, bob - size * 0.4, size * 0.14, 8, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
-        
+
         // Bottom base
         Draw3D.drawPrism(0, bob + size * 0.4, size * 0.16, 8, size * 0.1, color(140, 150, 160), obj.angle, sunAngle);
 
@@ -887,24 +299,24 @@ const SpaceObjectRenderers = {
         translate(0, bob - size * 0.32);
         const dishAng = 0.1 + Math.sin(anim ? anim.telescopeTilt : 0) * 0.04;
         rotate(dishAng);
-        
+
         // Dish segments (approximated with a flattened cone/prism or just a ring for now)
         // Let's use a ring for the dish rim and a smaller prism for the center
         Draw3D.drawRing3D(size * 0.08, 0, size * 0.18, size * 0.05, 6, size * 0.05, color(220, 230, 240), obj.angle + (dishAng), sunAngle);
         Draw3D.drawPrism(size * 0.08, 0, size * 0.05, 6, size * 0.05, color(100, 110, 120), obj.angle + (dishAng), sunAngle);
-        
+
         // Support struts
         for (let s = 0; s < 3; s++) {
             const sang = s * (TWO_PI / 3);
             const dx = Math.cos(sang) * size * 0.12;
             const dy = Math.sin(sang) * size * 0.08;
-            
+
             // Calculate strut geometry manually
-            const len = Math.sqrt(dx*dx + dy*dy);
+            const len = Math.sqrt(dx * dx + dy * dy);
             const ang = Math.atan2(dy, dx);
             const midX = dx / 2;
             const midY = dy / 2;
-            
+
             push();
             translate(midX, midY);
             rotate(ang);
@@ -923,10 +335,10 @@ const SpaceObjectRenderers = {
         // Instrument boom
         push();
         translate(size * 0.2, bob - size * 0.07);
-        rotate(PI/4);
-        Draw3D.drawBox3D(0, 0, size * 0.3, size * 0.02, size * 0.02, color(130, 140, 150), obj.angle + (PI/4), sunAngle);
+        rotate(PI / 4);
+        Draw3D.drawBox3D(0, 0, size * 0.3, size * 0.02, size * 0.02, color(130, 140, 150), obj.angle + (PI / 4), sunAngle);
         pop();
-        
+
         // Sensors on boom
         Draw3D.drawPrism(size * 0.35, bob - size * 0.15, size * 0.04, 6, size * 0.04, color(200, 210, 220), obj.angle, sunAngle);
 
@@ -945,7 +357,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(0, 255, 255, 255 * flash2), obj.angle, sunAngle);
     },
 
-    relay: function(obj, size, anim, bob) {
+    relay: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const relayPhase = (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06;
 
@@ -1042,7 +454,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawRing3D(0, bob + bobOsc, size * 0.5 * ringPulse, size * 0.02, 12, size * 0.01, color(130, 140, 150, 60), obj.angle, sunAngle);
     },
 
-    commDish: function(obj, size, anim, bob) {
+    commDish: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base pedestal
@@ -1063,7 +475,7 @@ const SpaceObjectRenderers = {
         // Parabolic reflector (approximated with a ring and a central prism/cone)
         push();
         translate(0, bob - size * 0.06);
-        
+
         // Main dish surface (using a large ring for the rim and a smaller one inside)
         Draw3D.drawRing3D(0, 0, size * 0.6, size * 0.1, 12, size * 0.1, color(220, 230, 240), obj.angle + (sweepAng), sunAngle);
         Draw3D.drawRing3D(0, 0, size * 0.4, size * 0.08, 12, size * 0.08, color(200, 210, 220), obj.angle + (sweepAng), sunAngle);
@@ -1079,7 +491,7 @@ const SpaceObjectRenderers = {
             const theta = sweepAng; // Local rotation only
             const offX = d * Math.sin(theta);
             const offY = d * Math.cos(theta);
-            
+
             line(0, 0, dx + offX, dy + offY);
         }
         noStroke();
@@ -1116,14 +528,14 @@ const SpaceObjectRenderers = {
         pop(); // end swivel
     },
 
-    habitat: function(obj, size, anim, bob) {
+    habitat: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const cylW = size * 0.9;
         const cylH = size * 0.6;
 
         // Main body (cylinder)
         Draw3D.drawPrism(0, bob, cylW * 0.5, 12, cylH, color(175, 165, 155), obj.angle, sunAngle);
-        
+
         // End caps
         Draw3D.drawPrism(0, bob - cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), obj.angle, sunAngle);
         Draw3D.drawPrism(0, bob + cylH * 0.5, cylW * 0.48, 12, cylH * 0.1, color(185, 175, 165), obj.angle, sunAngle);
@@ -1135,10 +547,10 @@ const SpaceObjectRenderers = {
             const wx = -cylW * 0.5 + winSpacing * (i + 1);
             const wy = -size * 0.05 + bob;
             const flick = 0.5 + 0.5 * Math.sin(anim ? (anim.habitatWindowPhase + i * 0.6) : obj.bobPhase);
-            
+
             // Window frame
             Draw3D.drawBox3D(wx, wy, size * 0.12, size * 0.2, size * 0.02, color(20, 40, 60), obj.angle, sunAngle);
-            
+
             // Window glass (lit)
             fill(30, Math.floor(110 + 90 * flick), Math.floor(180 + 40 * flick), Math.floor(160 * (0.6 + 0.4 * flick)));
             rect(wx - size * 0.05, wy - size * 0.09, size * 0.10, size * 0.18);
@@ -1165,31 +577,31 @@ const SpaceObjectRenderers = {
         rotate(panelAng);
         Draw3D.drawBox3D(size * 0.1, 0, size * 0.2, size * 0.08, size * 0.01, color(40, 80, 160), obj.angle, sunAngle);
         pop();
-        
+
         // Insignia
         fill(200, 210, 220, 150);
         ellipse(0, -size * 0.15 + bob, size * 0.1, size * 0.06);
     },
 
-    debris: function(obj, size, anim, bob) {
+    debris: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
+
         if (obj._shards && obj._shards.length) {
             for (let i = 0; i < obj._shards.length; i++) {
                 const sh = obj._shards[i];
                 push();
                 translate(sh.rx, sh.ry);
-                
+
                 // 3D tumbling rotation
                 const tumbleAngle = sh.angle + Math.sin(obj.bobPhase * 0.002) * 0.03;
                 rotate(tumbleAngle);
-                
+
                 // Draw shard as a prism
                 Draw3D.drawPrism(0, 0, size * 0.12 * sh.rrScale, sh.verts, size * 0.05, color(140, 120, 110), obj.angle, sunAngle);
-                
+
                 pop();
             }
-            
+
             // Dust puffs (keep 2D)
             for (let d = 0; d < 3; d++) {
                 const da = obj.bobPhase * 0.001 + d * 2.1;
@@ -1200,7 +612,7 @@ const SpaceObjectRenderers = {
                 fill(180, 160, 140, 60);
                 ellipse(dx, dy, 6, 3);
             }
-            
+
             // Flashing hazard lights
             const hazardFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25);
             fill(255, 0, 0, 80 * hazardFlash);
@@ -1211,7 +623,7 @@ const SpaceObjectRenderers = {
             ellipse(size * 0.1, size * 0.1 + bob, 6, 6);
             fill(255, 255, 0, 200 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
             ellipse(size * 0.1, size * 0.1 + bob, 3, 3);
-            
+
             // Glowing particles
             for (let p = 0; p < 2; p++) {
                 const pa = obj.bobPhase * 0.003 + p * 3.14;
@@ -1224,29 +636,29 @@ const SpaceObjectRenderers = {
         }
     },
 
-    probe: function(obj, size, anim, bob) {
+    probe: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
+
         // Body
         Draw3D.drawPrism(0, bob, size * 0.18, 4, size * 0.9, color(200, 200, 220), obj.angle, sunAngle);
-        
+
         // Top highlight edge
         Draw3D.drawPrism(0, bob - size * 0.45, size * 0.16, 4, size * 0.04, color(230, 230, 250), obj.angle, sunAngle);
-        
+
         // Nose cone (approximated with stacked prisms)
         Draw3D.drawPrism(0, bob - size * 0.55, size * 0.09, 4, size * 0.15, color(150, 150, 170), obj.angle, sunAngle);
         Draw3D.drawPrism(0, bob - size * 0.65, size * 0.01, 4, size * 0.1, color(190, 190, 210), obj.angle, sunAngle); // Tip
-        
+
         // Solar panel
         Draw3D.drawBox3D(0, size * 0.28 + bob, size * 0.36, size * 0.08, size * 0.02, color(30, 80, 160), obj.angle, sunAngle);
-        
+
         // Blinking nav light
         const blink = 0.5 + 0.5 * Math.sin(anim ? anim.probeBlink : obj.bobPhase * 0.1);
         fill(255, 140, 80, 80 * blink);
         ellipse(0, -size * 0.42 + bob, 12 * (1 + blink * 0.5), 12 * (1 + blink * 0.5));
         fill(255, 140, 80, 220 * blink);
         ellipse(0, -size * 0.42 + bob, 5 * (1 + blink), 5 * (1 + blink));
-        
+
         // Engine trail (keep 2D)
         fill(100, 160, 235, 30);
         ellipse(0, size * 0.52 + bob, size * 0.36, size * 0.12);
@@ -1254,7 +666,7 @@ const SpaceObjectRenderers = {
         ellipse(0, size * 0.48 + bob, size * 0.28, size * 0.08);
         fill(140, 200, 255, 70);
         ellipse(0, size * 0.45 + bob, size * 0.20, size * 0.05);
-        
+
         // Flashing status lights
         const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18);
         fill(0, 255, 0, 60 * statusFlash);
@@ -1265,7 +677,7 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.06, size * 0.1 + bob, 6, 6);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.18 + 1)));
         ellipse(size * 0.06, size * 0.1 + bob, 3, 3);
-        
+
         // Antenna deployment
         push();
         rotate(Math.sin(obj.bobPhase * 0.004) * 0.15);
@@ -1276,7 +688,7 @@ const SpaceObjectRenderers = {
         fill(180, 190, 200);
         ellipse(size * 0.2, -size * 0.4 + bob, 4, 4);
         pop();
-        
+
         // Sensor bands
         stroke(120, 130, 140, 150);
         strokeWeight(0.5);
@@ -1287,23 +699,23 @@ const SpaceObjectRenderers = {
         noStroke();
     },
 
-    beacon: function(obj, size, anim, bob) {
+    beacon: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main body
         Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.18, size * 0.5, size * 0.18, color(100, 100, 110), obj.angle, sunAngle);
-        
+
         // Top cap
         Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.16, size * 0.04, size * 0.16, color(130, 130, 140), obj.angle, sunAngle);
-        
+
         // Volumetric light cone
         const pulse = (Math.sin(obj.bobPhase * 1.6) + 1) * 0.5;
         const glow = 0.5 + 0.5 * pulse;
-        
+
         // Light source
         fill(255, 240, 100, 220 * glow);
         ellipse(0, bob - size * 0.12, size * 0.42 * (0.9 + 0.4 * pulse) * 0.5, size * 0.42 * (0.9 + 0.4 * pulse) * 0.3);
-        
+
         // Rotating light beam
         push();
         translate(0, bob - size * 0.12);
@@ -1316,7 +728,7 @@ const SpaceObjectRenderers = {
         vertex(size * 0.15, -size * 0.6);
         endShape(CLOSE);
         pop();
-        
+
         // Rotating halo rings
         noFill();
         stroke(220, 200, 80, 70 * glow);
@@ -1326,14 +738,14 @@ const SpaceObjectRenderers = {
         strokeWeight(1);
         ellipse(0, bob, size * (1.1 + pulse * 0.8), size * (0.8 + pulse * 0.5));
         noStroke();
-        
+
         // Flashing auxiliary lights
         const auxFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3);
         fill(0, 255, 255, 255 * auxFlash);
         ellipse(-size * 0.08, bob + size * 0.1, 3, 3);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
         ellipse(size * 0.08, bob + size * 0.1, 3, 3);
-        
+
         // Antenna array
         push();
         translate(0, bob);
@@ -1348,17 +760,17 @@ const SpaceObjectRenderers = {
         }
         noStroke();
         pop();
-        
+
         // Base
         Draw3D.drawBox3D(0, bob + size * 0.3, size * 0.1, size * 0.08, size * 0.1, color(80, 80, 90), obj.angle, sunAngle);
     },
 
-    outpost: function(obj, size, anim, bob) {
+    outpost: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
+
         // Central hub (large cylindrical core)
         Draw3D.drawPrism(0, bob, size * 0.15, 12, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
-        
+
         // Hub end caps
         Draw3D.drawPrism(0, bob - size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
         Draw3D.drawPrism(0, bob + size * 0.4, size * 0.18, 12, size * 0.05, color(160, 170, 180), obj.angle, sunAngle);
@@ -1368,7 +780,7 @@ const SpaceObjectRenderers = {
             const ang = m * (TWO_PI / 6);
             const mx = Math.cos(ang) * size * 0.25;
             const my = Math.sin(ang) * size * 0.25 + bob;
-            
+
             // Connecting corridor
             const cx = Math.cos(ang) * size * 0.15;
             const cy = Math.sin(ang) * size * 0.15 + bob;
@@ -1384,7 +796,7 @@ const SpaceObjectRenderers = {
             translate(mx, my);
             rotate(ang);
             Draw3D.drawBox3D(0, 0, size * 0.2, size * 0.12, size * 0.1, color(170, 180, 190), obj.angle, sunAngle);
-            
+
             // Windows/lights
             fill(255, 255, 200, 180);
             for (let w = -1; w <= 1; w++) {
@@ -1421,7 +833,7 @@ const SpaceObjectRenderers = {
             const dang = d * (TWO_PI / 3) + Math.PI / 6;
             const dx = Math.cos(dang) * size * 0.4;
             const dy = Math.sin(dang) * size * 0.4 + bob;
-            
+
             push();
             translate(dx, dy);
             rotate(dang);
@@ -1459,7 +871,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
     },
 
-    observatoryDome: function(obj, size, anim, bob) {
+    observatoryDome: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main support structure (hexagonal base)
@@ -1471,13 +883,13 @@ const SpaceObjectRenderers = {
 
         // Central support pillar
         Draw3D.drawBox3D(0, bob - size * 0.25, size * 0.1, size * 0.5, size * 0.1, color(140, 150, 160), obj.angle, sunAngle);
-        
+
         // Elevator car
         Draw3D.drawBox3D(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, size * 0.06, color(180, 190, 200), obj.angle, sunAngle);
 
         // Massive observation dome (approximated with a prism/hemisphere)
         Draw3D.drawPrism(0, bob - size * 0.45, size * 0.4, 12, size * 0.2, color(220, 240, 255, 100), obj.angle, sunAngle);
-        
+
         // Dome frame
         stroke(90, 100, 110, 180);
         strokeWeight(2);
@@ -1551,16 +963,16 @@ const SpaceObjectRenderers = {
         ellipse(0, bob + size * 0.25, 5, 5);
     },
 
-    weaponPlatform: function(obj, size, anim, bob) {
+    weaponPlatform: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main armored hull
         Draw3D.drawBox3D(0, bob, size * 0.8, size * 0.5, size * 0.2, color(60, 60, 70), obj.angle, sunAngle);
-        
+
         // Armor plating layers
         Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), obj.angle, sunAngle);
         Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.7, size * 0.08, size * 0.22, color(50, 50, 60), obj.angle, sunAngle);
-        
+
         // Reinforced corners
         for (let c = 0; c < 4; c++) {
             const cx = (c % 2 === 0 ? -1 : 1) * size * 0.35;
@@ -1573,10 +985,10 @@ const SpaceObjectRenderers = {
             const tang = t * (TWO_PI / 4) + (anim ? anim.turretRotation : 0);
             const tx = Math.cos(tang) * size * 0.3;
             const ty = Math.sin(tang) * size * 0.3 + bob;
-            
+
             // Turret base
             Draw3D.drawPrism(tx, ty, size * 0.075, 8, size * 0.05, color(70, 70, 80), obj.angle, sunAngle);
-            
+
             // Barrels
             push();
             translate(tx, ty);
@@ -1735,13 +1147,13 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    default: function(obj, size, anim, bob) {
+    default: function (obj, size, anim, bob) {
         // fallback simple marker
         fill(200, 200, 200);
         ellipse(0, 0 + bob, size * 0.6, size * 0.6);
     },
 
-    shieldGenerator: function(obj, size, anim, bob) {
+    shieldGenerator: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Standalone shield generator: visible dome, emitter pylons, pulsing energy field and protective ring
@@ -1754,14 +1166,14 @@ const SpaceObjectRenderers = {
             const pa = p * (TWO_PI / 4) + obj.bobPhase * 0.001;
             const px = Math.cos(pa) * size * 0.28;
             const py = Math.sin(pa) * size * 0.12 + bob;
-            
+
             // Pylon arm
             push();
             translate(px * 0.9, py - size * 0.06);
             rotate(pa);
             Draw3D.drawBox3D(0, 0, size * 0.1, size * 0.02, size * 0.02, color(140, 160, 180), obj.angle + (pa), sunAngle);
             pop();
-            
+
             // Emitter tip
             Draw3D.drawBox3D(px, py, size * 0.06, size * 0.04, size * 0.04, color(130, 150, 170), obj.angle, sunAngle);
         }
@@ -1789,7 +1201,7 @@ const SpaceObjectRenderers = {
         fill(120, 255, 180, 200); ellipse(size * 0.18, bob - size * 0.02, 4, 3);
     },
 
-    undergroundMarket: function(obj, size, anim, bob) {
+    undergroundMarket: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Dark, low-profile black market hub with neon signage and covered cargo crates
@@ -1804,7 +1216,7 @@ const SpaceObjectRenderers = {
             const cx = i * size * 0.22;
             const cy = bob + size * 0.06;
             Draw3D.drawBox3D(cx, cy, size * 0.24, size * 0.16, size * 0.08, color(50, 40, 38), obj.angle, sunAngle);
-            
+
             // Cage bars
             stroke(18, 18, 20, 120); strokeWeight(1);
             line(cx - size * 0.12, cy - size * 0.06, cx + size * 0.12, cy - size * 0.06);
@@ -1836,7 +1248,7 @@ const SpaceObjectRenderers = {
 
     },
 
-    solarSail: function(obj, size, anim, bob) {
+    solarSail: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Central bus
@@ -1844,15 +1256,15 @@ const SpaceObjectRenderers = {
 
         // Sails
         const sailAngle = anim ? (anim.solarSailAngle + Math.sin(obj.bobPhase * 0.002) * anim.solarSailFlutter) : 0;
-        
+
         // Left sail
         push();
         rotate(sailAngle);
-        
+
         // Struts
         // Draw3D.drawPrism(-size * 0.5, bob - size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), obj.angle + (Math.PI/2), sunAngle);
         // Draw3D.drawPrism(-size * 0.5, bob + size * 0.15, size * 0.02, 4, size * 1.0, color(140, 140, 150), obj.angle + (Math.PI/2), sunAngle);
-        
+
         // Sail fabric (2D with 3D positioning context)
         fill(245, 245, 255, 230);
         beginShape();
@@ -1860,7 +1272,7 @@ const SpaceObjectRenderers = {
         vertex(-size * 0.98, bob - size * 0.34);
         vertex(-size * 0.98, bob + size * 0.34);
         endShape(CLOSE);
-        
+
         // Grid lines
         stroke(200, 220, 240, 90); strokeWeight(0.5);
         const L0 = { x: -size * 0.12, y: bob };
@@ -1877,7 +1289,7 @@ const SpaceObjectRenderers = {
         // Right sail
         push();
         rotate(-sailAngle * 1.1);
-        
+
         // Sail fabric
         fill(245, 245, 255, 230);
         beginShape();
@@ -1885,7 +1297,7 @@ const SpaceObjectRenderers = {
         vertex(size * 0.98, bob - size * 0.34);
         vertex(size * 0.98, bob + size * 0.34);
         endShape(CLOSE);
-        
+
         // Grid lines
         stroke(200, 220, 240, 90); strokeWeight(0.5);
         const R0 = { x: size * 0.12, y: bob };
@@ -1917,12 +1329,12 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.08, bob - size * 0.04, 3, 3);
     },
 
-    engineArray: function(obj, size, anim, bob) {
+    engineArray: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Platform body
         Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.7, size * 0.28, size * 0.1, color(80, 80, 80), obj.angle, sunAngle);
-        
+
         // Central pylon
         Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.18, size * 0.46, size * 0.18, color(100, 100, 110), obj.angle, sunAngle);
 
@@ -1930,15 +1342,15 @@ const SpaceObjectRenderers = {
         for (let i = -1; i <= 1; i++) {
             const nx = i * size * 0.28;
             const ny = size * 0.18 + bob;
-            
+
             // Mounting arm
             stroke(110); strokeWeight(2);
             line(nx * 0.45, ny - size * 0.08, nx, ny - size * 0.02);
             noStroke();
-            
+
             // Nozzle housing
             Draw3D.drawPrism(nx, ny, size * 0.09, 8, size * 0.12, color(70, 70, 80), obj.angle, sunAngle);
-            
+
             // Inner glow
             const g = 0.5 + 0.45 * Math.sin((anim ? anim.engineGlow : 0.3) + i * 0.6 + obj.bobPhase * 0.015);
             fill(60, 150, 240, 160 * g);
@@ -1964,7 +1376,7 @@ const SpaceObjectRenderers = {
         ellipse(-size * 0.3, bob - size * 0.02, 3, 3);
         fill(255, 0, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + 1)));
         ellipse(size * 0.3, bob - size * 0.02, 3, 3);
-        
+
         // Cooling vane
         push();
         translate(0, bob + size * 0.1);
@@ -1974,7 +1386,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    cargoCluster: function(obj, size, anim, bob) {
+    cargoCluster: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         const cols = 3;
@@ -1987,10 +1399,10 @@ const SpaceObjectRenderers = {
             for (let c = 0; c < cols; c++) {
                 const x = (c - (cols - 1) / 2) * (cw + 6);
                 const y = (r - (rows - 1) / 2) * (ch + 6) + bob;
-                
+
                 // Container body
                 Draw3D.drawBox3D(x, y, cd, cw, ch, color(120 + r * 10, 110 + c * 8, 100), obj.angle, sunAngle);
-                
+
                 // Hatch animation
                 const hatch = Math.sin((anim ? anim.cargoHatch : 0) + c * 0.7 + r * 1.1) * 6;
                 // Hatch lid
@@ -2013,9 +1425,9 @@ const SpaceObjectRenderers = {
                 const dx = Math.cos(d.ang) * d.dist;
                 const dy = Math.sin(d.ang) * (d.dist * 0.32);
                 const w = 6 + Math.sin(d.phase) * 2;
-                
+
                 Draw3D.drawBox3D(dx, dy + bob - ch * 0.2, w, w, w, color(255, 220, 140), obj.angle, sunAngle);
-                
+
                 stroke(255, 200, 120, 120); strokeWeight(0.6);
                 line(dx, dy + bob - ch * 0.2, dx - Math.cos(d.ang) * 6, dy + bob - ch * 0.2 - Math.sin(d.ang) * 6);
                 noStroke();
@@ -2028,28 +1440,28 @@ const SpaceObjectRenderers = {
         ellipse(-size * 0.2, bob - ch * 0.3, 3, 3);
         fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.3 + 1)));
         ellipse(size * 0.2, bob - ch * 0.3, 3, 3);
-        
+
         // Crane arm
         push();
         translate(0, bob - ch * 0.5);
         const craneAng = Math.sin(obj.bobPhase * 0.002) * 0.15;
         rotate(craneAng);
-        Draw3D.drawPrism(0, 0, size * 0.02, 4, size * 0.3, color(100, 110, 120), obj.angle + (Math.PI/2), sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.02, 4, size * 0.3, color(100, 110, 120), obj.angle + (Math.PI / 2), sunAngle);
         Draw3D.drawBox3D(size * 0.25, -size * 0.2, size * 0.05, size * 0.05, size * 0.05, color(120, 130, 140), obj.angle, sunAngle);
         pop();
     },
 
-    researchArray: function(obj, size, anim, bob) {
+    researchArray: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Low platform
         Draw3D.drawBox3D(0, bob, size * 0.38, size * 0.38, size * 0.22, color(200, 200, 200), obj.angle, sunAngle);
-        
+
         // Sensor mast
         push();
         translate(0, bob - size * 0.06);
         Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.08, size * 0.4, color(140, 140, 140), obj.angle, sunAngle);
-        
+
         // Rotating ring sensor
         const ringAng = (anim ? anim.researchArraySweep : 0) * 0.04;
         rotate(ringAng);
@@ -2065,9 +1477,9 @@ const SpaceObjectRenderers = {
             const totalAng = baseAng + sway;
             rotate(totalAng);
             translate(0, -size * (0.36 + i * 0.05));
-            
+
             // Dish
-            Draw3D.drawPrism(0, 0, size * (0.16 - i * 0.02), 12, size * 0.05, color(235, 235, 235), obj.angle + (Math.PI/2), sunAngle);
+            Draw3D.drawPrism(0, 0, size * (0.16 - i * 0.02), 12, size * 0.05, color(235, 235, 235), obj.angle + (Math.PI / 2), sunAngle);
             // Dish rim
             noFill(); stroke(180); strokeWeight(0.9);
             ellipse(0, 0, size * (0.28 - i * 0.04), size * (0.16 - i * 0.03));
@@ -2095,32 +1507,32 @@ const SpaceObjectRenderers = {
             const by = Math.sin(ba) * br * 0.4 + bob * 0.05;
             Draw3D.drawBox3D(bx, by, size * 0.05, size * 0.08, size * 0.05, color(160, 230, 250, 180), obj.angle, sunAngle);
         }
-        
+
         // Central pulsing indicator
         const pulse = 0.5 + 0.5 * Math.sin(anim ? anim.researchPing : 0);
         fill(100, 200, 230, 120 * pulse);
         ellipse(0, -size * 0.06 + bob, 8 * pulse, 4 * pulse);
         noStroke();
-        
+
         // Status lights
         const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35);
         fill(255, 0, 0, 255 * statusFlash);
         ellipse(-size * 0.15, bob + size * 0.08, 3, 3);
         fill(0, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.35 + 1)));
         ellipse(size * 0.15, bob + size * 0.08, 3, 3);
-        
+
         // Auxiliary dish
         push();
         translate(size * 0.25, bob - size * 0.1);
         const auxAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
         rotate(auxAng);
-        Draw3D.drawPrism(0, 0, size * 0.07, 8, size * 0.05, color(210, 220, 230), obj.angle + (Math.PI/2), sunAngle);
+        Draw3D.drawPrism(0, 0, size * 0.07, 8, size * 0.05, color(210, 220, 230), obj.angle + (Math.PI / 2), sunAngle);
         pop();
     },
 
-    orbitalGarden: function(obj, size, anim, bob) {
+    orbitalGarden: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
-        
+
         // Helper to project "height" (z) along the object's rotation axis
         // z > 0 is "up" (towards the top of the station), z < 0 is "down"
         const sin = Math.sin(obj.angle || 0);
@@ -2139,7 +1551,7 @@ const SpaceObjectRenderers = {
         // Base Top at z = -0.15s, Depth = 0.15s (Bottom at -0.30s)
         const pBase = getPos(-size * 0.15);
         Draw3D.drawPrism(pBase.x, pBase.y, size * 0.4, 12, size * 0.15, color(50, 55, 60), obj.angle, sunAngle);
-        
+
         // Ring around base
         const pRing = getPos(-size * 0.20);
         Draw3D.drawRing3D(pRing.x, pRing.y, size * 0.5, size * 0.38, 12, size * 0.05, color(70, 75, 80), obj.angle, sunAngle);
@@ -2152,19 +1564,19 @@ const SpaceObjectRenderers = {
         // Lush Vegetation
         const breeze = (anim ? anim.gardenBreeze : 0) + obj.bobPhase * 0.002;
         const plantCount = 12;
-        
+
         // Plants stand on the soil (z = -0.10s)
         const soilZ = -size * 0.10;
-        
+
         for (let i = 0; i < plantCount; i++) {
             const angle = i * (TWO_PI / plantCount) + (i * 1.1);
             const r = size * (0.1 + (i % 3) * 0.08);
-            
+
             // Calculate plant position on the circular bed
             // We need to rotate this offset by obj.angle to match the station's rotation
             const localX = Math.cos(angle) * r;
             const localY = Math.sin(angle) * r; // Flat circle on the "floor"
-            
+
             // Rotate (localX, localY) by obj.angle
             // The "floor" plane is perpendicular to the Z axis.
             // In Draw3D's simple projection, the "side" view compresses the Y axis of the floor circle?
@@ -2185,12 +1597,12 @@ const SpaceObjectRenderers = {
             // So the "Top" face is the one closest to the camera.
             // So the "Soil" is a flat polygon facing the camera.
             // So plants should be placed on this polygon.
-            
+
             const px = pSoil.x + Math.cos(angle) * r;
             const py = pSoil.y + Math.sin(angle) * r;
-            
+
             const sway = Math.sin(breeze + i) * size * 0.02;
-            
+
             // Trunk
             // Trunks grow "up" (towards camera? or along station axis?)
             // If the station is a tower, trees should grow "out" from the axis? Or "up" along the axis?
@@ -2213,12 +1625,12 @@ const SpaceObjectRenderers = {
             // If theta=0, dv=(0, depth).
             // If I draw a rect at 0,0 and another at 0,10.
             // It looks like a tower viewed from slightly above-side.
-            
+
             // If I want trees to stand UP from the soil (perpendicular to the soil face):
             // Since the soil face is drawn as a flat polygon on screen, "Perpendicular" means "Towards the camera".
             // But we can't draw "towards the camera" easily with this 2D canvas except by draw order.
             // AND `drawPrism` extrudes sideways/downwards.
-            
+
             // Let's assume the "Soil" face is the ground.
             // Trees should stick out of it.
             // If we use `drawBox3D` or `drawPrism` for trees, they will also be extruded along the station axis.
@@ -2237,29 +1649,29 @@ const SpaceObjectRenderers = {
             // So trees should stand up *towards the camera*.
             // To simulate trees standing up towards the camera, we just draw them on top (draw order) and maybe give them a little "height" effect (parallax?).
             // Or we just draw them as blobs on the circle.
-            
+
             // Let's stick to drawing them as small prisms/boxes on the surface.
             // If I draw a box at (px, py), it sits on the surface.
             // To make it look like a tree, maybe just a small circle (top down view of tree).
             // OR, if we want to simulate the "Cupola" being a dome over it, we are looking into the dome.
-            
+
             // Trunk (Top down view = dot)
             // Foliage (Top down view = larger circle)
-            
+
             // Let's try drawing them as simple circles/blobs since we are looking "down" into the garden.
-            
+
             const trunkH = size * 0.02; // Not height, but thickness/size
             // Draw trunk
             fill(80, 60, 40);
             ellipse(px, py, size * 0.03, size * 0.03);
-            
+
             // Foliage
-            const bushSize = size * (0.08 + (i%3)*0.03);
+            const bushSize = size * (0.08 + (i % 3) * 0.03);
             const gVar = (i * 30) % 50;
             fill(40, 140 + gVar, 60);
             ellipse(px + sway, py + sway * 0.5, bushSize, bushSize);
         }
-        
+
         // Central Tree (Top down)
         fill(50, 180, 80);
         ellipse(pSoil.x, pSoil.y, size * 0.25, size * 0.25);
@@ -2280,20 +1692,20 @@ const SpaceObjectRenderers = {
         // So `getPos(0)` is the center. `getPos(0.1)` is "higher" (closer to top).
         // So we should draw from Bottom (negative z) to Top (positive z).
         // And we should use the painter's algorithm (draw bottom first).
-        
+
         // My previous logic:
         // Base at -0.15.
         // Soil at -0.10.
         // Cupola 1 at 0.05.
         // Cupola 2 at 0.15.
         // Cupola 3 at 0.22.
-        
+
         // This order is correct for Painter's Algorithm if we are looking from the "Top".
         // (The things "higher" up the stack cover the things "lower" down).
-        
+
         const domeColor = color(200, 240, 255, 40);
         const domeRibColor = color(200, 240, 255, 80);
-        
+
         // Cupola Layer 1 (Wide)
         // Top at z = 0.05s, Depth = 0.15s (Bottom at -0.10s, meets Soil)
         const pCup1 = getPos(size * 0.05);
@@ -2345,14 +1757,14 @@ const SpaceObjectRenderers = {
         // Rotated `dv` = `dv` rotated by `R`.
         // `dv(angle - R)` rotated by `R` = `dv(angle)`.
         // Yes! That works.
-        
+
         Draw3D.drawRing3D(0, 0, size * 0.65, size * 0.55, 16, size * 0.02, color(100, 120, 140), obj.angle - ringPhase, sunAngle);
         pop();
-        
+
         // Pollinators
         const pollPhase = (anim ? anim.pollinatorPhase : 0) + obj.bobPhase * 0.002;
-        for(let p=0; p<5; p++) {
-            const pa = pollPhase + p * (TWO_PI/5);
+        for (let p = 0; p < 5; p++) {
+            const pa = pollPhase + p * (TWO_PI / 5);
             const pr = size * 0.5;
             // Orbiting around the "Garden" level (z = 0)
             const pCenter = getPos(0);
@@ -2364,7 +1776,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    hydroponicsBay: function(obj, size, anim, bob) {
+    hydroponicsBay: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Helper to project "height" (z) along the object's rotation axis
@@ -2394,22 +1806,22 @@ const SpaceObjectRenderers = {
         for (let r = 0; r < rows; r++) {
             const z = startZ + r * gapZ;
             const pTray = getPos(z);
-            
+
             // Tray body
             Draw3D.drawBox3D(pTray.x, pTray.y, trayW, trayW, size * 0.05, color(40, 60, 50), obj.angle, sunAngle);
-            
+
             // Plants (grid on tray)
             // Draw slightly above tray surface
             const pPlants = getPos(z + size * 0.03);
-            
-            for(let px = -1; px <= 1; px++) {
-                for(let py = -1; py <= 1; py++) {
+
+            for (let px = -1; px <= 1; px++) {
+                for (let py = -1; py <= 1; py++) {
                     // Calculate local offsets for the grid
                     const offX = px * (trayW * 0.25);
                     const offY = py * (trayW * 0.25);
-                    
+
                     const sway = Math.sin((anim ? anim.hydroponicCycle : obj.bobPhase) * 0.9 + px + py) * 2;
-                    
+
                     // Draw plant box at the offset position
                     // Note: context is rotated, so (offX, offY) aligns with tray
                     Draw3D.drawBox3D(pTray.x + offX, pTray.y + offY, size * 0.12, size * 0.12, size * 0.08 + sway, color(80, 200, 120), obj.angle, sunAngle);
@@ -2431,7 +1843,7 @@ const SpaceObjectRenderers = {
         const pDomeTop = getPos(size * 0.32);
         const domeColor = color(200, 235, 250, 60);
         Draw3D.drawPrism(pDomeTop.x, pDomeTop.y, size * 0.55, 8, size * 0.55, domeColor, obj.angle, sunAngle);
-        
+
         // Dome Ribs
         Draw3D.drawRing3D(pDomeTop.x, pDomeTop.y, size * 0.55, size * 0.53, 8, size * 0.02, color(200, 235, 250, 100), obj.angle, sunAngle);
 
@@ -2447,19 +1859,19 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    decoyBuoy: function(obj, size, anim, bob) {
+    decoyBuoy: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // small, cheap decoy that pulses and emits short-lived flares
         // Main body
         Draw3D.drawPrism(0, bob, size * 0.25, 6, size * 0.4, color(140, 160, 220), obj.angle, sunAngle);
-        
+
         const dp = (Math.sin(anim ? anim.decoyPulse : obj.bobPhase * 0.8) + 1) * 0.5;
-        
+
         // Pulse glow
         fill(255, 140, 60, 160 * dp);
         ellipse(0, bob - size * 0.06, size * (0.2 + dp * 0.6), size * (0.2 + dp * 0.6));
-        
+
         // small outward puffs
         for (let p = 0; p < 3; p++) {
             const pa = obj.bobPhase * 0.01 + p * 1.5 + (anim ? anim.decoyPulse : 0);
@@ -2467,14 +1879,14 @@ const SpaceObjectRenderers = {
             fill(255, 180, 120, 60 * dp);
             ellipse(Math.cos(pa) * pr, Math.sin(pa) * pr + bob - size * 0.06, 6 + p * 3 * dp, 2 + p * 1.5 * dp);
         }
-        
+
         // Flashing warning lights
         const warnFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.5);
         fill(255, 0, 0, 255 * warnFlash);
         ellipse(-size * 0.15, bob + size * 0.1, 3, 3);
         fill(255, 255, 0, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.5 + 1)));
         ellipse(size * 0.15, bob + size * 0.1, 3, 3);
-        
+
         // Slow-moving antenna
         push();
         const antAng = Math.sin(obj.bobPhase * 0.006) * 0.3;
@@ -2484,12 +1896,12 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    miningPlatform: function(obj, size, anim, bob) {
+    miningPlatform: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Wide, flat base - emphasize silhouette like the classic 2D art
         Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), obj.angle, sunAngle);
-        
+
         // Top deck: a large, shallow plate with bold stripes (2D-inspired decals)
         Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), obj.angle, sunAngle);
         // Painted hazard stripes on deck (flat 2D look)
@@ -2518,11 +1930,11 @@ const SpaceObjectRenderers = {
             const baseAng = -PI / 2 + a * (TWO_PI / 3);
             const armWobble = Math.sin(obj._miningState.armPhase + a * 0.6) * 0.08;
             const ang = baseAng + armWobble;
-            
+
             push();
             translate(0, bob - size * 0.04);
             rotate(ang);
-            
+
             const hullLen = size * 0.48;
             const plate = [
                 { x: size * 0.06, y: -size * 0.03 },
@@ -2531,14 +1943,14 @@ const SpaceObjectRenderers = {
             ];
 
             Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), obj.angle, sunAngle, true);
-            
+
             // actuator piston (oscillating)
             const piston = Math.sin(obj._miningState.armPhase * 1.5 + a) * (size * 0.02);
             Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), obj.angle, sunAngle);
-            
+
             // Drill housing
             Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), obj.angle, sunAngle);
-            
+
             // Rotating drill tip (concentric rings for motion)
             push();
             translate(hullLen * 1.02, 0);
@@ -2614,7 +2026,7 @@ const SpaceObjectRenderers = {
             const p = obj._miningState.particles[i];
             p.vy += 0.06; p.y += p.vy; p.life -= 1;
             fill(140, 110, 80, 160 * (p.life / 100));
-            ellipse(p.x, p.y + bob, 3 + Math.random()*2, 2 + Math.random()*1.5);
+            ellipse(p.x, p.y + bob, 3 + Math.random() * 2, 2 + Math.random() * 1.5);
             if (p.life <= 0 || p.y - (size * 0.6) > size) obj._miningState.particles.splice(i, 1);
         }
 
@@ -2639,7 +2051,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    ancientRelic: function(obj, size, anim, bob) {
+    ancientRelic: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         // Redesigned obelisk-style relic with stacked prisms, floating ring and shards
         const pulse = (Math.sin(anim ? anim.relicPulse : obj.bobPhase * 0.001) + 1) * 0.5;
@@ -2653,7 +2065,7 @@ const SpaceObjectRenderers = {
             const t = L / layers;
             const r = lerp(size * 0.22, size * 0.08, t);
             const h = lerp(size * 0.22, size * 0.18, t);
-            const yOff = bob + (L - (layers/2 - 0.5)) * (size * 0.12);
+            const yOff = bob + (L - (layers / 2 - 0.5)) * (size * 0.12);
             Draw3D.drawPrism(0, yOff - size * 0.06, r, 6, h, color(48, 56, 66), obj.angle, sunAngle);
         }
 
@@ -2663,8 +2075,8 @@ const SpaceObjectRenderers = {
 
         // Levitation shards (extruded shapes, placed in depth around the relic)
         for (let s = 0; s < 6; s++) {
-            const a = s * TWO_PI / 6 + obj.bobPhase * 0.002 * (s%2?1:-1);
-            const distR = size * (0.28 + 0.06 * (s%3));
+            const a = s * TWO_PI / 6 + obj.bobPhase * 0.002 * (s % 2 ? 1 : -1);
+            const distR = size * (0.28 + 0.06 * (s % 3));
             const sx = Math.cos(a) * distR;
             const sy = Math.sin(a) * distR * 0.28 + bob - size * 0.04 + Math.sin(obj.bobPhase * 0.003 + s) * size * 0.02;
             // small shard prism
@@ -2691,50 +2103,50 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.14, size * 0.16 + bob, 5, 5);
     },
 
-    alienArtifact: function(obj, size, anim, bob) {
+    alienArtifact: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (typeof anim.artifactPhase === 'number') ? anim.artifactPhase : obj.bobPhase;
-        
+
         // Central Crystal Cluster
         const crystalColor = color(100, 40, 140);
         const glowColor = color(180, 100, 255);
-        
+
         // Main crystal (rotating prism)
         Draw3D.drawPrism(0, bob, size * 0.15, 6, size * 0.6, crystalColor, obj.angle + (phase * 0.2), sunAngle);
-        
+
         // Side crystals (tilted)
-        for(let i=0; i<3; i++) {
-            const ang = i * (TWO_PI/3) + phase * 0.1;
+        for (let i = 0; i < 3; i++) {
+            const ang = i * (TWO_PI / 3) + phase * 0.1;
             const dist = size * 0.15;
             const cx = Math.cos(ang) * dist;
             const cy = Math.sin(ang) * dist + bob;
-            
+
             // We can't easily tilt prisms with Draw3D, so we just place them around
             Draw3D.drawPrism(cx, cy, size * 0.08, 5, size * 0.4, color(80, 30, 120), obj.angle + (ang), sunAngle);
         }
-        
+
         // Floating Rings (segmented)
         const ringCount = 2;
-        for(let r=0; r<ringCount; r++) {
+        for (let r = 0; r < ringCount; r++) {
             const rRad = size * (0.4 + r * 0.25);
             const rSpeed = (r % 2 === 0 ? 1 : -1) * 0.005;
             const rAng = phase * 50 * rSpeed; // phase is already incrementing
-            
+
             const segs = 6;
-            for(let s=0; s<segs; s++) {
-                const sa = rAng + s * (TWO_PI/segs);
+            for (let s = 0; s < segs; s++) {
+                const sa = rAng + s * (TWO_PI / segs);
                 const sx = Math.cos(sa) * rRad;
                 const sy = Math.sin(sa) * (rRad * 0.35) + bob; // Flattened perspective
-                
+
                 Draw3D.drawBox3D(sx, sy, size * 0.1, size * 0.04, size * 0.04, color(140, 100, 180), obj.angle + (sa), sunAngle);
             }
         }
-        
+
         // Energy Core Pulse
         const pulse = 0.6 + 0.4 * Math.sin(phase * 3);
         fill(red(glowColor), green(glowColor), blue(glowColor), 150 * pulse);
         ellipse(0, bob, size * 0.3, size * 0.3);
-        
+
         // Lightning arcs
         if (Math.random() < 0.1) {
             stroke(200, 150, 255, 200);
@@ -2743,11 +2155,11 @@ const SpaceObjectRenderers = {
             const r1 = size * 0.2;
             const a2 = Math.random() * TWO_PI;
             const r2 = size * 0.6;
-            line(Math.cos(a1)*r1, Math.sin(a1)*r1 + bob, Math.cos(a2)*r2, Math.sin(a2)*r2 + bob);
+            line(Math.cos(a1) * r1, Math.sin(a1) * r1 + bob, Math.cos(a2) * r2, Math.sin(a2) * r2 + bob);
             noStroke();
         }
     },
-    signalFlare: function(obj, size, anim, bob) {
+    signalFlare: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim ? anim.flarePhase : obj.bobPhase * 0.008);
 
@@ -2776,7 +2188,7 @@ const SpaceObjectRenderers = {
 
         // Chromatic shell: slight RGB offsets to simulate shimmering edges
         push();
-        translate( Math.sin(phase * 0.9) * 1.5, Math.cos(phase * 1.1) * 1.2 );
+        translate(Math.sin(phase * 0.9) * 1.5, Math.cos(phase * 1.1) * 1.2);
         fill(255, 120, 160, Math.floor(48 * pulse));
         ellipse(0, bob, size * 0.9 * (0.95 + pulse * 0.08), size * 0.58 * (0.95 + pulse * 0.08));
         translate(-Math.sin(phase * 0.9) * 3.0, -Math.cos(phase * 1.1) * 2.4);
@@ -2822,7 +2234,7 @@ const SpaceObjectRenderers = {
             let mr = 220, mg = 200, mb = 160;
             if (m.colIdx === 1) { mr = 180; mg = 230; mb = 255; }
             if (m.colIdx === 2) { mr = 255; mg = 150; mb = 200; }
-            
+
             Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.round(80 * Math.sin(phase * 2 + i))), obj.angle, sunAngle);
         }
 
@@ -2844,7 +2256,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    asteroidMiner: function(obj, size, anim, bob) {
+    asteroidMiner: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base skid
@@ -2852,10 +2264,10 @@ const SpaceObjectRenderers = {
 
         // Main hull / tower
         Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.26, size * 0.52, size * 0.26, color(120, 118, 120), obj.angle, sunAngle);
-        
+
         // Armored plating panels
         Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.28, size * 0.08, size * 0.28, color(100, 98, 100), obj.angle, sunAngle);
-        
+
         // Grated intake vents
         Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.18, size * 0.06, size * 0.18, color(60, 60, 66), obj.angle, sunAngle);
 
@@ -2866,7 +2278,7 @@ const SpaceObjectRenderers = {
             push();
             // subtle arm sweep motion
             rotate(baseAng + Math.sin(obj.bobPhase * 0.0015 + a) * 0.03);
-            
+
             // Arm shaft
             const x1 = size * 0.14, y1 = size * 0.02 + bob;
             const x2 = size * 0.54, y2 = size * 0.18 + bob;
@@ -2874,13 +2286,13 @@ const SpaceObjectRenderers = {
             const my = (y1 + y2) / 2;
             const len = dist(x1, y1, x2, y2);
             const angle = atan2(y2 - y1, x2 - x1);
-            
+
             push();
             translate(mx, my);
             rotate(angle);
             Draw3D.drawBox3D(0, 0, len, size * 0.05, size * 0.05, color(120, 120, 120), obj.angle, sunAngle);
             pop();
-            
+
             // Arm joint
             Draw3D.drawBox3D(size * 0.54, size * 0.18 + bob, size * 0.09, size * 0.07, size * 0.06, color(95, 95, 95), obj.angle, sunAngle);
 
@@ -2890,11 +2302,11 @@ const SpaceObjectRenderers = {
             const spin = (anim ? anim.miningSpin : 0) + obj.bobPhase * 0.003 + a * 0.6;
             rotate(spin);
             Draw3D.drawBox3D(0, 0, size * 0.14, size * 0.05, size * 0.04, color(120, 110, 90), obj.angle, sunAngle);
-            
+
             // drill bit layers (concentric triangles)
             for (let d = 0; d < 3; d++) {
                 push(); rotate(d * 0.8);
-                Draw3D.drawPrism(size * (0.12 + d * 0.02), 0, size * 0.04, 3, size * 0.08, color(160 - d * 20, 140 - d * 18, 110 - d * 12), obj.angle + (-Math.PI/2), sunAngle);
+                Draw3D.drawPrism(size * (0.12 + d * 0.02), 0, size * 0.04, 3, size * 0.08, color(160 - d * 20, 140 - d * 18, 110 - d * 12), obj.angle + (-Math.PI / 2), sunAngle);
                 pop();
             }
             pop();
@@ -2925,10 +2337,10 @@ const SpaceObjectRenderers = {
         // Ore chute / conveyor with moving ore pieces
         push();
         const beltY = size * 0.36 + bob;
-        
+
         // Conveyor belt body
         Draw3D.drawBox3D(0, beltY, size * 0.66, size * 0.12, size * 0.1, color(40), obj.angle, sunAngle);
-        
+
         // belt segments (visual motion)
         stroke(28, 28, 32); strokeWeight(1);
         const beltPhase = (anim && typeof anim.miningSpin === 'number') ? anim.miningSpin * 6 : obj.bobPhase * 0.015;
@@ -2942,7 +2354,7 @@ const SpaceObjectRenderers = {
             const t = ((obj.bobPhase * 0.01) + o * 0.25) % 1;
             const ox = lerp(-size * 0.32, size * 0.32, t);
             const oreHue = (o % 2 === 0) ? color(200, 140, 80) : color(180, 90, 40);
-            
+
             // Ore chunks as small boxes
             Draw3D.drawBox3D(ox, beltY - size * 0.02, size * 0.06, size * 0.04, size * 0.04, oreHue, obj.angle, sunAngle);
         }
@@ -2952,10 +2364,10 @@ const SpaceObjectRenderers = {
         for (let s = -2; s <= 2; s++) {
             const sx = s * (size * 0.22);
             const sy = size * 0.46 + bob;
-            
+
             // Storage bins
             Draw3D.drawBox3D(sx, sy, size * 0.14, size * 0.16, size * 0.14, color(85, 60, 50), obj.angle, sunAngle);
-            
+
             stroke(60, 40, 30, 120); strokeWeight(1);
             line(sx - 6, sy - 8, sx + 6, sy - 8);
             noStroke();
@@ -2978,10 +2390,10 @@ const SpaceObjectRenderers = {
         obj._minerDrone.ang += 0.0045;
         const ddx = Math.cos(obj._minerDrone.ang) * obj._minerDrone.dist;
         const ddy = Math.sin(obj._minerDrone.ang) * (obj._minerDrone.dist * 0.36) + bob * 0.02;
-        
+
         // Drone body
         Draw3D.drawBox3D(ddx, ddy, 8, 6, 6, color(210, 200, 170), obj.angle, sunAngle);
-        
+
         // drone tether/arm
         stroke(160, 140, 120, 160); strokeWeight(0.6);
         line(ddx, ddy, ddx - Math.cos(obj._minerDrone.ang) * 8, ddy - Math.sin(obj._minerDrone.ang) * 8);
@@ -2991,7 +2403,7 @@ const SpaceObjectRenderers = {
         ellipse(ddx - 4, ddy - 2, 3, 3);
     },
 
-    energyCollector: function(obj, size, anim, bob) {
+    energyCollector: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base dish
@@ -3007,7 +2419,7 @@ const SpaceObjectRenderers = {
                 const a = i * (TWO_PI / layerCount) + spin * (1 + layer * 0.4) + obj.bobPhase * (0.0004 + layer * 0.0002);
                 const rx = Math.cos(a) * layerRadius;
                 const ry = Math.sin(a) * (size * 0.12) + bob;
-                
+
                 // Coil as a small box
                 Draw3D.drawBox3D(rx, ry, size * (0.10 - layer * 0.02), size * (0.06 - layer * 0.01), size * 0.05, color(90, 200, 240, alphaBase + 40 * Math.sin(obj.bobPhase * 0.01 + i)), obj.angle, sunAngle);
             }
@@ -3025,7 +2437,7 @@ const SpaceObjectRenderers = {
                 const lx = Math.cos(a) * size * 0.46;
                 const ly = Math.sin(a) * (size * 0.14) + bob;
                 const flash = 0.5 + 0.5 * Math.sin(anim.lightPhase + i * 0.7 + obj.bobPhase * 0.003);
-                
+
                 // LED as small box
                 Draw3D.drawBox3D(lx, ly, 3 + flash * 2, 3 + flash * 1.2, 3, color(180, 255, 200, 180 * flash), obj.angle, sunAngle);
             }
@@ -3037,23 +2449,23 @@ const SpaceObjectRenderers = {
             const pr = size * (0.12 + 0.06 * p);
             const px = Math.cos(angle * (0.7 + p * 0.3)) * pr * 0.9;
             const py = Math.sin(angle * (0.9 + p * 0.2)) * pr * 0.4 + bob * 0.25;
-            
+
             // Particle as tiny box
             Draw3D.drawBox3D(px, py, 2 + p * 0.6, 2 + p * 0.3, 2, color(140, 220, 255, 30 + 40 * Math.sin(obj.bobPhase * 0.01 + p)), obj.angle, sunAngle);
         }
     },
 
-    iceCrystal: function(obj, size, anim, bob) {
+    iceCrystal: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main crystal cluster
         for (let s = 0; s < 5; s++) {
             const ang = s * (TWO_PI / 5) + obj.bobPhase * 0.002;
             const len = size * (0.35 + s * 0.08);
-            
+
             const sx = Math.cos(ang) * size * 0.1;
             const sy = Math.sin(ang) * size * 0.05 + bob;
-            
+
             // Draw a prism for each shard
             Draw3D.drawPrism(sx, sy, len * 0.2, 4, len, color(200, 235, 255, 220), obj.angle, sunAngle);
         }
@@ -3062,13 +2474,13 @@ const SpaceObjectRenderers = {
         for (let i = 0; i < 3; i++) {
             const sx = Math.cos(obj.bobPhase * 0.002 + i) * size * 0.4;
             const sy = Math.sin(obj.bobPhase * 0.003 + i) * size * 0.18 + bob * 0.08;
-            
+
             // Tiny shard as a small prism
             Draw3D.drawPrism(sx, sy, 4, 3, 6, color(180, 220, 255, 120), obj.angle, sunAngle);
         }
     },
 
-    nebulaFragment: function(obj, size, anim, bob) {
+    nebulaFragment: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && typeof anim.nebulaPhase === 'number') ? anim.nebulaPhase : obj.bobPhase * 0.008;
         const t = (Math.sin(phase) + 1) * 0.5;
@@ -3090,7 +2502,7 @@ const SpaceObjectRenderers = {
             // slight offset for parallax look
             const ox = Math.sin(phase * (0.6 + i * 0.2)) * (size * 0.02 * i);
             const oy = Math.cos(phase * (0.7 + i * 0.18)) * (size * 0.01 * i) + bob * (0.04 * i);
-            
+
             // Use ellipses for the glow as they are billboards
             ellipse(ox, oy, w, h);
         }
@@ -3136,7 +2548,7 @@ const SpaceObjectRenderers = {
             let mr = 220, mg = 190, mb = 160;
             if (m.col === 1) { mr = 180; mg = 230; mb = 255; }
             if (m.col === 2) { mr = 255; mg = 150; mb = 220; }
-            
+
             // Mote as small box
             Draw3D.drawBox3D(mx, my, m.sz, m.sz, m.sz, color(mr, mg, mb, 120 + Math.floor(60 * Math.sin(phase * 2 + mi))), obj.angle, sunAngle);
         }
@@ -3147,28 +2559,28 @@ const SpaceObjectRenderers = {
             const sr = size * (0.18 + s * 0.14);
             const sx = Math.cos(sa) * sr * 0.6;
             const sy = Math.sin(sa) * sr * 0.38 + bob * 0.02;
-            
+
             // Sparkle as tiny box
             Draw3D.drawBox3D(sx, sy, 2.5 - s * 0.6, 2.5 - s * 0.6, 2, color(255, 255, 255, 140 - s * 30), obj.angle, sunAngle);
         }
     },
 
-    wreckage: function(obj, size, anim, bob) {
+    wreckage: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Main plate
         Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.28, size * 0.05, color(120, 110, 100), obj.angle, sunAngle);
-        
+
         // Scattered panels
         Draw3D.drawBox3D(-size * 0.22, bob - size * 0.12, size * 0.2, size * 0.08, size * 0.04, color(90, 80, 80), obj.angle, sunAngle);
         Draw3D.drawBox3D(size * 0.28, bob + size * 0.1, size * 0.18, size * 0.06, size * 0.04, color(90, 80, 80), obj.angle, sunAngle);
-        
+
         // Small sparks/puffs
         fill(255, 180, 140, 120);
         ellipse(size * 0.36, bob - size * 0.06, 6, 3);
     },
 
-    solarFarm: function(obj, size, anim, bob) {
+    solarFarm: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const a = anim || obj._anim || {};
 
@@ -3177,7 +2589,7 @@ const SpaceObjectRenderers = {
 
         // Central collector tower
         Draw3D.drawBox3D(0, bob - size * 0.06, size * 0.12, size * 0.32, size * 0.12, color(120, 130, 140), obj.angle, sunAngle);
-        
+
         // Collector glow
         fill(200, 220, 240, 60);
         ellipse(0, bob - size * 0.22, size * 0.14, size * 0.08);
@@ -3189,21 +2601,21 @@ const SpaceObjectRenderers = {
         const panelH = size * 0.08;
         const tiltBase = (typeof a.panelTiltAngle === 'number') ? a.panelTiltAngle : 0;
         const trackPhase = (typeof a.trackerPhase === 'number') ? a.trackerPhase : obj.bobPhase * 0.001;
-        
+
         for (let r = 0; r < rows; r++) {
             const yOff = bob - size * 0.06 + r * (panelH * 1.2);
             for (let c = 0; c < cols; c++) {
                 const x = (c - (cols - 1) / 2) * (panelW * 1.2);
                 const per = (c / cols) + r * 0.13;
                 const tilt = tiltBase + Math.sin(trackPhase * (0.9 + per * 0.2) + per * 1.7) * (0.14 + r * 0.02);
-                
+
                 push();
                 translate(x, yOff);
                 rotate(tilt);
-                
+
                 // Panel body
                 Draw3D.drawBox3D(0, 0, panelW, panelH, size * 0.01, color(18, 58, 130), obj.angle, sunAngle);
-                
+
                 // Grid lines
                 stroke(12, 30, 70, 160); strokeWeight(0.6);
                 for (let g = -2; g <= 2; g++) {
@@ -3211,7 +2623,7 @@ const SpaceObjectRenderers = {
                     line(-panelW * 0.46, gx, panelW * 0.46, gx);
                 }
                 noStroke();
-                
+
                 // Specular sheen
                 fill(255, 255, 240, 28);
                 beginShape();
@@ -3226,7 +2638,7 @@ const SpaceObjectRenderers = {
         // Wiring bus and pulse glow
         const pulse = 0.6 + 0.4 * Math.sin((a.wiringPulse || obj.bobPhase) * 0.006);
         Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.5, size * 0.04, size * 0.04, color(90, 200, 255, 80 + 80 * pulse), obj.angle, sunAngle);
-        
+
         // Small power node
         fill(120, 220, 255, 160);
         ellipse(-size * 0.18, bob + size * 0.12, 6, 4);
@@ -3243,22 +2655,22 @@ const SpaceObjectRenderers = {
             d.ang += d.speed;
             const dx = Math.cos(d.ang) * d.dist;
             const dy = Math.sin(d.ang) * d.dist * 0.36 + bob * 0.06;
-            
+
             // Tether line
             stroke(120, 140, 150, 120); strokeWeight(0.6);
             line(0, bob - size * 0.06, dx, dy - 2);
             noStroke();
-            
+
             // Drone body as small box
             Draw3D.drawBox3D(dx, dy, 6, 4, 4, color(240, 230, 200), obj.angle, sunAngle);
-            
+
             // Status light
             fill(100, 220, 160, 220);
             ellipse(dx + 3, dy - 1, 2, 2);
         }
     },
 
-    prison: function(obj, size, anim, bob) {
+    prison: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base platform shadow
@@ -3266,7 +2678,7 @@ const SpaceObjectRenderers = {
 
         // Main security compound
         Draw3D.drawBox3D(0, bob, size * 0.9, size * 0.5, size * 0.3, color(40, 40, 45), obj.angle, sunAngle);
-        
+
         // Reinforced plating
         Draw3D.drawBox3D(0, bob - size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), obj.angle, sunAngle);
         Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.85, size * 0.08, size * 0.32, color(30, 30, 35), obj.angle, sunAngle);
@@ -3274,13 +2686,13 @@ const SpaceObjectRenderers = {
         // Cell block modules (4 wings)
         for (let wing = 0; wing < 4; wing++) {
             const wangle = wing * (TWO_PI / 4);
-            
+
             let wx = 0, wy = 0, ww = 0, wh = 0;
             if (wing === 0) { wx = size * 0.35; wy = 0; ww = size * 0.25; wh = size * 0.12; }
             else if (wing === 1) { wx = 0; wy = size * 0.35; ww = size * 0.12; wh = size * 0.25; }
             else if (wing === 2) { wx = -size * 0.35; wy = 0; ww = size * 0.25; wh = size * 0.12; }
             else if (wing === 3) { wx = 0; wy = -size * 0.35; ww = size * 0.12; wh = size * 0.25; }
-            
+
             Draw3D.drawBox3D(wx, wy + bob, ww, wh, size * 0.1, color(50, 50, 55), obj.angle, sunAngle);
         }
 
@@ -3289,13 +2701,13 @@ const SpaceObjectRenderers = {
             const tangle = t * (TWO_PI / 4) + Math.PI / 4;
             const tx = Math.cos(tangle) * size * 0.42;
             const ty = Math.sin(tangle) * size * 0.42 + bob;
-            
+
             // Tower base
             Draw3D.drawBox3D(tx, ty, size * 0.1, size * 0.15, size * 0.2, color(45, 45, 50), obj.angle, sunAngle);
-            
+
             // Tower top
             Draw3D.drawBox3D(tx, ty - size * 0.08, size * 0.12, size * 0.04, size * 0.12, color(55, 55, 60), obj.angle, sunAngle);
-            
+
             // Guard light
             fill(200, 180, 100, 180);
             ellipse(tx, ty - size * 0.1, 4, 4);
@@ -3327,7 +2739,7 @@ const SpaceObjectRenderers = {
         strokeWeight(1.5);
         noFill();
         rect(0, bob, size * 0.98, size * 0.58, 10);
-        
+
         // Energy nodes at corners
         noStroke();
         for (let n = 0; n < 4; n++) {
@@ -3340,7 +2752,7 @@ const SpaceObjectRenderers = {
 
         // Central command center
         Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.2, size * 0.15, size * 0.1, color(60, 60, 70), obj.angle, sunAngle);
-        
+
         // Command windows
         for (let w = -1; w <= 1; w++) {
             Draw3D.drawBox3D(w * (size * 0.05), bob - size * 0.05, size * 0.025, size * 0.06, size * 0.02, color(150, 150, 200, 120), obj.angle, sunAngle);
@@ -3374,16 +2786,16 @@ const SpaceObjectRenderers = {
             drone.ang += drone.speed;
             const dx = Math.cos(drone.ang) * drone.dist;
             const dy = Math.sin(drone.ang) * drone.dist * 0.5 + bob;
-            
+
             // Drone as small box
             Draw3D.drawBox3D(dx, dy, 8, 6, 4, color(80, 80, 90), obj.angle, sunAngle);
-            
+
             fill(255, 0, 0, 200);
             ellipse(dx + 2, dy, 2, 2);
         }
     },
 
-    drugLab: function(obj, size, anim, bob) {
+    drugLab: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Platform shadow
@@ -3391,7 +2803,7 @@ const SpaceObjectRenderers = {
 
         // Main facility housing
         Draw3D.drawBox3D(0, bob, size * 0.7, size * 0.45, size * 0.25, color(55, 60, 55), obj.angle, sunAngle);
-        
+
         // Worn paneling
         Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), obj.angle, sunAngle);
         Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.65, size * 0.08, size * 0.26, color(45, 50, 45), obj.angle, sunAngle);
@@ -3400,14 +2812,14 @@ const SpaceObjectRenderers = {
         for (let t = -1; t <= 1; t++) {
             const tx = t * (size * 0.28);
             const ty = bob - size * 0.08;
-            
+
             // Tank body as a prism (cylinder approximation)
             Draw3D.drawPrism(tx, ty, size * 0.18, 8, size * 0.35, color(70, 75, 65), obj.angle, sunAngle);
-            
+
             // Liquid level indicator
             // Draw a small box on the side
             Draw3D.drawBox3D(tx, ty + size * 0.04, size * 0.12, size * 0.16, size * 0.19, color(100, 180, 140, 120), obj.angle, sunAngle);
-            
+
             // Hazard markings - skip for now or simplify
         }
 
@@ -3415,12 +2827,12 @@ const SpaceObjectRenderers = {
         for (let c = 0; c < 2; c++) {
             const cx = (c - 0.5) * (size * 0.6);
             const cy = bob + size * 0.2;
-            
+
             // Column body
             Draw3D.drawPrism(cx, cy, size * 0.08, 6, size * 0.25, color(60, 65, 60), obj.angle, sunAngle);
-            
+
             // Coil wrapping - skip for now
-            
+
             // Outlet valve
             fill(90, 95, 90);
             ellipse(cx, cy + size * 0.14, size * 0.06, size * 0.04);
@@ -3430,7 +2842,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(0, bob - size * 0.05, size * 0.6, size * 0.02, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
         Draw3D.drawBox3D(-size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
         Draw3D.drawBox3D(size * 0.15, bob + size * 0.05, size * 0.02, size * 0.2, size * 0.02, color(65, 70, 65), obj.angle, sunAngle);
-        
+
         // Flow indicators (glowing particles)
         const flowPhase = (anim && anim.flowPhase) ? anim.flowPhase : obj.bobPhase * 0.005;
         for (let f = 0; f < 3; f++) {
@@ -3444,10 +2856,10 @@ const SpaceObjectRenderers = {
         for (let v = 0; v < 2; v++) {
             const vx = (v - 0.5) * (size * 0.4);
             const vy = bob - size * 0.25;
-            
+
             // Fan housing
             Draw3D.drawBox3D(vx, vy, size * 0.12, size * 0.12, size * 0.05, color(50, 55, 50), obj.angle, sunAngle);
-            
+
             // Fan blades
             push();
             translate(vx, vy);
@@ -3466,10 +2878,10 @@ const SpaceObjectRenderers = {
         for (let e = 0; e < 2; e++) {
             const ex = (e - 0.5) * (size * 0.5);
             const ey = bob + size * 0.25;
-            
+
             // Vent cap
             Draw3D.drawBox3D(ex, ey, size * 0.08, size * 0.05, size * 0.05, color(65, 70, 65), obj.angle, sunAngle);
-            
+
             // Emissions (layered translucent ellipses)
             for (let p = 0; p < 3; p++) {
                 const py = ey - size * 0.05 - p * size * 0.08;
@@ -3502,15 +2914,15 @@ const SpaceObjectRenderers = {
         // Small maintenance bot
         const botX = Math.sin(obj.bobPhase * 0.002) * (size * 0.2);
         const botY = bob + size * 0.3;
-        
+
         // Bot as small box
         Draw3D.drawBox3D(botX, botY, 10, 6, 4, color(80, 85, 80), obj.angle, sunAngle);
-        
+
         fill(100, 200, 150, 150);
         ellipse(botX + 3, botY, 2, 2);
     },
 
-    labourColony: function(obj, size, anim, bob) {
+    labourColony: function (obj, size, anim, bob) {
         // Labour colony: industrial complex with worker modules, mining equipment, processing facilities and transport rails
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
@@ -3519,7 +2931,7 @@ const SpaceObjectRenderers = {
 
         // Central processing facility (large industrial structure)
         Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.4, size * 0.2, color(50, 50, 55), obj.angle, sunAngle);
-        
+
         // Processing windows
         for (let w = -2; w <= 2; w++) {
             Draw3D.drawBox3D(w * (size * 0.1), bob, size * 0.06, size * 0.25, size * 0.21, color(200, 150, 100), obj.angle, sunAngle);
@@ -3543,15 +2955,15 @@ const SpaceObjectRenderers = {
             const dy = bob + size * 0.15;
             // Drill platform
             Draw3D.drawBox3D(dx, dy, size * 0.18, size * 0.12, size * 0.05, color(45, 45, 50), obj.angle, sunAngle);
-            
+
             // Drill arm
             const drillAngle = Math.sin(obj.bobPhase * 0.002 + d) * 0.15;
             // Approximating rotated arm with a box
             Draw3D.drawBox3D(dx, dy - size * 0.06, size * 0.04, size * 0.25, size * 0.04, color(55, 55, 60), obj.angle + (drillAngle), sunAngle);
-            
+
             // Drill head
             Draw3D.drawBox3D(dx, dy + size * 0.19, size * 0.08, size * 0.06, size * 0.06, color(70, 70, 75), obj.angle + (drillAngle), sunAngle);
-            
+
             // Rotating drill bit
             const drillSpin = (anim && anim.drillSpin) ? anim.drillSpin : obj.bobPhase * 0.006;
             Draw3D.drawPrism(dx, dy + size * 0.25, size * 0.04, size * 0.06, 3, color(90, 90, 95), obj.angle + (drillSpin + d * Math.PI), sunAngle);
@@ -3560,7 +2972,7 @@ const SpaceObjectRenderers = {
         // Ore processing conveyors with moving ore chunks
         Draw3D.drawBox3D(-size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), obj.angle, sunAngle);
         Draw3D.drawBox3D(size * 0.25, bob + size * 0.28, size * 0.5, size * 0.08, size * 0.02, color(40, 40, 45), obj.angle, sunAngle);
-        
+
         // Moving ore on conveyors
         const conveyorPhase = (anim && anim.conveyorPhase) ? anim.conveyorPhase : obj.bobPhase * 0.004;
         for (let c = 0; c < 2; c++) {
@@ -3573,13 +2985,13 @@ const SpaceObjectRenderers = {
 
         // Transport rail system (monorail)
         Draw3D.drawBox3D(0, bob - size * 0.15, size * 1.0, size * 0.02, size * 0.02, color(60, 60, 65), obj.angle, sunAngle);
-        
+
         // Rail support pillars
         for (let p = -2; p <= 2; p++) {
             const px = p * (size * 0.25);
             Draw3D.drawBox3D(px, bob - size * 0.08, size * 0.04, size * 0.15, size * 0.04, color(50, 50, 55), obj.angle, sunAngle);
         }
-        
+
         // Transport pod moving along rail
         const podPos = Math.sin(obj.bobPhase * 0.003) * (size * 0.45);
         Draw3D.drawBox3D(podPos, bob - size * 0.15, size * 0.15, size * 0.08, size * 0.06, color(70, 70, 80), obj.angle, sunAngle);
@@ -3641,7 +3053,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    quantumGate: function(obj, size, anim, bob) {
+    quantumGate: function (obj, size, anim, bob) {
         // Enhanced quantum gate: multi-ring shimmer, rotating glyphs, teleport arcs and particle jets
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.gatePhase) ? anim.gatePhase : obj.bobPhase * 0.01;
@@ -3652,7 +3064,7 @@ const SpaceObjectRenderers = {
         const rC = Math.floor(200 + 55 * Math.sin(phase * 1.1));
         const gC = Math.floor(120 + 90 * Math.sin(phase * 1.5 + 1.2));
         const bC = Math.floor(220 + 20 * Math.sin(phase * 0.9 + 2.3));
-        
+
         // Core as a glowing box
         Draw3D.drawBox3D(0, bob, size * 0.28 * (0.8 + pulse * 0.35), size * 0.28 * (0.8 + pulse * 0.35), size * 0.28, color(rC, gC, bC, Math.floor(200 * pulse)), obj.angle + (spin), sunAngle);
 
@@ -3661,10 +3073,10 @@ const SpaceObjectRenderers = {
             const t = ring / 3;
             const col = color(Math.floor(lerp(rC, 120, t)), Math.floor(lerp(gC, 200, t)), Math.floor(lerp(bC, 255, t)), Math.floor(90 * (1 - t) * (1 + 0.6 * pulse)));
             const s = size * (0.6 + ring * 0.18) * (0.95 + 0.06 * Math.sin(phase * (1.2 + ring * 0.4)));
-            
+
             // Draw a few boxes to simulate a ring
             const segments = 8;
-            for(let i=0; i<segments; i++) {
+            for (let i = 0; i < segments; i++) {
                 const ang = i * (TWO_PI / segments) + spin * (1 + ring * 0.2);
                 const rx = Math.cos(ang) * s * 0.5;
                 const ry = Math.sin(ang) * s * 0.5 + bob;
@@ -3679,7 +3091,7 @@ const SpaceObjectRenderers = {
             const gr = size * 0.48;
             const gx = Math.cos(ga) * gr;
             const gy = Math.sin(ga) * gr * 0.9 + bob * 0.02;
-            
+
             const gw = 4 + 2 * Math.sin(phase * 2 + i);
             // Glyph as a prism
             Draw3D.drawPrism(gx, gy, gw, gw * 1.5, 3, color(255, 255, 255, 180), obj.angle + (ga + phase * 0.5), sunAngle);
@@ -3693,7 +3105,7 @@ const SpaceObjectRenderers = {
             const rIn = size * 0.28;
             const rOut = size * 0.66;
             const steps = 5; // Reduced steps for performance
-            
+
             for (let s = 0; s <= steps; s++) {
                 const v = s / steps;
                 const ang = startAng + v * arcLen;
@@ -3702,7 +3114,7 @@ const SpaceObjectRenderers = {
                 const y = Math.sin(ang) * rad * 0.92 + bob * 0.02 * Math.sin(phase + a);
                 const alpha = Math.floor(180 * (1 - v) * (0.6 + 0.4 * Math.sin(phase * 1.2 + a)));
                 const col = color(Math.floor(lerp(rC, 180, v)), Math.floor(lerp(gC, 220, v)), Math.floor(lerp(bC, 255, v)), alpha);
-                
+
                 Draw3D.drawBox3D(x, y, size * 0.05, size * 0.05, size * 0.05, col, obj.angle + (ang), sunAngle);
             }
         }
@@ -3730,7 +3142,7 @@ const SpaceObjectRenderers = {
             const pr = Math.floor(lerp(rC, 255, Math.random()));
             const pg = Math.floor(lerp(gC, 150, Math.random()));
             const pb = Math.floor(lerp(bC, 200, Math.random()));
-            
+
             Draw3D.drawBox3D(px, py, p.sz * (0.8 + fade * 1.2), p.sz * 0.6, p.sz, color(pr, pg, pb, Math.floor(160 * fade * pulse)), obj.angle + (p.ang), sunAngle);
         }
     },
@@ -3739,7 +3151,7 @@ const SpaceObjectRenderers = {
     // SHIPYARD - Large orbital shipbuilding facility with construction bays,
     // cranes, welding sparks, and docked ship frames
     // ==========================================================================
-    shipyard: function(obj, size, anim, bob) {
+    shipyard: function (obj, size, anim, bob) {
         // Animation phases
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
@@ -3753,16 +3165,16 @@ const SpaceObjectRenderers = {
         Draw3D.drawPrism(0, bob, size * 0.48, size * 0.48, 8, color(60, 80, 100, 120), obj.angle + (phase * 0.02), sunAngle);
 
         // Main central hub - industrial gray with blue accents
-        Draw3D.drawPrism(0, bob, size * 0.28, size * 0.28, 6, color(50, 55, 70), obj.angle + (-PI/6), sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.28, size * 0.28, 6, color(50, 55, 70), obj.angle + (-PI / 6), sunAngle);
 
         // Hub inner detail
         Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.18, size * 0.05, color(70, 80, 100), obj.angle, sunAngle);
         Draw3D.drawBox3D(0, bob, size * 0.12, size * 0.12, size * 0.08, color(40, 50, 65), obj.angle, sunAngle);
 
         // Beveled inner plate for the hex hub (adds perceived depth)
-        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 6, color(90, 100, 115), obj.angle + (-PI/6), sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 6, color(90, 100, 115), obj.angle + (-PI / 6), sunAngle);
         // inner darker inset
-        Draw3D.drawPrism(0, bob, size * 0.14, size * 0.14, 6, color(60, 70, 85), obj.angle + (-PI/6), sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.14, size * 0.14, 6, color(60, 70, 85), obj.angle + (-PI / 6), sunAngle);
 
         // Glowing core
         const coreGlow = 150 + 80 * Math.sin(phase * 3);
@@ -3770,7 +3182,7 @@ const SpaceObjectRenderers = {
 
         // Four construction bays extending from center (enlarged for visibility)
         for (let bay = 0; bay < 4; bay++) {
-            const bayAng = (TWO_PI / 4) * bay + PI/4;
+            const bayAng = (TWO_PI / 4) * bay + PI / 4;
             const bx = Math.cos(bayAng) * size * 0.44;
             const by = Math.sin(bayAng) * size * 0.44 + bob;
 
@@ -3785,7 +3197,7 @@ const SpaceObjectRenderers = {
             const frameX = bx - Math.cos(bayAng) * size * 0.02;
             const frameY = by - Math.sin(bayAng) * size * 0.02;
             Draw3D.drawBox3D(frameX, frameY, size * 0.3, size * 0.1, size * 0.05, color(36, 42, 52), obj.angle + (bayAng), sunAngle);
-            
+
             // cockpit / bridge
             const cockpitX = frameX + Math.cos(bayAng) * size * 0.06;
             const cockpitY = frameY + Math.sin(bayAng) * size * 0.06;
@@ -3797,7 +3209,7 @@ const SpaceObjectRenderers = {
             const craneY = by + Math.sin(bayAng) * size * 0.06;
             // Crane arm
             Draw3D.drawBox3D(craneX, craneY, size * 0.02, size * 0.12, size * 0.02, color(92, 104, 124), obj.angle + (bayAng + craneSway), sunAngle);
-            
+
             // Crane hook & cable
             const hookX = craneX + Math.cos(bayAng + craneSway) * size * 0.08;
             const hookY = craneY + Math.sin(bayAng + craneSway) * size * 0.08; // Simplified position
@@ -3826,18 +3238,18 @@ const SpaceObjectRenderers = {
 
         // External docking arms (2 large ones for finished ships)
         for (let arm = 0; arm < 2; arm++) {
-            const armAng = (arm === 0) ? -PI/2 : PI/2;
+            const armAng = (arm === 0) ? -PI / 2 : PI / 2;
             const rot = armAng + Math.sin(phase + arm) * 0.02;
-            
+
             // Position relative to center, rotated
             const armDist = size * 0.44;
             // Original code: translate(0, -size * 0.44) then rotate? No, rotate then translate.
             // "rotate(armAng...); translate(0, -size * 0.44);"
             // So it rotates the coordinate system, then moves UP (negative Y) in that rotated system.
-            
+
             const finalAng = rot;
-            const armX_world = Math.cos(finalAng - PI/2) * armDist; 
-            const armY_world = Math.sin(finalAng - PI/2) * armDist + bob;
+            const armX_world = Math.cos(finalAng - PI / 2) * armDist;
+            const armY_world = Math.sin(finalAng - PI / 2) * armDist + bob;
 
             // Docking arm structure
             Draw3D.drawBox3D(armX_world, armY_world, size * 0.05, size * 0.1, size * 0.05, color(70, 80, 100), obj.angle + (finalAng), sunAngle);
@@ -3874,7 +3286,7 @@ const SpaceObjectRenderers = {
             const panelX = px + Math.cos(panelAng) * size * 0.1;
             const panelY = py + Math.sin(panelAng) * size * 0.1;
             Draw3D.drawBox3D(panelX, panelY, size * 0.06, size * 0.12, size * 0.02, color(30, 40, 80), obj.angle + (panelAng), sunAngle);
-            
+
             // Panel reflection
             Draw3D.drawBox3D(panelX, panelY, size * 0.05, size * 0.04, size * 0.025, color(100, 150, 255, 40), obj.angle + (panelAng), sunAngle);
         }
@@ -3926,7 +3338,7 @@ const SpaceObjectRenderers = {
             p.ang += p.speed;
             const px = Math.cos(p.ang) * p.dist;
             const py = Math.sin(p.ang) * p.dist + bob * 0.6;
-            
+
             if (p.type === 'drone') {
                 const orient = Math.atan2(py, px) + Math.PI / 2 + (Math.sin(p.ang * 2) * 0.15);
                 Draw3D.drawBox3D(px, py, p.sz * 2.2, p.sz * 1.0, p.sz * 0.8, color(180, 185, 190), obj.angle + (orient), sunAngle);
@@ -4252,12 +3664,12 @@ class SpaceObject {
 
         // Update animations using efficient loop over rate table
         const anim = this._anim;
-        
+
         // Handle dynamic-speed properties separately
         if (anim.panelAngle !== undefined) anim.panelAngle += (anim.panelSpeed || 0) * dt;
         if (anim.telescopeTilt !== undefined) anim.telescopeTilt += (anim.telescopeSpeed || 0) * dt;
         if (anim.panelTiltAngle !== undefined) anim.panelTiltAngle += (anim.panelTiltSpeed || 0) * dt;
-        
+
         // Use rate table for fixed-rate animations (more efficient than multiple typeof checks)
         for (let i = 0, len = ANIM_RATES.length; i < len; i++) {
             const [prop, rate] = ANIM_RATES[i];
@@ -4273,7 +3685,7 @@ class SpaceObject {
                 shards[i].angle += shards[i].spin * dt;
             }
         }
-        
+
         // Update cargo drones
         if (this._drones) {
             const drones = this._drones;
@@ -4283,7 +3695,7 @@ class SpaceObject {
                 d.phase += 0.005 * dt;
             }
         }
-        
+
         // Update ice trail shards positions for subtle drifting
         if (this._trail) {
             const trail = this._trail;
@@ -4298,7 +3710,7 @@ class SpaceObject {
 
     draw() {
         if (!this.pos || this.destroyed) return;
-        
+
         push();
         translate(this.pos.x, this.pos.y);
         // Use the small render-only sway instead of the full logical `angle` so objects
@@ -4346,7 +3758,7 @@ class SpaceObject {
         }
 
         pop();
-        
+
 
         // --- Draw Health Bar (appears when damaged) ---
         if (this.health < this.maxHealth && this.maxHealth > 0) {

@@ -1129,7 +1129,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
         armament: ["Beam Laser", "Mini-Turret"],
         costCategory: "Medium", description: "Separatist vessel for deep space operations and hit-and-run attacks.",
-        vertexData: [{ x: 1, y: 0 }, { x: 0.3, y: 0.3 }, { x: -0.2, y: 0.7 }, { x: -1, y: 0.3 }, { x: -1, y: -0.3 }, { x: -0.2, y: -0.7 }, { x: 0.3, y: -0.3 }], // Sleek but rugged
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.2000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.2000, y: -0.7000 }, { x: 0.3000, y: -0.3000 }],
+                fillColor: [60, 80, 60],
+                strokeColor: [100, 120, 100],
+                strokeW: 1.40
+            },
+            {
+                vertexData: [{ x: -0.3532, y: 0.0000 }, { x: -0.4632, y: 0.1905 }, { x: -0.6832, y: 0.1905 }, { x: -0.7932, y: 0.0000 }, { x: -0.6832, y: -0.1905 }, { x: -0.4632, y: -0.1905 }],
+                fillColor: [212, 22, 22],
+                strokeColor: [50, 50, 60],
+                strokeW: 1.00
+            }
+        ],
         fillColor: [60, 80, 60], strokeColor: [100, 120, 100], strokeW: 1.4, // Olive Drab
         typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
         aiRoles: ["SEPARATIST", "PIRATE"]
@@ -1635,13 +1648,15 @@ function initShipCache(def) {
             let mainFillStr = cFill.toString();
             let darkFillStr = color(fillRGB.r * 0.8, fillRGB.g * 0.8, fillRGB.b * 0.8).toString();
 
-            // 4. Pre-calc Edges
+            // 4. Pre-calc Edges with face angles
             let edges = [];
             const len = layer.vertexData.length;
             for (let i = 0; i < len; i++) {
                 const next = (i + 1) % len;
                 const v1 = layer.vertexData[i];
                 const v2 = layer.vertexData[next];
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
 
                 let t1 = (maxX - v1.x) / xRange;
                 let t2 = (maxX - v2.x) / xRange;
@@ -1649,8 +1664,9 @@ function initShipCache(def) {
                 edges.push({
                     v1: v1,
                     v2: v2,
-                    dx: v2.x - v1.x,
-                    dy: v2.y - v1.y,
+                    dx: dx,
+                    dy: dy,
+                    faceAngle: Math.atan2(dx, -dy), // Pre-compute face normal angle
                     t1: t1,
                     t2: t2
                 });
@@ -1668,149 +1684,7 @@ function initShipCache(def) {
     }
 }
 
-// Optimized Extruded Poly Drawing
-function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, layerIndex = 0, mode = 'both') {
-    // Make upper layers slightly smaller/thinner so they sit on previous layers.
-    const shrinkPerLayer = 0.03;
-    const layerR = r * Math.max(0.85, 1 - layerIndex * shrinkPerLayer);
-    const depthScale = (layerIndex === 0) ? 1.0 : 0.35; // top layers are thin
-    const effDepth = depth * depthScale;
-    const dvx = effDepth * Math.sin(angle);
-    const dvy = effDepth * Math.cos(angle);
-
-    // --- BLUNTNESS CONTROL ---
-    // Change this value to control the thickness of the "wedge" tip.
-    // 0.0 = Sharp point (original behavior)
-    // 0.2 = Blunted tip (cheese wedge style)
-    // 1.0 = No taper (block style)
-    const bluntness = 0.3;
-    // -------------------------
-
-    // Disable strokes for ships: use fill-only rendering for performance
-    noStroke();
-
-    // 1. Draw Sides (Optimized)
-    if (mode === 'both' || mode === 'sides') {
-        for (let edge of layerCache.edges) {
-            // Visibility check (Backface Culling for CW winding)
-            if (edge.dx * dvy - edge.dy * dvx < 0) {
-                // Back vertices
-                // Apply bluntness factor to taper
-                // t goes from 0 (nose) to 1 (tail). 
-                // We map 0 -> bluntness, 1 -> 1.
-                const t1_mod = bluntness + (1 - bluntness) * edge.t1;
-                const t2_mod = bluntness + (1 - bluntness) * edge.t2;
-
-                let bx1 = (edge.v1.x * layerR) + dvx * t1_mod;
-                let by1 = (edge.v1.y * layerR) + dvy * t1_mod;
-                let bx2 = (edge.v2.x * layerR) + dvx * t2_mod;
-                let by2 = (edge.v2.y * layerR) + dvy * t2_mod;
-
-                // Front vertices
-                let fx1 = edge.v1.x * layerR;
-                let fy1 = edge.v1.y * layerR;
-                let fx2 = edge.v2.x * layerR;
-                let fy2 = edge.v2.y * layerR;
-
-                // Lighter shading than before
-                const faceAngle = Math.atan2(edge.dx, -edge.dy);
-                const diff = faceAngle - localSunAngle;
-                const b = 0.5 + (Math.cos(diff) + 1) * 0.25; // range ~0.5 - 1.0
-
-                fill(layerCache.fillRGB.r * b, layerCache.fillRGB.g * b, layerCache.fillRGB.b * b);
-
-                beginShape();
-                vertex(bx1, by1);
-                vertex(bx2, by2);
-                vertex(fx2, fy2);
-                vertex(fx1, fy1);
-                endShape(CLOSE);
-            }
-        }
-    }
-
-    // 2. Draw Top Face — flat fill, slightly lighter for upper layers
-    if (mode === 'both' || mode === 'top') {
-        let ctx = drawingContext;
-        const topBrightness = (layerIndex === 0) ? 1.0 : 1.05;
-        const fr = Math.min(255, Math.round(layerCache.fillRGB.r * topBrightness));
-        const fg = Math.min(255, Math.round(layerCache.fillRGB.g * topBrightness));
-        const fb = Math.min(255, Math.round(layerCache.fillRGB.b * topBrightness));
-        ctx.fillStyle = `rgb(${fr}, ${fg}, ${fb})`;
-        noStroke();
-
-        beginShape();
-        for (let v of layerCache.vertexData) {
-            vertex(v.x * layerR, v.y * layerR);
-        }
-        endShape(CLOSE);
-    }
-}
-
-// Symmetric 3D Extrusion for Alien Ships (no wedge taper - suitable for rotating vessels)
-function drawExtrudedPolySymmetric(r, layerCache, depth, angle, localSunAngle, layerIndex = 0, mode = 'both') {
-    // Make upper layers slightly smaller/thinner so they sit on previous layers.
-    const shrinkPerLayer = 0.03;
-    const layerR = r * Math.max(0.85, 1 - layerIndex * shrinkPerLayer);
-    const depthScale = (layerIndex === 0) ? 1.0 : 0.35; // top layers are thin
-    const effDepth = depth * depthScale;
-    const dvx = effDepth * Math.sin(angle);
-    const dvy = effDepth * Math.cos(angle);
-
-    // Disable strokes for ships: use fill-only rendering for performance
-    noStroke();
-
-    // 1. Draw Sides (Optimized) - No wedge taper, uniform depth
-    if (mode === 'both' || mode === 'sides') {
-        for (let edge of layerCache.edges) {
-            // Visibility check (Backface Culling for CW winding)
-            if (edge.dx * dvy - edge.dy * dvx < 0) {
-                // Back vertices - uniform depth (no taper based on x position)
-                let bx1 = (edge.v1.x * layerR) + dvx;
-                let by1 = (edge.v1.y * layerR) + dvy;
-                let bx2 = (edge.v2.x * layerR) + dvx;
-                let by2 = (edge.v2.y * layerR) + dvy;
-
-                // Front vertices
-                let fx1 = edge.v1.x * layerR;
-                let fy1 = edge.v1.y * layerR;
-                let fx2 = edge.v2.x * layerR;
-                let fy2 = edge.v2.y * layerR;
-
-                // Lighter shading than before
-                const faceAngle = Math.atan2(edge.dx, -edge.dy);
-                const diff = faceAngle - localSunAngle;
-                const b = 0.5 + (Math.cos(diff) + 1) * 0.25; // range ~0.5 - 1.0
-
-                fill(layerCache.fillRGB.r * b, layerCache.fillRGB.g * b, layerCache.fillRGB.b * b);
-
-                beginShape();
-                vertex(bx1, by1);
-                vertex(bx2, by2);
-                vertex(fx2, fy2);
-                vertex(fx1, fy1);
-                endShape(CLOSE);
-            }
-        }
-    }
-
-    // 2. Draw Top Face — flat fill, slightly lighter for upper layers
-    if (mode === 'both' || mode === 'top') {
-        let ctx = drawingContext;
-        const topBrightness = (layerIndex === 0) ? 1.0 : 1.05;
-        const fr = Math.min(255, Math.round(layerCache.fillRGB.r * topBrightness));
-        const fg = Math.min(255, Math.round(layerCache.fillRGB.g * topBrightness));
-        const fb = Math.min(255, Math.round(layerCache.fillRGB.b * topBrightness));
-        ctx.fillStyle = `rgb(${fr}, ${fg}, ${fb})`;
-        noStroke();
-
-        beginShape();
-        for (let v of layerCache.vertexData) {
-            vertex(v.x * layerR, v.y * layerR);
-        }
-        endShape(CLOSE);
-    }
-}
+// NOTE: drawExtrudedPolyOptimized() and drawExtrudedPolySymmetric() are now in draw3d.js
 
 // Generic Alien Ship Drawing Function (3D symmetric - no wedge, always extrudes down in world space)
 // shipRotation: the current rotation angle of the ship - used to counter-rotate extrusion so it stays pointing down
