@@ -11,8 +11,7 @@ let exportButton;
 let addShapeButton;
 let addVertexButton;
 let fillColorPicker;
-let strokeColorPicker;
-let strokeWeightInput;
+
 let instructionsDiv;
 let thargoidWarningSpan;
 let zoomInButton;
@@ -36,7 +35,7 @@ let weaponComparer = null; // Instance of the weapon comparer
 
 let currentShipKey = null; // Key ("Sidewinder", "CobraMkIII", etc.) or "--- New Blank ---"
 let currentShipDef = null; // The original definition object (if loaded)
-let shapes = []; // Array of shape objects: { vertexData: [{x,y},...], fillColor: [r,g,b], strokeColor: [r,g,b], strokeW: number }
+let shapes = []; // Array of shape objects: { vertexData: [{x,y},...], fillColor: [r,g,b] }
 
 // Layer stacking: shapes[0] = BOTTOM layer, shapes[shapes.length-1] = TOP layer
 // Drawing order: bottom to top (i=0 to i=shapes.length-1)
@@ -47,9 +46,9 @@ let historyStack = [];
 const maxHistorySize = 30; // Max number of undo steps
 
 // --- Display & Scaling ---
-let canvasWidth = 600;
-let canvasHeight = 450;
-let baseDisplaySize = 350; // Initial Max drawing size (represents current zoom)
+let canvasWidth = 1000;
+let canvasHeight = 650;
+let baseDisplaySize = 450; // Initial Max drawing size (represents current zoom)
 let maxDefinedShipSize = 1; // Will be calculated from definitions
 let pixelsPerUnit = 1; // Scale factor: pixels / ship size unit
 let gridSpacing = 25; // World units between grid lines (adjust for visual density)
@@ -85,9 +84,9 @@ let dragConstrainedAxis = null; // 'x', 'y', or null
 function setup() {
     console.log("Setup running...");
     console.log("SHIP_DEFINITIONS available:", typeof SHIP_DEFINITIONS !== 'undefined');
-    console.log("Ship count:", typeof SHIP_DEFINITIONS !== 'undefined' ? 
+    console.log("Ship count:", typeof SHIP_DEFINITIONS !== 'undefined' ?
         Object.keys(SHIP_DEFINITIONS).length : "N/A");
-    
+
     let canvas = createCanvas(canvasWidth, canvasHeight);
     canvas.parent('main');
     ellipseMode(RADIUS); // Use RADIUS for handle size consistency
@@ -115,8 +114,7 @@ function setup() {
     // Prefer new shield button id, fall back to existing skull id for compatibility
     addSkullButton = select('#addShieldButton') || select('#addSkullButton');
     fillColorPicker = select('#fillColorPicker');
-    strokeColorPicker = select('#strokeColorPicker');
-    strokeWeightInput = select('#strokeWeightInput');
+
     zoomInButton = select('#zoomInButton');
     zoomOutButton = select('#zoomOutButton');
     descriptionDiv = select('#shipDescriptionArea');
@@ -147,8 +145,7 @@ function setup() {
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
     if (fillColorPicker) fillColorPicker.input(updateSelectedShapeFill); else console.error("Fill picker not found");
-    if (strokeColorPicker) strokeColorPicker.input(updateSelectedShapeStroke); else console.error("Stroke picker not found");
-    if (strokeWeightInput) strokeWeightInput.input(updateSelectedShapeStrokeWeight); else console.error("Stroke weight input not found");
+
     if (straightenButton) straightenButton.mousePressed(handleStraightenClick); else console.error("Straighten button not found");
     if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
     if (mirrorVButton) mirrorVButton.mousePressed(handleVMirrorClick); else console.error("V Mirror button not found");
@@ -162,17 +159,17 @@ function setup() {
 
     // --- Instantiate ShipComparer AFTER SHIP_DEFINITIONS is ready ---
     if (typeof SHIP_DEFINITIONS !== 'undefined' && Object.keys(SHIP_DEFINITIONS).length > 0) {
-         try {
+        try {
             shipComparer = new ShipComparer(SHIP_DEFINITIONS);
             shipComparer.init();
             console.log("ShipComparer initialized.");
-         } catch (e) {
-             console.error("Failed to initialize ShipComparer:", e);
-             if(compareShipsButton?.elt) compareShipsButton.elt.disabled = true; // Disable button if init fails
-         }
+        } catch (e) {
+            console.error("Failed to initialize ShipComparer:", e);
+            if (compareShipsButton?.elt) compareShipsButton.elt.disabled = true; // Disable button if init fails
+        }
     } else {
         console.error("SHIP_DEFINITIONS not ready for ShipComparer initialization.");
-         if(compareShipsButton?.elt) compareShipsButton.elt.disabled = true;
+        if (compareShipsButton?.elt) compareShipsButton.elt.disabled = true;
     }
 
     // --- Instantiate WeaponComparer AFTER WEAPON_UPGRADES is ready ---
@@ -195,12 +192,12 @@ function setup() {
     updateUIControls(); // Set initial button disabled states etc.
 
     // Add a direct event listener for Command+Z
-    document.addEventListener('keydown', function(e) {
-      // Check if this is Command+Z (metaKey is Command on Mac)
-      if (e.key === 'z' && e.metaKey) {
-        e.preventDefault(); // Prevent browser's default undo behavior
-        undoLastChange();
-      }
+    document.addEventListener('keydown', function (e) {
+        // Check if this is Command+Z (metaKey is Command on Mac)
+        if (e.key === 'z' && e.metaKey) {
+            e.preventDefault(); // Prevent browser's default undo behavior
+            undoLastChange();
+        }
     });
 }
 
@@ -209,7 +206,7 @@ function saveStateForUndo() {
     try {
         // Basic Validation before saving (optional but good practice)
         for (const shape of shapes) {
-            if (!shape || !Array.isArray(shape.vertexData) || !Array.isArray(shape.fillColor) || shape.fillColor.length !== 3 || !Array.isArray(shape.strokeColor) || shape.strokeColor.length !== 3 || typeof shape.strokeW !== 'number') {
+            if (!shape || !Array.isArray(shape.vertexData) || !Array.isArray(shape.fillColor) || shape.fillColor.length !== 3) {
                 console.error("UNDO SAVE ERROR: Invalid shape structure detected before saving state.", shape);
                 return;
             }
@@ -219,8 +216,8 @@ function saveStateForUndo() {
                     return;
                 }
             }
-            if (shape.fillColor.some(isNaN) || shape.strokeColor.some(isNaN)) {
-                console.error("UNDO SAVE ERROR: NaN found in color data.", shape.fillColor, shape.strokeColor);
+            if (shape.fillColor.some(isNaN)) {
+                console.error("UNDO SAVE ERROR: NaN found in color data.", shape.fillColor);
                 return;
             }
         }
@@ -263,8 +260,6 @@ function undoLastChange() {
                 if (!shape) { shapeValid = false; console.error(`UNDO RESTORE ERROR: Shape at index ${i} is null/undefined.`); }
                 else if (!Array.isArray(shape.vertexData)) { shapeValid = false; console.error(`UNDO RESTORE ERROR: vertexData missing or not array at index ${i}.`); }
                 else if (!Array.isArray(shape.fillColor) || shape.fillColor.length !== 3) { shapeValid = false; console.error(`UNDO RESTORE ERROR: fillColor invalid at index ${i}.`, shape.fillColor); }
-                else if (!Array.isArray(shape.strokeColor) || shape.strokeColor.length !== 3) { shapeValid = false; console.error(`UNDO RESTORE ERROR: strokeColor invalid at index ${i}.`, shape.strokeColor); }
-                else if (typeof shape.strokeW !== 'number') { shapeValid = false; console.error(`UNDO RESTORE ERROR: strokeW invalid at index ${i}.`, shape.strokeW); }
                 else {
                     for (let j = 0; j < shape.vertexData.length; j++) {
                         const vert = shape.vertexData[j];
@@ -272,8 +267,8 @@ function undoLastChange() {
                             shapeValid = false; console.error(`UNDO RESTORE ERROR: Invalid vertex at shape[${i}], vertex[${j}]:`, vert); break;
                         }
                     }
-                    if (shape.fillColor.some(isNaN) || shape.strokeColor.some(isNaN)) {
-                        shapeValid = false; console.error(`UNDO RESTORE ERROR: NaN found in color data at index ${i}.`, shape.fillColor, shape.strokeColor);
+                    if (shape.fillColor.some(isNaN)) {
+                        shapeValid = false; console.error(`UNDO RESTORE ERROR: NaN found in color data at index ${i}.`, shape.fillColor);
                     }
                 }
                 if (!shapeValid) { isValidState = false; break; }
@@ -359,18 +354,16 @@ function draw() {
         // Draw Thargoid (non-editable) or Editable Shapes
         if (isThargoidSelected()) {
             SHIP_DEFINITIONS.Thargoid.drawFunction(actualDrawSize_s, false);
-        } else { 
+        } else {
             for (let i = 0; i < shapes.length; i++) { // Draw in order: shapes[0] at bottom, shapes[length-1] on top
                 let shape = shapes[i];
                 if (shape && shape.vertexData && shape.vertexData.length > 1) {
                     fill(shape.fillColor[0], shape.fillColor[1], shape.fillColor[2]);
-                    stroke(shape.strokeColor[0], shape.strokeColor[1], shape.strokeColor[2]);
-                    // Scale stroke weight relative to base definition size, prevent zero/negative
-                    let scaledStrokeW = max(0.5, (shape.strokeW || 1) * (pixelsPerUnit / (maxDefinedShipSize * 0.5)));
-                    strokeWeight(scaledStrokeW);
-                    // Highlight selected shape layer
+                    // Highlight selected shape layer with stroke, otherwise no stroke
                     if (i === selectedShapeIndex) {
-                        strokeWeight(max(1, scaledStrokeW) + 2); stroke(0, 150, 255, 200);
+                        strokeWeight(3); stroke(0, 150, 255, 200);
+                    } else {
+                        noStroke();
                     }
                     beginShape();
                     // Support holes via `shape.holes` (array of vertex arrays) using beginContour()/endContour()
@@ -463,24 +456,20 @@ function handleShipSelection() {
                 currentShipDef.vertexLayers.forEach(layer => {
                     shapes.push({
                         vertexData: JSON.parse(JSON.stringify(layer.vertexData)),
-                        fillColor: [...(layer.fillColor || [180, 180, 180])],
-                        strokeColor: [...(layer.strokeColor || [50, 50, 50])],
-                        strokeW: layer.strokeW || 1
+                        fillColor: [...(layer.fillColor || [180, 180, 180])]
                     });
                 });
                 selectedShapeIndex = 0; // Select the first layer
             } catch (e) {
                 console.error("ERROR processing vertexLayers for", currentShipKey, e);
             }
-        } 
+        }
         // Fallback to single vertexData if no vertexLayers or vertexLayers loading failed
         else if (currentShipDef.vertexData && currentShipDef.vertexData.length > 0 && !isThargoidSelected() && shapes.length === 0) {
             try {
                 shapes.push({ // Create initial shape layer (deep copy)
                     vertexData: JSON.parse(JSON.stringify(currentShipDef.vertexData)),
-                    fillColor: [...(currentShipDef.fillColor || [180, 180, 180])],
-                    strokeColor: [...(currentShipDef.strokeColor || [50, 50, 50])],
-                    strokeW: currentShipDef.strokeW || 1
+                    fillColor: [...(currentShipDef.fillColor || [180, 180, 180])]
                 });
                 selectedShapeIndex = 0; // Select the first layer
             } catch (e) {
@@ -533,7 +522,7 @@ function isThargoidSelected() {
 
 function isEditable() {
     return (currentShipKey === '--- New Blank ---') ||
-           (currentShipKey && currentShipKey !== 'Select a Ship...' && currentShipDef && !isThargoidSelected());
+        (currentShipKey && currentShipKey !== 'Select a Ship...' && currentShipDef && !isThargoidSelected());
 }
 
 function mousePressed() {
@@ -637,7 +626,7 @@ function mousePressed() {
             saveStateForUndo(); // SAVE STATE BEFORE starting shape drag
             draggingShape = true; // Set flag AFTER saving
             dragShapeStartX = mouseX; dragShapeStartY = mouseY;
-            
+
             // ADDING THIS: Save initial positions of ALL vertices in the shape
             let shape = shapes[selectedShapeIndex];
             dragVertexInitialPositions = [];
@@ -646,9 +635,9 @@ function mousePressed() {
                     dragVertexInitialPositions.push({ index: idx, x: vertex.x, y: vertex.y });
                 }
             });
-            
+
             selectedVertexIndices = []; // Deselect vertices
-        } 
+        }
         else if (selectedShapeIndex !== clickedShapeIndex && isEditable()) { // Clicked different shape: Select it
             selectedShapeIndex = clickedShapeIndex; selectedVertexIndices = [];
             draggingShape = false; updateColorPickersFromSelection();
@@ -670,7 +659,7 @@ function mouseDragged() {
     // Set flag if actual movement occurs beyond a small threshold
     if (!dragOccurred) {
         let moved = false;
-        if (draggingVertex) { moved = distSq(mouseX - width/2, mouseY - height/2, dragVertexStartX, dragVertexStartY) > 4; }
+        if (draggingVertex) { moved = distSq(mouseX - width / 2, mouseY - height / 2, dragVertexStartX, dragVertexStartY) > 4; }
         else if (draggingShape) { moved = distSq(mouseX, mouseY, dragShapeStartX, dragShapeStartY) > 4; }
         if (moved) dragOccurred = true;
     }
@@ -705,30 +694,30 @@ function mouseDragged() {
         let shape = shapes[selectedShapeIndex];
         let totalDx = mouseX - dragShapeStartX;
         let totalDy = mouseY - dragShapeStartY;
-        
+
         // Apply Axis Constraint Logic (Shift Key)
         if (keyIsDown(SHIFT)) {
             if (dragConstrainedAxis === null && distSq(mouseX, mouseY, dragShapeStartX, dragShapeStartY) > 25) {
                 dragConstrainedAxis = abs(totalDx) > abs(totalDy) ? 'x' : 'y';
             }
-            if (dragConstrainedAxis === 'x') { totalDy = 0; } 
+            if (dragConstrainedAxis === 'x') { totalDy = 0; }
             else if (dragConstrainedAxis === 'y') { totalDx = 0; }
-        } else { 
-            dragConstrainedAxis = null; 
+        } else {
+            dragConstrainedAxis = null;
         }
-        
+
         // Calculate the current drawing radius
-        let actualDrawSize_s = currentShipDef ? 
-            (currentShipDef.size || 1) * pixelsPerUnit : 
+        let actualDrawSize_s = currentShipDef ?
+            (currentShipDef.size || 1) * pixelsPerUnit :
             baseDisplaySize * (50 / maxDefinedShipSize);
-        let drawing_r = actualDrawSize_s > 0 ? 
-            actualDrawSize_s / 2 : 
+        let drawing_r = actualDrawSize_s > 0 ?
+            actualDrawSize_s / 2 :
             baseDisplaySize / (maxDefinedShipSize * 2);
-        
+
         // Convert screen delta to relative delta
-        let deltaRelX = totalDx / drawing_r; 
+        let deltaRelX = totalDx / drawing_r;
         let deltaRelY = totalDy / drawing_r;
-        
+
         // Apply the delta to all vertices from their saved initial positions
         dragVertexInitialPositions.forEach(initialPos => {
             if (shape.vertexData[initialPos.index]) {
@@ -760,37 +749,37 @@ function keyPressed() {
     }
 
     // === NEW KEYBOARD SHORTCUTS ===
-    
+
     // Zoom In: Period (.)
     if (key === '.') {
         zoomIn();
         return false;
     }
-    
+
     // Zoom Out: Comma (,)
     if (key === ',') {
         zoomOut();
         return false;
     }
-    
+
     // Add New Shape: A
     if (key === 'a' && isEditable()) {
         addNewShape();
         return false;
     }
-    
+
     // Toggle Add Vertex Mode: V
     if (key === 'v' && selectedShapeIndex !== -1 && isEditable()) {
         toggleAddVertexMode();
         return false;
     }
-    
+
     // Straighten Symmetry: S
     if (key === 's' && selectedShapeIndex !== -1 && isEditable()) {
         handleStraightenClick();
         return false;
     }
-    
+
     // Export: E
     if (key === 'e' && (shapes.length > 0 || isThargoidSelected())) {
         exportDrawFunctionCode();
@@ -826,12 +815,12 @@ function keyPressed() {
 }
 
 function keyReleased() {
-  // Check for Command+Z specifically
-  if (key === 'z' && keyIsDown(91)) {
-    undoLastChange();
-    return false; // Prevent default browser behavior
-  }
-  return true;
+    // Check for Command+Z specifically
+    if (key === 'z' && keyIsDown(91)) {
+        undoLastChange();
+        return false; // Prevent default browser behavior
+    }
+    return true;
 }
 
 // --- UI Update Functions ---
@@ -859,8 +848,6 @@ function updateUIControls() {
     const shouldBeDisabled = !shapeSelected;
     if (addVertexButton?.elt) addVertexButton.elt.disabled = shouldBeDisabled;
     if (fillColorPicker?.elt) fillColorPicker.elt.disabled = shouldBeDisabled;
-    if (strokeColorPicker?.elt) strokeColorPicker.elt.disabled = shouldBeDisabled;
-    if (strokeWeightInput?.elt) strokeWeightInput.elt.disabled = shouldBeDisabled;
 
     // Handle 'Add Vertex Mode' button state
     if (shouldBeDisabled && addingVertexMode) addingVertexMode = false; // Turn off mode if disabled
@@ -875,25 +862,16 @@ function updateColorPickersFromSelection() {
     if (selectedShapeIndex !== -1 && selectedShapeIndex < shapes.length && shapes[selectedShapeIndex]) {
         let shape = shapes[selectedShapeIndex];
         // Validate shape data before updating pickers
-        if (shape && Array.isArray(shape.fillColor) && shape.fillColor.length === 3 && !shape.fillColor.some(isNaN) &&
-            Array.isArray(shape.strokeColor) && shape.strokeColor.length === 3 && !shape.strokeColor.some(isNaN) &&
-            typeof shape.strokeW === 'number' && !isNaN(shape.strokeW))
-        {
+        if (shape && Array.isArray(shape.fillColor) && shape.fillColor.length === 3 && !shape.fillColor.some(isNaN)) {
             if (fillColorPicker) fillColorPicker.value(rgbToHex(shape.fillColor));
-            if (strokeColorPicker) strokeColorPicker.value(rgbToHex(shape.strokeColor));
-            if (strokeWeightInput) strokeWeightInput.value(shape.strokeW);
         } else {
-            console.warn("Selected shape has invalid color/style data. Resetting pickers.", shape);
-            // Reset pickers to default if data is bad
+            console.warn("Selected shape has invalid color data. Resetting picker.", shape);
+            // Reset picker to default if data is bad
             if (fillColorPicker) fillColorPicker.value('#cccccc');
-            if (strokeColorPicker) strokeColorPicker.value('#333333');
-            if (strokeWeightInput) strokeWeightInput.value(1);
         }
     } else {
-        // Reset pickers to default values if nothing is selected
+        // Reset picker to default value if nothing is selected
         if (fillColorPicker) fillColorPicker.value('#cccccc');
-        if (strokeColorPicker) strokeColorPicker.value('#333333');
-        if (strokeWeightInput) strokeWeightInput.value(1);
     }
 }
 
@@ -904,19 +882,6 @@ function updateSelectedShapeFill() {
         shapes[selectedShapeIndex].fillColor = [red(col), green(col), blue(col)];
     }
 }
-function updateSelectedShapeStroke() {
-    if (selectedShapeIndex !== -1 && shapes[selectedShapeIndex] && isEditable()) {
-        saveStateForUndo(); // Save state BEFORE change
-        let col = color(strokeColorPicker.value());
-        shapes[selectedShapeIndex].strokeColor = [red(col), green(col), blue(col)];
-    }
-}
-function updateSelectedShapeStrokeWeight() {
-    if (selectedShapeIndex !== -1 && shapes[selectedShapeIndex] && isEditable()) {
-        saveStateForUndo(); // Save state BEFORE change
-        shapes[selectedShapeIndex].strokeW = parseFloat(strokeWeightInput.value()) || 0;
-    }
-}
 
 // --- Action Functions ---
 function addNewShape() {
@@ -924,7 +889,7 @@ function addNewShape() {
     saveStateForUndo(); // Save state BEFORE adding
     let defaultShape = {
         vertexData: [{ x: -0.2, y: 0.2 }, { x: 0.2, y: 0.2 }, { x: 0, y: -0.2 }],
-        fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1
+        fillColor: [150, 150, 180]
     };
     shapes.push(defaultShape); // Add to top (now the end of the array)
     selectedShapeIndex = shapes.length - 1; // Select newly added shape
@@ -944,7 +909,7 @@ function addCircleShape() {
         const theta = (i / segments) * Math.PI * 2;
         verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
     }
-    const shape = { vertexData: verts, fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1 };
+    const shape = { vertexData: verts, fillColor: [150, 150, 180] };
     shapes.push(shape);
     selectedShapeIndex = shapes.length - 1;
     selectedVertexIndices = [];
@@ -962,7 +927,7 @@ function addHexagonShape() {
         const theta = (i / segments) * Math.PI * 2;
         verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
     }
-    const shape = { vertexData: verts, fillColor: [150, 150, 180], strokeColor: [50, 50, 60], strokeW: 1 };
+    const shape = { vertexData: verts, fillColor: [150, 150, 180] };
     shapes.push(shape);
     selectedShapeIndex = shapes.length - 1;
     selectedVertexIndices = [];
@@ -983,7 +948,7 @@ function addStarShape() {
         const r = (i % 2 === 0) ? outer : inner;
         verts.push({ x: Math.cos(theta) * r, y: Math.sin(theta) * r });
     }
-    const shape = { vertexData: verts, fillColor: [220, 200, 80], strokeColor: [120, 90, 20], strokeW: 1 };
+    const shape = { vertexData: verts, fillColor: [220, 200, 80] };
     shapes.push(shape);
     selectedShapeIndex = shapes.length - 1;
     selectedVertexIndices = [];
@@ -1009,7 +974,7 @@ function addShieldShape() {
     ];
 
     // Add as a single solid polygon (no holes)
-    shapes.push({ vertexData: outer, fillColor: [0, 0, 0], strokeColor: [0, 0, 0], strokeW: 1 });
+    shapes.push({ vertexData: outer, fillColor: [0, 0, 0] });
     selectedShapeIndex = startIndex; // select the shield shape
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
@@ -1125,10 +1090,10 @@ function centerDesign() {
     for (const shape of shapes) {
         if (shape?.vertexData) {
             for (const vertex of shape.vertexData) {
-                 if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
+                if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
                     vertex.x -= avgX;
                     vertex.y -= avgY;
-                 }
+                }
             }
         }
     }
@@ -1139,11 +1104,11 @@ function centerDesignByBoundingBox() {
         console.log("Center Design: No editable shapes to center.");
         return;
     }
-    
+
     // Find min and max coordinates
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
-    
+
     for (const shape of shapes) {
         if (shape?.vertexData) {
             for (const vertex of shape.vertexData) {
@@ -1156,20 +1121,20 @@ function centerDesignByBoundingBox() {
             }
         }
     }
-    
+
     // Center of bounding box
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
-    
+
     // Check if centering is needed
     if (Math.abs(centerX) < 1e-6 && Math.abs(centerY) < 1e-6) {
         console.log("Center Design: Design is already centered.");
         return;
     }
-    
+
     console.log(`Center Design: Shifting by (${-centerX.toFixed(4)}, ${-centerY.toFixed(4)})`);
     saveStateForUndo(); // Save state BEFORE applying the shift
-    
+
     // Apply the translation to all vertices
     for (const shape of shapes) {
         if (shape?.vertexData) {
@@ -1280,24 +1245,22 @@ function exportDrawFunctionCode() {
     if (currentShipDef && currentShipKey !== '--- New Blank ---') {
         baseName = currentShipKey.replace(/\s+/g, '').replace('Mk', 'Mk');
     }
-    
+
     let code = [];
     code.push(`// --- Generated Ship Layer Data for ${baseName} ---`);
     code.push(`// --- Contains ${shapes.length} shape layer(s) ---`);
     code.push(`// --- Export Date: ${new Date().toLocaleString()} ---`);
     code.push(``);
-    
+
     // Export directly in vertexLayers format
     code.push(`        vertexLayers: [`);
     for (let i = 0; i < shapes.length; i++) {
         let shape = shapes[i];
         if (!shape?.vertexData || shape.vertexData.length < 2) continue;
-        
+
         code.push(`            {`);
         code.push(`                vertexData: [ ${shape.vertexData.map(v => `{ x: ${v.x.toFixed(4)}, y: ${v.y.toFixed(4)} }`).join(', ')} ],`);
-        code.push(`                fillColor: [${shape.fillColor ? shape.fillColor.map(c => Math.round(c)).join(', ') : '180, 180, 180'}],`);
-        code.push(`                strokeColor: [${shape.strokeColor ? shape.strokeColor.map(c => Math.round(c)).join(', ') : '50, 50, 50'}],`);
-        code.push(`                strokeW: ${typeof shape.strokeW === 'number' ? shape.strokeW.toFixed(2) : 1}`);
+        code.push(`                fillColor: [${shape.fillColor ? shape.fillColor.map(c => Math.round(c)).join(', ') : '180, 180, 180'}]`);
         code.push(`            }${i < shapes.length - 1 ? ',' : ''}`);
     }
     code.push(`        ],`);

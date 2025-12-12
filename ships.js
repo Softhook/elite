@@ -18,19 +18,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.7821, y: 0.0000 }, { x: 0.0321, y: 0.4929 }, { x: -0.7821, y: 0.6286 }, { x: -0.7179, y: 0.0000 }, { x: -0.7821, y: -0.6286 }, { x: 0.0321, y: -0.4929 }],
                 fillColor: [100, 150, 200],
-                strokeColor: [151, 181, 196],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 }],
                 fillColor: [101, 171, 236],
-                strokeColor: [0, 0, 0],
-                strokeW: 1.00
             }
         ],
         fillColor: [100, 150, 200],
-        strokeColor: [151, 181, 196],
-        strokeW: 1.00,
         typicalCargo: [],
         price: 15900,
         aiRoles: ["POLICE"],
@@ -46,11 +40,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 }],
                 fillColor: [160, 160, 140],
-                strokeColor: [200, 200, 180],
-                strokeW: 1.00
             }
         ],
-        fillColor: [160, 160, 140], strokeColor: [200, 200, 180], strokeW: 1,
+        fillColor: [160, 160, 140],
         typicalCargo: ["Food", "Textiles", "Minerals"],
         price: 11000,
         aiRoles: ["HAULER"],
@@ -66,11 +58,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.8500, y: 0.3000 }, { x: -0.9500, y: 0.4000 }, { x: -1.1500, y: 0.2000 }, { x: -1.1500, y: -0.2000 }, { x: -0.9500, y: -0.4000 }, { x: 0.8500, y: -0.3000 }],
                 fillColor: [80, 90, 100],
-                strokeColor: [150, 160, 170],
-                strokeW: 2.50
             }
         ],
-        fillColor: [80, 90, 100], strokeColor: [150, 160, 170], strokeW: 2.5,
+        fillColor: [80, 90, 100],
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
         price: 53800,
         aiRoles: ["COMBAT", "MILITARY"],
@@ -86,13 +76,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 }],
                 fillColor: [200, 180, 80],
-                strokeColor: [100, 90, 40],
-                strokeW: 1.50
             }
         ],
         fillColor: [200, 180, 80],
-        strokeColor: [100, 90, 40],
-        strokeW: 1.50,
         typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
         price: 23600,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -105,20 +91,14 @@ const SHIP_DEFINITIONS = {
         armament: ["Force Blaster", "Disruptor", "Barrier Field"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
         fillColor: [80, 140, 100],
-        strokeColor: [40, 80, 50],
-        strokeW: 2.50,
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 }],
                 fillColor: [80, 140, 100],
-                strokeColor: [40, 80, 50],
-                strokeW: 2.50
             },
             {
                 vertexData: [{ x: 0.0000, y: -0.5162 }, { x: 0.3110, y: -0.1819 }, { x: 0.9574, y: 0.0000 }, { x: 0.3110, y: 0.1819 }, { x: 0.0000, y: 0.5162 }, { x: -0.3857, y: 0.0000 }],
                 fillColor: [230, 61, 120],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
@@ -136,13 +116,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9421, y: 0.0000 }, { x: 0.7579, y: 0.4000 }, { x: 0.0865, y: 0.5048 }, { x: 0.4546, y: 0.6548 }, { x: 0.2506, y: 0.8786 }, { x: -0.5596, y: 0.8810 }, { x: -0.9421, y: 0.6000 }, { x: -0.7690, y: 0.0000 }, { x: -0.9421, y: -0.6000 }, { x: -0.5596, y: -0.8810 }, { x: 0.2506, y: -0.8786 }, { x: 0.4546, y: -0.6548 }, { x: 0.0865, y: -0.5048 }, { x: 0.7579, y: -0.4000 }],
                 fillColor: [100, 105, 115],
-                strokeColor: [160, 165, 175],
-                strokeW: 1.20
             }
         ],
         fillColor: [100, 105, 115],
-        strokeColor: [160, 165, 175],
-        strokeW: 2.20,
         typicalCargo: ["Weapons", "Metals", "Machinery"],
         price: 55600,
         aiRoles: ["MILITARY"],
@@ -158,19 +134,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
                 fillColor: [100, 150, 200],
-                strokeColor: [200, 220, 255],
-                strokeW: 1.50
             },
             {
                 vertexData: [{ x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: -0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 }],
                 fillColor: [101, 171, 236],
-                strokeColor: [0, 0, 0],
-                strokeW: 1.00
             }
         ],
         fillColor: [100, 150, 200],
-        strokeColor: [200, 220, 255],
-        strokeW: 1.50,
         typicalCargo: ["Food"],
         price: 21600,
         aiRoles: ["POLICE", "HAULER"],
@@ -186,11 +156,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.1500, y: 0.4000 }, { x: -0.5500, y: 0.9000 }, { x: -0.9500, y: 0.5000 }, { x: -0.8500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.5500, y: -0.9000 }, { x: 0.1500, y: -0.4000 }],
                 fillColor: [100, 110, 90],
-                strokeColor: [160, 170, 150],
-                strokeW: 1.50
             }
         ],
-        fillColor: [100, 110, 90], strokeColor: [160, 170, 150], strokeW: 1.5,
+        fillColor: [100, 110, 90],
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 20800,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -206,25 +174,17 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 }],
                 fillColor: [143, 143, 148],
-                strokeColor: [180, 180, 200],
-                strokeW: 0.50
             },
             {
                 vertexData: [{ x: -0.7335, y: 0.6180 }, { x: 0.5918, y: 0.0000 }, { x: -0.7335, y: -0.6180 }, { x: -0.8380, y: 0.0000 }],
                 fillColor: [191, 191, 196],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.50
             },
             {
                 vertexData: [{ x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 }],
                 fillColor: [84, 84, 84],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
         fillColor: [100, 150, 200],
-        strokeColor: [151, 181, 196],
-        strokeW: 1.00,
         typicalCargo: [],
         price: 69700,
         aiRoles: ["MILITARY"],
@@ -238,26 +198,18 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
         fillColor: [110, 120, 130],
-        strokeColor: [180, 190, 200],
-        strokeW: 2.00,
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.5000 }, { x: -0.1500, y: 0.6000 }, { x: -0.7500, y: 0.8000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.7500, y: -0.8000 }, { x: -0.1500, y: -0.6000 }, { x: 0.7500, y: -0.5000 }],
                 fillColor: [110, 120, 130],
-                strokeColor: [180, 190, 200],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: -0.7067, y: -0.3486 }, { x: 0.8067, y: -0.3486 }, { x: -0.6161, y: -0.5037 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.01
             },
             {
                 vertexData: [{ x: -0.6839, y: 0.3453 }, { x: 0.7905, y: 0.3453 }, { x: -0.5867, y: 0.4955 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.01
             }
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Weapons", "Metals", "Adv Components"],
@@ -275,29 +227,21 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 }],
                 fillColor: [60, 65, 70],
-                strokeColor: [140, 150, 160],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: -0.9998, y: -0.2009 }, { x: -0.1000, y: -0.2431 }, { x: -0.7013, y: -0.5970 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.01
             },
             {
                 vertexData: [{ x: -0.9995, y: 0.2035 }, { x: -0.7020, y: 0.5957 }, { x: -0.1000, y: 0.3052 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.01
             },
             {
                 vertexData: [{ x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.01
             }
         ],
-        fillColor: [60, 65, 70], strokeColor: [140, 150, 160], strokeW: 2,
+        fillColor: [60, 65, 70],
         typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
         price: 64200,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -310,7 +254,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Scatter Beam"], // Alien tech
         costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
         vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
-        fillColor: [50, 50, 60], strokeColor: [200, 200, 255], strokeW: 1.0, // Dark metallic, light stroke
+        fillColor: [50, 50, 60], // Dark metallic, light stroke
         typicalCargo: [],
         price: 999999,
         aiRoles: ["ALIEN"],
@@ -326,11 +270,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
                 fillColor: [190, 195, 200],
-                strokeColor: [120, 125, 140],
-                strokeW: 1.50
             }
         ],
-        fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
+        fillColor: [190, 195, 200], // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 28400,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -346,23 +288,17 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.7205, y: 0.0000 }, { x: 0.5929, y: 0.4300 }, { x: -0.6050, y: 0.6968 }, { x: -0.3295, y: 0.4865 }, { x: -0.5929, y: 0.4300 }, { x: -0.3295, y: 0.1830 }, { x: -0.7205, y: 0.0000 }, { x: -0.3295, y: -0.1830 }, { x: -0.5929, y: -0.4300 }, { x: -0.3295, y: -0.4865 }, { x: -0.6050, y: -0.6968 }, { x: 0.5929, y: -0.4300 }],
                 fillColor: [65, 48, 197],
-                strokeColor: [120, 125, 140],
-                strokeW: 1.50
             },
             {
                 vertexData: [{ x: 0.6165, y: 0.0000 }, { x: 0.3009, y: 0.1809 }, { x: 0.3009, y: -0.1809 }],
                 fillColor: [250, 100, 0],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: 0.0000, y: 0.1777 }, { x: 0.2510, y: 0.0000 }, { x: 0.0000, y: -0.1777 }],
                 fillColor: [250, 100, 0],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [190, 195, 200], strokeColor: [120, 125, 140], strokeW: 1.5, // Light grey / medium grey
+        fillColor: [190, 195, 200], // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 18400,
         aiRoles: ["PIRATE"],
@@ -375,7 +311,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Twin Pulse"],
         costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
         vertexData: [{ x: 1.1, y: 0 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.8, y: -0.4 }],
-        fillColor: [200, 60, 60], strokeColor: [255, 150, 150], strokeW: 0.8,
+        fillColor: [200, 60, 60],
         typicalCargo: [],
         price: 10900,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -391,31 +327,21 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8795, y: 0.3500 }, { x: 0.5844, y: 0.4670 }, { x: 0.4207, y: 0.7285 }, { x: 0.1427, y: 0.8587 }, { x: -0.1705, y: 0.5488 }, { x: -0.9254, y: 0.4670 }, { x: -0.9252, y: 0.3625 }, { x: -0.5529, y: 0.1330 }, { x: -0.5529, y: -0.1330 }, { x: -0.9252, y: -0.3625 }, { x: -0.9295, y: -0.4650 }, { x: -0.1705, y: -0.5488 }, { x: 0.1427, y: -0.8587 }, { x: 0.4207, y: -0.7285 }, { x: 0.5885, y: -0.4650 }, { x: 0.8795, y: -0.3500 }, { x: 0.9295, y: 0.0000 }],
                 fillColor: [70, 100, 130],
-                strokeColor: [150, 180, 210],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: 0.1421, y: -0.7686 }, { x: 0.3536, y: -0.6314 }, { x: -0.0093, y: -0.4986 }, { x: -0.0093, y: -0.4986 }],
                 fillColor: [180, 180, 80],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.10
             },
             {
                 vertexData: [{ x: -0.0093, y: 0.4871 }, { x: -0.0093, y: 0.4871 }, { x: 0.3864, y: 0.6086 }, { x: 0.1621, y: 0.7857 }],
                 fillColor: [180, 180, 80],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.10
             },
             {
                 vertexData: [{ x: 0.3297, y: 0.2149 }, { x: 0.5680, y: 0.2548 }, { x: 0.7417, y: 0.0000 }, { x: 0.5680, y: -0.2548 }, { x: 0.3297, y: -0.2149 }],
                 fillColor: [180, 180, 80],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
         fillColor: [70, 100, 130],
-        strokeColor: [150, 180, 210],
-        strokeW: 2.00, // Blue-grey
         typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
         price: 63700,
         aiRoles: ["MILITARY"],
@@ -431,23 +357,17 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
                 fillColor: [220, 225, 230],
-                strokeColor: [100, 150, 200],
-                strokeW: 1.50
             },
             {
                 vertexData: [{ x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 0.50
             },
             {
                 vertexData: [{ x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [220, 225, 230], strokeColor: [100, 150, 200], strokeW: 1.5,
+        fillColor: [220, 225, 230],
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 42900,
         aiRoles: ["IMPERIAL"],
@@ -463,17 +383,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
                 fillColor: [210, 215, 220],
-                strokeColor: [80, 130, 180],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: 0.2400, y: 0.0000 }, { x: 0.0809, y: 0.0588 }, { x: 0.0742, y: 0.2283 }, { x: -0.0309, y: 0.0951 }, { x: -0.1942, y: 0.1411 }, { x: -0.1000, y: 0.0000 }, { x: -0.1942, y: -0.1411 }, { x: -0.0309, y: -0.0951 }, { x: 0.0742, y: -0.2283 }, { x: 0.0809, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [210, 215, 220], strokeColor: [80, 130, 180], strokeW: 1,
+        fillColor: [210, 215, 220],
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 20100,
         aiRoles: ["IMPERIAL"],
@@ -489,13 +405,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.4000, y: 0.5000 }, { x: -0.3000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.5103, y: 0.1697 }, { x: -0.5103, y: -0.1697 }, { x: -0.9000, y: -0.6000 }, { x: -0.3000, y: -0.8000 }, { x: 0.4000, y: -0.5000 }],
                 fillColor: [170, 160, 150],
-                strokeColor: [90, 80, 70],
-                strokeW: 1.50
             }
         ],
         fillColor: [170, 160, 150],
-        strokeColor: [90, 80, 70],
-        strokeW: 1.50, // Sandy grey
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 23100,
         aiRoles: ["COMBAT", "MILITARY"],
@@ -511,13 +423,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8168, y: 0.0000 }, { x: 0.6865, y: 0.5114 }, { x: -0.0134, y: 0.6114 }, { x: -0.6135, y: 0.8114 }, { x: -0.8168, y: 0.5917 }, { x: -0.3705, y: 0.2745 }, { x: -0.6039, y: 0.1373 }, { x: -0.5974, y: -0.1373 }, { x: -0.3705, y: -0.2745 }, { x: -0.8168, y: -0.5917 }, { x: -0.6135, y: -0.8114 }, { x: -0.0134, y: -0.6114 }, { x: 0.6865, y: -0.5114 }],
                 fillColor: [180, 150, 80],
-                strokeColor: [100, 80, 40],
-                strokeW: 1.50
             }
         ],
         fillColor: [180, 150, 80],
-        strokeColor: [100, 80, 40],
-        strokeW: 1.50,
         typicalCargo: ["Minerals", "Metals", "Machinery"],
         price: 20600,
         aiRoles: ["HAULER"],
@@ -533,13 +441,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.5772, y: -0.0058 }, { x: 0.2343, y: 0.4129 }, { x: -0.5772, y: 0.4129 }, { x: -0.5772, y: -0.4129 }, { x: 0.2343, y: -0.4129 }],
                 fillColor: [100, 120, 100],
-                strokeColor: [140, 160, 140],
-                strokeW: 1.50
             }
         ],
         fillColor: [100, 120, 100],
-        strokeColor: [140, 160, 140],
-        strokeW: 1.50,
         typicalCargo: [],
         price: 14600,
         aiRoles: ["PIRATE"],
@@ -556,11 +460,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.5500, y: 0.5000 }, { x: -0.4500, y: 0.6000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.4500, y: -0.6000 }, { x: 0.5500, y: -0.5000 }],
                 fillColor: [100, 120, 100],
-                strokeColor: [140, 160, 140],
-                strokeW: 1.50
             }
         ],
-        fillColor: [100, 120, 100], strokeColor: [140, 160, 140], strokeW: 1.5,
+        fillColor: [100, 120, 100],
         typicalCargo: ["Food", "Minerals"],
         price: 17200,
         aiRoles: ["PIRATE"],
@@ -576,17 +478,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 }],
                 fillColor: [60, 80, 90],
-                strokeColor: [130, 160, 180],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: 0.0560, y: 0.1290 }, { x: 0.3195, y: 0.0000 }, { x: 0.0560, y: -0.1290 }],
                 fillColor: [250, 250, 255],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [60, 80, 90], strokeColor: [130, 160, 180], strokeW: 2.0, // Dark blue/teal
+        fillColor: [60, 80, 90], // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
         price: 34600,
         aiRoles: ["HAULER"],
@@ -602,11 +500,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 }],
                 fillColor: [140, 130, 120],
-                strokeColor: [80, 75, 70],
-                strokeW: 1.20
             }
         ],
-        fillColor: [140, 130, 120], strokeColor: [80, 75, 70], strokeW: 1.2, // Brownish grey
+        fillColor: [140, 130, 120], // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
         price: 4200,
         aiRoles: ["TRANSPORT"],
@@ -622,11 +518,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
                 fillColor: [200, 200, 190],
-                strokeColor: [100, 100, 90],
-                strokeW: 1.50
             }
         ],
-        fillColor: [200, 200, 190], strokeColor: [100, 100, 90], strokeW: 1.5, // Off-white / beige
+        fillColor: [200, 200, 190], // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 24600,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -642,17 +536,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2000 }, { x: -0.6000, y: 0.5000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.7000, y: -0.2000 }],
                 fillColor: [130, 160, 170],
-                strokeColor: [200, 230, 240],
-                strokeW: 1.20
             },
             {
                 vertexData: [{ x: -0.2751, y: -0.5092 }, { x: -0.2751, y: 0.5092 }, { x: -0.1000, y: 0.7714 }, { x: -0.1000, y: -0.7714 }],
                 fillColor: [30, 77, 46],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [130, 160, 170], strokeColor: [200, 230, 240], strokeW: 1.2, // Teal / Light Blue-grey
+        fillColor: [130, 160, 170], // Teal / Light Blue-grey
         typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
         price: 10200,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -665,7 +555,7 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
         vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
-        fillColor: [180, 170, 160], strokeColor: [100, 95, 90], strokeW: 1.8, // Industrial grey/brown
+        fillColor: [180, 170, 160], // Industrial grey/brown
         typicalCargo: ["Minerals"],
         price: 8700,
         aiRoles: ["TRANSPORT"],
@@ -681,11 +571,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 }],
                 fillColor: [140, 140, 150],
-                strokeColor: [180, 180, 190],
-                strokeW: 2.00
             }
         ],
-        fillColor: [140, 140, 150], strokeColor: [180, 180, 190], strokeW: 2,
+        fillColor: [140, 140, 150],
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
         price: 57300,
         aiRoles: ["HAULER"],
@@ -701,13 +589,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1741, y: 0.0000 }, { x: 0.5245, y: 0.2433 }, { x: -0.1035, y: 0.1331 }, { x: -0.7045, y: 0.8065 }, { x: -1.1741, y: 0.4935 }, { x: -0.6173, y: 0.0000 }, { x: -1.1741, y: -0.4935 }, { x: -0.7045, y: -0.8065 }, { x: -0.1035, y: -0.1331 }, { x: 0.5245, y: -0.2433 }],
                 fillColor: [180, 180, 240],
-                strokeColor: [240, 240, 255],
-                strokeW: 1.00
             }
         ],
         fillColor: [180, 180, 240],
-        strokeColor: [240, 240, 255],
-        strokeW: 1.00, // Set in draw func: Blue/Purple/White
         typicalCargo: [],
         price: 30400,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -720,7 +604,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Pulse Laser", "Guardian Missile"], // Starter weapon
         costCategory: "N/A", description: "Cheap, agile starter ship.",
         vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
-        fillColor: [180, 100, 20], strokeColor: [220, 150, 50], strokeW: 1,
+        fillColor: [180, 100, 20],
         typicalCargo: ["Food"],
         price: 9800,
         aiRoles: ["PIRATE"],
@@ -736,11 +620,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 }],
                 fillColor: [230, 230, 235],
-                strokeColor: [180, 180, 200],
-                strokeW: 1.50
             }
         ],
-        fillColor: [230, 230, 235], strokeColor: [180, 180, 200], strokeW: 1.5, // White/Silver
+        fillColor: [230, 230, 235], // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
         price: 36000,
         aiRoles: ["HAULER"],
@@ -768,11 +650,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8500, y: 0.3000 }, { x: 0.8500, y: 0.7000 }, { x: -0.6500, y: 0.8000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.6500, y: -0.8000 }, { x: 0.8500, y: -0.7000 }, { x: 0.8500, y: -0.3000 }],
                 fillColor: [210, 160, 70],
-                strokeColor: [120, 90, 40],
-                strokeW: 1.50
             }
         ],
-        fillColor: [210, 160, 70], strokeColor: [120, 90, 40], strokeW: 1.5,
+        fillColor: [210, 160, 70],
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
         price: 20100,
         aiRoles: ["HAULER"],
@@ -788,13 +668,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9104, y: 0.2000 }, { x: 0.7896, y: 0.8000 }, { x: -0.7104, y: 0.9000 }, { x: -0.9104, y: 0.8000 }, { x: -0.9104, y: -0.8000 }, { x: -0.7104, y: -0.9000 }, { x: 0.7896, y: -0.8000 }, { x: 0.9104, y: -0.2000 }],
                 fillColor: [190, 140, 60],
-                strokeColor: [110, 80, 30],
-                strokeW: 2.50
             }
         ],
         fillColor: [190, 140, 60],
-        strokeColor: [110, 80, 30],
-        strokeW: 2.50,
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 43100,
         aiRoles: ["HAULER"],
@@ -810,17 +686,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
                 fillColor: [210, 210, 220],
-                strokeColor: [100, 100, 150],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 }],
                 fillColor: [154, 200, 244],
-                strokeColor: [0, 0, 0],
-                strokeW: 1.00
             }
         ],
-        fillColor: [210, 210, 220], strokeColor: [100, 100, 150], strokeW: 1,
+        fillColor: [210, 210, 220],
         typicalCargo: ["Computers", "Weapons", "Narcotics"],
         price: 24500,
         aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -836,13 +708,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
                 fillColor: [210, 4, 4],
-                strokeColor: [138, 138, 138],
-                strokeW: 1.50
             }
         ],
         fillColor: [210, 4, 4],
-        strokeColor: [138, 138, 138],
-        strokeW: 1.50,
         typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
         price: 31300,
         aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -858,13 +726,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 }],
                 fillColor: [210, 190, 80],
-                strokeColor: [120, 100, 30],
-                strokeW: 1.00
             }
         ],
         fillColor: [210, 190, 80],
-        strokeColor: [120, 100, 30],
-        strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 12500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -880,13 +744,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.3537, y: 1.4732 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.5794, y: -1.4143 }, { x: 0.0000, y: -0.3081 }],
                 fillColor: [118, 150, 244],
-                strokeColor: [212, 255, 0],
-                strokeW: 1.00
             }
         ],
         fillColor: [210, 190, 80],
-        strokeColor: [120, 100, 30],
-        strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 12500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -902,13 +762,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.7893, y: 0.0000 }, { x: -0.2224, y: 0.3805 }, { x: -0.2224, y: 1.0132 }, { x: -0.7107, y: 1.1822 }, { x: -0.4976, y: 0.3415 }, { x: -0.7893, y: 0.2472 }, { x: -0.7893, y: -0.2472 }, { x: -0.4976, y: -0.3415 }, { x: -0.7107, y: -1.1822 }, { x: -0.2224, y: -1.0132 }, { x: -0.2224, y: -0.3805 }, { x: 0.7893, y: 0.0000 }],
                 fillColor: [8, 210, 4],
-                strokeColor: [138, 138, 138],
-                strokeW: 0.50
             }
         ],
         fillColor: [210, 190, 80],
-        strokeColor: [120, 100, 30],
-        strokeW: 1.00,
         typicalCargo: ["Computers"],
         price: 17500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -921,7 +777,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Pulse Laser", "Twin Pulse"],
         costCategory: "Low-Medium", description: "A nimble and brightly colored Harlequin skirmisher.",
         vertexData: [{ x: 1, y: 0 }, { x: -0.5, y: 0.6 }, { x: -0.2, y: 0 }, { x: -0.5, y: -0.6 }],
-        fillColor: [255, 0, 0], strokeColor: [0, 0, 255], strokeW: 1.2,
+        fillColor: [255, 0, 0],
         typicalCargo: [], price: 32000, techLevel: 2,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
     },
@@ -932,7 +788,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Mini-Turret"],
         costCategory: "Medium", description: "A surprisingly capable Harlequin trader, often underestimated.",
         vertexData: [{ x: 0.8, y: 0.5 }, { x: -0.8, y: 0.5 }, { x: -0.8, y: -0.5 }, { x: 0.8, y: -0.5 }],
-        fillColor: [255, 255, 0], strokeColor: [0, 128, 0], strokeW: 1.5,
+        fillColor: [255, 255, 0],
         typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
         aiRoles: ["HAULER", "PIRATE"]
     },
@@ -943,7 +799,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Beam Laser"],
         costCategory: "Medium", description: "A swift Harlequin scout, adept at slipping past blockades.",
         vertexData: [{ x: 0.9, y: 0 }, { x: 0, y: 0.7 }, { x: -0.9, y: 0 }, { x: 0, y: -0.7 }],
-        fillColor: [128, 0, 128], strokeColor: [255, 165, 0], strokeW: 1.0,
+        fillColor: [128, 0, 128],
         typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
         aiRoles: ["PIRATE"]
     },
@@ -957,11 +813,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.4000 }, { x: 0.5000, y: 0.8000 }, { x: -0.2369, y: 0.9045 }, { x: -1.0000, y: 0.8000 }, { x: -0.9216, y: 0.0000 }, { x: -1.0000, y: -0.8000 }, { x: -0.2369, y: -0.9045 }, { x: 0.5000, y: -0.8000 }, { x: 1.0000, y: -0.4000 }],
                 fillColor: [0, 200, 200],
-                strokeColor: [200, 0, 200],
-                strokeW: 2.00
             }
         ],
-        fillColor: [0, 200, 200], strokeColor: [200, 0, 200], strokeW: 2.0,
+        fillColor: [0, 200, 200],
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
         aiRoles: ["HAULER", "PIRATE"]
     },
@@ -975,11 +829,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
                 fillColor: [150, 219, 0],
-                strokeColor: [255, 255, 255],
-                strokeW: 1.50
             }
         ],
-        fillColor: [50, 50, 50], strokeColor: [255, 255, 255], strokeW: 1.5,
+        fillColor: [50, 50, 50],
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
         aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
     },
@@ -990,7 +842,7 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Very Low", description: "A very basic, slow, and cheap short-range shuttle.",
         vertexData: [{ x: 0.6, y: 0.6 }, { x: -0.6, y: 0.6 }, { x: -0.6, y: -0.6 }, { x: 0.6, y: -0.6 }],
-        fillColor: [150, 150, 150], strokeColor: [100, 100, 100], strokeW: 1.0,
+        fillColor: [150, 150, 150],
         typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
         aiRoles: ["TRANSPORT"]
     },
@@ -1001,7 +853,7 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Low", description: "Slightly more capable than a Hopper, used for inter-station deliveries.",
         vertexData: [{ x: 0.7, y: 0.4 }, { x: -0.7, y: 0.4 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.4 }, { x: 0.7, y: -0.4 }],
-        fillColor: [130, 140, 150], strokeColor: [80, 90, 100], strokeW: 1.0,
+        fillColor: [130, 140, 150],
         typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
         aiRoles: ["TRANSPORT", "HAULER"]
     },
@@ -1012,7 +864,7 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Low", description: "A common sight carrying goods within a star system.",
         vertexData: [{ x: 0.8, y: 0.5 }, { x: 0.6, y: 0.7 }, { x: -0.8, y: 0.7 }, { x: -0.8, y: -0.7 }, { x: 0.6, y: -0.7 }, { x: 0.8, y: -0.5 }],
-        fillColor: [160, 150, 140], strokeColor: [100, 90, 80], strokeW: 1.2,
+        fillColor: [160, 150, 140],
         typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
         aiRoles: ["TRANSPORT"]
     },
@@ -1023,7 +875,7 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Low-Medium", description: "Slow but spacious, for bulk local transport. Little more than an engine strapped to containers.",
         vertexData: [{ x: 1, y: 0.6 }, { x: 0.8, y: 0.8 }, { x: -0.8, y: 0.8 }, { x: -1, y: 0.6 }, { x: -1, y: -0.6 }, { x: -0.8, y: -0.8 }, { x: 0.8, y: -0.8 }, { x: 1, y: -0.6 }],
-        fillColor: [100, 90, 80], strokeColor: [60, 50, 40], strokeW: 1.5,
+        fillColor: [100, 90, 80],
         typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
         aiRoles: ["TRANSPORT"]
     },
@@ -1034,7 +886,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
         costCategory: "Medium", description: "A common, modified fighter favored by pirates for its speed and bite.",
         vertexData: [{ x: 1, y: 0 }, { x: -0.4, y: 0.5 }, { x: -0.8, y: 0.3 }, { x: -0.8, y: -0.3 }, { x: -0.4, y: -0.5 }],
-        fillColor: [80, 20, 20], strokeColor: [150, 100, 100], strokeW: 1.0,
+        fillColor: [80, 20, 20],
         typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
     },
@@ -1045,7 +897,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
         costCategory: "Medium-High", description: "A heavily armed pirate vessel designed for disabling and looting targets.",
         vertexData: [{ x: 0.9, y: 0.3 }, { x: 0.2, y: 0.7 }, { x: -0.9, y: 0.7 }, { x: -0.9, y: -0.7 }, { x: 0.2, y: -0.7 }, { x: 0.9, y: -0.3 }],
-        fillColor: [50, 50, 50], strokeColor: [100, 100, 100], strokeW: 1.5,
+        fillColor: [50, 50, 50],
         typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
         aiRoles: ["PIRATE"]
     },
@@ -1056,7 +908,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Multi-Cannon", "Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
         costCategory: "High", description: "A formidable pirate capital ship, often a captured and modified freighter or military vessel.",
         vertexData: [{ x: 1, y: 0.1 }, { x: 0.5, y: 0.6 }, { x: -0.5, y: 0.8 }, { x: -1, y: 0.4 }, { x: -1, y: -0.4 }, { x: -0.5, y: -0.8 }, { x: 0.5, y: -0.6 }, { x: 1, y: -0.1 }],
-        fillColor: [40, 60, 40], strokeColor: [80, 100, 80], strokeW: 2.0,
+        fillColor: [40, 60, 40],
         typicalCargo: ["Narcotics", "Slaves", "Weapons"], price: 140000, techLevel: 5,
         aiRoles: ["PIRATE"]
     },
@@ -1067,7 +919,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Pulse Laser", "Mini-Turret"],
         costCategory: "Medium", description: "A swift pirate ship designed for quick raids on unsuspecting haulers.",
         vertexData: [{ x: 0.8, y: 0 }, { x: 0.2, y: 0.4 }, { x: -0.8, y: 0.4 }, { x: -0.8, y: -0.4 }, { x: 0.2, y: -0.4 }],
-        fillColor: [100, 60, 20], strokeColor: [150, 100, 50], strokeW: 1.0,
+        fillColor: [100, 60, 20],
         typicalCargo: ["Food", "Textiles", "Minerals"], price: 38000, techLevel: 2,
         aiRoles: ["PIRATE"]
     },
@@ -1078,7 +930,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
         costCategory: "Medium-High", description: "An upgraded pirate interceptor, bristling with stolen tech.",
         vertexData: [{ x: 1.1, y: 0 }, { x: -0.2, y: 0.5 }, { x: -0.9, y: 0.5 }, { x: -0.7, y: 0 }, { x: -0.9, y: -0.5 }, { x: -0.2, y: -0.5 }],
-        fillColor: [60, 20, 60], strokeColor: [120, 80, 120], strokeW: 1.3,
+        fillColor: [60, 20, 60],
         typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
     },
@@ -1092,17 +944,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }],
                 fillColor: [100, 40, 40],
-                strokeColor: [160, 100, 100],
-                strokeW: 1.20
             },
             {
                 vertexData: [{ x: 0.2200, y: 0.0000 }, { x: 0.1100, y: 0.1905 }, { x: -0.1100, y: 0.1905 }, { x: -0.2200, y: 0.0000 }, { x: -0.1100, y: -0.1905 }, { x: 0.1100, y: -0.1905 }],
                 fillColor: [150, 150, 180],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [100, 40, 40], strokeColor: [160, 100, 100], strokeW: 1.2,
+        fillColor: [100, 40, 40],
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
         aiRoles: ["SEPARATIST"]
     },
@@ -1116,11 +964,9 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 }],
                 fillColor: [70, 70, 70],
-                strokeColor: [120, 120, 120],
-                strokeW: 1.80
             }
         ],
-        fillColor: [70, 70, 70], strokeColor: [120, 120, 120], strokeW: 1.8,
+        fillColor: [70, 70, 70],
         typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
         aiRoles: ["SEPARATIST"]
     },
@@ -1134,17 +980,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.2000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.2000, y: -0.7000 }, { x: 0.3000, y: -0.3000 }],
                 fillColor: [60, 80, 60],
-                strokeColor: [100, 120, 100],
-                strokeW: 1.40
             },
             {
                 vertexData: [{ x: -0.3532, y: 0.0000 }, { x: -0.4632, y: 0.1905 }, { x: -0.6832, y: 0.1905 }, { x: -0.7932, y: 0.0000 }, { x: -0.6832, y: -0.1905 }, { x: -0.4632, y: -0.1905 }],
                 fillColor: [212, 22, 22],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [60, 80, 60], strokeColor: [100, 120, 100], strokeW: 1.4, // Olive Drab
+        fillColor: [60, 80, 60], // Olive Drab
         typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
         aiRoles: ["SEPARATIST", "PIRATE"]
     },
@@ -1154,8 +996,17 @@ const SHIP_DEFINITIONS = {
         baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
         armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
         costCategory: "High", description: "Lead ship in Separatist fleets, heavily armed and armored.",
-        vertexData: [{ x: 1, y: 0.2 }, { x: 0.6, y: 0.7 }, { x: -0.6, y: 0.9 }, { x: -1, y: 0.5 }, { x: -1, y: -0.5 }, { x: -0.6, y: -0.9 }, { x: 0.6, y: -0.7 }, { x: 1, y: -0.2 }], // Imposing, angular
-        fillColor: [50, 30, 30], strokeColor: [100, 80, 80], strokeW: 2.2, // Dark Brownish Red
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.2000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 }, { x: 1.0000, y: -0.2000 }],
+                fillColor: [50, 30, 30]
+            },
+            {
+                vertexData: [{ x: -0.3477, y: 0.0000 }, { x: -0.4577, y: 0.1905 }, { x: -0.6777, y: 0.1905 }, { x: -0.7877, y: 0.0000 }, { x: -0.6777, y: -0.1905 }, { x: -0.4577, y: -0.1905 }],
+                fillColor: [186, 8, 34]
+            }
+        ],
+        fillColor: [50, 30, 30], // Dark Brownish Red
         typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
         aiRoles: ["COMBAT", "SEPARATIST"]
     },
@@ -1169,17 +1020,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
                 fillColor: [80, 80, 60],
-                strokeColor: [120, 120, 100],
-                strokeW: 0.80
             },
             {
                 vertexData: [{ x: -0.2265, y: 0.0000 }, { x: -0.3365, y: 0.1905 }, { x: -0.5565, y: 0.1905 }, { x: -0.6665, y: 0.0000 }, { x: -0.5565, y: -0.1905 }, { x: -0.3365, y: -0.1905 }],
                 fillColor: [182, 17, 17],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             }
         ],
-        fillColor: [80, 80, 60], strokeColor: [120, 120, 100], strokeW: 0.8, // Muddy Yellow
+        fillColor: [80, 80, 60], // Muddy Yellow
         typicalCargo: [], price: 28000, techLevel: 2,
         aiRoles: ["COMBAT", "SEPARATIST", "GUARD"]
     },
@@ -1192,30 +1039,22 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.7000 }, { x: 0.7000, y: 1.0000 }, { x: -0.7000, y: 1.0000 }, { x: -1.0000, y: 0.7000 }, { x: -1.0000, y: -0.7000 }, { x: -0.7000, y: -1.0000 }, { x: 0.7000, y: -1.0000 }, { x: 1.0000, y: -0.7000 }],
-                fillColor: [52, 65, 64],
-                strokeColor: [90, 90, 100],
-                strokeW: 3.00
+                fillColor: [52, 65, 64]
             },
             {
                 vertexData: [{ x: -0.2512, y: -0.1969 }, { x: -0.3612, y: -0.0064 }, { x: -0.5812, y: -0.0064 }, { x: -0.6912, y: -0.1969 }, { x: -0.5812, y: -0.3874 }, { x: -0.3612, y: -0.3874 }],
-                fillColor: [212, 12, 42],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
+                fillColor: [212, 12, 42]
             },
             {
                 vertexData: [{ x: -0.2512, y: 0.1969 }, { x: -0.3612, y: 0.0064 }, { x: -0.5812, y: 0.0064 }, { x: -0.6912, y: 0.1969 }, { x: -0.5812, y: 0.3874 }, { x: -0.3612, y: 0.3874 }],
-                fillColor: [212, 12, 42],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
+                fillColor: [212, 12, 42]
             },
             {
-                vertexData: [{ x: -0.3522, y: 0.0016 }, { x: -0.2422, y: 0.1922 }, { x: -0.0222, y: 0.1922 }, { x: 0.0878, y: 0.0016 }, { x: -0.0222, y: -0.1889 }, { x: -0.2422, y: -0.1889 }],
-                fillColor: [212, 12, 42],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
+                vertexData: [{ x: -0.3497, y: 0.0004 }, { x: -0.2397, y: 0.1910 }, { x: -0.0197, y: 0.1910 }, { x: 0.0903, y: 0.0004 }, { x: -0.0197, y: -0.1901 }, { x: -0.2397, y: -0.1901 }],
+                fillColor: [212, 12, 42]
             }
         ],
-        fillColor: [40, 40, 50], strokeColor: [90, 90, 100], strokeW: 3.0,
+        fillColor: [40, 40, 50],
         typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
         aiRoles: ["COMBAT", "SEPARATIST"],
         canDualEngage: true // Large ships can engage two targets simultaneously
@@ -1227,7 +1066,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Pulse Laser", "Disruptor"],
         costCategory: "Medium-High", description: "Separatist ship with basic stealth capabilities, used for infiltration and sabotage.",
         vertexData: [{ x: 1, y: 0 }, { x: -0.3, y: 0.4 }, { x: -0.8, y: 0.1 }, { x: -0.8, y: -0.1 }, { x: -0.3, y: -0.4 }],
-        fillColor: [30, 30, 30], strokeColor: [70, 70, 70], strokeW: 1.0,
+        fillColor: [30, 30, 30],
         typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
         aiRoles: ["PIRATE", "SEPARATIST"]
     },
@@ -1238,7 +1077,7 @@ const SHIP_DEFINITIONS = {
         armament: ["Twin Pulse", "Mini-Turret"],
         costCategory: "Medium", description: "A Separatist transport designed to get vital supplies through hostile territory.",
         vertexData: [{ x: 0.9, y: 0.6 }, { x: 0.7, y: 0.8 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0.6 }, { x: -0.9, y: -0.6 }, { x: -0.7, y: -0.8 }, { x: 0.7, y: -0.8 }, { x: 0.9, y: -0.6 }],
-        fillColor: [90, 70, 50], strokeColor: [130, 110, 90], strokeW: 1.6,
+        fillColor: [90, 70, 50],
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
         aiRoles: ["HAULER"]
     },
@@ -1252,17 +1091,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.5000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.7000 }, { x: 0.5000, y: -0.4000 }],
                 fillColor: [220, 220, 240],
-                strokeColor: [100, 120, 200],
-                strokeW: 1.50
             },
             {
                 vertexData: [{ x: -0.4091, y: 0.0000 }, { x: -0.5682, y: 0.0588 }, { x: -0.5750, y: 0.2283 }, { x: -0.6800, y: 0.0951 }, { x: -0.8433, y: 0.1411 }, { x: -0.7491, y: 0.0000 }, { x: -0.8433, y: -0.1411 }, { x: -0.6800, y: -0.0951 }, { x: -0.5750, y: -0.2283 }, { x: -0.5682, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [220, 220, 240], strokeColor: [100, 120, 200], strokeW: 1.5,
+        fillColor: [220, 220, 240],
         typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1276,17 +1111,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.8444, y: 0.0813 }, { x: 0.3896, y: 0.3191 }, { x: -0.3614, y: 0.3732 }, { x: -0.5719, y: 0.6322 }, { x: -0.8444, y: 0.5000 }, { x: -0.8444, y: -0.5000 }, { x: -0.5719, y: -0.6322 }, { x: -0.3614, y: -0.3732 }, { x: 0.3896, y: -0.3191 }, { x: 0.8444, y: -0.0813 }],
                 fillColor: [240, 240, 250],
-                strokeColor: [180, 180, 100],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: -0.3352, y: 0.0041 }, { x: -0.4943, y: 0.0629 }, { x: -0.5010, y: 0.2323 }, { x: -0.6061, y: 0.0992 }, { x: -0.7693, y: 0.1452 }, { x: -0.6752, y: 0.0041 }, { x: -0.7693, y: -0.1370 }, { x: -0.6061, y: -0.0910 }, { x: -0.5010, y: -0.2242 }, { x: -0.4943, y: -0.0547 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [240, 240, 250], strokeColor: [180, 180, 100], strokeW: 2.0,
+        fillColor: [240, 240, 250],
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"],
         canDualEngage: true // Large ships can engage two targets simultaneously
@@ -1301,17 +1132,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.3000 }, { x: -1.0000, y: 0.1000 }, { x: -1.0000, y: -0.1000 }, { x: -0.5000, y: -0.3000 }],
                 fillColor: [200, 210, 230],
-                strokeColor: [80, 100, 180],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: -0.3304, y: 0.0000 }, { x: -0.4895, y: 0.0588 }, { x: -0.4962, y: 0.2283 }, { x: -0.6013, y: 0.0951 }, { x: -0.7645, y: 0.1411 }, { x: -0.6704, y: 0.0000 }, { x: -0.7645, y: -0.1411 }, { x: -0.6013, y: -0.0951 }, { x: -0.4962, y: -0.2283 }, { x: -0.4895, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [200, 210, 230], strokeColor: [80, 100, 180], strokeW: 1.0,
+        fillColor: [200, 210, 230],
         typicalCargo: [], price: 62000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
     },
@@ -1325,29 +1152,21 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.9000, y: 0.5000 }, { x: 0.5000, y: 0.9000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.5000 }, { x: -0.9000, y: -0.5000 }, { x: -0.5000, y: -0.9000 }, { x: 0.5000, y: -0.9000 }, { x: 0.9000, y: -0.5000 }],
                 fillColor: [180, 190, 210],
-                strokeColor: [120, 140, 190],
-                strokeW: 1.80
             },
             {
                 vertexData: [{ x: -0.7571, y: -0.4875 }, { x: 0.0000, y: -0.3393 }, { x: 0.7571, y: -0.4875 }, { x: -0.3319, y: -0.7334 }],
                 fillColor: [255, 255, 255],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: -0.3956, y: 0.7037 }, { x: 0.7252, y: 0.4089 }, { x: 0.0000, y: 0.2726 }, { x: -0.7252, y: 0.4089 }],
                 fillColor: [255, 255, 255],
-                strokeColor: [50, 50, 60],
-                strokeW: 1.00
             },
             {
                 vertexData: [{ x: -0.3938, y: 0.0000 }, { x: -0.5529, y: 0.0588 }, { x: -0.5596, y: 0.2283 }, { x: -0.6647, y: 0.0951 }, { x: -0.8279, y: 0.1411 }, { x: -0.7338, y: 0.0000 }, { x: -0.8279, y: -0.1411 }, { x: -0.6647, y: -0.0951 }, { x: -0.5596, y: -0.2283 }, { x: -0.5529, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [180, 190, 210], strokeColor: [120, 140, 190], strokeW: 1.8,
+        fillColor: [180, 190, 210],
         typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1362,18 +1181,14 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.3000 }, { x: -0.8000, y: 0.4000 }, { x: -1.1000, y: 0.0000 }, { x: -0.8000, y: -0.4000 }, { x: 0.8000, y: -0.3000 }],
                 fillColor: [250, 250, 255],
-                strokeColor: [200, 180, 120],
-                strokeW: 1.50
             },
             {
                 vertexData: [{ x: -0.4994, y: 0.0000 }, { x: -0.6585, y: 0.0588 }, { x: -0.6652, y: 0.2283 }, { x: -0.7703, y: 0.0951 }, { x: -0.9336, y: 0.1411 }, { x: -0.8394, y: 0.0000 }, { x: -0.9336, y: -0.1411 }, { x: -0.7703, y: -0.0951 }, { x: -0.6652, y: -0.2283 }, { x: -0.6585, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
 
-        fillColor: [250, 250, 255], strokeColor: [200, 180, 120], strokeW: 1.5,
+        fillColor: [250, 250, 255],
         typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
         aiRoles: ["IMPERIAL"]
     },
@@ -1387,17 +1202,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.3000 }, { x: 0.4000, y: 0.6000 }, { x: -0.4000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.4000, y: -0.8000 }, { x: 0.4000, y: -0.6000 }, { x: 1.0000, y: -0.3000 }],
                 fillColor: [210, 215, 225],
-                strokeColor: [90, 110, 170],
-                strokeW: 1.90
             },
             {
                 vertexData: [{ x: -0.3762, y: 0.0000 }, { x: -0.5353, y: 0.0588 }, { x: -0.5420, y: 0.2283 }, { x: -0.6471, y: 0.0951 }, { x: -0.8103, y: 0.1411 }, { x: -0.7162, y: 0.0000 }, { x: -0.8103, y: -0.1411 }, { x: -0.6471, y: -0.0951 }, { x: -0.5420, y: -0.2283 }, { x: -0.5353, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [210, 215, 225], strokeColor: [90, 110, 170], strokeW: 1.9,
+        fillColor: [210, 215, 225],
         typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1412,18 +1223,14 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.4000 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.4000 }],
                 fillColor: [230, 230, 245],
-                strokeColor: [150, 150, 220],
-                strokeW: 1.10
             },
             {
                 vertexData: [{ x: -0.3680, y: 0.0000 }, { x: -0.5271, y: 0.0588 }, { x: -0.5338, y: 0.2283 }, { x: -0.6389, y: 0.0951 }, { x: -0.8022, y: 0.1411 }, { x: -0.7080, y: 0.0000 }, { x: -0.8022, y: -0.1411 }, { x: -0.6389, y: -0.0951 }, { x: -0.5338, y: -0.2283 }, { x: -0.5271, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
 
-        fillColor: [230, 230, 245], strokeColor: [150, 150, 220], strokeW: 1.1,
+        fillColor: [230, 230, 245],
         typicalCargo: [], price: 58000, techLevel: 3,
         aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
     },
@@ -1437,17 +1244,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2500 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.6000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.9000, y: -0.6000 }, { x: 0.0000, y: -0.7000 }, { x: 0.7000, y: -0.2500 }],
                 fillColor: [225, 230, 240],
-                strokeColor: [120, 160, 210],
-                strokeW: 1.70
             },
             {
                 vertexData: [{ x: -0.4765, y: 0.0000 }, { x: -0.6356, y: 0.0588 }, { x: -0.6423, y: 0.2283 }, { x: -0.7474, y: 0.0951 }, { x: -0.9107, y: 0.1411 }, { x: -0.8165, y: 0.0000 }, { x: -0.9107, y: -0.1411 }, { x: -0.7474, y: -0.0951 }, { x: -0.6423, y: -0.2283 }, { x: -0.6356, y: -0.0588 }],
                 fillColor: [220, 200, 80],
-                strokeColor: [120, 90, 20],
-                strokeW: 1.00
             }
         ],
-        fillColor: [225, 230, 240], strokeColor: [120, 160, 210], strokeW: 1.7,
+        fillColor: [225, 230, 240],
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1461,17 +1264,13 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.0000, y: 1.1037 }, { x: 0.4791, y: 0.7567 }, { x: 0.4276, y: 0.0000 }, { x: 0.4791, y: -0.7567 }, { x: 0.0000, y: -1.1037 }, { x: -0.4937, y: -0.7636 }, { x: -0.4276, y: 0.0000 }, { x: -0.4937, y: 0.7636 }],
                 fillColor: [60, 255, 180],
-                strokeColor: [0, 200, 120],
-                strokeW: 2.00
             },
             {
                 vertexData: [{ x: 0.9369, y: 0.0000 }, { x: 0.6113, y: -0.1659 }, { x: -0.9369, y: 0.0000 }, { x: 0.6113, y: 0.1659 }],
                 fillColor: [0, 255, 120],
-                strokeColor: [0, 180, 90],
-                strokeW: 1.00
             }
         ],
-        fillColor: [60, 255, 180], strokeColor: [0, 200, 120], strokeW: 2.0,
+        fillColor: [60, 255, 180],
         typicalCargo: ["Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "SpiralWarden": {
@@ -1481,10 +1280,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Scatter Beam"],
         costCategory: "N/A", description: "Alien ship with spiral, shell-like armor.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220], strokeColor: [0, 200, 180], strokeW: 1.2 },
-            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200], strokeColor: [0, 180, 150], strokeW: 0.8 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220] },
+            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200] }
         ],
-        fillColor: [180, 255, 220], strokeColor: [0, 200, 180], strokeW: 1.2,
+        fillColor: [180, 255, 220],
         typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "TriadProbe": {
@@ -1494,11 +1293,11 @@ const SHIP_DEFINITIONS = {
         armament: ["Scatter Beam"],
         costCategory: "N/A", description: "Three-lobed alien probe, fast and evasive.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180], strokeColor: [0, 200, 100], strokeW: 1.0 },
-            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100], strokeColor: [200, 200, 0], strokeW: 1.0 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
 
-        fillColor: [200, 255, 180], strokeColor: [0, 200, 100], strokeW: 1.0,
+        fillColor: [200, 255, 180],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "HexaManta": {
@@ -1508,11 +1307,11 @@ const SHIP_DEFINITIONS = {
         armament: ["Disruptor", "Force Blaster"],
         costCategory: "N/A", description: "Wide, six-winged alien ship with layered fins.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.6 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.6 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.6 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.6 }], fillColor: [0, 255, 180], strokeColor: [0, 180, 120], strokeW: 2.0 },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 2.0 },
-            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255], strokeColor: [180, 0, 180], strokeW: 1.0 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.6 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.6 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.6 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.6 }], fillColor: [0, 255, 180] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
-        fillColor: [0, 255, 180], strokeColor: [0, 180, 120], strokeW: 2.0,
+        fillColor: [0, 255, 180],
         typicalCargo: ["Metals", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "FractalRay": {
@@ -1522,10 +1321,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
         costCategory: "N/A", description: "Alien ship with fractal, lightning-like arms.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 255, 180], strokeColor: [200, 200, 0], strokeW: 2.0 },
-            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100], strokeColor: [200, 200, 0], strokeW: 1.0 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 255, 180] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
-        fillColor: [255, 255, 180], strokeColor: [200, 200, 0], strokeW: 2.0,
+        fillColor: [255, 255, 180],
         typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "PetalSpinner": {
@@ -1535,10 +1334,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Scatter Beam"],
         costCategory: "N/A", description: "Alien ship with spinning, flower-like petals.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255], strokeColor: [180, 0, 180], strokeW: 1.2 },
-            { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 0.7 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255] },
+            { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255] }
         ],
-        fillColor: [255, 180, 255], strokeColor: [180, 0, 180], strokeW: 1.2,
+        fillColor: [255, 180, 255],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "CrescentMarauder": {
@@ -1548,10 +1347,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Disruptor", "Scatter Beam"],
         costCategory: "N/A", description: "Alien ship with a crescent, blade-like hull.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.5 },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255], strokeColor: [0, 120, 120], strokeW: 0.8 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255] }
         ],
-        fillColor: [180, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.5,
+        fillColor: [180, 255, 255],
         typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "ObsidianOrb": {
@@ -1561,10 +1360,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Force Blaster", "Disruptor"],
         costCategory: "N/A", description: "Massive, spherical alien ship with layered armor.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [40, 40, 60], strokeColor: [100, 100, 120], strokeW: 3.0 },
-            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [80, 80, 120], strokeColor: [180, 180, 255], strokeW: 1.5 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [40, 40, 60] },
+            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [80, 80, 120] }
         ],
-        fillColor: [40, 40, 60], strokeColor: [100, 100, 120], strokeW: 3.0,
+        fillColor: [40, 40, 60],
         typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"]
     },
     "TesseractScout": {
@@ -1574,10 +1373,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Scatter Beam"],
         costCategory: "N/A", description: "Alien scout with a shifting, four-dimensional shape.",
         vertexLayers: [
-            { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.0 },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255], strokeColor: [0, 120, 120], strokeW: 0.7 }
+            { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255] }
         ],
-        fillColor: [200, 255, 255], strokeColor: [0, 180, 180], strokeW: 1.0,
+        fillColor: [200, 255, 255],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "LotusCarrier": {
@@ -1587,11 +1386,11 @@ const SHIP_DEFINITIONS = {
         armament: ["Force Blaster", "Disruptor", "Scatter Beam", "Halo"],
         costCategory: "N/A", description: "Enormous alien carrier with layered, lotus-like petals.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.6, y: 0.8 }, { x: 1.0, y: 0.0 }, { x: 0.6, y: -0.8 }, { x: 0.0, y: -1.0 }, { x: -0.6, y: -0.8 }, { x: -1.0, y: 0.0 }, { x: -0.6, y: 0.8 }], fillColor: [255, 200, 255], strokeColor: [180, 0, 180], strokeW: 3.0 },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255], strokeColor: [180, 0, 180], strokeW: 2.0 },
-            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255], strokeColor: [180, 0, 180], strokeW: 1.0 }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.6, y: 0.8 }, { x: 1.0, y: 0.0 }, { x: 0.6, y: -0.8 }, { x: 0.0, y: -1.0 }, { x: -0.6, y: -0.8 }, { x: -1.0, y: 0.0 }, { x: -0.6, y: 0.8 }], fillColor: [255, 200, 255] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
-        fillColor: [255, 200, 255], strokeColor: [180, 0, 180], strokeW: 3.0,
+        fillColor: [255, 200, 255],
         typicalCargo: ["Luxury Goods", "Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
     }
 };
@@ -1621,8 +1420,6 @@ function initShipCache(def) {
     let layers = def.vertexLayers || [{
         vertexData: def.vertexData,
         fillColor: def.fillColor,
-        strokeColor: def.strokeColor,
-        strokeW: def.strokeW
     }];
 
     for (let layer of layers) {
@@ -1641,10 +1438,7 @@ function initShipCache(def) {
 
             // 3. Pre-calc Colors
             let cFill = color(layer.fillColor || def.fillColor || [100, 100, 100]);
-            let cStroke = color(layer.strokeColor || def.strokeColor || [200, 200, 200]);
-
             let fillRGB = { r: red(cFill), g: green(cFill), b: blue(cFill) };
-            let strokeRGB = { r: red(cStroke), g: green(cStroke), b: blue(cStroke) };
 
             // Pre-compute gradient strings
             let highlightStr = color(min(255, fillRGB.r * 1.3), min(255, fillRGB.g * 1.3), min(255, fillRGB.b * 1.3)).toString();
@@ -1678,9 +1472,8 @@ function initShipCache(def) {
             def._cache.layers.push({
                 vertexData: layer.vertexData,
                 minX, maxX, xRange,
-                fillRGB, strokeRGB,
+                fillRGB,
                 highlightStr, mainFillStr, darkFillStr,
-                strokeW: layer.strokeW || def.strokeW || 1,
                 edges: edges
             });
         }
@@ -1793,11 +1586,9 @@ function drawThargoid(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
             vertexData: verts,
             minX: -1, maxX: 1, xRange: 2,
             fillRGB: { r: 80, g: 160, b: 80 },
-            strokeRGB: { r: 100, g: 255, b: 100 },
             highlightStr: 'rgb(120, 200, 120)',
             mainFillStr: 'rgb(80, 160, 80)',
             darkFillStr: 'rgb(60, 120, 60)',
-            strokeW: 2,
             edges: []
         };
         // Build edges
@@ -1888,8 +1679,6 @@ function drawGeometricDrone(s, thrusting = false, angle = 0, localSunAngle = -0.
             vertexData: verts,
             minX: -1, maxX: 1, xRange: 2,
             fillRGB: { r: 50, g: 50, b: 60 },
-            strokeRGB: { r: 100, g: 200, b: 255 },
-            strokeW: 1,
             edges: []
         };
         for (let i = 0; i < verts.length; i++) {
