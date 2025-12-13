@@ -11,11 +11,11 @@ class UIMarket {
         // Button areas for click detection
         this.buttonAreas = [];
         this.backButtonArea = {};
-        
+
         // Space object market button areas
         this.spaceObjectButtonAreas = [];
         this.spaceObjectBackButtonArea = {};
-        
+
         // Button repeat/hold state
         this.buttonHeld = null;
         this.lastButtonAction = 0;
@@ -35,17 +35,23 @@ class UIMarket {
         const btnSpacing = 5;
         const totalBtnWidth = (btnW * 4) + (btnSpacing * 3);
         const remainingWidth = tableWidth - totalBtnWidth;
+
+        // Give commodity column more width (1.5x) to accommodate longer names like "Adv Components"
         const numDataColumns = includeStock ? 5 : 4;
-        const colWidth = Math.floor(remainingWidth / numDataColumns);
-        
+        const commodityMultiplier = 1.5;
+        const totalUnits = numDataColumns - 1 + commodityMultiplier; // Other columns get 1 unit, commodity gets 1.5x
+        const unitWidth = Math.floor(remainingWidth / totalUnits);
+        const commodityWidth = Math.floor(unitWidth * commodityMultiplier);
+        const colWidth = unitWidth;
+
         if (includeStock) {
             return {
                 commodityX: startX,
-                commodityW: colWidth,
-                buyX: startX + colWidth + colWidth / 2,
-                sellX: startX + colWidth * 2 + colWidth / 2,
-                stockX: startX + colWidth * 3 + colWidth / 2,
-                cargoX: startX + colWidth * 4 + colWidth / 2,
+                commodityW: commodityWidth,
+                buyX: startX + commodityWidth + colWidth / 2,
+                sellX: startX + commodityWidth + colWidth + colWidth / 2,
+                stockX: startX + commodityWidth + colWidth * 2 + colWidth / 2,
+                cargoX: startX + commodityWidth + colWidth * 3 + colWidth / 2,
                 buttonsStart: startX + tableWidth - totalBtnWidth,
                 totalWidth: tableWidth,
                 colWidth: colWidth,
@@ -55,10 +61,10 @@ class UIMarket {
         } else {
             return {
                 commodityX: startX,
-                commodityW: colWidth,
-                buyX: startX + colWidth + colWidth / 2,
-                sellX: startX + colWidth * 2 + colWidth / 2,
-                cargoX: startX + colWidth * 3 + colWidth / 2,
+                commodityW: commodityWidth,
+                buyX: startX + commodityWidth + colWidth / 2,
+                sellX: startX + commodityWidth + colWidth + colWidth / 2,
+                cargoX: startX + commodityWidth + colWidth * 2 + colWidth / 2,
                 buttonsStart: startX + tableWidth - totalBtnWidth,
                 totalWidth: tableWidth,
                 colWidth: colWidth,
@@ -143,25 +149,25 @@ class UIMarket {
      */
     drawStationMarket(market, player, uiManager) {
         if (!market || !player || typeof market.getPrices !== 'function') return;
-        
+
         market.updatePlayerCargo(player.cargo);
         const commodities = market.getPrices();
         this.buttonAreas = [];
         this.backButtonArea = {};
-        
+
         // Sync button areas array to UIManager (arrays sync by reference)
         uiManager.marketButtonAreas = this.buttonAreas;
 
         const panelRect = uiManager.getPanelRect();
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         push();
         uiManager.drawPanelBG(STANDARD_PANEL_BG, [255, 100, 100]);
-        
+
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = uiManager.drawStationHeader("Commodity Market", station, player, system);
-        
+
         // Table setup
         const sY = pY + headerHeight + 40;
         const tW = pW - 60;
@@ -170,7 +176,7 @@ class UIMarket {
         const btnW = 100;
         const btnH = rowH * 0.8;
         const maxDeviation = 0.8;
-        
+
         // Column layout using helper
         const columns = this._calculateMarketColumns(tW, sX, btnW);
 
@@ -192,19 +198,19 @@ class UIMarket {
             const isIllegalInSystem = !comm.isLegal && system?.securityLevel !== 'Anarchy';
             const stockQty = Math.max(0, Math.floor(comm.stock ?? 0));
             const outOfStock = stockQty <= 0;
-            
+
             // Commodity name
             fill(isIllegalInSystem ? 120 : 255);
             textAlign(LEFT, CENTER);
             text(comm.name || '?', sX + 10, tY, columns.commodityW - 15);
-            
+
             if (!comm.isLegal && isIllegalInSystem) {
                 fill(255, 0, 0);
                 text("ILLEGAL", sX + 10 + textWidth(comm.name || '?') + 15, tY);
             }
-            
+
             textAlign(CENTER, CENTER);
-            
+
             // Buy price with color coding
             if (comm.baseBuy > 0) {
                 const buyDeviation = (comm.buyPrice - comm.baseBuy) / comm.baseBuy;
@@ -213,7 +219,7 @@ class UIMarket {
                 fill(255);
             }
             text(comm.buyPrice ?? '?', columns.buyX, tY);
-            
+
             // Sell price with color coding
             if (comm.baseSell > 0) {
                 const sellDeviation = (comm.sellPrice - comm.baseSell) / comm.baseSell;
@@ -270,10 +276,10 @@ class UIMarket {
 
         // Back button
         this.backButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
-        
+
         // Sync back button area to UIManager AFTER it's drawn
         uiManager.marketBackButtonArea = this.backButtonArea;
-        
+
         pop();
     }
 
@@ -285,31 +291,31 @@ class UIMarket {
      */
     drawSpaceObjectMarket(spaceObject, player, uiManager) {
         if (!spaceObject || !player) return;
-        
+
         this.spaceObjectButtonAreas = [];
         this.spaceObjectBackButtonArea = {};
-        
+
         // Sync button areas array to UIManager (arrays sync by reference)
         uiManager.spaceObjectMarketButtonAreas = this.spaceObjectButtonAreas;
-        
+
         const panelRect = uiManager.getPanelRect();
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
-        
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
         push();
         uiManager.drawPanelBG(STANDARD_PANEL_BG, [255, 100, 100]);
-        
+
         const system = galaxy?.getCurrentSystem();
         const headerHeight = uiManager.drawSpaceObjectHeader("Commodity Market", spaceObject, player, system);
-        
+
         // Get tradable commodities
         const tradable = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
         const producesSet = new Set(tradable.produces || []);
         const buysSet = new Set(tradable.buys || []);
-        
+
         // Get station market for price reference
         const station = system?.station;
         const stationMarket = station?.market;
-        
+
         // Table setup
         const sY = pY + headerHeight + 40;
         const tW = pW - 60;
@@ -318,40 +324,40 @@ class UIMarket {
         const btnW = 100;
         const btnH = rowH * 0.8;
         const maxDeviation = 0.8;
-        
+
         // Column layout (no stock column for space objects)
         const columns = this._calculateMarketColumns(tW, sX, btnW, false);
-        
+
         // Draw column headers
         const headerY = sY - 20;
         this._drawMarketHeaders(sX, headerY, columns, false);
-        
+
         // Get all commodities
         const allCommodities = stationMarket ? stationMarket.getPrices() : this.getDefaultCommodityList();
-        
+
         // Draw commodity rows
         for (let i = 0; i < allCommodities.length; i++) {
             const comm = allCommodities[i];
             if (!comm) continue;
-            
+
             const commodityName = comm.name;
             const isProduced = producesSet.has(commodityName);
             const isBought = buysSet.has(commodityName);
             const isAvailable = isProduced || isBought;
-            
+
             const yP = sY + i * rowH;
             const tY = yP + rowH / 2;
-            
+
             // Alternating row background
             UIComponents.drawAlternatingRow(i, sX, yP, tW, rowH);
-            
+
             // Get player cargo for this commodity
             const playerItem = player.cargo.find(item => item && item.name === commodityName);
             const playerQty = playerItem ? playerItem.quantity : 0;
-            
+
             // Calculate prices
             let buyPrice = 0, sellPrice = 0, baseBuy = 0, baseSell = 0;
-            
+
             if (stationMarket) {
                 const stationPrices = stationMarket.getPrices();
                 const stationComm = stationPrices ? stationPrices.find(c => c.name === commodityName) : null;
@@ -385,12 +391,12 @@ class UIMarket {
                 sellPrice = Math.max(1, Math.floor(fallbackBase * SPACE_OBJECT_DEMAND_PREMIUM));
                 baseSell = baseSell || fallbackBase;
             }
-            
+
             // Commodity name
             textAlign(LEFT, CENTER);
             fill(isAvailable ? 255 : 100);
             text(commodityName || '?', sX + 10, tY, columns.commodityW - 15);
-            
+
             // Buy price
             textAlign(CENTER, CENTER);
             if (isProduced && buyPrice > 0) {
@@ -401,7 +407,7 @@ class UIMarket {
                 fill(80);
                 text("-", columns.buyX, tY);
             }
-            
+
             // Sell price
             if (isBought && sellPrice > 0) {
                 const sellDeviation = baseSell > 0 ? (sellPrice - baseSell) / baseSell : 0;
@@ -411,11 +417,11 @@ class UIMarket {
                 fill(80);
                 text("-", columns.sellX, tY);
             }
-            
+
             // Cargo amount
             fill(playerQty > 0 ? 255 : 80);
             text(playerQty, columns.cargoX, tY);
-            
+
             // Price indicators
             if (isProduced && baseBuy > 0 && buyPrice > 0) {
                 const buyDeviation = (buyPrice - baseBuy) / baseBuy;
@@ -425,11 +431,11 @@ class UIMarket {
                 const sellDeviation = (sellPrice - baseSell) / baseSell;
                 UIComponents.drawPriceIndicator(columns.sellX + columns.colWidth / 2, yP, rowH, sellDeviation, true, maxDeviation);
             }
-            
+
             // Buttons
             const isMissionCargo = player.activeMission?.cargoType === commodityName;
             const btnY = yP + (rowH - btnH) / 2;
-            
+
             // Buy 1 button
             const buy1X = columns.buttonsStart;
             const canBuyOne = isProduced && buyPrice > 0 && player.credits >= buyPrice && player.getCargoAmount() < player.cargoCapacity;
@@ -468,13 +474,13 @@ class UIMarket {
                 });
             }
         }
-        
+
         // Back button
         this.spaceObjectBackButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
-        
+
         // Sync back button area to UIManager AFTER it's drawn
         uiManager.spaceObjectMarketBackButtonArea = this.spaceObjectBackButtonArea;
-        
+
         pop();
     }
 
@@ -488,11 +494,11 @@ class UIMarket {
      */
     handleMousePress(mx, my, market, player) {
         // Check back button
-        if (UIComponents.isClickInArea(mx, my, this.backButtonArea)) { 
-            if (gameStateManager) gameStateManager.setState("DOCKED"); 
-            return true; 
+        if (UIComponents.isClickInArea(mx, my, this.backButtonArea)) {
+            if (gameStateManager) gameStateManager.setState("DOCKED");
+            return true;
         }
-        
+
         // Check market buttons
         for (const btn of this.buttonAreas) {
             if (UIComponents.isClickInArea(mx, my, btn)) {
@@ -533,7 +539,7 @@ class UIMarket {
      */
     performAction(btn, market, player) {
         if (!market || !player || !btn) return;
-        
+
         switch (btn.action) {
             case 'buy':
                 market.buy(btn.commodity, 1, player);
@@ -541,12 +547,12 @@ class UIMarket {
             case 'buyAll':
                 const item = market.getPrices().find(c => c.name === btn.commodity);
                 if (!item) return;
-                
+
                 const availableSpace = player.cargoCapacity - player.getCargoAmount();
                 const maxAffordable = Math.floor(player.credits / item.buyPrice);
                 const availableStock = Number.isFinite(item.stock) ? Math.max(0, Math.floor(item.stock)) : Number.POSITIVE_INFINITY;
                 const quantity = Math.min(availableSpace, maxAffordable, availableStock);
-                
+
                 if (quantity > 0) {
                     market.buy(btn.commodity, quantity, player);
                 }
@@ -573,16 +579,16 @@ class UIMarket {
      */
     handleSpaceObjectTrade(btn, player, tradeInfo, hud) {
         if (!btn || !player) return false;
-        
+
         const { locationName = 'Unknown', systemName = 'Unknown' } = tradeInfo;
-        
+
         const logTrade = () => {
             if (typeof player.recordStationTrade === 'function') {
                 player.recordStationTrade(locationName, systemName);
             }
             if (typeof saveGame === 'function') saveGame();
         };
-        
+
         switch (btn.action) {
             case 'BUY_COMMODITY': {
                 const price = btn.price || 0;
@@ -647,7 +653,7 @@ class UIMarket {
                 return true;
             }
         }
-        
+
         return false;
     }
 }
