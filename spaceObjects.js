@@ -42,7 +42,7 @@ const sizeMap = {
     signalFlare: 60,
     outpost: 200,
     asteroidMiner: 100,
-    fuelDepot: 90,
+    fuelDepot: 180,
     commDish: 70,
     solarFarm: 150,
     iceCrystal: 120,
@@ -1899,155 +1899,311 @@ const SpaceObjectRenderers = {
     miningPlatform: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Wide, flat base - emphasize silhouette like the classic 2D art
-        Draw3D.drawRing3D(0, bob + size * 0.10, size * 0.56, size * 0.20, 18, size * 0.03, color(60, 60, 70), obj.angle, sunAngle);
-
-        // Top deck: a large, shallow plate with bold stripes (2D-inspired decals)
-        Draw3D.drawBox3D(0, bob - size * 0.04, size * 0.7, size * 0.48, size * 0.04, color(120, 120, 130), obj.angle, sunAngle);
-        // Painted hazard stripes on deck (flat 2D look)
-        noStroke();
-        for (let i = -2; i <= 2; i++) {
-            const sx = i * (size * 0.12);
-            fill(200, 50, 40, 180);
-            rect(sx - size * 0.06, bob - size * 0.05, size * 0.12, size * 0.36);
-        }
-
-        // Central control tower — squat and stylized, less depth for 2D feel
-        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.18, size * 0.22, size * 0.32, color(110, 110, 120), obj.angle, sunAngle);
-        // Flat band windows (more graphic, less extruded)
-        fill(180, 220, 240);
-        for (let k = -1; k <= 1; k++) {
-            rect(-size * 0.06, bob - size * 0.26 + k * (size * 0.08), size * 0.12, size * 0.04);
-        }
-
-        // Mining arms: animated flat plates with rotating drill tips and oscillating actuators
+        // Initialize mining state with all needed properties
         if (!obj._miningState) {
-            obj._miningState = { armPhase: Math.random() * TWO_PI, dronePhase: Math.random() * TWO_PI, dust: [] };
+            obj._miningState = {
+                armPhase: Math.random() * TWO_PI,
+                dronePhase: Math.random() * TWO_PI,
+                dust: [],
+                particles: [],
+                drones: [],
+                laserPhase: Math.random() * TWO_PI
+            };
+            // Initialize service drones
+            for (let d = 0; d < 3; d++) {
+                obj._miningState.drones.push({
+                    ang: Math.random() * TWO_PI,
+                    dist: size * 0.55 + Math.random() * size * 0.1,
+                    phase: Math.random() * TWO_PI,
+                    speed: 0.002 + Math.random() * 0.002
+                });
+            }
         }
-        obj._miningState.armPhase += 0.018; // arm sweep
 
-        for (let a = 0; a < 3; a++) {
-            const baseAng = -PI / 2 + a * (TWO_PI / 3);
-            const armWobble = Math.sin(obj._miningState.armPhase + a * 0.6) * 0.08;
+        // Wide industrial base platform with structural supports
+        Draw3D.drawRing3D(0, bob + size * 0.12, size * 0.62, size * 0.22, 24, size * 0.04, color(65, 65, 75), obj.angle, sunAngle);
+        // Structural cross-beams
+        for (let i = 0; i < 4; i++) {
+            const ang = i * (PI / 2);
+            const x1 = Math.cos(ang) * size * 0.15;
+            const y1 = Math.sin(ang) * size * 0.15 + bob + size * 0.12;
+            const x2 = Math.cos(ang) * size * 0.55;
+            const y2 = Math.sin(ang) * size * 0.55 + bob + size * 0.12;
+            stroke(50, 50, 60, 120);
+            strokeWeight(2);
+            line(x1, y1, x2, y2);
+        }
+        noStroke();
+
+        // Top deck with industrial plating
+        Draw3D.drawBox3D(0, bob - size * 0.02, size * 0.75, size * 0.52, size * 0.05, color(125, 125, 135), obj.angle, sunAngle);
+
+        // Hazard stripes on deck
+        for (let i = -2; i <= 2; i++) {
+            const sx = i * (size * 0.14);
+            fill(220, 60, 40, 190);
+            rect(sx - size * 0.07, bob - size * 0.04, size * 0.14, size * 0.40);
+        }
+
+        // Central control tower with more detail
+        Draw3D.drawBox3D(0, bob - size * 0.20, size * 0.22, size * 0.26, size * 0.36, color(115, 115, 125), obj.angle, sunAngle);
+        // Control tower windows with animated lights
+        const windowFlicker = 0.7 + 0.3 * Math.sin(obj.bobPhase * 0.15);
+        for (let k = -1; k <= 1; k++) {
+            fill(180, 220, 240, 200 * windowFlicker);
+            rect(-size * 0.08, bob - size * 0.28 + k * (size * 0.09), size * 0.16, size * 0.05);
+        }
+        // Communication antenna on top
+        Draw3D.drawPrism(0, bob - size * 0.38, size * 0.02, 6, size * 0.08, color(140, 140, 150), obj.angle, sunAngle);
+
+        // Articulated mining arms with hydraulics and rotating drill heads
+        obj._miningState.armPhase += 0.016;
+
+        for (let a = 0; a < 4; a++) {
+            const baseAng = a * (TWO_PI / 4);
+            const armWobble = Math.sin(obj._miningState.armPhase + a * 0.7) * 0.12;
             const ang = baseAng + armWobble;
 
             push();
-            translate(0, bob - size * 0.04);
+            translate(0, bob - size * 0.02);
             rotate(ang);
 
-            const hullLen = size * 0.48;
-            const plate = [
-                { x: size * 0.06, y: -size * 0.03 },
-                { x: hullLen * 0.92, y: -size * 0.14 },
-                { x: hullLen, y: size * 0.14 }
+            // Main arm segment with hydraulics
+            const armLen = size * 0.52;
+            const armSegment = [
+                { x: size * 0.08, y: -size * 0.04 },
+                { x: armLen * 0.95, y: -size * 0.16 },
+                { x: armLen, y: size * 0.16 }
             ];
+            Draw3D.drawExtrudedShape(armSegment, size * 0.05, color(105, 105, 115), obj.angle, sunAngle, true);
 
-            Draw3D.drawExtrudedShape(plate, size * 0.045, color(100, 100, 110), obj.angle, sunAngle, true);
+            // Hydraulic piston with oscillation
+            const piston = Math.sin(obj._miningState.armPhase * 1.8 + a) * (size * 0.025);
+            Draw3D.drawBox3D(size * 0.08, piston * 0.6, size * 0.07, size * 0.08, size * 0.05, color(95, 95, 100), obj.angle, sunAngle);
+            // Piston rod
+            stroke(80, 80, 85);
+            strokeWeight(2);
+            line(size * 0.08, 0, size * 0.08, piston * 0.6);
+            noStroke();
 
-            // actuator piston (oscillating)
-            const piston = Math.sin(obj._miningState.armPhase * 1.5 + a) * (size * 0.02);
-            Draw3D.drawBox3D(size * 0.06, piston * 0.5, size * 0.06, size * 0.06, size * 0.04, color(90, 90, 95), obj.angle, sunAngle);
+            // Drill housing assembly
+            Draw3D.drawBox3D(armLen * 0.98, 0, size * 0.12, size * 0.12, size * 0.05, color(85, 85, 95), obj.angle, sunAngle);
 
-            // Drill housing
-            Draw3D.drawBox3D(hullLen * 0.98, 0, size * 0.10, size * 0.10, size * 0.04, color(80, 80, 90), obj.angle, sunAngle);
-
-            // Rotating drill tip (concentric rings for motion)
+            // Rotating drill head with multiple layers
             push();
-            translate(hullLen * 1.02, 0);
-            const spin = (anim && typeof anim.miningSpin === 'number' ? anim.miningSpin : 0) + obj._miningState.armPhase * 6 + a * 0.9;
+            translate(armLen * 1.04, 0);
+            const spin = (anim && typeof anim.drillSpin === 'number' ? anim.drillSpin : 0) + obj._miningState.armPhase * 8 + a;
             rotate(spin);
-            // drill core
-            Draw3D.drawPrism(0, 0, size * 0.045, 6, size * 0.08, color(150, 130, 100), obj.angle, sunAngle);
-            // tip highlight rotating
-            noStroke(); fill(220, 190, 140, 180);
-            ellipse(size * 0.08, 0, size * 0.06, size * 0.02);
-            stroke(140, 120, 90); strokeWeight(1);
+
+            // Drill core with bits
+            Draw3D.drawPrism(0, 0, size * 0.05, 8, size * 0.09, color(155, 135, 105), obj.angle, sunAngle);
+            // Drill cutting edges
+            for (let d = 0; d < 4; d++) {
+                push();
+                rotate(d * (PI / 2));
+                Draw3D.drawBox3D(size * 0.09, 0, size * 0.03, size * 0.08, size * 0.02, color(180, 160, 120), obj.angle, sunAngle);
+                pop();
+            }
+            // Drill tip glow
+            fill(230, 200, 150, 200);
+            ellipse(size * 0.10, 0, size * 0.08, size * 0.04);
             pop();
 
-            // Sparks / ore spray at drill head (animated semi-random)
-            const sprayPhase = (obj._miningState.armPhase * 0.8 + a);
-            for (let sp = 0; sp < 3; sp++) {
-                const r = lerp(size * 0.06, size * 0.14, (sp) / 3);
-                const sa = sprayPhase + sp * 1.2;
-                const sx = Math.cos(sa) * (hullLen * 1.05);
-                const sy = Math.sin(sa) * r * 0.25 + (piston * 0.4);
-                fill(200, 160, 100, 140 - sp * 30);
-                ellipse(sx, sy + bob - size * 0.04, 4 + sp * 2, 2 + sp);
+            // Enhanced sparks and ore spray at drill head
+            const sprayPhase = obj._miningState.armPhase * 1.2 + a;
+            for (let sp = 0; sp < 5; sp++) {
+                const r = lerp(size * 0.08, size * 0.18, sp / 5);
+                const sa = sprayPhase + sp * 1.5;
+                const sx = Math.cos(sa) * (armLen * 1.08);
+                const sy = Math.sin(sa) * r * 0.3 + (piston * 0.5);
+                const brightness = 210 - sp * 25;
+                fill(brightness, brightness * 0.8, brightness * 0.5, 180 - sp * 30);
+                ellipse(sx, sy + bob - size * 0.02, 5 + sp * 2.5, 3 + sp * 1.5);
             }
 
             pop();
         }
 
-        // Conveyor: shallow, with graphic moving marks (2D impression)
-        const beltY = size * 0.30 + bob;
-        Draw3D.drawBox3D(0, beltY, size * 0.64, size * 0.28, size * 0.03, color(40, 40, 40), obj.angle, sunAngle);
-        // Moving marks (simple rectangles to read as boxes from afar) — animate with local phase
-        if (!obj._miningState) obj._miningState = { armPhase: 0, dronePhase: 0, dust: [] };
-        obj._miningState.dronePhase += 0.02;
-        const boxPhase = (obj._miningState.dronePhase * 0.5) % 1;
-        for (let i = -4; i <= 4; i++) {
-            const px = i * (size * 0.12) + (boxPhase * size * 0.2);
-            fill(140, 115, 95);
-            rect(px - size * 0.04, beltY - size * 0.06, size * 0.08, size * 0.06);
+        // Extraction laser system (sweeping beam)
+        obj._miningState.laserPhase += 0.004;
+        const laserAngle = Math.sin(obj._miningState.laserPhase) * 0.35;
+        const laserPulse = 0.6 + 0.4 * Math.sin(obj._miningState.laserPhase * 3);
+
+        push();
+        rotate(laserAngle);
+        // Laser emitter
+        Draw3D.drawBox3D(-size * 0.08, -size * 0.08 + bob, size * 0.06, size * 0.06, size * 0.04, color(180, 200, 220), obj.angle, sunAngle);
+
+        // Laser beam
+        stroke(140, 200, 255, 160 * laserPulse);
+        strokeWeight(2.5);
+        line(-size * 0.08, -size * 0.08 + bob, -size * 0.65, -size * 0.58 + bob);
+        strokeWeight(1.5);
+        stroke(200, 230, 255, 100 * laserPulse);
+        line(-size * 0.08, -size * 0.08 + bob, -size * 0.65, -size * 0.58 + bob);
+        noStroke();
+
+        // Beam cone glow
+        fill(120, 200, 255, 40 * laserPulse);
+        beginShape();
+        vertex(-size * 0.08, -size * 0.08 + bob);
+        vertex(-size * 0.65, -size * 0.58 + bob - 10);
+        vertex(-size * 0.60, -size * 0.58 + bob + 10);
+        endShape(CLOSE);
+
+        // Beam impact point
+        fill(200, 230, 255, 220 * laserPulse);
+        ellipse(-size * 0.65, -size * 0.58 + bob, 8 * laserPulse, 5 * laserPulse);
+        pop();
+
+        // Enhanced conveyor belt system with ore chunks
+        const beltY = size * 0.32 + bob;
+        Draw3D.drawBox3D(0, beltY, size * 0.70, size * 0.32, size * 0.04, color(45, 45, 45), obj.angle, sunAngle);
+
+        // Conveyor rollers
+        for (let r = -3; r <= 3; r++) {
+            const rx = r * (size * 0.12);
+            Draw3D.drawPrism(rx, beltY + size * 0.14, size * 0.02, 8, size * 0.04, color(30, 30, 30), obj.angle, sunAngle);
         }
 
-        // Conveyor dust puffs — spawn occasionally
-        if (Math.random() < 0.08) {
-            obj._miningState.dust.push({ x: (Math.random() - 0.5) * size * 0.6, y: beltY - size * 0.02, life: 60 + Math.random() * 80 });
+        // Animated ore chunks on belt
+        obj._miningState.dronePhase += 0.015;
+        const conveyorPhase = (anim && typeof anim.conveyorPhase === 'number' ? anim.conveyorPhase : 0) + obj._miningState.dronePhase * 2;
+        for (let o = 0; o < 6; o++) {
+            const t = ((conveyorPhase * 0.01) + o * 0.16) % 1;
+            const ox = lerp(-size * 0.34, size * 0.34, t);
+            const oreType = o % 3;
+            const oreColor = oreType === 0 ? color(180, 120, 70) :
+                oreType === 1 ? color(160, 100, 50) :
+                    color(200, 150, 90);
+            Draw3D.drawBox3D(ox, beltY - size * 0.04, size * 0.07, size * 0.05, size * 0.05, oreColor, obj.angle, sunAngle);
+        }
+
+        // Belt motion lines
+        stroke(35, 35, 35);
+        strokeWeight(1);
+        for (let i = -5; i <= 5; i++) {
+            const lx = i * (size * 0.10) + ((conveyorPhase * 0.02) % (size * 0.10));
+            line(lx, beltY - size * 0.16, lx, beltY + size * 0.16);
+        }
+        noStroke();
+
+        // Ore processing chute with falling particles
+        Draw3D.drawBox3D(-size * 0.35, beltY - size * 0.16, size * 0.08, size * 0.12, size * 0.04, color(70, 70, 80), obj.angle, sunAngle);
+
+        // Processing dust
+        if (Math.random() < 0.12) {
+            obj._miningState.dust.push({
+                x: -size * 0.35 + (Math.random() - 0.5) * size * 0.1,
+                y: beltY - size * 0.10,
+                life: 70 + Math.random() * 90
+            });
         }
         for (let i = obj._miningState.dust.length - 1; i >= 0; i--) {
             const d = obj._miningState.dust[i];
             d.life -= 1;
-            d.y -= 0.15;
-            const alpha = map(d.life, 0, 120, 0, 140);
-            fill(160, 140, 120, alpha);
-            ellipse(d.x, d.y + bob, 8, 4);
+            d.y -= 0.18;
+            d.x += (Math.random() - 0.5) * 0.3;
+            const alpha = map(d.life, 0, 140, 0, 160);
+            fill(170, 150, 130, alpha);
+            ellipse(d.x, d.y, 9, 5);
             if (d.life <= 0) obj._miningState.dust.splice(i, 1);
         }
 
-        // Piles of ore — flattened ellipses for a stylized 2D look
-        for (let s = -3; s <= 3; s += 2) {
-            const sx = s * (size * 0.18);
-            const sy = size * 0.44 + bob;
-            fill(100, 70, 60);
-            ellipse(sx, sy, size * 0.14, size * 0.10);
-            stroke(60, 40, 30, 140); strokeWeight(1);
-            line(sx - 6, sy - 4, sx + 6, sy - 4);
+        // Ore storage bins with fill indicators
+        for (let s = -2; s <= 2; s++) {
+            const sx = s * (size * 0.20);
+            const sy = size * 0.48 + bob;
+
+            // Bin structure
+            Draw3D.drawBox3D(sx, sy, size * 0.16, size * 0.18, size * 0.16, color(90, 65, 55), obj.angle, sunAngle);
+
+            // Ore pile inside
+            const fillLevel = 0.6 + 0.2 * Math.sin(obj.bobPhase * 0.002 + s);
+            fill(110, 80, 65);
+            ellipse(sx, sy + size * 0.05, size * 0.12, size * 0.08 * fillLevel);
+
+            // Bin lid/cover
+            stroke(70, 50, 40, 140);
+            strokeWeight(1.5);
+            line(sx - size * 0.07, sy - size * 0.09, sx + size * 0.07, sy - size * 0.09);
             noStroke();
         }
 
-        // Occasional falling debris particles near ore piles
-        if (!obj._miningState.particles) obj._miningState.particles = [];
-        if (Math.random() < 0.06) {
-            const px = (Math.random() - 0.5) * size * 0.8;
-            obj._miningState.particles.push({ x: px, y: size * 0.36 + bob - size * 0.02, vy: 0.6 + Math.random() * 1.2, life: 40 + Math.random() * 60 });
+        // Falling debris particles near processing area
+        if (Math.random() < 0.08) {
+            const px = (Math.random() - 0.5) * size * 0.9;
+            obj._miningState.particles.push({
+                x: px,
+                y: size * 0.38 + bob - size * 0.04,
+                vy: 0.7 + Math.random() * 1.4,
+                life: 45 + Math.random() * 70
+            });
         }
         for (let i = obj._miningState.particles.length - 1; i >= 0; i--) {
             const p = obj._miningState.particles[i];
-            p.vy += 0.06; p.y += p.vy; p.life -= 1;
-            fill(140, 110, 80, 160 * (p.life / 100));
-            ellipse(p.x, p.y + bob, 3 + Math.random() * 2, 2 + Math.random() * 1.5);
-            if (p.life <= 0 || p.y - (size * 0.6) > size) obj._miningState.particles.splice(i, 1);
+            p.vy += 0.08;
+            p.y += p.vy;
+            p.life -= 1;
+            const alpha = 180 * (p.life / 115);
+            fill(150, 120, 90, alpha);
+            ellipse(p.x, p.y, 3.5 + Math.random() * 2.5, 2.5 + Math.random() * 2);
+            if (p.life <= 0 || p.y > bob + size * 0.6) obj._miningState.particles.splice(i, 1);
         }
 
-        // Large, readable warning lights and status indicators (2D pop)
-        const warn = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.006);
-        fill(255, 120, 100, 220 * warn);
-        ellipse(-size * 0.14, -size * 0.28 + bob, 8, 8);
-        ellipse(size * 0.14, -size * 0.28 + bob, 8, 8);
+        // Orbiting service drones with maintenance arms
+        for (let d = 0; d < obj._miningState.drones.length; d++) {
+            const drone = obj._miningState.drones[d];
+            drone.ang += drone.speed;
+            const ddx = Math.cos(drone.ang) * drone.dist;
+            const ddy = Math.sin(drone.ang) * (drone.dist * 0.40) + bob * 0.03;
 
-        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45);
-        fill(0, 255, 100, 255 * statusFlash);
-        ellipse(-size * 0.28, bob + size * 0.04, 4, 4);
-        fill(0, 200, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.45 + 1)));
-        ellipse(size * 0.28, bob + size * 0.04, 4, 4);
+            // Drone body
+            Draw3D.drawBox3D(ddx, ddy, 10, 7, 7, color(215, 205, 175), obj.angle, sunAngle);
 
-        // A single inspection drone (kept simple & flat)
-        push();
-        const droneAng = Math.sin(obj.bobPhase * 0.003) * 0.2;
-        translate(size * 0.38, bob - size * 0.12);
-        rotate(droneAng);
-        Draw3D.drawBox3D(0, 0, size * 0.08, size * 0.06, size * 0.03, color(200, 170, 140), obj.angle, sunAngle);
+            // Drone lights
+            const droneBlink = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.25 + d * 2);
+            fill(100, 255, 200, 255 * droneBlink);
+            ellipse(ddx - 3, ddy, 2, 2);
+            fill(255, 200, 100, 255 * (1 - droneBlink));
+            ellipse(ddx + 3, ddy, 2, 2);
+
+            // Drone tether/connection
+            stroke(170, 150, 130, 180);
+            strokeWeight(0.8);
+            line(ddx, ddy, ddx - Math.cos(drone.ang) * 10, ddy - Math.sin(drone.ang) * 10);
+
+            // Service arm
+            const armWave = Math.sin(obj.bobPhase * 0.01 + d) * 6;
+            line(ddx, ddy, ddx + armWave, ddy + 8);
+            noStroke();
+
+            // Tool at end of arm
+            fill(180, 180, 190);
+            ellipse(ddx + armWave, ddy + 8, 3, 3);
+        }
+
+        // Warning and status lights with varied patterns
+        const warn1 = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.007);
+        fill(255, 130, 110, 230 * warn1);
+        ellipse(-size * 0.16, -size * 0.32 + bob, 9, 9);
+        ellipse(size * 0.16, -size * 0.32 + bob, 9, 9);
+
+        const warn2 = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.008 + 0.5);
+        fill(255, 200, 80, 220 * warn2);
+        ellipse(-size * 0.32, -size * 0.16 + bob, 6, 6);
+        ellipse(size * 0.32, -size * 0.16 + bob, 6, 6);
+
+        const statusFlash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.50);
+        fill(0, 255, 120, 255 * statusFlash);
+        ellipse(-size * 0.30, bob + size * 0.06, 5, 5);
+        fill(0, 220, 255, 255 * (0.5 + 0.5 * Math.sin(obj.bobPhase * 0.50 + 1.5)));
+        ellipse(size * 0.30, bob + size * 0.06, 5, 5);
+
+        // Activity indicator on tower
+        const activityPulse = 0.7 + 0.3 * Math.sin(obj.bobPhase * 0.12);
+        fill(140, 200, 255, 200 * activityPulse);
+        ellipse(0, bob - size * 0.38, 6 * activityPulse, 4 * activityPulse);
         pop();
     },
 
