@@ -2200,7 +2200,6 @@ const SpaceObjectRenderers = {
         const activityPulse = 0.7 + 0.3 * Math.sin(obj.bobPhase * 0.12);
         fill(140, 200, 255, 200 * activityPulse);
         ellipse(0, bob - size * 0.38, 6 * activityPulse, 4 * activityPulse);
-        pop();
     },
 
     ancientRelic: function (obj, size, anim, bob) {

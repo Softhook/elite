@@ -744,8 +744,16 @@ const SHIP_DEFINITIONS = {
         baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
         armament: ["Beam Laser"],
         costCategory: "Medium", description: "A swift Harlequin scout, adept at slipping past blockades.",
-        vertexData: [{ x: 0.9, y: 0 }, { x: 0, y: 0.7 }, { x: -0.9, y: 0 }, { x: 0, y: -0.7 }],
-        fillColor: [128, 0, 128],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: 0.0000, y: -0.7000 }],
+                fillColor: [128, 0, 128]
+            },
+            {
+                vertexData: [{ x: 0.2743, y: -0.1886 }, { x: 0.2743, y: 0.2114 }, { x: 0.6743, y: 0.0114 }],
+                fillColor: [251, 255, 0]
+            }
+        ],
         typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
         aiRoles: ["PIRATE"]
     },
@@ -758,7 +766,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.4000 }, { x: 0.5000, y: 0.8000 }, { x: -0.2369, y: 0.9045 }, { x: -1.0000, y: 0.8000 }, { x: -0.9216, y: 0.0000 }, { x: -1.0000, y: -0.8000 }, { x: -0.2369, y: -0.9045 }, { x: 0.5000, y: -0.8000 }, { x: 1.0000, y: -0.4000 }],
-                fillColor: [0, 200, 200],
+                fillColor: [0, 200, 200]
+            },
+            {
+                vertexData: [{ x: 0.2020, y: -0.1143 }, { x: 0.3925, y: -0.2243 }, { x: 0.5182, y: -0.1517 }, { x: 0.5431, y: -0.1948 }, { x: 0.7631, y: -0.1948 }, { x: 0.8731, y: -0.0043 }, { x: 0.7631, y: 0.1862 }, { x: 0.5431, y: 0.1862 }, { x: 0.5182, y: 0.1431 }, { x: 0.3925, y: 0.2157 }, { x: 0.2020, y: 0.1057 }],
+                fillColor: [209, 0, 224]
             }
         ],
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
@@ -773,7 +785,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
-                fillColor: [150, 219, 0],
+                fillColor: [150, 219, 0]
+            },
+            {
+                vertexData: [{ x: -0.3802, y: -0.1847 }, { x: -0.2702, y: -0.3752 }, { x: -0.0502, y: -0.3752 }, { x: -0.0068, y: -0.2985 }, { x: -0.0056, y: -0.2979 }, { x: 0.1532, y: -0.2185 }, { x: 0.3532, y: -0.1185 }, { x: 0.3532, y: 0.1215 }, { x: 0.1532, y: 0.2215 }, { x: -0.0068, y: 0.3015 }, { x: -0.0589, y: 0.3739 }, { x: -0.2789, y: 0.3739 }, { x: -0.3889, y: 0.1833 }],
+                fillColor: [215, 20, 198]
             }
         ],
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
