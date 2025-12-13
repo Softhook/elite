@@ -1432,10 +1432,27 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.05,
         baseHull: 400, baseShield: 500, shieldRecharge: 3.0, cargoCapacity: 60,
         armament: ["Force Blaster", "Disruptor"],
-        costCategory: "N/A", description: "Massive, spherical alien ship with layered armor.",
+        costCategory: "N/A", description: "Massive, spherical alien ship with layered crystalline armor.",
         vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [40, 40, 60] },
-            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [80, 80, 120] }
+            // Outer shell - large dark obsidian octagon
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [25, 20, 35] },
+            // Crystal facets - diamond shapes at cardinal points
+            { vertexData: [{ x: 0.0, y: 0.85 }, { x: 0.12, y: 0.70 }, { x: 0.0, y: 0.55 }, { x: -0.12, y: 0.70 }], fillColor: [60, 45, 80] },
+            { vertexData: [{ x: 0.85, y: 0.0 }, { x: 0.70, y: 0.12 }, { x: 0.55, y: 0.0 }, { x: 0.70, y: -0.12 }], fillColor: [60, 45, 80] },
+            { vertexData: [{ x: 0.0, y: -0.85 }, { x: 0.12, y: -0.70 }, { x: 0.0, y: -0.55 }, { x: -0.12, y: -0.70 }], fillColor: [60, 45, 80] },
+            { vertexData: [{ x: -0.85, y: 0.0 }, { x: -0.70, y: 0.12 }, { x: -0.55, y: 0.0 }, { x: -0.70, y: -0.12 }], fillColor: [60, 45, 80] },
+            // Mid layer - smaller octagon with purple tint
+            { vertexData: [{ x: 0.0, y: 0.65 }, { x: 0.46, y: 0.46 }, { x: 0.65, y: 0.0 }, { x: 0.46, y: -0.46 }, { x: 0.0, y: -0.65 }, { x: -0.46, y: -0.46 }, { x: -0.65, y: 0.0 }, { x: -0.46, y: 0.46 }], fillColor: [45, 35, 65] },
+            // Inner ring - violet accents
+            { vertexData: [{ x: 0.0, y: 0.42 }, { x: 0.30, y: 0.30 }, { x: 0.42, y: 0.0 }, { x: 0.30, y: -0.30 }, { x: 0.0, y: -0.42 }, { x: -0.30, y: -0.30 }, { x: -0.42, y: 0.0 }, { x: -0.30, y: 0.30 }], fillColor: [80, 50, 120] },
+            // Core segments - bright crystalline center (12-sided)
+            {
+                vertexData: [
+                    { x: 0.0, y: 0.25 }, { x: 0.13, y: 0.22 }, { x: 0.22, y: 0.13 }, { x: 0.25, y: 0.0 },
+                    { x: 0.22, y: -0.13 }, { x: 0.13, y: -0.22 }, { x: 0.0, y: -0.25 }, { x: -0.13, y: -0.22 },
+                    { x: -0.22, y: -0.13 }, { x: -0.25, y: 0.0 }, { x: -0.22, y: 0.13 }, { x: -0.13, y: 0.22 }
+                ], fillColor: [120, 80, 180]
+            }
         ],
         typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"]
     },
@@ -1970,25 +1987,69 @@ function drawCrescentMarauder(s, thrusting = false, angle = 0, localSunAngle = -
 function drawObsidianOrb(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.ObsidianOrb;
-    let rotAngle = frameCount * 0.005;
+    let t = frameCount * 0.05;
 
+    // Slow counter-rotating layers
+    let outerRotAngle = frameCount * 0.005;
+    let innerRotAngle = frameCount * -0.008;
+
+    // Pulsing effects
+    let corePulse = 1.0 + sin(t * 0.8) * 0.15;
+    let ringPulse = sin(t * 1.2) * 0.5 + 0.5;
+
+    // Draw outer layers (rotating slowly)
     push();
-    rotate(rotAngle);
-
-    // Draw 3D base shape with counter-rotated extrusion
-    drawGenericAlienShip(def, s, thrusting, rotAngle, localSunAngle);
-
-    // Ring effect
-    noFill();
-    stroke(100, 100, 255, 100);
-    strokeWeight(2);
-    ellipse(0, 0, s * 1.05, s * 0.18);
+    rotate(outerRotAngle);
+    drawGenericAlienShip(def, s, thrusting, outerRotAngle, localSunAngle);
     pop();
 
-    // Sphere highlight overlay
+    // Energy rings - multiple concentric rings with varying opacity
+    noFill();
+    strokeWeight(2);
+
+    // Outer ring - violet glow
+    stroke(120, 80, 200, 80 + ringPulse * 120);
+    ellipse(0, 0, s * 1.15, s * 0.22);
+
+    // Mid ring - purple
+    stroke(100, 60, 180, 60 + ringPulse * 100);
+    ellipse(0, 0, s * 1.08, s * 0.18);
+
+    // Inner ring - deep violet
+    stroke(80, 50, 150, 40 + ringPulse * 80);
+    ellipse(0, 0, s * 1.0, s * 0.14);
+
+    // Rotating energy field (counter-rotating ethereal effect)
+    push();
+    rotate(innerRotAngle);
+    strokeWeight(1);
+    noFill();
+    for (let i = 0; i < 3; i++) {
+        let offset = i * TWO_PI / 3;
+        let radius = r * 0.6;
+        stroke(100, 70, 180, 60 - i * 15);
+        circle(cos(offset) * radius * 0.3, sin(offset) * radius * 0.3, r * 0.4);
+    }
+    pop();
+
+    // Crystalline core highlight - pulsing bright center
     noStroke();
-    fill(255, 255, 255, 30);
-    ellipse(-r * 0.2, -r * 0.2, r * 0.3, r * 0.3);
+
+    // Outer glow
+    fill(150, 100, 220, 40 * corePulse);
+    ellipse(0, 0, r * 0.5 * corePulse);
+
+    // Inner glow
+    fill(180, 120, 255, 60 * corePulse);
+    ellipse(0, 0, r * 0.35 * corePulse);
+
+    // Core highlight (off-center for dimension)
+    fill(220, 180, 255, 80);
+    ellipse(-r * 0.08, -r * 0.08, r * 0.2, r * 0.2);
+
+    // Brightest center point
+    fill(255, 220, 255, 120);
+    ellipse(-r * 0.05, -r * 0.05, r * 0.1, r * 0.1);
 }
 
 function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
