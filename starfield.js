@@ -29,6 +29,16 @@ class Starfield {
     draw() {
         this.rebuildIfNeeded();
         push();
+        
+        // Use centralized background color if available
+        if (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.BACKGROUND_COLOR) {
+            const bg = STARFIELD_CONFIG.BACKGROUND_COLOR;
+            background(bg.r, bg.g, bg.b);
+        } else {
+            background(10, 15, 40); // Fallback to deep blue
+        }
+
+
         noStroke();
         for (let i = 0; i < this.bgStars.length; i++) {
             const star = this.bgStars[i];
