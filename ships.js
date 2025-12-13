@@ -30,6 +30,28 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["POLICE"],
         techLevel: 1 // Starter
     },
+    "CobraMkIII": {
+        name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
+        baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
+        baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
+        armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
+        costCategory: "Medium", description: "The legendary jack-of-all-trades.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
+                fillColor: [100, 150, 200],
+            },
+            {
+                vertexData: [{ x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: -0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 }],
+                fillColor: [101, 171, 236],
+            }
+        ],
+        fillColor: [100, 150, 200],
+        typicalCargo: ["Food"],
+        price: 21600,
+        aiRoles: ["POLICE", "HAULER"],
+        techLevel: 2 // Utility
+    },
     "Adder": {
         name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
@@ -84,28 +106,6 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["EXPLORER", "HAULER"],
         techLevel: 2 // Mid-tier
     },
-    "BioFrigate": {
-        name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
-        baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
-        baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
-        armament: ["Force Blaster", "Disruptor", "Barrier Field"],
-        costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
-        fillColor: [80, 140, 100],
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 }],
-                fillColor: [80, 140, 100],
-            },
-            {
-                vertexData: [{ x: 0.0000, y: -0.5162 }, { x: 0.3110, y: -0.1819 }, { x: 0.9574, y: 0.0000 }, { x: 0.3110, y: 0.1819 }, { x: 0.0000, y: 0.5162 }, { x: -0.3857, y: 0.0000 }],
-                fillColor: [230, 61, 120],
-            }
-        ],
-        typicalCargo: ["Metals", "Chemicals", "Adv Components"],
-        price: 999999,
-        aiRoles: ["ALIEN"],
-        techLevel: 5 // Alien
-    },
     "CenturionGunship": {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
@@ -140,28 +140,7 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MILITARY"],
         techLevel: 3 // Mid-tier
     },
-    "CobraMkIII": {
-        name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
-        baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
-        baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
-        armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
-        costCategory: "Medium", description: "The legendary jack-of-all-trades.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
-                fillColor: [100, 150, 200],
-            },
-            {
-                vertexData: [{ x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: -0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 }],
-                fillColor: [101, 171, 236],
-            }
-        ],
-        fillColor: [100, 150, 200],
-        typicalCargo: ["Food"],
-        price: 21600,
-        aiRoles: ["POLICE", "HAULER"],
-        techLevel: 2 // Utility
-    },
+
     "DiamondbackExplorer": {
         name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
@@ -263,19 +242,6 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
         techLevel: 4 // Advanced
     },
-    "GeometricDrone": {
-        name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
-        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
-        baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
-        armament: ["Scatter Beam"], // Alien tech
-        costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
-        vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
-        fillColor: [50, 50, 60], // Dark metallic, light stroke
-        typicalCargo: [],
-        price: 999999,
-        aiRoles: ["ALIEN"],
-        techLevel: 5 // Cutting-edge
-    },
     "GladiusFighter": {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
@@ -363,54 +329,7 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MILITARY"],
         techLevel: 4 // Advanced
     },
-    "ImperialClipper": {
-        name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
-        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
-        baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
-        armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
-        costCategory: "High", description: "Elegant and fast Imperial ship, good shield charging.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
-                fillColor: [220, 225, 230],
-            },
-            {
-                vertexData: [{ x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 }],
-                fillColor: [150, 150, 180],
-            },
-            {
-                vertexData: [{ x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 }],
-                fillColor: [220, 200, 80],
-            }
-        ],
-        fillColor: [220, 225, 230],
-        typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
-        price: 42900,
-        aiRoles: ["IMPERIAL"],
-        techLevel: 4 // Advanced
-    },
-    "ImperialCourier": {
-        name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
-        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
-        baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
-        armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
-        costCategory: "Medium", description: "Fast, sleek Imperial ship with good shields for its size.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
-                fillColor: [210, 215, 220],
-            },
-            {
-                vertexData: [{ x: 0.2400, y: 0.0000 }, { x: 0.0809, y: 0.0588 }, { x: 0.0742, y: 0.2283 }, { x: -0.0309, y: 0.0951 }, { x: -0.1942, y: 0.1411 }, { x: -0.1000, y: 0.0000 }, { x: -0.1942, y: -0.1411 }, { x: -0.0309, y: -0.0951 }, { x: 0.0742, y: -0.2283 }, { x: 0.0809, y: -0.0588 }],
-                fillColor: [220, 200, 80],
-            }
-        ],
-        fillColor: [210, 215, 220],
-        typicalCargo: ["Luxury Goods", "Medicine"],
-        price: 20100,
-        aiRoles: ["IMPERIAL"],
-        techLevel: 2 // Utility
-    },
+
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
@@ -644,18 +563,6 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["HAULER"],
         techLevel: 4 // Advanced
     },
-    "Thargoid": {
-        name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
-        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
-        baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
-        costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
-        vertexData: [], // Not editable via vertex data in this setup
-        typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
-        price: 999999,
-        aiRoles: ["ALIEN"],
-        techLevel: 5 // Alien
-    },
     "Type6Transporter": {
         name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
@@ -690,7 +597,8 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 43100,
         aiRoles: ["HAULER"],
-        techLevel: 3 // Mid-tier
+        techLevel: 3, // Mid-tier
+        canDualEngage: true
     },
     "Viper": {
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
@@ -1131,6 +1039,103 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
         aiRoles: ["HAULER"]
     },
+    "FieldRepairTender": {
+        name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 55,
+        baseMaxSpeed: 2.8, baseThrust: 0.04, baseTurnRate: 0.03491,
+        baseHull: 220, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
+        armament: ["Mini-Turret", "Barrier Field"],
+        costCategory: "Medium", description: "Slow, sturdy support vessel equipped for field repairs and resupply operations.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0349, y: 0.0340 }, { x: 0.8349, y: 0.5340 }, { x: 0.2349, y: 0.8340 }, { x: -0.6651, y: 0.7340 }, { x: -1.0349, y: 0.1572 }, { x: -0.9032, y: -0.2882 }, { x: -0.1422, y: 0.0072 }, { x: -0.0464, y: -0.1491 }, { x: -0.3288, y: -0.5737 }, { x: -0.2188, y: -0.7642 }, { x: 0.5021, y: -0.8340 }, { x: 0.6700, y: -0.5581 }, { x: 0.3358, y: -0.4722 }, { x: 0.4977, y: -0.1766 }, { x: 0.8438, y: -0.2974 }],
+                fillColor: [200, 200, 190]
+            }
+        ],
+        fillColor: [180, 200, 180],
+        typicalCargo: ["Medicine", "Machinery", "Adv Components", "Metals"],
+        price: 38500,
+        aiRoles: ["HAULER", "TRANSPORT"],
+        techLevel: 3
+    },
+    "VanguardCruiser": {
+        name: "Vanguard Cruiser", role: "Fast Attack Cruiser", sizeCategory: "Large", size: 95,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.018,
+        baseHull: 380, baseShield: 320, shieldRecharge: 1.3, cargoCapacity: 60,
+        armament: ["Sniper Rail", "Railgun Turret", "Force Blaster", "Kalibr Missile", "Harpoon Launcher", "Barrier Field"],
+        costCategory: "Very High", description: "A swift capital-class cruiser with cutting-edge weapons. Excellent speed but sluggish handling.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.2500 }, { x: 0.3000, y: 0.4000 }, { x: -0.6000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.1000, y: 0.0000 }, { x: -1.0000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.3000, y: -0.4000 }, { x: 0.8000, y: -0.2500 }],
+                fillColor: [70, 80, 100],
+            },
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.2000, y: 0.1500 }, { x: -0.2000, y: 0.1500 }, { x: -0.2000, y: -0.1500 }, { x: 0.2000, y: -0.1500 }],
+                fillColor: [120, 180, 220],
+            },
+            {
+                vertexData: [{ x: -0.5000, y: 0.2500 }, { x: -0.8000, y: 0.2500 }, { x: -0.8000, y: 0.0500 }, { x: -0.5000, y: 0.0500 }],
+                fillColor: [200, 80, 60],
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.0500 }, { x: -0.8000, y: -0.0500 }, { x: -0.8000, y: -0.2500 }, { x: -0.5000, y: -0.2500 }],
+                fillColor: [200, 80, 60],
+            }
+        ],
+        fillColor: [70, 80, 100],
+        typicalCargo: ["Weapons", "Adv Components", "Computers"],
+        price: 89500,
+        aiRoles: ["MILITARY", "COMBAT"],
+        techLevel: 4,
+        canDualEngage: true
+    },
+    "ImperialClipper": {
+        name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
+        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
+        baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
+        armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
+        costCategory: "High", description: "Elegant and fast Imperial ship, good shield charging.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
+                fillColor: [220, 225, 230],
+            },
+            {
+                vertexData: [{ x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 }],
+                fillColor: [150, 150, 180],
+            },
+            {
+                vertexData: [{ x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 }],
+                fillColor: [220, 200, 80],
+            }
+        ],
+        fillColor: [220, 225, 230],
+        typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
+        price: 42900,
+        aiRoles: ["IMPERIAL"],
+        techLevel: 4 // Advanced
+    },
+    "ImperialCourier": {
+        name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
+        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
+        baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
+        armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
+        costCategory: "Medium", description: "Fast, sleek Imperial ship with good shields for its size.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
+                fillColor: [210, 215, 220],
+            },
+            {
+                vertexData: [{ x: 0.2400, y: 0.0000 }, { x: 0.0809, y: 0.0588 }, { x: 0.0742, y: 0.2283 }, { x: -0.0309, y: 0.0951 }, { x: -0.1942, y: 0.1411 }, { x: -0.1000, y: 0.0000 }, { x: -0.1942, y: -0.1411 }, { x: -0.0309, y: -0.0951 }, { x: 0.0742, y: -0.2283 }, { x: 0.0809, y: -0.0588 }],
+                fillColor: [220, 200, 80],
+            }
+        ],
+        fillColor: [210, 215, 220],
+        typicalCargo: ["Luxury Goods", "Medicine"],
+        price: 20100,
+        aiRoles: ["IMPERIAL"],
+        techLevel: 2 // Utility
+    },
     "ImperialGuardian": {
         name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
@@ -1304,6 +1309,18 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
+    "Thargoid": {
+        name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
+        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
+        baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
+        costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
+        vertexData: [], // Not editable via vertex data in this setup
+        typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
+    },
     "ObeliskSentinel": {
         name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 6.2, baseThrust: 0.13, baseTurnRate: 0.075,
@@ -1377,6 +1394,19 @@ const SHIP_DEFINITIONS = {
         fillColor: [255, 255, 180],
         typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
+    "GeometricDrone": {
+        name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
+        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
+        baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
+        armament: ["Scatter Beam"], // Alien tech
+        costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
+        vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
+        fillColor: [50, 50, 60], // Dark metallic, light stroke
+        typicalCargo: [],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Cutting-edge
+    },
     "PetalSpinner": {
         name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
         baseMaxSpeed: 8.2, baseThrust: 0.21, baseTurnRate: 0.12,
@@ -1428,6 +1458,28 @@ const SHIP_DEFINITIONS = {
         ],
         fillColor: [200, 255, 255],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+    },
+    "BioFrigate": {
+        name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
+        baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
+        baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
+        armament: ["Force Blaster", "Disruptor", "Barrier Field"],
+        costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
+        fillColor: [80, 140, 100],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 }],
+                fillColor: [80, 140, 100],
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.5162 }, { x: 0.3110, y: -0.1819 }, { x: 0.9574, y: 0.0000 }, { x: 0.3110, y: 0.1819 }, { x: 0.0000, y: 0.5162 }, { x: -0.3857, y: 0.0000 }],
+                fillColor: [230, 61, 120],
+            }
+        ],
+        typicalCargo: ["Metals", "Chemicals", "Adv Components"],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
     },
     "LotusCarrier": {
         name: "Lotus Carrier (Alien)", role: "Alien Carrier", sizeCategory: "Very Large", size: 120,
