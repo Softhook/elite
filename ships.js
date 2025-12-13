@@ -24,7 +24,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [101, 171, 236],
             }
         ],
-        fillColor: [100, 150, 200],
         typicalCargo: [],
         price: 15900,
         aiRoles: ["POLICE"],
@@ -46,7 +45,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [101, 171, 236],
             }
         ],
-        fillColor: [100, 150, 200],
         typicalCargo: ["Food"],
         price: 21600,
         aiRoles: ["POLICE", "HAULER"],
@@ -64,7 +62,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 160, 140],
             }
         ],
-        fillColor: [160, 160, 140],
         typicalCargo: ["Food", "Textiles", "Minerals"],
         price: 11000,
         aiRoles: ["HAULER"],
@@ -82,7 +79,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [80, 90, 100],
             }
         ],
-        fillColor: [80, 90, 100],
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
         price: 53800,
         aiRoles: ["COMBAT", "MILITARY"],
@@ -100,7 +96,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 180, 80],
             }
         ],
-        fillColor: [200, 180, 80],
         typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
         price: 23600,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -134,7 +129,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [182, 182, 185]
             }
         ],
-        fillColor: [100, 105, 115],
         typicalCargo: ["Weapons", "Metals", "Machinery"],
         price: 55600,
         aiRoles: ["MILITARY"],
@@ -153,7 +147,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [100, 110, 90],
             }
         ],
-        fillColor: [100, 110, 90],
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 20800,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -179,7 +172,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [84, 84, 84],
             }
         ],
-        fillColor: [100, 150, 200],
         typicalCargo: [],
         price: 69700,
         aiRoles: ["MILITARY"],
@@ -192,7 +184,7 @@ const SHIP_DEFINITIONS = {
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Military arsenal
         costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
-        fillColor: [110, 120, 130],
+
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.5000 }, { x: -0.1500, y: 0.6000 }, { x: -0.7500, y: 0.8000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.7500, y: -0.8000 }, { x: -0.1500, y: -0.6000 }, { x: 0.7500, y: -0.5000 }],
@@ -236,7 +228,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [150, 150, 180],
             }
         ],
-        fillColor: [60, 65, 70],
         typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
         price: 64200,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -254,7 +245,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [190, 195, 200],
             }
         ],
-        fillColor: [190, 195, 200], // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 28400,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -280,7 +270,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [250, 100, 0],
             }
         ],
-        fillColor: [190, 195, 200], // Light grey / medium grey
         typicalCargo: ["Computers"],
         price: 18400,
         aiRoles: ["PIRATE"],
@@ -323,7 +312,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [180, 180, 80],
             }
         ],
-        fillColor: [70, 100, 130],
         typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
         price: 63700,
         aiRoles: ["MILITARY"],
@@ -342,7 +330,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [170, 160, 150],
             }
         ],
-        fillColor: [170, 160, 150],
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 23100,
         aiRoles: ["COMBAT", "MILITARY"],
@@ -360,7 +347,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [180, 150, 80],
             }
         ],
-        fillColor: [180, 150, 80],
         typicalCargo: ["Minerals", "Metals", "Machinery"],
         price: 20600,
         aiRoles: ["HAULER"],
@@ -378,7 +364,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [100, 120, 100],
             }
         ],
-        fillColor: [100, 120, 100],
         typicalCargo: [],
         price: 14600,
         aiRoles: ["PIRATE"],
@@ -397,7 +382,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [100, 120, 100],
             }
         ],
-        fillColor: [100, 120, 100],
         typicalCargo: ["Food", "Minerals"],
         price: 17200,
         aiRoles: ["PIRATE"],
@@ -419,7 +403,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [250, 250, 255],
             }
         ],
-        fillColor: [60, 80, 90], // Dark blue/teal
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
         price: 34600,
         aiRoles: ["HAULER"],
@@ -437,7 +420,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [140, 130, 120],
             }
         ],
-        fillColor: [140, 130, 120], // Brownish grey
         typicalCargo: ["Food", "Machinery", "Metals"],
         price: 4200,
         aiRoles: ["TRANSPORT"],
@@ -455,7 +437,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 200, 190],
             }
         ],
-        fillColor: [200, 200, 190], // Off-white / beige
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 24600,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -477,7 +458,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [30, 77, 46],
             }
         ],
-        fillColor: [130, 160, 170], // Teal / Light Blue-grey
         typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
         price: 10200,
         aiRoles: ["EXPLORER", "HAULER"],
@@ -508,7 +488,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [140, 140, 150],
             }
         ],
-        fillColor: [140, 140, 150],
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
         price: 57300,
         aiRoles: ["HAULER"],
@@ -526,7 +505,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [180, 180, 240],
             }
         ],
-        fillColor: [180, 180, 240],
         typicalCargo: [],
         price: 30400,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -557,7 +535,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [230, 230, 235],
             }
         ],
-        fillColor: [230, 230, 235], // White/Silver
         typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
         price: 36000,
         aiRoles: ["HAULER"],
@@ -575,7 +552,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [210, 160, 70],
             }
         ],
-        fillColor: [210, 160, 70],
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
         price: 20100,
         aiRoles: ["HAULER"],
@@ -593,7 +569,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [190, 140, 60],
             }
         ],
-        fillColor: [190, 140, 60],
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 43100,
         aiRoles: ["HAULER"],
@@ -616,7 +591,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [154, 200, 244],
             }
         ],
-        fillColor: [210, 210, 220],
         typicalCargo: ["Computers", "Weapons", "Narcotics"],
         price: 24500,
         aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -634,7 +608,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [210, 4, 4],
             }
         ],
-        fillColor: [210, 4, 4],
         typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
         price: 31300,
         aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -652,7 +625,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [210, 190, 80],
             }
         ],
-        fillColor: [210, 190, 80],
         typicalCargo: ["Computers"],
         price: 12500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -670,7 +642,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [118, 150, 244],
             }
         ],
-        fillColor: [210, 190, 80],
         typicalCargo: ["Computers"],
         price: 12500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -688,7 +659,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [8, 210, 4],
             }
         ],
-        fillColor: [210, 190, 80],
         typicalCargo: ["Computers"],
         price: 17500,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
@@ -739,7 +709,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 200, 200],
             }
         ],
-        fillColor: [0, 200, 200],
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
         aiRoles: ["HAULER", "PIRATE"]
     },
@@ -755,7 +724,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [150, 219, 0],
             }
         ],
-        fillColor: [50, 50, 50],
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
         aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
     },
@@ -874,7 +842,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [150, 150, 180],
             }
         ],
-        fillColor: [100, 40, 40],
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
         aiRoles: ["SEPARATIST"]
     },
@@ -902,7 +869,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [113, 14, 39]
             }
         ],
-        fillColor: [70, 70, 70],
         typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
         aiRoles: ["SEPARATIST"]
     },
@@ -922,7 +888,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 22, 22],
             }
         ],
-        fillColor: [60, 80, 60], // Olive Drab
         typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
         aiRoles: ["SEPARATIST", "PIRATE"]
     },
@@ -942,7 +907,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [186, 8, 34]
             }
         ],
-        fillColor: [50, 30, 30], // Dark Brownish Red
         typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
         aiRoles: ["COMBAT", "SEPARATIST"]
     },
@@ -962,7 +926,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [182, 17, 17],
             }
         ],
-        fillColor: [80, 80, 60], // Muddy Yellow
         typicalCargo: [], price: 28000, techLevel: 2,
         aiRoles: ["COMBAT", "SEPARATIST", "GUARD"]
     },
@@ -990,7 +953,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 12, 42]
             }
         ],
-        fillColor: [40, 40, 50],
         typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
         aiRoles: ["COMBAT", "SEPARATIST"],
         canDualEngage: true // Large ships can engage two targets simultaneously
@@ -1011,7 +973,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [114, 3, 3]
             }
         ],
-        fillColor: [30, 30, 30],
         typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
         aiRoles: ["PIRATE", "SEPARATIST"]
     },
@@ -1035,7 +996,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [133, 0, 57]
             }
         ],
-        fillColor: [90, 70, 50],
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
         aiRoles: ["HAULER"]
     },
@@ -1051,7 +1011,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 200, 190]
             }
         ],
-        fillColor: [180, 200, 180],
         typicalCargo: ["Medicine", "Machinery", "Adv Components", "Metals"],
         price: 38500,
         aiRoles: ["HAULER", "TRANSPORT"],
@@ -1081,7 +1040,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 80, 60],
             }
         ],
-        fillColor: [70, 80, 100],
         typicalCargo: ["Weapons", "Adv Components", "Computers"],
         price: 89500,
         aiRoles: ["MILITARY", "COMBAT"],
@@ -1108,7 +1066,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [220, 225, 230],
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 42900,
         aiRoles: ["IMPERIAL"],
@@ -1130,7 +1087,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [210, 215, 220],
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 20100,
         aiRoles: ["IMPERIAL"],
@@ -1152,7 +1108,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [220, 220, 240],
         typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1172,7 +1127,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [240, 240, 250],
         typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"],
         canDualEngage: true // Large ships can engage two targets simultaneously
@@ -1193,7 +1147,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [200, 210, 230],
         typicalCargo: [], price: 62000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
     },
@@ -1221,7 +1174,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [180, 190, 210],
         typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1242,8 +1194,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-
-        fillColor: [250, 250, 255],
         typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
         aiRoles: ["IMPERIAL"]
     },
@@ -1263,7 +1213,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [210, 215, 225],
         typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1284,8 +1233,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-
-        fillColor: [230, 230, 245],
         typicalCargo: [], price: 58000, techLevel: 3,
         aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
     },
@@ -1305,7 +1252,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [220, 200, 80],
             }
         ],
-        fillColor: [225, 230, 240],
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
@@ -1337,7 +1283,6 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 255, 120],
             }
         ],
-        fillColor: [60, 255, 180],
         typicalCargo: ["Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "SpiralWarden": {
@@ -1350,7 +1295,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220] },
             { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200] }
         ],
-        fillColor: [180, 255, 220],
         typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "TriadProbe": {
@@ -1363,8 +1307,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
-
-        fillColor: [200, 255, 180],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "HexaManta": {
@@ -1378,7 +1320,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
-        fillColor: [0, 255, 180],
         typicalCargo: ["Metals", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "FractalRay": {
@@ -1391,7 +1332,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 255, 180] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
-        fillColor: [255, 255, 180],
         typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "GeometricDrone": {
@@ -1417,7 +1357,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255] },
             { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255] }
         ],
-        fillColor: [255, 180, 255],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "CrescentMarauder": {
@@ -1430,7 +1369,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255] }
         ],
-        fillColor: [180, 255, 255],
         typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "ObsidianOrb": {
@@ -1443,7 +1381,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [40, 40, 60] },
             { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [80, 80, 120] }
         ],
-        fillColor: [40, 40, 60],
         typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"]
     },
     "TesseractScout": {
@@ -1456,7 +1393,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255] },
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255] }
         ],
-        fillColor: [200, 255, 255],
         typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "BioFrigate": {
@@ -1465,7 +1401,6 @@ const SHIP_DEFINITIONS = {
         baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
         armament: ["Force Blaster", "Disruptor", "Barrier Field"],
         costCategory: "N/A", description: "Large, organic alien vessel. Slow but durable.",
-        fillColor: [80, 140, 100],
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9619, y: 0.0000 }, { x: 0.5195, y: 0.6500 }, { x: 0.1625, y: 0.7625 }, { x: -0.1625, y: 0.7625 }, { x: -0.5195, y: 0.6500 }, { x: -0.7517, y: 0.4402 }, { x: -0.9000, y: 0.2000 }, { x: -0.9619, y: 0.0000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7517, y: -0.4402 }, { x: -0.5386, y: -0.6424 }, { x: -0.1701, y: -0.7854 }, { x: 0.1701, y: -0.7854 }, { x: 0.5386, y: -0.6424 }],
@@ -2028,28 +1963,56 @@ function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.
 function drawLotusCarrier(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.LotusCarrier;
-    let rotAngle = frameCount * 0.005;
+    let pulse = 1.0 + sin(frameCount * 0.08) * 0.05; // Large slow pulse
+    let rotSpeed = frameCount * 0.01;
+
+    // Draw 3D base using generated petal shape
+    if (!def._cache) initShipCache(def);
+    if (!def._lotusCache) {
+        // Create dynamic star/petal shape (Pink Thargoid)
+        let petals = 8;
+        let verts = [];
+        for (let i = 0; i < petals * 2; i++) {
+            let a = (i / (petals * 2)) * TWO_PI;
+            let rad = (i % 2 === 0) ? 1.0 : 0.4;
+            verts.push({ x: cos(a) * rad, y: sin(a) * rad });
+        }
+        def._lotusCache = {
+            vertexData: verts,
+            minX: -1, maxX: 1, xRange: 2,
+            fillRGB: { r: 255, g: 100, b: 180 }, // Hot Pink
+            highlightStr: 'rgb(255, 160, 220)',
+            mainFillStr: 'rgb(255, 100, 180)',
+            darkFillStr: 'rgb(180, 60, 120)',
+            edges: []
+        };
+        // Build edges
+        for (let i = 0; i < verts.length; i++) {
+            const next = (i + 1) % verts.length;
+            def._lotusCache.edges.push({
+                v1: verts[i], v2: verts[next],
+                dx: verts[next].x - verts[i].x,
+                dy: verts[next].y - verts[i].y,
+                t1: 0.5, t2: 0.5 // uniform depth
+            });
+        }
+    }
+
+    let depth = s * 0.22; // Quite thick
+    const worldDownAngle = rotSpeed;
 
     push();
-    rotate(rotAngle);
-
-    // Draw 3D base shape with counter-rotated extrusion
-    drawGenericAlienShip(def, s, thrusting, rotAngle, localSunAngle);
-
-    // Petal glow overlay
-    noStroke();
-    fill(255, 150, 255, 50);
-    for (let i = 0; i < 8; i++) {
-        push();
-        rotate(i * TWO_PI / 8);
-        ellipse(r * 0.55, 0, r * 0.5, r * 0.25);
-        pop();
-    }
+    rotate(rotSpeed);
+    // Draw 3D shape with counter-rotated extrusion
+    drawExtrudedPolySymmetric(r * pulse, def._lotusCache, depth, worldDownAngle, localSunAngle, 0, 'both');
     pop();
 
-    // Core glow
-    fill(255, 255, 200, 150);
-    ellipse(0, 0, r * 0.3);
+    // Central Eye (Bright)
+    fill(255, 255, 255);
+    noStroke();
+    ellipse(0, 0, r * 0.25);
+    fill(255, 200, 50); // Gold center
+    ellipse(0, 0, r * 0.12);
 }
 
 // Non-Alien Custom Ships - use standard 3D wedge rendering
