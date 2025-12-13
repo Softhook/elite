@@ -15,7 +15,7 @@ class EnemyMovement {
      */
     performRotationAndThrust(desiredMovementTargetPos) {
         let angleDifference = PI; // Default to max difference
-        
+
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
             // Reuse tempVector to avoid allocations
             this.tempVector.set(
@@ -27,7 +27,7 @@ class EnemyMovement {
                 angleDifference = this.rotateTowards(desiredAngle);
             }
         }
-        
+
         // Default thrust multiplier
         let effectiveThrustMultiplier = 1.0;
         let canThrust = false; // Master flag to decide if thrusting happens
@@ -68,7 +68,7 @@ class EnemyMovement {
                     // Calculate the distance at which braking should occur
                     let targetSize = this.target.size || (this.target.width / 2) || this.size; // Estimate target size if not standard
                     let approachBrakingZone = (this.size + targetSize) * APPROACH_BRAKING_DISTANCE_FACTOR;
-                    
+
                     if (distToActualTarget < approachBrakingZone) {
                         effectiveThrustMultiplier = APPROACH_CLOSE_THRUST_REDUCTION;
                         // console.log(`${this.shipTypeName} in APPROACH braking zone. Dist: ${distToActualTarget.toFixed(0)}, Multiplier: ${effectiveThrustMultiplier}`);
@@ -82,15 +82,15 @@ class EnemyMovement {
 
             } else if (this.currentState === AI_STATE.FLEEING) {
                 effectiveThrustMultiplier = (this.role === AI_ROLE.TRANSPORT)
-                                        ? FLEE_THRUST_MULT_TRANSPORT
-                                        : FLEE_THRUST_MULT_DEFAULT;
+                    ? FLEE_THRUST_MULT_TRANSPORT
+                    : FLEE_THRUST_MULT_DEFAULT;
                 if (isAlignedForThrust) { // Fleeing ships should always try to thrust if aligned
                     canThrust = true;
                 }
             } else if (this.currentState === AI_STATE.SNIPING) {
                 // For sniping, alignment for thrust can be more lenient for minor adjustments
-                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5; 
-                
+                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5;
+
                 // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
                 if (desiredMovementTargetPos && p5.Vector.dist(this.pos, desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
                     if (isAlignedForSnipeThrust) {
@@ -99,19 +99,19 @@ class EnemyMovement {
                     } else {
                         canThrust = false; // Don't thrust if not aligned for adjustment
                     }
-                } else { 
+                } else {
                     // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
-                    this.vel.mult(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99)); 
+                    this.vel.mult(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99));
                     canThrust = false; // No active thrust, just braking
                 }
             } else if (this.currentState === AI_STATE.REPOSITIONING) {
                 // effectiveThrustMultiplier is 1.0 by default
-                
+
                 // Add braking when close to reposition target to prevent overshooting/ramming
                 if (desiredMovementTargetPos) {
                     const distToRepo = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
                     const brakingDist = this.size * 4.0;
-                    
+
                     if (distToRepo < brakingDist) {
                         effectiveThrustMultiplier = map(distToRepo, this.size, brakingDist, 0.2, 1.0, true);
                     }
@@ -127,11 +127,11 @@ class EnemyMovement {
                 }
             }
         }
-        
+
         if (canThrust) {
             this.thrustForward(effectiveThrustMultiplier);
         }
-        
+
         return angleDifference;
     }
 
@@ -142,14 +142,14 @@ class EnemyMovement {
      */
     getMovementTargetForState(distanceToTarget) {
         let desiredMovementTargetPos = null;
-        
+
         switch (this.currentState) {
             case AI_STATE.APPROACHING:
                 if (this.isTargetValid(this.target)) {
                     desiredMovementTargetPos = this.predictTargetPosition();
                 }
                 break;
-                
+
             case AI_STATE.ATTACK_PASS:
                 if (this.attackPassTargetPos && this.isTargetValid(this.target)) {
                     // Use the pre-calculated target position
@@ -163,15 +163,15 @@ class EnemyMovement {
                     desiredMovementTargetPos = this.pos.copy();
                 }
                 break;
-                
+
             case AI_STATE.REPOSITIONING:
                 desiredMovementTargetPos = this.repositionTarget;
                 break;
-                
+
             case AI_STATE.PATROLLING:
                 desiredMovementTargetPos = this.patrolTargetPos;
                 break;
-                
+
             case AI_STATE.SNIPING:
                 // Turret mode with subtle forward drift toward target (no standoff maintenance)
                 if (this.isTargetValid && this.isTargetValid(this.target)) {
@@ -211,7 +211,7 @@ class EnemyMovement {
                 desiredMovementTargetPos = this.pos.copy();
                 break;
         }
-        
+
         return desiredMovementTargetPos;
     }
 
@@ -222,47 +222,55 @@ class EnemyMovement {
     updatePhysics() {
         // Skip if destroyed
         if (this.destroyed) return;
-        
+
         // --- TANGLE WEAPON EFFECT ---
         if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
             // First apply normal drag (always safe)
             this.vel.mult(this.drag);
-            
+
             // Then apply the tangle effect with safety bounds
             const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
             const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
-            
+
             // Apply tangle effect if values are valid
             if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
                 this.vel.mult(tangledSpeedFactor);
-                
+
                 // Add slight directional randomness to simulate being caught in energy net
                 if (frameCount % 5 === 0) {
                     this.vel.rotate(random(-0.1, 0.1));
                 }
             }
-            
+
             // Update drag timer
             this.dragEffectTimer -= deltaTime / 1000;
             if (this.dragEffectTimer <= 0) {
                 this.dragMultiplier = 1.0;
                 this.dragEffectTimer = 0;
             }
-        } 
+        }
         // --- STATION PROXIMITY EFFECT ---
         else if (this.currentState === AI_STATE.NEAR_STATION) {
             // Station braking - stronger effect than normal drag
             this.vel.mult(this.drag * 0.8);
-        } 
+        }
         // --- DEFAULT DRAG ---
         else {
             // Normal drag
             this.vel.mult(this.drag);
         }
-        
-        // Ensure we don't exceed max speed
-        this.vel.limit(this.maxSpeed);
-        
+
+        // Limit Max Speed Logic (Soft Cap to allow knockback)
+        const currentSpeed = this.vel.mag();
+        if (currentSpeed > this.maxSpeed) {
+            // If exceeding max speed (likely due to knockback/explosion), apply stronger drag
+            // instead of hard clamping. This allows the ship to "coast" down to normal speed.
+            this.vel.mult(0.9); // Stronger deceleration for overspeed
+        } else {
+            // Normal operation - safeguard against thrust accumulation
+            this.vel.limit(this.maxSpeed);
+        }
+
         // Update position only if velocity is valid
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
             this.pos.add(this.vel);
@@ -270,7 +278,7 @@ class EnemyMovement {
             console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
             this.vel.set(0, 0);
         }
-        
+
         // Update thrust particles
         if (this.thrustManager) {
             this.thrustManager.update();

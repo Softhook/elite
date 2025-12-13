@@ -2076,8 +2076,20 @@ class StarSystem {
             // Player's wave affects enemies and asteroids
             wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
         } else {
-            // Enemy's wave affects player only
+            // Enemy's wave affects everything too (Player, Asteroids, and potentially other Enemies if friendly fire is valid for this weapon)
+            // We want force waves to be chaotic and affect the environment
             if (this.player) wave.entitiesToProcess.push(this.player);
+
+            // Add asteroids
+            wave.entitiesToProcess.push(...this.asteroids);
+
+            // Add other enemies (excluding self will be handled in collision check or here)
+            // Filter out the owner immediately to prevent self-damage
+            for (const enemy of this.enemies) {
+                if (enemy !== wave.owner) {
+                    wave.entitiesToProcess.push(enemy);
+                }
+            }
         }
 
         // Use a Set for reliable object tracking (handles entities without IDs correctly)
