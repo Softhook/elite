@@ -23,10 +23,10 @@ class SaveSelectionScreen {
         this.totalOptions = NUM_SAVE_SLOTS;
         this.animationOffset = 0;
         this.buttonHoverEffects = [];
-        
+
         this.savedGamePreviews = new Array(NUM_SAVE_SLOTS).fill(null);
         this.loadAllSavePreviews();
-        
+
         // Visual effects
         this.bgStars = [];
         this.initBackgroundStars();
@@ -63,7 +63,7 @@ class SaveSelectionScreen {
         }
         return bestIdx;
     }
-    
+
     /**
      * Computes Elite rank from kill count
      * This mirrors the logic in Player.getEliteRating()
@@ -82,7 +82,7 @@ class SaveSelectionScreen {
         if (kills >= 8) return "Mostly Harmless";
         return "Harmless";
     }
-    
+
     initBackgroundStars() {
         // Create simple background stars for atmosphere
         this.bgStars = [];
@@ -96,7 +96,7 @@ class SaveSelectionScreen {
             });
         }
     }
-    
+
     loadAllSavePreviews() {
         const validatePreview = (obj) => {
             if (!obj) return false;
@@ -107,7 +107,7 @@ class SaveSelectionScreen {
             return true;
         };
 
-        if (typeof(Storage) !== "undefined") {
+        if (typeof (Storage) !== "undefined") {
             for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
                 const primaryKey = SAVE_KEY_PREFIX + i;
                 const backupKey = primaryKey + '_bak';
@@ -154,16 +154,16 @@ class SaveSelectionScreen {
             this.savedGamePreviews = new Array(NUM_SAVE_SLOTS).fill(null);
         }
     }
-    
+
     update(deltaTime) {
         // Update animation offset for subtle movement
         this.animationOffset += deltaTime * 0.001;
-        
+
         // Update background star twinkling
         for (let star of this.bgStars) {
             star.twinkle += deltaTime * 0.002; // Consider using this.animationOffset for a more continuous effect if desired
         }
-        
+
         // Update button hover effects
         this.buttonHoverEffects = this.buttonHoverEffects.filter(effect => {
             effect.life -= deltaTime * 0.003;
@@ -177,8 +177,9 @@ class SaveSelectionScreen {
         if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
             sharedStarfield.draw();
         } else {
-            // Fallback: Dark space background and our local simple stars
-            background(5, 5, 15);
+            // Fallback: Use centralized starfield background color
+            const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
+            background(bg.r, bg.g, bg.b);
             push();
             noStroke();
             for (let star of this.bgStars) {
@@ -202,11 +203,11 @@ class SaveSelectionScreen {
     drawTitle() {
         push();
         textAlign(CENTER, CENTER);
-        
+
         if (typeof font !== 'undefined') {
             textFont(font);
         }
-        
+
         // Main title
         textSize(48);
         fill(210, 200, 255); // Slightly brighter purple
@@ -214,38 +215,38 @@ class SaveSelectionScreen {
         // Prefer the global extruded helper if available, otherwise fall back to titleScreen method or plain text
         if (typeof drawExtrudedText === 'function') {
             push();
-            drawExtrudedText("COMMANDER", width/2, height * 0.15, 48, 6, 0, [210, 200, 255]);
+            drawExtrudedText("COMMANDER", width / 2, height * 0.15, 48, 6, 0, [210, 200, 255]);
             pop();
         } else if (typeof titleScreen !== 'undefined' && typeof titleScreen.drawExtrudedText === 'function') {
             push();
-            titleScreen.drawExtrudedText("COMMANDER", width/2, height * 0.15, 48, 6, 0, [210, 200, 255]);
+            titleScreen.drawExtrudedText("COMMANDER", width / 2, height * 0.15, 48, 6, 0, [210, 200, 255]);
             pop();
         } else {
             fill(210, 200, 255);
-            text("COMMANDER", width/2, height * 0.15);
+            text("COMMANDER", width / 2, height * 0.15);
         }
-        
+
         // Subtitle
         textSize(24);
         fill(160, 160, 210); // Slightly brighter blue/purple
         // Shadow for subtitle
 
         fill(160, 160, 210);
-        text("Select Save Game", width/2, height * 0.22);
-        
+        text("Select Save Game", width / 2, height * 0.22);
+
         pop();
     }
-    
+
     draw() {
         // Draw background
         this.drawBackground();
-        
+
         // Draw title
         this.drawTitle();
-        
+
         // Draw save slots with per-slot actions
         this.drawOptionsUI();
-        
+
         // Draw instructions
         this.drawInstructions();
     }
@@ -269,22 +270,22 @@ class SaveSelectionScreen {
             const title = slotData
                 ? `${this.formatSavedAt(slotData.savedAt)}`
                 : `EMPTY SLOT`;
-            this.drawSlot(i, title, slotData, width/2 - slotWidth/2, currentSlotY, slotWidth, slotHeight, this.selectedOption === i);
+            this.drawSlot(i, title, slotData, width / 2 - slotWidth / 2, currentSlotY, slotWidth, slotHeight, this.selectedOption === i);
         }
     }
-    
+
     // drawSlot signature changes: add isSelected parameter
     drawSlot(slotIndex, title, data, x, y, w, h, isSelected) {
         push();
-        
+
         // Use the game font if available
         if (font) {
             textFont(font);
         }
-        
+
         // const isSelected = this.selectedSlot === slotIndex; // This line is replaced by the parameter
         const hoverOffset = isSelected ? sin(this.animationOffset * 2) * 3 : 0;
-        
+
         // Slot background
         if (isSelected) {
             // Selected slot - glowing border
@@ -297,12 +298,12 @@ class SaveSelectionScreen {
             strokeWeight(1);
             fill(15, 25, 45, 80);
         }
-        
+
         rect(x + hoverOffset, y, w, h, 8);
-        
+
         // Slot content
         textAlign(LEFT, TOP);
-        
+
         // Title
         textSize(18); // Slightly smaller for more slots
         fill(isSelected ? color(150, 200, 255) : color(120, 140, 180));
@@ -325,7 +326,7 @@ class SaveSelectionScreen {
             endShape(CLOSE);
             pop();
         }
-        
+
         // Compute 5-column layout within this slot; the last column hosts the Start New button
         const columns = this.computeSlotColumns(x + hoverOffset, y, w, h);
         // Precompute button rect (column 5 / index 4)
@@ -335,10 +336,10 @@ class SaveSelectionScreen {
             // Show saved game details
             textSize(20); // Adjusted for smaller slot
             fill(isSelected ? color(200, 220, 255) : color(100, 120, 150));
-            
+
             const playerData = data.playerData;
             const galaxyData = data.galaxyData;
-            
+
             const lineSpacing = 20;
             // Column mapping:
             // col 0: ship silhouette (graphic)
@@ -364,7 +365,7 @@ class SaveSelectionScreen {
                 // Column 1 - Basic info
                 text(this.truncateText(`Credits: ${playerData.credits?.toLocaleString() || '0'}`, col1Max), col1X, line1Y);
                 line1Y += lineSpacing;
-                
+
                 text(this.truncateText(`Ship: ${playerData.shipTypeName || 'Unknown'}`, col1Max), col1X, line1Y);
                 // line1Y += lineSpacing; // Increment if more items in col1
 
@@ -382,7 +383,7 @@ class SaveSelectionScreen {
                 const wantedLevel = (sysData && typeof sysData.playerWantedLevel === 'number') ? sysData.playerWantedLevel : 0;
                 let wantedText = isWanted ? (wantedLevel > 0 ? `Wanted (Lv ${wantedLevel})` : "Wanted") : "Clean";
                 let wantedColor = isWanted ? color(255, 100, 0) : color(0, 255, 0); // Orange for wanted, green for clean
-                
+
                 fill(isSelected ? wantedColor : color(red(wantedColor) * 0.7, green(wantedColor) * 0.7, blue(wantedColor) * 0.7));
                 text(this.truncateText(`Status: ${wantedText}`, col2Max), col2X, line2Y);
                 pop();
@@ -405,7 +406,7 @@ class SaveSelectionScreen {
             }
             // Ship silhouette in column 0 area (left cluster)
             const shipCenterX = columns[0].x + columns[0].w / 2;
-            this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', shipCenterX, y + h/2, isSelected);
+            this.drawShipSilhouette(playerData?.shipTypeName || 'Sidewinder', shipCenterX, y + h / 2, isSelected);
 
             // Subtle recovered badge when preview came from backup
             if (data.__recovered) {
@@ -430,7 +431,7 @@ class SaveSelectionScreen {
 
             // Place the new game icon where the ship would be (col0)
             const shipCenterX = columns[0].x + columns[0].w / 2;
-            this.drawNewGameIcon(shipCenterX, y + h/2, isSelected);
+            this.drawNewGameIcon(shipCenterX, y + h / 2, isSelected);
         }
 
         // Per-slot "Start New" button on the right side (5th column)
@@ -456,9 +457,9 @@ class SaveSelectionScreen {
         textSize(14);
         fill(isMouseOverBtn ? color(180, 230, 255) : color(150, 190, 220));
         const label = hasSave ? "Start New (Overwrite)" : "Start New";
-        text(label, btn.x + btn.w/2, btn.y + btn.h/2);
+        text(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
         pop();
-        
+
         pop();
     }
 
@@ -470,7 +471,7 @@ class SaveSelectionScreen {
         const btnW = min(180, col.w - padding * 2);
         const btnH = 32;
         const btnX = col.x + col.w - padding - btnW; // right-align within column
-        const btnY = y + h/2 - btnH/2;
+        const btnY = y + h / 2 - btnH / 2;
         return { x: btnX, y: btnY, w: btnW, h: btnH };
     }
 
@@ -500,19 +501,19 @@ class SaveSelectionScreen {
         }
         return s + '…';
     }
-    
+
     drawShipSilhouette(shipType, x, y, isSelected) {
         //console.log(`drawShipSilhouette called for shipType: ${shipType} at x:${x}, y:${y}`);
         push();
         translate(x, y);
-        
+
         const shipDef = SHIP_DEFINITIONS[shipType];
         if (shipDef && typeof shipDef.drawFunction === 'function') {
             //console.log(`Using shipDef for ${shipType}. Attempting to draw ACTUAL ship with size: ${shipDef.size}`);
             scale(0.8); // Reverted to previous scale
             fill(255, 0, 0); // Reverted to red fill for visibility
             noStroke();
-            
+
             // Call the ship's draw function with its defined size
             if (typeof shipDef.size === 'number') {
                 shipDef.drawFunction(shipDef.size); // Pass the base size
@@ -522,32 +523,32 @@ class SaveSelectionScreen {
             }
 
         } else {
-            console.log(`Using FALLBACK drawing for ${shipType}`); 
-            scale(0.8); 
-            fill(255, 0, 0); 
+            console.log(`Using FALLBACK drawing for ${shipType}`);
+            scale(0.8);
+            fill(255, 0, 0);
             noStroke();
             ellipseMode(CENTER);
-            ellipse(0, 0, 30, 30); 
+            ellipse(0, 0, 30, 30);
         }
-        
+
         pop();
     }
-    
+
     drawNewGameIcon(x, y, isSelected) {
         push();
         translate(x, y);
-        
+
         const glowAlpha = isSelected ? (sin(this.animationOffset * 3) * 0.3 + 0.7) * 100 : 50;
-        
+
         // Star icon for new game
         fill(isSelected ? color(255, 220, 100, glowAlpha) : color(150, 130, 80, 80));
         noStroke();
-        
+
         // Draw star shape
         const spikes = 8;
         const outerRadius = 20;
         const innerRadius = 10;
-        
+
         beginShape();
         for (let i = 0; i < spikes * 2; i++) {
             const angle = (i / (spikes * 2)) * TWO_PI;
@@ -557,10 +558,10 @@ class SaveSelectionScreen {
             vertex(x_pos, y_pos);
         }
         endShape(CLOSE);
-        
+
         pop();
     }
-    
+
     drawRookieOption(x, y, w, h, isSelected) {
         push();
         if (font) textFont(font);
@@ -579,14 +580,14 @@ class SaveSelectionScreen {
         rect(x + hoverOffset, y, w, h, 8);
 
         textAlign(CENTER, CENTER);
-        
+
         fill(isSelected ? color(180, 255, 180) : color(120, 180, 120));
         textSize(18);
-        text("START NEW ROOKIE PILOT", x + w/2 + hoverOffset, y + h/2 - 5); // Adjusted for two lines
+        text("START NEW ROOKIE PILOT", x + w / 2 + hoverOffset, y + h / 2 - 5); // Adjusted for two lines
 
         textSize(12);
         fill(isSelected ? color(150, 200, 150) : color(100, 140, 100));
-        text("Sidewinder, 1000 Credits, Fresh Start", x + w/2 + hoverOffset, y + h/2 + 15); // Second line (updated to 1000 credits)
+        text("Sidewinder, 1000 Credits, Fresh Start", x + w / 2 + hoverOffset, y + h / 2 + 15); // Second line (updated to 1000 credits)
 
         pop();
     }
@@ -594,20 +595,20 @@ class SaveSelectionScreen {
     drawInstructions() {
         push();
         textAlign(CENTER, CENTER);
-        
+
         // Use the game font if available
         if (font) {
             textFont(font);
         }
-        
+
         textSize(16);
         fill(120, 140, 180);
-        
-        text("↑↓ Select slot   ENTER Continue   Click 'Start New' to overwrite   ESC Back", width/2, height * 0.85);
-        
+
+        text("↑↓ Select slot   ENTER Continue   Click 'Start New' to overwrite   ESC Back", width / 2, height * 0.85);
+
         pop();
     }
-    
+
     handleKeyPressed(key, keyCode) {
         if (keyCode === UP_ARROW) {
             this.selectedOption = (this.selectedOption - 1 + this.totalOptions) % this.totalOptions;
@@ -624,7 +625,7 @@ class SaveSelectionScreen {
             }
         }
     }
-    
+
     handleClick(mouseX, mouseY) {
         const slotHeight = 90;
         const slotWidth = width * 0.7;
@@ -633,8 +634,8 @@ class SaveSelectionScreen {
         const totalUIHeight = totalSlotsHeight;
         let startY = (height - totalUIHeight) / 2 + 20;
         if (startY < height * 0.25) startY = height * 0.25;
-        
-        const xPos = width/2 - slotWidth/2;
+
+        const xPos = width / 2 - slotWidth / 2;
 
         // Check save slots (including per-slot Start New button)
         for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
@@ -672,13 +673,13 @@ class SaveSelectionScreen {
         effectY = startY + this.selectedOption * (slotHeight + spacing) + slotHeight / 2;
 
         this.buttonHoverEffects.push({
-            x: width/2,
+            x: width / 2,
             y: effectY,
             size: 0,
             life: 1.0
         });
     }
-    
+
     confirmSelection() {
         if (this.selectedOption < NUM_SAVE_SLOTS) {
             const slotIndex = this.selectedOption;
@@ -693,7 +694,7 @@ class SaveSelectionScreen {
             }
         }
     }
-    
+
     startNewGame(slotIndex) {
         // Reset game state for new game
         if (player) {
@@ -707,34 +708,34 @@ class SaveSelectionScreen {
             player.activeMission = null;
             player.applyShipDefinition("Sidewinder");
         }
-        
+
         if (galaxy) {
             // Generate new galaxy
             globalSessionSeed = millis();
             galaxy.initGalaxySystems(globalSessionSeed);
-            
+
             // Position player near starting station
             const startingSystem = galaxy?.getCurrentSystem();
             if (startingSystem && startingSystem.station && startingSystem.station.pos) {
-                player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100, 
-                             startingSystem.station.pos.y);
+                player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100,
+                    startingSystem.station.pos.y);
                 player.angle = PI;
                 player.currentSystem = startingSystem;
                 startingSystem.player = player;
                 startingSystem.enterSystem(player);
-                
+
                 if (eventManager) {
                     eventManager.initializeReferences(startingSystem, player, uiManager);
                 }
             }
         }
-        
+
         // Clear any existing save in this specific slot (both primary and backup)
         localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex);
         localStorage.removeItem(SAVE_KEY_PREFIX + slotIndex + '_bak'); // Also remove backup to prevent promotion
         window.activeSaveSlotIndex = slotIndex; // Set active slot for saving
         localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
-        
+
         // Clear any existing event markers from previous sessions
         if (typeof uiManager !== 'undefined') {
             uiManager.clearEventMarkers();
@@ -743,7 +744,7 @@ class SaveSelectionScreen {
         // Transition to game
         gameStateManager.setState("IN_FLIGHT");
     }
-    
+
     loadSavedGame(slotIndex) {
         // Use existing global loadGame function, now expecting a slotIndex
         const success = loadGame(slotIndex); // loadGame in sketch.js should handle setting activeSaveSlotIndex
@@ -778,14 +779,14 @@ class SaveSelectionScreen {
         // Reset player for rookie game
         if (player) {
             player.credits = 1000; // Rookie credits (updated from 100 to 1000)
-            player.hull = player.maxHull; 
-            player.shield = player.maxShield; 
+            player.hull = player.maxHull;
+            player.shield = player.maxShield;
             player.cargo = [];
             player.kills = 0;
             player.isWanted = false;
             player.activeMission = null;
             if (typeof player.applyShipDefinition === 'function') {
-                player.applyShipDefinition("Sidewinder"); 
+                player.applyShipDefinition("Sidewinder");
             } else {
                 console.error("player.applyShipDefinition is not a function. Cannot set ship for rookie.");
             }
@@ -796,13 +797,13 @@ class SaveSelectionScreen {
         }
 
         if (galaxy) {
-            globalSessionSeed = millis(); 
+            globalSessionSeed = millis();
             galaxy.initGalaxySystems(globalSessionSeed);
 
             const startingSystem = galaxy.getCurrentSystem();
             if (startingSystem && startingSystem.station && startingSystem.station.pos) {
                 player.pos.set(startingSystem.station.pos.x + startingSystem.station.size + 100,
-                                 startingSystem.station.pos.y);
+                    startingSystem.station.pos.y);
                 player.angle = PI;
                 player.currentSystem = startingSystem;
                 startingSystem.player = player; // Link player to system
@@ -816,7 +817,7 @@ class SaveSelectionScreen {
                 }
             } else {
                 console.error("Failed to set up starting system for rookie game.");
-                return; 
+                return;
             }
         } else {
             console.error("Galaxy object not found. Cannot start rookie game.");
@@ -830,7 +831,7 @@ class SaveSelectionScreen {
         localStorage.setItem(LAST_ACTIVE_SLOT_KEY, chosenSlotIndex.toString()); // Store as last active slot
 
         this.loadAllSavePreviews(); // Refresh previews as one slot is now effectively new/empty
-        
+
         // Clear any existing event markers from previous sessions
         if (typeof uiManager !== 'undefined') {
             uiManager.clearEventMarkers();
@@ -842,7 +843,7 @@ class SaveSelectionScreen {
             console.error("GameStateManager not found. Cannot transition to in-flight state.");
         }
     }
-    
+
     // Method to reinitialize stars when window is resized
     resize() {
         this.initBackgroundStars();

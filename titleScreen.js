@@ -25,7 +25,7 @@ class TitleScreenBeam {
         const alpha = map(this.duration, 0, this.maxDuration, 0, this.color[3] || 200);
         stroke(this.color[0], this.color[1], this.color[2], alpha);
         line(this.start.x, this.start.y, this.end.x, this.end.y);
-        
+
         // Add glow effect
         strokeWeight(this.width + 2);
         stroke(this.color[0], this.color[1], this.color[2], alpha * 0.3);
@@ -37,7 +37,7 @@ class TitleScreenBeam {
 // Expose a global extruded-text helper so other screens can reuse the same rendering.
 // This will prefer the active `titleScreen.drawExtrudedText` implementation if present,
 // otherwise it will attempt to reuse the helper methods defined on `TitleScreen.prototype`.
-function drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0,180,255]) {
+function drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0, 180, 255]) {
     // If a titleScreen instance exists and provides the method, use it (keeps behaviour consistent)
     if (typeof titleScreen !== 'undefined' && titleScreen && typeof titleScreen.drawExtrudedText === 'function') {
         return titleScreen.drawExtrudedText(str, cx, cy, fontSize, depth, angle, colorRGB);
@@ -82,8 +82,8 @@ function drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0
     push();
     translate(cx, cy);
     try {
-        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'sides');
-        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'top');
+        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI / 4, 0, 'sides');
+        drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI / 4, 0, 'top');
         noFill(); stroke(0, 100, 200); strokeWeight(1);
         beginShape();
         for (let v of layerCache.vertexData) vertex(v.x, v.y);
@@ -104,14 +104,14 @@ class TitleScreen {
         // Animation properties for title text
         this.titleY = -100; // Start off-screen
         this.authorAlpha = 0;
-        
+
         // Scene elements for dynamic flight scene
         this.displayShips = [];
         this.projectiles = [];
         this.beams = [];
 
         this.setupDynamicScene();
-        
+
         // Instructions screen - starting Y (will be adjusted responsively)
         this.instructionScrollY = height * 0.12;
         // Track whether we've requested fullscreen from the title screen
@@ -119,16 +119,16 @@ class TitleScreen {
     }
 
     setupDynamicScene() {
-        this.displayShips = []; 
+        this.displayShips = [];
         this.projectiles = [];
         this.beams = [];
 
         // Filter ships that have a drawFunction and at least one weapon defined
         // CHANGED: Look for armament property instead of weapons
         const shipTypesAvailable = Object.keys(SHIP_DEFINITIONS).filter(
-            shipKey => typeof SHIP_DEFINITIONS[shipKey].drawFunction === 'function' && 
-                       SHIP_DEFINITIONS[shipKey].armament && 
-                       SHIP_DEFINITIONS[shipKey].armament.length > 0
+            shipKey => typeof SHIP_DEFINITIONS[shipKey].drawFunction === 'function' &&
+                SHIP_DEFINITIONS[shipKey].armament &&
+                SHIP_DEFINITIONS[shipKey].armament.length > 0
         );
 
         if (shipTypesAvailable.length === 0) {
@@ -139,7 +139,7 @@ class TitleScreen {
         // Create 3-5 ships for the dynamic scene
         const numShips = floor(random(3, 6));
         const usedShipTypes = [];
-        
+
         // Generate ships with varied behaviors
         for (let i = 0; i < numShips; i++) {
             // Select ship type
@@ -154,7 +154,7 @@ class TitleScreen {
                 shipType = availableTypes.length > 0 ? random(availableTypes) : random(shipTypesAvailable);
             }
             usedShipTypes.push(shipType);
-            
+
             const shipDef = SHIP_DEFINITIONS[shipType];
             if (!shipDef) continue;
 
@@ -163,7 +163,7 @@ class TitleScreen {
             if (shipDef.armament && shipDef.armament.length > 0) {
                 weaponName = shipDef.armament[0]; // Use first weapon in armament array
             }
-            
+
             // Get the weapon definition from WEAPON_UPGRADES
             let shipWeaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
             if (!shipWeaponDef) {
@@ -205,16 +205,16 @@ class TitleScreen {
                 }
             });
     }
-    
+
     update(deltaTime) {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
             // Animate title entrance
             if (this.titleY < height * 0.4) {
-                this.titleY += deltaTime * 0.05; 
+                this.titleY += deltaTime * 0.05;
             } else {
                 this.titleY = height * 0.4;
             }
-            
+
             // Fade in author credit after title appears
             if (this.titleY >= height * 0.15 && this.authorAlpha < 255) {
                 this.authorAlpha = min(255, this.authorAlpha + deltaTime * 0.1);
@@ -228,7 +228,7 @@ class TitleScreen {
                     this.updateShipTarget(ship);
                     ship.targetUpdateTime = 5000 + random(-1000, 1000);
                 }
-                
+
                 // Update ship movement based on behavior
                 switch (ship.behavior) {
                     case 'chase':
@@ -242,23 +242,23 @@ class TitleScreen {
                         this.updatePatrolShip(ship, deltaTime);
                         break;
                 }
-                
+
                 // Update position and boundaries
                 ship.pos.add(p5.Vector.mult(ship.vel, deltaTime * 0.05));
-                
+
                 // Screen wrap - allow ships to fly offscreen but reappear on the other side
                 if (ship.pos.x < -100) ship.pos.x = width + 100;
                 if (ship.pos.x > width + 100) ship.pos.x = -100;
                 if (ship.pos.y < -100) ship.pos.y = height + 100;
                 if (ship.pos.y > height + 100) ship.pos.y = -100;
-                
+
                 // Handle shooting
                 ship.fireCooldown -= deltaTime;
                 if (ship.fireCooldown <= 0 && ship.weapon) {
                     this.fireTitleScreenWeapon(ship);
                     ship.fireCooldown = random(1500, 4000);
                 }
-                
+
                 // Update thrust particles
                 this.updateThrustParticles(ship, deltaTime);
             }
@@ -267,9 +267,9 @@ class TitleScreen {
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
                 const p = this.projectiles[i];
                 p.update(deltaTime);
-                
+
                 // Remove if off-screen or expired
-                if (p.lifetime <= 0 || 
+                if (p.lifetime <= 0 ||
                     p.pos.x < -200 || p.pos.x > width + 200 ||
                     p.pos.y < -200 || p.pos.y > height + 200) {
                     this.projectiles.splice(i, 1);
@@ -298,7 +298,7 @@ class TitleScreen {
             // Find closest ship to avoid
             let closestShip = null;
             let closestDist = Infinity;
-            
+
             for (const otherShip of this.displayShips) {
                 if (otherShip !== ship) {
                     const dist = p5.Vector.dist(ship.pos, otherShip.pos);
@@ -311,34 +311,34 @@ class TitleScreen {
             ship.target = closestShip;
         }
     }
-    
+
     updateChaseShip(ship, deltaTime) {
         ship.isThrusting = false;
-        
+
         // If we have a target, pursue it
         if (ship.target) {
             // Calculate angle to target
             const dx = ship.target.pos.x - ship.pos.x;
             const dy = ship.target.pos.y - ship.pos.y;
             ship.targetAngle = Math.atan2(dy, dx);
-            
+
             // Turn toward target angle
             let angleDiff = (ship.targetAngle - ship.angle + TWO_PI) % TWO_PI;
             if (angleDiff > PI) angleDiff -= TWO_PI;
-            
+
             ship.angle += angleDiff * ship.turnRate * deltaTime;
             ship.angle = (ship.angle + TWO_PI) % TWO_PI;
-            
+
             // Thrust if pointing approximately toward target
             if (Math.abs(angleDiff) < 0.5) {
                 // Calculate desired velocity
                 const dir = p5.Vector.fromAngle(ship.angle);
                 dir.mult(ship.maxSpeed);
-                
+
                 // Smoothly accelerate
                 ship.vel.lerp(dir, 0.01);
                 ship.isThrusting = true;
-                
+
                 // Add thrust particles
                 if (random() < 0.3) {
                     this.createThrustParticle(ship);
@@ -349,58 +349,58 @@ class TitleScreen {
             this.updatePatrolShip(ship, deltaTime);
         }
     }
-    
+
     updateEvadeShip(ship, deltaTime) {
         ship.isThrusting = false;
-        
+
         // If we have a target to evade
         if (ship.target) {
             // Calculate angle away from target
             const dx = ship.pos.x - ship.target.pos.x;
             const dy = ship.pos.y - ship.target.pos.y;
             ship.targetAngle = Math.atan2(dy, dx);
-            
+
             // Turn toward escape angle
             let angleDiff = (ship.targetAngle - ship.angle + TWO_PI) % TWO_PI;
             if (angleDiff > PI) angleDiff -= TWO_PI;
-            
+
             ship.angle += angleDiff * ship.turnRate * deltaTime;
             ship.angle = (ship.angle + TWO_PI) % TWO_PI;
-            
+
             // Thrust if pointing approximately away from target
             if (Math.abs(angleDiff) < 0.7) {
                 // Calculate desired velocity
                 const dir = p5.Vector.fromAngle(ship.angle);
                 dir.mult(ship.maxSpeed * 1.2); // Faster when evading
-                
+
                 // Accelerate
                 ship.vel.lerp(dir, 0.02);
                 ship.isThrusting = true;
-                
+
                 // Add thrust particles more frequently
                 if (random() < 0.5) {
                     this.createThrustParticle(ship);
                 }
             }
-            
+
             // Check if we're getting too close to screen edge
             const edgeMargin = 100;
             if (ship.pos.x < edgeMargin || ship.pos.x > width - edgeMargin ||
                 ship.pos.y < edgeMargin || ship.pos.y > height - edgeMargin) {
                 // Turn toward center of screen
-                ship.targetAngle = Math.atan2(height/2 - ship.pos.y, width/2 - ship.pos.x);
+                ship.targetAngle = Math.atan2(height / 2 - ship.pos.y, width / 2 - ship.pos.x);
             }
         } else {
             // Default patrol behavior if no threat
             this.updatePatrolShip(ship, deltaTime);
         }
     }
-    
+
     updatePatrolShip(ship, deltaTime) {
         // Regular patrol behavior with occasional changes in direction
         let angleDiff = (ship.targetAngle - ship.angle + TWO_PI) % TWO_PI;
         if (angleDiff > PI) angleDiff -= TWO_PI;
-        
+
         ship.angle += angleDiff * ship.turnRate * deltaTime;
         ship.angle = (ship.angle + TWO_PI) % TWO_PI;
 
@@ -412,16 +412,16 @@ class TitleScreen {
         // Thrust in current direction
         const dir = p5.Vector.fromAngle(ship.angle);
         dir.mult(ship.maxSpeed);
-        
+
         // Smoothly interpolate current velocity toward desired direction
         ship.vel.lerp(dir, 0.005);
-        
+
         // Apply thrusting visual effect
         ship.isThrusting = true;
         if (random() < 0.2) {
             this.createThrustParticle(ship);
         }
-        
+
         // Adjust course if nearing screen edge
         const edgeMargin = 150;
         if (ship.pos.x < edgeMargin) {
@@ -434,15 +434,15 @@ class TitleScreen {
             ship.targetAngle = -HALF_PI; // Turn north
         }
     }
-    
+
     createThrustParticle(ship) {
         if (!ship.thrustParticles) ship.thrustParticles = [];
-        
+
         // Calculate thrust position (back of ship)
         const shipSize = ship.def.size * ship.scale;
         const thrustAngle = ship.angle + PI; // Opposite direction of ship
         const thrustDist = shipSize * 0.5;
-        
+
         // Create a new thrust particle
         ship.thrustParticles.push({
             pos: createVector(
@@ -454,34 +454,34 @@ class TitleScreen {
             alpha: random(150, 200),
             lifespan: random(20, 40)
         });
-        
+
         // Limit particles for performance
         while (ship.thrustParticles.length > 20) {
             ship.thrustParticles.shift();
         }
     }
-    
+
     updateThrustParticles(ship, deltaTime) {
         if (!ship.thrustParticles) ship.thrustParticles = [];
-        
+
         // Update existing particles
         for (let i = ship.thrustParticles.length - 1; i >= 0; i--) {
             const p = ship.thrustParticles[i];
-            
+
             // Update position
             p.pos.add(p.vel);
-            
+
             // Shrink and fade
             p.size *= 0.95;
             p.alpha -= 5;
             p.lifespan -= 1;
-            
+
             // Remove expired particles
             if (p.lifespan <= 0 || p.alpha <= 0 || p.size < 1) {
                 ship.thrustParticles.splice(i, 1);
             }
         }
-        
+
         // Add new particles if thrusting
         if (ship.isThrusting && random() < 0.3) {
             this.createThrustParticle(ship);
@@ -530,7 +530,7 @@ class TitleScreen {
     }
 
     // Draw extruded text using the ship extrusion helper. Attempts to use the p5 font outlines.
-    drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0,180,255]) {
+    drawExtrudedText(str, cx, cy, fontSize, depth, angle = 0, colorRGB = [0, 180, 255]) {
         if (!font || typeof font.textToPoints !== 'function' || typeof drawExtrudedPolyOptimized !== 'function') {
             // fallback to plain text
             push(); textFont(font); textSize(fontSize); fill(colorRGB[0], colorRGB[1], colorRGB[2]); textAlign(CENTER, CENTER); text(str, cx, cy); pop();
@@ -553,9 +553,9 @@ class TitleScreen {
         // To approximate ships style extrusion, set layerIndex 0 and mode both.
         try {
             // Draw sides first
-            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'sides');
+            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI / 4, 0, 'sides');
             // Draw top face
-            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI/4, 0, 'top');
+            drawExtrudedPolyOptimized(1, layerCache, depth, angle, -PI / 4, 0, 'top');
 
             // Optionally add a thin stroke on top for clarity
             noFill(); stroke(0, 100, 200); strokeWeight(1);
@@ -574,9 +574,9 @@ class TitleScreen {
             return;
         }
 
-        const weaponDef = ship.weapon; 
+        const weaponDef = ship.weapon;
         // Estimate muzzle position based on ship size and angle
-        const muzzleOffset = (ship.def.size || 30) * ship.scale * 0.5; 
+        const muzzleOffset = (ship.def.size || 30) * ship.scale * 0.5;
         const muzzlePos = createVector(
             ship.pos.x + cos(ship.angle) * muzzleOffset,
             ship.pos.y + sin(ship.angle) * muzzleOffset
@@ -584,33 +584,33 @@ class TitleScreen {
 
         // Create simplified 'firedBy' object
         const firedBy = {
-            id: ship.id, 
+            id: ship.id,
             pos: ship.pos.copy(),
             vel: ship.vel.copy(),
             isPlayer: false,
-            color: ship.color, 
-            faction: "TitleScreenDisplay", 
+            color: ship.color,
+            faction: "TitleScreenDisplay",
             teamId: ship.id,
             type: ship.type,
             angle: ship.angle,
         };
 
-    if (weaponDef.type === 'beam') {
-        const beamEndPos = createVector(
-            muzzlePos.x + cos(ship.angle) * (weaponDef.range || 1000),
-            muzzlePos.y + sin(ship.angle) * (weaponDef.range || 1000)
-        );
-        // CHANGE THIS LINE
-        const beam = new TitleScreenBeam( // <-- Changed from "Beam" to "TitleScreenBeam"
-            muzzlePos,
-            beamEndPos,
-            weaponDef.color || [255, 0, 0, 200],
-            weaponDef.beamWidth || 3,
-            weaponDef.beamDuration || 150,
-            firedBy
-        );
-        this.beams.push(beam);
-    } else if (weaponDef.type === 'missile') {
+        if (weaponDef.type === 'beam') {
+            const beamEndPos = createVector(
+                muzzlePos.x + cos(ship.angle) * (weaponDef.range || 1000),
+                muzzlePos.y + sin(ship.angle) * (weaponDef.range || 1000)
+            );
+            // CHANGE THIS LINE
+            const beam = new TitleScreenBeam( // <-- Changed from "Beam" to "TitleScreenBeam"
+                muzzlePos,
+                beamEndPos,
+                weaponDef.color || [255, 0, 0, 200],
+                weaponDef.beamWidth || 3,
+                weaponDef.beamDuration || 150,
+                firedBy
+            );
+            this.beams.push(beam);
+        } else if (weaponDef.type === 'missile') {
         } else {
             const projectile = new Projectile(
                 muzzlePos.x, muzzlePos.y,
@@ -631,15 +631,15 @@ class TitleScreen {
             this.projectiles.push(projectile);
         }
     }
-    
+
     drawTitleScreen() {
-        background(0);
+        // Use centralized starfield background color for consistency
+        const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
+        background(bg.r, bg.g, bg.b);
         if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
             sharedStarfield.draw();
-        } else {
-            background(0);
         }
-    
+
         // Draw projectiles and beams behind ships
         for (const p of this.projectiles) {
             p.draw();
@@ -647,7 +647,7 @@ class TitleScreen {
         for (const b of this.beams) {
             b.draw();
         }
-        
+
         // Draw ships with thrust particles
         for (const ship of this.displayShips) {
             // Draw thrust particles first
@@ -656,19 +656,19 @@ class TitleScreen {
                     push();
                     noStroke();
                     // Orange-yellow gradient for thrust
-                    fill(255, 150 + p.alpha/2, 50, p.alpha);
+                    fill(255, 150 + p.alpha / 2, 50, p.alpha);
                     ellipse(p.pos.x, p.pos.y, p.size, p.size);
                     pop();
                 }
             }
-            
+
             // Draw ship - CHANGED: rotate by -HALF_PI instead of +HALF_PI for correct orientation
             if (ship.def && typeof ship.def.drawFunction === 'function') {
                 push();
                 translate(ship.pos.x, ship.pos.y);
-                
+
                 // Calculate sun angle for 3D effect (sun at center of screen)
-                const sunAngle = atan2(height/2 - ship.pos.y, width/2 - ship.pos.x);
+                const sunAngle = atan2(height / 2 - ship.pos.y, width / 2 - ship.pos.x);
                 const localSunAngle = sunAngle - ship.angle;
 
                 rotate(ship.angle); // Changed from + to - to rotate 90 degrees counterclockwise 
@@ -688,19 +688,19 @@ class TitleScreen {
 
             const size = 200 + i * 2;
             const depth = 6 + i * 1.5;
-            this.drawExtrudedText("SubSpace Elite", width/2, this.titleY, size, depth, 0, [0, 80 + i*20, 155]);
+            this.drawExtrudedText("SubSpace Elite", width / 2, this.titleY, size, depth, 0, [0, 80 + i * 20, 155]);
         }
 
-  
+
         // Author Credit
         textFont(font);
         textSize(20);
         fill(200, 200, 255, this.authorAlpha);
         noStroke();
         textAlign(CENTER, CENTER);
-        text("Christian Nold, Easter 2025", width/2, this.titleY + 120);
+        text("Christian Nold, Easter 2025", width / 2, this.titleY + 120);
         pop();
-        
+
         // Draw "Click to Continue" Prompt with pulsing effect
         push();
         textAlign(CENTER, CENTER);
@@ -709,16 +709,16 @@ class TitleScreen {
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
         textFont(font);
-        text("Click to Continue", width/2, promptY);
+        text("Click to Continue", width / 2, promptY);
         pop();
     }
-    
+
     drawInstructionScreen() {
-        background(0);
+        // Use centralized starfield background color for consistency
+        const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
+        background(bg.r, bg.g, bg.b);
         if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
             sharedStarfield.draw();
-        } else {
-            background(0);
         }
 
         push();
@@ -809,9 +809,9 @@ class TitleScreen {
 
         pop();
     }
-    
+
     // Note: starfield rendering has been moved to `starfield.js` (sharedStarfield).
-    
+
     handleClick() {
         if (gameStateManager.currentState === "TITLE_SCREEN") {
             // If already fullscreen, proceed as before
@@ -851,7 +851,7 @@ class TitleScreen {
             gameStateManager.setState("SAVE_SELECTION");
         }
     }
-    
+
     handleKeyPress(keyCode, key) {
         // Allow SPACE to advance from instructions
         if (gameStateManager.currentState === "INSTRUCTIONS" && (keyCode === 32 || key === ' ')) {

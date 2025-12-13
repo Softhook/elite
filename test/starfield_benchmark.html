@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,19 +11,21 @@
             margin: 0;
             padding: 20px;
             font-family: 'Courier New', monospace;
-            background: #111;
+            background: #0a0f28;
             color: #0f0;
         }
+
         #controls {
             position: fixed;
             top: 10px;
             left: 10px;
             z-index: 100;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border: 1px solid #0f0;
             border-radius: 5px;
         }
+
         button {
             background: #000;
             color: #0f0;
@@ -32,69 +35,123 @@
             cursor: pointer;
             font-family: 'Courier New', monospace;
         }
+
         button:hover {
             background: #0f0;
             color: #000;
         }
+
         button.active {
             background: #0f0;
             color: #000;
         }
+
+        select {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 6px 10px;
+            margin: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        label {
+            margin-left: 10px;
+        }
+
         #results {
             position: fixed;
             top: 10px;
             right: 10px;
             z-index: 100;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border: 1px solid #0f0;
             border-radius: 5px;
             min-width: 250px;
         }
+
         .result-row {
             display: flex;
             justify-content: space-between;
             margin: 5px 0;
         }
-        .good { color: #0f0; }
-        .ok { color: #ff0; }
-        .bad { color: #f00; }
+
+        .good {
+            color: #0f0;
+        }
+
+        .ok {
+            color: #ff0;
+        }
+
+        .bad {
+            color: #f00;
+        }
+
         #instructions {
             position: fixed;
             bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             padding: 10px 20px;
             border: 1px solid #0f0;
             border-radius: 5px;
             text-align: center;
         }
+
         canvas {
             display: block;
         }
+
+        .section-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
+
 <body>
     <div id="controls">
         <h3>Starfield Benchmark</h3>
+        <div class="section-label">Rendering Mode:</div>
         <div>
             <button id="btn-progressive" class="active" onclick="setMode('progressive')">Progressive</button>
             <button id="btn-buffered" onclick="setMode('buffered')">Buffered</button>
             <button id="btn-legacy" onclick="setMode('legacy')">Legacy</button>
         </div>
+        <div class="section-label">Tile Size:</div>
+        <div>
+            <select id="tile-size-select" onchange="setTileSize(parseInt(this.value))">
+                <option value="256">256px</option>
+                <option value="512" selected>512px</option>
+                <option value="768">768px</option>
+                <option value="1024">1024px</option>
+            </select>
+            <label id="tile-size-label">Current: 512px</label>
+        </div>
         <div style="margin-top: 10px;">
             <button onclick="runBenchmark()">Run Full Benchmark</button>
             <button onclick="resetBenchmark()">Reset</button>
         </div>
+        <div id="worker-status" style="margin-top: 10px; font-size: 12px;">
+            Worker: <span id="worker-indicator">checking...</span>
+        </div>
     </div>
-    
+
     <div id="results">
         <h3>Performance Metrics</h3>
         <div class="result-row">
             <span>Mode:</span>
             <span id="current-mode">progressive</span>
+        </div>
+        <div class="result-row">
+            <span>Tile Size:</span>
+            <span id="current-tile-size">512px</span>
         </div>
         <div class="result-row">
             <span>FPS:</span>
@@ -119,95 +176,143 @@
         <hr style="border-color: #0f0;">
         <div id="benchmark-results"></div>
     </div>
-    
+
     <div id="instructions">
         Use WASD or Arrow Keys to move | Hold SHIFT for speed boost<br>
-        Compare smoothness between modes during fast movement
+        Compare smoothness between modes and tile sizes during fast movement
     </div>
 
     <script>
+        // Deep space dark blue background color (matches STARFIELD_CONFIG in starSystem.js)
+        const STARFIELD_BG_COLOR = '#0a0f28';
+        const STARFIELD_BG_RGB = { r: 10, g: 15, b: 40 };
+
         // Simplified star system for benchmark testing
         let currentMode = 'progressive';
         let player = { pos: null, vel: null };
         let systemIndex = 42;
-        
+
         // Performance tracking
         let frameTimes = [];
         let maxFrameTimes = 120;
         let benchmarkResults = {};
-        
+
         // Tile-based progressive rendering
-        const tileSize = 512;
+        let tileSize = 512;
         const tiles = new Map();
         const tileQueue = [];
         const baseMaxTilesPerFrame = 2;
         const maxDynamicTiles = 8;
-        const maxCachedTiles = 64;
+        let maxCachedTiles = 64;
         const tileGenerationTimeBudgetMs = 4; // cap generation work per frame (ms)
         let lastPlayerVelX = 0;
         let lastPlayerVelY = 0;
-        // Worker + OffscreenCanvas support
+
+        // Worker + OffscreenCanvas support - use the REAL starfield worker
         const workerEnabled = (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined');
         let tileWorker = null;
-        if (workerEnabled) {
+
+        function initWorker() {
+            if (!workerEnabled) {
+                document.getElementById('worker-indicator').textContent = 'Not Supported';
+                document.getElementById('worker-indicator').style.color = '#f00';
+                return;
+            }
+
             try {
-                tileWorker = new Worker('starfield_worker.js');
-                tileWorker.onmessage = function(e) {
+                // Use the real starfield worker from the parent directory
+                tileWorker = new Worker('../starfield_worker.js');
+                tileWorker.onmessage = function (e) {
                     const data = e.data;
                     const key = data.key;
                     if (!key) return;
-                    // create a p5 graphics and draw the incoming ImageBitmap into it
+
                     if (data.error) {
                         tiles.delete(key);
                         return;
                     }
+
                     const imgBitmap = data.bitmap;
                     const [tx, ty] = key.split(',').map(Number);
                     const buffer = createGraphics(tileSize, tileSize);
                     const ctx = buffer.drawingContext;
                     try {
-                        // draw the incoming bitmap to the p5 buffer, matching buffer dimensions
-                        ctx.clearRect(0,0,buffer.width,buffer.height);
+                        ctx.clearRect(0, 0, buffer.width, buffer.height);
                         if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
                         ctx.drawImage(imgBitmap, 0, 0, buffer.width, buffer.height);
-                    } catch (err) {}
-                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch(e) {}
+                    } catch (err) {
+                        console.error('Error drawing tile:', err);
+                    }
+                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { }
                     tiles.set(key, { buffer, lastUsed: millis() });
                 };
+                tileWorker.onerror = function (e) {
+                    console.error('Worker error:', e);
+                    document.getElementById('worker-indicator').textContent = 'Error';
+                    document.getElementById('worker-indicator').style.color = '#f00';
+                };
+
+                document.getElementById('worker-indicator').textContent = 'Active (Real Worker)';
+                document.getElementById('worker-indicator').style.color = '#0f0';
             } catch (err) {
+                console.error('Failed to create worker:', err);
                 tileWorker = null;
+                document.getElementById('worker-indicator').textContent = 'Failed: ' + err.message;
+                document.getElementById('worker-indicator').style.color = '#f00';
             }
         }
-        
+
         // Single buffer rendering
         let starfieldBuffer = null;
         const bufferSize = 4096;
         let lastBufferX = null;
         let lastBufferY = null;
         const regenerationThreshold = 1000;
-        
+
+        function setTileSize(newSize) {
+            tileSize = newSize;
+            document.getElementById('tile-size-label').textContent = 'Current: ' + newSize + 'px';
+            document.getElementById('current-tile-size').textContent = newSize + 'px';
+
+            // Calculate max cached tiles based on tile size (larger tiles = fewer cached)
+            maxCachedTiles = Math.floor(256 * 256 / (tileSize / 512));
+
+            // Clear tiles and reset
+            clearTiles();
+            frameTimes = [];
+        }
+
+        function clearTiles() {
+            for (const [key, tile] of tiles.entries()) {
+                try { if (tile.buffer) tile.buffer.remove(); } catch (e) { }
+            }
+            tiles.clear();
+            tileQueue.length = 0;
+        }
+
         function setup() {
             createCanvas(windowWidth - 40, windowHeight - 40);
             player.pos = createVector(0, 0);
             player.vel = createVector(0, 0);
             angleMode(RADIANS);
+            initWorker();
         }
-        
+
         function draw() {
             // Update player movement
             updatePlayer();
-            
+
             // Time the frame
             const frameStart = performance.now();
-            
-            // Draw background
-            background(0);
-            
+
+            // Draw background using centralized color
+            background(STARFIELD_BG_RGB.r, STARFIELD_BG_RGB.g, STARFIELD_BG_RGB.b);
+
             push();
-            translate(width/2 - player.pos.x, height/2 - player.pos.y);
-            
+            translate(width / 2 - player.pos.x, height / 2 - player.pos.y);
+
             // Draw stars based on mode
-            switch(currentMode) {
+            switch (currentMode) {
                 case 'progressive':
                     drawProgressiveStarfield();
                     break;
@@ -218,13 +323,13 @@
                     drawLegacyStarfield();
                     break;
             }
-            
+
             // Draw player indicator
             fill(0, 255, 0);
             ellipse(player.pos.x, player.pos.y, 10, 10);
-            
+
             pop();
-            
+
             // Track frame time
             const frameEnd = performance.now();
             const frameTime = frameEnd - frameStart;
@@ -232,52 +337,52 @@
             if (frameTimes.length > maxFrameTimes) {
                 frameTimes.shift();
             }
-            
+
             // Update UI
             updateUI();
         }
-        
+
         function updatePlayer() {
             const speed = keyIsDown(SHIFT) ? 25 : 8;
-            
+
             if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) player.vel.x = -speed;
             else if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) player.vel.x = speed;
             else player.vel.x *= 0.9;
-            
+
             if (keyIsDown(UP_ARROW) || keyIsDown(87)) player.vel.y = -speed;
             else if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) player.vel.y = speed;
             else player.vel.y *= 0.9;
-            
+
             player.pos.add(player.vel);
-            
+
             lastPlayerVelX = player.vel.x;
             lastPlayerVelY = player.vel.y;
         }
-        
+
         // ==================== PROGRESSIVE RENDERING ====================
         function drawProgressiveStarfield() {
             const playerX = player.pos.x;
             const playerY = player.pos.y;
-            
+
             const padding = tileSize;
-            const left = playerX - width/2 - padding;
-            const right = playerX + width/2 + padding;
-            const top = playerY - height/2 - padding;
-            const bottom = playerY + height/2 + padding;
-            
+            const left = playerX - width / 2 - padding;
+            const right = playerX + width / 2 + padding;
+            const top = playerY - height / 2 - padding;
+            const bottom = playerY + height / 2 + padding;
+
             const startTileX = Math.floor(left / tileSize);
             const endTileX = Math.ceil(right / tileSize);
             const startTileY = Math.floor(top / tileSize);
             const endTileY = Math.ceil(bottom / tileSize);
-            
+
             const currentTime = millis();
             const missingTiles = [];
-            
+
             for (let tx = startTileX; tx <= endTileX; tx++) {
                 for (let ty = startTileY; ty <= endTileY; ty++) {
                     const key = `${tx},${ty}`;
                     const tile = tiles.get(key);
-                    
+
                     if (tile && tile.buffer) {
                         tile.lastUsed = currentTime;
                         image(tile.buffer, tx * tileSize, ty * tileSize);
@@ -288,13 +393,13 @@
                     }
                 }
             }
-            
+
             // Queue missing tiles
             queueTilesForGeneration(missingTiles, playerX, playerY);
             processTileQueue();
             cleanupOldTiles(currentTime);
         }
-        
+
         function drawStarsDirectlyForTile(tx, ty) {
             // Draw a lightweight placeholder instead of full-detail tile to avoid big frame spikes.
             drawPlaceholderTile(tx, ty);
@@ -306,7 +411,7 @@
             // faint background so missing tiles are not visually jarring
             push();
             noStroke();
-            fill(3, 3, 6, 60);
+            fill(STARFIELD_BG_RGB.r + 2, STARFIELD_BG_RGB.g + 2, STARFIELD_BG_RGB.b + 6, 60);
             rect(left, top, tileSize, tileSize);
 
             // deterministic few dots as low-detail stars
@@ -325,14 +430,14 @@
             }
             pop();
         }
-        
+
         function queueTilesForGeneration(missingTiles, playerX, playerY) {
             for (const t of missingTiles) {
                 const alreadyQueued = tileQueue.some(q => q.key === t.key);
                 if (!alreadyQueued && !tiles.has(t.key)) {
                     const dx = (t.tx + 0.5) * tileSize - playerX;
                     const dy = (t.ty + 0.5) * tileSize - playerY;
-                    t.priority = Math.sqrt(dx*dx + dy*dy);
+                    t.priority = Math.sqrt(dx * dx + dy * dy);
                     tileQueue.push(t);
                 }
             }
@@ -351,14 +456,14 @@
                         if (!tiles.has(nkey) && !tileQueue.some(q => q.key === nkey)) {
                             const dx = (nx + 0.5) * tileSize - playerX;
                             const dy = (ny + 0.5) * tileSize - playerY;
-                            tileQueue.push({ tx: nx, ty: ny, key: nkey, priority: Math.sqrt(dx*dx + dy*dy) });
+                            tileQueue.push({ tx: nx, ty: ny, key: nkey, priority: Math.sqrt(dx * dx + dy * dy) });
                         }
                     }
                 }
             }
             tileQueue.sort((a, b) => a.priority - b.priority);
         }
-        
+
         function processTileQueue() {
             // Adaptive generation: honor a dynamic tile count and a short time budget per frame.
             const start = performance.now();
@@ -378,7 +483,7 @@
             const extra = Math.min(maxDynamicTiles - baseMaxTilesPerFrame, Math.round(speed / 4));
             return Math.max(1, baseMaxTilesPerFrame + extra);
         }
-        
+
         function generateTile(tx, ty) {
             const key = `${tx},${ty}`;
             // avoid duplicate generation requests
@@ -390,16 +495,25 @@
             // If worker is available, ask it to generate an ImageBitmap and transfer it back.
             if (tileWorker) {
                 try {
-                    tileWorker.postMessage({ cmd: 'generateTile', tx, ty, tileSize, systemIndex }, []);
+                    // Pass tileSize and backgroundColor to the real worker
+                    tileWorker.postMessage({
+                        cmd: 'generateTile',
+                        tx,
+                        ty,
+                        tileSize,
+                        systemIndex,
+                        backgroundColor: STARFIELD_BG_COLOR
+                    }, []);
                     return;
                 } catch (err) {
+                    console.error('Worker postMessage failed:', err);
                     // fallthrough to main-thread generation
                 }
             }
 
             // fallback: generate on main thread (existing logic)
             const buffer = createGraphics(tileSize, tileSize);
-            buffer.background(0);
+            buffer.background(STARFIELD_BG_RGB.r, STARFIELD_BG_RGB.g, STARFIELD_BG_RGB.b);
             buffer.noStroke();
 
             const worldLeft = tx * tileSize;
@@ -421,149 +535,149 @@
 
             tiles.set(key, { buffer, lastUsed: millis() });
         }
-        
+
         function cleanupOldTiles(currentTime) {
             if (tiles.size <= maxCachedTiles) return;
-            
+
             const tileList = [];
             for (const [key, tile] of tiles.entries()) {
                 tileList.push({ key, age: currentTime - tile.lastUsed, buffer: tile.buffer });
             }
             tileList.sort((a, b) => b.age - a.age);
-            
+
             const toRemove = tileList.length - maxCachedTiles;
             for (let i = 0; i < toRemove; i++) {
-                try { tileList[i].buffer.remove(); } catch(e) {}
+                try { tileList[i].buffer.remove(); } catch (e) { }
                 tiles.delete(tileList[i].key);
             }
         }
-        
+
         // ==================== BUFFERED RENDERING ====================
         function drawBufferedStarfield() {
-            const needsRegen = !starfieldBuffer || 
+            const needsRegen = !starfieldBuffer ||
                 lastBufferX === null || lastBufferY === null ||
                 Math.abs(player.pos.x - lastBufferX) > regenerationThreshold ||
                 Math.abs(player.pos.y - lastBufferY) > regenerationThreshold;
-            
+
             if (needsRegen) {
                 generateStarfieldBuffer();
             }
-            
+
             if (starfieldBuffer) {
-                image(starfieldBuffer, lastBufferX - bufferSize/2, lastBufferY - bufferSize/2);
+                image(starfieldBuffer, lastBufferX - bufferSize / 2, lastBufferY - bufferSize / 2);
             }
         }
-        
+
         function generateStarfieldBuffer() {
             if (!starfieldBuffer) {
                 starfieldBuffer = createGraphics(bufferSize, bufferSize);
             }
-            
+
             lastBufferX = player.pos.x;
             lastBufferY = player.pos.y;
-            
-            starfieldBuffer.background(0);
+
+            starfieldBuffer.background(STARFIELD_BG_RGB.r, STARFIELD_BG_RGB.g, STARFIELD_BG_RGB.b);
             starfieldBuffer.noStroke();
-            
+
             const halfSize = bufferSize / 2;
             const left = lastBufferX - halfSize;
             const right = lastBufferX + halfSize;
             const top = lastBufferY - halfSize;
             const bottom = lastBufferY + halfSize;
-            
+
             drawStarLayerToLargeBuffer(starfieldBuffer, left, right, top, bottom, {
                 gridSize: 45, maxStarsPerCell: 3,
                 sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
                 colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
             });
-            
+
             drawStarLayerToLargeBuffer(starfieldBuffer, left, right, top, bottom, {
                 gridSize: 200, maxStarsPerCell: 1,
                 sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
                 colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
             });
         }
-        
+
         // ==================== LEGACY RENDERING ====================
         function drawLegacyStarfield() {
             const padding = 100;
-            const left = player.pos.x - width/2 - padding;
-            const right = player.pos.x + width/2 + padding;
-            const top = player.pos.y - height/2 - padding;
-            const bottom = player.pos.y + height/2 + padding;
-            
+            const left = player.pos.x - width / 2 - padding;
+            const right = player.pos.x + width / 2 + padding;
+            const top = player.pos.y - height / 2 - padding;
+            const bottom = player.pos.y + height / 2 + padding;
+
             drawStarLayer(left, right, top, bottom, {
                 gridSize: 45, maxStarsPerCell: 3,
                 sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
                 colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
             });
-            
+
             drawStarLayer(left, right, top, bottom, {
                 gridSize: 200, maxStarsPerCell: 1,
                 sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
                 colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
             });
         }
-        
+
         // ==================== SHARED DRAWING FUNCTIONS ====================
         function drawStarLayer(left, right, top, bottom, config) {
             const gridSize = config.gridSize;
             const systemSeed = systemIndex * 1337;
-            
+
             const colors = {
                 white: [255, 255, 255],
                 blue: [200, 220, 255],
                 yellow: [255, 250, 200],
                 red: [255, 200, 180]
             };
-            
+
             const startGX = Math.floor(left / gridSize);
             const endGX = Math.ceil(right / gridSize);
             const startGY = Math.floor(top / gridSize);
             const endGY = Math.ceil(bottom / gridSize);
-            
+
             noStroke();
-            
+
             const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
             const minSize = sizeRange[0];
             const sizeDiff = sizeRange[1] - minSize;
             const minBright = brightnessRange[0];
             const brightDiff = brightnessRange[1] - minBright;
-            
+
             for (let gx = startGX; gx <= endGX; gx++) {
                 const gxSeed = (gx * 73856093) >>> 0;
-                
+
                 for (let gy = startGY; gy <= endGY; gy++) {
                     let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                     let rng = cellSeed;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                    
+
                     for (let i = 0; i < starCount; i++) {
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const size = minSize + (rng / 4294967296) * sizeDiff;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         let brightness = minBright + (rng / 4294967296) * brightDiff;
                         if (size < 2) brightness = Math.min(255, brightness * 1.4);
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
                         const baseColor = colors[colorType];
-                        
+
                         const brightnessFactor = brightness / 255;
                         fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
-                        
+
                         if (size <= 2) {
                             rect(worldX, worldY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
                         } else {
@@ -573,71 +687,71 @@
                 }
             }
         }
-        
+
         function drawStarLayerToBuffer(buffer, worldLeft, worldRight, worldTop, worldBottom, tileX, tileY, config) {
             const gridSize = config.gridSize;
             const systemSeed = systemIndex * 1337;
-            
+
             const colors = {
                 white: [255, 255, 255],
                 blue: [200, 220, 255],
                 yellow: [255, 250, 200],
                 red: [255, 200, 180]
             };
-            
+
             const startGX = Math.floor(worldLeft / gridSize);
             const endGX = Math.ceil(worldRight / gridSize);
             const startGY = Math.floor(worldTop / gridSize);
             const endGY = Math.ceil(worldBottom / gridSize);
-            
+
             const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
             const minSize = sizeRange[0];
             const sizeDiff = sizeRange[1] - minSize;
             const minBright = brightnessRange[0];
             const brightDiff = brightnessRange[1] - minBright;
-            
+
             const bufferOffsetX = worldLeft;
             const bufferOffsetY = worldTop;
-            
+
             for (let gx = startGX; gx <= endGX; gx++) {
                 const gxSeed = (gx * 73856093) >>> 0;
-                
+
                 for (let gy = startGY; gy <= endGY; gy++) {
                     let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                     let rng = cellSeed;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                    
+
                     for (let i = 0; i < starCount; i++) {
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         const bufferX = worldX - bufferOffsetX;
                         const bufferY = worldY - bufferOffsetY;
-                        
+
                         if (bufferX < -5 || bufferX > tileSize + 5 || bufferY < -5 || bufferY > tileSize + 5) continue;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const size = minSize + (rng / 4294967296) * sizeDiff;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         let brightness = minBright + (rng / 4294967296) * brightDiff;
                         if (size < 2) brightness = Math.min(255, brightness * 1.4);
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
                         const baseColor = colors[colorType];
-                        
+
                         const brightnessFactor = brightness / 255;
                         buffer.fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
-                        
+
                         if (size <= 2) {
                             buffer.rect(bufferX, bufferY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
                         } else {
@@ -647,71 +761,71 @@
                 }
             }
         }
-        
+
         function drawStarLayerToLargeBuffer(buffer, left, right, top, bottom, config) {
             const gridSize = config.gridSize;
             const systemSeed = systemIndex * 1337;
-            
+
             const colors = {
                 white: [255, 255, 255],
                 blue: [200, 220, 255],
                 yellow: [255, 250, 200],
                 red: [255, 200, 180]
             };
-            
+
             const startGX = Math.floor(left / gridSize);
             const endGX = Math.ceil(right / gridSize);
             const startGY = Math.floor(top / gridSize);
             const endGY = Math.ceil(bottom / gridSize);
-            
+
             const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
             const minSize = sizeRange[0];
             const sizeDiff = sizeRange[1] - minSize;
             const minBright = brightnessRange[0];
             const brightDiff = brightnessRange[1] - minBright;
-            
+
             const bufferOffsetX = lastBufferX - bufferSize / 2;
             const bufferOffsetY = lastBufferY - bufferSize / 2;
-            
+
             for (let gx = startGX; gx <= endGX; gx++) {
                 const gxSeed = (gx * 73856093) >>> 0;
-                
+
                 for (let gy = startGY; gy <= endGY; gy++) {
                     let cellSeed = (gxSeed ^ (gy * 19349663) ^ (systemSeed * 83492791)) >>> 0;
                     let rng = cellSeed;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     if ((rng / 4294967296) > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-                    
+
                     rng = (rng * 1664525 + 1013904223) >>> 0;
                     const starCount = Math.floor((rng / 4294967296) * maxStarsPerCell) + 1;
-                    
+
                     for (let i = 0; i < starCount; i++) {
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldX = gx * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const worldY = gy * gridSize + ((rng / 4294967296) - 0.5) * gridSize * 2;
-                        
+
                         const bufferX = worldX - bufferOffsetX;
                         const bufferY = worldY - bufferOffsetY;
-                        
+
                         if (bufferX < -5 || bufferX > bufferSize + 5 || bufferY < -5 || bufferY > bufferSize + 5) continue;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const size = minSize + (rng / 4294967296) * sizeDiff;
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         let brightness = minBright + (rng / 4294967296) * brightDiff;
                         if (size < 2) brightness = Math.min(255, brightness * 1.4);
-                        
+
                         rng = (rng * 1664525 + 1013904223) >>> 0;
                         const colorType = colorTypes[Math.floor((rng / 4294967296) * colorTypes.length)];
                         const baseColor = colors[colorType];
-                        
+
                         const brightnessFactor = brightness / 255;
                         buffer.fill(baseColor[0] * brightnessFactor, baseColor[1] * brightnessFactor, baseColor[2] * brightnessFactor);
-                        
+
                         if (size <= 2) {
                             buffer.rect(bufferX, bufferY, Math.max(1, Math.round(size)), Math.max(1, Math.round(size)));
                         } else {
@@ -721,11 +835,11 @@
                 }
             }
         }
-        
+
         // ==================== UI FUNCTIONS ====================
         function updateUI() {
             document.getElementById('current-mode').textContent = currentMode;
-            
+
             if (frameTimes.length > 0) {
                 const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
                 const maxFrameTime = Math.max(...frameTimes);
@@ -733,39 +847,38 @@
                 const fps = 1000 / avgFrameTime;
                 const minFps = 1000 / maxFrameTime;
                 const jitter = maxFrameTime - minFrameTime;
-                
+
                 document.getElementById('fps').textContent = fps.toFixed(1);
                 document.getElementById('fps').className = fps >= 55 ? 'good' : (fps >= 30 ? 'ok' : 'bad');
-                
+
                 document.getElementById('frame-time').textContent = avgFrameTime.toFixed(2) + ' ms';
                 document.getElementById('frame-time').className = avgFrameTime <= 16 ? 'good' : (avgFrameTime <= 33 ? 'ok' : 'bad');
-                
+
                 document.getElementById('min-fps').textContent = minFps.toFixed(1);
                 document.getElementById('min-fps').className = minFps >= 30 ? 'good' : (minFps >= 15 ? 'ok' : 'bad');
-                
+
                 document.getElementById('max-frame-time').textContent = maxFrameTime.toFixed(2) + ' ms';
                 document.getElementById('max-frame-time').className = maxFrameTime <= 33 ? 'good' : (maxFrameTime <= 100 ? 'ok' : 'bad');
-                
+
                 document.getElementById('jitter').textContent = jitter.toFixed(2) + ' ms';
                 document.getElementById('jitter').className = jitter <= 10 ? 'good' : (jitter <= 30 ? 'ok' : 'bad');
             }
         }
-        
+
         function setMode(mode) {
             currentMode = mode;
             frameTimes = [];
-            
+
             // Update button states
             document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + mode).classList.add('active');
-            
+
             // Reset state
             player.pos = createVector(0, 0);
             player.vel = createVector(0, 0);
-            
+
             // Clear caches
-            tiles.clear();
-            tileQueue.length = 0;
+            clearTiles();
             if (starfieldBuffer) {
                 starfieldBuffer.remove();
                 starfieldBuffer = null;
@@ -773,88 +886,106 @@
             lastBufferX = null;
             lastBufferY = null;
         }
-        
+
         function resetBenchmark() {
             benchmarkResults = {};
             document.getElementById('benchmark-results').innerHTML = '';
             setMode(currentMode);
         }
-        
+
         async function runBenchmark() {
             const modes = ['progressive', 'buffered', 'legacy'];
+            const tileSizes = [256, 512, 768, 1024];
             const resultsDiv = document.getElementById('benchmark-results');
             resultsDiv.innerHTML = '<p>Running benchmark...</p>';
-            
+
             benchmarkResults = {};
-            
+
             for (const mode of modes) {
-                // Set mode and reset
-                setMode(mode);
-                await sleep(100);
-                
-                // Run automatic movement pattern
-                const testFrames = 180; // 3 seconds at 60fps
-                frameTimes = [];
-                
-                // Simulate fast movement
-                for (let i = 0; i < testFrames; i++) {
-                    player.vel.x = 20 * Math.sin(i * 0.1);
-                    player.vel.y = 15 * Math.cos(i * 0.08);
-                    await nextFrame();
+                benchmarkResults[mode] = {};
+
+                for (const size of tileSizes) {
+                    // Only test tile sizes for progressive mode
+                    if (mode !== 'progressive' && size !== 512) continue;
+
+                    // Set mode and tile size
+                    setMode(mode);
+                    if (mode === 'progressive') {
+                        setTileSize(size);
+                    }
+                    await sleep(100);
+
+                    // Run automatic movement pattern
+                    const testFrames = 180; // 3 seconds at 60fps
+                    frameTimes = [];
+
+                    // Simulate fast movement
+                    for (let i = 0; i < testFrames; i++) {
+                        player.vel.x = 20 * Math.sin(i * 0.1);
+                        player.vel.y = 15 * Math.cos(i * 0.08);
+                        await nextFrame();
+                    }
+
+                    // Calculate results
+                    const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                    const maxFrameTime = Math.max(...frameTimes);
+                    const minFrameTime = Math.min(...frameTimes);
+                    const avgFps = 1000 / avgFrameTime;
+                    const minFps = 1000 / maxFrameTime;
+                    const jitter = maxFrameTime - minFrameTime;
+
+                    const sizeKey = mode === 'progressive' ? size : 'default';
+                    benchmarkResults[mode][sizeKey] = {
+                        avgFps: avgFps.toFixed(1),
+                        minFps: minFps.toFixed(1),
+                        avgFrameTime: avgFrameTime.toFixed(2),
+                        maxFrameTime: maxFrameTime.toFixed(2),
+                        jitter: jitter.toFixed(2)
+                    };
                 }
-                
-                // Calculate results
-                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
-                const maxFrameTime = Math.max(...frameTimes);
-                const minFrameTime = Math.min(...frameTimes);
-                const avgFps = 1000 / avgFrameTime;
-                const minFps = 1000 / maxFrameTime;
-                const jitter = maxFrameTime - minFrameTime;
-                
-                benchmarkResults[mode] = {
-                    avgFps: avgFps.toFixed(1),
-                    minFps: minFps.toFixed(1),
-                    avgFrameTime: avgFrameTime.toFixed(2),
-                    maxFrameTime: maxFrameTime.toFixed(2),
-                    jitter: jitter.toFixed(2)
-                };
             }
-            
+
             // Display results
             let html = '<h4>Benchmark Results</h4>';
             html += '<table style="width:100%; font-size: 11px;">';
-            html += '<tr><th>Mode</th><th>Avg FPS</th><th>Min FPS</th><th>Jitter</th></tr>';
-            
-            for (const [mode, data] of Object.entries(benchmarkResults)) {
-                const fpsClass = parseFloat(data.avgFps) >= 55 ? 'good' : (parseFloat(data.avgFps) >= 30 ? 'ok' : 'bad');
-                const jitterClass = parseFloat(data.jitter) <= 10 ? 'good' : (parseFloat(data.jitter) <= 30 ? 'ok' : 'bad');
-                html += `<tr>
-                    <td>${mode}</td>
-                    <td class="${fpsClass}">${data.avgFps}</td>
-                    <td>${data.minFps}</td>
-                    <td class="${jitterClass}">${data.jitter}ms</td>
-                </tr>`;
+            html += '<tr><th>Mode</th><th>Tile</th><th>Avg FPS</th><th>Min FPS</th><th>Jitter</th></tr>';
+
+            for (const [mode, sizeResults] of Object.entries(benchmarkResults)) {
+                for (const [size, data] of Object.entries(sizeResults)) {
+                    const fpsClass = parseFloat(data.avgFps) >= 55 ? 'good' : (parseFloat(data.avgFps) >= 30 ? 'ok' : 'bad');
+                    const jitterClass = parseFloat(data.jitter) <= 10 ? 'good' : (parseFloat(data.jitter) <= 30 ? 'ok' : 'bad');
+                    const sizeLabel = size === 'default' ? '-' : size + 'px';
+                    html += `<tr>
+                        <td>${mode}</td>
+                        <td>${sizeLabel}</td>
+                        <td class="${fpsClass}">${data.avgFps}</td>
+                        <td>${data.minFps}</td>
+                        <td class="${jitterClass}">${data.jitter}ms</td>
+                    </tr>`;
+                }
             }
             html += '</table>';
-            
+
             resultsDiv.innerHTML = html;
-            
-            // Return to progressive mode
+
+            // Return to progressive mode with default tile size
             setMode('progressive');
+            setTileSize(512);
         }
-        
+
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
-        
+
         function nextFrame() {
             return new Promise(resolve => requestAnimationFrame(resolve));
         }
-        
+
         function windowResized() {
             resizeCanvas(windowWidth - 40, windowHeight - 40);
             setMode(currentMode);
         }
     </script>
 </body>
+
 </html>

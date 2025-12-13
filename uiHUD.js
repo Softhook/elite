@@ -13,21 +13,21 @@ class UIHUD {
         this.battleIndicatorDuration = 1200;
         this.battleIndicatorLineLength = 25;
         this.battleIndicatorEdgeBuffer = 10;
-        
+
         // Message system
         this.messages = [];
         this.messageDisplayTime = 4000;
         this.maxMessagesToShow = 4;
-        
+
         // Communication messages (radio chatter)
         this.communicationMessages = [];
         this.communicationDisplayTime = 15000;
         this.maxCommunicationMessagesToShow = 5;
         this.communicationQueueLimit = 12;
-        
+
         // Cached values for performance
         this._lastMessageBlockHeight = 0;
-        
+
         // Persistent messages (top of screen)
         this.persistentMessages = [];
         // Event markers for location-based events (visible on HUD/minimap)
@@ -161,7 +161,7 @@ class UIHUD {
                 if (Array.isArray(m.color)) {
                     fill(...m.color, opacity);
                 } else {
-                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255,255,255, opacity); }
+                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255, 255, 255, opacity); }
                 }
                 circle(screenX, screenY, sz);
 
@@ -211,7 +211,7 @@ class UIHUD {
                 if (Array.isArray(m.color)) {
                     fill(...m.color, opacity);
                 } else {
-                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255,255,255, opacity); }
+                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255, 255, 255, opacity); }
                 }
                 triangle(-8, -6, -8, 6, 8, 0);
                 pop();
@@ -302,7 +302,7 @@ class UIHUD {
                     edgeX = constrain(screenCenterX + (edgeY - screenCenterY) / tan(angleToEvent), edgeBuffer, width - edgeBuffer);
                 }
             }
-            
+
             edgeX = constrain(edgeX, edgeBuffer, width - edgeBuffer);
             edgeY = constrain(edgeY, edgeBuffer, height - edgeBuffer);
 
@@ -349,11 +349,11 @@ class UIHUD {
 
         for (let i = 0; i < this.persistentMessages.length; i++) {
             const msg = this.persistentMessages[i];
-            
+
             // Draw background for readability
             fill(0, 0, 0, 150);
             const textW = textWidth(msg.text);
-            rect(width/2 - textW/2 - 10, startY + i * lineHeight, textW + 20, lineHeight);
+            rect(width / 2 - textW / 2 - 10, startY + i * lineHeight, textW + 20, lineHeight);
 
             // Draw text
             if (Array.isArray(msg.color)) {
@@ -361,7 +361,7 @@ class UIHUD {
             } else {
                 fill(msg.color);
             }
-            text(msg.text, width/2, startY + i * lineHeight + 2);
+            text(msg.text, width / 2, startY + i * lineHeight + 2);
         }
         pop();
     }
@@ -372,43 +372,43 @@ class UIHUD {
      */
     drawHUD(player) {
         if (!player) { console.warn("drawHUD: Player object missing"); return; }
-        
-        const csName = player.currentSystem?.name || 'N/A'; 
+
+        const csName = player.currentSystem?.name || 'N/A';
         const cargoAmt = player.getCargoAmount() ?? 0;
-        const cargoCap = player.cargoCapacity ?? 0; 
-        const hull = player.hull ?? 0; 
+        const cargoCap = player.cargoCapacity ?? 0;
+        const hull = player.hull ?? 0;
         const maxHull = player.maxHull || 1;
         const credits = player.credits ?? 0;
         const shipName = player.shipTypeName || "Unknown Ship";
         const eliteRating = player.getEliteRating();
-    
+
         this.drawBattleIndicators(player);
         this.drawEventMarkers(player);
 
-        push(); 
-        fill(0, 180, 0, 150); 
-        noStroke(); 
+        push();
+        fill(0, 180, 0, 150);
+        noStroke();
         rect(0, 0, width, 40);
-        
+
         // Left side - System name with additional info
-        fill(255); 
+        fill(255);
         textFont(font);
-        textSize(20); 
-        textAlign(LEFT, CENTER); 
+        textSize(20);
+        textAlign(LEFT, CENTER);
         const systemType = player.currentSystem?.economyType || 'Unknown';
         const secLevel = player.currentSystem?.securityLevel || 'Unknown';
         const techLevel = player.currentSystem?.techLevel || '?';
         text(`${csName}            ${systemType}   Tech: ${techLevel}   Security: ${secLevel}`, 10, 20);
-        
+
         const statusLineY = 20;
-        
+
         // Center - LEGAL status
         fill(255);
         textAlign(CENTER, CENTER);
-        
+
         let factionDisplay = "";
         let factionRank = "";
-        
+
         if (player.isPolice) {
             factionDisplay = "POLICE";
             factionRank = player.getFactionRank("POLICE");
@@ -424,24 +424,24 @@ class UIHUD {
         } else {
             factionDisplay = "LEGAL";
         }
-        
+
         let statusText = `${eliteRating} - ${factionDisplay}`;
         if (factionRank) {
             statusText += ` (${factionRank})`;
         }
-        
+
         if (player.currentSystem?.isPlayerWanted()) {
             statusText += " - Wanted";
             fill(255, 0, 0);
         }
-        
-        text(statusText, width/2, statusLineY);
-        
+
+        text(statusText, width / 2, statusLineY);
+
         // Right side - Ship info
         fill(255);
         textAlign(RIGHT, CENTER);
-        text(`Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width-300, statusLineY);
-        
+        text(`Cargo: ${cargoAmt}/${cargoCap}   Credits: ${credits}`, width - 300, statusLineY);
+
         // Shield and Hull bars
         const barWidth = 140;
         const barHeight = 14;
@@ -451,21 +451,21 @@ class UIHUD {
         if (player.maxShield > 0) {
             fill(20, 20, 60);
             rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
-            
+
             const shieldPercent = player.shield / player.maxShield;
             fill(50, 100, 255);
             rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
-            
+
             stroke(100, 150, 255);
             noFill();
             rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
-            
+
             fill(255);
             noStroke();
             textFont(font);
             textAlign(RIGHT, CENTER);
             textSize(20);
-            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight/2 - 2);
+            text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight / 2 - 2);
         }
 
         fill(60, 20, 20);
@@ -483,14 +483,14 @@ class UIHUD {
         noStroke();
         textAlign(RIGHT, CENTER);
         textSize(20);
-        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight/2 + 2);
-        
+        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight / 2 + 2);
+
         this.drawWeaponSelector(player);
-        
+
         pop();
         // Draw persistent messages after weapon selector so they appear below it
         this.drawPersistentMessages(player);
-        
+
         if (gameStateManager?.currentState !== "GALAXY_MAP") {
             this.drawTargetOverlay(player);
         }
@@ -502,42 +502,42 @@ class UIHUD {
      */
     drawWeaponSelector(player) {
         if (!player?.weapons || player.weapons.length === 0) return;
-        
+
         const weaponBarY = 45;
         const weaponBarH = 24;
-        
+
         push();
         fill(0, 50, 80, 150);
         noStroke();
         rect(0, weaponBarY, width, weaponBarH);
-        
+
         textAlign(LEFT, CENTER);
         textSize(20);
         let xPos = 10;
-        
+
         const weaponIdx = player.weaponIndex;
         for (let index = 0; index < player.weapons.length; index++) {
             const weapon = player.weapons[index];
             const isSelected = (index === weaponIdx);
             const slotPadding = 10;
-            const slotText = `${index+1}: ${weapon.name}`;
+            const slotText = `${index + 1}: ${weapon.name}`;
             const textW = textWidth(slotText);
             const slotW = textW + slotPadding * 2;
-            
+
             if (isSelected) {
                 fill(0, 100, 180, 200);
             } else {
                 fill(0, 80, 120, 120);
             }
             rect(xPos, weaponBarY + 3, slotW, weaponBarH - 6, 5);
-            
+
             if (isSelected) {
                 fill(255, 255, 100);
             } else {
                 fill(200);
             }
-            text(slotText, xPos + slotPadding, weaponBarY + weaponBarH/2);
-            
+            text(slotText, xPos + slotPadding, weaponBarY + weaponBarH / 2);
+
             if (isSelected) {
                 let indicatorRatio = 0;
                 let indicatorColor = [255, 50, 50, 200];
@@ -559,10 +559,10 @@ class UIHUD {
                     rect(xPos, weaponBarY + weaponBarH - 3, slotW * indicatorRatio, 3);
                 }
             }
-            
+
             xPos += slotW + 5;
         }
-        
+
         // Active mission display on right side
         if (player.activeMission?.title) {
             const missionText = `Mission: ${player.activeMission.title}`;
@@ -571,19 +571,19 @@ class UIHUD {
             const missionTextW = textWidth(missionText);
             const missionBoxW = missionTextW + missionPadding * 2;
             const missionBoxX = width - missionBoxW - 10;
-            
+
             fill(0, 80, 140, 200);
             stroke(0, 100, 180);
             strokeWeight(1);
             rect(missionBoxX, weaponBarY + 3, missionBoxW, weaponBarH - 6, 5);
-            
+
             fill(255, 180, 0);
             noStroke();
             textAlign(LEFT, CENTER);
-            text(missionText, missionBoxX + missionPadding, weaponBarY + weaponBarH/2);
-            
+            text(missionText, missionBoxX + missionPadding, weaponBarY + weaponBarH / 2);
+
             fill(255, 200, 0);
-            circle(missionBoxX + 6, weaponBarY + weaponBarH/2, 5);
+            circle(missionBoxX + 6, weaponBarY + weaponBarH / 2, 5);
         }
 
         // Autopilot indicator
@@ -618,9 +618,9 @@ class UIHUD {
             textAlign(CENTER, CENTER);
             textSize(18);
             fill(255, 255, 100);
-            text(`Autopilot Engaged: ${targetLabel} ${hint}`, width/2, autopilotY + 10);
+            text(`Autopilot Engaged: ${targetLabel} ${hint}`, width / 2, autopilotY + 10);
         }
-        
+
         pop();
     }
 
@@ -646,7 +646,7 @@ class UIHUD {
         const autopilotOffset = player?.autopilotEnabled ? 35 : 0;
         const panelX = width - panelWidth - 20;
         const panelY = 80 + autopilotOffset;
-        
+
         // Get uiManager for minimap reference
         const minimapSize = typeof uiManager !== 'undefined' ? uiManager.minimapSize : 200;
         const minimapMargin = typeof uiManager !== 'undefined' ? uiManager.minimapMargin : 15;
@@ -659,7 +659,7 @@ class UIHUD {
         } else if (isSpaceObject) {
             pilotName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
         }
-        
+
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
@@ -686,8 +686,8 @@ class UIHUD {
         let tradableCommoditiesHeight = 0;
         let tradable = null;
         if (isSpaceObject && target.isDockable) {
-            tradable = (typeof target.getTradableCommodities === 'function') 
-                ? target.getTradableCommodities() 
+            tradable = (typeof target.getTradableCommodities === 'function')
+                ? target.getTradableCommodities()
                 : { produces: [], buys: [] };
             if (tradable.produces && tradable.produces.length > 0) {
                 tradableCommoditiesHeight += sectionSpacing + lineHeight + lineHeight; // heading + items
@@ -698,7 +698,7 @@ class UIHUD {
         }
 
         const statBarsHeight = (lineHeight + 4) * 2;
-        const weaponsHeight = (weaponsList && weaponsList.length > 0) 
+        const weaponsHeight = (weaponsList && weaponsList.length > 0)
             ? (sectionSpacing + lineHeight + weaponsList.length * lineHeight + sectionSpacing)
             : 0;
 
@@ -747,7 +747,7 @@ class UIHUD {
         strokeWeight(2);
         rect(panelX, panelY, panelWidth, panelHeight, 8);
         noStroke();
-        
+
         const ctx = drawingContext;
         ctx.save();
         ctx.beginPath();
@@ -831,7 +831,7 @@ class UIHUD {
                 text(tradable.produces.join(', '), cursorX, cursorY);
                 cursorY += lineHeight;
             }
-            
+
             if (tradable.buys && tradable.buys.length > 0) {
                 cursorY += sectionSpacing;
                 fill(255, 200, 100);
@@ -913,8 +913,8 @@ class UIHUD {
 
     // Message system methods
     addMessage(msg, color = [200, 200, 200], duration = this.messageDisplayTime) {
-        this.messages.push({ 
-            text: msg, 
+        this.messages.push({
+            text: msg,
             time: millis(),
             color: color,
             duration: duration
@@ -948,7 +948,7 @@ class UIHUD {
         for (let i = 0; i < toShow.length; i++) {
             const messageItem = toShow[i];
             const messageColor = messageItem.color || [200, 200, 200];
-            
+
             if (typeof messageColor === 'string') {
                 try {
                     fill(color(messageColor));
@@ -1028,7 +1028,7 @@ class UIHUD {
                 const c = color(colorValue);
                 fill(red(c), green(c), blue(c), Math.min(alpha(c), targetAlpha));
                 applied = true;
-            } catch (_) {}
+            } catch (_) { }
         } else if (Array.isArray(colorValue)) {
             const [r = 200, g = 200, b = 200, a = 255] = colorValue;
             fill(r, g, b, Math.min(a, targetAlpha));
@@ -1059,7 +1059,7 @@ class UIHUD {
         textAlign(LEFT, BOTTOM);
         textFont(font);
         textSize(10);
-        
+
         if (fpsAverage >= 50) {
             fill(0, 255, 0);
         } else if (fpsAverage >= 30) {
@@ -1067,7 +1067,7 @@ class UIHUD {
         } else {
             fill(255, 0, 0);
         }
-        
+
         text(`FPS: ${fpsAverage}`, 10, height - 10);
         pop();
     }
@@ -1080,7 +1080,9 @@ class UIHUD {
         if (typeof sharedStarfield !== 'undefined' && sharedStarfield && typeof sharedStarfield.draw === 'function') {
             sharedStarfield.draw();
         } else {
-            background(0);
+            // Use centralized starfield background color
+            const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
+            background(bg.r, bg.g, bg.b);
         }
 
         push();
