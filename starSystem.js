@@ -21,19 +21,7 @@ const JUMP_ZONE_CONFIG = {
     MIN_ALPHA: 20
 };
 
-// === Starfield Rendering Configuration ===
-const STARFIELD_CONFIG = {
-    TILE_SIZE: 768,
-    MAX_TILES_PER_FRAME: 2,
-    MAX_CACHED_TILES: 64,
-    DIRECTION_BOOST: 500,
-    PREDICTION_FRAMES: 30,
-    CLEANUP_INTERVAL_MS: 5000,
-    WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined'),
-    // Deep space dark blue background (not pure black for visual depth)
-    BACKGROUND_COLOR: { r: 10, g: 15, b: 40 },
-    BACKGROUND_CSS: '#0a0f28'
-};
+// STARFIELD_CONFIG is now defined in starfieldConfig.js
 
 // === Spawn Configuration ===
 const SPAWN_CONFIG = {

@@ -1,101 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elite (p5.js)</title>
-    <script src="libraries/p5.min.js"></script>
-    <script src="libraries/p5.sound.min.js"></script>
-    <script src="libraries/riffwave.js"></script>
-    <script src="libraries/sfxr.js"></script>
-    <script src="libraries/ts.es5.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elite (p5.js)</title>
+  <script src="libraries/p5.min.js"></script>
+  <script src="libraries/p5.sound.min.js"></script>
+  <script src="libraries/riffwave.js"></script>
+  <script src="libraries/sfxr.js"></script>
+  <script src="libraries/ts.es5.min.js"></script>
 
-    <!-- Global debug flags/helpers (must load early) -->
-    <script src="debug.js"></script>
+  <!-- Global debug flags/helpers (must load early) -->
+  <script src="debug.js"></script>
 
-    <script src="soundManager.js"></script>
-    <script src="ambientSoundManager.js"></script>
-    <script src="stationMusic.js"></script> 
+  <script src="soundManager.js"></script>
+  <script src="ambientSoundManager.js"></script>
+  <script src="stationMusic.js"></script>
 
   <!-- Basic utility classes first -->
   <script src="objectPool.js"></script>
-  
+
   <script src="projectile.js"></script>
   <script src="mine.js"></script>
   <script src="eventManager.js"></script>
 
-    <!-- Load Data Definitions FIRST -->
-    <script src="draw3d.js"></script>  <!-- Centralized 3D rendering -->
-    <script src="ships.js"></script>
-    <script src="weapons.js"></script>
-    <script src="weaponSystem.js"></script>
-    <script src="harpoon.js"></script>
-    <script src="mission.js"></script> <!-- ADDED -->
+  <!-- Load Data Definitions FIRST -->
+  <script src="draw3d.js"></script> <!-- Centralized 3D rendering -->
+  <script src="ships.js"></script>
+  <script src="weapons.js"></script>
+  <script src="weaponSystem.js"></script>
+  <script src="harpoon.js"></script>
+  <script src="mission.js"></script> <!-- ADDED -->
 
-    <!-- Load Generators/Managers NEXT -->
-    <script src="missionGenerator.js"></script> <!-- ADDED -->
-    <script src="gameStateManager.js"></script>
+  <!-- Load Generators/Managers NEXT -->
+  <script src="missionGenerator.js"></script> <!-- ADDED -->
+  <script src="gameStateManager.js"></script>
 
-    <!-- Load Game World Classes -->
-    <script src="market.js"></script>
-    <script src="station.js"></script> <!-- Uses Market -->
-    <script src="planet.js"></script>
-    <script src="asteroid.js"></script>
-    
-    <!-- NEW: Astronomical Features -->
-    <script src="nebula.js"></script>        <!-- New astronomical feature -->
-    <script src="cosmicStorm.js"></script>   <!-- New astronomical feature -->
-    
-    <script src="starSystem.js"></script> <!-- Uses Station, Planet, Asteroid, and now the new features -->
-    <script src="galaxy.js"></script>     <!-- Uses StarSystem -->
-    
+  <!-- Load Game World Classes -->
+  <script src="market.js"></script>
+  <script src="station.js"></script> <!-- Uses Market -->
+  <script src="planet.js"></script>
+  <script src="asteroid.js"></script>
 
-    <!-- Load Entity Classes -->
-   
-    <script src="thrustParticles.js"></script>
-    <script src="player.js"></script>     <!-- Uses Mission -->
-    <script src="enemyConstants.js"></script> <!-- Enemy AI constants and enums -->
-    <script src="communicationSystem.js"></script> <!-- Handles NPC chatter -->
-    <script src="enemyUtils.js"></script>     <!-- Enemy utility methods -->
-    <script src="enemyTargeting.js"></script> <!-- Enemy targeting logic -->
-    <script src="enemyStateMachine.js"></script> <!-- Enemy state machine -->
-    <script src="enemyMovement.js"></script>  <!-- Enemy movement and physics -->
-    <script src="enemyCombat.js"></script>    <!-- Enemy combat and weapons -->
-    <script src="enemyAIBehaviors.js"></script> <!-- Enemy AI behaviors (role-specific) -->
-    <script src="enemyCargo.js"></script>     <!-- Enemy cargo handling -->
-    <script src="enemyDamageSystem.js"></script> <!-- Enemy damage system -->
-    <script src="enemyRendering.js"></script> <!-- Enemy rendering -->
-    <script src="enemy.js"></script>      <!-- Main Enemy class -->
-    <script src="inventoryScreen.js"></script>
-    <script src="cargo.js"></script>
-    <script src="spaceObjects.js"></script>
+  <!-- NEW: Astronomical Features -->
+  <script src="nebula.js"></script> <!-- New astronomical feature -->
+  <script src="cosmicStorm.js"></script> <!-- New astronomical feature -->
 
-    <!-- Small utilities used by UI -->
-    <script src="systemDescription.js"></script>
+  <script src="starfieldConfig.js"></script> <!-- Starfield Configuration -->
+  <script src="starSystem.js"></script> <!-- Uses Station, Planet, Asteroid, and now the new features -->
+  <script src="galaxy.js"></script> <!-- Uses StarSystem -->
 
-    <!-- Load UI Modules (must load BEFORE uiManager.js) -->
-    <script src="uiComponents.js"></script>
-    <script src="uiHUD.js"></script>
-    <script src="uiMinimap.js"></script>
-    <script src="uiMarket.js"></script>
-    <script src="uiStationMenus.js"></script>
-    <script src="uiMissions.js"></script>
-    <script src="uiGalaxyMap.js"></script>
-    <script src="uiFactionRecruitment.js"></script>
-    <script src="newsManager.js"></script>
 
-    <!-- Load Main UI Manager (orchestrates modules) -->
-    <script src="uiManager.js"></script>
+  <!-- Load Entity Classes -->
 
-    <!-- Load Main Sketch Entry Point -->
-    <script src="explosion.js"></script>
-    <script src="starfield.js"></script>
-    <script src="titleScreen.js"></script>
-    <script src="saveSelectionScreen.js"></script>
-    <script src="sketch.js"></script>
+  <script src="thrustParticles.js"></script>
+  <script src="player.js"></script> <!-- Uses Mission -->
+  <script src="enemyConstants.js"></script> <!-- Enemy AI constants and enums -->
+  <script src="communicationSystem.js"></script> <!-- Handles NPC chatter -->
+  <script src="enemyUtils.js"></script> <!-- Enemy utility methods -->
+  <script src="enemyTargeting.js"></script> <!-- Enemy targeting logic -->
+  <script src="enemyStateMachine.js"></script> <!-- Enemy state machine -->
+  <script src="enemyMovement.js"></script> <!-- Enemy movement and physics -->
+  <script src="enemyCombat.js"></script> <!-- Enemy combat and weapons -->
+  <script src="enemyAIBehaviors.js"></script> <!-- Enemy AI behaviors (role-specific) -->
+  <script src="enemyCargo.js"></script> <!-- Enemy cargo handling -->
+  <script src="enemyDamageSystem.js"></script> <!-- Enemy damage system -->
+  <script src="enemyRendering.js"></script> <!-- Enemy rendering -->
+  <script src="enemy.js"></script> <!-- Main Enemy class -->
+  <script src="inventoryScreen.js"></script>
+  <script src="cargo.js"></script>
+  <script src="spaceObjects.js"></script>
 
-    <link rel="stylesheet" href="style.css">
+  <!-- Small utilities used by UI -->
+  <script src="systemDescription.js"></script>
+
+  <!-- Load UI Modules (must load BEFORE uiManager.js) -->
+  <script src="uiComponents.js"></script>
+  <script src="uiHUD.js"></script>
+  <script src="uiMinimap.js"></script>
+  <script src="uiMarket.js"></script>
+  <script src="uiStationMenus.js"></script>
+  <script src="uiMissions.js"></script>
+  <script src="uiGalaxyMap.js"></script>
+  <script src="uiFactionRecruitment.js"></script>
+  <script src="newsManager.js"></script>
+
+  <!-- Load Main UI Manager (orchestrates modules) -->
+  <script src="uiManager.js"></script>
+
+  <!-- Load Main Sketch Entry Point -->
+  <script src="explosion.js"></script>
+  <script src="starfield.js"></script>
+  <script src="titleScreen.js"></script>
+  <script src="saveSelectionScreen.js"></script>
+  <script src="sketch.js"></script>
+
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 </body>
+
 </html>

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starfield Rendering Benchmark</title>
     <script src="../libraries/p5.min.js"></script>
+    <script src="../starfieldConfig.js"></script> <!-- Load shared config -->
     <style>
         body {
             margin: 0;
@@ -166,7 +167,15 @@
             </select>
             <label id="tile-size-label">Current: 512px</label>
         </div>
+        <div class="section-label">Optimization Features:</div>
+        <div>
+            <label><input type="checkbox" id="chk-boost" checked onchange="updateFeatures()"> Directional Boost</label>
+            <label><input type="checkbox" id="chk-prediction" checked onchange="updateFeatures()"> Prediction
+                Frames</label>
+        </div>
         <div style="margin-top: 10px;">
+            <button onclick="runFeatureComparison()" style="background:#003; border-color:#fc0; color:#fc0;">Run Feature
+                Comparison</button>
             <button onclick="runTileSizeComparison()" style="background:#003;">Compare Tile Sizes</button>
             <button onclick="runBenchmark()">Run Full Benchmark</button>
             <button onclick="resetBenchmark()">Reset</button>
@@ -375,7 +384,47 @@
             updateUI();
         }
 
+
+
+        // ==================== FEATURE COMPARISON BENCHMARK ====================
+        let isAutoDriving = false;
+        let autoDriveStartTime = 0;
+        let autoDriveDuration = 0;
+        let onAutoDriveComplete = null;
+
+        function startAutoDrive(duration, onComplete) {
+            isAutoDriving = true;
+            autoDriveStartTime = millis();
+            autoDriveDuration = duration;
+            onAutoDriveComplete = onComplete;
+            // Reset position for consistency
+            player.pos = createVector(0, 0);
+            player.vel = createVector(0, 0);
+            frameTimes = []; // Clear previous metrics
+            benchmarkResults = {};
+        }
+
         function updatePlayer() {
+            if (isAutoDriving) {
+                // Consistency benchmark movement: Large circle at high speed
+                const elapsed = millis() - autoDriveStartTime;
+                const progress = elapsed / 2000; // Period of circle
+                const speed = 25; // Max speed
+                player.vel.x = Math.cos(progress) * speed;
+                player.vel.y = Math.sin(progress) * speed;
+                player.pos.add(player.vel);
+
+                lastPlayerVelX = player.vel.x;
+                lastPlayerVelY = player.vel.y;
+
+                if (elapsed >= autoDriveDuration) {
+                    isAutoDriving = false;
+                    player.vel.mult(0); // Stop
+                    if (onAutoDriveComplete) onAutoDriveComplete();
+                }
+                return;
+            }
+
             const speed = keyIsDown(SHIFT) ? 25 : 8;
 
             if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) player.vel.x = -speed;
@@ -390,6 +439,74 @@
 
             lastPlayerVelX = player.vel.x;
             lastPlayerVelY = player.vel.y;
+        }
+
+        async function runFeatureComparison() {
+            const resultsDiv = document.getElementById('benchmark-results');
+            resultsDiv.innerHTML = '<div style="color:#fc0">Starting Feature Comparison... Do not touch controls.</div>';
+
+            const testCases = [
+                { name: "Baseline (None)", boost: false, pred: false },
+                { name: "Boost Only", boost: true, pred: false },
+                { name: "Prediction Only", boost: false, pred: true },
+                { name: "Both Enabled", boost: true, pred: true }
+            ];
+
+            const results = [];
+
+            for (const test of testCases) {
+                // 1. Setup
+                document.getElementById('chk-boost').checked = test.boost;
+                document.getElementById('chk-prediction').checked = test.pred;
+                updateFeatures();
+
+                resultsDiv.innerHTML += `<div>Running: ${test.name}...</div>`;
+
+                // 2. Clear caches to ensure cold(ish) start fairness
+                clearTiles();
+                frameTimes = [];
+
+                // 3. Run Test (Wait for it to finish)
+                await new Promise(resolve => {
+                    startAutoDrive(5000, resolve); // 5 seconds per test
+                });
+
+                // 4. Collect Metrics
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const fps = 1000 / avgFrameTime;
+                const minApparentFps = 1000 / Math.max(...frameTimes);
+                const maxFrameTime = Math.max(...frameTimes);
+
+                // Jitter: Standard Deviation of frame times
+                const mean = avgFrameTime;
+                const sqDiffs = frameTimes.map(f => Math.pow(f - mean, 2));
+                const avgSqDiff = sqDiffs.reduce((a, b) => a + b, 0) / sqDiffs.length;
+                const jitter = Math.sqrt(avgSqDiff);
+
+                results.push({
+                    name: test.name,
+                    fps: fps.toFixed(1),
+                    minFps: minApparentFps.toFixed(1),
+                    jitter: jitter.toFixed(2),
+                    maxLate: maxFrameTime.toFixed(1)
+                });
+            }
+
+            // 5. Display Report
+            let html = '<table style="width:100%; text-align:left; border-collapse:collapse; margin-top:10px;">';
+            html += '<tr style="border-bottom:1px solid #0f0"><th style="padding:5px">Feature Set</th><th>FPS</th><th>Min FPS</th><th>Jitter</th></tr>';
+
+            results.forEach(r => {
+                html += `<tr style="border-bottom:1px solid #333">
+                    <td style="padding:5px">${r.name}</td>
+                    <td class="good">${r.fps}</td>
+                    <td class="${r.minFps < 30 ? 'bad' : 'ok'}">${r.minFps}</td>
+                    <td>${r.jitter}ms</td>
+                </tr>`;
+            });
+            html += '</table>';
+
+            resultsDiv.innerHTML = html;
         }
 
         // ==================== PROGRESSIVE RENDERING ====================
@@ -464,22 +581,94 @@
             pop();
         }
 
+
+
+        // ==================== FEATURES TOGGLE ====================
+        let useBoost = true;
+        let usePrediction = true;
+
+        function updateFeatures() {
+            useBoost = document.getElementById('chk-boost').checked;
+            usePrediction = document.getElementById('chk-prediction').checked;
+            console.log(`Features updated: Boost=${useBoost}, Prediction=${usePrediction}`);
+        }
+
+        // Modified to use Directional Boost and Prediction
         function queueTilesForGeneration(missingTiles, playerX, playerY) {
+            const velX = lastPlayerVelX;
+            const velY = lastPlayerVelY;
+            const velMag = Math.sqrt(velX * velX + velY * velY);
+
+            // 1. Queue visible missing tiles (Standard priority)
             for (const t of missingTiles) {
                 const alreadyQueued = tileQueue.some(q => q.key === t.key);
                 if (!alreadyQueued && !tiles.has(t.key)) {
+                    // Start with basic distance priority
                     const dx = (t.tx + 0.5) * tileSize - playerX;
                     const dy = (t.ty + 0.5) * tileSize - playerY;
-                    t.priority = Math.sqrt(dx * dx + dy * dy);
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // Apply Directional Boost if enabled
+                    let boost = 0;
+                    if (useBoost && velMag > 0.1) {
+                        const dot = (dx * velX + dy * velY) / (dist * velMag);
+                        boost = dot > 0 ? dot * STARFIELD_CONFIG.DIRECTION_BOOST : 0;
+                    }
+
+                    t.priority = dist - boost; // Lower is better (closer/boosted)
                     tileQueue.push(t);
                 }
             }
+
+            // 2. Queue Predictive Tiles (if enabled and moving fast enough)
+            if (usePrediction && velMag > 2) {
+                const predictX = playerX + velX * STARFIELD_CONFIG.PREDICTION_FRAMES;
+                const predictY = playerY + velY * STARFIELD_CONFIG.PREDICTION_FRAMES;
+
+                // Calculate predicted view bounds
+                const padding = tileSize;
+                const predLeft = predictX - width / 2 - padding;
+                const predRight = predictX + width / 2 + padding;
+                const predTop = predictY - height / 2 - padding;
+                const predBottom = predictY + height / 2 + padding;
+
+                const startTx = Math.floor(predLeft / tileSize);
+                const endTx = Math.ceil(predRight / tileSize);
+                const startTy = Math.floor(predTop / tileSize);
+                const endTy = Math.ceil(predBottom / tileSize);
+
+                for (let tx = startTx; tx <= endTx; tx++) {
+                    for (let ty = startTy; ty <= endTy; ty++) {
+                        const key = `${tx},${ty}`;
+
+                        // Skip if already loaded, queued, or visible (handled above)
+                        if (tiles.has(key) || tileQueue.some(q => q.key === key)) continue;
+
+                        // Check if it's already in the 'missingTiles' list to avoid double add
+                        // (Though the 'tileQueue.some' check above covers this mostly)
+                        // Actually, we just need to queue it.
+
+                        const dx = (tx + 0.5) * tileSize - playerX;
+                        const dy = (ty + 0.5) * tileSize - playerY;
+
+                        // Predictive tiles generally have lower priority than immediate visible ones,
+                        // but higher than far-off pre-warming.
+                        // We give them a generous priority boost relative to their actual current distance.
+
+                        tileQueue.push({
+                            tx, ty, key,
+                            priority: Math.sqrt(dx * dx + dy * dy) - 1000 // Artificial boost to preload
+                        });
+                    }
+                }
+            }
+
             tileQueue.sort((a, b) => a.priority - b.priority);
             if (tileQueue.length > maxCachedTiles * 2) {
                 tileQueue.length = maxCachedTiles * 2;
             }
 
-            // Pre-warm neighboring tiles (small radius) to reduce visible pop-in during fast movement
+            // Pre-warm neighboring tiles logic (kept from original, but lower priority)
             const prewarmRadius = 1;
             for (const t of missingTiles) {
                 for (let ox = -prewarmRadius; ox <= prewarmRadius; ox++) {
@@ -487,9 +676,10 @@
                         const nx = t.tx + ox, ny = t.ty + oy;
                         const nkey = `${nx},${ny}`;
                         if (!tiles.has(nkey) && !tileQueue.some(q => q.key === nkey)) {
+                            // Only add if not predicted (redundancy check optional but good)
                             const dx = (nx + 0.5) * tileSize - playerX;
                             const dy = (ny + 0.5) * tileSize - playerY;
-                            tileQueue.push({ tx: nx, ty: ny, key: nkey, priority: Math.sqrt(dx * dx + dy * dy) });
+                            tileQueue.push({ tx: nx, ty: ny, key: nkey, priority: Math.sqrt(dx * dx + dy * dy) + 2000 }); // Low priority
                         }
                     }
                 }
