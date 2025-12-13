@@ -12,7 +12,7 @@ const WEAPON_UPGRADES = [
         desc: "Standard energy weapon."
     },
     {
-        
+
         name: "Sniper Rail",
         type: "projectile",
         damage: 35,
@@ -30,7 +30,7 @@ const WEAPON_UPGRADES = [
         price: 3000,
         desc: "Very high damage, long cooldown."
     },
-    
+
     // -----------------------------
     // Beam Weapons
     // -----------------------------
@@ -73,7 +73,7 @@ const WEAPON_UPGRADES = [
         price: 1400,
         desc: "Short beam, disables enemy shields."
     },
-    
+
     // -----------------------------
     // Multi-Shot Parallel (Straight)
     // -----------------------------
@@ -104,12 +104,12 @@ const WEAPON_UPGRADES = [
         price: 1300,
         desc: "Four parallel shots."
     },
-    
+
     // -----------------------------
     // Spread Weapons (2-way)
     // -----------------------------
     {
-        name: "V Spread", 
+        name: "V Spread",
         type: "spread2",
         damage: 12,
         color: [255, 255, 0], // Yellow
@@ -126,7 +126,7 @@ const WEAPON_UPGRADES = [
         price: 1400,
         desc: "Two heavy shots at a wide angle."
     },
-    
+
     // -----------------------------
     // Spread Weapons (3-way)
     // -----------------------------
@@ -148,7 +148,7 @@ const WEAPON_UPGRADES = [
         price: 2000,
         desc: "Fast 3-way spread, good for swarms."
     },
-    
+
     // -----------------------------
     // Spread Weapons (4-way)
     // -----------------------------
@@ -174,7 +174,7 @@ const WEAPON_UPGRADES = [
         price: 1600,
         desc: "Tight 5-way spread."
     },
-    
+
     // -----------------------------
     // Turret Weapons (Auto-aiming)
     // -----------------------------
@@ -196,16 +196,16 @@ const WEAPON_UPGRADES = [
         price: 4500,
         desc: "High damage, slow fire, auto-aims."
     },
-    
+
     // -----------------------------
     // Special Weapons
     // -----------------------------
     {
         name: "Force Blaster",
         type: "force",
-        damage: 400,
+        damage: 60,
         color: [255, 0, 0], // Red
-        fireRate: 2, 
+        fireRate: 2,
         price: 32500,
         maxRadius: 300,
         desc: "Area effect."
@@ -213,9 +213,9 @@ const WEAPON_UPGRADES = [
     {
         name: "Jedi Force",
         type: "force",
-        damage: 500,
+        damage: 100,
         color: [255, 255, 0], // Purple
-        fireRate: 2, 
+        fireRate: 2,
         price: 40600,
         maxRadius: 750,
         desc: "Super damage, area effect."
@@ -274,14 +274,14 @@ const WEAPON_UPGRADES = [
         fireRate: 7.0,          // Very long reload
         price: 3400,
         speed: 4,               // Slightly slower, heavier
-        turnRate: 0.08,         
+        turnRate: 0.08,
         lifespan: 300,
         missileHull: 50,       // Hull for destructible missiles
         desc: "Devastating but slow-reloading."
     },
-     // -----------------------------
-        // Tangle weapons
-      // -----------------------------
+    // -----------------------------
+    // Tangle weapons
+    // -----------------------------
     {
         name: "Tangle Projector",
         type: "tangle",

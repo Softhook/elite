@@ -318,11 +318,9 @@ class WeaponSystem {
             growRate: 20, // INCREASED from 15 to 20
             damage: damage,
             color: color,
-            processed: {},
+            processed: new Set(), // Initialize as Set directly
             // Add batch processing properties with pre-populated entities
-            processedCount: 0,
-            entitiesToProcess: entitiesToProcess,
-            maxProcessPerFrame: 20 // INCREASED from 10 to 20
+            entitiesToProcess: entitiesToProcess
         });
 
         WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);

@@ -2053,11 +2053,11 @@ class StarSystem {
                 this._initializeForceWaveTargets(wave);
             }
 
-            // Process entities in batches
-            this._processForceWaveBatch(wave);
+            // Process collisions for all tracked entities
+            this._processForceWaveCollisions(wave);
 
-            // Remove wave if complete
-            if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
+            // Remove wave only when it has reached max size
+            if (wave.radius >= wave.maxRadius) {
                 this._fastRemove(this.forceWaves, i);
             }
         }
@@ -2080,42 +2080,50 @@ class StarSystem {
             if (this.player) wave.entitiesToProcess.push(this.player);
         }
 
-        // Initialize tracking
-        wave.processedCount = 0;
-        wave.processed = {};
+        // Use a Set for reliable object tracking (handles entities without IDs correctly)
+        wave.processed = new Set();
     }
 
     /**
-     * Processes a batch of entities for a force wave.
+     * Processes collisions for a force wave against its target list.
+     * Checks all unprocessed entities every frame to ensure the expanding wave catches them.
      * @param {Object} wave - The force wave to process
      * @private
      */
-    _processForceWaveBatch(wave) {
-        const batchSize = 50; // Process up to 50 entities per frame
-        const remainingEntities = wave.entitiesToProcess.length - wave.processedCount;
-        const entitiesToProcessNow = Math.min(remainingEntities, batchSize);
+    _processForceWaveCollisions(wave) {
+        // Iterate through all tracked entities
+        for (let i = 0; i < wave.entitiesToProcess.length; i++) {
+            const entity = wave.entitiesToProcess[i];
 
-        for (let j = 0; j < entitiesToProcessNow; j++) {
-            const entity = wave.entitiesToProcess[wave.processedCount + j];
+            // Use the Set for existence check
+            if (wave.processed.has(entity)) continue;
 
-            // Skip if entity is invalid, destroyed, or already processed
-            if (!entity || !entity.pos || (typeof entity.isDestroyed === 'function' && entity.isDestroyed()) || wave.processed[entity.id || entity]) continue;
+            // Skip if entity is invalid or destroyed
+            if (!entity || !entity.pos || (typeof entity.isDestroyed === 'function' && entity.isDestroyed())) {
+                wave.processed.add(entity);
+                continue;
+            }
 
-            // Fast distance check using squared distance
+            // Calculate distance
             const dx = entity.pos.x - wave.pos.x;
             const dy = entity.pos.y - wave.pos.y;
             const distSq = dx * dx + dy * dy;
+
+            // Check if wave has reached the entity
             const radiusWithEntity = wave.radius + entity.size / 2;
             const radiusWithEntitySq = radiusWithEntity * radiusWithEntity;
 
-            // If entity is within wave radius, apply damage
             if (distSq < radiusWithEntitySq) {
+                // Hit! Damage and mark processed
                 this._applyForceWaveDamage(wave, entity, distSq, dx, dy);
+            } else {
+                // Not hit yet. Check if it's out of max range entirely (optimization)
+                const maxReach = wave.maxRadius + entity.size / 2;
+                if (distSq > maxReach * maxReach) {
+                    wave.processed.add(entity); // Will never be hit
+                }
             }
         }
-
-        // Update processed count
-        wave.processedCount += entitiesToProcessNow;
     }
 
     /**
@@ -2133,25 +2141,26 @@ class StarSystem {
 
         const maxRadiusAdj = wave.maxRadius + entity.size / 2;
         const dist = Math.sqrt(distSq);
-        const distRatio = dist / maxRadiusAdj;
+        const distRatio = Math.min(1.0, Math.max(0, dist / maxRadiusAdj));
 
-        // Gradual falloff curve for better damage distribution
-        const falloff = Math.pow(1 - distRatio, 0.5);
+        // Use Linear falloff for a more gradual, predictable drop-off
+        const falloff = 1.0 - distRatio;
 
-        // Ensure meaningful minimum damage (at least 30% of max damage)
-        const minDamage = Math.max(40, Math.floor(wave.damage * 0.3));
+        // Ensure meaningful minimum damage at the edge
+        const minDamage = Math.max(10, Math.floor(wave.damage * 0.1));
         const dmg = Math.max(minDamage, Math.floor(wave.damage * falloff));
 
         // Apply damage and mark as processed
         entity.takeDamage(dmg, wave.owner, this);
-        wave.processed[entity.id || entity] = true;
+        wave.processed.add(entity);
 
         // Apply knockback force without allocating vectors
         if (entity.vel) {
             const invLen = dist > 0 ? 1 / dist : 0;
             const nx = dx * invLen;
             const ny = dy * invLen;
-            const forceMagnitude = 15 - 10 * distRatio;
+            // Knockback scales with proximity too
+            const forceMagnitude = 25 * falloff;
             entity.vel.x += nx * forceMagnitude;
             entity.vel.y += ny * forceMagnitude;
         }
