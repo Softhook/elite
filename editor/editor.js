@@ -28,6 +28,7 @@ let addHexButton;
 let addStarButton;
 let addSkullButton;
 let undoButton;
+let combineShapesButton;
 let compareShipsButton;
 let shipComparer = null; // Instance of the comparer class
 let compareWeaponsButton;
@@ -64,8 +65,8 @@ let grabRadius = 10; // Screen pixels for clicking handle
 let edgeClickMinDist = 15; // Screen pixels for clicking edge in add mode
 const straightenThreshold = 0.2; // Tolerance for symmetry check (relative coords)
 
-let selectedShapeIndex = -1;
-let selectedVertexIndices = []; // <-- Array for multi-select vertex indices
+let selectedShapeIndices = []; // Array of selected shape layer indices (multi-select)
+let selectedVertexIndices = []; // Array for multi-select vertex indices within primary shape
 let draggingVertex = false; // Now means dragging selected vertices
 let addingVertexMode = false;
 let draggingShape = false; // Flag for shape dragging
@@ -125,6 +126,7 @@ function setup() {
     rotatePlus90Button = select('#rotatePlus90Button');
     rotateMinus90Button = select('#rotateMinus90Button');
     undoButton = select('#undoButton');
+    combineShapesButton = select('#combineShapesButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
     compareWeaponsButton = select('#compareWeaponsButton');
 
@@ -153,6 +155,7 @@ function setup() {
     if (rotatePlus90Button) rotatePlus90Button.mousePressed(() => rotateSelectedByDegrees(90)); else console.error("Rotate +90 button not found");
     if (rotateMinus90Button) rotateMinus90Button.mousePressed(() => rotateSelectedByDegrees(-90)); else console.error("Rotate -90 button not found");
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
+    if (combineShapesButton) combineShapesButton.mousePressed(combineSelectedShapes); else console.error("Combine Shapes button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
     if (compareWeaponsButton) compareWeaponsButton.mousePressed(toggleWeaponComparer); else console.error("Compare Weapons button not found");
     if (descriptionDiv === null) { console.error("Description Div (#shipDescriptionArea) not found!"); }
@@ -286,7 +289,7 @@ function undoLastChange() {
         shapes = restoredShapes;
 
         // Reset selections and interaction modes
-        selectedShapeIndex = -1;
+        selectedShapeIndices = [];
         selectedVertexIndices = [];
         addingVertexMode = false;
         draggingVertex = false;
@@ -359,8 +362,8 @@ function draw() {
                 let shape = shapes[i];
                 if (shape && shape.vertexData && shape.vertexData.length > 1) {
                     fill(shape.fillColor[0], shape.fillColor[1], shape.fillColor[2]);
-                    // Highlight selected shape layer with stroke, otherwise no stroke
-                    if (i === selectedShapeIndex) {
+                    // Highlight selected shape layers with stroke, otherwise no stroke
+                    if (selectedShapeIndices.includes(i)) {
                         strokeWeight(3); stroke(0, 150, 255, 200);
                     } else {
                         noStroke();
@@ -393,9 +396,10 @@ function draw() {
             }
         }
 
-        // Draw Vertex Handles for the selected shape (if editable)
-        if (selectedShapeIndex !== -1 && selectedShapeIndex < shapes.length && !isThargoidSelected()) {
-            let selectedShape = shapes[selectedShapeIndex];
+        // Draw Vertex Handles for the primary selected shape (first in selectedShapeIndices)
+        const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+        if (primaryShapeIndex !== -1 && primaryShapeIndex < shapes.length && !isThargoidSelected()) {
+            let selectedShape = shapes[primaryShapeIndex];
             if (selectedShape && selectedShape.vertexData && drawing_r > 0) {
                 for (let i = 0; i < selectedShape.vertexData.length; i++) {
                     let v = selectedShape.vertexData[i];
@@ -433,7 +437,7 @@ function drawGrid(ppu, spacing) {
 // --- Event Handlers ---
 function handleShipSelection() {
     // Reset state variables
-    currentShipKey = shipSelector.value(); shapes = []; selectedShapeIndex = -1; selectedVertexIndices = [];
+    currentShipKey = shipSelector.value(); shapes = []; selectedShapeIndices = []; selectedVertexIndices = [];
     addingVertexMode = false; draggingShape = false; draggingVertex = false;
     dragConstrainedAxis = null; dragOccurred = false;
 
@@ -459,7 +463,7 @@ function handleShipSelection() {
                         fillColor: [...(layer.fillColor || [180, 180, 180])]
                     });
                 });
-                selectedShapeIndex = 0; // Select the first layer
+                selectedShapeIndices = [0]; // Select the first layer
             } catch (e) {
                 console.error("ERROR processing vertexLayers for", currentShipKey, e);
             }
@@ -471,10 +475,10 @@ function handleShipSelection() {
                     vertexData: JSON.parse(JSON.stringify(currentShipDef.vertexData)),
                     fillColor: [...(currentShipDef.fillColor || [180, 180, 180])]
                 });
-                selectedShapeIndex = 0; // Select the first layer
+                selectedShapeIndices = [0]; // Select the first layer
             } catch (e) {
                 console.error("ERROR processing vertexData for", currentShipKey, e);
-                selectedShapeIndex = -1; currentShipDef = null; shapes = [];
+                selectedShapeIndices = []; currentShipDef = null; shapes = [];
                 descriptionText = "Error loading ship data.";
             }
         }
@@ -543,10 +547,13 @@ function mousePressed() {
     draggingVertex = false; draggingShape = false;
     dragVertexInitialPositions = []; dragConstrainedAxis = null;
 
+    // Get primary selected shape (first in array)
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+
     // --- 1. Handle Add Vertex Mode ---
     if (addingVertexMode && isEditable() && interaction_r > 0) {
-        if (selectedShapeIndex !== -1 && shapes[selectedShapeIndex]) {
-            let shape = shapes[selectedShapeIndex];
+        if (primaryShapeIndex !== -1 && shapes[primaryShapeIndex]) {
+            let shape = shapes[primaryShapeIndex];
             if (!shape || !shape.vertexData) { console.error("Add Vertex Failed: Invalid shape"); return; }
             let closestEdgeInfo = findClosestEdgeRelative(shape, mx_shape_rel, my_shape_rel);
             let screenEdgeDistSq = closestEdgeInfo ? distSqToSegment(mx_rel, my_rel,
@@ -567,10 +574,10 @@ function mousePressed() {
         updateUIControls(); return; // Stop processing
     }
 
-    // --- 2. Check for Vertex Handle Click ---
+    // --- 2. Check for Vertex Handle Click (only on primary selected shape) ---
     let clickedVertexHandleIndex = -1;
-    if (isEditable() && selectedShapeIndex !== -1 && shapes[selectedShapeIndex]?.vertexData && interaction_r > 0) {
-        let selectedShape = shapes[selectedShapeIndex];
+    if (isEditable() && primaryShapeIndex !== -1 && shapes[primaryShapeIndex]?.vertexData && interaction_r > 0) {
+        let selectedShape = shapes[primaryShapeIndex];
         for (let i = 0; i < selectedShape.vertexData.length; i++) {
             let v = selectedShape.vertexData[i];
             if (typeof v?.x === 'number' && typeof v?.y === 'number') {
@@ -587,7 +594,7 @@ function mousePressed() {
         let indexInSelection = selectedVertexIndices.indexOf(clickedVertexHandleIndex);
         let currentlySelected = indexInSelection !== -1;
 
-        if (keyIsDown(SHIFT)) { // Toggle selection (No state change needing undo)
+        if (keyIsDown(SHIFT)) { // Toggle vertex selection (No state change needing undo)
             if (currentlySelected) { selectedVertexIndices.splice(indexInSelection, 1); }
             else { selectedVertexIndices.push(clickedVertexHandleIndex); }
         } else { // Prepare for drag
@@ -596,7 +603,7 @@ function mousePressed() {
             draggingVertex = true; // Set flag AFTER saving
             dragVertexStartX = mx_rel; dragVertexStartY = my_rel;
             dragVertexInitialPositions = [];
-            let shape = shapes[selectedShapeIndex];
+            let shape = shapes[primaryShapeIndex];
             if (shape?.vertexData) {
                 selectedVertexIndices.forEach(idx => {
                     if (shape.vertexData[idx]) { dragVertexInitialPositions.push({ index: idx, x: shape.vertexData[idx].x, y: shape.vertexData[idx].y }); }
@@ -609,42 +616,62 @@ function mousePressed() {
     draggingVertex = false; // Ensure flag is false if no handle click
 
     // --- 3. Check for Shape Click (Selection / Drag Initiation) ---
-    let clickedShapeIndex = -1; let clickedInsideSelectedShape = false;
+    let clickedShapeIndex = -1;
     // Iterate from END to START to check top visual layer first
     for (let i = shapes.length - 1; i >= 0; i--) { // Check top layer first (highest index)
         let currentShape = shapes[i];
         if (currentShape?.vertexData?.length >= 3 && isPointInPolygon(mx_shape_rel, my_shape_rel, currentShape.vertexData)) {
             clickedShapeIndex = i;
-            if (i === selectedShapeIndex) clickedInsideSelectedShape = true;
             break; // Found topmost hit
         }
     }
 
     // --- Action based on Shape Click ---
     if (clickedShapeIndex !== -1) { // Clicked inside *some* shape
-        if (clickedInsideSelectedShape && isEditable()) { // Clicked selected shape: Start drag
+        const isClickedShapeSelected = selectedShapeIndices.includes(clickedShapeIndex);
+
+        if (keyIsDown(SHIFT) && isEditable()) {
+            // Shift+Click: Toggle shape in selection
+            if (isClickedShapeSelected) {
+                // Remove from selection
+                selectedShapeIndices = selectedShapeIndices.filter(idx => idx !== clickedShapeIndex);
+            } else {
+                // Add to selection
+                selectedShapeIndices.push(clickedShapeIndex);
+            }
+            selectedVertexIndices = []; // Clear vertex selection when changing shape selection
+            updateColorPickersFromSelection();
+        } else if (isClickedShapeSelected && isEditable()) {
+            // Regular click on already selected shape: Start drag of ALL selected shapes
             saveStateForUndo(); // SAVE STATE BEFORE starting shape drag
             draggingShape = true; // Set flag AFTER saving
             dragShapeStartX = mouseX; dragShapeStartY = mouseY;
 
-            // ADDING THIS: Save initial positions of ALL vertices in the shape
-            let shape = shapes[selectedShapeIndex];
+            // Save initial positions of ALL vertices in ALL selected shapes
             dragVertexInitialPositions = [];
-            shape.vertexData.forEach((vertex, idx) => {
-                if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
-                    dragVertexInitialPositions.push({ index: idx, x: vertex.x, y: vertex.y });
+            selectedShapeIndices.forEach(shapeIdx => {
+                let shape = shapes[shapeIdx];
+                if (shape?.vertexData) {
+                    shape.vertexData.forEach((vertex, vertIdx) => {
+                        if (typeof vertex?.x === 'number' && typeof vertex?.y === 'number') {
+                            dragVertexInitialPositions.push({ shapeIndex: shapeIdx, index: vertIdx, x: vertex.x, y: vertex.y });
+                        }
+                    });
                 }
             });
 
-            selectedVertexIndices = []; // Deselect vertices
+            selectedVertexIndices = []; // Deselect vertices when dragging shapes
+        } else if (!isClickedShapeSelected && isEditable()) {
+            // Clicked different (unselected) shape: Select only that shape
+            selectedShapeIndices = [clickedShapeIndex];
+            selectedVertexIndices = [];
+            draggingShape = false;
+            updateColorPickersFromSelection();
         }
-        else if (selectedShapeIndex !== clickedShapeIndex && isEditable()) { // Clicked different shape: Select it
-            selectedShapeIndex = clickedShapeIndex; selectedVertexIndices = [];
-            draggingShape = false; updateColorPickersFromSelection();
-        }
-    } else { // Clicked outside any shape: Deselect (No undo needed)
-        if (selectedShapeIndex !== -1) {
-            selectedShapeIndex = -1; selectedVertexIndices = [];
+    } else { // Clicked outside any shape: Deselect all (No undo needed)
+        if (selectedShapeIndices.length > 0) {
+            selectedShapeIndices = [];
+            selectedVertexIndices = [];
             updateColorPickersFromSelection();
         }
         draggingShape = false;
@@ -670,16 +697,14 @@ function mouseDragged() {
     else if (shapes.length > 0 && currentShipKey === '--- New Blank ---') { actualDrawSize_s = baseDisplaySize * (50 / maxDefinedShipSize); }
     let interaction_r = actualDrawSize_s > 0 ? actualDrawSize_s / 2 : baseDisplaySize / (maxDefinedShipSize * 2);
 
-    // --- Handle Multi-Vertex Dragging ---
-    if (draggingVertex && selectedShapeIndex !== -1 && shapes[selectedShapeIndex]?.vertexData && isEditable()) {
-        let shape = shapes[selectedShapeIndex];
+    // Get primary selected shape
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+
+    // --- Handle Multi-Vertex Dragging (on primary shape only) ---
+    if (draggingVertex && primaryShapeIndex !== -1 && shapes[primaryShapeIndex]?.vertexData && isEditable()) {
+        let shape = shapes[primaryShapeIndex];
         let currentMxRel = mouseX - width / 2; let currentMyRel = mouseY - height / 2;
         let deltaScreenX = currentMxRel - dragVertexStartX; let deltaScreenY = currentMyRel - dragVertexStartY;
-        // Apply Axis Constraint Logic (Shift Key)
-        if (keyIsDown(SHIFT)) {
-            if (dragConstrainedAxis === null && (abs(deltaScreenX) > 5 || abs(deltaScreenY) > 5)) { dragConstrainedAxis = abs(deltaScreenX) > abs(deltaScreenY) ? 'x' : 'y'; }
-            if (dragConstrainedAxis === 'x') { deltaScreenY = 0; } else if (dragConstrainedAxis === 'y') { deltaScreenX = 0; }
-        } else { dragConstrainedAxis = null; }
         // Convert screen delta to relative delta and apply
         let deltaRelX = deltaScreenX / interaction_r; let deltaRelY = deltaScreenY / interaction_r;
         dragVertexInitialPositions.forEach(initialPos => {
@@ -689,29 +714,17 @@ function mouseDragged() {
             }
         });
     }
-    // --- Handle Shape Dragging ---
-    else if (draggingShape && selectedShapeIndex !== -1 && shapes[selectedShapeIndex]?.vertexData && isEditable()) {
-        let shape = shapes[selectedShapeIndex];
+    // --- Handle Multi-Shape Dragging ---
+    else if (draggingShape && selectedShapeIndices.length > 0 && isEditable()) {
         let totalDx = mouseX - dragShapeStartX;
         let totalDy = mouseY - dragShapeStartY;
 
-        // Apply Axis Constraint Logic (Shift Key)
-        if (keyIsDown(SHIFT)) {
-            if (dragConstrainedAxis === null && distSq(mouseX, mouseY, dragShapeStartX, dragShapeStartY) > 25) {
-                dragConstrainedAxis = abs(totalDx) > abs(totalDy) ? 'x' : 'y';
-            }
-            if (dragConstrainedAxis === 'x') { totalDy = 0; }
-            else if (dragConstrainedAxis === 'y') { totalDx = 0; }
-        } else {
-            dragConstrainedAxis = null;
-        }
-
         // Calculate the current drawing radius
-        let actualDrawSize_s = currentShipDef ?
+        let actualDrawSize_s_local = currentShipDef ?
             (currentShipDef.size || 1) * pixelsPerUnit :
             baseDisplaySize * (50 / maxDefinedShipSize);
-        let drawing_r = actualDrawSize_s > 0 ?
-            actualDrawSize_s / 2 :
+        let drawing_r = actualDrawSize_s_local > 0 ?
+            actualDrawSize_s_local / 2 :
             baseDisplaySize / (maxDefinedShipSize * 2);
 
         // Convert screen delta to relative delta
@@ -719,8 +732,11 @@ function mouseDragged() {
         let deltaRelY = totalDy / drawing_r;
 
         // Apply the delta to all vertices from their saved initial positions
+        // Each position has shapeIndex and vertexIndex stored
         dragVertexInitialPositions.forEach(initialPos => {
-            if (shape.vertexData[initialPos.index]) {
+            const shapeIdx = initialPos.shapeIndex !== undefined ? initialPos.shapeIndex : primaryShapeIndex;
+            const shape = shapes[shapeIdx];
+            if (shape?.vertexData?.[initialPos.index]) {
                 shape.vertexData[initialPos.index].x = initialPos.x + deltaRelX;
                 shape.vertexData[initialPos.index].y = initialPos.y + deltaRelY;
             }
@@ -769,13 +785,13 @@ function keyPressed() {
     }
 
     // Toggle Add Vertex Mode: V
-    if (key === 'v' && selectedShapeIndex !== -1 && isEditable()) {
+    if (key === 'v' && selectedShapeIndices.length > 0 && isEditable()) {
         toggleAddVertexMode();
         return false;
     }
 
     // Straighten Symmetry: S
-    if (key === 's' && selectedShapeIndex !== -1 && isEditable()) {
+    if (key === 's' && selectedShapeIndices.length > 0 && isEditable()) {
         handleStraightenClick();
         return false;
     }
@@ -787,9 +803,10 @@ function keyPressed() {
     }
 
     // Delete Selected Vertices (DELETE or BACKSPACE without Shift)
-    if ((keyCode === DELETE || keyCode === BACKSPACE) && !keyIsDown(SHIFT) && selectedShapeIndex !== -1 && selectedVertexIndices.length > 0 && isEditable()) {
-        if (shapes[selectedShapeIndex]?.vertexData) {
-            let shape = shapes[selectedShapeIndex];
+    const primaryShapeIdx = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if ((keyCode === DELETE || keyCode === BACKSPACE) && !keyIsDown(SHIFT) && primaryShapeIdx !== -1 && selectedVertexIndices.length > 0 && isEditable()) {
+        if (shapes[primaryShapeIdx]?.vertexData) {
+            let shape = shapes[primaryShapeIdx];
             let remainingVertices = shape.vertexData.length - selectedVertexIndices.length;
             if (remainingVertices >= 3) { // Check if deletion is valid
                 saveStateForUndo(); // Save state BEFORE deleting vertices
@@ -798,15 +815,19 @@ function keyPressed() {
             } else { console.warn(`Cannot delete vertices - must leave at least 3.`); }
         }
     }
-    // Delete Selected Shape Layer (SHIFT + DELETE or BACKSPACE)
-    else if ((keyCode === DELETE || keyCode === BACKSPACE) && keyIsDown(SHIFT) && selectedShapeIndex !== -1 && isEditable()) {
-        if (shapes.length > selectedShapeIndex && selectedShapeIndex >= 0) {
-            saveStateForUndo(); // Save state BEFORE deleting shape layer
-            shapes.splice(selectedShapeIndex, 1); // Remove the shape layer
-            selectedShapeIndex = -1; selectedVertexIndices = []; // Reset selection
-            draggingVertex = false; draggingShape = false;
-            updateUIControls(); updateColorPickersFromSelection(); // Update UI
-        }
+    // Delete Selected Shape Layers (SHIFT + DELETE or BACKSPACE)
+    else if ((keyCode === DELETE || keyCode === BACKSPACE) && keyIsDown(SHIFT) && selectedShapeIndices.length > 0 && isEditable()) {
+        saveStateForUndo(); // Save state BEFORE deleting shape layers
+        // Remove selected shapes from highest index to lowest to preserve indices
+        const sortedIndices = [...selectedShapeIndices].sort((a, b) => b - a);
+        sortedIndices.forEach(idx => {
+            if (idx >= 0 && idx < shapes.length) {
+                shapes.splice(idx, 1);
+            }
+        });
+        selectedShapeIndices = []; selectedVertexIndices = []; // Reset selection
+        draggingVertex = false; draggingShape = false;
+        updateUIControls(); updateColorPickersFromSelection(); // Update UI
     }
     // Add Ctrl+Z / Cmd+Z for Undo
     else if (key === 'z' && (keyIsDown(CONTROL) || keyCode === 91 || keyCode === 93)) {
@@ -826,14 +847,16 @@ function keyReleased() {
 // --- UI Update Functions ---
 function updateUIControls() {
     let editable = isEditable();
-    let shapeSelected = selectedShapeIndex !== -1 && editable && shapes[selectedShapeIndex];
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    let shapeSelected = primaryShapeIndex !== -1 && editable && shapes[primaryShapeIndex];
     let hasShapes = shapes.length > 0 && editable; // Check if there are any editable shapes
+    let multipleSelected = selectedShapeIndices.length >= 2; // For combine button
 
     // Enable/disable buttons based on state
     if (addShapeButton?.elt) addShapeButton.elt.disabled = !editable && currentShipKey !== '--- New Blank ---';
     if (exportButton?.elt) exportButton.elt.disabled = shapes.length === 0 && !isThargoidSelected();
     if (straightenButton?.elt) straightenButton.elt.disabled = !shapeSelected;
-    if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes; // <-- Update this button's state
+    if (centerDesignButton?.elt) centerDesignButton.elt.disabled = !hasShapes;
     if (mirrorVButton?.elt) mirrorVButton.elt.disabled = !shapeSelected;
     if (mirrorHButton?.elt) mirrorHButton.elt.disabled = !shapeSelected;
     if (rotatePlus90Button?.elt) rotatePlus90Button.elt.disabled = !shapeSelected;
@@ -843,6 +866,7 @@ function updateUIControls() {
     if (addStarButton?.elt) addStarButton.elt.disabled = !editable;
     if (addSkullButton?.elt) addSkullButton.elt.disabled = !editable;
     if (undoButton?.elt) undoButton.elt.disabled = historyStack.length === 0;
+    if (combineShapesButton?.elt) combineShapesButton.elt.disabled = !multipleSelected || !editable;
 
     // Disable editing tools if no editable shape is selected
     const shouldBeDisabled = !shapeSelected;
@@ -859,8 +883,9 @@ function updateUIControls() {
 }
 
 function updateColorPickersFromSelection() {
-    if (selectedShapeIndex !== -1 && selectedShapeIndex < shapes.length && shapes[selectedShapeIndex]) {
-        let shape = shapes[selectedShapeIndex];
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex !== -1 && primaryShapeIndex < shapes.length && shapes[primaryShapeIndex]) {
+        let shape = shapes[primaryShapeIndex];
         // Validate shape data before updating pickers
         if (shape && Array.isArray(shape.fillColor) && shape.fillColor.length === 3 && !shape.fillColor.some(isNaN)) {
             if (fillColorPicker) fillColorPicker.value(rgbToHex(shape.fillColor));
@@ -876,11 +901,385 @@ function updateColorPickersFromSelection() {
 }
 
 function updateSelectedShapeFill() {
-    if (selectedShapeIndex !== -1 && shapes[selectedShapeIndex] && isEditable()) {
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex !== -1 && shapes[primaryShapeIndex] && isEditable()) {
         saveStateForUndo(); // Save state BEFORE change
         let col = color(fillColorPicker.value());
-        shapes[selectedShapeIndex].fillColor = [red(col), green(col), blue(col)];
+        // Apply fill color to ALL selected shapes
+        selectedShapeIndices.forEach(idx => {
+            if (shapes[idx]) {
+                shapes[idx].fillColor = [red(col), green(col), blue(col)];
+            }
+        });
     }
+}
+/**
+ * Computes the convex hull of a set of points using Graham scan algorithm.
+ * @param {Array<{x:number, y:number}>} points - Array of points
+ * @returns {Array<{x:number, y:number}>} - Points forming the convex hull in counter-clockwise order
+ */
+function computeConvexHull(points) {
+    if (points.length < 3) return points.slice();
+
+    // Find the point with lowest y (and leftmost if tied)
+    let start = 0;
+    for (let i = 1; i < points.length; i++) {
+        if (points[i].y < points[start].y ||
+            (points[i].y === points[start].y && points[i].x < points[start].x)) {
+            start = i;
+        }
+    }
+
+    const pivot = points[start];
+
+    // Sort points by polar angle with respect to pivot
+    const sorted = points.slice().sort((a, b) => {
+        if (a === pivot) return -1;
+        if (b === pivot) return 1;
+
+        const angleA = Math.atan2(a.y - pivot.y, a.x - pivot.x);
+        const angleB = Math.atan2(b.y - pivot.y, b.x - pivot.x);
+
+        if (Math.abs(angleA - angleB) < 1e-10) {
+            // Same angle, sort by distance (closer first)
+            const distA = (a.x - pivot.x) ** 2 + (a.y - pivot.y) ** 2;
+            const distB = (b.x - pivot.x) ** 2 + (b.y - pivot.y) ** 2;
+            return distA - distB;
+        }
+        return angleA - angleB;
+    });
+
+    // Cross product to determine turn direction
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+    const hull = [];
+    for (const p of sorted) {
+        // Remove points that make clockwise turns
+        while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], p) <= 0) {
+            hull.pop();
+        }
+        hull.push(p);
+    }
+
+    return hull;
+}
+
+/**
+ * Checks if two line segments intersect and returns the intersection point.
+ * @param {number} x1, y1, x2, y2 - First segment endpoints
+ * @param {number} x3, y3, x4, y4 - Second segment endpoints
+ * @returns {{x: number, y: number}|null} - Intersection point or null
+ */
+function getLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (Math.abs(denom) < 1e-10) return null; // Parallel or coincident
+
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+    // Check if intersection is within both segments (exclusive of endpoints to avoid duplicates)
+    if (t > 0.001 && t < 0.999 && u > 0.001 && u < 0.999) {
+        return {
+            x: x1 + t * (x2 - x1),
+            y: y1 + t * (y2 - y1)
+        };
+    }
+    return null;
+}
+
+/**
+ * Computes polygon union by tracing the outer boundary.
+ * This creates a clean combined shape without internal edges while preserving concave details.
+ * @param {Array<Array<{x:number, y:number}>>} polygons - Array of polygon vertex arrays
+ * @returns {Array<{x:number, y:number}>} - Combined outer boundary vertices
+ */
+function computePolygonUnion(polygons) {
+    // Collect all points from all polygons
+    const allPoints = [];
+    for (const poly of polygons) {
+        if (poly && poly.length >= 3) {
+            for (const p of poly) {
+                allPoints.push({ x: p.x, y: p.y, polyIdx: polygons.indexOf(poly) });
+            }
+        }
+    }
+
+    if (allPoints.length < 3) return allPoints.map(p => ({ x: p.x, y: p.y }));
+
+    // Find all intersection points between polygon edges and insert them
+    const edgesWithIntersections = [];
+    
+    // Build edge list with intersection points inserted
+    for (let i = 0; i < polygons.length; i++) {
+        const poly = polygons[i];
+        if (!poly || poly.length < 3) continue;
+
+        for (let e = 0; e < poly.length; e++) {
+            const p1 = poly[e];
+            const p2 = poly[(e + 1) % poly.length];
+            
+            // Collect all intersections on this edge
+            const edgeIntersections = [];
+            
+            for (let j = 0; j < polygons.length; j++) {
+                if (i === j) continue;
+                const otherPoly = polygons[j];
+                if (!otherPoly || otherPoly.length < 3) continue;
+
+                for (let f = 0; f < otherPoly.length; f++) {
+                    const q1 = otherPoly[f];
+                    const q2 = otherPoly[(f + 1) % otherPoly.length];
+
+                    const intersection = getLineIntersection(
+                        p1.x, p1.y, p2.x, p2.y,
+                        q1.x, q1.y, q2.x, q2.y
+                    );
+
+                    if (intersection) {
+                        // Calculate t parameter along edge
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const t = Math.abs(dx) > Math.abs(dy) 
+                            ? (intersection.x - p1.x) / dx 
+                            : (intersection.y - p1.y) / dy;
+                        edgeIntersections.push({ ...intersection, t });
+                    }
+                }
+            }
+            
+            // Sort intersections by t parameter
+            edgeIntersections.sort((a, b) => a.t - b.t);
+            
+            // Build segments along this edge
+            let prev = { x: p1.x, y: p1.y };
+            for (const inter of edgeIntersections) {
+                edgesWithIntersections.push({ 
+                    from: prev, 
+                    to: { x: inter.x, y: inter.y },
+                    polyIdx: i 
+                });
+                prev = { x: inter.x, y: inter.y };
+            }
+            edgesWithIntersections.push({ 
+                from: prev, 
+                to: { x: p2.x, y: p2.y },
+                polyIdx: i 
+            });
+        }
+    }
+
+    // Filter segments: keep only those whose midpoint is not strictly inside another polygon
+    const outerSegments = edgesWithIntersections.filter(seg => {
+        const midX = (seg.from.x + seg.to.x) / 2;
+        const midY = (seg.from.y + seg.to.y) / 2;
+        
+        for (let i = 0; i < polygons.length; i++) {
+            if (i === seg.polyIdx) continue; // Don't check against own polygon
+            const poly = polygons[i];
+            if (!poly || poly.length < 3) continue;
+            if (isPointStrictlyInside(midX, midY, poly)) {
+                return false; // Midpoint is inside another polygon, exclude
+            }
+        }
+        return true;
+    });
+
+    if (outerSegments.length < 3) {
+        // Fall back to collecting outer boundary points and ordering them
+        return orderBoundaryPoints(polygons, allPoints);
+    }
+
+    // Collect unique vertices from outer segments
+    const uniquePoints = [];
+    const seen = new Set();
+    
+    for (const seg of outerSegments) {
+        const key1 = `${seg.from.x.toFixed(6)},${seg.from.y.toFixed(6)}`;
+        const key2 = `${seg.to.x.toFixed(6)},${seg.to.y.toFixed(6)}`;
+        
+        if (!seen.has(key1)) {
+            seen.add(key1);
+            uniquePoints.push({ x: seg.from.x, y: seg.from.y });
+        }
+        if (!seen.has(key2)) {
+            seen.add(key2);
+            uniquePoints.push({ x: seg.to.x, y: seg.to.y });
+        }
+    }
+
+    if (uniquePoints.length < 3) {
+        return orderBoundaryPoints(polygons, allPoints);
+    }
+
+    // Order points by angle around centroid to form a clean perimeter
+    return orderPointsByAngle(uniquePoints);
+}
+
+/**
+ * Orders boundary points by angle around their centroid.
+ * @param {Array<{x:number, y:number}>} points - Points to order
+ * @returns {Array<{x:number, y:number}>} - Ordered points
+ */
+function orderPointsByAngle(points) {
+    if (points.length < 3) return points;
+    
+    // Calculate centroid
+    let cx = 0, cy = 0;
+    for (const p of points) {
+        cx += p.x;
+        cy += p.y;
+    }
+    cx /= points.length;
+    cy /= points.length;
+
+    // Sort by angle around centroid
+    const sorted = points.slice().sort((a, b) => {
+        const angleA = Math.atan2(a.y - cy, a.x - cx);
+        const angleB = Math.atan2(b.y - cy, b.x - cx);
+        return angleA - angleB;
+    });
+
+    return sorted;
+}
+
+/**
+ * Fallback: orders points that are on the outer boundary of the union.
+ * @param {Array<Array<{x:number, y:number}>>} polygons - Original polygons
+ * @param {Array<{x:number, y:number}>} allPoints - All collected points
+ * @returns {Array<{x:number, y:number}>} - Ordered boundary points
+ */
+function orderBoundaryPoints(polygons, allPoints) {
+    // Filter to only points not strictly inside any other polygon
+    const outerPoints = allPoints.filter(point => {
+        for (const poly of polygons) {
+            if (!poly || poly.length < 3) continue;
+            if (isPointStrictlyInside(point.x, point.y, poly)) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    if (outerPoints.length < 3) {
+        // Ultimate fallback: convex hull
+        return computeConvexHull(allPoints.map(p => ({ x: p.x, y: p.y })));
+    }
+
+    // Order by angle around centroid
+    return orderPointsByAngle(outerPoints.map(p => ({ x: p.x, y: p.y })));
+}
+
+/**
+ * Checks if a point is strictly inside a polygon (not on the edge).
+ * Uses ray casting with a margin to exclude edge points.
+ */
+function isPointStrictlyInside(px, py, polygon) {
+    if (!polygon || polygon.length < 3) return false;
+
+    // First check if point is very close to any edge - if so, not strictly inside
+    const edgeThreshold = 0.005;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const vi = polygon[i], vj = polygon[j];
+        if (typeof vi?.x !== 'number' || typeof vj?.x !== 'number') continue;
+
+        const distSq = distSqToSegmentLocal(px, py, vi.x, vi.y, vj.x, vj.y);
+        if (distSq < edgeThreshold * edgeThreshold) {
+            return false; // Point is on or very close to edge
+        }
+    }
+
+    // Standard ray casting
+    let isInside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const vi = polygon[i], vj = polygon[j];
+        if (typeof vi?.x !== 'number' || typeof vj?.x !== 'number') continue;
+
+        if (((vi.y > py) !== (vj.y > py)) &&
+            (px < (vj.x - vi.x) * (py - vi.y) / (vj.y - vi.y) + vi.x)) {
+            isInside = !isInside;
+        }
+    }
+    return isInside;
+}
+
+/**
+ * Calculates squared distance from point to line segment (local helper).
+ */
+function distSqToSegmentLocal(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return (px - x1) ** 2 + (py - y1) ** 2;
+
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = x1 + t * dx;
+    const projY = y1 + t * dy;
+    return (px - projX) ** 2 + (py - projY) ** 2;
+}
+
+/**
+ * Combines multiple selected shapes into a single layer.
+ * Computes the union (outer boundary) of all selected shapes,
+ * removing internal vertices and extraneous edges.
+ * The lowest-indexed selected shape's color is used.
+ */
+function combineSelectedShapes() {
+    if (selectedShapeIndices.length < 2 || !isEditable()) {
+        console.warn('Combine Shapes: Need at least 2 shapes selected.');
+        return;
+    }
+
+    saveStateForUndo(); // Save state BEFORE combining
+
+    // Sort indices to process in order (lowest first becomes the base)
+    const sortedIndices = [...selectedShapeIndices].sort((a, b) => a - b);
+    const baseIndex = sortedIndices[0];
+    const baseShape = shapes[baseIndex];
+
+    if (!baseShape || !Array.isArray(baseShape.vertexData)) {
+        console.error('Combine Shapes: Base shape is invalid.');
+        return;
+    }
+
+    // Collect all polygon vertex arrays
+    const polygons = [];
+    sortedIndices.forEach(idx => {
+        const shape = shapes[idx];
+        if (shape && Array.isArray(shape.vertexData) && shape.vertexData.length >= 3) {
+            polygons.push(shape.vertexData);
+        }
+    });
+
+    if (polygons.length < 2) {
+        console.error('Combine Shapes: Need at least 2 valid polygons.');
+        return;
+    }
+
+    // Compute the union of all polygons
+    const combinedVertices = computePolygonUnion(polygons);
+
+    if (combinedVertices.length < 3) {
+        console.error('Combine Shapes: Not enough vertices to create combined shape.');
+        return;
+    }
+
+    // Update base shape with combined vertices
+    baseShape.vertexData = combinedVertices;
+    baseShape.holes = []; // Clear any holes
+
+    // Remove the merged shapes from highest index to lowest to preserve indices
+    const shapesToRemove = sortedIndices.slice(1);
+    for (let i = shapesToRemove.length - 1; i >= 0; i--) {
+        shapes.splice(shapesToRemove[i], 1);
+    }
+
+    selectedShapeIndices = [baseIndex];
+    selectedVertexIndices = [];
+
+    console.log(`Combine Shapes: Merged ${sortedIndices.length} shapes into ${combinedVertices.length} vertices (clean union).`);
+    updateUIControls();
+    updateColorPickersFromSelection();
 }
 
 // --- Action Functions ---
@@ -892,7 +1291,8 @@ function addNewShape() {
         fillColor: [150, 150, 180]
     };
     shapes.push(defaultShape); // Add to top (now the end of the array)
-    selectedShapeIndex = shapes.length - 1; // Select newly added shape
+    selectedShapeIndices = [shapes.length - 1]; // Select newly added shape
+    selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') {
         currentShipKey = '--- New Blank ---'; currentShipDef = null;
     }
@@ -911,7 +1311,7 @@ function addCircleShape() {
     }
     const shape = { vertexData: verts, fillColor: [150, 150, 180] };
     shapes.push(shape);
-    selectedShapeIndex = shapes.length - 1;
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
@@ -929,7 +1329,7 @@ function addHexagonShape() {
     }
     const shape = { vertexData: verts, fillColor: [150, 150, 180] };
     shapes.push(shape);
-    selectedShapeIndex = shapes.length - 1;
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
@@ -950,7 +1350,7 @@ function addStarShape() {
     }
     const shape = { vertexData: verts, fillColor: [220, 200, 80] };
     shapes.push(shape);
-    selectedShapeIndex = shapes.length - 1;
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
@@ -975,14 +1375,15 @@ function addShieldShape() {
 
     // Add as a single solid polygon (no holes)
     shapes.push({ vertexData: outer, fillColor: [0, 0, 0] });
-    selectedShapeIndex = startIndex; // select the shield shape
+    selectedShapeIndices = [startIndex]; // select the shield shape
     selectedVertexIndices = [];
     if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
     updateUIControls(); updateColorPickersFromSelection();
 }
 
 function toggleAddVertexMode() {
-    if (selectedShapeIndex !== -1 && isEditable() && shapes[selectedShapeIndex]) {
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex !== -1 && isEditable() && shapes[primaryShapeIndex]) {
         addingVertexMode = !addingVertexMode;
         if (addingVertexMode) { // Reset interaction state when entering mode
             draggingVertex = false; selectedVertexIndices = []; draggingShape = false;
@@ -994,9 +1395,10 @@ function toggleAddVertexMode() {
 }
 
 function handleStraightenClick() {
-    if (selectedShapeIndex !== -1 && isEditable() && shapes[selectedShapeIndex]) {
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex !== -1 && isEditable() && shapes[primaryShapeIndex]) {
         saveStateForUndo(); // Save state BEFORE modifying vertices
-        straightenMirroredVertices(shapes[selectedShapeIndex], straightenThreshold);
+        straightenMirroredVertices(shapes[primaryShapeIndex], straightenThreshold);
     }
 }
 
@@ -1148,7 +1550,8 @@ function centerDesignByBoundingBox() {
 
 // --- Vertical and Horizontal Mirror Functions ---
 function handleVMirrorClick() {
-    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex === -1 || !isEditable() || !shapes[primaryShapeIndex]) {
         console.warn('V Mirror: No selectable shape selected or editor not editable.');
         return;
     }
@@ -1156,7 +1559,8 @@ function handleVMirrorClick() {
 }
 
 function handleHMirrorClick() {
-    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+    const primaryShapeIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
+    if (primaryShapeIndex === -1 || !isEditable() || !shapes[primaryShapeIndex]) {
         console.warn('H Mirror: No selectable shape selected or editor not editable.');
         return;
     }
@@ -1164,7 +1568,7 @@ function handleHMirrorClick() {
 }
 
 function mirrorSelectedAcrossVerticalLine() {
-    const srcIndex = selectedShapeIndex;
+    const srcIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
     const src = shapes[srcIndex];
     if (!src || !Array.isArray(src.vertexData) || src.vertexData.length < 3) {
         console.warn('V Mirror: Source shape invalid.');
@@ -1176,14 +1580,14 @@ function mirrorSelectedAcrossVerticalLine() {
     newShape.vertexData = newShape.vertexData.map(v => ({ x: (typeof v.x === 'number' ? -v.x : v.x), y: v.y }));
 
     shapes.push(newShape);
-    selectedShapeIndex = shapes.length - 1;
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
     updateUIControls(); updateColorPickersFromSelection();
-    console.log('V Mirror: Created mirrored layer from shape', srcIndex, '->', selectedShapeIndex);
+    console.log('V Mirror: Created mirrored layer from shape', srcIndex, '->', shapes.length - 1);
 }
 
 function mirrorSelectedAcrossHorizontalLine() {
-    const srcIndex = selectedShapeIndex;
+    const srcIndex = selectedShapeIndices.length > 0 ? selectedShapeIndices[0] : -1;
     const src = shapes[srcIndex];
     if (!src || !Array.isArray(src.vertexData) || src.vertexData.length < 3) {
         console.warn('H Mirror: Source shape invalid.');
@@ -1195,43 +1599,45 @@ function mirrorSelectedAcrossHorizontalLine() {
     newShape.vertexData = newShape.vertexData.map(v => ({ x: v.x, y: (typeof v.y === 'number' ? -v.y : v.y) }));
 
     shapes.push(newShape);
-    selectedShapeIndex = shapes.length - 1;
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
     updateUIControls(); updateColorPickersFromSelection();
-    console.log('H Mirror: Created mirrored layer from shape', srcIndex, '->', selectedShapeIndex);
+    console.log('H Mirror: Created mirrored layer from shape', srcIndex, '->', shapes.length - 1);
 }
 
 // --- Rotation Functions ---
 function rotateSelectedByDegrees(angleDeg) {
-    if (selectedShapeIndex === -1 || !isEditable() || !shapes[selectedShapeIndex]) {
+    if (selectedShapeIndices.length === 0 || !isEditable()) {
         console.warn('Rotate: No selectable shape selected or editor not editable.');
-        return;
-    }
-    const shape = shapes[selectedShapeIndex];
-    if (!shape || !Array.isArray(shape.vertexData) || shape.vertexData.length < 1) {
-        console.warn('Rotate: Source shape invalid.');
         return;
     }
     saveStateForUndo(); // Save before rotating
     const rad = angleDeg * Math.PI / 180;
     const cosA = Math.cos(rad), sinA = Math.sin(rad);
+
     try {
-        shape.vertexData = shape.vertexData.map(v => {
-            if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
-            const nx = v.x * cosA - v.y * sinA;
-            const ny = v.x * sinA + v.y * cosA;
-            return { x: nx, y: ny };
-        });
-        // Rotate holes if present
-        if (Array.isArray(shape.holes)) {
-            shape.holes = shape.holes.map(hole => hole.map(v => {
+        // Rotate ALL selected shapes
+        selectedShapeIndices.forEach(shapeIdx => {
+            const shape = shapes[shapeIdx];
+            if (!shape || !Array.isArray(shape.vertexData) || shape.vertexData.length < 1) return;
+
+            shape.vertexData = shape.vertexData.map(v => {
                 if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
                 const nx = v.x * cosA - v.y * sinA;
                 const ny = v.x * sinA + v.y * cosA;
                 return { x: nx, y: ny };
-            }));
-        }
-        console.log(`Rotate: Rotated shape ${selectedShapeIndex} by ${angleDeg}°.`);
+            });
+            // Rotate holes if present
+            if (Array.isArray(shape.holes)) {
+                shape.holes = shape.holes.map(hole => hole.map(v => {
+                    if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
+                    const nx = v.x * cosA - v.y * sinA;
+                    const ny = v.x * sinA + v.y * cosA;
+                    return { x: nx, y: ny };
+                }));
+            }
+        });
+        console.log(`Rotate: Rotated ${selectedShapeIndices.length} shape(s) by ${angleDeg}°.`);
         updateUIControls(); updateColorPickersFromSelection();
     } catch (e) {
         console.error('Rotate failed:', e);

@@ -979,7 +979,19 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 }],
-                fillColor: [70, 70, 70],
+                fillColor: [70, 70, 70]
+            },
+            {
+                vertexData: [{ x: -0.3192, y: 0.0000 }, { x: -0.4292, y: 0.1905 }, { x: -0.6492, y: 0.1905 }, { x: -0.7592, y: 0.0000 }, { x: -0.6492, y: -0.1905 }, { x: -0.4292, y: -0.1905 }],
+                fillColor: [170, 3, 3]
+            },
+            {
+                vertexData: [{ x: -0.6115, y: -0.6230 }, { x: -0.5095, y: -0.5024 }, { x: 0.2554, y: -0.7038 }],
+                fillColor: [113, 14, 39]
+            },
+            {
+                vertexData: [{ x: -0.6115, y: 0.6230 }, { x: -0.5095, y: 0.5024 }, { x: 0.2554, y: 0.7038 }],
+                fillColor: [113, 14, 39]
             }
         ],
         fillColor: [70, 70, 70],
@@ -1081,7 +1093,16 @@ const SHIP_DEFINITIONS = {
         baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
         armament: ["Pulse Laser", "Disruptor"],
         costCategory: "Medium-High", description: "Separatist ship with basic stealth capabilities, used for infiltration and sabotage.",
-        vertexData: [{ x: 1, y: 0 }, { x: -0.3, y: 0.4 }, { x: -0.8, y: 0.1 }, { x: -0.8, y: -0.1 }, { x: -0.3, y: -0.4 }],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.4000 }, { x: -0.8000, y: 0.1000 }, { x: -0.8000, y: -0.1000 }, { x: -0.3000, y: -0.4000 }],
+                fillColor: [30, 30, 30]
+            },
+            {
+                vertexData: [{ x: -0.1743, y: 0.0000 }, { x: -0.2843, y: 0.1905 }, { x: -0.5043, y: 0.1905 }, { x: -0.6143, y: 0.0000 }, { x: -0.5043, y: -0.1905 }, { x: -0.2843, y: -0.1905 }],
+                fillColor: [114, 3, 3]
+            }
+        ],
         fillColor: [30, 30, 30],
         typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
         aiRoles: ["PIRATE", "SEPARATIST"]
@@ -1092,7 +1113,20 @@ const SHIP_DEFINITIONS = {
         baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"],
         costCategory: "Medium", description: "A Separatist transport designed to get vital supplies through hostile territory.",
-        vertexData: [{ x: 0.9, y: 0.6 }, { x: 0.7, y: 0.8 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0.6 }, { x: -0.9, y: -0.6 }, { x: -0.7, y: -0.8 }, { x: 0.7, y: -0.8 }, { x: 0.9, y: -0.6 }],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.6000 }, { x: 0.7000, y: 0.8000 }, { x: -0.7000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.7000, y: -0.8000 }, { x: 0.7000, y: -0.8000 }, { x: 0.9000, y: -0.6000 }],
+                fillColor: [90, 70, 50]
+            },
+            {
+                vertexData: [{ x: -0.3708, y: 0.2585 }, { x: -0.4808, y: 0.4490 }, { x: -0.7008, y: 0.4490 }, { x: -0.8108, y: 0.2585 }, { x: -0.7008, y: 0.0679 }, { x: -0.4808, y: 0.0679 }],
+                fillColor: [133, 0, 57]
+            },
+            {
+                vertexData: [{ x: -0.3708, y: -0.2585 }, { x: -0.4808, y: -0.4490 }, { x: -0.7008, y: -0.4490 }, { x: -0.8108, y: -0.2585 }, { x: -0.7008, y: -0.0679 }, { x: -0.4808, y: -0.0679 }],
+                fillColor: [133, 0, 57]
+            }
+        ],
         fillColor: [90, 70, 50],
         typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
         aiRoles: ["HAULER"]
