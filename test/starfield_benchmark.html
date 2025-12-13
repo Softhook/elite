@@ -160,6 +160,9 @@
                 <option value="512" selected>512px (default)</option>
                 <option value="768">768px</option>
                 <option value="1024">1024px</option>
+                <option value="1536">1536px</option>
+                <option value="2048">2048px</option>
+                <option value="4096">4096px</option>
             </select>
             <label id="tile-size-label">Current: 512px</label>
         </div>
@@ -925,7 +928,7 @@
 
         // Focused tile size comparison - only tests Progressive mode (the current production method)
         async function runTileSizeComparison() {
-            const tileSizes = [128, 256, 384, 512, 768, 1024];
+            const tileSizes = [128, 256, 384, 512, 768, 1024, 1536, 2048, 4096];
             const resultsDiv = document.getElementById('benchmark-results');
             resultsDiv.innerHTML = '<p>Comparing tile sizes (Progressive mode)...</p>';
 
@@ -1000,7 +1003,7 @@
 
         async function runBenchmark() {
             const modes = ['progressive', 'buffered', 'legacy'];
-            const tileSizes = [128, 256, 384, 512, 768, 1024];
+            const tileSizes = [128, 256, 384, 512, 768, 1024, 1536, 2048, 4096];
             const resultsDiv = document.getElementById('benchmark-results');
             resultsDiv.innerHTML = '<p>Running full benchmark...</p>';
 

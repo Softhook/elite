@@ -23,7 +23,7 @@ const JUMP_ZONE_CONFIG = {
 
 // === Starfield Rendering Configuration ===
 const STARFIELD_CONFIG = {
-    TILE_SIZE: 512,
+    TILE_SIZE: 768,
     MAX_TILES_PER_FRAME: 2,
     MAX_CACHED_TILES: 64,
     DIRECTION_BOOST: 500,
