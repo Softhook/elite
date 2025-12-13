@@ -125,9 +125,21 @@ class UIMinimap {
 
         push();
 
-        // Draw background/border
+        // Draw background/border - use star field background color if available
         try {
-            fill(0, 0, 0, 180);
+            // Default starfield fallback (matches starfield.js fallback)
+            let bgCol = [10, 15, 40];
+            if (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.BACKGROUND_COLOR) {
+                const bg = STARFIELD_CONFIG.BACKGROUND_COLOR;
+                bgCol = [
+                    (typeof bg.r === 'number') ? bg.r : 0,
+                    (typeof bg.g === 'number') ? bg.g : 0,
+                    (typeof bg.b === 'number') ? bg.b : 0
+                ];
+            }
+
+            // Use semi-transparent fill to preserve minimap overlay look
+            fill(bgCol[0], bgCol[1], bgCol[2], 180);
             stroke(0, 200, 0, 200);
             strokeWeight(1);
             rect(this.x, this.y, this.size, this.size);
