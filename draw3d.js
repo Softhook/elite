@@ -586,9 +586,13 @@ const Draw3D = {
  * @param {string} mode - 'both', 'sides', or 'top'
  */
 function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, layerIndex = 0, mode = 'both') {
-    const shrinkPerLayer = 0.03;
-    const layerR = r * Math.max(0.85, 1 - layerIndex * shrinkPerLayer);
-    const depthScale = (layerIndex === 0) ? 1.0 : 0.35;
+    // Only base layer (index 0) uses shrink for wedge taper effect.
+    // Secondary layers (decals) use full radius to match their designed positions.
+    const layerR = (layerIndex === 0) ? r : r;
+
+    // Only the base layer (index 0) has physical depth/extrusion.
+    // Secondary layers (index > 0) are flat decorative decals with no elevation.
+    const depthScale = (layerIndex === 0) ? 1.0 : 0.0;
     const effDepth = depth * depthScale;
     const dvx = effDepth * Math.sin(angle);
     const dvy = effDepth * Math.cos(angle);
@@ -653,9 +657,13 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
  * Symmetric extruded polygon for alien ships (no wedge taper)
  */
 function drawExtrudedPolySymmetric(r, layerCache, depth, angle, localSunAngle, layerIndex = 0, mode = 'both') {
-    const shrinkPerLayer = 0.03;
-    const layerR = r * Math.max(0.85, 1 - layerIndex * shrinkPerLayer);
-    const depthScale = (layerIndex === 0) ? 1.0 : 0.35;
+    // Only base layer (index 0) uses shrink for stacking effect.
+    // Secondary layers (decals) use full radius to match their designed positions.
+    const layerR = (layerIndex === 0) ? r : r;
+
+    // Only the base layer (index 0) has physical depth/extrusion.
+    // Secondary layers (index > 0) are flat decorative decals with no elevation.
+    const depthScale = (layerIndex === 0) ? 1.0 : 0.0;
     const effDepth = depth * depthScale;
     const dvx = effDepth * Math.sin(angle);
     const dvy = effDepth * Math.cos(angle);
