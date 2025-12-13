@@ -29,6 +29,17 @@ function isPlayerInJumpZone(playerObj, systemObj) {
 }
 
 /**
+ * Helper to apply the centralized starfield background color.
+ * Uses STARFIELD_CONFIG if available, otherwise defaults to dark blue.
+ */
+function applyStarfieldBackground() {
+    const bg = (typeof STARFIELD_CONFIG !== 'undefined')
+        ? STARFIELD_CONFIG.BACKGROUND_COLOR
+        : { r: 10, g: 15, b: 40 };
+    background(bg.r, bg.g, bg.b);
+}
+
+/**
  * List of game states where the player is at a station or in station menus.
  * Used for transition logic and state validation.
  * @constant {string[]}
@@ -1117,7 +1128,7 @@ class GameStateManager {
      * @private
      */
     _drawStationBackground(player, currentSystem) {
-        background(0);
+        applyStarfieldBackground();
 
         if (currentSystem) {
             try {
@@ -1180,7 +1191,7 @@ class GameStateManager {
      * @private
      */
     _drawDockedSpaceObject(player, currentSystem) {
-        background(0);
+        applyStarfieldBackground();
 
         if (currentSystem) {
             try {
@@ -1227,7 +1238,7 @@ class GameStateManager {
                 console.error("Error drawing space object background:", e);
             }
         } else {
-            background(0);
+            applyStarfieldBackground();
         }
 
         if (player) {
@@ -1266,7 +1277,7 @@ class GameStateManager {
                 console.error("Error drawing space object background:", e);
             }
         } else {
-            background(0);
+            applyStarfieldBackground();
         }
 
         if (player) {
@@ -1305,7 +1316,7 @@ class GameStateManager {
                 console.error("Error drawing space object background:", e);
             }
         } else {
-            background(0);
+            applyStarfieldBackground();
         }
 
         if (player) {
@@ -1340,7 +1351,7 @@ class GameStateManager {
                 console.error("Error drawing space object background:", e);
             }
         } else {
-            background(0);
+            applyStarfieldBackground();
         }
 
         if (player) {
@@ -1512,7 +1523,7 @@ class GameStateManager {
                 console.error("ERROR in currentSystem.draw (Jumping):", e);
             }
         } else {
-            background(0);
+            applyStarfieldBackground();
         }
 
         // Draw jump charge UI (only if fade hasn't started)

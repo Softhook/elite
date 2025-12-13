@@ -29,7 +29,10 @@ const STARFIELD_CONFIG = {
     DIRECTION_BOOST: 500,
     PREDICTION_FRAMES: 30,
     CLEANUP_INTERVAL_MS: 5000,
-    WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined')
+    WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined'),
+    // Deep space dark blue background (not pure black for visual depth)
+    BACKGROUND_COLOR: { r: 10, g: 15, b: 40 },
+    BACKGROUND_CSS: '#0a0f28'
 };
 
 // === Spawn Configuration ===
@@ -158,7 +161,8 @@ if (STAR_SYSTEM_DEBUG) {
 let STARFIELD_TILE_WORKER = null;
 if (STARFIELD_CONFIG.WORKER_ENABLED) {
     try {
-        STARFIELD_TILE_WORKER = new Worker('starfield_worker.js');
+        // Added v2 to bust browser cache and ensure new background color is used
+        STARFIELD_TILE_WORKER = new Worker('starfield_worker.js?v=2');
         STARFIELD_TILE_WORKER.onmessage = function (e) {
             const data = e.data;
             if (!data) return;
@@ -3326,8 +3330,9 @@ class StarSystem {
      * Supports worker-based offscreen generation for optimal performance.
      */
     drawBackground() {
-        // Clear background with dark space color
-        fill(0, 0, 0);
+        // Clear background with dark space color (deep dark blue, not pure black)
+        const bg = STARFIELD_CONFIG.BACKGROUND_COLOR;
+        fill(bg.r, bg.g, bg.b);
         noStroke();
         rect(-width * 2, -height * 2, width * 4, height * 4);
 
@@ -3611,7 +3616,8 @@ class StarSystem {
 
         // Fallback: main-thread generation (existing logic)
         const buffer = createGraphics(tileSize, tileSize);
-        buffer.background(0);
+        const bg = STARFIELD_CONFIG.BACKGROUND_COLOR;
+        buffer.background(bg.r, bg.g, bg.b);
         buffer.noStroke();
 
         // Calculate world bounds for this tile

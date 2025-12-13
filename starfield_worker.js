@@ -1,18 +1,23 @@
 // Worker: generates a tile using OffscreenCanvas and returns an ImageBitmap
-self.onmessage = function(e) {
+// Deep space dark blue background color
+const STARFIELD_BG_COLOR = '#0a0f28';
+
+self.onmessage = function (e) {
     const data = e.data;
     if (!data || !data.cmd) return;
 
     // Generate a single tile
     if (data.cmd === 'generateTile') {
         const tx = data.tx, ty = data.ty, tileSize = data.tileSize, systemIndex = data.systemIndex;
+        // Accept optional background color, default to dark blue
+        const bgColor = data.backgroundColor || STARFIELD_BG_COLOR;
         try {
-                const off = new OffscreenCanvas(tileSize, tileSize);
-                const ctx = off.getContext('2d', { alpha: false });
-                ctx.imageSmoothingEnabled = true;
-            // background
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0,0,tileSize,tileSize);
+            const off = new OffscreenCanvas(tileSize, tileSize);
+            const ctx = off.getContext('2d', { alpha: false });
+            ctx.imageSmoothingEnabled = true;
+            // background - deep space dark blue
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, tileSize, tileSize);
 
             drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, {
                 gridSize: 45, maxStarsPerCell: 3,
@@ -50,10 +55,10 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
     const gridSize = config.gridSize;
     const systemSeed = (systemIndex * 1337) >>> 0;
     const colors = {
-        white: [255,255,255],
-        blue: [200,220,255],
-        yellow: [255,250,200],
-        red: [255,200,180]
+        white: [255, 255, 255],
+        blue: [200, 220, 255],
+        yellow: [255, 250, 200],
+        red: [255, 200, 180]
     };
 
     const worldLeft = tx * tileSize;
@@ -84,20 +89,20 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
         const key = s + '|' + r + ',' + g + ',' + b;
         if (spriteCache.has(key)) return spriteCache.get(key);
         const pad = 2;
-        const c = new OffscreenCanvas(s + pad*2, s + pad*2);
+        const c = new OffscreenCanvas(s + pad * 2, s + pad * 2);
         const cc = c.getContext('2d', { alpha: true });
-        const cx = (s + pad*2) / 2;
+        const cx = (s + pad * 2) / 2;
         const cy = cx;
         const radius = s / 2;
-        const grad = cc.createRadialGradient(cx, cy, Math.max(0, radius*0.1), cx, cy, radius);
+        const grad = cc.createRadialGradient(cx, cy, Math.max(0, radius * 0.1), cx, cy, radius);
         grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
         grad.addColorStop(0.6, `rgba(${r},${g},${b},0.6)`);
         grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
         cc.fillStyle = grad;
         cc.beginPath();
-        cc.arc(cx, cy, radius, 0, Math.PI*2);
+        cc.arc(cx, cy, radius, 0, Math.PI * 2);
         cc.fill();
-        spriteCache.set(key, { canvas: c, half: (s + pad*2)/2 });
+        spriteCache.set(key, { canvas: c, half: (s + pad * 2) / 2 });
         return spriteCache.get(key);
     }
 
@@ -129,7 +134,7 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
                 if (size <= 2) {
                     // fast pixel for tiny stars
                     ctx.fillStyle = `rgb(${r},${g},${b})`;
-                    ctx.fillRect((bufferX+0.5)|0, (bufferY+0.5)|0, Math.max(1, (size+0.5)|0), Math.max(1, (size+0.5)|0));
+                    ctx.fillRect((bufferX + 0.5) | 0, (bufferY + 0.5) | 0, Math.max(1, (size + 0.5) | 0), Math.max(1, (size + 0.5) | 0));
                 } else {
                     // draw pre-rendered soft sprite for medium/large stars
                     const sprite = makeSprite(size, r, g, b);

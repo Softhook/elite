@@ -229,7 +229,9 @@ function handleCriticalSetupError(error) {
 
 // --- p5.js Draw Function ---
 function draw() {
-    background(0);
+    // Use starfield background color for consistency (fallback if config not available)
+    const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
+    background(bg.r, bg.g, bg.b);
 
     if (!validateGameState()) {
         return;
