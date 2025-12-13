@@ -46,6 +46,30 @@
             color: #000;
         }
 
+        button.current-mode {
+            border: 2px solid #0ff;
+            position: relative;
+        }
+
+        button.current-mode::after {
+            content: '★';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #0ff;
+            color: #000;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            line-height: 16px;
+        }
+
+        .comparison-mode {
+            opacity: 0.7;
+            font-style: italic;
+        }
+
         select {
             background: #000;
             color: #0f0;
@@ -120,21 +144,27 @@
         <h3>Starfield Benchmark</h3>
         <div class="section-label">Rendering Mode:</div>
         <div>
-            <button id="btn-progressive" class="active" onclick="setMode('progressive')">Progressive</button>
-            <button id="btn-buffered" onclick="setMode('buffered')">Buffered</button>
-            <button id="btn-legacy" onclick="setMode('legacy')">Legacy</button>
+            <button id="btn-progressive" class="active current-mode" onclick="setMode('progressive')">Progressive
+                (CURRENT)</button>
+            <button id="btn-buffered" class="comparison-mode" onclick="setMode('buffered')"
+                title="For comparison only">Buffered</button>
+            <button id="btn-legacy" class="comparison-mode" onclick="setMode('legacy')"
+                title="For comparison only">Legacy</button>
         </div>
-        <div class="section-label">Tile Size:</div>
+        <div class="section-label">Tile Size (for Progressive mode):</div>
         <div>
             <select id="tile-size-select" onchange="setTileSize(parseInt(this.value))">
+                <option value="128">128px</option>
                 <option value="256">256px</option>
-                <option value="512" selected>512px</option>
+                <option value="384">384px</option>
+                <option value="512" selected>512px (default)</option>
                 <option value="768">768px</option>
                 <option value="1024">1024px</option>
             </select>
             <label id="tile-size-label">Current: 512px</label>
         </div>
         <div style="margin-top: 10px;">
+            <button onclick="runTileSizeComparison()" style="background:#003;">Compare Tile Sizes</button>
             <button onclick="runBenchmark()">Run Full Benchmark</button>
             <button onclick="resetBenchmark()">Reset</button>
         </div>
@@ -893,11 +923,86 @@
             setMode(currentMode);
         }
 
+        // Focused tile size comparison - only tests Progressive mode (the current production method)
+        async function runTileSizeComparison() {
+            const tileSizes = [128, 256, 384, 512, 768, 1024];
+            const resultsDiv = document.getElementById('benchmark-results');
+            resultsDiv.innerHTML = '<p>Comparing tile sizes (Progressive mode)...</p>';
+
+            const results = {};
+
+            for (const size of tileSizes) {
+                setMode('progressive');
+                setTileSize(size);
+                await sleep(200); // Allow tiles to clear
+
+                // Run automatic movement pattern - large circle
+                const testFrames = 240; // 4 seconds at 60fps
+                frameTimes = [];
+
+                for (let i = 0; i < testFrames; i++) {
+                    player.vel.x = 100 * Math.sin(i * 0.05);
+                    player.vel.y = 80 * Math.cos(i * 0.04);
+                    await nextFrame();
+                }
+
+                // Calculate results
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const maxFrameTime = Math.max(...frameTimes);
+                const minFrameTime = Math.min(...frameTimes);
+                const avgFps = 1000 / avgFrameTime;
+                const minFps = 1000 / maxFrameTime;
+                const jitter = maxFrameTime - minFrameTime;
+
+                results[size] = {
+                    avgFps: avgFps.toFixed(1),
+                    minFps: minFps.toFixed(1),
+                    avgFrameTime: avgFrameTime.toFixed(2),
+                    maxFrameTime: maxFrameTime.toFixed(2),
+                    jitter: jitter.toFixed(2)
+                };
+            }
+
+            // Display results - focused tile comparison table
+            let html = '<h4>Tile Size Comparison (Progressive)</h4>';
+            html += '<table style="width:100%; font-size: 11px;">';
+            html += '<tr><th>Tile Size</th><th>Avg FPS</th><th>Min FPS</th><th>Avg Frame</th><th>Jitter</th></tr>';
+
+            // Find best values for highlighting
+            const avgFpsValues = Object.values(results).map(r => parseFloat(r.avgFps));
+            const bestAvgFps = Math.max(...avgFpsValues);
+            const jitterValues = Object.values(results).map(r => parseFloat(r.jitter));
+            const bestJitter = Math.min(...jitterValues);
+
+            for (const [size, data] of Object.entries(results)) {
+                const isBestFps = parseFloat(data.avgFps) === bestAvgFps;
+                const isBestJitter = parseFloat(data.jitter) === bestJitter;
+                const fpsClass = parseFloat(data.avgFps) >= 55 ? 'good' : (parseFloat(data.avgFps) >= 30 ? 'ok' : 'bad');
+                const jitterClass = parseFloat(data.jitter) <= 10 ? 'good' : (parseFloat(data.jitter) <= 30 ? 'ok' : 'bad');
+                const defaultMark = size === '512' ? ' (default)' : '';
+
+                html += `<tr style="${isBestFps ? 'font-weight:bold;' : ''}">
+                    <td>${size}px${defaultMark}</td>
+                    <td class="${fpsClass}">${data.avgFps}${isBestFps ? ' ★' : ''}</td>
+                    <td>${data.minFps}</td>
+                    <td>${data.avgFrameTime}ms</td>
+                    <td class="${jitterClass}">${data.jitter}ms${isBestJitter ? ' ★' : ''}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            html += '<p style="font-size:10px;color:#888;">★ = best value</p>';
+
+            resultsDiv.innerHTML = html;
+
+            // Return to default tile size
+            setTileSize(512);
+        }
+
         async function runBenchmark() {
             const modes = ['progressive', 'buffered', 'legacy'];
-            const tileSizes = [256, 512, 768, 1024];
+            const tileSizes = [128, 256, 384, 512, 768, 1024];
             const resultsDiv = document.getElementById('benchmark-results');
-            resultsDiv.innerHTML = '<p>Running benchmark...</p>';
+            resultsDiv.innerHTML = '<p>Running full benchmark...</p>';
 
             benchmarkResults = {};
 
@@ -919,10 +1024,10 @@
                     const testFrames = 180; // 3 seconds at 60fps
                     frameTimes = [];
 
-                    // Simulate fast movement
+                    // Simulate fast movement - large circle for thorough testing
                     for (let i = 0; i < testFrames; i++) {
-                        player.vel.x = 20 * Math.sin(i * 0.1);
-                        player.vel.y = 15 * Math.cos(i * 0.08);
+                        player.vel.x = 100 * Math.sin(i * 0.05);
+                        player.vel.y = 80 * Math.cos(i * 0.04);
                         await nextFrame();
                     }
 

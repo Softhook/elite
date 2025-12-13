@@ -1096,7 +1096,6 @@ class GameStateManager {
                 break;
 
             case "GAME_OVER":
-                background(0, 150);
                 if (uiManager) {
                     try { uiManager.drawGameOverScreen(); } catch (e) { }
                 }
