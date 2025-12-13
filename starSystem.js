@@ -2683,7 +2683,7 @@ class StarSystem {
 
         if (overlap <= 0) return; // No actual overlap
 
-        // Normalized collision vector
+        // Normalized collision vector (normal pointing from 1 to 2)
         const nx = dx / dist;
         const ny = dy / dist;
 
@@ -2694,20 +2694,42 @@ class StarSystem {
         asteroid2.pos.x += nx * overlap * separationFactor;
         asteroid2.pos.y += ny * overlap * separationFactor;
 
-        // Apply very gentle impulse based on mass (much softer than ship collisions)
+        // --- Physics-based Impulse Resolution ---
+
+        // Relative velocity
+        const rvx = asteroid2.vel.x - asteroid1.vel.x;
+        const rvy = asteroid2.vel.y - asteroid1.vel.y;
+
+        // Velocity along the normal
+        const velAlongNormal = rvx * nx + rvy * ny;
+
+        // Do not resolve if velocities are separating
+        if (velAlongNormal > 0) return;
+
+        // Coefficient of restitution (bounciness)
+        // 0.8 = somewhat bouncy rock
+        const restitution = 0.8;
+
+        // Mass (using size^2 as approximation for mass)
         const mass1 = asteroid1.size * asteroid1.size;
         const mass2 = asteroid2.size * asteroid2.size;
-        const totalMass = mass1 + mass2;
 
-        // Gentle impulse factor (0.3 instead of 3 used for ships)
-        const impulseFactor = 0.3;
-        const impulse1 = impulseFactor * (mass2 / totalMass);
-        const impulse2 = impulseFactor * (mass1 / totalMass);
+        // Inverse mass
+        const invMass1 = 1 / mass1;
+        const invMass2 = 1 / mass2;
 
-        asteroid1.vel.x -= nx * impulse1;
-        asteroid1.vel.y -= ny * impulse1;
-        asteroid2.vel.x += nx * impulse2;
-        asteroid2.vel.y += ny * impulse2;
+        // Calculate impulse scalar
+        let j = -(1 + restitution) * velAlongNormal;
+        j /= (invMass1 + invMass2);
+
+        // Apply impulse
+        const impulseX = j * nx;
+        const impulseY = j * ny;
+
+        asteroid1.vel.x -= impulseX * invMass1;
+        asteroid1.vel.y -= impulseY * invMass1;
+        asteroid2.vel.x += impulseX * invMass2;
+        asteroid2.vel.y += impulseY * invMass2;
     }
 
     /** Handles all collision detection and responses in the system. */
