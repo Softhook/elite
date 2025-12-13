@@ -69,6 +69,78 @@ function getColorComponents(col) {
     return components;
 }
 
+// ============================================================================
+// DEFERRED RENDERING QUEUE - For depth-sorted primitive drawing
+// ============================================================================
+
+/**
+ * Global rendering queue for depth-sorting primitives
+ * When active, Draw3D calls are deferred and sorted by depth before execution
+ */
+let _renderQueue = null;
+
+/**
+ * Start deferred rendering mode - all Draw3D calls will be queued instead of executed
+ */
+function beginDeferredRendering() {
+    _renderQueue = [];
+}
+
+/**
+ * Sort queued primitives by depth and execute them
+ * Call this at the end of a renderer to flush all deferred draws
+ */
+function flushDeferredRendering() {
+    if (!_renderQueue || _renderQueue.length === 0) {
+        _renderQueue = null;
+        return;
+    }
+
+    // Capture the queue and clear it BEFORE executing
+    // This prevents infinite recursion when queued functions call Draw3D methods
+    const queue = _renderQueue;
+    _renderQueue = null;
+
+    // Sort by depth (higher depth = farther away = draw first)
+    queue.sort((a, b) => b.depth - a.depth);
+
+    // Execute all queued draw calls in sorted order
+    for (let item of queue) {
+        item.fn();
+    }
+}
+
+/**
+ * Calculate effective depth for a primitive considering position and rotation
+ * @param {number} x - X position
+ * @param {number} y - Y position  
+ * @param {number} depth - Extrusion depth
+ * @param {number} angle - Rotation angle
+ * @returns {number} Effective depth value (higher = farther)
+ */
+function calculatePrimitiveDepth(x, y, depth, angle) {
+    // In isometric 2.5D, depth is a combination of Y position and X position rotated
+    // The depth vector tells us the "viewing angle"
+    // 
+    // Key insight: The depth vector (dv.x, dv.y) represents the direction "away from camera"
+    // So depth should be: position projected onto the depth direction
+    //
+    // Depth = y (primary, screen space) + how far "into the screen" based on angle
+
+    const dv = Draw3D.getDepthVector(depth, angle);
+
+    // Use Y as primary depth, then add X contribution based on viewing angle
+    // When angle = 0 (dv.y > 0): Y is depth, X doesn't matter much
+    // When angle = π/2 (dv.x > 0): X becomes important for depth
+    // 
+    // Normalized depth direction: dv is already the offset direction
+    // Project position onto this direction for depth
+    const depthScore = y + (dv.y * 0.5) + (x * Math.sin(angle || 0) * 0.3);
+
+    return depthScore;
+}
+
+
 const Draw3D = {
 
     /**
@@ -89,6 +161,16 @@ const Draw3D = {
      * Draw an extruded regular prism (polygon with depth)
      */
     drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle) {
+        // If deferred rendering is active, queue this call
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawPrism(x, y, r, sides, depth, col, angle, sunAngle)
+            });
+            return;
+        }
+
         const dv = this.getDepthVector(depth, angle);
         const trig = getTrigCache(sides);
         const cc = getColorComponents(col);
@@ -96,7 +178,7 @@ const Draw3D = {
 
         strokeWeight(1);
 
-        // Draw Bottom Cap - use cached colors
+        // Draw Bottom Cap
         fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
         stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
@@ -134,7 +216,7 @@ const Draw3D = {
             }
         }
 
-        // Draw Top
+        // Draw Top Cap
         fill(col);
         stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         beginShape();
@@ -211,6 +293,16 @@ const Draw3D = {
      * Draw a 3D extruded box
      */
     drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle) {
+        // If deferred rendering is active, queue this call instead of executing
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawBox3D(x, y, w, h, depth, col, angle, sunAngle)
+            });
+            return;
+        }
+
         const dv = this.getDepthVector(depth, angle);
         const cc = getColorComponents(col);
         const hw = w / 2;
@@ -269,6 +361,21 @@ const Draw3D = {
      * Draw an extruded arbitrary shape from vertices
      */
     drawExtrudedShape: function (vertices, depth, col, angle, sunAngle, cull = true) {
+        // If deferred rendering is active, queue this call
+        if (_renderQueue !== null) {
+            // Calculate centroid for depth sorting
+            let cx = 0, cy = 0;
+            for (let v of vertices) { cx += v.x; cy += v.y; }
+            cx /= vertices.length;
+            cy /= vertices.length;
+            const primitiveDepth = calculatePrimitiveDepth(cx, cy, depth, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawExtrudedShape(vertices, depth, col, angle, sunAngle, cull)
+            });
+            return;
+        }
+
         const dv = this.getDepthVector(depth, angle);
 
         strokeWeight(1);
@@ -326,6 +433,16 @@ const Draw3D = {
      * Draw a 3D ring (torus cross-section)
      */
     drawRing3D: function (x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
+        // If deferred rendering is active, queue this call
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawRing3D(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation)
+            });
+            return;
+        }
+
         const dv = this.getDepthVector(depth, angle);
         const angleStep = TWO_PI / sides;
 

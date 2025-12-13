@@ -60,6 +60,9 @@
         let ships = [];
         let scaleFactor = 1;
         let focusedIndex = -1;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartAngle = 0;
 
         function setup() {
             createCanvas(window.innerWidth, window.innerHeight);
@@ -87,6 +90,30 @@
             });
         }
 
+        function mousePressed() {
+            if (focusedIndex !== -1) {
+                isDragging = true;
+                dragStartX = mouseX;
+                dragStartAngle = ships[focusedIndex].manualAngle || 0;
+            }
+        }
+
+        function mouseDragged() {
+            if (isDragging && focusedIndex !== -1) {
+                const ship = ships[focusedIndex];
+                const dragDelta = (mouseX - dragStartX) * 0.01; // Sensitivity
+                ship.manualAngle = dragStartAngle + dragDelta;
+                ship.isDragging = true;
+            }
+        }
+
+        function mouseReleased() {
+            if (isDragging && focusedIndex !== -1) {
+                ships[focusedIndex].isDragging = false;
+            }
+            isDragging = false;
+        }
+
         function windowResized() {
             resizeCanvas(window.innerWidth, window.innerHeight);
             arrangeGrid();
@@ -98,7 +125,15 @@
             for (let k of keys) {
                 const def = SHIP_DEFINITIONS[k];
                 const s = (def && def.size) ? def.size : 40;
-                ships.push({ key: k, def: def, pos: createVector(0, 0), size: s, baseSize: s });
+                ships.push({
+                    key: k,
+                    def: def,
+                    pos: createVector(0, 0),
+                    size: s,
+                    baseSize: s,
+                    manualAngle: 0,
+                    isDragging: false
+                });
             }
             focusedIndex = -1;
             arrangeGrid();
@@ -145,7 +180,7 @@
                 info.innerHTML = `Ships: ${ships.length} — Use arrow keys to focus.`;
             } else {
                 const s = ships[focusedIndex];
-                info.innerHTML = `Viewing ${focusedIndex + 1}/${ships.length}: ${s.key} (${s.def ? s.def.name : 'unknown'}) — ←↑ prev   ↓→ next   Esc exit`;
+                info.innerHTML = `Viewing ${focusedIndex + 1}/${ships.length}: ${s.key} (${s.def ? s.def.name : 'unknown'}) — Drag to rotate (full 360°). ←↑ prev   ↓→ next   Esc exit`;
             }
         }
 
@@ -163,22 +198,32 @@
         }
 
         function drawShipAt(sObj, centered = false) {
+            // Calculate current rotation angle
+            let currentAngle = 0;
+            if (sObj.isDragging && sObj.manualAngle !== undefined) {
+                currentAngle = sObj.manualAngle;
+            } else {
+                currentAngle = sin(frameCount * 0.01) * 0.06;
+            }
+
             push();
             translate(sObj.pos.x, sObj.pos.y);
-            // small rotation animation for interest
-            rotate(sin(frameCount * 0.01) * 0.06);
+            // Apply rotation transform for the ship shape
+            rotate(currentAngle);
 
             // If there is a custom draw function matching the key, call it
             const fnName = 'draw' + sObj.key;
             const def = sObj.def;
             try {
                 if (typeof window[fnName] === 'function') {
-                    // custom draw functions accept size, thrusting
-                    window[fnName](sObj.size, false);
+                    // custom draw functions accept size, thrusting, angle
+                    // Pass angle for 3D extrusion calculation
+                    window[fnName](sObj.size, false, currentAngle);
                 } else if (def && typeof drawGenericShip === 'function') {
-                    // generic fallback
-                    drawGenericShip(def, sObj.size, false);
+                    // generic fallback - pass angle for 3D extrusion
+                    drawGenericShip(def, sObj.size, false, currentAngle);
                 } else if (def && def.vertexData) {
+                    // For simple vertex data, rotation is already applied
                     drawShapeFromData(sObj.size / 2, def.vertexData, def.fillColor, def.strokeColor, def.strokeW);
                 } else {
                     // simple placeholder
@@ -213,7 +258,7 @@
                 drawShipAt(s);
                 push(); fill(230); textSize(18); textAlign(CENTER, TOP);
                 text(`${focusedIndex + 1}/${ships.length} — ${s.key} (${s.def ? s.def.name : 'unknown'})`, width / 2, height / 2 + s.size * 0.65 + 10);
-                textSize(12); text('← ↑ : prev   ↓ → : next   Esc : exit', width / 2, height - 36);
+                textSize(12); text('← ↑ : prev   ↓ → : next   Esc : exit   Drag to rotate (full 360°)', width / 2, height - 36);
                 pop();
                 s.pos.x = oldX; s.pos.y = oldY; s.size = oldSize;
             }

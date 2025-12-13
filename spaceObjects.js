@@ -201,9 +201,6 @@ const SpaceObjectRenderers = {
     fuelDepot: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // platform shadow/base
-        Draw3D.drawRing3D(0, size * 0.18 + bob, size * 0.44, size * 0.13, 12, size * 0.02, color(24, 28, 32), obj.angle, sunAngle);
-
         // tanks (three vertical tanks)
         const tankW = size * 0.22;
         const tankH = size * 0.44;
@@ -1408,7 +1405,6 @@ const SpaceObjectRenderers = {
                 // Hatch lid
                 push();
                 translate(x, y - ch * 0.5);
-                // rotateX(-hatch * 0.05); // Simple rotation for hatch - disabled as rotateX is 3D only
                 Draw3D.drawBox3D(0, 0, cd * 0.8, cw * 0.8, size * 0.02, color(100, 90, 80), obj.angle, sunAngle);
                 pop();
 
@@ -3797,21 +3793,15 @@ class SpaceObject {
     }
 
     update(system) {
-        // Slow rotation and gentle bobbing
+        // Oscillating rotation instead of continuous spinning to minimize Z-sorting artifacts
         const dt = (typeof deltaTime === 'number') ? deltaTime : 16;
-        // Keep a logically-updated `angle` but prevent uncontrolled growth by wrapping it.
-        // Also compute a small render-only sway `_renderAngle` so objects don't fully spin,
-        // preserving the 3D visual cues while allowing a subtle motion.
-        this.angle += this.rotationSpeed * dt;
-        // Wrap logical angle into [-PI, PI] to avoid large numbers
-        if (typeof this.angle === 'number' && isFinite(this.angle)) {
-            this.angle = this.angle % TWO_PI;
-            if (this.angle > PI) this.angle -= TWO_PI;
-            if (this.angle < -PI) this.angle += TWO_PI;
-        }
-        // Render-only sway: small oscillation based on bobPhase and an optional amplitude
-        const swayAmp = (typeof this.rotationAmplitude === 'number') ? this.rotationAmplitude : 0.25;
-        // this._renderAngle = Math.sin(this.bobPhase * 0.0012) * swayAmp;
+
+        // Use bobPhase to drive rotation oscillation
+        // Asymmetric range: -20° to +60° (clockwise bias)
+        const oscillationPhase = this.bobPhase * this.rotationSpeed * 100;
+        const normalizedSin = (Math.sin(oscillationPhase) + 1) / 2; // 0 to 1
+        this.angle = normalizedSin * (Math.PI / 3 + Math.PI / 9) - Math.PI / 9; // -20° to +60°
+
         this.bobPhase += 0.0015 * dt;
         if (this.pos && !this.destroyed) {
             this.pos.x += this._drift.x;

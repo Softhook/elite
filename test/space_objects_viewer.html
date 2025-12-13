@@ -56,12 +56,12 @@
     </div>
 
     <script>
-        // This viewer relies only on p5 and spaceObjects.js
-        // It will create one instance of each type in `sizeMap` and render them on screen.
-
         let objects = [];
         let scaleFactor = 1;
         let focusedIndex = -1; // -1 = grid view, otherwise index of focused object
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartAngle = 0;
 
         function setup() {
             createCanvas(window.innerWidth, window.innerHeight);
@@ -89,6 +89,41 @@
                     if (focusedIndex !== -1) clearFocus();
                 }
             });
+        }
+
+        function mousePressed() {
+            if (focusedIndex !== -1) {
+                isDragging = true;
+                dragStartX = mouseX;
+                dragStartAngle = objects[focusedIndex].angle;
+            }
+        }
+
+        function mouseDragged() {
+            if (isDragging && focusedIndex !== -1) {
+                const obj = objects[focusedIndex];
+                const dragDelta = (mouseX - dragStartX) * 0.01; // Sensitivity
+                let newAngle = dragStartAngle + dragDelta;
+
+                // Check if this is a space object (has constrained rotation)
+                // Ships don't have the _viewerBaseSize property, space objects do
+                const isSpaceObject = obj._viewerBaseSize !== undefined;
+
+                if (isSpaceObject) {
+                    // Clamp to -20° to +60° (asymmetric, clockwise bias)
+                    newAngle = constrain(newAngle, -Math.PI / 9, Math.PI / 3);
+                }
+
+                obj.angle = newAngle;
+                obj._manualRotation = true; // Flag to override automatic oscillation
+            }
+        }
+
+        function mouseReleased() {
+            if (isDragging && focusedIndex !== -1) {
+                objects[focusedIndex]._manualRotation = false;
+            }
+            isDragging = false;
         }
 
         function windowResized() {
@@ -168,7 +203,9 @@
                 info.innerHTML = `Types: ${objects.length} — Use arrow keys to focus an object (enter fullscreen view).`;
             } else {
                 const obj = objects[focusedIndex];
-                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type} — Use arrows to navigate, Esc to exit.`;
+                const isSpaceObject = obj._viewerBaseSize !== undefined;
+                const rotationType = isSpaceObject ? 'constrained to -20° to +60°' : 'full 360°';
+                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type} — Drag to rotate (${rotationType}). Arrows to navigate, Esc to exit.`;
             }
         }
 
@@ -207,7 +244,7 @@
             if (focusedIndex === -1) {
                 // Grid view: draw all objects
                 for (let obj of objects) {
-                    obj.update();
+                    if (!obj._manualRotation) obj.update();
                     obj.draw();
                     // draw type label
                     push(); noStroke(); fill(200); textSize(11); textAlign(CENTER, TOP);
@@ -225,15 +262,17 @@
                 // choose a size that fills most of the screen
                 obj.size = Math.floor(Math.min(width, height) * 0.62);
 
-                // update/draw single object
-                obj.update();
+                // update/draw single object (skip update if dragging)
+                if (!obj._manualRotation) obj.update();
                 obj.draw();
 
                 // label and navigation hint
                 push(); fill(230); textSize(18); textAlign(CENTER, TOP);
                 text(`${focusedIndex + 1}/${objects.length} — ${obj.type}`, width / 2, height / 2 + obj.size * 0.65 + 10);
                 textSize(12);
-                text('← ↑ : prev   ↓ → : next   Esc : exit', width / 2, height - 36);
+                const isSpaceObject = obj._viewerBaseSize !== undefined;
+                const rotationType = isSpaceObject ? '-20° to +60°' : '360°';
+                text(`← ↑ : prev   ↓ → : next   Esc : exit   Drag to rotate (${rotationType})`, width / 2, height - 36);
                 pop();
 
                 // restore
