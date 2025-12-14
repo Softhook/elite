@@ -277,6 +277,12 @@ class Enemy {
             // otherwise, it might start PATROLLING or IDLE until a principal is assigned.
             // For now, let's default to PATROLLING if no principal is immediately available.
             this.currentState = AI_STATE.PATROLLING;
+        } else if (this.role === AI_ROLE.MINER) {
+            // Miners start with random timing offset to prevent synchronization
+            this.currentState = AI_STATE.IDLE;
+            // Add random offset to patrol timing (0-5 seconds)
+            this._minerInitOffset = random(0, 5);
+            this._minerElapsedTime = 0;
         } else {
             // Existing role assignments – for Pirates/Police/Hauler, etc.
             switch (this.role) {

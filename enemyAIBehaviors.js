@@ -1623,6 +1623,21 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      */
     updateMinerAI(system) {
+        // Apply initialization timing offset to prevent synchronized spawning behavior
+        if (this._minerInitOffset !== undefined && this._minerElapsedTime !== undefined) {
+            this._minerElapsedTime += (deltaTime / 1000);
+            if (this._minerElapsedTime < this._minerInitOffset) {
+                // Still in initialization delay - idle with gentle drift
+                this.vel.mult(0.95);
+                this.updatePhysics();
+                return;
+            } else if (this._minerElapsedTime >= this._minerInitOffset && this.currentState === AI_STATE.IDLE) {
+                // Initialization complete - clear offset and start patrolling
+                this._minerInitOffset = undefined;
+                this._minerElapsedTime = undefined;
+            }
+        }
+
         // Handle cargo collection if currently collecting
         if (this.currentState === AI_STATE.COLLECTING_CARGO) {
             if (!this.updateCargoCollectionAI(system)) {
@@ -1658,6 +1673,10 @@ class EnemyAIBehaviors {
                 }
                 this.shouldReturnToStation = false;
                 this.changeState(AI_STATE.IDLE);
+                // Clean up asteroid targeting
+                if (this.asteroidTarget && this.asteroidTarget._targetingCount > 0) {
+                    this.asteroidTarget._targetingCount--;
+                }
                 this.asteroidTarget = null;
             } else {
                 // Move toward station
@@ -1679,6 +1698,11 @@ class EnemyAIBehaviors {
             }
         }
 
+        // Clean up old asteroid target tracking
+        if (this.asteroidTarget && this.asteroidTarget.destroyed && this.asteroidTarget._targetingCount > 0) {
+            this.asteroidTarget._targetingCount--;
+        }
+
         // Find and target nearest asteroid
         if (!this.asteroidTarget || this.asteroidTarget.destroyed) {
             this.asteroidTarget = this.findNearestAsteroid(system);
@@ -1694,11 +1718,17 @@ class EnemyAIBehaviors {
                         this.changeState(AI_STATE.PATROLLING);
                     }
 
+                    // Initialize miner's patrol preference if not set
+                    if (this._minerPatrolRange === undefined) {
+                        this._minerPatrolRange = random(1000, 2500); // Individual patrol range
+                        this._minerPatrolMinDist = random(600, 1200); // Individual minimum distance
+                    }
+
                     // Initialize patrol target if not set
                     if (!this.patrolTargetPos) {
                         // Start patrol from a random point in the system
                         const patrolAngle = random(TWO_PI);
-                        const patrolDist = random(800, 2000);
+                        const patrolDist = random(this._minerPatrolMinDist, this._minerPatrolRange);
                         this.patrolTargetPos = createVector(
                             this.pos.x + cos(patrolAngle) * patrolDist,
                             this.pos.y + sin(patrolAngle) * patrolDist
@@ -1712,9 +1742,9 @@ class EnemyAIBehaviors {
                     );
 
                     if (distToPatrolTarget < 100) {
-                        // Reached patrol point - select new one
+                        // Reached patrol point - select new one with individual variation
                         const patrolAngle = random(TWO_PI);
-                        const patrolDist = random(800, 2000);
+                        const patrolDist = random(this._minerPatrolMinDist, this._minerPatrolRange);
                         this.patrolTargetPos = createVector(
                             this.pos.x + cos(patrolAngle) * patrolDist,
                             this.pos.y + sin(patrolAngle) * patrolDist
@@ -1791,25 +1821,30 @@ class EnemyAIBehaviors {
     }
 
     /**
-     * Find the nearest static asteroid in the system
-     * Miners should target slow-moving or stationary asteroids, not fast-moving ones
+     * Find a suitable static asteroid to mine
+     * Selects from top candidates with randomization to prevent all miners targeting the same asteroid
      * @param {Object} system - The current star system
-     * @returns {Object|null} The nearest static asteroid or null if none found
+     * @returns {Object|null} A selected asteroid or null if none found
      */
     findNearestAsteroid(system) {
         if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
             return null;
         }
 
-        let nearestAsteroid = null;
-        let nearestDistance = Infinity;
-        const MAX_ASTEROID_SPEED = 0.1; // Only target nearly-static asteroids (very low threshold)
+        const MAX_ASTEROID_SPEED = 0.1; // Only target nearly-static asteroids
+        const candidates = [];
 
+        // Initialize miner's random offset if not set (for consistent individual preference)
+        if (this._minerAsteroidPreference === undefined) {
+            this._minerAsteroidPreference = random(-200, 200);
+        }
+
+        // Collect all valid asteroids with their distances
         for (const asteroid of system.asteroids) {
             if (!asteroid || asteroid.destroyed) continue;
             if (!asteroid.pos || typeof asteroid.pos.x !== 'number' || typeof asteroid.pos.y !== 'number') continue;
 
-            // Skip fast-moving asteroids - miners should only target static/slow ones
+            // Skip fast-moving asteroids
             if (asteroid.vel) {
                 const speed = Math.sqrt(asteroid.vel.x * asteroid.vel.x + asteroid.vel.y * asteroid.vel.y);
                 if (speed > MAX_ASTEROID_SPEED) continue;
@@ -1817,13 +1852,42 @@ class EnemyAIBehaviors {
 
             const distance = dist(this.pos.x, this.pos.y, asteroid.pos.x, asteroid.pos.y);
 
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestAsteroid = asteroid;
+            // Apply individual miner preference to distance (gives each miner slight bias)
+            const adjustedDistance = distance + (asteroid._targetingCount || 0) * 800 + this._minerAsteroidPreference;
+
+            candidates.push({ asteroid, distance: adjustedDistance });
+        }
+
+        if (candidates.length === 0) return null;
+
+        // Sort by adjusted distance
+        candidates.sort((a, b) => a.distance - b.distance);
+
+        // Select from top 3-5 candidates randomly (or fewer if not enough asteroids)
+        const topCandidates = Math.min(5, candidates.length);
+        const selectionPool = candidates.slice(0, topCandidates);
+
+        // Weighted random selection - closer asteroids more likely but not guaranteed
+        const weights = selectionPool.map((_, i) => topCandidates - i);
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+        let randomValue = random(totalWeight);
+
+        let selectedIndex = 0;
+        for (let i = 0; i < weights.length; i++) {
+            randomValue -= weights[i];
+            if (randomValue <= 0) {
+                selectedIndex = i;
+                break;
             }
         }
 
-        return nearestAsteroid;
+        const selected = selectionPool[selectedIndex].asteroid;
+
+        // Track targeting count on the asteroid
+        if (!selected._targetingCount) selected._targetingCount = 0;
+        selected._targetingCount++;
+
+        return selected;
     }
 
     /**
