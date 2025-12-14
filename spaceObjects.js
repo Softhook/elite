@@ -848,100 +848,27 @@ const SpaceObjectRenderers = {
     observatoryDome: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Main support structure (smooth cylinder base)
-        Draw3D.drawCylinder(0, bob + size * 0.05, size * 0.5, size * 0.3, 16, color(120, 130, 140), obj.angle, sunAngle);
+        // Simple cylindrical base
+        Draw3D.drawCylinder(0, bob + size * 0.1, size * 0.4, size * 0.35, 16, color(120, 130, 140), obj.angle, sunAngle);
 
-        // Secondary support rings
-        Draw3D.drawRing3D(0, bob, size * 0.9, size * 0.15, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
-        Draw3D.drawRing3D(0, bob - size * 0.1, size * 0.8, size * 0.12, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
-
-        // Central support pillar (smooth cylinder)
-        Draw3D.drawCylinder(0, bob - size * 0.25, size * 0.08, size * 0.5, 12, color(140, 150, 160), obj.angle, sunAngle);
-
-        // Elevator car
-        Draw3D.drawBox3D(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, size * 0.06, color(180, 190, 200), obj.angle, sunAngle);
-
-        // Massive observation dome using GEODESIC primitive for premium look
-        Draw3D.drawGeodesicDome(0, bob - size * 0.40, size * 0.42, 2, color(100, 160, 220, 150), obj.angle, sunAngle);
-
-        // Primary telescope assembly
+        // Telescope inside (drawn before dome for proper layering)
         push();
-        translate(0, bob - size * 0.45);
-        const sweepAng = anim ? anim.telescopeSweep : 0;
-        rotate(sweepAng);
-        Draw3D.drawCylinder(0, 0, size * 0.06, size * 0.35, 10, color(60, 70, 80), obj.angle, sunAngle);
-        // Lens cone
-        Draw3D.drawCone(0, -size * 0.2, size * 0.05, size * 0.08, 8, color(30, 40, 50), obj.angle, sunAngle);
+        translate(0, bob - size * 0.05);
+        // Slow continuous rotation
+        const telescopeRotation = anim ? (anim.telescopeSweep * 0.1) : 0;
+        rotate(telescopeRotation);
+        Draw3D.drawCylinder(0, 0, size * 0.05, size * 0.25, 8, color(60, 70, 80), obj.angle, sunAngle);
+        Draw3D.drawCone(0, -size * 0.14, size * 0.04, size * 0.06, 6, color(30, 40, 50), obj.angle, sunAngle);
         pop();
 
-        // Secondary telescope arrays with smooth cylinders
-        for (let s = 0; s < 3; s++) {
-            const sa = s * TWO_PI / 3;
-            const sx = Math.cos(sa) * size * 0.25;
-            const sy = Math.sin(sa) * size * 0.25 + bob - size * 0.3;
-            Draw3D.drawCylinder(sx, sy, size * 0.04, size * 0.2, 8, color(70, 80, 90), obj.angle, sunAngle);
-            // Lens tip
-            Draw3D.drawCone(sx, sy - size * 0.12, size * 0.03, size * 0.06, 6, color(50, 60, 70), obj.angle, sunAngle);
-        }
+        // Observation dome (simple smooth dome, transparent) - positioned to sit on base
+        Draw3D.drawDome(0, bob - size * 0.05, size * 0.45, 16, color(100, 160, 220, 120), obj.angle, sunAngle);
 
-        // Research modules with rounded corners
-        for (let m = 0; m < 4; m++) {
-            const ma = m * TWO_PI / 4;
-            const mx = Math.cos(ma) * size * 0.4;
-            const my = Math.sin(ma) * size * 0.4 + bob - size * 0.05;
-            Draw3D.drawCylinder(mx, my, size * 0.06, size * 0.08, 8, color(160, 170, 180), obj.angle, sunAngle);
-            // Small dome caps
-            Draw3D.drawDome(mx, my - size * 0.05, size * 0.06, 6, color(180, 190, 200), obj.angle, sunAngle);
-        }
-
-        // Observation decks
-        for (let d = 0; d < 2; d++) {
-            const dy = bob - size * 0.35 + d * size * 0.1;
-            Draw3D.drawRing3D(0, dy, size * 0.5, size * 0.08, 12, size * 0.02, color(180, 190, 200, 150), obj.angle, sunAngle);
-        }
-
-        // Solar power arrays with lattice frames
-        Draw3D.drawLattice(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, 3, 2, 1.5, color(80, 90, 100), obj.angle, sunAngle);
-        Draw3D.drawBox3D(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, size * 0.01, color(30, 60, 100, 180), obj.angle, sunAngle);
-
-        Draw3D.drawLattice(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, 3, 2, 1.5, color(80, 90, 100), obj.angle, sunAngle);
-        Draw3D.drawBox3D(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, size * 0.01, color(30, 60, 100, 180), obj.angle, sunAngle);
-
-        // Communication arrays with antenna rods
-        Draw3D.drawRod(-size * 0.3, bob - size * 0.15, -size * 0.3, bob - size * 0.45, 2, color(120, 130, 140), obj.angle, sunAngle, true);
-        Draw3D.drawRod(size * 0.3, bob - size * 0.15, size * 0.3, bob - size * 0.45, 2, color(120, 130, 140), obj.angle, sunAngle, true);
-
-        // Atmospheric sensors as small rods
-        for (let w = 0; w < 6; w++) {
-            const wa = w * TWO_PI / 6;
-            const wx = Math.cos(wa) * size * 0.45;
-            const wy = Math.sin(wa) * size * 0.45 + bob - size * 0.1;
-            Draw3D.drawRod(wx, wy, wx * 1.1, wy - size * 0.06, 1.5, color(140, 150, 160), obj.angle, sunAngle, false);
-        }
-
-        // Cooling systems using HELIX primitives for detail
-        Draw3D.drawHelix(-size * 0.15, bob + size * 0.15, size * 0.06, size * 0.25, 1.5, 6, 2, color(100, 180, 220, 180), obj.angle, sunAngle);
-        Draw3D.drawHelix(size * 0.15, bob + size * 0.15, size * 0.06, size * 0.25, 1.5, 6, 2, color(100, 180, 220, 180), obj.angle, sunAngle);
-
-        // Rotating equipment ring (torus)
-        const rotationPhase = anim ? anim.domeRotation * 0.3 : 0;
-        push();
-        rotate(rotationPhase);
-        Draw3D.drawTorus(0, bob - size * 0.15, size * 0.35, size * 0.03, 12, 6, color(140, 150, 160, 120), obj.angle, sunAngle);
-        pop();
-
-        // Lights
-        const obsFlash1 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0));
-        const obsFlash2 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0) + 1);
-        const obsFlash3 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0) + 2);
-        fill(255, 255, 150, 255 * obsFlash1);
-        ellipse(-size * 0.2, bob - size * 0.4, 5, 5);
-        fill(150, 255, 255, 255 * obsFlash2);
-        ellipse(size * 0.2, bob - size * 0.4, 5, 5);
-        fill(255, 150, 255, 255 * obsFlash3);
-        ellipse(0, bob + size * 0.25, 5, 5);
+        // Navigation light on top
+        const obsFlash = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0));
+        fill(100, 180, 255, 255 * obsFlash);
+        ellipse(0, bob - size * 0.5, 4, 4);
     },
-
     weaponPlatform: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
