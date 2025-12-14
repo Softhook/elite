@@ -2207,9 +2207,6 @@ const SpaceObjectRenderers = {
         // Redesigned obelisk-style relic with stacked prisms, floating ring and shards
         const pulse = (Math.sin(anim ? anim.relicPulse : obj.bobPhase * 0.001) + 1) * 0.5;
 
-        // Pedestal
-        Draw3D.drawPrism(0, bob + size * 0.28, size * 0.36, 12, size * 0.08, color(32, 36, 40), obj.angle, sunAngle);
-
         // Stacked obelisk segments (tapered)
         const layers = 4;
         for (let L = 0; L < layers; L++) {
