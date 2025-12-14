@@ -2293,11 +2293,6 @@ const SpaceObjectRenderers = {
             }
         }
 
-        // Energy Core Pulse
-        const pulse = 0.6 + 0.4 * Math.sin(phase * 3);
-        fill(red(glowColor), green(glowColor), blue(glowColor), 150 * pulse);
-        ellipse(0, bob, size * 0.3, size * 0.3);
-
         // Lightning arcs
         if (Math.random() < 0.1) {
             stroke(200, 150, 255, 200);
@@ -3299,208 +3294,200 @@ const SpaceObjectRenderers = {
     },
 
     // ==========================================================================
-    // SHIPYARD - Large orbital shipbuilding facility with construction bays,
-    // cranes, welding sparks, and docked ship frames
+    // SHIPYARD - Large orbital shipbuilding facility with unified structure
+    // and consistent perspective orientation
     // ==========================================================================
     shipyard: function (obj, size, anim, bob) {
         // Animation phases
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
         const cranePhase = (anim && anim.cranePhase) ? anim.cranePhase : obj.bobPhase * 0.0008;
-        // Slow down weld animation so sparks are less frantic
-        const weldPhase = (anim && anim.weldPhase) ? anim.weldPhase : obj.bobPhase * 0.00005;
+        const assemblyPhase = (anim && anim.assemblyPhase) ? anim.assemblyPhase : obj.bobPhase * 0.001;
         const dockingPulse = 0.7 + 0.3 * Math.sin(phase * 2);
 
-        // Main shipyard hull - large industrial hexagonal structure
-        // Background scaffolding/lattice - approximated with a large flat prism
-        Draw3D.drawPrism(0, bob, size * 0.48, size * 0.48, 8, color(60, 80, 100, 120), obj.angle + (phase * 0.02), sunAngle);
+        // Main structural angle - all elements align to this
+        const mainAngle = obj.angle;
 
-        // Main central hub - industrial gray with blue accents
-        Draw3D.drawPrism(0, bob, size * 0.28, size * 0.28, 6, color(50, 55, 70), obj.angle + (-PI / 6), sunAngle);
+        // Core central hub - multi-layered cylinder
+        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 8, color(50, 55, 70), mainAngle, sunAngle);
+        Draw3D.drawPrism(0, bob, size * 0.16, size * 0.16, 8, color(60, 70, 85), mainAngle, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.12, size * 0.12, size * 0.08, color(40, 50, 65), mainAngle, sunAngle);
 
-        // Hub inner detail
-        Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.18, size * 0.05, color(70, 80, 100), obj.angle, sunAngle);
-        Draw3D.drawBox3D(0, bob, size * 0.12, size * 0.12, size * 0.08, color(40, 50, 65), obj.angle, sunAngle);
-
-        // Beveled inner plate for the hex hub (adds perceived depth)
-        Draw3D.drawPrism(0, bob, size * 0.22, size * 0.22, 6, color(90, 100, 115), obj.angle + (-PI / 6), sunAngle);
-        // inner darker inset
-        Draw3D.drawPrism(0, bob, size * 0.14, size * 0.14, 6, color(60, 70, 85), obj.angle + (-PI / 6), sunAngle);
-
-        // Glowing core
+        // Glowing central core
         const coreGlow = 150 + 80 * Math.sin(phase * 3);
-        Draw3D.drawBox3D(0, bob, size * 0.06, size * 0.06, size * 0.1, color(100, 180, 255, coreGlow), obj.angle, sunAngle);
+        Draw3D.drawBox3D(0, bob, size * 0.06, size * 0.06, size * 0.12, color(100, 180, 255, coreGlow), mainAngle, sunAngle);
 
-        // Four construction bays extending from center (enlarged for visibility)
+        // Four main construction bays extending outward
         for (let bay = 0; bay < 4; bay++) {
-            const bayAng = (TWO_PI / 4) * bay + PI / 4;
-            const bx = Math.cos(bayAng) * size * 0.44;
-            const by = Math.sin(bayAng) * size * 0.44 + bob;
+            const bayAngle = (TWO_PI / 4) * bay;
+            const dist = size * 0.35;
+            const bx = Math.cos(bayAngle) * dist;
+            const by = Math.sin(bayAngle) * dist + bob;
 
-            // Bay structure - larger, more detailed arms
-            Draw3D.drawBox3D(bx, by, size * 0.42, size * 0.18, size * 0.1, color(52, 58, 74), obj.angle + (bayAng), sunAngle);
+            // Main bay structure (large rectangular construction zone)
+            Draw3D.drawBox3D(bx, by, size * 0.3, size * 0.2, size * 0.12, color(52, 58, 74), mainAngle, sunAngle);
 
-            // Bay interior glow (construction activity) - larger and more saturated
+            // Interior glow (construction activity)
             const bayGlow = 110 + 60 * Math.sin(phase * 2 + bay * 1.5);
-            Draw3D.drawBox3D(bx, by, size * 0.34, size * 0.12, size * 0.11, color(255, 210, 120, bayGlow), obj.angle + (bayAng), sunAngle);
-            // Ship frame under construction (larger, with hull detail)
-            // Approximating ship frame with a box
-            const frameX = bx - Math.cos(bayAng) * size * 0.02;
-            const frameY = by - Math.sin(bayAng) * size * 0.02;
-            Draw3D.drawBox3D(frameX, frameY, size * 0.3, size * 0.1, size * 0.05, color(36, 42, 52), obj.angle + (bayAng), sunAngle);
+            Draw3D.drawBox3D(bx, by, size * 0.24, size * 0.14, size * 0.13, color(255, 210, 120, bayGlow * 0.6), mainAngle, sunAngle);
 
-            // cockpit / bridge
-            const cockpitX = frameX + Math.cos(bayAng) * size * 0.06;
-            const cockpitY = frameY + Math.sin(bayAng) * size * 0.06;
-            Draw3D.drawBox3D(cockpitX, cockpitY, size * 0.06, size * 0.04, size * 0.06, color(90, 110, 130), obj.angle + (bayAng), sunAngle);
+            // Ship frame under construction
+            Draw3D.drawBox3D(bx, by, size * 0.22, size * 0.08, size * 0.06, color(36, 42, 52), mainAngle, sunAngle);
 
-            // Construction crane arm (thicker and more visible)
-            const craneSway = Math.sin(cranePhase + bay * 2) * 0.22;
-            const craneX = bx + Math.cos(bayAng) * size * 0.06;
-            const craneY = by + Math.sin(bayAng) * size * 0.06;
-            // Crane arm
-            Draw3D.drawBox3D(craneX, craneY, size * 0.02, size * 0.12, size * 0.02, color(92, 104, 124), obj.angle + (bayAng + craneSway), sunAngle);
+            // Cockpit section
+            const cockpitDist = size * 0.08;
+            const cockpitX = bx + Math.cos(bayAngle) * cockpitDist;
+            const cockpitY = by + Math.sin(bayAngle) * cockpitDist;
+            Draw3D.drawPrism(cockpitX, cockpitY, size * 0.04, size * 0.05, 6, color(90, 110, 130), mainAngle, sunAngle);
 
-            // Crane hook & cable
-            const hookX = craneX + Math.cos(bayAng + craneSway) * size * 0.08;
-            const hookY = craneY + Math.sin(bayAng + craneSway) * size * 0.08; // Simplified position
-            Draw3D.drawBox3D(hookX, hookY, size * 0.03, size * 0.03, size * 0.03, color(120, 130, 150), obj.angle + (bayAng), sunAngle);
+            // Rotating assembly arms (2 per bay)
+            for (let arm = 0; arm < 2; arm++) {
+                const armRotation = assemblyPhase + bay * 0.5 + arm * PI;
+                const armRadius = size * 0.08;
+                const armBaseX = bx + Math.cos(bayAngle - HALF_PI) * (arm === 0 ? size * 0.08 : -size * 0.08);
+                const armBaseY = by + Math.sin(bayAngle - HALF_PI) * (arm === 0 ? size * 0.08 : -size * 0.08);
 
-            // Larger welding sparks and directional streaks (animated)
-            if (Math.sin(weldPhase * 6 + bay * 2.2) > 0.3) {
-                for (let s = 0; s < 4; s++) { // Reduced count for 3D
-                    const sparkAng = -0.6 + Math.random() * 1.2; // biased outward
-                    const sparkDist = Math.random() * size * 0.06;
-                    const sparkX = bx + size * 0.02 + Math.cos(sparkAng) * sparkDist;
-                    const sparkY = by + Math.sin(sparkAng) * sparkDist;
-                    // streak
-                    Draw3D.drawBox3D(sparkX, sparkY, 3 + Math.random() * 3, 2 + Math.random() * 2, 2, color(255, 220 + Math.random() * 35, 120, 220), obj.angle + (sparkAng), sunAngle);
-                }
-                // Bright weld point
-                Draw3D.drawBox3D(bx + size * 0.02, by, 6, 6, 6, color(255, 255, 220, 240), obj.angle, sunAngle);
+                // Arm pivot
+                Draw3D.drawBox3D(armBaseX, armBaseY, size * 0.03, size * 0.03, size * 0.04, color(92, 104, 124), mainAngle, sunAngle);
+
+                // Rotating arm endpoint
+                const armEndX = armBaseX + Math.cos(armRotation) * armRadius;
+                const armEndY = armBaseY + Math.sin(armRotation) * armRadius;
+                Draw3D.drawBox3D(armEndX, armEndY, size * 0.02, size * 0.02, size * 0.03, color(120, 130, 150), mainAngle, sunAngle);
             }
 
-            // Gantry that traverses the bay (large visible movement)
-            const gantryPos = (Math.sin(phase * 0.6 + bay) * 0.45 + 0.5) * (size * 0.16);
-            const gantryX = bx - Math.cos(bayAng) * (size * 0.08 - gantryPos);
-            const gantryY = by - Math.sin(bayAng) * (size * 0.08 - gantryPos);
-            Draw3D.drawBox3D(gantryX, gantryY, size * 0.12, size * 0.04, size * 0.04, color(120, 125, 140), obj.angle + (bayAng), sunAngle);
-        }
+            // Scanner beam sweeping across construction bay
+            const scannerPhase = (phase * 2 + bay) % TWO_PI;
+            const scannerProgress = (Math.sin(scannerPhase) + 1) / 2; // 0 to 1
+            if (scannerProgress > 0.1 && scannerProgress < 0.9) {
+                const scanX = bx + (scannerProgress - 0.5) * size * 0.24;
+                const scanY = by;
+                // Vertical scanner beam
+                Draw3D.drawBox3D(scanX, scanY, size * 0.01, size * 0.16, size * 0.01, color(100, 200, 255, 180), mainAngle, sunAngle);
+            }
 
-        // External docking arms (2 large ones for finished ships)
-        for (let arm = 0; arm < 2; arm++) {
-            const armAng = (arm === 0) ? -PI / 2 : PI / 2;
-            const rot = armAng + Math.sin(phase + arm) * 0.02;
+            // Connecting strut from core to bay
+            const strutMidX = bx * 0.5;
+            const strutMidY = (by + bob) * 0.5;
+            Draw3D.drawBox3D(strutMidX, strutMidY, size * 0.06, size * 0.04, size * 0.04, color(70, 80, 100), mainAngle, sunAngle);
 
-            // Position relative to center, rotated
-            const armDist = size * 0.44;
-            // Original code: translate(0, -size * 0.44) then rotate? No, rotate then translate.
-            // "rotate(armAng...); translate(0, -size * 0.44);"
-            // So it rotates the coordinate system, then moves UP (negative Y) in that rotated system.
+            // Gantry crane on top of bay
+            const craneSway = Math.sin(cranePhase + bay * 2) * 0.08;
+            const craneBaseY = by - size * 0.12;
 
-            const finalAng = rot;
-            const armX_world = Math.cos(finalAng - PI / 2) * armDist;
-            const armY_world = Math.sin(finalAng - PI / 2) * armDist + bob;
+            // Crane track
+            Draw3D.drawBox3D(bx, craneBaseY, size * 0.28, size * 0.02, size * 0.02, color(92, 104, 124), mainAngle, sunAngle);
 
-            // Docking arm structure
-            Draw3D.drawBox3D(armX_world, armY_world, size * 0.05, size * 0.1, size * 0.05, color(70, 80, 100), obj.angle + (finalAng), sunAngle);
+            // Crane trolley (moves along track)
+            const trolleyPos = Math.sin(phase * 0.5 + bay) * (size * 0.1);
+            Draw3D.drawBox3D(bx + trolleyPos, craneBaseY, size * 0.06, size * 0.03, size * 0.04, color(100, 110, 125), mainAngle, sunAngle);
 
-            // Docking clamps
-            Draw3D.drawBox3D(armX_world, armY_world - size * 0.11, size * 0.08, size * 0.03, size * 0.04, color(60, 70, 85), obj.angle + (finalAng), sunAngle);
+            // Crane hook hanging down
+            const hookY = craneBaseY + size * 0.08 + Math.abs(craneSway) * size * 0.04;
+            Draw3D.drawBox3D(bx + trolleyPos, hookY, size * 0.02, size * 0.02, size * 0.06, color(120, 130, 150), mainAngle, sunAngle);
+
+            // Docking clamp at outer edge
+            const outerDist = size * 0.42;
+            const outerX = Math.cos(bayAngle) * outerDist;
+            const outerY = Math.sin(bayAngle) * outerDist + bob;
+            Draw3D.drawBox3D(outerX, outerY, size * 0.04, size * 0.04, size * 0.05, color(60, 70, 85), mainAngle, sunAngle);
 
             // Docking lights
-            const dockLight = (Math.sin(phase * 4 + arm * PI) > 0) ? 255 : 80;
-            Draw3D.drawBox3D(armX_world - size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), obj.angle + (finalAng), sunAngle);
-            Draw3D.drawBox3D(armX_world + size * 0.03, armY_world - size * 0.115, 3, 3, 3, color(100, 255, 100, dockLight), obj.angle + (finalAng), sunAngle);
+            const dockLight = (Math.sin(phase * 4 + bay * PI / 2) > 0) ? 255 : 80;
+            Draw3D.drawBox3D(outerX, outerY, 3, 3, 3, color(100, 255, 100, dockLight), mainAngle, sunAngle);
         }
 
-        // Rotating warning beacons on corners
-        for (let b = 0; b < 4; b++) {
-            const beaconAng = (TWO_PI / 4) * b;
-            const beaconX = Math.cos(beaconAng) * size * 0.52;
-            const beaconY = Math.sin(beaconAng) * size * 0.52 + bob;
+        // Structural ring connecting the bays
+        const ringSegments = 16;
+        const ringRadius = size * 0.38;
+        for (let i = 0; i < ringSegments; i++) {
+            const segAng = (TWO_PI / ringSegments) * i;
+            const sx = Math.cos(segAng) * ringRadius;
+            const sy = Math.sin(segAng) * ringRadius + bob;
+            Draw3D.drawBox3D(sx, sy, size * 0.08, size * 0.04, size * 0.04, color(60, 80, 100, 180), mainAngle, sunAngle);
+        }
+
+        // Warning beacons around perimeter
+        for (let b = 0; b < 8; b++) {
+            const beaconAng = (TWO_PI / 8) * b + (TWO_PI / 16);
+            const beaconX = Math.cos(beaconAng) * size * 0.48;
+            const beaconY = Math.sin(beaconAng) * size * 0.48 + bob;
             const beaconFlash = Math.sin(phase * 6 + b * 1.5) > 0.5;
             const col = beaconFlash ? color(255, 100, 50, 220) : color(100, 40, 20, 150);
-            Draw3D.drawBox3D(beaconX, beaconY, 6, 6, 6, col, obj.angle, sunAngle);
+            Draw3D.drawBox3D(beaconX, beaconY, 5, 5, 5, col, mainAngle, sunAngle);
         }
 
-        // Solar panel arrays on sides
+        // Solar panel arrays (top and bottom, aligned with structure)
         for (let panel = 0; panel < 2; panel++) {
-            const panelAng = (panel === 0) ? 0 : PI;
-            const px = Math.cos(panelAng) * size * 0.46;
-            const py = Math.sin(panelAng) * size * 0.46 + bob;
+            const py = bob + (panel === 0 ? -size * 0.32 : size * 0.32);
 
-            // Panel arm
-            Draw3D.drawBox3D(px, py, size * 0.08, size * 0.02, size * 0.02, color(80, 90, 100), obj.angle + (panelAng), sunAngle);
+            // Panel support arms (vertical struts)
+            Draw3D.drawBox3D(-size * 0.15, (bob + py) * 0.5, size * 0.02, Math.abs(py - bob), size * 0.02, color(80, 90, 100), mainAngle, sunAngle);
+            Draw3D.drawBox3D(size * 0.15, (bob + py) * 0.5, size * 0.02, Math.abs(py - bob), size * 0.02, color(80, 90, 100), mainAngle, sunAngle);
 
-            // Solar panels
-            const panelX = px + Math.cos(panelAng) * size * 0.1;
-            const panelY = py + Math.sin(panelAng) * size * 0.1;
-            Draw3D.drawBox3D(panelX, panelY, size * 0.06, size * 0.12, size * 0.02, color(30, 40, 80), obj.angle + (panelAng), sunAngle);
-
-            // Panel reflection
-            Draw3D.drawBox3D(panelX, panelY, size * 0.05, size * 0.04, size * 0.025, color(100, 150, 255, 40), obj.angle + (panelAng), sunAngle);
+            // Solar panel array (3 segments, all same orientation)
+            for (let seg = 0; seg < 3; seg++) {
+                const segX = (seg - 1) * size * 0.14;
+                Draw3D.drawBox3D(segX, py, size * 0.12, size * 0.06, size * 0.02, color(30, 40, 80), mainAngle, sunAngle);
+                // Panel reflection/detail
+                Draw3D.drawBox3D(segX, py, size * 0.08, size * 0.03, size * 0.025, color(100, 150, 255, 40), mainAngle, sunAngle);
+            }
         }
 
-        // Central control tower
-        Draw3D.drawBox3D(0, bob - size * 0.12, size * 0.08, size * 0.16, size * 0.08, color(65, 70, 85), obj.angle, sunAngle);
+        // Central control tower (above core, aligned with structure)
+        Draw3D.drawBox3D(0, bob - size * 0.18, size * 0.05, size * 0.18, size * 0.1, color(65, 70, 85), mainAngle, sunAngle);
 
-        // Control tower windows
-        Draw3D.drawBox3D(0, bob - size * 0.14, size * 0.04, size * 0.02, size * 0.09, color(150, 200, 255, 180 * dockingPulse), obj.angle, sunAngle);
+        // Control windows (stacked, same orientation)
+        for (let w = 0; w < 4; w++) {
+            const wy = bob - size * 0.22 + w * size * 0.03;
+            Draw3D.drawBox3D(0, wy, size * 0.04, size * 0.012, size * 0.11, color(150, 200, 255, 180 * dockingPulse), mainAngle, sunAngle);
+        }
 
-        // Antenna array on top
-        Draw3D.drawBox3D(0, bob - size * 0.19, size * 0.01, size * 0.06, size * 0.01, color(100, 110, 130), obj.angle, sunAngle);
-        Draw3D.drawBox3D(0, bob - size * 0.2, size * 0.04, size * 0.01, size * 0.01, color(100, 110, 130), obj.angle, sunAngle);
+        // Antenna mast
+        Draw3D.drawBox3D(0, bob - size * 0.28, size * 0.008, size * 0.08, size * 0.008, color(100, 110, 130), mainAngle, sunAngle);
+        // Cross antenna
+        Draw3D.drawBox3D(0, bob - size * 0.3, size * 0.04, size * 0.008, size * 0.008, color(100, 110, 130), mainAngle, sunAngle);
 
-        // Communication dish
-        // Approximating dish with a small box or prism
-        Draw3D.drawBox3D(0, bob - size * 0.22, size * 0.04, size * 0.02, size * 0.04, color(90, 100, 120), obj.angle, sunAngle);
+        // Communication dish (aligned)
+        Draw3D.drawPrism(0, bob - size * 0.32, size * 0.035, size * 0.025, 8, color(90, 100, 120), mainAngle, sunAngle);
 
-        // Ambient particle effects (floating debris/sparks)
+        // Maintenance drones and sparks
         if (!obj._shipyardParticles) {
             obj._shipyardParticles = [];
-            // convert ambient blobs into a small squad of maintenance drones plus a few sparks/debris
-            const droneCount = 6;
-            for (let d = 0; d < droneCount; d++) {
+            for (let d = 0; d < 6; d++) {
                 obj._shipyardParticles.push({
                     type: 'drone',
                     ang: Math.random() * TWO_PI,
-                    dist: size * (0.18 + Math.random() * 0.45),
-                    // drones orbit slower and predictably
+                    dist: size * (0.22 + Math.random() * 0.26),
                     speed: 0.0004 + Math.random() * 0.0008,
-                    sz: 3 + Math.random() * 3,
-                    id: 'drone_' + d
+                    sz: 3 + Math.random() * 3
                 });
             }
-            // a few lingering sparks/debris for atmosphere
             for (let p = 0; p < 4; p++) {
                 obj._shipyardParticles.push({
                     type: 'spark',
                     ang: Math.random() * TWO_PI,
-                    dist: size * (0.18 + Math.random() * 0.4),
+                    dist: size * (0.24 + Math.random() * 0.3),
                     speed: 0.001 + Math.random() * 0.0015,
                     sz: 2 + Math.random() * 2
                 });
             }
         }
 
-        // Update and draw particles
+        // Update and draw particles (all aligned with main structure)
         for (const p of obj._shipyardParticles) {
             p.ang += p.speed;
             const px = Math.cos(p.ang) * p.dist;
             const py = Math.sin(p.ang) * p.dist + bob * 0.6;
 
             if (p.type === 'drone') {
-                const orient = Math.atan2(py, px) + Math.PI / 2 + (Math.sin(p.ang * 2) * 0.15);
-                Draw3D.drawBox3D(px, py, p.sz * 2.2, p.sz * 1.0, p.sz * 0.8, color(180, 185, 190), obj.angle + (orient), sunAngle);
+                Draw3D.drawBox3D(px, py, p.sz * 2.2, p.sz * 1.0, p.sz * 0.8, color(180, 185, 190), mainAngle, sunAngle);
                 // Blinking light
                 const blink = 0.5 + 0.5 * Math.sin(phase * 3 + p.ang * 4);
-                Draw3D.drawBox3D(px, py, 3, 3, 3, color(255, 100, 100, 200 * blink), obj.angle + (orient), sunAngle);
+                Draw3D.drawBox3D(px, py, 2.5, 2.5, 2.5, color(255, 100, 100, 200 * blink), mainAngle, sunAngle);
             } else if (p.type === 'spark') {
-                const intensity = 160 + Math.sin(weldPhase * 6 + p.ang * 2) * 100;
-                Draw3D.drawBox3D(px, py, p.sz * 1.6, p.sz * 1.2, p.sz, color(255, 230, 160, Math.min(255, intensity)), obj.angle, sunAngle);
-            } else {
-                Draw3D.drawBox3D(px, py, p.sz, p.sz, p.sz, color(80, 90, 100, 120), obj.angle, sunAngle);
+                const intensity = 160 + Math.sin(phase * 6 + p.ang * 2) * 100;
+                Draw3D.drawBox3D(px, py, p.sz * 1.6, p.sz * 1.2, p.sz, color(255, 230, 160, Math.min(255, intensity)), mainAngle, sunAngle);
             }
         }
     }
@@ -3650,10 +3637,10 @@ class SpaceObject {
                 anim.lightPhase = Math.random() * TWO_PI;
                 break;
             case 'shipyard':
-                // shipyard animation: construction phases, crane movement, welding sparks
+                // shipyard animation: construction phases, crane movement, assembly arms
                 anim.shipyardPhase = Math.random() * TWO_PI;
                 anim.cranePhase = Math.random() * TWO_PI;
-                anim.weldPhase = Math.random() * TWO_PI;
+                anim.assemblyPhase = Math.random() * TWO_PI;
                 break;
         }
         // unique id used by debris RNG and other persistent behaviors
