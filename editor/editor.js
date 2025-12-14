@@ -714,6 +714,23 @@ function mouseDragged() {
         let shape = shapes[primaryShapeIndex];
         let currentMxRel = mouseX - width / 2; let currentMyRel = mouseY - height / 2;
         let deltaScreenX = currentMxRel - dragVertexStartX; let deltaScreenY = currentMyRel - dragVertexStartY;
+
+        // Axis constraint with Shift key
+        if (keyIsDown(SHIFT)) {
+            // Determine constraint axis on first significant movement
+            if (dragConstrainedAxis === null && (Math.abs(deltaScreenX) > 2 || Math.abs(deltaScreenY) > 2)) {
+                dragConstrainedAxis = Math.abs(deltaScreenX) > Math.abs(deltaScreenY) ? 'x' : 'y';
+            }
+            // Apply constraint
+            if (dragConstrainedAxis === 'x') {
+                deltaScreenY = 0;
+            } else if (dragConstrainedAxis === 'y') {
+                deltaScreenX = 0;
+            }
+        } else {
+            dragConstrainedAxis = null; // Reset if Shift is released
+        }
+
         // Convert screen delta to relative delta and apply
         let deltaRelX = deltaScreenX / interaction_r; let deltaRelY = deltaScreenY / interaction_r;
         dragVertexInitialPositions.forEach(initialPos => {
@@ -727,6 +744,22 @@ function mouseDragged() {
     else if (draggingShape && selectedShapeIndices.length > 0 && isEditable()) {
         let totalDx = mouseX - dragShapeStartX;
         let totalDy = mouseY - dragShapeStartY;
+
+        // Axis constraint with Shift key
+        if (keyIsDown(SHIFT)) {
+            // Determine constraint axis on first significant movement
+            if (dragConstrainedAxis === null && (Math.abs(totalDx) > 2 || Math.abs(totalDy) > 2)) {
+                dragConstrainedAxis = Math.abs(totalDx) > Math.abs(totalDy) ? 'x' : 'y';
+            }
+            // Apply constraint
+            if (dragConstrainedAxis === 'x') {
+                totalDy = 0;
+            } else if (dragConstrainedAxis === 'y') {
+                totalDx = 0;
+            }
+        } else {
+            dragConstrainedAxis = null; // Reset if Shift is released
+        }
 
         // Calculate the current drawing radius
         let actualDrawSize_s_local = currentShipDef ?
@@ -809,6 +842,73 @@ function keyPressed() {
     if (key === 'e' && (shapes.length > 0 || isThargoidSelected())) {
         exportDrawFunctionCode();
         return false;
+    }
+
+    // Arrow Keys: Move Selected Vertices or Shape(s)
+    if (selectedShapeIndices.length > 0 && isEditable()) {
+        const moveIncrement = 0.02; // Small movement increment in relative coordinates
+        let dx = 0, dy = 0;
+
+        if (keyCode === LEFT_ARROW) {
+            dx = -moveIncrement;
+        } else if (keyCode === RIGHT_ARROW) {
+            dx = moveIncrement;
+        } else if (keyCode === UP_ARROW) {
+            dy = -moveIncrement;
+        } else if (keyCode === DOWN_ARROW) {
+            dy = moveIncrement;
+        }
+
+        // If an arrow key was pressed
+        if (dx !== 0 || dy !== 0) {
+            saveStateForUndo(); // Save state before moving
+
+            // Get primary selected shape
+            const primaryShapeIdx = selectedShapeIndices[0];
+
+            // If vertices are selected, move only those vertices
+            if (selectedVertexIndices.length > 0 && primaryShapeIdx !== -1) {
+                const shape = shapes[primaryShapeIdx];
+                if (shape && Array.isArray(shape.vertexData)) {
+                    selectedVertexIndices.forEach(vIdx => {
+                        const v = shape.vertexData[vIdx];
+                        if (v && typeof v.x === 'number' && typeof v.y === 'number') {
+                            v.x += dx;
+                            v.y += dy;
+                        }
+                    });
+                }
+            }
+            // Otherwise, move entire selected shape(s)
+            else {
+                selectedShapeIndices.forEach(shapeIdx => {
+                    const shape = shapes[shapeIdx];
+                    if (shape && Array.isArray(shape.vertexData)) {
+                        // Move all vertices
+                        shape.vertexData.forEach(v => {
+                            if (typeof v?.x === 'number' && typeof v?.y === 'number') {
+                                v.x += dx;
+                                v.y += dy;
+                            }
+                        });
+
+                        // Move holes if present
+                        if (Array.isArray(shape.holes)) {
+                            shape.holes.forEach(hole => {
+                                hole.forEach(v => {
+                                    if (typeof v?.x === 'number' && typeof v?.y === 'number') {
+                                        v.x += dx;
+                                        v.y += dy;
+                                    }
+                                });
+                            });
+                        }
+                    }
+                });
+            }
+
+            return false; // Prevent default arrow key behavior
+        }
     }
 
     // Delete Selected Vertices (DELETE or BACKSPACE without Shift)
