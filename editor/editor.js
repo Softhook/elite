@@ -23,7 +23,10 @@ let mirrorVButton;
 let mirrorHButton;
 let rotatePlus90Button;
 let rotateMinus90Button;
+let sizeIncreaseButton;
+let sizeDecreaseButton;
 let addCircleButton;
+let addSquareButton;
 let addHexButton;
 let addStarButton;
 let addSkullButton;
@@ -110,6 +113,7 @@ function setup() {
     addShapeButton = select('#addShapeButton');
     addVertexButton = select('#addVertexButton');
     addCircleButton = select('#addCircleButton');
+    addSquareButton = select('#addSquareButton');
     addHexButton = select('#addHexButton');
     addStarButton = select('#addStarButton');
     // Prefer new shield button id, fall back to existing skull id for compatibility
@@ -125,6 +129,8 @@ function setup() {
     mirrorHButton = select('#hmirrorButton');
     rotatePlus90Button = select('#rotatePlus90Button');
     rotateMinus90Button = select('#rotateMinus90Button');
+    sizeIncreaseButton = select('#sizeIncreaseButton');
+    sizeDecreaseButton = select('#sizeDecreaseButton');
     undoButton = select('#undoButton');
     combineShapesButton = select('#combineShapesButton');
     compareShipsButton = select('#compareShipsButton'); // Add this
@@ -140,6 +146,7 @@ function setup() {
     if (exportButton) exportButton.mousePressed(exportDrawFunctionCode); else console.error("Export button not found");
     if (addShapeButton) addShapeButton.mousePressed(addNewShape); else console.error("Add Shape button not found");
     if (addCircleButton) addCircleButton.mousePressed(addCircleShape); else console.error("Add Circle button not found");
+    if (addSquareButton) addSquareButton.mousePressed(addSquareShape); else console.error("Add Square button not found");
     if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
     if (addStarButton) addStarButton.mousePressed(addStarShape); else console.error("Add Star button not found");
     if (addSkullButton) addSkullButton.mousePressed(addShieldShape); else console.error("Add Shield button not found");
@@ -152,8 +159,10 @@ function setup() {
     if (centerDesignButton) centerDesignButton.mousePressed(centerDesignByBoundingBox); else console.error("Center Design button not found"); // <-- Attach listener
     if (mirrorVButton) mirrorVButton.mousePressed(handleVMirrorClick); else console.error("V Mirror button not found");
     if (mirrorHButton) mirrorHButton.mousePressed(handleHMirrorClick); else console.error("H Mirror button not found");
-    if (rotatePlus90Button) rotatePlus90Button.mousePressed(() => rotateSelectedByDegrees(90)); else console.error("Rotate +90 button not found");
-    if (rotateMinus90Button) rotateMinus90Button.mousePressed(() => rotateSelectedByDegrees(-90)); else console.error("Rotate -90 button not found");
+    if (rotatePlus90Button) rotatePlus90Button.mousePressed(() => rotateSelectedByDegrees(45)); else console.error("Rotate +45 button not found");
+    if (rotateMinus90Button) rotateMinus90Button.mousePressed(() => rotateSelectedByDegrees(-45)); else console.error("Rotate -45 button not found");
+    if (sizeIncreaseButton) sizeIncreaseButton.mousePressed(() => scaleSelectedShapes(1.1)); else console.error("Size Increase button not found");
+    if (sizeDecreaseButton) sizeDecreaseButton.mousePressed(() => scaleSelectedShapes(0.9)); else console.error("Size Decrease button not found");
     if (undoButton) undoButton.mousePressed(undoLastChange); else console.error("Undo button not found");
     if (combineShapesButton) combineShapesButton.mousePressed(combineSelectedShapes); else console.error("Combine Shapes button not found");
     if (compareShipsButton) compareShipsButton.mousePressed(toggleShipComparer); else console.error("Compare Ships button not found"); // Add this
@@ -1008,7 +1017,7 @@ function computePolygonUnion(polygons) {
 
     // Find all intersection points between polygon edges and insert them
     const edgesWithIntersections = [];
-    
+
     // Build edge list with intersection points inserted
     for (let i = 0; i < polygons.length; i++) {
         const poly = polygons[i];
@@ -1017,10 +1026,10 @@ function computePolygonUnion(polygons) {
         for (let e = 0; e < poly.length; e++) {
             const p1 = poly[e];
             const p2 = poly[(e + 1) % poly.length];
-            
+
             // Collect all intersections on this edge
             const edgeIntersections = [];
-            
+
             for (let j = 0; j < polygons.length; j++) {
                 if (i === j) continue;
                 const otherPoly = polygons[j];
@@ -1039,31 +1048,31 @@ function computePolygonUnion(polygons) {
                         // Calculate t parameter along edge
                         const dx = p2.x - p1.x;
                         const dy = p2.y - p1.y;
-                        const t = Math.abs(dx) > Math.abs(dy) 
-                            ? (intersection.x - p1.x) / dx 
+                        const t = Math.abs(dx) > Math.abs(dy)
+                            ? (intersection.x - p1.x) / dx
                             : (intersection.y - p1.y) / dy;
                         edgeIntersections.push({ ...intersection, t });
                     }
                 }
             }
-            
+
             // Sort intersections by t parameter
             edgeIntersections.sort((a, b) => a.t - b.t);
-            
+
             // Build segments along this edge
             let prev = { x: p1.x, y: p1.y };
             for (const inter of edgeIntersections) {
-                edgesWithIntersections.push({ 
-                    from: prev, 
+                edgesWithIntersections.push({
+                    from: prev,
                     to: { x: inter.x, y: inter.y },
-                    polyIdx: i 
+                    polyIdx: i
                 });
                 prev = { x: inter.x, y: inter.y };
             }
-            edgesWithIntersections.push({ 
-                from: prev, 
+            edgesWithIntersections.push({
+                from: prev,
                 to: { x: p2.x, y: p2.y },
-                polyIdx: i 
+                polyIdx: i
             });
         }
     }
@@ -1072,7 +1081,7 @@ function computePolygonUnion(polygons) {
     const outerSegments = edgesWithIntersections.filter(seg => {
         const midX = (seg.from.x + seg.to.x) / 2;
         const midY = (seg.from.y + seg.to.y) / 2;
-        
+
         for (let i = 0; i < polygons.length; i++) {
             if (i === seg.polyIdx) continue; // Don't check against own polygon
             const poly = polygons[i];
@@ -1092,11 +1101,11 @@ function computePolygonUnion(polygons) {
     // Collect unique vertices from outer segments
     const uniquePoints = [];
     const seen = new Set();
-    
+
     for (const seg of outerSegments) {
         const key1 = `${seg.from.x.toFixed(6)},${seg.from.y.toFixed(6)}`;
         const key2 = `${seg.to.x.toFixed(6)},${seg.to.y.toFixed(6)}`;
-        
+
         if (!seen.has(key1)) {
             seen.add(key1);
             uniquePoints.push({ x: seg.from.x, y: seg.from.y });
@@ -1122,7 +1131,7 @@ function computePolygonUnion(polygons) {
  */
 function orderPointsByAngle(points) {
     if (points.length < 3) return points;
-    
+
     // Calculate centroid
     let cx = 0, cy = 0;
     for (const p of points) {
@@ -1309,6 +1318,24 @@ function addCircleShape() {
         const theta = (i / segments) * Math.PI * 2;
         verts.push({ x: Math.cos(theta) * radius, y: Math.sin(theta) * radius });
     }
+    const shape = { vertexData: verts, fillColor: [150, 150, 180] };
+    shapes.push(shape);
+    selectedShapeIndices = [shapes.length - 1];
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
+    updateUIControls(); updateColorPickersFromSelection();
+}
+
+function addSquareShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const size = 0.22; // half-width/height
+    const verts = [
+        { x: -size, y: -size },
+        { x: size, y: -size },
+        { x: size, y: size },
+        { x: -size, y: size }
+    ];
     const shape = { vertexData: verts, fillColor: [150, 150, 180] };
     shapes.push(shape);
     selectedShapeIndices = [shapes.length - 1];
@@ -1641,6 +1668,44 @@ function rotateSelectedByDegrees(angleDeg) {
         updateUIControls(); updateColorPickersFromSelection();
     } catch (e) {
         console.error('Rotate failed:', e);
+    }
+}
+
+function scaleSelectedShapes(scaleFactor) {
+    if (selectedShapeIndices.length === 0 || !isEditable()) {
+        console.warn('Scale: No selectable shape selected or editor not editable.');
+        return;
+    }
+    if (typeof scaleFactor !== 'number' || scaleFactor <= 0) {
+        console.error('Scale: Invalid scale factor:', scaleFactor);
+        return;
+    }
+    saveStateForUndo(); // Save before scaling
+
+    try {
+        // Scale ALL selected shapes
+        selectedShapeIndices.forEach(shapeIdx => {
+            const shape = shapes[shapeIdx];
+            if (!shape || !Array.isArray(shape.vertexData) || shape.vertexData.length < 1) return;
+
+            // Scale main vertices
+            shape.vertexData = shape.vertexData.map(v => {
+                if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
+                return { x: v.x * scaleFactor, y: v.y * scaleFactor };
+            });
+
+            // Scale holes if present
+            if (Array.isArray(shape.holes)) {
+                shape.holes = shape.holes.map(hole => hole.map(v => {
+                    if (typeof v?.x !== 'number' || typeof v?.y !== 'number') return v;
+                    return { x: v.x * scaleFactor, y: v.y * scaleFactor };
+                }));
+            }
+        });
+        console.log(`Scale: Scaled ${selectedShapeIndices.length} shape(s) by ${scaleFactor.toFixed(2)}x.`);
+        updateUIControls(); updateColorPickersFromSelection();
+    } catch (e) {
+        console.error('Scale failed:', e);
     }
 }
 
