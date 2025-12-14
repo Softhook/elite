@@ -358,97 +358,63 @@ const SpaceObjectRenderers = {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const relayPhase = (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06;
 
-        // Add a little bob to the entire relay to feel alive
-        const bobOsc = Math.sin(obj.bobPhase * 0.006) * (size * 0.01);
+        // Main tower (vertical cylinder)
+        Draw3D.drawPrism(0, bob, size * 0.20, 12, size * 0.32, color(130, 135, 140), obj.angle, sunAngle);
 
-        // Base ring and heavier footprint to ground the object visually
-        Draw3D.drawRing3D(0, bob + bobOsc + size * 0.02, size * 0.52, size * 0.06, 12, size * 0.02, color(110, 120, 130), obj.angle, sunAngle);
+        // Cross-arm structure for dishes (4 arms extending from center)
+        const armAngle = relayPhase * 0.2; // Slow rotation
+        for (let i = 0; i < 4; i++) {
+            const a = i * (PI / 2) + armAngle;
+            const armLength = size * 0.55;
 
-        // Prepare dish geometry so we can draw back faces first, hub, then front faces
-        const dishCount = 4;
-        const dishes = [];
-        for (let i = 0; i < dishCount; i++) {
-            const a = i * (TWO_PI / dishCount) + relayPhase * 0.5;
-            const dDist = size * 0.62;
-            const lx = Math.cos(a) * dDist;
-            const ly = Math.sin(a) * dDist * 0.28;
-            const depth = Math.sin(a + relayPhase * 0.2);
-            dishes.push({ a, lx, ly, depth, i });
-        }
-
-        // Draw back-facing dishes first (so they appear behind the hub)
-        for (let dd of dishes) {
-            if (dd.depth >= 0) continue;
-            const armLen = Math.sqrt(dd.lx * dd.lx + dd.ly * dd.ly);
-            const armAng = Math.atan2(dd.ly, dd.lx);
+            // Arm extending from center
             push();
-            translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
-            rotate(armAng);
-            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(130, 135, 140), obj.angle, sunAngle);
-            pop();
+            translate(0, bob - size * 0.08);
+            rotate(a);
 
-            // darker, recessed dish plate
+            // Arm beam
+            Draw3D.drawBox3D(armLength * 0.5, 0, armLength, size * 0.04, size * 0.04, color(110, 115, 120), obj.angle, sunAngle);
+
+            // Large satellite dish at end of arm
+            const dishX = armLength;
+            const dishY = 0;
+
             push();
-            translate(dd.lx, bob + bobOsc + dd.ly);
-            rotate(armAng + PI / 2 + Math.sin(relayPhase * 0.6 + dd.i) * 0.06);
+            translate(dishX, dishY);
+            rotate(PI / 2); // Orient dish outward
+
+            // Dish mount
+            Draw3D.drawBox3D(0, 0, size * 0.06, size * 0.06, size * 0.04, color(100, 105, 110), obj.angle, sunAngle);
+
+            // Dish surface (parabolic)
             Draw3D.drawExtrudedShape([
-                { x: -size * 0.16, y: -size * 0.06 },
-                { x: 0, y: 0 },
-                { x: -size * 0.16, y: size * 0.06 }
-            ], size * 0.05, color(180, 190, 200, 180), obj.angle, sunAngle, true);
+                { x: -size * 0.18, y: -size * 0.10 },
+                { x: -size * 0.04, y: 0 },
+                { x: -size * 0.18, y: size * 0.10 }
+            ], size * 0.08, color(200, 210, 220), obj.angle, sunAngle, true);
+
+            // Dish receiver (center)
+            Draw3D.drawBox3D(-size * 0.08, 0, size * 0.04, size * 0.04, size * 0.03, color(160, 170, 180), obj.angle, sunAngle);
+
+            pop();
             pop();
         }
 
-        // Hub core (draw after back dishes so it layers on top)
-        Draw3D.drawPrism(0, bob + bobOsc, size * 0.22, 6, size * 0.18, color(190, 190, 200), obj.angle, sunAngle);
-        Draw3D.drawPrism(0, bob + bobOsc - size * 0.06, size * 0.18, 6, size * 0.06, color(220, 220, 230), obj.angle, sunAngle);
+        // Upper section of tower
+        Draw3D.drawPrism(0, bob - size * 0.24, size * 0.16, 8, size * 0.16, color(140, 145, 150), obj.angle, sunAngle);
 
-        // Central spire/antenna
-        Draw3D.drawPrism(0, bob + bobOsc - size * 0.08, size * 0.04, 6, size * 0.12, color(230, 230, 240), obj.angle, sunAngle);
+        // Communication array on top
+        Draw3D.drawPrism(0, bob - size * 0.38, size * 0.12, 6, size * 0.14, color(150, 155, 160), obj.angle, sunAngle);
 
-        // Draw front-facing dishes (so they overlap the hub correctly)
-        for (let dd of dishes) {
-            if (dd.depth < 0) continue;
-            const armLen = Math.sqrt(dd.lx * dd.lx + dd.ly * dd.ly);
-            const armAng = Math.atan2(dd.ly, dd.lx);
-            push();
-            translate(dd.lx / 2, bob + bobOsc + dd.ly / 2);
-            rotate(armAng);
-            Draw3D.drawBox3D(0, 0, armLen, 2, 2, color(140, 145, 150), obj.angle, sunAngle);
-            pop();
+        // Antenna spire
+        Draw3D.drawPrism(0, bob - size * 0.50, size * 0.04, 6, size * 0.15, color(170, 175, 180), obj.angle, sunAngle);
 
-            // brighter face dish with slight animated tilt
-            push();
-            translate(dd.lx, bob + bobOsc + dd.ly);
-            rotate(armAng + PI / 2 + Math.sin(relayPhase * 0.6 + dd.i) * 0.06);
-            Draw3D.drawExtrudedShape([
-                { x: -size * 0.16, y: -size * 0.06 },
-                { x: 0, y: 0 },
-                { x: -size * 0.16, y: size * 0.06 }
-            ], size * 0.05, color(230, 235, 240), obj.angle, sunAngle, true);
+        // Top beacon (static)
+        Draw3D.drawPrism(0, bob - size * 0.60, size * 0.03, 8, size * 0.05, color(255, 120, 80), obj.angle, sunAngle);
 
-            // pulsing receiver dot
-            const pulse = 0.6 + 0.4 * Math.sin(relayPhase * 1.8 + dd.i);
-            Draw3D.drawBox3D(dd.lx - Math.cos(dd.a) * size * 0.03, bob + bobOsc + dd.ly - Math.sin(dd.a) * size * 0.03, 4 * pulse, 3 * pulse, 2, color(255, 220, 120, 200), obj.angle, sunAngle);
-            pop();
-        }
-
-        // Larger decorative pips around hub edge (fewer, bolder — reads well at small sizes)
-        for (let p = 0; p < 6; p++) {
-            const a = p * (TWO_PI / 6) + relayPhase * 0.4;
-            const lx = Math.cos(a) * size * 0.43;
-            const ly = Math.sin(a) * size * 0.12;
-            Draw3D.drawBox3D(lx, ly + bob + bobOsc, 4, 3, 2, color(200, 210, 230), obj.angle, sunAngle);
-        }
-
-        // Status lights (central, readable)
-        const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
-        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 6, 6, 3, color(255, 200, 80, 200 * flash), obj.angle, sunAngle);
-        Draw3D.drawBox3D(0, -size * 0.06 + bob + bobOsc, 3, 3, 3, color(255, 230, 160, 255 * flash), obj.angle, sunAngle);
-
-        // Subtle concentric rings for depth/scale reference with slow pulse
-        const ringPulse = 0.85 + 0.15 * Math.sin(obj.bobPhase * 0.008);
-        Draw3D.drawRing3D(0, bob + bobOsc, size * 0.5 * ringPulse, size * 0.02, 12, size * 0.01, color(130, 140, 150, 60), obj.angle, sunAngle);
+        // Status indicator (static light)
+        fill(100, 220, 255, 200);
+        ellipse(0, bob - size * 0.32, 4, 3);
     },
 
     commDish: function (obj, size, anim, bob) {
