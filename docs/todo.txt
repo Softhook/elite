@@ -8,6 +8,7 @@ Add faction decals onto the ships
 
 Make the quantum gate. Teleport the player to a random star system 
 
+Make the war state affect the enemy behavior 
 
 war event change sapwn drencency
 

@@ -71,7 +71,7 @@ class EnemyAIBehaviors {
 
         // Only track stalls in combat approach states, not SNIPING (intentional standoff)
         const relevantState = this.currentState === AI_STATE.APPROACHING ||
-                               this.currentState === AI_STATE.REPOSITIONING;
+            this.currentState === AI_STATE.REPOSITIONING;
 
         if (!relevantState) {
             this._resetRangeStall();
@@ -121,16 +121,16 @@ class EnemyAIBehaviors {
         }
 
         if (this._rangeStallTimer >= this._rangeStallTriggerTime) {
-            const newState = (this.currentState === AI_STATE.REPOSITIONING) 
-                ? AI_STATE.APPROACHING 
+            const newState = (this.currentState === AI_STATE.REPOSITIONING)
+                ? AI_STATE.APPROACHING
                 : AI_STATE.ATTACK_PASS;
             const targetName = this.target?.shipTypeName || (this.target === this.currentSystem?.player ? 'Player' : 'Unknown');
-            
+
             AI_LOG(`⚠️ RANGE STALL: ${this.shipTypeName} vs ${targetName} - stalled for ${this._rangeStallTimer.toFixed(1)}s at range ${distanceToTarget.toFixed(0)} -> forcing ${AI_STATE_NAME[newState]}`);
-            
+
             this.changeState(newState);
             this._resetRangeStall();
-            
+
             // Add cooldown to prevent immediate re-triggering
             this._rangeStallCooldown = 5.0; // 5 second cooldown after forcing state change
         }
@@ -297,12 +297,12 @@ class EnemyAIBehaviors {
 
     _updateCoverPeek(dtSeconds) {
         if (!this.repositionTarget || !this.coverTarget) return;
-        
+
         // Check distance to the base cover position
         const dx = this.repositionTarget.x - this.pos.x;
         const dy = this.repositionTarget.y - this.pos.y;
         const dist = Math.hypot(dx, dy);
-        
+
         // Start peek cycle if at cover and timer is expired
         // Relaxed distance check (was 30) to ensure ships actually trigger the behavior
         const triggerDist = Math.max(50, this.size * 2);
@@ -310,10 +310,10 @@ class EnemyAIBehaviors {
             this.coverPeekTimer = 4.0; // 2s out, 2s back
             this.peekSide = Math.random() < 0.5 ? 1 : -1;
         }
-        
+
         if (this.coverPeekTimer > 0) {
             this.coverPeekTimer = Math.max(0, this.coverPeekTimer - dtSeconds);
-            
+
             // If in first half of timer (peeking out), modify repositionTarget
             if (this.coverPeekTimer > 2.0) {
                 const targetPos = this.target?.pos || this.pos;
@@ -321,27 +321,27 @@ class EnemyAIBehaviors {
                 const ay = this.coverTarget.pos.y;
                 const tx = targetPos.x;
                 const ty = targetPos.y;
-                
+
                 let dirX = tx - ax;
                 let dirY = ty - ay;
                 const len = Math.hypot(dirX, dirY);
-                
+
                 if (len > 0.001) {
                     dirX /= len;
                     dirY /= len;
-                    
+
                     // Perpendicular vector (sideways)
                     const perpX = -dirY * this.peekSide;
                     const perpY = dirX * this.peekSide;
-                    
+
                     // Calculate peek offset distance
                     const radius = this.coverTarget.maxRadius || (this.coverTarget.size ? this.coverTarget.size * 0.5 : 20);
                     const peekOffset = radius * 1.5 + this.size; // Increased from 1.2 for safety
-                    
+
                     // Push the peek point slightly further away from the asteroid to avoid clipping
                     // The 'dir' vector points from Asteroid to Target.
                     // We want to move opposite to 'dir' (away from target, which is also away from asteroid on this side)
-                    const outwardPush = this.size * 2.0; 
+                    const outwardPush = this.size * 2.0;
 
                     // Modify repositionTarget to be the peek position
                     this.repositionTarget = createVector(
@@ -408,8 +408,8 @@ class EnemyAIBehaviors {
                     const sizeFactor = Math.max(0, Math.min(1, ((r * 2) - this.size) / Math.max(r * 2, 1)));
                     const speed = (cover.vel && typeof cover.vel.mag === 'function') ? cover.vel.mag() : Math.hypot(cover.vel?.x || 0, cover.vel?.y || 0);
                     const speedPenalty = Math.min(speed, 3) * 0.4;
-                    
-                    console.log(`${this.shipTypeName} attempting cover at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}) | score:${coverScore.toFixed(2)} dist_tgt:${distanceToTarget.toFixed(0)} hull:${(this.hull/this.maxHull*100).toFixed(0)}% | ast_r:${r.toFixed(1)} dist_ast:${distToAst.toFixed(1)} sizeF:${sizeFactor.toFixed(2)} distF:${distFactor.toFixed(2)} speedP:${speedPenalty.toFixed(2)} LOS:${blocksLOS ? 'Y' : 'N'}`);
+
+                    console.log(`${this.shipTypeName} attempting cover at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}) | score:${coverScore.toFixed(2)} dist_tgt:${distanceToTarget.toFixed(0)} hull:${(this.hull / this.maxHull * 100).toFixed(0)}% | ast_r:${r.toFixed(1)} dist_ast:${distToAst.toFixed(1)} sizeF:${sizeFactor.toFixed(2)} distF:${distFactor.toFixed(2)} speedP:${speedPenalty.toFixed(2)} LOS:${blocksLOS ? 'Y' : 'N'}`);
                     this.coverTarget = cover;
                     refreshCoverApproachPoint();
                     if (this.currentState !== AI_STATE.REPOSITIONING) {
@@ -436,11 +436,11 @@ class EnemyAIBehaviors {
     updateCombatAI(system) {
         // 1. Handle forced‐combat mode (e.g., Hauler retaliation override)
         const isInForcedCombat = this._handleForcedCombat(system);
-    
+
         // 2. Update targeting (may be overridden by forced combat)
         let targetExists = this.updateTargeting(system);
         targetExists = this.isTargetValid(this.target);
-    
+
         // 3. Compute distance to target and angle for firing (with predictive aiming)
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
         let shootingAngle = this.angle;
@@ -463,7 +463,7 @@ class EnemyAIBehaviors {
         } else {
             this._resetRangeStall();
         }
-    
+
         // 4. Run state‐transition logic.
         //    REMOVED: if (!isInForcedCombat)
         //    Allow updateCombatState to run even if in forced combat,
@@ -472,14 +472,14 @@ class EnemyAIBehaviors {
 
         // 4b. Cover behavior: pick cover and reposition if needed
         this._updateCoverBehavior(system, targetExists, distanceToTarget);
-    
+
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
         // ← NO MORE "if (FLEEING) updateFleeingAI" here!
         if (this.currentState === AI_STATE.FLEEING) {
             // state helper handles movement & exit
             return;
         }
-    
+
         // 6. Otherwise, do normal combat movement & firing
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
         this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
@@ -496,25 +496,25 @@ class EnemyAIBehaviors {
         if (system.player && system.isPlayerWanted()) {
             // Always set player as target when wanted
             this.target = system.player;
-            
+
             // MODIFIED: Immediately pursue if system-wide alert is active
-            if (system.policeAlertSent && 
+            if (system.policeAlertSent &&
                 (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) {
                 this.changeState(AI_STATE.APPROACHING);
-                
+
                 // Force rotation toward player
                 if (this.pos && system.player.pos) {
-                    let angleToPlayer = atan2(system.player.pos.y - this.pos.y, 
-                                            system.player.pos.x - this.pos.x);
+                    let angleToPlayer = atan2(system.player.pos.y - this.pos.y,
+                        system.player.pos.x - this.pos.x);
                     this.angle = angleToPlayer;
                 }
-                
+
                 if (!this.hasReportedWantedPlayer) {
                     ENEMY_AI_LOG(`Police ${this.shipTypeName} responding to system-wide alert`);
                     this.hasReportedWantedPlayer = true;
                 }
             }
-            
+
             // Use combat AI when player is wanted
             this.updateCombatAI(system);
             return;
@@ -522,13 +522,13 @@ class EnemyAIBehaviors {
             // Reset flags when player is no longer wanted
             this.hasReportedWantedPlayer = false;
             this.reportedWantedTarget = false;
-            
+
             // Clear system alert flag if needed
             if (system.player && !system.player.isWanted && system.policeAlertSent) {
                 system.policeAlertSent = false;
             }
         }
-        
+
         // Check for wanted ships
         let wantedTarget = null;
         if (system.enemies && system.enemies.length > 0) {
@@ -539,7 +539,7 @@ class EnemyAIBehaviors {
                 }
             }
         }
-        
+
         if (wantedTarget) {
             // Target any wanted ship
             this.target = wantedTarget;
@@ -552,16 +552,16 @@ class EnemyAIBehaviors {
             if (this.currentState !== AI_STATE.PATROLLING) {
                 this.changeState(AI_STATE.PATROLLING);
             }
-            
+
             if (!this.patrolTargetPos) {
                 this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500));
             }
-            
+
             let desiredMovementTargetPos = this.patrolTargetPos;
             let distToPatrolTarget = desiredMovementTargetPos
                 ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
                 : Infinity;
-                
+
             if (distToPatrolTarget < 50) {
                 // Select a new patrol target - sometimes station, sometimes elsewhere
                 if (system?.station?.pos) {
@@ -573,13 +573,13 @@ class EnemyAIBehaviors {
                         const patrolRange = 2000; // Area to patrol within
                         const patrolAngle = random(TWO_PI);
                         const patrolDist = random(700, patrolRange);
-                        
+
                         // Create patrol point relative to current position
                         this.patrolTargetPos = createVector(
                             this.pos.x + cos(patrolAngle) * patrolDist,
                             this.pos.y + sin(patrolAngle) * patrolDist
                         );
-                        
+
                         //console.log(`Police ${this.shipTypeName} patrolling to new point at distance ${patrolDist.toFixed(0)}`);
                     }
                 } else {
@@ -588,7 +588,7 @@ class EnemyAIBehaviors {
                 }
                 desiredMovementTargetPos = this.patrolTargetPos;
             }
-            
+
             this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         }
     }
@@ -611,7 +611,7 @@ class EnemyAIBehaviors {
                 this.previousTargetPos = this.patrolTargetPos ? this.patrolTargetPos.copy() : null;
 
                 // Decide whether to fight or flee based on hull
-                    if (this.hull < this.maxHull * 0.5) { // Flee if below 50% hull
+                if (this.hull < this.maxHull * 0.5) { // Flee if below 50% hull
                     HAULER_LOG(`Hauler ${this.shipTypeName} fleeing from attack by ${this.lastAttacker.shipTypeName || 'Player'}`);
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.FLEEING);
@@ -639,7 +639,7 @@ class EnemyAIBehaviors {
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
                     this.attackCooldown = 3.0; // Prevent re-triggering this check for 3 seconds
                     //if (uiManager) uiManager.addMessage(`${this.shipTypeName} retaliating against attack`, null, true); // Only show once
-                    
+
                     // IMPROVED FIX: Skip all normal hauler processing for this frame
                     this.updateCombatAI(system);
                     return;
@@ -659,11 +659,11 @@ class EnemyAIBehaviors {
                     this.target = null; // Clear target
                     this.inCombat = false; // Clear combat flag
                     this.attackCooldown = 5.0; // Prevent immediate re-engagement
-                    
+
                     // Return to previous state or default
                     this.changeState(this.previousHaulerState || AI_STATE.PATROLLING);
                     this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy(); // Restore patrol target
-                    
+
                     // Don't run combat AI this frame if disengaging
                     this.performSafeRotationAndThrust(system, this.patrolTargetPos); // Move towards patrol target
                     this.updatePhysics();
@@ -672,7 +672,7 @@ class EnemyAIBehaviors {
             }
 
             // Force reinstate combat state if needed (but don't spam if in hauler-specific states)
-            if (this.currentState !== AI_STATE.APPROACHING && 
+            if (this.currentState !== AI_STATE.APPROACHING &&
                 this.currentState !== AI_STATE.ATTACK_PASS &&
                 this.currentState !== AI_STATE.REPOSITIONING &&
                 this.currentState !== AI_STATE.FLEEING &&
@@ -686,7 +686,7 @@ class EnemyAIBehaviors {
             }
 
             // Check hull status - flee if heavily damaged during combat
-                    if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
+            if (this.hull < this.maxHull * 0.4 && this.currentState !== AI_STATE.FLEEING) {
                 HAULER_LOG(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
                 this.target = this.lastAttacker || this.target; // Ensure we flee from *something*
                 this.changeState(AI_STATE.FLEEING);
@@ -708,7 +708,7 @@ class EnemyAIBehaviors {
         {
             // Set the inCombat flag if needed
             this.inCombat = true;
-            
+
 
             this.updateCombatAI(system);
             this.updatePhysics();
@@ -741,7 +741,7 @@ class EnemyAIBehaviors {
                 } else {
                     // If patrolTargetPos already exists, check if it's the station
                     if (system?.station?.pos && this.patrolTargetPos.dist(system.station.pos) < 1) {
-                         isTargetingStation = true;
+                        isTargetingStation = true;
                     }
                 }
 
@@ -754,16 +754,16 @@ class EnemyAIBehaviors {
                 if (dS < this.stationProximityThreshold) {
                     // If we are close AND our intended target was the station, transition
                     if (isTargetingStation) {
-                         AI_LOG(`Hauler ${this.shipTypeName} arriving near station (Dist: ${dS.toFixed(1)}).`);
-                         this.changeState(AI_STATE.NEAR_STATION);
-                         shouldMove = false; // Stop moving this frame, let NEAR_STATION handle braking/waiting
+                        AI_LOG(`Hauler ${this.shipTypeName} arriving near station (Dist: ${dS.toFixed(1)}).`);
+                        this.changeState(AI_STATE.NEAR_STATION);
+                        shouldMove = false; // Stop moving this frame, let NEAR_STATION handle braking/waiting
                     } else {
-                         // Reached a non-station patrol point.
-                         // For now, just treat it like arriving at the station for simplicity.
-                         // Could add logic here later to pick a new patrol point or head towards station.
-                         AI_LOG(`Hauler ${this.shipTypeName} arriving near patrol point (Dist: ${dS.toFixed(1)}). Treating as station arrival.`);
-                         this.changeState(AI_STATE.NEAR_STATION);
-                         shouldMove = false;
+                        // Reached a non-station patrol point.
+                        // For now, just treat it like arriving at the station for simplicity.
+                        // Could add logic here later to pick a new patrol point or head towards station.
+                        AI_LOG(`Hauler ${this.shipTypeName} arriving near patrol point (Dist: ${dS.toFixed(1)}). Treating as station arrival.`);
+                        this.changeState(AI_STATE.NEAR_STATION);
+                        shouldMove = false;
                     }
                 }
                 break;
@@ -790,25 +790,25 @@ class EnemyAIBehaviors {
             case AI_STATE.LEAVING_SYSTEM:
                 this.target = null; // Ensure target is null when leaving
                 desiredMovementTargetPos = this.patrolTargetPos;
-                 if (!desiredMovementTargetPos) {
-                     HAULER_LOG(`WARN: Hauler ${this.shipTypeName} in LEAVING_SYSTEM state has no patrolTargetPos! Attempting recovery.`);
-                     this.setLeavingSystemTarget(system);
-                     desiredMovementTargetPos = this.patrolTargetPos;
-                     if (!desiredMovementTargetPos) {
-                         shouldMove = false;
-                         break;
-                     }
+                if (!desiredMovementTargetPos) {
+                    HAULER_LOG(`WARN: Hauler ${this.shipTypeName} in LEAVING_SYSTEM state has no patrolTargetPos! Attempting recovery.`);
+                    this.setLeavingSystemTarget(system);
+                    desiredMovementTargetPos = this.patrolTargetPos;
+                    if (!desiredMovementTargetPos) {
+                        shouldMove = false;
+                        break;
+                    }
                 }
 
-                                // --- DETAILED DEBUG LOGGING ---
-                                try {
-                                    const jz = system?.jumpZoneCenter;
-                                    HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} pos=(${this.pos.x.toFixed(1)},${this.pos.y.toFixed(1)}) target=(${desiredMovementTargetPos.x.toFixed(1)},${desiredMovementTargetPos.y.toFixed(1)}) jumpZone=${jz ? `${jz.x.toFixed(1)},${jz.y.toFixed(1)}` : 'none'}`);
-                                } catch (e) { /* ignore logging errors */ }
+                // --- DETAILED DEBUG LOGGING ---
+                try {
+                    const jz = system?.jumpZoneCenter;
+                    HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} pos=(${this.pos.x.toFixed(1)},${this.pos.y.toFixed(1)}) target=(${desiredMovementTargetPos.x.toFixed(1)},${desiredMovementTargetPos.y.toFixed(1)}) jumpZone=${jz ? `${jz.x.toFixed(1)},${jz.y.toFixed(1)}` : 'none'}`);
+                } catch (e) { /* ignore logging errors */ }
 
-                                // Calculate distance to target (Jump Zone/Edge)
-                                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
-                                HAULER_LOG(`[LEAVING] ${this.shipTypeName} distanceToTarget=${dE.toFixed(1)}`);
+                // Calculate distance to target (Jump Zone/Edge)
+                let dE = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
+                HAULER_LOG(`[LEAVING] ${this.shipTypeName} distanceToTarget=${dE.toFixed(1)}`);
 
 
                 // ---  Exit Condition ---
@@ -840,15 +840,15 @@ class EnemyAIBehaviors {
                             this.initiateJumpFade();
                             HAULER_LOG(`${this.shipTypeName} (Guard) could not follow principal, initiating jump fade`);
                         }
-                        } else {
-                            // Normal hauler/transport leaving
-                            this.inCombat = false;
-                            this.haulerCombatTimer = undefined;
-                            HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
-                            // Use centralized helper so all ships use the same visual fade behavior
-                            this.initiateJumpFade(0.35, 1.2);
-                            HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
-                        }
+                    } else {
+                        // Normal hauler/transport leaving
+                        this.inCombat = false;
+                        this.haulerCombatTimer = undefined;
+                        HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
+                        // Use centralized helper so all ships use the same visual fade behavior
+                        this.initiateJumpFade(0.35, 1.2);
+                        HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
+                    }
                     shouldMove = false;
                 }
                 break; // End LEAVING_SYSTEM case
@@ -856,7 +856,7 @@ class EnemyAIBehaviors {
             default:
                 this.target = null;
                 HAULER_LOG(`Hauler ${this.shipTypeName} in unexpected state ${this.currentState}. Resetting.`);
-                if(system?.station?.pos) {
+                if (system?.station?.pos) {
                     this.patrolTargetPos = system.station.pos.copy();
                     this.changeState(AI_STATE.PATROLLING);
                 } else {
@@ -978,7 +978,7 @@ class EnemyAIBehaviors {
             this.updateCombatAI(system);
             this.updatePhysics();
             return;
-       }
+        }
 
         // --- Normal Transport Logic ---
         this.target = null; // Ensure target is null during normal transport
@@ -1056,8 +1056,8 @@ class EnemyAIBehaviors {
                     pts.push(system.station.pos.copy()); objs.push(null);
                     pts.push(p5.Vector.add(system.station.pos, createVector(random(-500, 500), random(-500, 500)))); objs.push(null);
                 } else {
-                    pts.push(createVector(0,0)); objs.push(null);
-                    pts.push(createVector(500,0)); objs.push(null);
+                    pts.push(createVector(0, 0)); objs.push(null);
+                    pts.push(createVector(500, 0)); objs.push(null);
                 }
             }
 
@@ -1089,7 +1089,7 @@ class EnemyAIBehaviors {
             this._routeApproachJitterIndex = this.currentRouteIndex;
         }
         const lateralJitter = this._routeApproachJitter || 0;
-        let moveTarget = (destination && typeof destination.copy === 'function') ? destination.copy() : (destination ? createVector(destination.x, destination.y) : createVector(0,0));
+        let moveTarget = (destination && typeof destination.copy === 'function') ? destination.copy() : (destination ? createVector(destination.x, destination.y) : createVector(0, 0));
         if (destObj && destObj.pos) {
             try {
                 const dir = p5.Vector.sub(this.pos, destObj.pos);
@@ -1257,7 +1257,7 @@ class EnemyAIBehaviors {
 
 
         // --- Apply Braking when close to cargo ---
-            if (distanceToCargo < brakingDistance) {
+        if (distanceToCargo < brakingDistance) {
             // Map distance to brake factor: stronger braking closer to target
             // Starts braking gently (~0.95) at brakingDistance, increases to strong braking (~0.75) near collectionRadius
             const brakeFactor = map(distanceToCargo, collectionRadius * 0.8, brakingDistance, 0.75, 0.95);
@@ -1282,7 +1282,7 @@ class EnemyAIBehaviors {
 
             if (hasHarpoon && distanceToCargo >= collectionRadius && distanceToCargo <= (this.firingRange || 0)) {
                 const harpoonIdx = (Array.isArray(this.weapons)) ? this.weapons.findIndex(w => {
-                    try { return (typeof getBaseWeaponType === 'function') ? getBaseWeaponType(w.type || '') === WEAPON_TYPE.HARPOON : (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); } catch(e) { return (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); }
+                    try { return (typeof getBaseWeaponType === 'function') ? getBaseWeaponType(w.type || '') === WEAPON_TYPE.HARPOON : (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); } catch (e) { return (typeof (w.type) === 'string' && w.type.toLowerCase().includes('harpoon')); }
                 }) : -1;
                 if (harpoonIdx !== -1 && typeof this.isWeaponReady === 'function' && this.isWeaponReady()) {
                     // Prevent firing duplicate harpoons if owner or cargo already has a tether
@@ -1310,9 +1310,9 @@ class EnemyAIBehaviors {
                             const tvy = (this.cargoTarget.vel && this.cargoTarget.vel.y) ? this.cargoTarget.vel.y : 0;
                             const s = (harpoonWeapon && harpoonWeapon.speed) ? harpoonWeapon.speed : 30;
 
-                            const a = (tvx*tvx + tvy*tvy) - (s*s);
-                            const b = 2 * (tx*tvx + ty*tvy);
-                            const c = tx*tx + ty*ty;
+                            const a = (tvx * tvx + tvy * tvy) - (s * s);
+                            const b = 2 * (tx * tvx + ty * tvy);
+                            const c = tx * tx + ty * ty;
                             let t = null;
                             if (Math.abs(a) < 1e-6) {
                                 if (Math.abs(b) > 1e-6) {
@@ -1320,12 +1320,12 @@ class EnemyAIBehaviors {
                                     if (tl > 0) t = tl;
                                 }
                             } else {
-                                const disc = b*b - 4*a*c;
+                                const disc = b * b - 4 * a * c;
                                 if (disc >= 0) {
                                     const sqrtD = Math.sqrt(disc);
-                                    const t1 = (-b - sqrtD) / (2*a);
-                                    const t2 = (-b + sqrtD) / (2*a);
-                                    const candidates = [t1, t2].filter(v => v > 0).sort((A,B)=>A-B);
+                                    const t1 = (-b - sqrtD) / (2 * a);
+                                    const t2 = (-b + sqrtD) / (2 * a);
+                                    const candidates = [t1, t2].filter(v => v > 0).sort((A, B) => A - B);
                                     if (candidates.length) t = candidates[0];
                                 }
                             }
@@ -1364,7 +1364,7 @@ class EnemyAIBehaviors {
 
 
         // --- Check if we've reached the cargo for collection ---
-            if (distanceToCargo < collectionRadius) {
+        if (distanceToCargo < collectionRadius) {
             // Double-check cargo hasn't been collected already (race condition protection)
             if (this.cargoTarget.collected) {
                 CARGO_LOG(`WARN: ${this.shipTypeName} tried to collect already-collected cargo`);
@@ -1372,7 +1372,7 @@ class EnemyAIBehaviors {
                 this.cargoCollectionCooldown = 0.5;
                 return false;
             }
-            
+
             const pickupResult = (typeof this.collectCargoFromWorld === 'function')
                 ? this.collectCargoFromWorld(this.cargoTarget)
                 : { added: 0, fullyCollected: false };
@@ -1429,7 +1429,7 @@ class EnemyAIBehaviors {
                 this.combatEngagementTimer = 15.0; // Engage for 15 seconds before disengaging
                 this.inCombat = true; // Mark as in combat
                 this.attackCooldown = 3.0; // Prevent re-triggering for 3 seconds
-                
+
                 // Continue with combat logic below
             }
         }
@@ -1446,11 +1446,11 @@ class EnemyAIBehaviors {
                     this.target = null; // Clear target
                     this.inCombat = false; // Clear combat flag
                     this.attackCooldown = 10.0; // Prevent immediate re-engagement
-                    
+
                     // Return to patrol
                     this.changeState(AI_STATE.PATROLLING);
                     this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy();
-                    
+
                     // Move towards patrol target this frame
                     this.performSafeRotationAndThrust(system, this.patrolTargetPos);
                     this.updatePhysics();
@@ -1459,7 +1459,7 @@ class EnemyAIBehaviors {
             }
 
             // Force reinstate combat state if needed
-            if (this.currentState !== AI_STATE.APPROACHING && 
+            if (this.currentState !== AI_STATE.APPROACHING &&
                 this.currentState !== AI_STATE.ATTACK_PASS &&
                 this.currentState !== AI_STATE.REPOSITIONING &&
                 this.currentState !== AI_STATE.FLEEING &&
@@ -1491,7 +1491,7 @@ class EnemyAIBehaviors {
         // Determine ship faction based on ship type
         const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
         let faction = 'MILITARY'; // Default
-        
+
         if (shipDef && shipDef.aiRoles) {
             if (shipDef.aiRoles.includes('IMPERIAL')) {
                 faction = 'IMPERIAL';
@@ -1504,20 +1504,20 @@ class EnemyAIBehaviors {
 
         // Update targeting with faction-specific priorities
         let targetExists = this.updateTargeting(system);
-        
+
         // Apply faction-specific AI bonuses when engaging
         if (targetExists && this.target) {
             const targetDef = this.target.shipTypeName ? SHIP_DEFINITIONS[this.target.shipTypeName] : null;
             const targetFaction = (this.target instanceof Player && this.target.playerFaction)
                 ? this.target.playerFaction
                 : (this._getShipFaction ? this._getShipFaction(this.target) : 'UNKNOWN');
-            
+
             // Military ships get bonus against aliens
             if (faction === 'MILITARY' && this.target.role === AI_ROLE.ALIEN) {
                 // Apply significant AI bonus: better aim, faster reactions
                 this._applyMilitaryAlienBonus();
             }
-            
+
             // Imperial and Separatist ships get bonus against each other
             if ((faction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
                 (faction === 'SEPARATIST' && targetFaction === 'IMPERIAL')) {
@@ -1526,7 +1526,7 @@ class EnemyAIBehaviors {
         }
 
         targetExists = this.isTargetValid(this.target);
-        
+
         // Calculate distance and angle for combat (with predictive aiming)
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
         let shootingAngle = this.angle;
@@ -1549,16 +1549,16 @@ class EnemyAIBehaviors {
         } else {
             this._resetRangeStall();
         }
-        
+
         // Run state-transition logic
         this.updateCombatState(targetExists, distanceToTarget);
-        
+
         // If in patrol mode (no target), occasionally pause to scan or dock
         if (!targetExists || this.currentState === AI_STATE.PATROLLING) {
             this._updateCombatPatrolBehavior(system);
             return;
         }
-        
+
         // Normal combat behavior
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
         this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
@@ -1577,7 +1577,7 @@ class EnemyAIBehaviors {
             this.rotationSpeed *= 1.3;
             this._militaryBonusApplied = true;
         }
-        
+
         // Tighter angle tolerance for more accurate shots
         this.angleTolerance = 0.15; // ~8.5 degrees instead of ~15
     }
@@ -1593,7 +1593,7 @@ class EnemyAIBehaviors {
             this.maxSpeed *= 1.2; // 20% faster
             this._rivalryBonusApplied = true;
         }
-        
+
         // More aggressive engagement
         this.engageDistance *= 1.3;
         this.firingRange *= 1.2;
@@ -1607,7 +1607,7 @@ class EnemyAIBehaviors {
         if (this.currentState !== AI_STATE.PATROLLING) {
             this.changeState(AI_STATE.PATROLLING);
         }
-        
+
         // Similar to police patrol but occasionally dock at station
         if (!this.patrolTargetPos) {
             // Random patrol behavior: sometimes station, sometimes random point
@@ -1623,12 +1623,12 @@ class EnemyAIBehaviors {
                 );
             }
         }
-        
+
         let desiredMovementTargetPos = this.patrolTargetPos;
         let distToPatrolTarget = desiredMovementTargetPos
             ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
             : Infinity;
-            
+
         if (distToPatrolTarget < 50) {
             // Pause to "scan" occasionally
             if (random() < 0.2) {
@@ -1645,7 +1645,7 @@ class EnemyAIBehaviors {
                 }
                 return;
             }
-            
+
             // Select new patrol target
             if (system?.station?.pos && random() < 0.25) {
                 this.patrolTargetPos = system.station.pos.copy();
@@ -1660,18 +1660,19 @@ class EnemyAIBehaviors {
             }
             desiredMovementTargetPos = this.patrolTargetPos;
         }
-        
+
         this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
     }
 
     /**
      * Lightweight obstacle avoidance: nudge movement target away from the nearest
-     * asteroid or ship intersecting the current path, or slightly slow the ship for a short time.
+     * asteroid, ship, or space object intersecting the current path, or slightly slow the ship for a short time.
      * Low CPU: only checks obstacles within the forward cone and a capped distance.
+     * Note: Local transports (AI_ROLE.TRANSPORT) do not avoid space objects, only asteroids and ships.
      */
     _avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos) {
         if (!system || !desiredMovementTargetPos) return desiredMovementTargetPos;
-        
+
         // Quick guards
         const toX = desiredMovementTargetPos.x - this.pos.x;
         const toY = desiredMovementTargetPos.y - this.pos.y;
@@ -1692,16 +1693,16 @@ class EnemyAIBehaviors {
         // Helper to check a single obstacle
         const checkObstacle = (obj) => {
             if (!obj || obj === this || obj.destroyed || !obj.pos) return;
-            
+
             const dx = obj.pos.x - this.pos.x;
             const dy = obj.pos.y - this.pos.y;
             const proj = dx * dirX + dy * dirY; // distance along forward vector
-            
+
             if (proj <= 0 || proj > maxCheckDist) return;
-            
+
             // perpendicular squared distance from path
             const perpSq = dx * dx + dy * dy - proj * proj;
-            
+
             // Determine radius based on object type
             let r = 0;
             if (obj.maxRadius) {
@@ -1711,9 +1712,9 @@ class EnemyAIBehaviors {
             } else {
                 r = 20; // Fallback
             }
-            
+
             const safety = Math.max(this.size, 16) + r + 12; // padding
-            
+
             if (perpSq <= safety * safety) {
                 if (proj < threatProj) {
                     threat = obj;
@@ -1740,6 +1741,14 @@ class EnemyAIBehaviors {
         // Check player
         if (system.player) {
             checkObstacle(system.player);
+        }
+
+        // Check space objects (satellites, platforms, debris, etc.)
+        // Local transports (AI_ROLE.TRANSPORT) do not avoid space objects
+        if (this.role !== AI_ROLE.TRANSPORT && Array.isArray(system.spaceObjects)) {
+            for (const spaceObj of system.spaceObjects) {
+                checkObstacle(spaceObj);
+            }
         }
 
         if (!threat) return desiredMovementTargetPos;
