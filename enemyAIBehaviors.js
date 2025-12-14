@@ -546,7 +546,35 @@ class EnemyAIBehaviors {
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
                 this.changeState(AI_STATE.APPROACHING);
             }
-            this.updateCombatAI(system);
+
+            // Handle combat directly without calling updateCombatAI (which would reset targeting)
+            const targetExists = this.isTargetValid(this.target);
+            if (targetExists) {
+                const distanceToTarget = this.distanceTo(this.target);
+
+                // Calculate shooting angle with predictive aiming
+                let shootingAngle = this.angle;
+                const predictedPos = this.predictTargetPosition();
+                if (predictedPos) {
+                    shootingAngle = atan2(
+                        predictedPos.y - this.pos.y,
+                        predictedPos.x - this.pos.x
+                    );
+                } else {
+                    shootingAngle = atan2(
+                        this.target.pos.y - this.pos.y,
+                        this.target.pos.x - this.pos.x
+                    );
+                }
+
+                // Update combat state transitions
+                this.updateCombatState(targetExists, distanceToTarget);
+
+                // Move and fire
+                const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
+                this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
+                this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
+            }
         } else {
             // No wanted targets: Patrol
             if (this.currentState !== AI_STATE.PATROLLING) {

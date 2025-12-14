@@ -642,7 +642,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Weapons", "Narcotics"],
         price: 24500,
-        aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["POLICE", "COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
         techLevel: 3 // Mid-tier
     },
     "Vulture": {

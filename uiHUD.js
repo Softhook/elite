@@ -639,7 +639,7 @@ class UIHUD {
 
         if (!hasShipIdentity && !isAsteroid && !isSpaceObject) return;
 
-        const panelWidth = Math.min(280, Math.max(200, width * 0.2));
+        const panelWidth = Math.min(320, Math.max(240, width * 0.22));
         const padding = 12;
         const lineHeight = 20;
         const sectionSpacing = 8;
@@ -667,11 +667,15 @@ class UIHUD {
         const shieldPercent = this._getStatPercent(target.shield, target.maxShield);
         const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
         const rangeLine = this._formatRangeLine(player, target);
+        const activityStatus = hasShipIdentity ? this._getActivityStatus(target) : null;
         const weaponsList = hasShipIdentity ? this._getTargetWeapons(target) : [];
 
         const infoLines = [];
         if (hasShipIdentity) {
             infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        }
+        if (activityStatus) {
+            infoLines.push(activityStatus);
         }
         if (rangeLine) {
             infoLines.push(rangeLine);
@@ -909,6 +913,86 @@ class UIHUD {
             .map(entry => ({ name: entry.name.trim(), quantity: entry.quantity }));
         entries.sort((a, b) => b.quantity - a.quantity);
         return entries;
+    }
+
+    _getActivityStatus(target) {
+        if (!target || !target.currentState) return null;
+
+        const state = target.currentState;
+        const role = target.role;
+
+        // Role-specific activity descriptions
+        if (role === AI_ROLE.MINER) {
+            if (target.asteroidTarget && !target.asteroidTarget.destroyed) {
+                return 'Activity: Mining Asteroid';
+            }
+            if (state === AI_STATE.COLLECTING_CARGO) {
+                return 'Activity: Collecting Ore';
+            }
+            if (target.shouldReturnToStation || (target.cargoCapacity > 0 && target.getCargoAmount && target.getCargoAmount() >= target.cargoCapacity)) {
+                return 'Activity: Returning to Station';
+            }
+            if (state === AI_STATE.PATROLLING) {
+                return 'Activity: Searching for Asteroids';
+            }
+        }
+
+        if (role === AI_ROLE.HAULER || role === AI_ROLE.TRANSPORT) {
+            if (state === AI_STATE.COLLECTING_CARGO) {
+                return 'Activity: Collecting Cargo';
+            }
+            if (state === AI_STATE.LEAVING_SYSTEM) {
+                return 'Activity: Jumping to Hyperspace';
+            }
+            if (state === AI_STATE.TRANSPORTING) {
+                return 'Activity: On Trade Route';
+            }
+            if (state === AI_STATE.PATROLLING) {
+                return 'Activity: Trading';
+            }
+        }
+
+        if (role === AI_ROLE.POLICE) {
+            if (state === AI_STATE.APPROACHING || state === AI_STATE.ATTACK_PASS || state === AI_STATE.REPOSITIONING) {
+                if (target.target) {
+                    return 'Activity: Engaging Hostile';
+                }
+            }
+            if (state === AI_STATE.PATROLLING) {
+                return 'Activity: Patrolling System';
+            }
+        }
+
+        // General combat states
+        if (state === AI_STATE.APPROACHING || state === AI_STATE.ATTACK_PASS || state === AI_STATE.REPOSITIONING || state === AI_STATE.SNIPING) {
+            if (target.target) {
+                const targetName = target.target instanceof Player ? 'You' : (target.target.shipTypeName || 'Target');
+                return `Activity: Engaging ${targetName}`;
+            }
+            return 'Activity: In Combat';
+        }
+
+        if (state === AI_STATE.FLEEING) {
+            return 'Activity: Fleeing';
+        }
+
+        if (state === AI_STATE.COLLECTING_CARGO) {
+            return 'Activity: Collecting Cargo';
+        }
+
+        if (state === AI_STATE.PATROLLING) {
+            return 'Activity: Patrolling';
+        }
+
+        if (state === AI_STATE.GUARDING && target.principal) {
+            return 'Activity: On Guard Duty';
+        }
+
+        if (state === AI_STATE.IDLE) {
+            return 'Activity: Idle';
+        }
+
+        return null;
     }
 
     // Message system methods

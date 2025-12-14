@@ -1189,6 +1189,11 @@ class StarSystem {
      * @private
      */
     _selectMilitaryShip() {
+        // Check for police spawn (50% of normal probability - military has law enforcement)
+        if (this._shouldSpawnPolice(0.5)) {
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+        }
+
         const rand = random();
         if (rand < 0.60 && MILITARY_SHIPS.length > 0) {
             return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS) };
@@ -1206,6 +1211,11 @@ class StarSystem {
     }
 
     _selectAlienShip() {
+        // Check for police spawn (20% of normal probability - aliens suppress law enforcement)
+        if (this._shouldSpawnPolice(0.2)) {
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+        }
+
         if (random() < 0.8 && ALIEN_SHIPS.length > 0) {
             return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
         }
@@ -1222,6 +1232,11 @@ class StarSystem {
     }
 
     _selectMiningShip() {
+        // Check for police spawn (40% of normal probability - industrial law enforcement)
+        if (this._shouldSpawnPolice(0.4)) {
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+        }
+
         const rand = random();
         if (rand < 0.40 && MINER_SHIPS.length > 0) {
             return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS) };
@@ -1237,6 +1252,11 @@ class StarSystem {
     }
 
     _selectOffworldShip() {
+        // Check for police spawn (30% of normal probability - frontier law enforcement)
+        if (this._shouldSpawnPolice(0.3)) {
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+        }
+
         const rand = random();
         if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
             return { role: AI_ROLE.HAULER, ship: random(EXPLORER_SHIPS) };
@@ -1249,6 +1269,11 @@ class StarSystem {
     }
 
     _selectFactionShip(primaryFaction, secondaryFaction) {
+        // Check for police spawn (60% of normal probability - factions have organized law enforcement)
+        if (this._shouldSpawnPolice(0.6)) {
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+        }
+
         const rand = random();
         if (rand < 0.60 && primaryFaction.length > 0) {
             return { role: AI_ROLE.COMBAT, ship: random(primaryFaction) };
@@ -1287,6 +1312,20 @@ class StarSystem {
         }
 
         return { role: chosenRole, ship: chosenShip };
+    }
+
+    /**
+     * Helper to check if police should spawn based on security level.
+     * Used by economy-specific ship selection to include police.
+     * 
+     * @param {number} multiplier - Probability multiplier (0.0-1.0) to scale police chance
+     * @returns {boolean} True if police should spawn
+     * @private
+     */
+    _shouldSpawnPolice(multiplier = 1.0) {
+        const probs = this.getEnemyRoleProbabilities();
+        const policeChance = probs.POLICE * multiplier;
+        return random() < policeChance;
     }
 
     /**
