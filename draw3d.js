@@ -572,6 +572,466 @@ const Draw3D = {
     },
 
     /**
+     * Draw a hemisphere/dome (half sphere)
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} radius - Dome radius
+     * @param {number} segments - Number of segments (quality)
+     * @param {color} col - Base color
+     * @param {number} angle - Extrusion angle
+     * @param {number} sunAngle - Sun angle for shading
+     * @param {boolean} inverted - If true, dome points down instead of up
+     */
+    drawDome: function (x, y, radius, segments, col, angle, sunAngle, inverted = false) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, radius, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawDome(x, y, radius, segments, col, angle, sunAngle, inverted)
+            });
+            return;
+        }
+
+        const cc = getColorComponents(col);
+        const heightSegments = Math.max(3, Math.floor(segments / 2));
+        const radialSegments = Math.max(6, segments);
+        const angleStep = TWO_PI / radialSegments;
+        const heightStep = (PI / 2) / heightSegments;
+        const flipY = inverted ? -1 : 1;
+
+        strokeWeight(0.5);
+
+        // Draw dome segments from bottom to top
+        for (let h = 0; h < heightSegments; h++) {
+            const phi1 = h * heightStep;
+            const phi2 = (h + 1) * heightStep;
+            const r1 = Math.cos(phi1) * radius;
+            const r2 = Math.cos(phi2) * radius;
+            const y1 = -Math.sin(phi1) * radius * flipY;
+            const y2 = -Math.sin(phi2) * radius * flipY;
+
+            // Draw ring of faces at this height
+            for (let r = 0; r < radialSegments; r++) {
+                const theta1 = r * angleStep;
+                const theta2 = (r + 1) * angleStep;
+
+                // Calculate vertices
+                const x1 = x + Math.cos(theta1) * r1;
+                const z1 = y + Math.sin(theta1) * r1 + y1;
+                const x2 = x + Math.cos(theta2) * r1;
+                const z2 = y + Math.sin(theta2) * r1 + y1;
+                const x3 = x + Math.cos(theta2) * r2;
+                const z3 = y + Math.sin(theta2) * r2 + y2;
+                const x4 = x + Math.cos(theta1) * r2;
+                const z4 = y + Math.sin(theta1) * r2 + y2;
+
+                // Calculate face normal for lighting
+                const avgTheta = (theta1 + theta2) / 2;
+                const avgPhi = (phi1 + phi2) / 2;
+                const faceAngle = avgTheta;
+                const b = getShading(faceAngle - sunAngle) * (0.8 + Math.sin(avgPhi) * 0.4);
+
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.7, cc.g * b * 0.7, cc.b * b * 0.7, cc.a);
+
+                // Draw quad face
+                beginShape();
+                vertex(x1, z1);
+                vertex(x2, z2);
+                if (h < heightSegments - 1) {
+                    vertex(x3, z3);
+                    vertex(x4, z4);
+                } else {
+                    // Top cap - triangle
+                    vertex(x, y + y2);
+                }
+                endShape(CLOSE);
+            }
+        }
+    },
+
+    /**
+     * Draw a 3D cylinder (like prism but with smooth circular cross-section)
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} radius - Cylinder radius
+     * @param {number} height - Cylinder height
+     * @param {number} segments - Number of segments around circumference
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawCylinder: function (x, y, radius, height, segments, col, angle, sunAngle) {
+        // This is essentially a prism with many sides, but optimized
+        this.drawPrism(x, y, radius, Math.max(8, segments), height, col, angle, sunAngle);
+    },
+
+    /**
+     * Draw a 3D cone/pyramid
+     * @param {number} x - Base center X
+     * @param {number} y - Base center Y
+     * @param {number} baseRadius - Base radius
+     * @param {number} height - Cone height
+     * @param {number} segments - Number of segments
+     * @param {color} col - Base color
+     * @param {number} angle - Extrusion angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawCone: function (x, y, baseRadius, height, segments, col, angle, sunAngle) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, height, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawCone(x, y, baseRadius, height, segments, col, angle, sunAngle)
+            });
+            return;
+        }
+
+        const dv = this.getDepthVector(height, angle);
+        const cc = getColorComponents(col);
+        const angleStep = TWO_PI / segments;
+        const tipX = x;
+        const tipY = y - height;
+
+        strokeWeight(1);
+
+        // Draw base
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+        beginShape();
+        for (let i = 0; i < segments; i++) {
+            const ang = i * angleStep - PI / 2;
+            vertex(x + Math.cos(ang) * baseRadius + dv.x, y + Math.sin(ang) * baseRadius + dv.y);
+        }
+        endShape(CLOSE);
+
+        // Draw sides with backface culling
+        for (let i = 0; i < segments; i++) {
+            const ang = i * angleStep - PI / 2;
+            const nextAng = ((i + 1) % segments) * angleStep - PI / 2;
+            const faceAngle = (i + 0.5) * angleStep - PI / 2;
+
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
+            const dot = nx * dv.x + ny * dv.y;
+
+            if (dot > 0.001) {
+                const baseX1 = x + Math.cos(ang) * baseRadius;
+                const baseY1 = y + Math.sin(ang) * baseRadius;
+                const baseX2 = x + Math.cos(nextAng) * baseRadius;
+                const baseY2 = y + Math.sin(nextAng) * baseRadius;
+
+                const b = getShading(faceAngle - sunAngle) * 0.9;
+
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
+
+                // Triangle face from base edge to tip
+                beginShape();
+                vertex(baseX1 + dv.x, baseY1 + dv.y);
+                vertex(baseX2 + dv.x, baseY2 + dv.y);
+                vertex(tipX, tipY);
+                endShape(CLOSE);
+            }
+        }
+    },
+
+    /**
+     * Draw a helix/spiral structure
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} radius - Helix radius
+     * @param {number} height - Total height
+     * @param {number} turns - Number of complete turns
+     * @param {number} segments - Number of segments per turn
+     * @param {number} thickness - Helix strand thickness
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawHelix: function (x, y, radius, height, turns, segments, thickness, col, angle, sunAngle) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, height, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawHelix(x, y, radius, height, turns, segments, thickness, col, angle, sunAngle)
+            });
+            return;
+        }
+
+        const cc = getColorComponents(col);
+        const totalSegments = Math.floor(segments * turns);
+        const heightStep = height / totalSegments;
+        const angleStep = (TWO_PI * turns) / totalSegments;
+
+        strokeWeight(0.5);
+
+        // Draw helix as connected segments
+        for (let i = 0; i < totalSegments; i++) {
+            const t = i / totalSegments;
+            const nextT = (i + 1) / totalSegments;
+
+            const theta = i * angleStep;
+            const nextTheta = (i + 1) * angleStep;
+
+            const hx1 = x + Math.cos(theta) * radius;
+            const hy1 = y - height * 0.5 + i * heightStep;
+            const hx2 = x + Math.cos(nextTheta) * radius;
+            const hy2 = y - height * 0.5 + (i + 1) * heightStep;
+
+            const faceAngle = theta;
+            const b = getShading(faceAngle - sunAngle);
+
+            fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+            stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
+
+            // Draw segment as small box
+            this.drawBox3D(hx1, hy1, thickness, thickness, thickness * 0.5, col, angle, sunAngle);
+        }
+    },
+
+    /**
+     * Draw a lattice/grid panel structure
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} width - Panel width
+     * @param {number} height - Panel height
+     * @param {number} gridX - Number of grid divisions X
+     * @param {number} gridY - Number of grid divisions Y
+     * @param {number} beamThickness - Thickness of grid beams
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawLattice: function (x, y, width, height, gridX, gridY, beamThickness, col, angle, sunAngle) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, beamThickness, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawLattice(x, y, width, height, gridX, gridY, beamThickness, col, angle, sunAngle)
+            });
+            return;
+        }
+
+        const stepX = width / gridX;
+        const stepY = height / gridY;
+        const halfW = width / 2;
+        const halfH = height / 2;
+
+        // Draw vertical beams
+        for (let i = 0; i <= gridX; i++) {
+            const bx = x - halfW + i * stepX;
+            this.drawBox3D(bx, y, beamThickness, height, beamThickness, col, angle, sunAngle);
+        }
+
+        // Draw horizontal beams
+        for (let j = 0; j <= gridY; j++) {
+            const by = y - halfH + j * stepY;
+            this.drawBox3D(x, by, width, beamThickness, beamThickness, col, angle, sunAngle);
+        }
+    },
+
+    /**
+     * Draw a thin antenna/rod with optional tip
+     * @param {number} x1 - Start X
+     * @param {number} y1 - Start Y
+     * @param {number} x2 - End X
+     * @param {number} y2 - End Y
+     * @param {number} thickness - Rod thickness
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     * @param {boolean} withTip - Add a small sphere tip
+     */
+    drawRod: function (x1, y1, x2, y2, thickness, col, angle, sunAngle, withTip = false) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth((x1 + x2) / 2, (y1 + y2) / 2, thickness, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawRod(x1, y1, x2, y2, thickness, col, angle, sunAngle, withTip)
+            });
+            return;
+        }
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+
+        push();
+        translate(midX, midY);
+        rotate(Math.atan2(dy, dx));
+        this.drawBox3D(0, 0, len, thickness, thickness, col, angle, sunAngle);
+        pop();
+
+        if (withTip) {
+            // Draw small sphere at tip
+            const cc = getColorComponents(col);
+            fill(cc.r * 1.2, cc.g * 1.2, cc.b * 1.2, cc.a);
+            stroke(cc.r, cc.g, cc.b, cc.a);
+            ellipse(x2, y2, thickness * 2, thickness * 1.5);
+        }
+    },
+
+    /**
+     * Draw a geodesic dome (faceted hemisphere)
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} radius - Dome radius
+     * @param {number} subdivisions - Detail level (1-3)
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawGeodesicDome: function (x, y, radius, subdivisions, col, angle, sunAngle) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, radius, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawGeodesicDome(x, y, radius, subdivisions, col, angle, sunAngle)
+            });
+            return;
+        }
+
+        const cc = getColorComponents(col);
+        const segments = Math.max(6, 6 * (subdivisions + 1));
+        const rings = Math.max(3, 3 * (subdivisions + 1));
+        const angleStep = TWO_PI / segments;
+        const heightStep = 1 / rings;
+
+        strokeWeight(0.8);
+
+        // Draw faceted dome
+        for (let r = 0; r < rings; r++) {
+            const t1 = r * heightStep;
+            const t2 = (r + 1) * heightStep;
+            const phi1 = t1 * (PI / 2);
+            const phi2 = t2 * (PI / 2);
+
+            const r1 = Math.cos(phi1) * radius;
+            const r2 = Math.cos(phi2) * radius;
+            const h1 = -Math.sin(phi1) * radius;
+            const h2 = -Math.sin(phi2) * radius;
+
+            for (let i = 0; i < segments; i++) {
+                const theta1 = i * angleStep;
+                const theta2 = (i + 1) * angleStep;
+
+                // Calculate face center for lighting
+                const faceAngle = (theta1 + theta2) / 2;
+                const b = getShading(faceAngle - sunAngle) * (0.7 + Math.random() * 0.3);
+
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * 0.3, cc.g * 0.3, cc.b * 0.3, cc.a * 0.8);
+
+                // Draw facet
+                beginShape();
+                vertex(x + Math.cos(theta1) * r1, y + h1);
+                vertex(x + Math.cos(theta2) * r1, y + h1);
+                if (r < rings - 1) {
+                    vertex(x + Math.cos(theta2) * r2, y + h2);
+                    vertex(x + Math.cos(theta1) * r2, y + h2);
+                } else {
+                    vertex(x, y + h2);
+                }
+                endShape(CLOSE);
+            }
+        }
+    },
+
+    /**
+     * Draw a 3D torus (donut shape)
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} majorRadius - Distance from center to tube center
+     * @param {number} minorRadius - Tube radius
+     * @param {number} segments - Number of segments around major circle
+     * @param {number} tubeSegments - Number of segments around tube
+     * @param {color} col - Base color
+     * @param {number} angle - Rotation angle
+     * @param {number} sunAngle - Sun angle for shading
+     */
+    drawTorus: function (x, y, majorRadius, minorRadius, segments, tubeSegments, col, angle, sunAngle) {
+        if (_renderQueue !== null) {
+            const primitiveDepth = calculatePrimitiveDepth(x, y, minorRadius, angle);
+            _renderQueue.push({
+                depth: primitiveDepth,
+                fn: () => this.drawTorus(x, y, majorRadius, minorRadius, segments, tubeSegments, col, angle, sunAngle)
+            });
+            return;
+        }
+
+        const cc = getColorComponents(col);
+        const majorStep = TWO_PI / segments;
+        const minorStep = TWO_PI / tubeSegments;
+
+        strokeWeight(0.5);
+
+        // Draw torus segments
+        for (let i = 0; i < segments; i++) {
+            const theta1 = i * majorStep;
+            const theta2 = (i + 1) * majorStep;
+
+            const cx1 = Math.cos(theta1) * majorRadius;
+            const cy1 = Math.sin(theta1) * majorRadius;
+            const cx2 = Math.cos(theta2) * majorRadius;
+            const cy2 = Math.sin(theta2) * majorRadius;
+
+            for (let j = 0; j < tubeSegments; j++) {
+                const phi1 = j * minorStep;
+                const phi2 = (j + 1) * minorStep;
+
+                const cos1 = Math.cos(phi1) * minorRadius;
+                const sin1 = Math.sin(phi1) * minorRadius;
+                const cos2 = Math.cos(phi2) * minorRadius;
+                const sin2 = Math.sin(phi2) * minorRadius;
+
+                // Calculate vertices
+                // For each point, we need to:
+                // 1. Position on major circle: (cx, cy)
+                // 2. Add tube offset rotated around the major circle
+                const vx1 = x + (majorRadius + cos1) * Math.cos(theta1);
+                const vy1 = y + (majorRadius + cos1) * Math.sin(theta1) + sin1;
+                const vx2 = x + (majorRadius + cos1) * Math.cos(theta2);
+                const vy2 = y + (majorRadius + cos1) * Math.sin(theta2) + sin1;
+                const vx3 = x + (majorRadius + cos2) * Math.cos(theta2);
+                const vy3 = y + (majorRadius + cos2) * Math.sin(theta2) + sin2;
+                const vx4 = x + (majorRadius + cos2) * Math.cos(theta1);
+                const vy4 = y + (majorRadius + cos2) * Math.sin(theta1) + sin2;
+
+                // Backface culling: only draw faces visible from above
+                // Calculate face normal using cross product of two edges
+                const edge1x = vx2 - vx1;
+                const edge1y = vy2 - vy1;
+                const edge2x = vx4 - vx1;
+                const edge2y = vy4 - vy1;
+
+                // Cross product z-component (normal pointing up or down)
+                const normalZ = edge1x * edge2y - edge1y * edge2x;
+
+                // Only draw if face is pointing towards viewer (positive z)
+                if (normalZ > 0) {
+                    // Calculate lighting
+                    const faceAngle = theta1;
+                    const b = getShading(faceAngle - sunAngle) * (0.6 + Math.sin(phi1) * 0.4);
+
+                    fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                    stroke(cc.r * b * 0.7, cc.g * b * 0.7, cc.b * b * 0.7, cc.a);
+
+                    // Draw quad
+                    beginShape();
+                    vertex(vx1, vy1);
+                    vertex(vx2, vy2);
+                    vertex(vx3, vy3);
+                    vertex(vx4, vy4);
+                    endShape(CLOSE);
+                }
+            }
+        }
+    },
+
+    /**
      * Draw extruded ring from vertex arrays
      */
     drawExtrudedRing: function (outerVerts, innerVerts, depth, col, angle, sunAngle) {

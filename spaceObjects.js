@@ -19,7 +19,10 @@ const DOCKABLE_SPACE_OBJECT_TYPES = [
     'drugLab',
     'labourColony',
     'undergroundMarket',
-    'shipyard'
+    'shipyard',
+    'advancedResearchStation',
+    'powerStation',
+    'commHub'
 ];
 
 // Size map for each object type
@@ -59,7 +62,11 @@ const sizeMap = {
     drugLab: 200,
     labourColony: 240,
     undergroundMarket: 250,
-    shipyard: 320
+    shipyard: 320,
+    advancedResearchStation: 280,
+    powerStation: 240,
+    commHub: 180,
+    alienMonolith: 200
 };
 
 // Mapping of what each SpaceObject type typically produces and what it will buy
@@ -101,6 +108,10 @@ const SPACE_OBJECT_COMMODITIES = {
     labourColony: { produces: ['Slaves', 'Metals', 'Textiles', 'Machinery'], buys: ['Food'] },
     undergroundMarket: { produces: [], buys: ['Slaves', 'Narcotics', 'Weapons'] },
     shipyard: { produces: [], buys: ['Food', 'Machinery', 'Adv Components', 'Computers'] },
+    advancedResearchStation: { produces: ['Adv Components', 'Computers'], buys: ['Food', 'Chemicals', 'Machinery'] },
+    powerStation: { produces: ['Adv Components', 'Machinery'], buys: ['Chemicals', 'Metals'] },
+    commHub: { produces: ['Computers'], buys: ['Adv Components', 'Machinery'] },
+    alienMonolith: { produces: ['Luxury Goods'], buys: [] },
     default: { produces: [], buys: [] }
 };
 
@@ -837,55 +848,50 @@ const SpaceObjectRenderers = {
     observatoryDome: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Main support structure (hexagonal base)
-        Draw3D.drawPrism(0, bob, size * 0.5, 6, size * 0.2, color(120, 130, 140), obj.angle, sunAngle);
+        // Main support structure (smooth cylinder base)
+        Draw3D.drawCylinder(0, bob + size * 0.05, size * 0.5, size * 0.3, 16, color(120, 130, 140), obj.angle, sunAngle);
 
         // Secondary support rings
         Draw3D.drawRing3D(0, bob, size * 0.9, size * 0.15, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
         Draw3D.drawRing3D(0, bob - size * 0.1, size * 0.8, size * 0.12, 12, size * 0.05, color(100, 110, 120), obj.angle, sunAngle);
 
-        // Central support pillar
-        Draw3D.drawBox3D(0, bob - size * 0.25, size * 0.1, size * 0.5, size * 0.1, color(140, 150, 160), obj.angle, sunAngle);
+        // Central support pillar (smooth cylinder)
+        Draw3D.drawCylinder(0, bob - size * 0.25, size * 0.08, size * 0.5, 12, color(140, 150, 160), obj.angle, sunAngle);
 
         // Elevator car
         Draw3D.drawBox3D(0, bob - size * 0.15 + Math.sin(anim ? anim.domeRotation : 0) * 2, size * 0.06, size * 0.04, size * 0.06, color(180, 190, 200), obj.angle, sunAngle);
 
-        // Massive observation dome (approximated with a prism/hemisphere)
-        Draw3D.drawPrism(0, bob - size * 0.45, size * 0.4, 12, size * 0.2, color(220, 240, 255, 100), obj.angle, sunAngle);
-
-        // Dome frame
-        stroke(90, 100, 110, 180);
-        strokeWeight(2);
-        noFill();
-        // Simplified wireframe
-        const domeRadius = size * 0.4;
-        const domeHeight = size * 0.2;
-        const domeY = bob - size * 0.45;
-        // ... (wireframe drawing logic if needed, or rely on prism edges)
+        // Massive observation dome using GEODESIC primitive for premium look
+        Draw3D.drawGeodesicDome(0, bob - size * 0.40, size * 0.42, 2, color(100, 160, 220, 150), obj.angle, sunAngle);
 
         // Primary telescope assembly
         push();
         translate(0, bob - size * 0.45);
         const sweepAng = anim ? anim.telescopeSweep : 0;
         rotate(sweepAng);
-        Draw3D.drawBox3D(0, 0, size * 0.12, size * 0.35, size * 0.12, color(60, 70, 80), obj.angle, sunAngle);
-        Draw3D.drawPrism(0, -size * 0.2, size * 0.04, 8, size * 0.02, color(30, 40, 50), obj.angle, sunAngle);
+        Draw3D.drawCylinder(0, 0, size * 0.06, size * 0.35, 10, color(60, 70, 80), obj.angle, sunAngle);
+        // Lens cone
+        Draw3D.drawCone(0, -size * 0.2, size * 0.05, size * 0.08, 8, color(30, 40, 50), obj.angle, sunAngle);
         pop();
 
-        // Secondary telescope arrays
+        // Secondary telescope arrays with smooth cylinders
         for (let s = 0; s < 3; s++) {
             const sa = s * TWO_PI / 3;
             const sx = Math.cos(sa) * size * 0.25;
             const sy = Math.sin(sa) * size * 0.25 + bob - size * 0.3;
-            Draw3D.drawBox3D(sx, sy, size * 0.08, size * 0.2, size * 0.08, color(70, 80, 90), obj.angle, sunAngle);
+            Draw3D.drawCylinder(sx, sy, size * 0.04, size * 0.2, 8, color(70, 80, 90), obj.angle, sunAngle);
+            // Lens tip
+            Draw3D.drawCone(sx, sy - size * 0.12, size * 0.03, size * 0.06, 6, color(50, 60, 70), obj.angle, sunAngle);
         }
 
-        // Research modules
+        // Research modules with rounded corners
         for (let m = 0; m < 4; m++) {
             const ma = m * TWO_PI / 4;
             const mx = Math.cos(ma) * size * 0.4;
             const my = Math.sin(ma) * size * 0.4 + bob - size * 0.05;
-            Draw3D.drawBox3D(mx, my, size * 0.12, size * 0.08, size * 0.08, color(160, 170, 180), obj.angle, sunAngle);
+            Draw3D.drawCylinder(mx, my, size * 0.06, size * 0.08, 8, color(160, 170, 180), obj.angle, sunAngle);
+            // Small dome caps
+            Draw3D.drawDome(mx, my - size * 0.05, size * 0.06, 6, color(180, 190, 200), obj.angle, sunAngle);
         }
 
         // Observation decks
@@ -894,25 +900,35 @@ const SpaceObjectRenderers = {
             Draw3D.drawRing3D(0, dy, size * 0.5, size * 0.08, 12, size * 0.02, color(180, 190, 200, 150), obj.angle, sunAngle);
         }
 
-        // Solar power arrays
-        Draw3D.drawBox3D(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), obj.angle, sunAngle);
-        Draw3D.drawBox3D(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.06, size * 0.02, color(30, 60, 100), obj.angle, sunAngle);
+        // Solar power arrays with lattice frames
+        Draw3D.drawLattice(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, 3, 2, 1.5, color(80, 90, 100), obj.angle, sunAngle);
+        Draw3D.drawBox3D(-size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, size * 0.01, color(30, 60, 100, 180), obj.angle, sunAngle);
 
-        // Communication arrays
-        Draw3D.drawPrism(-size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), obj.angle, sunAngle);
-        Draw3D.drawPrism(size * 0.3, bob - size * 0.2, size * 0.05, 6, size * 0.06, color(100, 110, 120), obj.angle, sunAngle);
+        Draw3D.drawLattice(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, 3, 2, 1.5, color(80, 90, 100), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.6, bob + size * 0.1, size * 0.35, size * 0.15, size * 0.01, color(30, 60, 100, 180), obj.angle, sunAngle);
 
-        // Atmospheric sensors
+        // Communication arrays with antenna rods
+        Draw3D.drawRod(-size * 0.3, bob - size * 0.15, -size * 0.3, bob - size * 0.45, 2, color(120, 130, 140), obj.angle, sunAngle, true);
+        Draw3D.drawRod(size * 0.3, bob - size * 0.15, size * 0.3, bob - size * 0.45, 2, color(120, 130, 140), obj.angle, sunAngle, true);
+
+        // Atmospheric sensors as small rods
         for (let w = 0; w < 6; w++) {
             const wa = w * TWO_PI / 6;
             const wx = Math.cos(wa) * size * 0.45;
             const wy = Math.sin(wa) * size * 0.45 + bob - size * 0.1;
-            Draw3D.drawPrism(wx, wy, size * 0.015, 4, size * 0.02, color(140, 150, 160), obj.angle, sunAngle);
+            Draw3D.drawRod(wx, wy, wx * 1.1, wy - size * 0.06, 1.5, color(140, 150, 160), obj.angle, sunAngle, false);
         }
 
-        // Cooling systems
-        Draw3D.drawBox3D(-size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), obj.angle, sunAngle);
-        Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.25, size * 0.04, color(120, 130, 140, 150), obj.angle, sunAngle);
+        // Cooling systems using HELIX primitives for detail
+        Draw3D.drawHelix(-size * 0.15, bob + size * 0.15, size * 0.06, size * 0.25, 1.5, 6, 2, color(100, 180, 220, 180), obj.angle, sunAngle);
+        Draw3D.drawHelix(size * 0.15, bob + size * 0.15, size * 0.06, size * 0.25, 1.5, 6, 2, color(100, 180, 220, 180), obj.angle, sunAngle);
+
+        // Rotating equipment ring (torus)
+        const rotationPhase = anim ? anim.domeRotation * 0.3 : 0;
+        push();
+        rotate(rotationPhase);
+        Draw3D.drawTorus(0, bob - size * 0.15, size * 0.35, size * 0.03, 12, 6, color(140, 150, 160, 120), obj.angle, sunAngle);
+        pop();
 
         // Lights
         const obsFlash1 = 0.5 + 0.5 * Math.sin((anim ? anim.observationLights : 0));
@@ -3453,6 +3469,187 @@ const SpaceObjectRenderers = {
                 Draw3D.drawBox3D(px, py, p.sz * 1.6, p.sz * 1.2, p.sz, color(255, 230, 160, Math.min(255, intensity)), mainAngle, sunAngle);
             }
         }
+    },
+
+    // Advanced Research Station - showcases torus, dome, cone, lattice
+    advancedResearchStation: function (obj, size, anim, bob) {
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+
+        // Central hub - smooth cylinder
+        Draw3D.drawCylinder(0, bob, size * 0.2, size * 0.6, 16, color(160, 170, 180), obj.angle, sunAngle);
+
+        // Habitat ring - rotating torus
+        const rotPhase = obj.bobPhase * 0.001;
+        push();
+        rotate(rotPhase);
+        Draw3D.drawTorus(0, bob, size * 0.6, size * 0.1, 20, 10, color(140, 150, 160), obj.angle, sunAngle);
+        pop();
+
+        // Research domes
+        for (let i = 0; i < 4; i++) {
+            const ang = i * (TWO_PI / 4);
+            const dx = Math.cos(ang) * size * 0.6;
+            const dy = Math.sin(ang) * size * 0.6;
+            Draw3D.drawDome(dx, dy + bob, size * 0.12, 8, color(100, 150, 200, 180), obj.angle, sunAngle);
+        }
+
+        // Communication spire with cone tip
+        Draw3D.drawRod(0, bob - size * 0.3, 0, bob - size * 0.6, 3, color(180, 180, 190), obj.angle, sunAngle, false);
+        Draw3D.drawCone(0, bob - size * 0.6, size * 0.04, size * 0.08, 6, color(200, 180, 160), obj.angle, sunAngle);
+
+        // Solar arrays with lattice frames
+        Draw3D.drawLattice(-size * 0.9, bob, size * 0.4, size * 0.2, 3, 2, 2, color(90, 100, 110), obj.angle, sunAngle);
+        Draw3D.drawBox3D(-size * 0.9, bob, size * 0.4, size * 0.2, 1, color(40, 70, 120, 150), obj.angle, sunAngle);
+
+        Draw3D.drawLattice(size * 0.9, bob, size * 0.4, size * 0.2, 3, 2, 2, color(90, 100, 110), obj.angle, sunAngle);
+        Draw3D.drawBox3D(size * 0.9, bob, size * 0.4, size * 0.2, 1, color(40, 70, 120, 150), obj.angle, sunAngle);
+
+        // Status lights
+        const flash = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.15);
+        fill(100, 200, 255, 255 * flash);
+        ellipse(0, bob - size * 0.65, 4, 4);
+    },
+
+    // Power Generation Station - showcases helix, torus stack, geodesic dome
+    powerStation: function (obj, size, anim, bob) {
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+
+        // Main reactor core - cylinder with glow
+        Draw3D.drawCylinder(0, bob, size * 0.25, size * 0.5, 16, color(100, 120, 140), obj.angle, sunAngle);
+
+        // Cooling helixes around reactor
+        for (let i = 0; i < 3; i++) {
+            const ang = i * (TWO_PI / 3);
+            const dx = Math.cos(ang) * size * 0.3;
+            const dy = Math.sin(ang) * size * 0.3;
+            Draw3D.drawHelix(dx, dy + bob, size * 0.08, size * 0.6, 2, 8, 2, color(80, 180, 220), obj.angle, sunAngle);
+        }
+
+        // Energy collection rings - torus stack
+        for (let r = 0; r < 3; r++) {
+            const ry = bob - size * 0.15 - r * size * 0.12;
+            const phase = obj.bobPhase * 0.002 + r * 1;
+            push();
+            translate(0, ry);
+            rotate(phase);
+            Draw3D.drawTorus(0, 0, size * 0.4 - r * size * 0.05, size * 0.04, 16, 8,
+                color(120 + r * 20, 140 + r * 15, 160 + r * 10, 180), obj.angle, sunAngle);
+            pop();
+        }
+
+        // Support struts - rods
+        for (let s = 0; s < 6; s++) {
+            const sang = s * (TWO_PI / 6);
+            const sx = Math.cos(sang) * size * 0.2;
+            const sy = Math.sin(sang) * size * 0.2;
+            Draw3D.drawRod(sx, sy + bob - size * 0.25, sx * 2, sy * 2 + bob + size * 0.25,
+                2, color(140, 140, 150), obj.angle, sunAngle, false);
+        }
+
+        // Geodesic shield dome
+        Draw3D.drawGeodesicDome(0, bob, size * 0.5, 2, color(80, 160, 200, 100), obj.angle, sunAngle);
+
+        // Core glow
+        const glow = 0.6 + 0.4 * Math.sin(obj.bobPhase * 0.02);
+        fill(100, 180, 255, 80 * glow);
+        ellipse(0, bob, size * 0.6, size * 0.4);
+    },
+
+    // Communication Hub - showcases cylinder stacking, rods, inverted domes, lattice
+    commHub: function (obj, size, anim, bob) {
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+
+        // Central tower - tapered cylinders
+        Draw3D.drawCylinder(0, bob + size * 0.1, size * 0.15, size * 0.3, 12, color(140, 145, 150), obj.angle, sunAngle);
+        Draw3D.drawCylinder(0, bob - size * 0.1, size * 0.12, size * 0.2, 12, color(150, 155, 160), obj.angle, sunAngle);
+        Draw3D.drawCylinder(0, bob - size * 0.25, size * 0.09, size * 0.15, 10, color(160, 165, 170), obj.angle, sunAngle);
+
+        // Top antenna spire - cone
+        Draw3D.drawCone(0, bob - size * 0.35, size * 0.06, size * 0.15, 8, color(180, 170, 160), obj.angle, sunAngle);
+
+        // Antenna array - rods in circle
+        for (let a = 0; a < 8; a++) {
+            const aang = a * (TWO_PI / 8);
+            const ax = Math.cos(aang) * size * 0.35;
+            const ay = Math.sin(aang) * size * 0.35;
+            Draw3D.drawRod(ax, ay + bob - size * 0.12, ax * 1.3, ay * 1.3 + bob - size * 0.25,
+                2, color(120, 130, 140), obj.angle, sunAngle, true);
+        }
+
+        // Signal dishes - inverted domes for dish shape
+        for (let d = 0; d < 4; d++) {
+            const dang = d * (TWO_PI / 4) + PI / 4;
+            const dx = Math.cos(dang) * size * 0.25;
+            const dy = Math.sin(dang) * size * 0.25;
+            Draw3D.drawDome(dx, dy + bob, size * 0.08, 8, color(200, 210, 220), obj.angle, sunAngle, true);
+        }
+
+        // Base platform with lattice
+        Draw3D.drawLattice(0, bob + size * 0.3, size * 0.6, size * 0.6, 4, 4, 2, color(100, 110, 120), obj.angle, sunAngle);
+
+        // Signal pulse
+        const pulse = 0.5 + 0.5 * Math.sin(obj.bobPhase * 0.03);
+        fill(100, 255, 200, 150 * pulse);
+        ellipse(0, bob - size * 0.42, 6 * (1 + pulse), 6 * (1 + pulse));
+    },
+
+    // Alien Monolith - showcases ALL primitives with pulsing animation
+    alienMonolith: function (obj, size, anim, bob) {
+        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+        const pulse = Math.sin(obj.bobPhase * 0.003) * 0.5 + 0.5;
+
+        // Base - torus platform
+        Draw3D.drawTorus(0, bob + size * 0.3, size * 0.4, size * 0.08, 16, 10,
+            color(80 + pulse * 40, 40, 80 + pulse * 80), obj.angle, sunAngle);
+
+        // Main structure - stacked cylinders with different radii
+        Draw3D.drawCylinder(0, bob + size * 0.15, size * 0.2, size * 0.2, 12,
+            color(60 + pulse * 30, 30, 90 + pulse * 60), obj.angle, sunAngle);
+        Draw3D.drawCylinder(0, bob - size * 0.05, size * 0.18, size * 0.25, 12,
+            color(70 + pulse * 40, 35, 100 + pulse * 70), obj.angle, sunAngle);
+
+        // Energy dome at top
+        Draw3D.drawGeodesicDome(0, bob - size * 0.22, size * 0.22, 2,
+            color(100 + pulse * 100, 50 + pulse * 100, 150 + pulse * 100, 180), obj.angle, sunAngle);
+
+        // Helical energy streams
+        for (let h = 0; h < 3; h++) {
+            const hang = h * (TWO_PI / 3);
+            const hx = Math.cos(hang) * size * 0.25;
+            const hy = Math.sin(hang) * size * 0.25;
+            Draw3D.drawHelix(hx, hy + bob, size * 0.06, size * 0.5, 2, 6, 2,
+                color(120 + pulse * 80, 60 + pulse * 80, 180 + pulse * 60, 150), obj.angle, sunAngle);
+        }
+
+        // Floating rings
+        for (let r = 0; r < 2; r++) {
+            const ry = bob - size * 0.35 + r * size * 0.12;
+            const rphase = obj.bobPhase * 0.001 + r * PI;
+            push();
+            translate(0, ry);
+            rotate(rphase);
+            Draw3D.drawTorus(0, 0, size * 0.35, size * 0.04, 12, 8,
+                color(140 + pulse * 60, 80 + pulse * 80, 200 + pulse * 40, 200), obj.angle, sunAngle);
+            pop();
+        }
+
+        // Top spike
+        Draw3D.drawCone(0, bob - size * 0.42, size * 0.05, size * 0.12, 6,
+            color(160 + pulse * 80, 120 + pulse * 100, 220 + pulse * 30), obj.angle, sunAngle);
+
+        // Energy tendrils - rods with glowing tips
+        for (let t = 0; t < 6; t++) {
+            const tang = t * (TWO_PI / 6);
+            const phase = obj.bobPhase * 0.004 + t;
+            const tx = Math.cos(tang + phase) * size * 0.4;
+            const ty = Math.sin(tang + phase) * size * 0.4;
+            Draw3D.drawRod(0, bob - size * 0.3, tx, ty + bob - size * 0.1,
+                1.5, color(180 + pulse * 60, 140 + pulse * 100, 255, 200), obj.angle, sunAngle, true);
+        }
+
+        // Central energy glow
+        fill(150 + pulse * 100, 100 + pulse * 140, 255, 120 * pulse);
+        ellipse(0, bob - size * 0.15, size * 0.5 * (1 + pulse * 0.3), size * 0.35 * (1 + pulse * 0.3));
     }
 };
 
@@ -3654,7 +3851,11 @@ class SpaceObject {
             drugLab: 0.00006,
             labourColony: 0.00004,
             undergroundMarket: 0.000025,
-            shipyard: 0.00002
+            shipyard: 0.00002,
+            advancedResearchStation: 0.00003,
+            powerStation: 0.00004,
+            commHub: 0.00006,
+            alienMonolith: 0.00002
         };
         this.rotationSpeed = rotMap[type] || 0.001;
         this.bobPhase = Math.random() * Math.PI * 2;
@@ -3931,9 +4132,13 @@ class SpaceObject {
             quantumGate: 'Quantum Gate',
             prison: 'Prison Station',
             drugLab: 'Drug Laboratory',
-            labourColony: 'Labour Colony'
-            , undergroundMarket: 'Underground Market'
-            , shipyard: 'Orbital Shipyard'
+            labourColony: 'Labour Colony',
+            undergroundMarket: 'Underground Market',
+            shipyard: 'Orbital Shipyard',
+            advancedResearchStation: 'Advanced Research Station',
+            powerStation: 'Power Generation Station',
+            commHub: 'Communication Hub',
+            alienMonolith: 'Alien Monolith'
         };
         return nameMap[this.type] || (this.type ? this.type : 'space object');
     }
