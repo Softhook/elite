@@ -46,11 +46,7 @@ war event change sapwn drencency
 
 ship ship collision
 
-ship space object collission
-
 event text on map
-
-event text dissapers when cargo expired on its own
 
 make events less often
 
@@ -59,9 +55,6 @@ make events more dramtic bigger cargo drops
 
 ## Core Gameplay Enhancements
 
-make space objects explode
-
-reduce the ship spawn number and only increase for specific states like war
 
 new kind of nebula and storm which slows down ship movement
 
@@ -118,8 +111,6 @@ mining Ai for prospectors look for the nearest asteroid and mine, pick up cargo 
 There are many of them in mining systems
 
 A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
-
-Ai actively hiding behind meterorites
 
 ## Editor
 
