@@ -28,18 +28,18 @@ class UIMinimap {
         this.hazardsBuffer = null;
         this._hazardsBufferSize = 0;
 
-        // Minimap color mapping by AI role
+        // Minimap color mapping by AI role (using centralized color constants)
         this.roleColors = {};
-        if (typeof AI_ROLE !== 'undefined') {
-            this.roleColors[AI_ROLE.PIRATE] = [220, 20, 20];
-            this.roleColors[AI_ROLE.POLICE] = [30, 144, 255];
-            this.roleColors[AI_ROLE.HAULER] = [50, 205, 50];
-            this.roleColors[AI_ROLE.TRANSPORT] = [255, 140, 0];
-            this.roleColors[AI_ROLE.MINER] = [255, 140, 0]; // Same as transport - peaceful
-            this.roleColors[AI_ROLE.ALIEN] = [138, 43, 226];
-            this.roleColors[AI_ROLE.BOUNTY_HUNTER] = [255, 69, 0];
-            this.roleColors[AI_ROLE.GUARD] = [100, 100, 255];
-            this.roleColors[AI_ROLE.COMBAT] = [255, 100, 100];
+        if (typeof AI_ROLE !== 'undefined' && typeof ROLE_COLORS !== 'undefined') {
+            this.roleColors[AI_ROLE.PIRATE] = ROLE_COLORS.PIRATE;
+            this.roleColors[AI_ROLE.POLICE] = ROLE_COLORS.POLICE;
+            this.roleColors[AI_ROLE.HAULER] = ROLE_COLORS.HAULER;
+            this.roleColors[AI_ROLE.TRANSPORT] = ROLE_COLORS.TRANSPORT;
+            this.roleColors[AI_ROLE.MINER] = ROLE_COLORS.MINER;
+            this.roleColors[AI_ROLE.ALIEN] = ROLE_COLORS.ALIEN;
+            this.roleColors[AI_ROLE.BOUNTY_HUNTER] = ROLE_COLORS.BOUNTY_HUNTER;
+            this.roleColors[AI_ROLE.GUARD] = ROLE_COLORS.GUARD;
+            this.roleColors[AI_ROLE.COMBAT] = ROLE_COLORS.COMBAT;
         }
     }
 
@@ -382,12 +382,14 @@ class UIMinimap {
             if (isFullyWithinBounds(mapX, mapY, iconHalfExtent, iconHalfExtent)) {
                 // Prefer faction-based coloring when available (IMPERIAL / SEPARATIST / MILITARY)
                 let colArr = null;
-                if (enemy.faction === 'IMPERIAL') {
-                    colArr = [0, 120, 255];
-                } else if (enemy.faction === 'SEPARATIST') {
-                    colArr = [200, 60, 200];
-                } else if (enemy.faction === 'MILITARY') {
-                    colArr = [100, 120, 140];
+                if (typeof FACTION_COLORS !== 'undefined') {
+                    if (enemy.faction === 'IMPERIAL') {
+                        colArr = FACTION_COLORS.IMPERIAL;
+                    } else if (enemy.faction === 'SEPARATIST') {
+                        colArr = FACTION_COLORS.SEPARATIST;
+                    } else if (enemy.faction === 'MILITARY') {
+                        colArr = FACTION_COLORS.MILITARY;
+                    }
                 }
                 if (!colArr) {
                     const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);

@@ -58,20 +58,20 @@ class UIFactionRecruitment {
     drawFactionRecruitmentMenu(player, factionName, factionKey, themeColors, tagline, bountyDescription, panelRect, headerHeight, system) {
         this.factionRecruitmentButtonAreas = [];
         if (!player) return;
-        
-        const {x: pX, y: pY, w: pW, h: pH} = panelRect;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
         const contentY = pY + headerHeight + 10;
-        
+
         const isWanted = system?.isPlayerWanted ? system.isPlayerWanted() : false;
         const canJoin = player.canJoinFaction ? player.canJoinFaction(factionKey) : false;
-        
+
         // Display faction info
         UIComponents.setTextStyle({ fill: themeColors[1], size: 24, align: [CENTER, TOP] });
         text(`${factionName} Recruitment Office`, pX + pW / 2, contentY);
-        
+
         UIComponents.setTextStyle({ fill: 255, size: 18 });
         text(tagline, pX + pW / 2, contentY + 40);
-        
+
         // Show legal status
         UIComponents.setTextStyle({ fill: 255, size: 20 });
         text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY + 80);
@@ -79,27 +79,27 @@ class UIFactionRecruitment {
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
         UIComponents.setTextStyle({ fill: statusColor, size: 24 });
         text(statusText, pX + pW / 2, contentY + 110);
-        
+
         // Show current faction status
         if (player.playerFaction) {
             UIComponents.setTextStyle({ fill: [255, 200, 100], size: 18 });
             text(`Current Faction: ${player.playerFaction}`, pX + pW / 2, contentY + 140);
         }
-        
+
         // Display bounty information if member
         if (player.playerFaction === factionKey) {
             UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
             text(bountyDescription, pX + pW / 2, contentY + (player.playerFaction ? 170 : 150));
         }
-        
+
         // Show faction kill progress
         try {
             const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
             if (progress) {
-                UIComponents.setTextStyle({ 
-                    fill: [themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9], 
-                    size: 16, 
-                    align: [CENTER, TOP] 
+                UIComponents.setTextStyle({
+                    fill: [themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9],
+                    size: 16,
+                    align: [CENTER, TOP]
                 });
                 if (progress.nextThreshold) {
                     text(`${factionKey} Kills: ${progress.kills} — ${progress.killsToNext} to ${progress.nextRank}`, pX + pW / 2, contentY + 240);
@@ -108,24 +108,24 @@ class UIFactionRecruitment {
                 }
             }
         } catch (e) { /* fail silently */ }
-        
+
         let btnW = pW * 0.5, btnH = 45;
         let btnX = pX + pW / 2 - btnW / 2;
         let btnY1 = contentY + (player.playerFaction === factionKey ? 200 : (player.playerFaction ? 170 : 150));
-        
+
         // Fine payment if wanted
         if (isWanted) {
             let fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel);
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, {action: 'pay_fine', amount: fineAmount, faction: factionKey})
+                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount, faction: factionKey })
             );
             btnY1 += btnH + 20;
         }
-        
+
         // Join faction button or status message
         if (canJoin && !isWanted) {
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Join ${factionName}`, themeColors[0], themeColors[1], 5, {action: 'join_faction', faction: factionKey})
+                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Join ${factionName}`, themeColors[0], themeColors[1], 5, { action: 'join_faction', faction: factionKey })
             );
         } else if (player.playerFaction === factionKey) {
             UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
@@ -137,9 +137,9 @@ class UIFactionRecruitment {
             UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
             text("Clear your legal status to join", pX + pW / 2, btnY1 + btnH / 2);
         }
-        
+
         // Back button
-        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, {action: 'back'});
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' });
         this.factionRecruitmentButtonAreas.push(backBtn);
     }
 
@@ -151,11 +151,16 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawImperialRecruitmentMenu(player, panelRect, headerHeight, system) {
+        // Calculate theme colors from FACTION_COLORS if available
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [255, 235, 180];
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5)); // Darker version
+        const lightColor = baseColor; // Use base color as light version
+
         this.drawFactionRecruitmentMenu(
             player,
             "Imperial Navy",
             "IMPERIAL",
-            [[120, 100, 50], [220, 190, 90]],
+            [darkColor, lightColor],
             "Serve the Empire. Restore order to the galaxy.",
             "Active Bounty: 2,000 cr per Separatist killed",
             panelRect,
@@ -172,11 +177,16 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawSeparatistRecruitmentMenu(player, panelRect, headerHeight, system) {
+        // Calculate theme colors from FACTION_COLORS if available
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [128, 128, 0];
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5)); // Darker version
+        const lightColor = baseColor; // Use base color as light version
+
         this.drawFactionRecruitmentMenu(
             player,
             "Separatist Forces",
             "SEPARATIST",
-            [[100, 50, 0], [200, 100, 0]],
+            [darkColor, lightColor],
             "Fight for freedom. Break the chains of tyranny.",
             "Active Bounty: 2,000 cr per Imperial killed",
             panelRect,
@@ -216,30 +226,30 @@ class UIFactionRecruitment {
      */
     handleRecruitmentClicks(mx, my, player, addMessageFn) {
         if (!Array.isArray(this.factionRecruitmentButtonAreas)) return null;
-        
+
         for (const area of this.factionRecruitmentButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
-            
+
             if (area.action === 'back') {
                 return { action: 'back' };
             }
-            
+
             if (area.action === 'pay_fine' && player) {
-                return { 
-                    action: 'pay_fine', 
-                    amount: area.amount, 
-                    faction: area.faction 
+                return {
+                    action: 'pay_fine',
+                    amount: area.amount,
+                    faction: area.faction
                 };
             }
-            
+
             if (area.action === 'join_faction' && player) {
-                return { 
-                    action: 'join_faction', 
-                    faction: area.faction 
+                return {
+                    action: 'join_faction',
+                    faction: area.faction
                 };
             }
         }
-        
+
         return null;
     }
 
@@ -252,7 +262,7 @@ class UIFactionRecruitment {
      */
     processFinePayment(player, amount, addMessageFn) {
         if (!player || !player.currentSystem) return false;
-        
+
         const success = player.spendCredits ? player.spendCredits(amount) : false;
         if (success) {
             player.currentSystem.playerWanted = false;
@@ -281,7 +291,7 @@ class UIFactionRecruitment {
      */
     processJoinFaction(player, factionKey, addMessageFn) {
         if (!player) return false;
-        
+
         const joined = player.joinFaction ? player.joinFaction(factionKey) : false;
         if (joined) {
             const msgByFaction = {

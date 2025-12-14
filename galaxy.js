@@ -55,21 +55,36 @@ class Galaxy {
     // STATIC PROPERTIES
     // =========================================================================
 
-    /** Economy type definitions with associated colors */
-    static ECONOMY_DATA = {
-        "Industrial": { color: [60, 120, 200, 210] }, // Blue
-        "Agricultural": { color: [180, 120, 40, 210] }, // Brown/Orange
-        "Mining": { color: [160, 160, 170, 210] }, // Light Grey/Silver
-        "Refinery": { color: [160, 40, 40, 210] },   // Maroon
-        "Post Human": { color: [0, 200, 200, 210] },   // Cyan
-        "Tourism": { color: [200, 80, 200, 210] },  // Purple/Pink
-        "Service": { color: [200, 255, 255, 210] }, // 
-        "Military": { color: [200, 50, 50, 210] },   // Red
-        "Offworld": { color: [100, 180, 100, 210] }, // Light Green (Placeholder)
-        "Separatist": { color: [200, 100, 0, 210] },   // Orange (Placeholder)
-        "Imperial": { color: [218, 165, 32, 210] },  // Gold (Placeholder)
-        "Alien": { color: [100, 50, 150, 210] },  // Dark Purple
-        "Default": { color: [150, 150, 150, 210] }   // Default grey if type unknown
+    /** Economy type definitions with associated colors (using centralized color constants) */
+    static ECONOMY_DATA = typeof ECONOMY_COLORS !== 'undefined' ? {
+        "Industrial": { color: ECONOMY_COLORS.Industrial },
+        "Agricultural": { color: ECONOMY_COLORS.Agricultural },
+        "Mining": { color: ECONOMY_COLORS.Mining },
+        "Refinery": { color: ECONOMY_COLORS.Refinery },
+        "Post Human": { color: ECONOMY_COLORS["Post Human"] },
+        "Tourism": { color: ECONOMY_COLORS.Tourism },
+        "Service": { color: ECONOMY_COLORS.Service },
+        "Military": { color: ECONOMY_COLORS.Military },
+        "Offworld": { color: ECONOMY_COLORS.Offworld },
+        "Separatist": { color: ECONOMY_COLORS.Separatist },
+        "Imperial": { color: ECONOMY_COLORS.Imperial },
+        "Alien": { color: ECONOMY_COLORS.Alien },
+        "Default": { color: ECONOMY_COLORS.Default }
+    } : {
+        // Fallback if ECONOMY_COLORS not loaded
+        "Industrial": { color: [60, 120, 200, 210] },
+        "Agricultural": { color: [180, 120, 40, 210] },
+        "Mining": { color: [160, 160, 170, 210] },
+        "Refinery": { color: [160, 40, 40, 210] },
+        "Post Human": { color: [0, 200, 200, 210] },
+        "Tourism": { color: [200, 80, 200, 210] },
+        "Service": { color: [200, 255, 255, 210] },
+        "Military": { color: [200, 50, 50, 210] },
+        "Offworld": { color: [100, 180, 100, 210] },
+        "Separatist": { color: [128, 128, 0, 210] },
+        "Imperial": { color: [255, 235, 180, 210] },
+        "Alien": { color: [50, 205, 50, 210] },
+        "Default": { color: [150, 150, 150, 210] }
     };
 
     // =========================================================================

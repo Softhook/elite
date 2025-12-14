@@ -10,7 +10,7 @@ class CommunicationSystem {
         this._lastGlobalMessageTime = -Infinity;
         this._playerTitle = "Commander";
 
-        this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"]; 
+        this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"];
         this._pirateGroups = [
             "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet", "Stokey Krew", "Tottenham Turks", "Hackney Bombers", "Bombacilars",
             "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves", "Crimson Vector", "Adkins Family"
@@ -116,7 +116,7 @@ class CommunicationSystem {
                 "{enemyName}: Last offer: pay the toll or pay the undertow.",
                 "{enemyName}: We’re bored and broke. You can fix both.",
                 "{enemyName}: If you loved that paint job, keep it safe and pay up.",
-                "{enemyName}: We don’t want trouble. We want your {cargoWord}." 
+                "{enemyName}: We don’t want trouble. We want your {cargoWord}."
             ],
             pirateRetort: [
                 "{enemyName}: Bold move, {playerTitle}. Let's see how long that bravado lasts.",
@@ -136,19 +136,19 @@ class CommunicationSystem {
                 "Spicy. Let’s turn up the heat.",
                 "{enemyName}: We were being polite. Past tense.",
                 "Alright, hero—let’s see if you can tank this.",
-                "{enemyName}: We’ll add that to the invoice." 
+                "{enemyName}: We’ll add that to the invoice."
             ],
             alienEngage: [
                 "⟟⟊⟒⋮⟟ ⊑⟟⟊⟟⟒ ✦ ☼", "⌬𐌰𐌿𐍄 ∴ ʘ͜ʖʘ", "∰⟴⟴⟁⟁⟁ ∰⟴⟴⟁⟁⟁", "⋇⋇⋇ ᚠᛇᚻ ᚾᚪᚾ", "◬⟁◬⟁◬",
                 "╳╳╳ ⟟⟟⟟ ϟϟϟ", "ᚷᛟᚾᛖᚱ ᛚᛟᚾᚷ", "҉҉҉ ☍☌☍", "⟁⟊⟟⟒ :: ⌬⌬⌬", "彡彡 彗彗",
                 "ζ≀ζ≀ζ", "ᛝᛝᛝ ∴ ∴", "₪₪₪ ᚺᚨᛚᛚ", "⟁⟁⟁ ⟟⟊⟒", "¤¤¤ ѪѪѪ",
-                "⟟⟟⟟ ᚷᚷᚷ", "≀≀≀ ∿∿∿", "▣▢▣▢", "⟴⟴⟴", "****" 
+                "⟟⟟⟟ ᚷᚷᚷ", "≀≀≀ ∿∿∿", "▣▢▣▢", "⟴⟴⟴", "****"
             ],
             alienRetort: [
                 "⋔⋇⋔⋇", "⟟⟒⟊⟟⟒", "ϞϟϞ", "ƛƛƛ", "彗彗彗", "ᛣᛣᛣ", "𓆣𓆣𓆣", "₪₪₪", "҉҉҉ ҉҉҉", "◯◯◯"
             ],
             pirateDeath: [
-                "{enemyName}: ugh—","{enemyName}: Noooooo", "{enemyName}: Ejecting…", "{enemyName}: …static…", "{enemyName}: engines… gone—", "{enemyName}: not like—this—",
+                "{enemyName}: ugh—", "{enemyName}: Noooooo", "{enemyName}: Ejecting…", "{enemyName}: …static…", "{enemyName}: engines… gone—", "{enemyName}: not like—this—",
                 "{enemyName}: vents—open—", "{enemyName}: I’m… out—", "{enemyName}: hull… breaking—", "{enemyName}: you— win—",
                 "{enemyName}: reactor—hot—", "{enemyName}: system—dead—"
             ],
@@ -478,7 +478,7 @@ class CommunicationSystem {
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);
                 let templateList, color;
-                
+
                 if (faction === 'IMPERIAL') {
                     templateList = this.templates.imperialEngage;
                     color = [255, 180, 100];
@@ -490,7 +490,7 @@ class CommunicationSystem {
                     templateList = this.templates.militaryEngage;
                     color = [255, 100, 100];
                 }
-                
+
                 this._maybeSend(enemy, "combat_engage", templateList, {
                     chance: 0.65,
                     cooldown: 16000,
@@ -540,7 +540,7 @@ class CommunicationSystem {
             // Determine faction for combat ships
             const faction = this._getShipFaction(enemy);
             let templateList, color;
-            
+
             if (faction === 'IMPERIAL') {
                 templateList = this.templates.imperialEngage;
                 color = [255, 180, 100];
@@ -552,7 +552,7 @@ class CommunicationSystem {
                 templateList = this.templates.militaryEngage;
                 color = [255, 100, 100];
             }
-            
+
             this._maybeSend(enemy, "combat_engage", templateList, {
                 chance: 0.65,
                 cooldown: 16000,
@@ -615,7 +615,7 @@ class CommunicationSystem {
             // Determine faction for combat ships
             const faction = this._getShipFaction(enemy);
             let templateList, color;
-            
+
             if (faction === 'IMPERIAL') {
                 templateList = this.templates.imperialRetort;
                 color = [255, 180, 100];
@@ -627,7 +627,7 @@ class CommunicationSystem {
                 templateList = this.templates.militaryRetort;
                 color = [255, 100, 100];
             }
-            
+
             this._maybeSend(enemy, "combat_retort", templateList, {
                 chance: 0.5,
                 cooldown: 14000,
@@ -644,13 +644,13 @@ class CommunicationSystem {
         let templateList = null;
         let color = [255, 190, 140];
         switch (enemy.role) {
-            case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = [255,140,100]; break;
-            case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = [140,180,255]; break;
+            case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [220, 20, 20]; break;
+            case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [30, 144, 255]; break;
             case AI_ROLE.HAULER:
-            case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = [255,220,140]; break;
-            case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180,100,255]; break;
-            case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200,160,255]; break;
-            case AI_ROLE.COMBAT: 
+            case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.TRANSPORT : [204, 119, 34]; break;
+            case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180, 100, 255]; break;
+            case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
+            case AI_ROLE.COMBAT:
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);
                 if (faction === 'IMPERIAL') {
@@ -673,7 +673,7 @@ class CommunicationSystem {
             color,
             duration: (this.uiManager?.communicationDisplayTime || 15000) * 0.6
         });
-        
+
         // Clean up cooldown entry for destroyed enemy to prevent memory leak
         this._cleanupEnemy(enemy);
     }
@@ -876,17 +876,17 @@ class CommunicationSystem {
         if (!ship || !ship.shipTypeName) {
             return 'MILITARY'; // Default
         }
-        
+
         // Check if SHIP_DEFINITIONS is available
         if (typeof SHIP_DEFINITIONS === 'undefined') {
             return 'MILITARY';
         }
-        
+
         const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
         if (!shipDef || !shipDef.aiRoles) {
             return 'MILITARY';
         }
-        
+
         if (shipDef.aiRoles.includes('IMPERIAL')) {
             return 'IMPERIAL';
         } else if (shipDef.aiRoles.includes('SEPARATIST')) {
@@ -894,7 +894,7 @@ class CommunicationSystem {
         } else if (shipDef.aiRoles.includes('MILITARY')) {
             return 'MILITARY';
         }
-        
+
         return 'MILITARY'; // Default
     }
 
@@ -968,20 +968,20 @@ class CommunicationSystem {
         // This should be called occasionally (e.g., every 60 seconds) from the main game loop
         const now = this._now();
         const staleThreshold = 120000; // 2 minutes - entries older than this are considered stale
-        
+
         const keysToDelete = [];
         this._enemyCooldowns.forEach((record, key) => {
             // Check if any category has been updated recently
             const categoryTimes = Object.values(record);
             const mostRecent = Math.max(...categoryTimes);
-            
+
             if (now - mostRecent > staleThreshold) {
                 keysToDelete.push(key);
             }
         });
-        
+
         keysToDelete.forEach(key => this._enemyCooldowns.delete(key));
-        
+
         return keysToDelete.length; // Return count of cleaned up entries for debugging
     }
 
@@ -1053,7 +1053,7 @@ class CommunicationSystem {
         const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
             ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
             : this.uiManager.addMessage.bind(this.uiManager);
-        
+
         addFn(message, color, duration);
 
         // Update cooldown

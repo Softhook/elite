@@ -33,19 +33,19 @@ class NewsManager {
         this.recentNewsHashes = new Set();
         this.maxRecentHashes = 50;
 
-        // Factional perspectives for report generation
+        // Factional perspectives for report generation (using centralized color constants)
         this.factions = {
             IMPERIAL: {
                 name: "The Core Echo",
                 tone: "formal",
                 bias: "order",
-                color: [100, 150, 255]
+                color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [255, 235, 180]
             },
             SEPARATIST: {
                 name: "Free Flow Channel",
                 tone: "agitative",
                 bias: "resistance",
-                color: [255, 100, 100]
+                color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [128, 128, 0]
             },
             INDEPENDENT: {
                 name: "The Freight Log",
