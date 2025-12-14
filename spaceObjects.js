@@ -63,7 +63,7 @@ const sizeMap = {
     labourColony: 240,
     undergroundMarket: 250,
     shipyard: 320,
-    advancedResearchStation: 280,
+    advancedResearchStation: 200,
     powerStation: 240,
     commHub: 180,
     alienMonolith: 200
@@ -3475,9 +3475,6 @@ const SpaceObjectRenderers = {
     advancedResearchStation: function (obj, size, anim, bob) {
         const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
-        // Central hub - smooth cylinder
-        Draw3D.drawCylinder(0, bob, size * 0.2, size * 0.6, 16, color(160, 170, 180), obj.angle, sunAngle);
-
         // Habitat ring - rotating torus
         const rotPhase = obj.bobPhase * 0.001;
         push();
@@ -3608,9 +3605,6 @@ const SpaceObjectRenderers = {
         Draw3D.drawCylinder(0, bob - size * 0.05, size * 0.18, size * 0.25, 12,
             color(70 + pulse * 40, 35, 100 + pulse * 70), obj.angle, sunAngle);
 
-        // Energy dome at top
-        Draw3D.drawGeodesicDome(0, bob - size * 0.22, size * 0.22, 2,
-            color(100 + pulse * 100, 50 + pulse * 100, 150 + pulse * 100, 180), obj.angle, sunAngle);
 
         // Helical energy streams
         for (let h = 0; h < 3; h++) {
