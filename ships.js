@@ -90,7 +90,8 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
         price: 53800,
         aiRoles: ["COMBAT", "MILITARY"],
-        techLevel: 3 // Mid-tier
+        techLevel: 3, // Mid-tier
+        canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "AspExplorer": {
         name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
@@ -101,7 +102,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 }],
-                fillColor: [200, 180, 80],
+                fillColor: [200, 180, 80]
+            },
+            {
+                vertexData: [{ x: 0.2400, y: 0.2911 }, { x: 0.2400, y: -0.2911 }, { x: 0.5511, y: 0.0000 }],
+                fillColor: [181, 151, 177]
             }
         ],
         typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
@@ -517,7 +522,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 }],
-                fillColor: [140, 140, 150],
+                fillColor: [140, 140, 150]
+            },
+            {
+                vertexData: [{ x: 0.5400, y: -0.3800 }, { x: 0.6800, y: -0.2200 }, { x: 0.6800, y: 0.2200 }, { x: 0.5400, y: 0.3800 }],
+                fillColor: [182, 182, 185]
             }
         ],
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
@@ -624,11 +633,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
-                fillColor: [210, 210, 220],
+                fillColor: [210, 210, 220]
             },
             {
-                vertexData: [{ x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 }],
-                fillColor: [154, 200, 244],
+                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
+                fillColor: [133, 193, 249]
             }
         ],
         typicalCargo: ["Computers", "Weapons", "Narcotics"],
@@ -726,8 +735,16 @@ const SHIP_DEFINITIONS = {
         baseHull: 40, baseShield: 60, shieldRecharge: 1.4, cargoCapacity: 5,
         armament: ["Pulse Laser", "Twin Pulse"],
         costCategory: "Low-Medium", description: "A nimble and brightly colored Harlequin skirmisher.",
-        vertexData: [{ x: 1, y: 0 }, { x: -0.5, y: 0.6 }, { x: -0.2, y: 0 }, { x: -0.5, y: -0.6 }],
-        fillColor: [255, 0, 0],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.6000 }, { x: -0.2000, y: 0.0000 }, { x: -0.5000, y: -0.6000 }],
+                fillColor: [255, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.0400 }, { x: 0.8400, y: -0.0400 }, { x: 0.8400, y: 0.0400 }, { x: -0.2000, y: 0.0400 }],
+                fillColor: [255, 247, 0]
+            }
+        ],
         typicalCargo: [], price: 32000, techLevel: 2,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
     },
@@ -737,8 +754,36 @@ const SHIP_DEFINITIONS = {
         baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
         armament: ["Mini-Turret"],
         costCategory: "Medium", description: "A surprisingly capable Harlequin trader, often underestimated.",
-        vertexData: [{ x: 0.8, y: 0.5 }, { x: -0.8, y: 0.5 }, { x: -0.8, y: -0.5 }, { x: 0.8, y: -0.5 }],
-        fillColor: [255, 255, 0],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8000, y: 0.5000 }, { x: -0.8000, y: 0.5000 }, { x: -0.8000, y: -0.5000 }, { x: 0.8000, y: -0.5000 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.6600, y: -0.5000 }, { x: -0.6200, y: -0.5000 }, { x: -0.6200, y: 0.5000 }, { x: -0.6600, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            },
+            {
+                vertexData: [{ x: 0.5400, y: -0.5000 }, { x: 0.5000, y: -0.5000 }, { x: 0.5000, y: 0.5000 }, { x: 0.5400, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            },
+            {
+                vertexData: [{ x: -0.4200, y: -0.5000 }, { x: -0.3800, y: -0.5000 }, { x: -0.3800, y: 0.5000 }, { x: -0.4200, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            },
+            {
+                vertexData: [{ x: 0.6600, y: -0.5000 }, { x: 0.6200, y: -0.5000 }, { x: 0.6200, y: 0.5000 }, { x: 0.6600, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            },
+            {
+                vertexData: [{ x: -0.5400, y: -0.5000 }, { x: -0.5000, y: -0.5000 }, { x: -0.5000, y: 0.5000 }, { x: -0.5400, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            },
+            {
+                vertexData: [{ x: 0.4200, y: -0.5000 }, { x: 0.3800, y: -0.5000 }, { x: 0.3800, y: 0.5000 }, { x: 0.4200, y: 0.5000 }],
+                fillColor: [255, 0, 221]
+            }
+        ],
         typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
         aiRoles: ["HAULER", "PIRATE"]
     },
