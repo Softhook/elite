@@ -86,7 +86,8 @@ const buildShipRoleArrays = () => {
         GUARD_SHIPS: [],
         IMPERIAL_SHIPS: [],
         SEPARATIST_SHIPS: [],
-        COMBAT_SHIPS: []
+        COMBAT_SHIPS: [],
+        MINER_SHIPS: []
     };
 
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -118,7 +119,8 @@ const {
     GUARD_SHIPS,
     IMPERIAL_SHIPS,
     SEPARATIST_SHIPS,
-    COMBAT_SHIPS
+    COMBAT_SHIPS,
+    MINER_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -1136,7 +1138,10 @@ class StarSystem {
             alien: () => this._selectAlienShip(),
             offworld: () => this._selectOffworldShip(),
             separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS),
-            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS)
+            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS),
+            mining: () => this._selectMiningShip(),
+            industrial: () => this._selectMiningShip(),
+            refinery: () => this._selectMiningShip()
         };
 
         const handler = economyHandlers[econ];
@@ -1214,6 +1219,21 @@ class StarSystem {
             return { role: selected.role, ship: random(selected.ships) };
         }
         return { role: AI_ROLE.HAULER, ship: "Krait" };
+    }
+
+    _selectMiningShip() {
+        const rand = random();
+        if (rand < 0.40 && MINER_SHIPS.length > 0) {
+            return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS) };
+        } else if (rand < 0.70 && HAULER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        } else if (rand < 0.90 && TRANSPORT_SHIPS.length > 0) {
+            return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
+        } else if (PIRATE_SHIPS.length > 0) {
+            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
+        } else {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ['Type6Transporter']) };
+        }
     }
 
     _selectOffworldShip() {

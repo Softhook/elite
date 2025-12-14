@@ -10,7 +10,7 @@ const NPC_TRADE_RULES = {
     SELL_PARTIAL_RATIO: 0.85,       // 85%-95% of base -> acceptable, unload fraction
     SELL_PARTIAL_FRACTION: 0.5,     // Sell half when in partial range
     SELL_MIN_RATIO: 0.70,           // Below 70% of base -> hold cargo, price too low
-    
+
     // Buying thresholds (Station → NPC, compare station's buyPrice to base)
     BUY_MAX_RATIO: 1.05,            // Don't buy above 105% of base price
     BUY_IDEAL_RATIO: 0.90,          // At/below 90% of base -> strong buy signal
@@ -210,7 +210,7 @@ class EnemyCargo {
             return;
         }
 
-        const eligibleRole = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT);
+        const eligibleRole = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT || this.role === AI_ROLE.MINER);
         if (!eligibleRole) {
             this._hasDockedThisPause = true;
             return;
@@ -244,7 +244,11 @@ class EnemyCargo {
         const shipDef = SHIP_DEFINITIONS?.[this.shipTypeName];
         const targetLoad = Math.max(0, Math.min(this.cargoCapacity || 0, Math.floor((this.cargoCapacity || 0) * random(0.55, 0.9))));
 
-        if (market && targetLoad > this.getCargoAmount()) {
+        // Miners only sell ore, they don't buy cargo from stations
+        // Haulers and transports both buy and sell
+        const shouldLoadCargo = (this.role === AI_ROLE.HAULER || this.role === AI_ROLE.TRANSPORT);
+
+        if (shouldLoadCargo && market && targetLoad > this.getCargoAmount()) {
             const options = this._determineStationCargoOptions(station, shipDef);
             if (options.length > 0) {
                 const beforeLoad = this.getCargoAmount();
@@ -305,8 +309,8 @@ class EnemyCargo {
         }
 
         // Check if illegal goods can be traded in this system
-        const isAnarchySystem = this.currentSystem && 
-            typeof this.currentSystem.securityLevel === 'string' && 
+        const isAnarchySystem = this.currentSystem &&
+            typeof this.currentSystem.securityLevel === 'string' &&
             this.currentSystem.securityLevel.toLowerCase() === 'anarchy';
 
         holdings.forEach(entry => {
@@ -406,10 +410,10 @@ class EnemyCargo {
                 const comm = this._getMarketCommodity(market, type);
                 if (comm) {
                     // Skip illegal goods in non-Anarchy systems
-                    const isAnarchySystem = this.currentSystem && 
-                        typeof this.currentSystem.securityLevel === 'string' && 
+                    const isAnarchySystem = this.currentSystem &&
+                        typeof this.currentSystem.securityLevel === 'string' &&
                         this.currentSystem.securityLevel.toLowerCase() === 'anarchy';
-                    
+
                     if (!comm.isLegal && !isAnarchySystem) {
                         attempted.add(type);
                         if (attempted.size >= options.length) {

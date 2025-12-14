@@ -15,7 +15,8 @@ const AI_ROLE = {
     ALIEN: 'Alien',
     BOUNTY_HUNTER: 'BOUNTY_HUNTER',
     GUARD: 'Guard',
-    COMBAT: 'Combat'  // Military, imperial, and separatist combat ships
+    COMBAT: 'Combat',  // Military, imperial, and separatist combat ships
+    MINER: 'Miner'  // Mining ships that target asteroids
 };
 
 // -------------------------

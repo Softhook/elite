@@ -13,31 +13,33 @@ class UIMinimap {
         this.expandedSize = 360;
         this.size = this.expandedSize; // Always use expanded size
         this.margin = 0;
-        
+
         // Position (calculated during draw)
         this.x = 0;
         this.y = 0;
         this.scale = 1;
-        
+
         // Zoom configuration
         this.worldViewRanges = [3000, 5000, 10000, 20000, 35000, 50000];
         this.zoomIndex = 2; // Start at widest view
         this.worldViewRange = this.worldViewRanges[this.zoomIndex];
-        
+
         // Hazards buffer for performance
         this.hazardsBuffer = null;
         this._hazardsBufferSize = 0;
-        
+
         // Minimap color mapping by AI role
         this.roleColors = {};
         if (typeof AI_ROLE !== 'undefined') {
-            this.roleColors[AI_ROLE.POLICE] = [0, 120, 255];
+            this.roleColors[AI_ROLE.PIRATE] = [220, 20, 20];
+            this.roleColors[AI_ROLE.POLICE] = [30, 144, 255];
+            this.roleColors[AI_ROLE.HAULER] = [50, 205, 50];
             this.roleColors[AI_ROLE.TRANSPORT] = [255, 140, 0];
-            this.roleColors[AI_ROLE.HAULER] = [255, 200, 0];
-            this.roleColors[AI_ROLE.GUARD] = [255, 200, 0];
-            this.roleColors[AI_ROLE.PIRATE] = [255, 0, 0];
-            this.roleColors[AI_ROLE.ALIEN] = [0, 200, 0];
-            this.roleColors[AI_ROLE.COMBAT] = [128, 0, 128];
+            this.roleColors[AI_ROLE.MINER] = [255, 140, 0]; // Same as transport - peaceful
+            this.roleColors[AI_ROLE.ALIEN] = [138, 43, 226];
+            this.roleColors[AI_ROLE.BOUNTY_HUNTER] = [255, 69, 0];
+            this.roleColors[AI_ROLE.GUARD] = [100, 100, 255];
+            this.roleColors[AI_ROLE.COMBAT] = [255, 100, 100];
         }
     }
 
@@ -63,7 +65,7 @@ class UIMinimap {
     isClickInMinimap(mx, my) {
         const area = this.getArea();
         return mx >= area.x && mx <= area.x + area.size &&
-               my >= area.y && my <= area.y + area.size;
+            my >= area.y && my <= area.y + area.size;
     }
 
     /**
@@ -96,12 +98,12 @@ class UIMinimap {
         // Update size and scale
         this.size = this.expandedSize;
         this.worldViewRange = this.worldViewRanges[this.zoomIndex];
-        
+
         // Calculate position and scale
         this.x = width - this.size - this.margin;
         this.y = height - this.size - this.margin;
         this.scale = this.size / this.worldViewRange;
-        
+
         // Sync state back to UIManager for backward compatibility
         if (uiManager) {
             uiManager.minimapSize = this.size;
@@ -111,7 +113,7 @@ class UIMinimap {
             uiManager.minimapWorldViewRange = this.worldViewRange;
             uiManager.minimapZoomIndex = this.zoomIndex;
         }
-        
+
         if (isNaN(this.scale) || this.scale <= 0 || !isFinite(this.scale)) {
             this.scale = 0.01;
         }
@@ -214,7 +216,7 @@ class UIMinimap {
             this.hazardsBuffer = createGraphics(this.size, this.size);
             this._hazardsBufferSize = this.size;
         }
-        
+
         const hbuf = this.hazardsBuffer;
         hbuf.clear();
         hbuf.push();
@@ -255,7 +257,7 @@ class UIMinimap {
                 const by = bufCenter + relY * this.scale;
                 const br = Math.max(1, neb.radius * this.scale);
                 const col = nebulaStrokeColor(neb);
-                
+
                 hbuf.push();
                 hbuf.noFill();
                 hbuf.stroke(col[0], col[1], col[2], 150);
@@ -276,7 +278,7 @@ class UIMinimap {
                 const by = bufCenter + relY * this.scale;
                 const br = Math.max(1, st.radius * this.scale);
                 const col = stormStrokeColor(st);
-                
+
                 hbuf.push();
                 hbuf.noFill();
                 hbuf.stroke(col[0], col[1], col[2], 180);
@@ -327,7 +329,7 @@ class UIMinimap {
         for (let i = 0; i < planets.length; i++) {
             const planet = planets[i];
             if (!planet?.pos) continue;
-            
+
             const relX = planet.pos.x - player.pos.x;
             const relY = planet.pos.y - player.pos.y;
             const mapX = mapCenterX + relX * this.scale;
@@ -370,7 +372,7 @@ class UIMinimap {
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
             if (!enemy?.pos || enemy.isDestroyed()) continue;
-            
+
             const relX = enemy.pos.x - player.pos.x;
             const relY = enemy.pos.y - player.pos.y;
             const mapX = mapCenterX + relX * this.scale;
@@ -391,7 +393,7 @@ class UIMinimap {
                     const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
                     colArr = this.roleColors[roleKey] || [255, 0, 0];
                 }
-                
+
                 push();
                 noStroke();
                 translate(mapX, mapY);
@@ -408,12 +410,12 @@ class UIMinimap {
         for (let i = 0; i < spaceObjects.length; i++) {
             const obj = spaceObjects[i];
             if (!obj?.pos) continue;
-            
+
             const relX = obj.pos.x - player.pos.x;
             const relY = obj.pos.y - player.pos.y;
             const mapX = mapCenterX + relX * this.scale;
             const mapY = mapCenterY + relY * this.scale;
-            
+
             if (isFullyWithinBounds(mapX, mapY, 2, 2)) {
                 noStroke();
                 fill(255);
@@ -485,7 +487,7 @@ class UIMinimap {
         for (let i = 0; i < cargos.length; i++) {
             const c = cargos[i];
             if (!c || !c.pos || c.collected) continue;
-            
+
             const relX = c.pos.x - player.pos.x;
             const relY = c.pos.y - player.pos.y;
             const mapX = mapCenterX + relX * this.scale;
@@ -499,7 +501,7 @@ class UIMinimap {
             if (Array.isArray(col)) fill(col[0], col[1], col[2], 220);
             else fill(col);
             const size = 2;
-            rect(mapX - size/2, mapY - size/2, size, size, 1);
+            rect(mapX - size / 2, mapY - size / 2, size, size, 1);
             pop();
         }
     }
@@ -655,7 +657,7 @@ class UIMinimap {
                 let col = [255, 100, 255];
                 if (Array.isArray(m.color)) col = m.color;
                 else if (typeof m.color === 'string') {
-                    try { const cc = color(m.color); col = [red(cc), green(cc), blue(cc)]; } catch (e) {}
+                    try { const cc = color(m.color); col = [red(cc), green(cc), blue(cc)]; } catch (e) { }
                 }
 
                 push();
@@ -663,7 +665,7 @@ class UIMinimap {
                 if (onMap && mapX >= mapLeft && mapX <= mapRight && mapY >= mapTop && mapY <= mapBottom) {
                     noStroke();
                     fill(col[0], col[1], col[2], 220);
-                    rect(mapX - size/2, mapY - size/2, size, size, 2);
+                    rect(mapX - size / 2, mapY - size / 2, size, size, 2);
 
                     // Try to draw abbreviated label if space allows
                     if (m.label && typeof m.label === 'string') {

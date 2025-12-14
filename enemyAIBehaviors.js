@@ -567,9 +567,8 @@ class EnemyAIBehaviors {
                 if (system?.station?.pos) {
                     if (random() < 0.2) { //20% chance to patrol back to station
                         this.patrolTargetPos = system.station.pos.copy();
-                        //console.log(`Police ${this.shipTypeName} patrolling back to station`);
                     } else {
-                        // 70% chance to patrol elsewhere in the system
+                        // 80% chance to patrol elsewhere in the system
                         const patrolRange = 2000; // Area to patrol within
                         const patrolAngle = random(TWO_PI);
                         const patrolDist = random(700, patrolRange);
@@ -579,8 +578,6 @@ class EnemyAIBehaviors {
                             this.pos.x + cos(patrolAngle) * patrolDist,
                             this.pos.y + sin(patrolAngle) * patrolDist
                         );
-
-                        //console.log(`Police ${this.shipTypeName} patrolling to new point at distance ${patrolDist.toFixed(0)}`);
                     }
                 } else {
                     // No station, just patrol randomly
@@ -1587,16 +1584,218 @@ class EnemyAIBehaviors {
      * Increases aggression and combat effectiveness
      */
     _applyFactionRivalryBonus() {
-        // Boost combat stats temporarily
-        if (!this._rivalryBonusApplied) {
-            this._baseMaxSpeedBackup = this.maxSpeed;
-            this.maxSpeed *= 1.2; // 20% faster
-            this._rivalryBonusApplied = true;
+        this.maxSpeed = this.baseMaxSpeed * COMBAT_RIVALRY_MAX_SPEED_MULT;
+        this.engageDistance = (180 + this.size * 0.5) * COMBAT_RIVALRY_ENGAGE_DISTANCE_MULT;
+        this.firingRange = (350 + this.size * 0.3) * COMBAT_RIVALRY_FIRING_RANGE_MULT;
+        this.visualFiringRange = this.firingRange;
+    }
+
+    /**
+     * Miner AI Logic - Targets asteroids, destroys them, collects cargo, and sells at station
+     * @param {Object} system - The current star system
+     */
+    updateMinerAI(system) {
+        // Handle cargo collection if currently collecting
+        if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+            if (!this.updateCargoCollectionAI(system)) {
+                // Done collecting, return to mining
+                this.changeState(AI_STATE.IDLE);
+                this.asteroidTarget = null;
+            }
+            this.updatePhysics();
+            return;
         }
 
-        // More aggressive engagement
-        this.engageDistance *= 1.3;
-        this.firingRange *= 1.2;
+        // Check if cargo hold is full - if so, return to station
+        const cargoAmount = (typeof this.getCargoAmount === 'function') ? this.getCargoAmount() : 0;
+        const cargoCapacity = this.cargoCapacity || 0;
+        const cargoFull = cargoCapacity > 0 && cargoAmount >= cargoCapacity;
+
+        if (cargoFull || (cargoAmount > 0 && this.shouldReturnToStation)) {
+            // Head to station to sell cargo
+            if (!system?.station?.pos) {
+                // No station in system, just idle
+                this.changeState(AI_STATE.IDLE);
+                this.vel.mult(0.95);
+                this.updatePhysics();
+                return;
+            }
+
+            const distToStation = dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y);
+
+            if (distToStation < this.stationProximityThreshold) {
+                // At station - dock and sell cargo
+                if (typeof this.handleStationDocking === 'function') {
+                    this.handleStationDocking(system);
+                }
+                this.shouldReturnToStation = false;
+                this.changeState(AI_STATE.IDLE);
+                this.asteroidTarget = null;
+            } else {
+                // Move toward station
+                this.changeState(AI_STATE.PATROLLING);
+                this.performSafeRotationAndThrust(system, system.station.pos);
+            }
+            this.updatePhysics();
+            return;
+        }
+
+        // Look for cargo on the ground first (prioritize existing cargo)
+        if (this.cargoCollectionCooldown <= 0) {
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                this.cargoTarget = cargoTarget;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
+                this.updatePhysics();
+                return;
+            }
+        }
+
+        // Find and target nearest asteroid
+        if (!this.asteroidTarget || this.asteroidTarget.destroyed) {
+            this.asteroidTarget = this.findNearestAsteroid(system);
+
+            if (!this.asteroidTarget) {
+                // No asteroids available - patrol to search for asteroids instead of idling
+                if (cargoAmount > 0) {
+                    // Have cargo but no asteroids - return to station
+                    this.shouldReturnToStation = true;
+                } else {
+                    // No cargo and no asteroids - patrol the system to search
+                    if (this.currentState !== AI_STATE.PATROLLING) {
+                        this.changeState(AI_STATE.PATROLLING);
+                    }
+
+                    // Initialize patrol target if not set
+                    if (!this.patrolTargetPos) {
+                        // Start patrol from a random point in the system
+                        const patrolAngle = random(TWO_PI);
+                        const patrolDist = random(800, 2000);
+                        this.patrolTargetPos = createVector(
+                            this.pos.x + cos(patrolAngle) * patrolDist,
+                            this.pos.y + sin(patrolAngle) * patrolDist
+                        );
+                    }
+
+                    // Check if reached patrol target
+                    const distToPatrolTarget = dist(
+                        this.pos.x, this.pos.y,
+                        this.patrolTargetPos.x, this.patrolTargetPos.y
+                    );
+
+                    if (distToPatrolTarget < 100) {
+                        // Reached patrol point - select new one
+                        const patrolAngle = random(TWO_PI);
+                        const patrolDist = random(800, 2000);
+                        this.patrolTargetPos = createVector(
+                            this.pos.x + cos(patrolAngle) * patrolDist,
+                            this.pos.y + sin(patrolAngle) * patrolDist
+                        );
+                    }
+
+                    // Move toward patrol target
+                    this.performSafeRotationAndThrust(system, this.patrolTargetPos);
+                }
+                this.updatePhysics();
+                return;
+            }
+        }
+
+        // Move toward and attack the asteroid
+        const distanceToAsteroid = dist(
+            this.pos.x, this.pos.y,
+            this.asteroidTarget.pos.x, this.asteroidTarget.pos.y
+        );
+
+        // Set state to approaching if not already
+        if (this.currentState === AI_STATE.IDLE) {
+            this.changeState(AI_STATE.APPROACHING);
+        }
+
+        // Calculate ideal attack distance (not too close, not too far)
+        const idealDistance = this.firingRange * 0.7; // Stay at 70% of firing range
+        const stopDistance = idealDistance * 0.8; // Start slowing down earlier
+
+        // Only thrust if we're far from the ideal position
+        if (distanceToAsteroid > stopDistance) {
+            // Move toward asteroid
+            this.performSafeRotationAndThrust(system, this.asteroidTarget.pos);
+        } else {
+            // We're close enough - just rotate to face it and apply strong damping
+            const angleToAsteroid = atan2(
+                this.asteroidTarget.pos.y - this.pos.y,
+                this.asteroidTarget.pos.x - this.pos.x
+            );
+
+            // Rotate to face target
+            let angleDiff = angleToAsteroid - this.angle;
+            while (angleDiff > PI) angleDiff -= TWO_PI;
+            while (angleDiff < -PI) angleDiff += TWO_PI;
+
+            if (Math.abs(angleDiff) > 0.05) {
+                this.angle += angleDiff * 0.1; // Smooth rotation
+            }
+
+            // Apply strong damping when close - reduces jitter
+            this.vel.mult(0.92);
+        }
+
+        // Fire at asteroid if in range
+        if (distanceToAsteroid < this.firingRange && this.isArmed()) {
+            const angleToAsteroid = atan2(
+                this.asteroidTarget.pos.y - this.pos.y,
+                this.asteroidTarget.pos.x - this.pos.x
+            );
+
+            // Calculate angle difference to see if we're aimed correctly
+            let angleDiff = angleToAsteroid - this.angle;
+            // Normalize angle difference to -PI to PI range
+            while (angleDiff > PI) angleDiff -= TWO_PI;
+            while (angleDiff < -PI) angleDiff += TWO_PI;
+
+            // Fire if weapon is ready and we're roughly aimed at the asteroid (within 15 degrees)
+            if (this.isWeaponReady() && Math.abs(angleDiff) < 0.26) { // 0.26 radians ~= 15 degrees
+                this.fireWeapon(system, angleToAsteroid);
+            }
+        }
+
+        this.updatePhysics();
+    }
+
+    /**
+     * Find the nearest static asteroid in the system
+     * Miners should target slow-moving or stationary asteroids, not fast-moving ones
+     * @param {Object} system - The current star system
+     * @returns {Object|null} The nearest static asteroid or null if none found
+     */
+    findNearestAsteroid(system) {
+        if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
+            return null;
+        }
+
+        let nearestAsteroid = null;
+        let nearestDistance = Infinity;
+        const MAX_ASTEROID_SPEED = 0.1; // Only target nearly-static asteroids (very low threshold)
+
+        for (const asteroid of system.asteroids) {
+            if (!asteroid || asteroid.destroyed) continue;
+            if (!asteroid.pos || typeof asteroid.pos.x !== 'number' || typeof asteroid.pos.y !== 'number') continue;
+
+            // Skip fast-moving asteroids - miners should only target static/slow ones
+            if (asteroid.vel) {
+                const speed = Math.sqrt(asteroid.vel.x * asteroid.vel.x + asteroid.vel.y * asteroid.vel.y);
+                if (speed > MAX_ASTEROID_SPEED) continue;
+            }
+
+            const distance = dist(this.pos.x, this.pos.y, asteroid.pos.x, asteroid.pos.y);
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestAsteroid = asteroid;
+            }
+        }
+
+        return nearestAsteroid;
     }
 
     /**
@@ -1744,8 +1943,8 @@ class EnemyAIBehaviors {
         }
 
         // Check space objects (satellites, platforms, debris, etc.)
-        // Local transports (AI_ROLE.TRANSPORT) do not avoid space objects
-        if (this.role !== AI_ROLE.TRANSPORT && Array.isArray(system.spaceObjects)) {
+        // Local transports and police do not avoid space objects (they operate around stations)
+        if (this.role !== AI_ROLE.TRANSPORT && this.role !== AI_ROLE.POLICE && Array.isArray(system.spaceObjects)) {
             for (const spaceObj of system.spaceObjects) {
                 checkObstacle(spaceObj);
             }

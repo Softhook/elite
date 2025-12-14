@@ -502,15 +502,15 @@ const SHIP_DEFINITIONS = {
     },
     "ProspectorMiner": { // NEW - Miner
         name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
-        baseMaxSpeed: 3.5, baseThrust: 0.08, baseTurnRate: 0.03840,
+        baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
-        armament: [],
+        armament: ["Beam Laser"], // Mining lasers for asteroid destruction
         costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
         vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
         fillColor: [180, 170, 160], // Industrial grey/brown
-        typicalCargo: ["Minerals"],
+        typicalCargo: ["Minerals", "Metals"],
         price: 8700,
-        aiRoles: ["TRANSPORT"],
+        aiRoles: ["MINER"],
         techLevel: 2 // Utility
     },
     "Python": {

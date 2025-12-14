@@ -616,6 +616,9 @@ class Enemy {
                     case AI_ROLE.HAULER:
                         this.updateHaulerAI(system);
                         break;
+                    case AI_ROLE.MINER:
+                        this.updateMinerAI(system);
+                        break;
                     case AI_ROLE.COMBAT:
                         this.updateCombatRoleAI(system); // New combat role AI
                         break;
