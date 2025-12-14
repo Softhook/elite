@@ -2720,6 +2720,55 @@ class StarSystem {
         asteroid2.vel.y += impulseY * invMass2;
     }
 
+    /**
+     * Handles asteroid-to-space object collision (elastic physics, no damage)
+     * Space objects are treated as static/very massive, so asteroid bounces off
+     * @private
+     */
+    _handleAsteroidSpaceObjectCollision(asteroid, spaceObject) {
+        const dx = spaceObject.pos.x - asteroid.pos.x;
+        const dy = spaceObject.pos.y - asteroid.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq) || 0.001;
+
+        // Calculate overlap
+        const rAsteroid = asteroid.maxRadius || asteroid.size / 2;
+        const rObject = (typeof spaceObject.collisionRadius === 'number')
+            ? spaceObject.collisionRadius
+            : spaceObject.size / 2;
+        const minDist = rAsteroid + rObject;
+        const overlap = minDist - dist;
+
+        if (overlap <= 0) return; // No actual overlap
+
+        // Normalized collision vector (normal pointing from asteroid to object)
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Push asteroid away from space object (treat space object as immovable)
+        asteroid.pos.x -= nx * overlap;
+        asteroid.pos.y -= ny * overlap;
+
+        // --- Physics-based Impulse Resolution ---
+
+        // Velocity of asteroid along the normal
+        const velAlongNormal = asteroid.vel.x * nx + asteroid.vel.y * ny;
+
+        // Do not resolve if asteroid is moving away
+        if (velAlongNormal > 0) return;
+
+        // Coefficient of restitution (slightly less bouncy than asteroid-asteroid)
+        const restitution = 0.7;
+
+        // Reflect velocity along normal with restitution
+        // Treat space object as infinite mass (doesn't move)
+        const impulse = -(1 + restitution) * velAlongNormal;
+
+        asteroid.vel.x += impulse * nx;
+        asteroid.vel.y += impulse * ny;
+    }
+
+
     /** Handles all collision detection and responses in the system. */
     checkCollisions() {
         // Early exit if no player
@@ -2779,6 +2828,22 @@ class StarSystem {
 
                     if (asteroid1.checkCollision(asteroid2)) {
                         this._handleAsteroidAsteroidCollision(asteroid1, asteroid2);
+                    }
+                }
+            }
+
+            // Asteroid vs Space Object collisions
+            const spaceObjectCount = this.spaceObjects.length;
+            for (let i = 0; i < asteroidCount; i++) {
+                const asteroid = this.asteroids[i];
+                if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
+
+                for (let j = 0; j < spaceObjectCount; j++) {
+                    const spaceObject = this.spaceObjects[j];
+                    if (!spaceObject || !spaceObject.pos || spaceObject.isDestroyed()) continue;
+
+                    if (asteroid.checkCollision(spaceObject)) {
+                        this._handleAsteroidSpaceObjectCollision(asteroid, spaceObject);
                     }
                 }
             }
