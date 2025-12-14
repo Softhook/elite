@@ -1508,8 +1508,8 @@ class EnemyAIBehaviors {
         // Apply faction-specific AI bonuses when engaging
         if (targetExists && this.target) {
             const targetDef = this.target.shipTypeName ? SHIP_DEFINITIONS[this.target.shipTypeName] : null;
-            const targetFaction = (this.target instanceof Player && this.target.playerFaction)
-                ? this.target.playerFaction
+            const targetFaction = (this.target instanceof Player)
+                ? (this.target.playerFaction || 'UNKNOWN')
                 : (this._getShipFaction ? this._getShipFaction(this.target) : 'UNKNOWN');
 
             // Military ships get bonus against aliens

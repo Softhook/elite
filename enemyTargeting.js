@@ -460,9 +460,10 @@ class EnemyTargeting {
             // Exception: Allow brief retaliation if same-faction ship attacked us
             if (enemy._getShipFaction) {
                 const myFaction = enemy._getShipFaction(enemy);
-                // For Player targets, use their actual faction, not their ship's faction
-                const targetFaction = (target instanceof Player && target.playerFaction)
-                    ? target.playerFaction
+                // For Player targets, use their faction directly (or 'UNKNOWN' if null)
+                // For NPC targets, get faction via ship faction check
+                const targetFaction = (target instanceof Player)
+                    ? (target.playerFaction || 'UNKNOWN')
                     : enemy._getShipFaction(target);
 
                 // Only apply faction logic if both have known factions (not UNKNOWN)
@@ -524,8 +525,8 @@ class EnemyTargeting {
                         _interesting = true;
 
                         // Bonus against military ships - check player's actual faction
-                        const targetFaction = (target instanceof Player && target.playerFaction)
-                            ? target.playerFaction
+                        const targetFaction = (target instanceof Player)
+                            ? (target.playerFaction || 'UNKNOWN')
                             : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
                         if (targetFaction === 'MILITARY') {
                             _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military targets
@@ -554,9 +555,9 @@ class EnemyTargeting {
                 case AI_ROLE.COMBAT:
                     // Combat ships prioritize based on faction
                     const myFaction = enemy._getShipFaction ? enemy._getShipFaction(enemy) : 'UNKNOWN';
-                    // For Player targets, use their actual faction, not their ship's faction
-                    const targetFaction = (target instanceof Player && target.playerFaction)
-                        ? target.playerFaction
+                    // For Player targets, use their faction directly (or 'UNKNOWN' if null)
+                    const targetFaction = (target instanceof Player)
+                        ? (target.playerFaction || 'UNKNOWN')
                         : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
 
                     // Military ships prioritize aliens with significant bonus
@@ -620,6 +621,7 @@ class EnemyTargeting {
 
                 // 3. Ally engagement penalty - encourage target distribution
                 // Count same-faction allies already targeting this same target
+                // Apply scaling penalty based on distance: close ships can engage, distant ships should find other targets
                 if (system?.enemies && enemy._getShipFaction) {
                     const myFaction = enemy._getShipFaction(enemy);
                     let alliesTargetingSame = 0;
@@ -636,10 +638,21 @@ class EnemyTargeting {
                     }
 
                     if (alliesTargetingSame > 0) {
-                        const allyPenalty = Math.min(
+                        let allyPenalty = Math.min(
                             TARGET_SCORE_ALLY_ENGAGED_CAP,
                             alliesTargetingSame * TARGET_SCORE_ALLY_ENGAGED_PENALTY
                         );
+
+                        // Scale penalty by distance - ships already close should still engage
+                        // Ships far away should have full penalty to prevent convergence
+                        const closeEngagementDistance = 200; // Ships within this range can engage despite allies
+                        if (distance < closeEngagementDistance) {
+                            // Reduce penalty for close ships (linear scale from 0% at 0 distance to 100% at closeEngagementDistance)
+                            const distanceScale = distance / closeEngagementDistance;
+                            allyPenalty *= distanceScale;
+                        }
+                        // Ships beyond closeEngagementDistance get full penalty
+
                         _score -= allyPenalty;
                     }
                 }

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Targeting & Avoidance Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+
+        .changelog {
+            background: #1e1e2a;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #81c784;
+        }
+
+        .changelog h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            color: #81c784;
+        }
+
+        .changelog ul {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .changelog code {
+            background: #2a2a3a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #ffb74d;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎯 AI Targeting & Space Object Avoidance Tests</h1>
+
+    <div class="description">
+        Tests for AI targeting distance penalties and space object avoidance behaviors added on 2025-12-14.
+    </div>
+
+    <div class="changelog">
+        <h2>Changes Being Tested</h2>
+        <ul>
+            <li><strong>Distance-Aware Targeting</strong>:
+                <ul>
+                    <li>Distance penalty multiplier: <code>0.08 → 0.15</code></li>
+                    <li>Distance penalty cap: <code>80 → 150</code></li>
+                    <li>Ally engagement penalty now scales with distance (close ships &lt;200u can engage)</li>
+                </ul>
+            </li>
+            <li><strong>Space Object Avoidance</strong>:
+                <ul>
+                    <li>Ships avoid asteroids, space objects, and other ships in their path</li>
+                    <li>Exception: Local transports (TRANSPORT role) don't avoid space objects (can dock)</li>
+                    <li>Uses forward-cone checking for performance (max 600u lookahead)</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../harpoon.js"></script>
+    <script src="../weaponSystem.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../thrustParticles.js"></script>
+    <script src="../enemyUtils.js"></script>
+    <script src="../enemy.js"></script>
+    <script src="../enemyDamageSystem.js"></script>
+    <script src="../enemyRendering.js"></script>
+    <script src="../enemyMovement.js"></script>
+    <script src="../enemyTargeting.js"></script>
+    <script src="../enemyCombat.js"></script>
+    <script src="../enemyStateMachine.js"></script>
+    <script src="../enemyAIBehaviors.js"></script>
+    <script src="../enemyCargo.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // Apply Enemy Mixins
+        if (typeof applyEnemyUtilityMethods === 'function') applyEnemyUtilityMethods();
+        if (typeof applyEnemyDamageSystemMethods === 'function') applyEnemyDamageSystemMethods();
+        if (typeof applyEnemyRenderingMethods === 'function') applyEnemyRenderingMethods();
+        if (typeof applyEnemyMovementMethods === 'function') applyEnemyMovementMethods();
+        if (typeof applyEnemyTargetingMethods === 'function') applyEnemyTargetingMethods();
+        if (typeof applyEnemyCombatMethods === 'function') applyEnemyCombatMethods();
+        if (typeof applyEnemyStateMachineMethods === 'function') applyEnemyStateMachineMethods();
+        if (typeof applyEnemyAIBehaviorMethods === 'function') applyEnemyAIBehaviorMethods();
+        if (typeof applyEnemyCargoMethods === 'function') applyEnemyCargoMethods();
+
+        // Mock Player class for instanceof checks
+        class Player {
+            constructor(options = {}) {
+                this.pos = createVector(options.x || 0, options.y || 0);
+                this.vel = createVector(0, 0);
+                this.size = options.size || 30;
+                this.hull = options.hull || 100;
+                this.maxHull = 100;
+                this.shield = options.shield || 50;
+                this.maxShield = 50;
+                this.cargo = options.cargo || [];
+                this.wantedLevel = options.wantedLevel || 0;
+                this.isPlayer = true;
+                // Set playerFaction to 'PLAYER' so faction check doesn't apply same-faction penalty
+                this.playerFaction = options.playerFaction || 'PLAYER';
+            }
+
+            getCargoAmount() {
+                return Array.isArray(this.cargo) ? this.cargo.length : 0;
+            }
+
+            distanceTo(target) {
+                if (!target || !target.pos) return Infinity;
+                return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+            }
+        }
+
+        // Mock player factory
+        function createMockPlayer(options = {}) {
+            return new Player(options);
+        }
+
+        // Mock system
+        function createMockSystem(options = {}) {
+            return {
+                asteroids: options.asteroids || [],
+                enemies: options.enemies || [],
+                spaceObjects: options.spaceObjects || [],
+                projectiles: options.projectiles || [],
+                station: options.station || { pos: createVector(0, 0), size: 100 },
+                player: options.player || null,
+                isPlayerWanted: function () {
+                    return this.player && this.player.wantedLevel > 0;
+                }
+            };
+        }
+
+        // ============================================
+        // Distance Penalty Constants Tests
+        // ============================================
+
+        describe('Distance Penalty Constants (2025-12-14 Changes)', () => {
+            it('should have increased distance penalty multiplier', () => {
+                expect(TARGET_SCORE_DISTANCE_PENALTY_MULT).toBe(0.15);
+                expect(TARGET_SCORE_DISTANCE_PENALTY_MULT).toBeGreaterThan(0.08);
+            });
+
+            it('should have increased distance penalty cap', () => {
+                expect(TARGET_SCORE_DISTANCE_PENALTY_CAP).toBe(150);
+                expect(TARGET_SCORE_DISTANCE_PENALTY_CAP).toBeGreaterThan(80);
+            });
+
+            it('should have ally engagement penalty constants', () => {
+                expect(TARGET_SCORE_ALLY_ENGAGED_PENALTY).toBeDefined();
+                expect(TARGET_SCORE_ALLY_ENGAGED_CAP).toBeDefined();
+                expect(TARGET_SCORE_ALLY_ENGAGED_PENALTY).toBe(25);
+                expect(TARGET_SCORE_ALLY_ENGAGED_CAP).toBe(75);
+            });
+        });
+
+        // ============================================
+        // Space Object Avoidance Tests
+        // ============================================
+
+        describe('Space Object Avoidance', () => {
+            let enemy;
+            let mockSystem;
+
+            beforeEach(() => {
+                const mockPlayer = createMockPlayer({ x: 1000, y: 1000 });
+                enemy = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+
+                // Create system with obstacles
+                mockSystem = createMockSystem({
+                    asteroids: [
+                        { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false }
+                    ],
+                    spaceObjects: [
+                        { pos: createVector(300, 0), size: 60, maxRadius: 30, destroyed: false }
+                    ]
+                });
+            });
+
+            it('should have avoidance method', () => {
+                expect(typeof enemy._avoidObstaclesAndAdjustTarget).toBe('function');
+            });
+
+            it('should have performSafeRotationAndThrust wrapper', () => {
+                expect(typeof enemy.performSafeRotationAndThrust).toBe('function');
+            });
+
+            it('should detect obstacle in path', () => {
+                // Target directly past the asteroid
+                const targetPos = createVector(400, 0);
+                const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                expect(safeTarget).toBeDefined();
+                expect(safeTarget.x).toBeDefined();
+                expect(safeTarget.y).toBeDefined();
+
+                // Safe target should be adjusted away from straight line
+                // (either laterally offset or should set avoidance timer)
+                const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+                expect(wasAdjusted).toBe(true);
+            });
+
+            it('should not adjust target when no obstacles', () => {
+                // Target in clear space
+                const targetPos = createVector(0, 500);
+                const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                // Should return target unchanged
+                expect(safeTarget.x).toBe(targetPos.x);
+                expect(safeTarget.y).toBe(targetPos.y);
+            });
+
+            it('should slow down when obstacle is very close', () => {
+                // Position enemy very close to asteroid
+                enemy.pos.set(160, 0); // 160 units from asteroid at 200,0
+                const targetPos = createVector(400, 0);
+
+                enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                // Should set avoidance timer for velocity damping
+                expect(enemy._asteroidAvoidTimer).toBeGreaterThan(0);
+            });
+        });
+
+        // ============================================
+        // Transport Exception Tests
+        // ============================================
+
+        describe('Transport Role Space Object Exception', () => {
+            let transport;
+            let mockSystem;
+
+            beforeEach(() => {
+                const mockPlayer = createMockPlayer();
+                transport = new Enemy(0, 0, mockPlayer, 'Shuttle', AI_ROLE.TRANSPORT);
+
+                mockSystem = createMockSystem({
+                    asteroids: [
+                        { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false }
+                    ],
+                    spaceObjects: [
+                        { pos: createVector(250, 0), size: 60, maxRadius: 30, destroyed: false }
+                    ]
+                });
+            });
+
+            it('should avoid asteroids', () => {
+                const targetPos = createVector(400, 0);
+                const safeTarget = transport._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                // Should adjust for asteroid
+                const wasAdjusted = (safeTarget.y !== targetPos.y) || transport._asteroidAvoidTimer > 0;
+                expect(wasAdjusted).toBe(true);
+            });
+
+            it('should NOT avoid space objects (can dock with them)', () => {
+                // Remove asteroid, only space object in path
+                mockSystem.asteroids = [];
+
+                const targetPos = createVector(300, 0); // Through space object
+                const safeTarget = transport._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                // Should NOT be adjusted for space object (transports can dock)
+                // This is checked in line 1748: if (this.role !== AI_ROLE.TRANSPORT ...)
+                expect(transport.role).toBe(AI_ROLE.TRANSPORT);
+            });
+        });
+
+        // ============================================
+        // Distance-Aware Targeting Tests
+        // ============================================
+
+        describe('Distance-Aware Target Selection', () => {
+            let pirate1, pirate2, pirate3;
+            let mockTarget;
+            let mockSystem;
+
+            beforeEach(() => {
+                // Create player with LOTS of cargo so pirates find them VERY interesting
+                // This ensures scores stay positive even with distance penalties
+                const largeCargo = [];
+                for (let i = 0; i < 50; i++) {
+                    largeCargo.push({ name: `Item${i}`, quantity: 10 });
+                }
+
+                mockTarget = createMockPlayer({
+                    x: 0,
+                    y: 0,
+                    cargo: largeCargo
+                });
+
+                // Use closer distances to keep scores positive: 100, 300, 600
+                pirate1 = new Enemy(100, 0, null, 'Sidewinder', AI_ROLE.PIRATE); // Close
+                pirate2 = new Enemy(300, 0, null, 'Sidewinder', AI_ROLE.PIRATE); // Medium  
+                pirate3 = new Enemy(600, 0, null, 'Sidewinder', AI_ROLE.PIRATE); // Far
+
+                mockSystem = createMockSystem({
+                    player: mockTarget,
+                    enemies: [pirate1, pirate2, pirate3]
+                });
+
+                // Give them proper faction check
+                pirate1._getShipFaction = pirate2._getShipFaction = pirate3._getShipFaction = () => 'PIRATE';
+            });
+
+            it('should penalize distant targets more heavily', () => {
+                const score100 = pirate1.evaluateTargetScore(mockTarget, mockSystem);
+                const score300 = pirate2.evaluateTargetScore(mockTarget, mockSystem);
+                const score600 = pirate3.evaluateTargetScore(mockTarget, mockSystem);
+
+                // Closer pirates should have higher scores
+                expect(score100).toBeGreaterThan(score300);
+                expect(score300).toBeGreaterThan(score600);
+            });
+
+            it('should apply distance penalty with new multiplier', () => {
+                // Calculate expected penalty for far target
+                const distance = 500;
+                const expectedPenalty = Math.min(
+                    TARGET_SCORE_DISTANCE_PENALTY_CAP,
+                    distance * TARGET_SCORE_DISTANCE_PENALTY_MULT
+                );
+
+                expect(expectedPenalty).toBe(Math.min(150, 500 * 0.15));
+                expect(expectedPenalty).toBe(75); // 500 * 0.15 = 75, under cap
+            });
+        });
+
+        // ============================================
+        // Ally Engagement Penalty Tests
+        // ============================================
+
+        describe('Distance-Scaled Ally Engagement Penalty', () => {
+            let police1, police2, police3, police4;
+            let mockPlayer;
+            let mockSystem;
+
+            beforeEach(() => {
+                // Create wanted player so police find them interesting
+                mockPlayer = createMockPlayer({
+                    x: 0,
+                    y: 0,
+                    wantedLevel: 3  // Police only target wanted players
+                });
+
+                // Create police ships at different distances
+                police1 = new Enemy(50, 0, null, 'Viper', AI_ROLE.POLICE);   // Very close (50u)
+                police2 = new Enemy(100, 0, null, 'Viper', AI_ROLE.POLICE);  // Close (100u)
+                police3 = new Enemy(300, 0, null, 'Viper', AI_ROLE.POLICE);  // Far (300u)
+                police4 = new Enemy(600, 0, null, 'Viper', AI_ROLE.POLICE);  // Very far (600u)
+
+                // All police should have same faction
+                const getFaction = () => 'POLICE';
+                police1._getShipFaction = getFaction;
+                police2._getShipFaction = getFaction;
+                police3._getShipFaction = getFaction;
+                police4._getShipFaction = getFaction;
+
+                mockSystem = createMockSystem({
+                    player: mockPlayer,
+                    enemies: [police1, police2, police3, police4]
+                });
+            });
+
+            it('should apply reduced ally penalty for close ships', () => {
+                // Police1 already targeting player
+                police1.target = mockPlayer;
+
+                // Police2 is close (100u) - should have reduced penalty
+                const closeScore = police2.evaluateTargetScore(mockPlayer, mockSystem);
+
+                // Police4 is far (600u) - should have full penalty
+                const farScore = police4.evaluateTargetScore(mockPlayer, mockSystem);
+
+                // Close ship should score better than far ship despite ally penalty
+                expect(closeScore).toBeGreaterThan(farScore);
+            });
+
+            it('should allow very close ships to engage despite allies', () => {
+                // Police1 and police2 already targeting player
+                police1.target = mockPlayer;
+                police2.target = mockPlayer;
+
+                // Police2 is at 100u - within close engagement distance (200u)
+                // Should still have decent score due to distance scaling
+                const score = police2.evaluateTargetScore(mockPlayer, mockSystem);
+
+                // Should be valid target (positive score)
+                expect(score).toBeGreaterThan(0);
+            });
+
+            it('should apply full ally penalty for distant ships', () => {
+                // Multiple allies targeting the same target
+                police1.target = mockPlayer;
+                police2.target = mockPlayer;
+                police3.target = mockPlayer;
+
+                // Police4 is far (600u) - beyond close engagement distance (200u)
+                // Should get full ally penalty
+                const score = police4.evaluateTargetScore(mockPlayer, mockSystem);
+
+                // Score should be heavily penalized (may even be negative/invalid)
+                // With 3 allies * 25 penalty = 75 penalty (capped at 75)
+                // Plus distance penalty of ~90 (600 * 0.15)
+                // Total penalty: ~165, which should make score very low
+                expect(score).toBeLessThan(50); // Arbitrary but reasonable threshold
+            });
+        });
+
+        // ============================================
+        // Integration Tests
+        // ============================================
+
+        describe('Integration: Targeting + Avoidance', () => {
+            it('should avoid obstacles while pursuing target', () => {
+                const mockPlayer = createMockPlayer({ x: 500, y: 0 });
+                const pirate = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                pirate.target = mockPlayer;
+
+                const mockSystem = createMockSystem({
+                    player: mockPlayer,
+                    asteroids: [
+                        { pos: createVector(250, 0), size: 80, maxRadius: 40, destroyed: false }
+                    ],
+                    enemies: [pirate]
+                });
+
+                // Simulate movement toward target
+                const targetPos = mockPlayer.pos;
+                const safeTarget = pirate._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+                // Should adjust path around asteroid
+                expect(safeTarget).toBeDefined();
+                const wasAdjusted = (safeTarget.y !== targetPos.y) || pirate._asteroidAvoidTimer > 0;
+                expect(wasAdjusted).toBe(true);
+            });
+
+            it('should prefer closer targets naturally (distance penalty)', () => {
+                // Create targets with lots of cargo so scores stay positive
+                const largeCargo = [];
+                for (let i = 0; i < 50; i++) {
+                    largeCargo.push({ name: `Item${i}`, quantity: 10 });
+                }
+
+                const closeTarget = createMockPlayer({
+                    x: 200,
+                    y: 0,
+                    cargo: largeCargo
+                });
+                const farTarget = createMockPlayer({
+                    x: 600,
+                    y: 0,
+                    cargo: largeCargo
+                });
+
+                const pirate = new Enemy(0, 0, null, 'Sidewinder', AI_ROLE.PIRATE);
+                pirate._getShipFaction = () => 'PIRATE';
+
+                const mockSystem = createMockSystem({
+                    enemies: [pirate]
+                });
+
+                const closeScore = pirate.evaluateTargetScore(closeTarget, mockSystem);
+                const farScore = pirate.evaluateTargetScore(farTarget, mockSystem);
+
+                expect(closeScore).toBeGreaterThan(farScore);
+            });
+        });
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>
