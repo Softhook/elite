@@ -2101,7 +2101,7 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      */
     updateRepairAI(system) {
-        // Priority 1: Check if any planets have lost all their space objects
+        // Always check for reconstruction needs first (Priority 1)
         const planetNeedingReconstruction = this.findPlanetNeedingSpaceObject(system);
 
         if (planetNeedingReconstruction) {
@@ -2126,24 +2126,22 @@ class EnemyAIBehaviors {
                 this.repairTarget.pos.x, this.repairTarget.pos.y
             );
 
-            const repairRange = 60; // Slightly larger range due to slow speed
+            const repairRange = 60;
 
             if (distToTarget < repairRange) {
                 // Within range - perform repairs
                 this.changeState(AI_STATE.IDLE);
                 this.performRepair(this.repairTarget);
-                this.vel.mult(0.9); // Slow to hovering
+                this.vel.mult(0.9);
 
                 // Check if current target is fully repaired
                 if (!this.isRepairTargetValid(this.repairTarget)) {
-                    // Target fully repaired, immediately look for next target
+                    // Target fully repaired, find next target
                     this.repairTarget = this.selectRepairTarget(this.findDamagedSpaceObjects(system));
 
                     if (this.repairTarget) {
-                        // Found another damaged object, continue repairing
                         this.changeState(AI_STATE.PATROLLING);
                     }
-                    // If no more damaged objects, will fall through to station return
                 }
             } else {
                 // Move towards damaged object
@@ -2155,7 +2153,9 @@ class EnemyAIBehaviors {
             return;
         }
 
-        // Priority 4: Return to station when all work is done
+        // Priority 4: Return to station when no work found
+        // Note: We always re-check for work at the start of this function,
+        // so even when idle at station, we'll detect new reconstruction needs
         if (!system?.station?.pos) {
             this.changeState(AI_STATE.IDLE);
             this.vel.mult(0.95);
@@ -2169,7 +2169,7 @@ class EnemyAIBehaviors {
         );
 
         if (distToStation < this.stationProximityThreshold) {
-            // At station - idle and wait
+            // At station - idle and wait (will re-check on next update)
             this.changeState(AI_STATE.NEAR_STATION);
             this.vel.mult(0.8);
         } else {
@@ -2195,61 +2195,31 @@ class EnemyAIBehaviors {
             system.spaceObjects = [];
         }
 
-        console.log(`[RECONSTRUCTION] Checking ${system.planets.length} planets for reconstruction needs. Total space objects: ${system.spaceObjects.length}`);
+        // Check each planet to see if it has at least one alive space object
+        // Use planetIndex instead of distance because planets orbit but space objects are static
+        for (let i = 1; i < system.planets.length; i++) {
+            const planet = system.planets[i];
+            if (!planet || !planet.pos) continue;
 
-        // Check each planet to see if it has at least one space object
-        for (const planet of system.planets) {
-            if (!planet || !planet.pos) {
-                console.log('[RECONSTRUCTION] Skipping planet: no pos');
-                continue;
-            }
+            // Skip the sun
+            if (i === 0) continue;
 
-            // Skip the sun (position 0,0) - it shouldn't have space objects
-            const distFromCenter = dist(planet.pos.x, planet.pos.y, 0, 0);
-            if (distFromCenter < 100) {
-                console.log(`[RECONSTRUCTION] Skipping ${planet.name}: is sun (dist from center: ${Math.round(distFromCenter)})`);
-                continue; // Sun is at center
-            }
+            // Find alive space objects associated with this planet by planetIndex
+            const aliveObjectsForPlanet = system.spaceObjects.filter(obj => {
+                if (!obj || obj.destroyed) return false;
+                // Check if object is actually alive (has health > 0)
+                if (typeof obj.health === 'number' && obj.health <= 0) return false;
 
-            // Only check planets that have an orbit radius (actual planets, not sun)
-            if (!planet.orbitRadius || planet.orbitRadius <= 0) {
-                console.log(`[RECONSTRUCTION] Skipping ${planet.name}: no orbit radius (orbitRadius: ${planet.orbitRadius})`);
-                continue;
-            }
-
-            console.log(`[RECONSTRUCTION] Checking planet ${planet.name} (orbit: ${planet.orbitRadius})...`);
-
-            // Find space objects near this planet
-            const allNearbyObjects = [];
-            const aliveNearbyObjects = [];
-
-            for (const obj of system.spaceObjects) {
-                if (!obj || !obj.pos) continue;
-
-                const distToPlanet = dist(obj.pos.x, obj.pos.y, planet.pos.x, planet.pos.y);
-                const orbitRadius = planet.orbitRadius || 0;
-                const maxDist = Math.max(orbitRadius * 0.3, 500);
-
-                if (distToPlanet < maxDist) {
-                    allNearbyObjects.push(obj);
-                    const isAlive = !obj.destroyed && (typeof obj.health !== 'number' || obj.health > 0);
-                    if (isAlive) {
-                        aliveNearbyObjects.push(obj);
-                    }
-                    console.log(`[RECONSTRUCTION]   - ${obj.type}: destroyed=${obj.destroyed}, health=${obj.health}/${obj.maxHealth}, dist=${Math.round(distToPlanet)}, alive=${isAlive}`);
-                }
-            }
-
-            console.log(`[RECONSTRUCTION] Planet ${planet.name}: ${aliveNearbyObjects.length} alive / ${allNearbyObjects.length} total nearby (orbit radius: ${planet.orbitRadius})`);
+                // Match by planetIndex (more reliable than distance since planets orbit)
+                return obj.planetIndex === i;
+            });
 
             // If this planet has no alive space objects, it needs reconstruction
-            if (aliveNearbyObjects.length === 0) {
-                console.log(`[RECONSTRUCTION] ✓ Planet ${planet.name} needs space object reconstruction!`);
+            if (aliveObjectsForPlanet.length === 0) {
                 return planet;
             }
         }
 
-        console.log('[RECONSTRUCTION] No planets need reconstruction');
         return null;
     }
 
@@ -2270,7 +2240,6 @@ class EnemyAIBehaviors {
             // In position - reconstruct space object
             if (!this._reconstructionTimer) {
                 this._reconstructionTimer = 5.0; // 5 seconds to build
-                console.log(`${this.shipTypeName} beginning space object reconstruction at ${planet.name}`);
             }
 
             // Count down reconstruction timer
@@ -2308,6 +2277,14 @@ class EnemyAIBehaviors {
      * @param {Object} planet - The planet to spawn object at
      */
     reconstructSpaceObjectAtPlanet(system, planet) {
+        // The repair ship is positioned at the planet during reconstruction
+        // So we spawn the object at the repair ship's position, not planet.pos (which may be outdated)
+        const spawnPos = { x: this.pos.x, y: this.pos.y };
+
+        // Temporarily override planet position for spawning
+        const originalPos = planet.pos;
+        planet.pos = spawnPos;
+
         // Use the system's existing space object spawning logic
         if (typeof system.spawnSpaceObjectsForPlanets === 'function') {
             // Temporarily mark only this planet for spawning
@@ -2316,7 +2293,6 @@ class EnemyAIBehaviors {
 
             try {
                 system.spawnSpaceObjectsForPlanets();
-                console.log(`${this.shipTypeName} reconstructed space object at ${planet.name}`);
             } catch (e) {
                 console.error('Error during space object reconstruction:', e);
             }
@@ -2324,6 +2300,9 @@ class EnemyAIBehaviors {
             // Restore original planets array
             system.planets = originalPlanets;
         }
+
+        // Restore original planet position
+        planet.pos = originalPos;
     }
 
     /**

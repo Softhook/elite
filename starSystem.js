@@ -5227,12 +5227,34 @@ class StarSystem {
     spawnSpaceObjectsForPlanets() {
         console.log(`         >>> spawnSpaceObjectsForPlanets START for ${this.name}`);
 
-        // GUARD: If space objects already exist, don't spawn more
-        // This prevents on-demand spawning with non-deterministic seeds during gameplay
-        if (this.spaceObjects && this.spaceObjects.length > 0) {
-            console.log(`         >>> Space objects already exist (${this.spaceObjects.length}), skipping spawn`);
+        // GUARD: Check if the planets we're about to spawn for already have alive objects
+        // When reconstructing, this.planets is temporarily set to just the planet needing reconstruction
+        // So we check if THOSE specific planets already have objects
+        const planetsNeedingObjects = [];
+        for (let i = 0; i < this.planets.length; i++) {
+            const planet = this.planets[i];
+            if (!planet) continue;
+
+            // Get the actual planet index (could be different if planets array was modified)
+            const planetIdx = planet.planetIndex !== undefined ? planet.planetIndex : i;
+
+            // Check if this planet already has alive objects
+            const hasAliveObjects = this.spaceObjects.some(obj => {
+                if (!obj || obj.destroyed) return false;
+                if (typeof obj.health === 'number' && obj.health <= 0) return false;
+                return obj.planetIndex === planetIdx;
+            });
+
+            if (!hasAliveObjects) {
+                planetsNeedingObjects.push(planet);
+            }
+        }
+
+        if (planetsNeedingObjects.length === 0) {
+            console.log(`         >>> All planets already have alive objects, skipping spawn`);
             return;
         }
+
 
         if (!this.planets || this.planets.length === 0) {
             console.warn(`         >>> No planets found in ${this.name}, skipping space objects`);
@@ -5273,10 +5295,19 @@ class StarSystem {
             }
         }
 
-        for (let planetIdx = 1; planetIdx < this.planets.length; planetIdx++) {
+        // Loop through planets (check each planet to see if it's the sun, don't assume index 0)
+        for (let planetIdx = 0; planetIdx < this.planets.length; planetIdx++) {
             const planet = this.planets[planetIdx];
-            // Store the correct planet index for space object association
-            const correctPlanetIndex = planet.planetIndex || planetIdx;
+            if (!planet) continue;
+
+            // Skip the sun (check by properties, not index - during reconstruction planets array is modified)
+            // Sun is always at (0,0) with no orbit radius
+            const isSun = planet.isSun || (planet.pos && Math.abs(planet.pos.x) < 50 && Math.abs(planet.pos.y) < 50);
+            if (isSun) continue;
+
+            // CRITICAL: Use planet's stored planetIndex if it exists (for reconstruction)
+            // During reconstruction, this.planets = [singlePlanet] so loop index would be 0
+            const correctPlanetIndex = planet.planetIndex !== undefined ? planet.planetIndex : planetIdx;
 
             if (['Industrial', 'Refinery', 'Mining'].includes(this.economyType)) {
                 // Always spawn at least one mining platform
@@ -5377,25 +5408,25 @@ class StarSystem {
             return obj.health < obj.maxHealth; // Damaged if health < max
         });
 
-        // Check if any planets need reconstruction
-        const needsReconstruction = this.planets && this.planets.some(planet => {
+        // Check if any planets need reconstruction (by planetIndex)
+        const needsReconstruction = this.planets && this.planets.some((planet, planetIdx) => {
             if (!planet || !planet.pos) return false;
 
-            // Skip sun
-            const distFromCenter = dist(planet.pos.x, planet.pos.y, 0, 0);
-            if (distFromCenter < 100) return false;
-            if (!planet.orbitRadius || planet.orbitRadius <= 0) return false;
+            // Skip sun at index 0
+            if (planetIdx === 0) return false;
 
-            // Check if any space objects are associated with this planet
-            const objectsNearPlanet = this.spaceObjects.filter(obj => {
-                if (!obj || obj.destroyed || !obj.pos) return false;
-                const distToPlanet = dist(obj.pos.x, obj.pos.y, planet.pos.x, planet.pos.y);
-                const maxDist = Math.max(planet.orbitRadius * 0.3, 500); // Define a reasonable radius around the planet
-                return distToPlanet < maxDist;
+            // Check if any alive space objects are associated with this planet by planetIndex
+            const aliveObjectsForPlanet = this.spaceObjects.filter(obj => {
+                if (!obj || obj.destroyed) return false;
+                // Check if object is actually alive (has health > 0)
+                if (typeof obj.health === 'number' && obj.health <= 0) return false;
+
+                // Match by planetIndex
+                return obj.planetIndex === planetIdx;
             });
 
-            // A planet needs reconstruction if it has no associated space objects (excluding the sun)
-            return objectsNearPlanet.length === 0;
+            // A planet needs reconstruction if it has no alive space objects
+            return aliveObjectsForPlanet.length === 0;
         });
 
         // Only spawn if there's work to do
@@ -5405,7 +5436,6 @@ class StarSystem {
 
         // Check if we have repair ships available
         if (!REPAIR_SHIPS || REPAIR_SHIPS.length === 0) {
-            console.warn('No REPAIR_SHIPS available for spawning');
             return;
         }
 
@@ -5435,7 +5465,6 @@ class StarSystem {
             repairTender.initializeColors();
 
             this.addEnemy(repairTender);
-            console.log(`Spawned ${shipType} (REPAIR) - responding to damage/reconstruction needs`);
         } catch (e) {
             console.error('Error spawning repair tender:', e);
         }
