@@ -1552,19 +1552,19 @@ function addSkullShape() {
         { x: -0.25, y: -0.05 },  // left temple
     ];
 
-    // === LAYER 4: JAW WITH ANGULAR TEETH ===
+    // === LAYER 4: JAW WITH ANGULAR TEETH (Rotated 180° and moved lower) ===
     const jaw = [
-        { x: -0.15, y: 0.15 },   // left jaw connection
-        { x: -0.12, y: 0.20 },   // tooth 1 left
-        { x: -0.08, y: 0.18 },   // tooth 1 valley
-        { x: -0.04, y: 0.20 },   // tooth 2 left
-        { x: 0.00, y: 0.18 },    // tooth 2 valley (center)
-        { x: 0.04, y: 0.20 },    // tooth 3 right
-        { x: 0.08, y: 0.18 },    // tooth 3 valley
-        { x: 0.12, y: 0.20 },    // tooth 4 right
-        { x: 0.15, y: 0.15 },    // right jaw connection
-        { x: 0.08, y: 0.12 },    // inner jaw right
-        { x: -0.08, y: 0.12 },   // inner jaw left
+        { x: 0.15, y: 0.22 },    // left jaw connection (rotated)
+        { x: 0.12, y: 0.17 },    // tooth 1 left (rotated)
+        { x: 0.08, y: 0.19 },    // tooth 1 valley (rotated)
+        { x: 0.04, y: 0.17 },    // tooth 2 left (rotated)
+        { x: 0.00, y: 0.19 },    // tooth 2 valley (center, rotated)
+        { x: -0.04, y: 0.17 },   // tooth 3 right (rotated)
+        { x: -0.08, y: 0.19 },   // tooth 3 valley (rotated)
+        { x: -0.12, y: 0.17 },   // tooth 4 right (rotated)
+        { x: -0.15, y: 0.22 },   // right jaw connection (rotated)
+        { x: -0.08, y: 0.25 },   // inner jaw right (rotated)
+        { x: 0.08, y: 0.25 },    // inner jaw left (rotated)
     ];
 
     // === LAYER 5 & 6: EYE SOCKETS (black triangles) ===
