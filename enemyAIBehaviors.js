@@ -2095,6 +2095,32 @@ class EnemyAIBehaviors {
         }
     }
 
+    // ========================================
+    // REPAIR SHIP AI CONFIGURATION
+    // ========================================
+
+    /**
+     * Configuration constants for repair ship behavior
+     * @constant
+     */
+    static get REPAIR_CONFIG() {
+        return {
+            REPAIR_RANGE: 60,              // Distance at which repair operations can occur
+            RECONSTRUCTION_RANGE: 100,      // Distance needed to reconstruct space objects
+            REPAIR_RATE: 8,                 // Health points restored per second
+            RECONSTRUCTION_TIME: 5.0,       // Seconds required to build a new space object
+            JUMP_ZONE_BUFFER: 300,          // Minimum distance from jump zone for reconstruction
+            EFFECT_SPAWN_CHANCE: {
+                repair: 0.3,                // Probability of spawning repair visual effects
+                construction: 0.2           // Probability of spawning construction effects
+            }
+        };
+    }
+
+    // ========================================
+    // REPAIR SHIP AI - MAIN LOGIC
+    // ========================================
+
     /**
      * Repair AI Logic - Maintains system space objects
      * Repairs damaged objects and reconstructs destroyed ones
@@ -2102,7 +2128,7 @@ class EnemyAIBehaviors {
      */
     updateRepairAI(system) {
         // Always check for reconstruction needs first (Priority 1)
-        const planetNeedingReconstruction = this.findPlanetNeedingSpaceObject(system);
+        const planetNeedingReconstruction = this.findPlanetNeedingReconstruction(system);
 
         if (planetNeedingReconstruction) {
             // Move to planet and reconstruct space object
@@ -2112,7 +2138,7 @@ class EnemyAIBehaviors {
         }
 
         // Priority 2: Check for damaged space objects
-        const damagedObjects = this.findDamagedSpaceObjects(system);
+        const damagedObjects = this.findAllDamagedSpaceObjects(system);
 
         // If no target or target is fully repaired, find new target
         if (!this.repairTarget || !this.isRepairTargetValid(this.repairTarget)) {
@@ -2126,7 +2152,7 @@ class EnemyAIBehaviors {
                 this.repairTarget.pos.x, this.repairTarget.pos.y
             );
 
-            const repairRange = 60;
+            const repairRange = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RANGE;
 
             if (distToTarget < repairRange) {
                 // Within range - perform repairs
@@ -2137,7 +2163,7 @@ class EnemyAIBehaviors {
                 // Check if current target is fully repaired
                 if (!this.isRepairTargetValid(this.repairTarget)) {
                     // Target fully repaired, find next target
-                    this.repairTarget = this.selectRepairTarget(this.findDamagedSpaceObjects(system));
+                    this.repairTarget = this.selectRepairTarget(this.findAllDamagedSpaceObjects(system));
 
                     if (this.repairTarget) {
                         this.changeState(AI_STATE.PATROLLING);
@@ -2181,12 +2207,17 @@ class EnemyAIBehaviors {
         this.updatePhysics();
     }
 
+    // ========================================
+    // REPAIR SHIP AI - DETECTION FUNCTIONS
+    // ========================================
+
     /**
-     * Find planets that have lost all their space objects
+     * Find planets that have lost all their space objects and need reconstruction
+     * Skips sun (index 0) and planets too close to jump zone
      * @param {Object} system - The current star system
      * @returns {Object|null} Planet needing space object reconstruction
      */
-    findPlanetNeedingSpaceObject(system) {
+    findPlanetNeedingReconstruction(system) {
         if (!system?.planets || !Array.isArray(system.planets)) {
             return null;
         }
@@ -2199,17 +2230,6 @@ class EnemyAIBehaviors {
         for (let i = 1; i < system.planets.length; i++) {
             const planet = system.planets[i];
             if (!planet || !planet.pos) continue;
-
-            // Skip planets too close to the jump zone to avoid spawning objects there
-            if (system.jumpZoneCenter) {
-                const dx = planet.pos.x - system.jumpZoneCenter.x;
-                const dy = planet.pos.y - system.jumpZoneCenter.y;
-                const distToJumpZone = Math.sqrt(dx * dx + dy * dy);
-                const minDist = (system.jumpZoneRadius || 500) + 500;
-                if (distToJumpZone < minDist) {
-                    continue; // Skip this planet - too close to jump zone
-                }
-            }
 
             // Find alive space objects associated with this planet by planetIndex
             const aliveObjectsForPlanet = system.spaceObjects.filter(obj => {
@@ -2230,8 +2250,14 @@ class EnemyAIBehaviors {
         return null;
     }
 
+
+    // ========================================
+    // REPAIR SHIP AI - ACTION FUNCTIONS
+    // ========================================
+
     /**
      * Handle reconstruction of a space object at a planet
+     * Manages positioning, timing, and reconstruction process
      * @param {Object} system - The current star system
      * @param {Object} planet - The planet needing a space object
      */
@@ -2241,12 +2267,12 @@ class EnemyAIBehaviors {
             planet.pos.x, planet.pos.y
         );
 
-        const reconstructionRange = 100; // Must be close to planet
+        const reconstructionRange = EnemyAIBehaviors.REPAIR_CONFIG.RECONSTRUCTION_RANGE;
 
         if (distToPlanet < reconstructionRange) {
             // In position - reconstruct space object
             if (!this._reconstructionTimer) {
-                this._reconstructionTimer = 5.0; // 5 seconds to build
+                this._reconstructionTimer = EnemyAIBehaviors.REPAIR_CONFIG.RECONSTRUCTION_TIME;
             }
 
             // Count down reconstruction timer
@@ -2280,36 +2306,12 @@ class EnemyAIBehaviors {
 
     /**
      * Reconstruct a new space object at the given planet
+     * Uses the repair ship's current position as the spawn location
      * @param {Object} system - The current star system
      * @param {Object} planet - The planet to spawn object at
      */
     reconstructSpaceObjectAtPlanet(system, planet) {
-        // The repair ship is positioned at the planet during reconstruction
-        // Spawn the object at the repair ship's position
         const spawnPos = { x: this.pos.x, y: this.pos.y };
-
-        console.log(`RECONSTRUCTION: Repair ship at (${Math.round(spawnPos.x)}, ${Math.round(spawnPos.y)})`);
-        console.log(`  Planet ${planet.name} at (${Math.round(planet.pos.x)}, ${Math.round(planet.pos.y)})`);
-        if (system.jumpZoneCenter) {
-            const dx = spawnPos.x - system.jumpZoneCenter.x;
-            const dy = spawnPos.y - system.jumpZoneCenter.y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            console.log(`  Jump zone at (${Math.round(system.jumpZoneCenter.x)}, ${Math.round(system.jumpZoneCenter.y)}), dist: ${Math.round(d)}`);
-        }
-
-        // Validate spawn position - don't spawn at jump zone
-        if (system.jumpZoneCenter) {
-            const dx = spawnPos.x - system.jumpZoneCenter.x;
-            const dy = spawnPos.y - system.jumpZoneCenter.y;
-            const distFromJumpZone = Math.sqrt(dx * dx + dy * dy);
-
-            // If within jump zone radius + buffer, abort
-            const minDist = (system.jumpZoneRadius || 500) + 300;
-            if (distFromJumpZone < minDist) {
-                console.warn(`Repair ship too close to jump zone for reconstruction (dist: ${Math.round(distFromJumpZone)}), aborting`);
-                return;
-            }
-        }
 
         // Temporarily override planet position for spawning
         const originalPos = planet.pos;
@@ -2340,7 +2342,7 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      * @returns {Array} Array of damaged space objects
      */
-    findDamagedSpaceObjects(system) {
+    findAllDamagedSpaceObjects(system) {
         if (!system?.spaceObjects || !Array.isArray(system.spaceObjects)) {
             return [];
         }
@@ -2356,8 +2358,14 @@ class EnemyAIBehaviors {
         });
     }
 
+
+    // ========================================
+    // REPAIR SHIP AI - VALIDATION FUNCTIONS
+    // ========================================
+
     /**
      * Select the best repair target from damaged objects
+     * Prioritizes by damage severity, then by proximity
      * @param {Array} damagedObjects - Array of damaged objects
      * @returns {Object|null} Selected repair target
      */
@@ -2404,10 +2412,11 @@ class EnemyAIBehaviors {
 
     /**
      * Perform repair on target object
+     * Restores health and shields at configured repair rate
      * @param {Object} target - The object to repair
      */
     performRepair(target) {
-        const repairRate = 8; // Health points per second (faster due to slow ship)
+        const repairRate = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RATE;
         const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
             ? (deltaTime / 1000)
             : 0.016;
@@ -2417,11 +2426,6 @@ class EnemyAIBehaviors {
         // Repair health (space objects use 'health', not 'hull')
         if (target.health < target.maxHealth) {
             target.health = Math.min(target.maxHealth, target.health + repairAmount);
-
-            // Visual feedback
-            if (Math.random() < 0.05) {
-                console.log(`${this.shipTypeName} repairing ${target.type} - Health: ${Math.floor(target.health)}/${target.maxHealth}`);
-            }
 
             // Spawn repair particles/beam
             this.spawnRepairEffects(target);
@@ -2435,13 +2439,19 @@ class EnemyAIBehaviors {
         }
     }
 
+
+    // ========================================
+    // REPAIR SHIP AI - VISUAL EFFECT FUNCTIONS
+    // ========================================
+
     /**
      * Visual effects during repair operations
+     * Creates cyan/green particle beam from ship to target
      * @param {Object} target - The object being repaired
      */
     spawnRepairEffects(target) {
         // Only spawn effects occasionally to avoid performance issues
-        if (Math.random() > 0.3) return;
+        if (Math.random() > EnemyAIBehaviors.REPAIR_CONFIG.EFFECT_SPAWN_CHANCE.repair) return;
 
         if (!this.currentSystem) return;
 
@@ -2468,11 +2478,12 @@ class EnemyAIBehaviors {
 
     /**
      * Visual effects during reconstruction operations
+     * Creates orange/yellow construction particles around ship
      * @param {Object} planet - The planet where reconstruction is happening
      */
     spawnConstructionEffects(planet) {
         // Spawn effects occasionally
-        if (Math.random() > 0.2) return;
+        if (Math.random() > EnemyAIBehaviors.REPAIR_CONFIG.EFFECT_SPAWN_CHANCE.construction) return;
 
         if (!this.currentSystem) return;
 

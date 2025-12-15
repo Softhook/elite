@@ -5390,77 +5390,25 @@ class StarSystem {
      * Only spawns if there are damaged space objects or planets needing reconstruction
      */
     spawnRepairTender() {
-        // Check if repair tender already exists
+        // Early return: check if repair tender already exists
         const existingTender = this.enemies.find(e =>
             e.role === AI_ROLE.REPAIR && !e.destroyed
         );
+        if (existingTender) return;
 
-        if (existingTender) {
-            return; // Already have one
-        }
+        // Early return: check if there's work to do
+        if (!this._hasRepairWork()) return;
 
-        // Check if there's any damage or reconstruction needed
-        const hasDamagedObjects = this.spaceObjects && this.spaceObjects.some(obj => {
-            if (!obj || obj.destroyed) return false;
-            // Space objects use 'health' for damage tracking, not 'hull'
-            if (typeof obj.health !== 'number' || typeof obj.maxHealth !== 'number') return false;
-            if (obj.maxHealth <= 0) return false;
-            return obj.health < obj.maxHealth; // Damaged if health < max
-        });
+        // Early return: check if repair ships are available
+        if (!REPAIR_SHIPS || REPAIR_SHIPS.length === 0) return;
 
-        // Check if any planets need reconstruction (by planetIndex)
-        const needsReconstruction = this.planets && this.planets.some((planet, planetIdx) => {
-            if (!planet || !planet.pos) return false;
+        // Calculate spawn position
+        const spawnPos = this._getRepairTenderSpawnLocation();
 
-            // Skip sun at index 0
-            if (planetIdx === 0) return false;
-
-            // Check if any alive space objects are associated with this planet by planetIndex
-            const aliveObjectsForPlanet = this.spaceObjects.filter(obj => {
-                if (!obj || obj.destroyed) return false;
-                // Check if object is actually alive (has health > 0)
-                if (typeof obj.health === 'number' && obj.health <= 0) return false;
-
-                // Match by planetIndex
-                return obj.planetIndex === planetIdx;
-            });
-
-            // A planet needs reconstruction if it has no alive space objects
-            return aliveObjectsForPlanet.length === 0;
-        });
-
-        // Only spawn if there's work to do
-        if (!hasDamagedObjects && !needsReconstruction) {
-            return; // No damage, no need for repair tender
-        }
-
-        // Check if we have repair ships available
-        if (!REPAIR_SHIPS || REPAIR_SHIPS.length === 0) {
-            return;
-        }
-
-        // Spawn near station if available, otherwise near player
-        let spawnX, spawnY;
-
-        if (this.station?.pos) {
-            const angle = random(TWO_PI);
-            const dist = 200 + random(100);
-            spawnX = this.station.pos.x + cos(angle) * dist;
-            spawnY = this.station.pos.y + sin(angle) * dist;
-        } else if (this.player?.pos) {
-            const angle = random(TWO_PI);
-            const dist = this._getDiagonalDistance() + random(500, 1000);
-            spawnX = this.player.pos.x + cos(angle) * dist;
-            spawnY = this.player.pos.y + sin(angle) * dist;
-        } else {
-            // No good reference, spawn at random location
-            spawnX = random(-2000, 2000);
-            spawnY = random(-2000, 2000);
-        }
-
+        // Spawn the repair tender
         try {
             const shipType = random(REPAIR_SHIPS);
-            const repairTender = new Enemy(spawnX, spawnY, this.player, shipType, AI_ROLE.REPAIR);
+            const repairTender = new Enemy(spawnPos.x, spawnPos.y, this.player, shipType, AI_ROLE.REPAIR);
             repairTender.calculateRadianProperties();
             repairTender.initializeColors();
 
@@ -5468,6 +5416,89 @@ class StarSystem {
         } catch (e) {
             console.error('Error spawning repair tender:', e);
         }
+    }
+
+    /**
+     * Check if the system has any repair work available
+     * @returns {boolean} True if damaged objects or reconstruction needed
+     * @private
+     */
+    _hasRepairWork() {
+        return this._hasDamagedSpaceObjects() || this._hasPlanetsNeedingReconstruction();
+    }
+
+    /**
+     * Check if any space objects are damaged
+     * @returns {boolean} True if damaged space objects exist
+     * @private
+     */
+    _hasDamagedSpaceObjects() {
+        if (!this.spaceObjects) return false;
+
+        return this.spaceObjects.some(obj => {
+            if (!obj || obj.destroyed) return false;
+            if (typeof obj.health !== 'number' || typeof obj.maxHealth !== 'number') return false;
+            if (obj.maxHealth <= 0) return false;
+            return obj.health < obj.maxHealth;
+        });
+    }
+
+    /**
+     * Check if any planets need reconstruction
+     * @returns {boolean} True if any planets lack space objects
+     * @private
+     */
+    _hasPlanetsNeedingReconstruction() {
+        if (!this.planets) return false;
+
+        return this.planets.some((planet, planetIdx) => {
+            if (!planet || !planet.pos) return false;
+            if (planetIdx === 0) return false; // Skip sun
+
+            // Check if this planet has any alive space objects
+            const hasAliveObjects = this.spaceObjects.some(obj => {
+                if (!obj || obj.destroyed) return false;
+                if (typeof obj.health === 'number' && obj.health <= 0) return false;
+                return obj.planetIndex === planetIdx;
+            });
+
+            // Planet needs reconstruction if it has no alive space objects
+            return !hasAliveObjects;
+        });
+    }
+
+    /**
+     * Calculate spawn location for repair tender
+     * Prioritizes station, then player, then random location
+     * @returns {{x: number, y: number}} Spawn coordinates
+     * @private
+     */
+    _getRepairTenderSpawnLocation() {
+        // Prefer spawning near station
+        if (this.station?.pos) {
+            const angle = random(TWO_PI);
+            const dist = 200 + random(100);
+            return {
+                x: this.station.pos.x + cos(angle) * dist,
+                y: this.station.pos.y + sin(angle) * dist
+            };
+        }
+
+        // Fall back to near player
+        if (this.player?.pos) {
+            const angle = random(TWO_PI);
+            const dist = this._getDiagonalDistance() + random(500, 1000);
+            return {
+                x: this.player.pos.x + cos(angle) * dist,
+                y: this.player.pos.y + sin(angle) * dist
+            };
+        }
+
+        // Last resort: random location
+        return {
+            x: random(-2000, 2000),
+            y: random(-2000, 2000)
+        };
     }
 
     /**
