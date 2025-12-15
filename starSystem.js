@@ -5220,11 +5220,11 @@ class StarSystem {
     }
 
     /**
-     * Spawn space objects near planets based on system economy type.
-     * Industrial/Refinery/Mining systems always have mining platforms near planets.
-     * Other systems have random space objects.
+     * Spawns space objects (satellites, debris, etc.) near planets in this system
+     * This method is SEEDED - it will generate the same objects for the same system seed
+     * @param {boolean} skipJumpZoneObjects - If true, don't spawn objects near jump zone (used during reconstruction)
      */
-    spawnSpaceObjectsForPlanets() {
+    spawnSpaceObjectsForPlanets(skipJumpZoneObjects = false) {
         console.log(`         >>> spawnSpaceObjectsForPlanets START for ${this.name}`);
 
         // GUARD: Check if the planets we're about to spawn for already have alive objects
@@ -5359,8 +5359,8 @@ class StarSystem {
             }
         }
 
-        // Spawn 1-3 objects near the jump gate
-        if (this.jumpZoneCenter) {
+        // Spawn 1-3 objects near the jump gate (skip during reconstruction)
+        if (!skipJumpZoneObjects && this.jumpZoneCenter) {
             const jumpGateTypes = ['signalFlare', 'relay', 'satellite', 'decoyBuoy', 'probe', 'beacon', 'telescope', 'commDish', 'quantumGate'];
             const numJumpObjects = Math.floor(random(1, 4)); // 1 to 3
             for (let j = 0; j < numJumpObjects; j++) {

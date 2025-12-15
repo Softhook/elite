@@ -2322,7 +2322,7 @@ class EnemyAIBehaviors {
             system.planets = [planet];
 
             try {
-                system.spawnSpaceObjectsForPlanets();
+                system.spawnSpaceObjectsForPlanets(true); // Skip jump zone objects during reconstruction
             } catch (e) {
                 console.error('Error during space object reconstruction:', e);
             }
