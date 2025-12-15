@@ -590,7 +590,7 @@ High-yield mineral discovery increases mining resource availability.
 
 ### MINE_ACCIDENT
 
-Mining accident triggers emergency response.
+Mining accident spawns salvage cargo from spilled ore.
 
 **Location:** [`eventManager.js:421`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L421)
 
@@ -601,13 +601,17 @@ Mining accident triggers emergency response.
 - **Warning Message:** "HAZARD: Mining accident - emergency response." (orange)
 
 **Effects:**
-- Currently warning-only; no spawn/market effects implemented
+- Spawns 1-6 units of Metals cargo (×10 with multiplier)
+- Creates HUD marker for salvage location (3 minutes)
+- Cargo appears 1200-2200 units from player
+
+**Related Systems:** `cargo.js`, `uiManager.js` (event markers)
 
 ---
 
 ### SOLAR_FLARE
 
-Space weather event.
+Solar flare damages player shields and spawns a solar storm.
 
 **Location:** [`eventManager.js:422`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L422)
 
@@ -618,13 +622,17 @@ Space weather event.
 - **Warning Message:** "SPACE WEATHER: Solar flare activity detected." (yellow)
 
 **Effects:**
-- Currently warning-only; no mechanical effects implemented
+- Damages player shields by 50-80% of max shield
+- Spawns a solar-type cosmic storm (radius 400-700) 900-1600 units from player
+- Adds persistent event message (30 seconds)
+
+**Related Systems:** `player.js` (shield damage), `cosmicStorm.js` (solar storms)
 
 ---
 
 ### QUARANTINE
 
-Contagion quarantine measures.
+Quarantine consumes Food supplies at a station.
 
 **Location:** [`eventManager.js:423`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L423)
 
@@ -635,13 +643,17 @@ Contagion quarantine measures.
 - **Warning Message:** "QUARANTINE: Contagion measures in effect." (purple)
 
 **Effects:**
-- Currently warning-only; no mechanical effects implemented
+- Consumes 12-35 units of Food from station market
+- Adds persistent event marker (3 minutes)
+- Creates HUD marker at station location
+
+**Related Systems:** `market.js` (Food commodity), `uiManager.js` (event markers)
 
 ---
 
 ### REFUGEE_INFLUX
 
-Refugee crisis strains local services.
+Refugee influx consumes Food and strains station services.
 
 **Location:** [`eventManager.js:424`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L424)
 
@@ -652,13 +664,16 @@ Refugee crisis strains local services.
 - **Warning Message:** "CIVIC: Refugee influx stresses local services." (brown)
 
 **Effects:**
-- Currently warning-only; no mechanical effects implemented
+- Consumes 15-45 units of Food from station market
+- Adds persistent event marker (2 minutes)
+
+**Related Systems:** `market.js` (Food commodity)
 
 ---
 
 ### BOUNTY_INCREASE
 
-Bounties on criminals increased.
+Increased bounties attract bounty hunters to the jump zone.
 
 **Location:** [`eventManager.js:428`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L428)
 
@@ -669,13 +684,17 @@ Bounties on criminals increased.
 - **Warning Message:** "NOTICE: Bounties increased on wanted criminals." (red)
 
 **Effects:**
-- Currently warning-only; could affect `enemyDamageSystem.js` bounty calculations
+- Spawns 4-9 bounty hunter ships around jump zone
+- Ships set to `AI_STATE.APPROACHING` targeting player
+- Adds persistent event message (3 minutes)
+
+**Related Systems:** `ships.js` (BOUNTY_HUNTER ships), `enemyStateMachine.js` (AI_STATE.APPROACHING)
 
 ---
 
 ### REPUTATION_SCANDAL
 
-News scandal affects reputation.
+Corporate scandal causes market volatility in luxury goods and textiles.
 
 **Location:** [`eventManager.js:429`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L429)
 
@@ -686,13 +705,17 @@ News scandal affects reputation.
 - **Warning Message:** "SCANDAL: Reputation-shifting news is spreading." (pink)
 
 **Effects:**
-- Currently warning-only; could affect faction reputation
+- Adds 45-75% of baseline Luxury Goods stock (dumped inventory)
+- Removes 25-50% of Textiles stock (product recall)
+- Adds persistent event marker (3 minutes)
+
+**Related Systems:** `market.js` (Luxury Goods, Textiles commodities)
 
 ---
 
 ### HACKER_ATTACK
 
-Cyber attack on station systems.
+Cyber attack damages station systems and spawns hijacked pirate ships.
 
 **Location:** [`eventManager.js:426`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L426)
 
@@ -703,7 +726,13 @@ Cyber attack on station systems.
 - **Warning Message:** "CYBER: Systems under hacker attack." (purple)
 
 **Effects:**
-- Currently warning-only; no mechanical effects implemented
+- Drains 45-75% of Computers stock
+- Drains 20-40% of Medicine stock
+- Spawns 2-5 pirate ships (hijacked cutters) around station
+- Pirates set to `AI_STATE.APPROACHING` targeting player
+- Creates HUD marker (2 minutes)
+
+**Related Systems:** `market.js` (Computers, Medicine), `enemyStateMachine.js` (AI_STATE.APPROACHING)
 
 ---
 

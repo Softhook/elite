@@ -570,51 +570,85 @@ class EventManager {
     }
 
     _executeCustomEvent(eventType) {
+        // Route to category-specific handlers
+        const marketEvents = ['MARKET_SHORTAGE', 'MARKET_SURPLUS', 'BLACK_MARKET_AUCTION'];
+        const socialEvents = ['SMUGGLING_BUST', 'BLOCKADE', 'DIPLOMATIC_VISIT', 'TECH_BREAKTHROUGH', 'STATION_STRIKE'];
+        const crisisEvents = ['POWER_OUTAGE', 'SABOTAGE', 'MINING_BOOM', 'MINE_ACCIDENT', 'SOLAR_FLARE', 'QUARANTINE', 'REFUGEE_INFLUX', 'HACKER_ATTACK'];
+        const warEvents = ['SKIRMISH_SEPARATIST_IMPERIAL', 'SKIRMISH_ALIEN_MILITARY', 'WAR_SEPARATIST_IMPERIAL', 'WAR_ALIEN_MILITARY'];
+        const miscEvents = ['BOUNTY_INCREASE', 'REPUTATION_SCANDAL'];
+
+        if (marketEvents.includes(eventType)) {
+            return this._executeMarketEvent(eventType);
+        } else if (socialEvents.includes(eventType)) {
+            return this._executeSocialEvent(eventType);
+        } else if (crisisEvents.includes(eventType)) {
+            return this._executeCrisisEvent(eventType);
+        } else if (warEvents.includes(eventType)) {
+            return this._executeWarEventTrigger(eventType);
+        } else if (miscEvents.includes(eventType)) {
+            return this._executeMiscEvent(eventType);
+        } else {
+            console.warn(`EventManager: Unknown custom event type ${eventType}.`);
+        }
+    }
+
+    // ============================================
+    // Market Event Handlers
+    // ============================================
+
+    _executeMarketEvent(eventType) {
         switch (eventType) {
             case 'MARKET_SHORTAGE': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const commodity = this._pickCommodity(station.market, comm => comm && comm.stock > 1);
                 if (!commodity) return;
+
                 const baseline = commodity.baseStock || commodity.stock || 10;
                 const request = Math.max(1, Math.round(baseline * random(0.55, 0.9)));
                 const removed = station.market.consumeStockForNPC(commodity.name, request, { allowPartial: true });
+
                 if (removed > 0) {
                     const msg = `${station.name}: ${commodity.name} shortage (-${removed} units)`;
                     this._notifyEvent(msg, 'orange', 4000, 'MARKET_SHORTAGE', { stationName: station.name, commodity: commodity.name });
                     this._addPersistentEvent(`SHORTAGE_${station.name}`, `${station.name}: ${commodity.name} Shortage (High Prices)`, 'orange', this._extendDurationMs(180000));
-                    try {
-                        if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                            this.uiManager.addEventMarker(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Shortage`, 'orange', this._extendDurationMs(180000));
-                        }
-                    } catch (e) { }
+
+                    if (station?.pos) {
+                        this._addEventMarkerSafely(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Shortage`, 'orange', this._extendDurationMs(180000));
+                    }
                 }
                 break;
             }
+
             case 'MARKET_SURPLUS': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const commodity = this._pickCommodity(station.market);
                 if (!commodity) return;
+
                 const baseline = commodity.baseStock || commodity.stock || 8;
                 const grant = Math.max(1, Math.round(baseline * random(0.6, 1.1)));
                 const added = station.market.addStockFromNPC(commodity.name, grant);
+
                 if (added > 0) {
                     const msg = `${station.name}: ${commodity.name} oversupply (+${added} units)`;
                     this._notifyEvent(msg, 'green', 4000, 'MARKET_SURPLUS', { stationName: station.name, commodity: commodity.name });
                     this._addPersistentEvent(`SURPLUS_${station.name}`, `${station.name}: ${commodity.name} Surplus (Low Prices)`, 'green', this._extendDurationMs(180000));
-                    try {
-                        if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                            this.uiManager.addEventMarker(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Surplus`, 'green', this._extendDurationMs(180000));
-                        }
-                    } catch (e) { }
+
+                    if (station?.pos) {
+                        this._addEventMarkerSafely(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Surplus`, 'green', this._extendDurationMs(180000));
+                    }
                 }
                 break;
             }
+
             case 'BLACK_MARKET_AUCTION': {
                 const types = ['Narcotics', 'Weapons', 'Slaves'];
                 const count = floor(random(2, 6));
                 const spawnedTypes = new Set();
+
                 for (let i = 0; i < count; i++) {
                     const angle = random(TWO_PI);
                     const r = random(1600, 3000);
@@ -622,153 +656,151 @@ class EventManager {
                     const y = this.player.pos.y + sin(angle) * r;
                     const t = random(types);
                     spawnedTypes.add(t);
-                    // Scale black market cache quantities up by multiplier
+
                     const baseQty = Math.max(1, floor(random(1, 4)));
                     const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
-                    // Create cargo and attach a marker id so it can be removed when collected
-                    try {
-                        const cargo = new Cargo(x, y, t, qty);
-                        const markerId = `BLACK_MARKET_${frameCount}_${i}`;
-                        cargo.eventMarkerId = markerId;
-                        this.starSystem.addCargo(cargo);
-                        // Add HUD marker so player can locate black market caches
-                        const label = `${t} cache`;
-                        if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                            this.uiManager.addEventMarker(markerId, x, y, label, 'purple', this._extendDurationMs(180000));
-                        }
-                    } catch (e) {
-                        // Fallback: still add a plain cargo if marker setup fails
-                        try { this.starSystem.addCargo(new Cargo(x, y, t, qty)); } catch (_) { }
-                    }
+                    const markerId = `BLACK_MARKET_${frameCount}_${i}`;
+                    const label = `${t} cache`;
+
+                    const cargo = this._spawnCargoWithMarker(x, y, t, qty, markerId, label, 'purple', this._extendDurationMs(180000));
                 }
+
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Black market auction seeded ${count} caches (${Array.from(spawnedTypes).join(', ')})`, 'purple');
                 break;
             }
+        }
+    }
+
+    // ============================================
+    // Social/Political Event Handlers
+    // ============================================
+
+    _executeSocialEvent(eventType) {
+        switch (eventType) {
             case 'SMUGGLING_BUST': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const illegal = station.market.commodities?.filter(c => c && c.isLegal === false && c.stock > 0) || [];
                 let seizedName = null;
                 let seizedAmount = 0;
+
                 if (illegal.length) {
                     const chosen = random(illegal);
                     const request = Math.max(1, Math.round((chosen.baseStock || chosen.stock || 10) * random(0.5, 0.8)));
                     seizedAmount = station.market.consumeStockForNPC(chosen.name, request, { allowPartial: true });
                     seizedName = chosen.name;
                 }
+
                 const spawnCount = Math.max(4, Math.floor(random(4, 8)));
                 const anchor = station.pos || this.player.pos;
-                for (let i = 0; i < spawnCount; i++) {
-                    const ang = random(TWO_PI);
-                    const dist = random(900, 1700);
-                    const sx = anchor.x + cos(ang) * dist;
-                    const sy = anchor.y + sin(ang) * dist;
-                    this._spawnAdHocEnemy(sx, sy, AI_ROLE.POLICE, (enemy) => {
-                        enemy.currentState = AI_STATE.PATROLLING;
-                        enemy.target = null;
-                    });
-                }
+                this._spawnPolicePatrol(spawnCount, anchor, 'SMUGGLING_BUST');
+
                 const seizedText = seizedAmount > 0 && seizedName ? `${seizedAmount} ${seizedName} seized` : 'Contraband routes disrupted';
                 this._notifyEvent(`${station.name}: Smuggling bust (${seizedText}; ${spawnCount} patrol ships dispatched)`, 'red', 4000, 'SMUGGLING_BUST', { stationName: station.name });
-                try {
-                    const anchorLabel = this._formatStationLabel(station);
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(120000));
-                    }
-                } catch (e) { }
+
+                this._addEventMarkerSafely(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(120000));
                 break;
             }
+
             case 'BLOCKADE': {
                 const durationMs = this._extendDurationMs(60 * 1000);
                 this.starSystem.blockadeExpires = millis() + durationMs;
+
                 const station = this._pickRandomStation();
                 const anchor = station?.pos || this.player.pos;
                 const anchorName = this._formatStationLabel(station);
                 const spawnCount = Math.max(5, Math.floor(random(5, 9)));
                 const radius = (station?.dockingRadius || 800) + random(400, 900);
-                for (let i = 0; i < spawnCount; i++) {
-                    const angle = random(TWO_PI);
-                    const dist = radius + random(-150, 150);
-                    const sx = anchor.x + cos(angle) * dist;
-                    const sy = anchor.y + sin(angle) * dist;
-                    this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (enemy) => {
-                        enemy.principal = station || this.player;
-                        enemy.currentState = AI_STATE.GUARDING;
-                    });
-                }
+
+                this._spawnGuardFormation(spawnCount, anchor, station || this.player, radius);
+
                 this._notifyEvent(`${anchorName}: Naval blockade established (${spawnCount} gunships)`, 'blue', durationMs);
                 this._addPersistentEvent('BLOCKADE', `${anchorName}: Naval Blockade Active`, 'blue', durationMs);
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        const ax = anchor.x || this.player.pos.x;
-                        const ay = anchor.y || this.player.pos.y;
-                        this.uiManager.addEventMarker(`BLOCKADE_${frameCount}`, ax, ay, `Blockade`, 'blue', durationMs);
-                    }
-                } catch (e) { }
+
+                this._addEventMarkerSafely(`BLOCKADE_${frameCount}`, anchor.x, anchor.y, `Blockade`, 'blue', durationMs);
                 break;
             }
+
             case 'DIPLOMATIC_VISIT': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const currentLux = station.market.getAvailableStock ? station.market.getAvailableStock('Luxury Goods') : 0;
                 const added = station.market.addStockFromNPC('Luxury Goods', Math.max(8, Math.round((currentLux || 25) * random(0.8, 1.4))));
+
                 this._notifyEvent(`${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
+                }
                 break;
             }
+
             case 'TECH_BREAKTHROUGH': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const added = station.market.addStockFromNPC('Adv Components', Math.max(8, Math.round(random(8, 16))));
                 this._notifyEvent(`${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
+                }
                 break;
             }
+
             case 'STATION_STRIKE': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const availableFood = station.market.getAvailableStock ? station.market.getAvailableStock('Food') : 0;
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(3, Math.round((availableFood || 20) * random(0.6, 1))), { allowPartial: true });
+
                 this._notifyEvent(`${station.name}: Strike limits services (-${consumed} Food)`, 'orange');
                 this._addPersistentEvent(`STRIKE_${station.name}`, `${station.name}: Station Strike (Services Limited)`, 'orange', this._extendDurationMs(120000));
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(120000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(120000));
+                }
                 break;
             }
+        }
+    }
+
+    // ============================================
+    // Crisis Event Handlers
+    // ============================================
+
+    _executeCrisisEvent(eventType) {
+        switch (eventType) {
             case 'POWER_OUTAGE': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const outageDuration = this._extendDurationMs(45 * 1000);
                 station.powerOutageExpires = millis() + outageDuration;
+
                 const lostComputers = this._drainCommodityByPercent(station.market, 'Computers', 0.35, 0.6);
                 const lostMachinery = this._drainCommodityByPercent(station.market, 'Machinery', 0.3, 0.5);
                 const lostAdv = this._drainCommodityByPercent(station.market, 'Adv Components', 0.25, 0.45);
+
                 const parts = [];
                 if (lostComputers) parts.push(`${lostComputers} Computers`);
                 if (lostMachinery) parts.push(`${lostMachinery} Machinery`);
                 if (lostAdv) parts.push(`${lostAdv} Adv Components`);
                 const summary = parts.length ? parts.join(', ') : 'systems offline';
+
                 this._notifyEvent(`${station.name}: Power outage (${summary})`, 'yellow');
                 this._addPersistentEvent(`OUTAGE_${station.name}`, `${station.name}: Power Outage`, 'yellow', outageDuration);
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`OUTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Power Outage`, 'yellow', outageDuration);
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`OUTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Power Outage`, 'yellow', outageDuration);
+                }
                 break;
             }
+
             case 'SABOTAGE': {
                 const targetObj = this._pickSpaceObject(obj => obj && !obj.destroyed);
                 const anchor = targetObj?.pos || this.player.pos;
@@ -776,31 +808,38 @@ class EventManager {
                 const r = random(900, 2200);
                 const x = anchor.x + cos(ang) * r;
                 const y = anchor.y + sin(ang) * r;
+
+                const baseQty = Math.max(1, floor(random(2, 8)));
+                const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
+
                 try {
-                    const baseQty = Math.max(1, floor(random(2, 8)));
-                    const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
                     const c = new Cargo(x, y, 'Metals', qty);
-                    // No HUD marker here by default, but attach if needed later
                     this.starSystem.addCargo(c);
-                } catch (e) { this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8))))); }
+                } catch (e) {
+                    this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8)))));
+                }
+
                 const descriptor = targetObj ? `${targetObj.type} near ${targetObj.planetName || 'deep orbit'}` : `${this._formatStationLabel(null)} infrastructure`;
                 this._notifyEvent(`Sabotage: ${descriptor} damaged, salvage drifting nearby`, 'crimson');
                 break;
             }
+
             case 'MINING_BOOM': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const metals = station.market.addStockFromNPC('Metals', Math.max(15, Math.floor(random(20, 40))));
                 const minerals = station.market.addStockFromNPC('Minerals', Math.max(15, Math.floor(random(20, 40))));
+
                 this._notifyEvent(`${station.name}: Mining boom (+${metals} Metals, +${minerals} Minerals)`, 'olive', 4000, 'MINING_BOOM', { stationName: station.name });
                 this._addPersistentEvent(`BOOM_${station.name}`, `${station.name}: Mining Boom (High Supply)`, 'olive', this._extendDurationMs(180000));
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`BOOM_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Mining Boom`, 'olive', this._extendDurationMs(180000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`BOOM_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Mining Boom`, 'olive', this._extendDurationMs(180000));
+                }
                 break;
             }
+
             case 'MINE_ACCIDENT': {
                 const ang = random(TWO_PI);
                 const r = random(1200, 2200);
@@ -808,30 +847,16 @@ class EventManager {
                 const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
                 const x = this.player.pos.x + cos(ang) * r;
                 const y = this.player.pos.y + sin(ang) * r;
-                try {
-                    const c2 = new Cargo(x, y, 'Metals', qty);
-                    const markerId = `MINE_ACCIDENT_${frameCount}`;
-                    c2.eventMarkerId = markerId;
-                    this.starSystem.addCargo(c2);
-                    const anchorLabel = this._deriveAnchorLabelForPos(x, y);
-                    const label = `Salvage: ${qty} Metals`;
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(markerId, x, y, label, 'orange', this._extendDurationMs(180000));
-                    }
-                } catch (e) {
-                    try { this.starSystem.addCargo(new Cargo(x, y, 'Metals', qty)); } catch (_) { }
-                }
+
+                const markerId = `MINE_ACCIDENT_${frameCount}`;
+                const label = `Salvage: ${qty} Metals`;
+                this._spawnCargoWithMarker(x, y, 'Metals', qty, markerId, label, 'orange', this._extendDurationMs(180000));
+
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Mine accident spilled ${qty} units of ore — salvage beacons deployed`, 'orange');
-                try {
-                    const anchorLabel = this._deriveAnchorLabelForPos(x, y);
-                    const label = `Salvage: ${qty} Metals`;
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(`MINE_ACCIDENT_${frameCount}`, x, y, label, 'orange', this._extendDurationMs(180000));
-                    }
-                } catch (e) { }
                 break;
             }
+
             case 'SOLAR_FLARE': {
                 const shieldDamage = Math.round(Math.max(25, (this.player.maxShield || 0) * random(0.5, 0.8)));
                 if (typeof this.player.shield === 'number') {
@@ -839,45 +864,53 @@ class EventManager {
                     this.player.lastShieldHitTime = millis();
                     this.player.shieldHitTime = millis();
                 }
+
                 const flareAngle = random(TWO_PI);
                 const flareDist = random(900, 1600);
                 const fx = this.player.pos.x + cos(flareAngle) * flareDist;
                 const fy = this.player.pos.y + sin(flareAngle) * flareDist;
                 const storm = new CosmicStorm(fx, fy, random(400, 700), 'solar');
                 this.starSystem.cosmicStorms.push(storm);
+
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Solar flare scorches shields (-${shieldDamage} shield strength)`, 'yellow');
                 this._addPersistentEvent('SOLAR_FLARE', 'WARNING: Solar Flare Activity', 'yellow', this._extendDurationMs(30000));
                 break;
             }
+
             case 'QUARANTINE': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(6, Math.round(random(12, 35))), { allowPartial: true });
                 this._notifyEvent(`${station.name}: Quarantine enforced (-${consumed} Food)`, 'purple');
                 this._addPersistentEvent(`QUARANTINE_${station.name}`, `${station.name}: Quarantine (Food Shortage)`, 'purple', this._extendDurationMs(180000));
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', this._extendDurationMs(180000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', this._extendDurationMs(180000));
+                }
                 break;
             }
+
             case 'REFUGEE_INFLUX': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(8, Math.round(random(15, 45))), { allowPartial: true });
                 this._notifyEvent(`${station.name}: Refugee influx (-${consumed} Food)`, 'brown');
                 this._addPersistentEvent(`REFUGEE_${station.name}`, `${station.name}: Refugee Influx (High Demand)`, 'brown', this._extendDurationMs(120000));
                 break;
             }
+
             case 'HACKER_ATTACK': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const computersLost = this._drainCommodityByPercent(station.market, 'Computers', 0.45, 0.75);
                 const medsLost = this._drainCommodityByPercent(station.market, 'Medicine', 0.2, 0.4);
                 const spawnCount = Math.max(2, Math.floor(random(2, 5)));
                 const anchor = station.pos || this.player.pos;
+
                 for (let i = 0; i < spawnCount; i++) {
                     const ang = random(TWO_PI);
                     const dist = random(700, 1400);
@@ -888,22 +921,33 @@ class EventManager {
                         enemy.target = this.player;
                     });
                 }
+
                 const parts = [];
                 if (computersLost) parts.push(`${computersLost} Computers fried`);
                 if (medsLost) parts.push(`${medsLost} Medicine spoiled`);
                 const summary = parts.length ? parts.join(', ') : 'systems glitching';
+
                 this._notifyEvent(`${station.name}: Hacker attack (${summary}; ${spawnCount} hijacked cutters)`, 'purple');
-                try {
-                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function' && station?.pos) {
-                        this.uiManager.addEventMarker(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
-                    }
-                } catch (e) { }
+
+                if (station?.pos) {
+                    this._addEventMarkerSafely(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
+                }
                 break;
             }
+        }
+    }
+
+    // ============================================
+    // Miscellaneous Event Handlers
+    // ============================================
+
+    _executeMiscEvent(eventType) {
+        switch (eventType) {
             case 'BOUNTY_INCREASE': {
                 const spawnCount = Math.max(4, Math.floor(random(5, 9)));
                 const anchorVec = this.starSystem.jumpZoneCenter || this.player.pos;
                 const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(300, 700);
+
                 for (let i = 0; i < spawnCount; i++) {
                     const angle = random(TWO_PI);
                     const dist = baseRadius + random(-200, 200);
@@ -914,45 +958,57 @@ class EventManager {
                         enemy.target = this.player;
                     });
                 }
+
                 const systemLabel = this.starSystem?.name || 'Local sector';
                 this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships inbound`, 'red');
                 this._addPersistentEvent('BOUNTY_INCREASE', 'NOTICE: High Bounty Payouts Active', 'red', this._extendDurationMs(180000));
                 break;
             }
+
             case 'REPUTATION_SCANDAL': {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
+
                 const addedLux = this._addCommodityByPercent(station.market, 'Luxury Goods', 0.45, 0.75);
                 const recalledTextiles = this._drainCommodityByPercent(station.market, 'Textiles', 0.25, 0.5);
+
                 const pieces = [];
                 if (addedLux) pieces.push(`+${addedLux} Luxury Goods dumped`);
                 if (recalledTextiles) pieces.push(`${recalledTextiles} Textiles recalled`);
                 const summary = pieces.length ? pieces.join(', ') : 'brand damage ripples';
+
                 this._notifyEvent(`${station.name}: Reputation scandal (${summary})`, 'pink');
                 this._addPersistentEvent(`SCANDAL_${station.name}`, `${station.name}: Reputation Scandal (Market Volatility)`, 'pink', this._extendDurationMs(180000));
                 break;
             }
-            // === War Event Handlers ===
-            case 'SKIRMISH_SEPARATIST_IMPERIAL': {
-                this._executeWarEvent('SKIRMISH', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(5 * 60 * 1000)); // 5 minutes
-                break;
-            }
-            case 'SKIRMISH_ALIEN_MILITARY': {
-                this._executeWarEvent('SKIRMISH', 'ALIEN_VS_MILITARY', this._extendDurationMs(5 * 60 * 1000));
-                break;
-            }
-            case 'WAR_SEPARATIST_IMPERIAL': {
-                this._executeWarEvent('FULL_WAR', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(15 * 60 * 1000)); // 15 minutes
-                break;
-            }
-            case 'WAR_ALIEN_MILITARY': {
-                this._executeWarEvent('FULL_WAR', 'ALIEN_VS_MILITARY', this._extendDurationMs(15 * 60 * 1000));
-                break;
-            }
-            default:
-                console.warn(`EventManager: Unknown custom event type ${eventType}.`);
         }
     }
+
+    // ============================================
+    // War Event Trigger Router
+    // ============================================
+
+    _executeWarEventTrigger(eventType) {
+        switch (eventType) {
+            case 'SKIRMISH_SEPARATIST_IMPERIAL':
+                this._executeWarEvent('SKIRMISH', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(5 * 60 * 1000));
+                break;
+            case 'SKIRMISH_ALIEN_MILITARY':
+                this._executeWarEvent('SKIRMISH', 'ALIEN_VS_MILITARY', this._extendDurationMs(5 * 60 * 1000));
+                break;
+            case 'WAR_SEPARATIST_IMPERIAL':
+                this._executeWarEvent('FULL_WAR', 'SEPARATIST_VS_IMPERIAL', this._extendDurationMs(15 * 60 * 1000));
+                break;
+            case 'WAR_ALIEN_MILITARY':
+                this._executeWarEvent('FULL_WAR', 'ALIEN_VS_MILITARY', this._extendDurationMs(15 * 60 * 1000));
+                break;
+        }
+    }
+
+    // ============================================
+    // War State System
+    // ============================================
+
 
     /**
      * Executes a war event, setting the active war state and spawn modifiers.
@@ -1352,10 +1408,141 @@ class EventManager {
         }
     }
 
+    // ============================================
+    // Helper Methods for Event Execution
+    // ============================================
+
+    /**
+     * Safely adds an event marker with error handling.
+     * Eliminates the try-catch duplication across event handlers.
+     * @private
+     */
+    _addEventMarkerSafely(id, x, y, label, color, duration) {
+        try {
+            if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                this.uiManager.addEventMarker(id, x, y, label, color, duration);
+                return true;
+            }
+        } catch (e) {
+            // Silently fail - marker is optional
+        }
+        return false;
+    }
+
+    /**
+     * Consumes a commodity from a station market for an event and notifies the player.
+     * @private
+     */
+    _consumeCommodityForEvent(station, commodityName, minPercent, maxPercent, eventType, eventColor = 'orange') {
+        if (!station || !station.market) return { consumed: 0, message: null };
+
+        const baseline = this._getCommodityBaseline(station.market, commodityName);
+        const request = Math.max(1, Math.round(baseline * random(minPercent, maxPercent)));
+        const consumed = station.market.consumeStockForNPC(commodityName, request, { allowPartial: true });
+
+        if (consumed > 0) {
+            const message = `${station.name}: ${commodityName} shortage (-${consumed} units)`;
+            return { consumed, message, station, commodityName };
+        }
+
+        return { consumed: 0, message: null };
+    }
+
+    /**
+     * Gets the baseline stock for a commodity (for percentage calculations).
+     * @private
+     */
+    _getCommodityBaseline(market, commodityName) {
+        if (!market) return 10;
+
+        const available = market.getAvailableStock ? market.getAvailableStock(commodityName) : 0;
+
+        if (typeof market._getCommodity === 'function') {
+            const comm = market._getCommodity(commodityName);
+            if (comm) {
+                return comm.baseStock || comm.defaultBaseStock || comm.stock || available || 10;
+            }
+        }
+
+        return available || 10;
+    }
+
+    /**
+     * Spawns a patrol of police ships around a location.
+     * Used by SMUGGLING_BUST and similar events.
+     * @private
+     */
+    _spawnPolicePatrol(count, anchor, eventName) {
+        const ships = [];
+        for (let i = 0; i < count; i++) {
+            const ang = random(TWO_PI);
+            const dist = random(900, 1700);
+            const sx = anchor.x + cos(ang) * dist;
+            const sy = anchor.y + sin(ang) * dist;
+            const enemy = this._spawnAdHocEnemy(sx, sy, AI_ROLE.POLICE, (e) => {
+                e.currentState = AI_STATE.PATROLLING;
+                e.target = null;
+            });
+            if (enemy) ships.push(enemy);
+        }
+        return ships;
+    }
+
+    /**
+     * Spawns ships in a defensive guard formation around a location.
+     * Used by BLOCKADE event.
+     * @private
+     */
+    _spawnGuardFormation(count, anchor, principal, radius) {
+        const ships = [];
+        for (let i = 0; i < count; i++) {
+            const angle = random(TWO_PI);
+            const dist = radius + random(-150, 150);
+            const sx = anchor.x + cos(angle) * dist;
+            const sy = anchor.y + sin(angle) * dist;
+            const enemy = this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (e) => {
+                e.principal = principal;
+                e.currentState = AI_STATE.GUARDING;
+            });
+            if (enemy) ships.push(enemy);
+        }
+        return ships;
+    }
+
+    /**
+     * Creates a cargo spawn with event marker tracking.
+     * @private
+     */
+    _spawnCargoWithMarker(x, y, cargoType, quantity, markerId, label, color, duration) {
+        try {
+            const cargo = new Cargo(x, y, cargoType, quantity);
+            cargo.eventMarkerId = markerId;
+            this.starSystem.addCargo(cargo);
+
+            this._addEventMarkerSafely(markerId, x, y, label, color, duration);
+
+            return cargo;
+        } catch (e) {
+            // Fallback: try to add cargo without marker
+            try {
+                const cargo = new Cargo(x, y, cargoType, quantity);
+                this.starSystem.addCargo(cargo);
+                return cargo;
+            } catch (err) {
+                return null;
+            }
+        }
+    }
+
+    // ============================================
+    // Utility Methods
+    // ============================================
+
     _pickStationWithMarket() {
         const station = this._pickRandomStation();
         if (station && station.market) return station;
         return null;
+
     }
 
     _pickCommodity(market, filterFn) {
