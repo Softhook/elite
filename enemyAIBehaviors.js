@@ -2094,6 +2094,390 @@ class EnemyAIBehaviors {
             this.vel.mult(0.92);
         }
     }
+
+    /**
+     * Repair AI Logic - Maintains system space objects
+     * Repairs damaged objects and reconstructs destroyed ones
+     * @param {Object} system - The current star system
+     */
+    updateRepairAI(system) {
+        // Priority 1: Check if any planets have lost all their space objects
+        const planetNeedingReconstruction = this.findPlanetNeedingSpaceObject(system);
+
+        if (planetNeedingReconstruction) {
+            // Move to planet and reconstruct space object
+            this.handleSpaceObjectReconstruction(system, planetNeedingReconstruction);
+            this.updatePhysics();
+            return;
+        }
+
+        // Priority 2: Check for damaged space objects
+        const damagedObjects = this.findDamagedSpaceObjects(system);
+
+        // If no target or target is fully repaired, find new target
+        if (!this.repairTarget || !this.isRepairTargetValid(this.repairTarget)) {
+            this.repairTarget = this.selectRepairTarget(damagedObjects);
+        }
+
+        // Priority 3: Repair damaged objects
+        if (this.repairTarget) {
+            const distToTarget = dist(
+                this.pos.x, this.pos.y,
+                this.repairTarget.pos.x, this.repairTarget.pos.y
+            );
+
+            const repairRange = 60; // Slightly larger range due to slow speed
+
+            if (distToTarget < repairRange) {
+                // Within range - perform repairs
+                this.changeState(AI_STATE.IDLE);
+                this.performRepair(this.repairTarget);
+                this.vel.mult(0.9); // Slow to hovering
+
+                // Check if current target is fully repaired
+                if (!this.isRepairTargetValid(this.repairTarget)) {
+                    // Target fully repaired, immediately look for next target
+                    this.repairTarget = this.selectRepairTarget(this.findDamagedSpaceObjects(system));
+
+                    if (this.repairTarget) {
+                        // Found another damaged object, continue repairing
+                        this.changeState(AI_STATE.PATROLLING);
+                    }
+                    // If no more damaged objects, will fall through to station return
+                }
+            } else {
+                // Move towards damaged object
+                this.changeState(AI_STATE.PATROLLING);
+                this.performSafeRotationAndThrust(system, this.repairTarget.pos);
+            }
+
+            this.updatePhysics();
+            return;
+        }
+
+        // Priority 4: Return to station when all work is done
+        if (!system?.station?.pos) {
+            this.changeState(AI_STATE.IDLE);
+            this.vel.mult(0.95);
+            this.updatePhysics();
+            return;
+        }
+
+        const distToStation = dist(
+            this.pos.x, this.pos.y,
+            system.station.pos.x, system.station.pos.y
+        );
+
+        if (distToStation < this.stationProximityThreshold) {
+            // At station - idle and wait
+            this.changeState(AI_STATE.NEAR_STATION);
+            this.vel.mult(0.8);
+        } else {
+            // Move towards station
+            this.changeState(AI_STATE.PATROLLING);
+            this.performSafeRotationAndThrust(system, system.station.pos);
+        }
+
+        this.updatePhysics();
+    }
+
+    /**
+     * Find planets that have lost all their space objects
+     * @param {Object} system - The current star system
+     * @returns {Object|null} Planet needing space object reconstruction
+     */
+    findPlanetNeedingSpaceObject(system) {
+        if (!system?.planets || !Array.isArray(system.planets)) {
+            return null;
+        }
+
+        if (!system.spaceObjects || !Array.isArray(system.spaceObjects)) {
+            system.spaceObjects = [];
+        }
+
+        console.log(`[RECONSTRUCTION] Checking ${system.planets.length} planets for reconstruction needs. Total space objects: ${system.spaceObjects.length}`);
+
+        // Check each planet to see if it has at least one space object
+        for (const planet of system.planets) {
+            if (!planet || !planet.pos) {
+                console.log('[RECONSTRUCTION] Skipping planet: no pos');
+                continue;
+            }
+
+            // Skip the sun (position 0,0) - it shouldn't have space objects
+            const distFromCenter = dist(planet.pos.x, planet.pos.y, 0, 0);
+            if (distFromCenter < 100) {
+                console.log(`[RECONSTRUCTION] Skipping ${planet.name}: is sun (dist from center: ${Math.round(distFromCenter)})`);
+                continue; // Sun is at center
+            }
+
+            // Only check planets that have an orbit radius (actual planets, not sun)
+            if (!planet.orbitRadius || planet.orbitRadius <= 0) {
+                console.log(`[RECONSTRUCTION] Skipping ${planet.name}: no orbit radius (orbitRadius: ${planet.orbitRadius})`);
+                continue;
+            }
+
+            console.log(`[RECONSTRUCTION] Checking planet ${planet.name} (orbit: ${planet.orbitRadius})...`);
+
+            // Find space objects near this planet
+            const allNearbyObjects = [];
+            const aliveNearbyObjects = [];
+
+            for (const obj of system.spaceObjects) {
+                if (!obj || !obj.pos) continue;
+
+                const distToPlanet = dist(obj.pos.x, obj.pos.y, planet.pos.x, planet.pos.y);
+                const orbitRadius = planet.orbitRadius || 0;
+                const maxDist = Math.max(orbitRadius * 0.3, 500);
+
+                if (distToPlanet < maxDist) {
+                    allNearbyObjects.push(obj);
+                    const isAlive = !obj.destroyed && (typeof obj.health !== 'number' || obj.health > 0);
+                    if (isAlive) {
+                        aliveNearbyObjects.push(obj);
+                    }
+                    console.log(`[RECONSTRUCTION]   - ${obj.type}: destroyed=${obj.destroyed}, health=${obj.health}/${obj.maxHealth}, dist=${Math.round(distToPlanet)}, alive=${isAlive}`);
+                }
+            }
+
+            console.log(`[RECONSTRUCTION] Planet ${planet.name}: ${aliveNearbyObjects.length} alive / ${allNearbyObjects.length} total nearby (orbit radius: ${planet.orbitRadius})`);
+
+            // If this planet has no alive space objects, it needs reconstruction
+            if (aliveNearbyObjects.length === 0) {
+                console.log(`[RECONSTRUCTION] ✓ Planet ${planet.name} needs space object reconstruction!`);
+                return planet;
+            }
+        }
+
+        console.log('[RECONSTRUCTION] No planets need reconstruction');
+        return null;
+    }
+
+    /**
+     * Handle reconstruction of a space object at a planet
+     * @param {Object} system - The current star system
+     * @param {Object} planet - The planet needing a space object
+     */
+    handleSpaceObjectReconstruction(system, planet) {
+        const distToPlanet = dist(
+            this.pos.x, this.pos.y,
+            planet.pos.x, planet.pos.y
+        );
+
+        const reconstructionRange = 100; // Must be close to planet
+
+        if (distToPlanet < reconstructionRange) {
+            // In position - reconstruct space object
+            if (!this._reconstructionTimer) {
+                this._reconstructionTimer = 5.0; // 5 seconds to build
+                console.log(`${this.shipTypeName} beginning space object reconstruction at ${planet.name}`);
+            }
+
+            // Count down reconstruction timer
+            const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
+                ? (deltaTime / 1000)
+                : 0.016;
+
+            this._reconstructionTimer -= deltaSeconds;
+
+            // Stop moving during reconstruction
+            this.changeState(AI_STATE.IDLE);
+            this.vel.mult(0.85);
+
+            // Spawn construction particles
+            if (this._reconstructionTimer > 0) {
+                this.spawnConstructionEffects(planet);
+            }
+
+            // When timer completes, spawn new space object
+            if (this._reconstructionTimer <= 0) {
+                this.reconstructSpaceObjectAtPlanet(system, planet);
+                this._reconstructionTimer = null;
+            }
+        } else {
+            // Move towards planet
+            this.changeState(AI_STATE.PATROLLING);
+            this.performSafeRotationAndThrust(system, planet.pos);
+            this._reconstructionTimer = null; // Reset if moved away
+        }
+    }
+
+    /**
+     * Reconstruct a new space object at the given planet
+     * @param {Object} system - The current star system
+     * @param {Object} planet - The planet to spawn object at
+     */
+    reconstructSpaceObjectAtPlanet(system, planet) {
+        // Use the system's existing space object spawning logic
+        if (typeof system.spawnSpaceObjectsForPlanets === 'function') {
+            // Temporarily mark only this planet for spawning
+            const originalPlanets = system.planets;
+            system.planets = [planet];
+
+            try {
+                system.spawnSpaceObjectsForPlanets();
+                console.log(`${this.shipTypeName} reconstructed space object at ${planet.name}`);
+            } catch (e) {
+                console.error('Error during space object reconstruction:', e);
+            }
+
+            // Restore original planets array
+            system.planets = originalPlanets;
+        }
+    }
+
+    /**
+     * Find all damaged space objects in the system
+     * @param {Object} system - The current star system
+     * @returns {Array} Array of damaged space objects
+     */
+    findDamagedSpaceObjects(system) {
+        if (!system?.spaceObjects || !Array.isArray(system.spaceObjects)) {
+            return [];
+        }
+
+        return system.spaceObjects.filter(obj => {
+            if (!obj || obj.destroyed) return false;
+            // Space objects use 'health' for damage tracking, not 'hull'
+            if (typeof obj.health !== 'number' || typeof obj.maxHealth !== 'number') return false;
+            if (obj.maxHealth <= 0) return false;
+
+            // Consider objects damaged if health < 100%
+            return obj.health < obj.maxHealth;
+        });
+    }
+
+    /**
+     * Select the best repair target from damaged objects
+     * @param {Array} damagedObjects - Array of damaged objects
+     * @returns {Object|null} Selected repair target
+     */
+    selectRepairTarget(damagedObjects) {
+        if (!damagedObjects || damagedObjects.length === 0) return null;
+
+        // Prioritize by hull percentage (most damaged first), then distance
+        let bestTarget = null;
+        let bestScore = -Infinity;
+
+        for (const obj of damagedObjects) {
+            const hullPercent = obj.health / obj.maxHealth;
+            const distToObj = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
+
+            // Lower hull % = higher priority (invert)
+            const urgencyScore = (1 - hullPercent) * 100;
+            const proximityScore = 1000 / (distToObj + 1);
+
+            const score = urgencyScore + proximityScore;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget = obj;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    /**
+     * Check if repair target is still valid
+     * @param {Object} target - The repair target
+     * @returns {boolean} True if target is still valid
+     */
+    isRepairTargetValid(target) {
+        if (!target || target.destroyed) return false;
+        // Space objects use 'health' for damage tracking, not 'hull'
+        if (typeof target.health !== 'number' || typeof target.maxHealth !== 'number') return false;
+        if (target.maxHealth <= 0) return false;
+
+        // Target is valid if still damaged
+        return target.health < target.maxHealth;
+    }
+
+    /**
+     * Perform repair on target object
+     * @param {Object} target - The object to repair
+     */
+    performRepair(target) {
+        const repairRate = 8; // Health points per second (faster due to slow ship)
+        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
+            ? (deltaTime / 1000)
+            : 0.016;
+
+        const repairAmount = repairRate * deltaSeconds;
+
+        // Repair health (space objects use 'health', not 'hull')
+        if (target.health < target.maxHealth) {
+            target.health = Math.min(target.maxHealth, target.health + repairAmount);
+
+            // Visual feedback
+            if (Math.random() < 0.05) {
+                console.log(`${this.shipTypeName} repairing ${target.type} - Health: ${Math.floor(target.health)}/${target.maxHealth}`);
+            }
+
+            // Spawn repair particles/beam
+            this.spawnRepairEffects(target);
+        }
+
+        // Also repair shields if object has them
+        if (typeof target.shield === 'number' && typeof target.maxShield === 'number') {
+            if (target.shield < target.maxShield) {
+                target.shield = Math.min(target.maxShield, target.shield + repairAmount);
+            }
+        }
+    }
+
+    /**
+     * Visual effects during repair operations
+     * @param {Object} target - The object being repaired
+     */
+    spawnRepairEffects(target) {
+        // Only spawn effects occasionally to avoid performance issues
+        if (Math.random() > 0.3) return;
+
+        if (!this.currentSystem) return;
+
+        // Create repair beam particles from repair tender to target
+        const dx = target.pos.x - this.pos.x;
+        const dy = target.pos.y - this.pos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= 0) return;
+
+        // Spawn particles along the beam path
+        const numParticles = 3;
+        for (let i = 0; i < numParticles; i++) {
+            const t = Math.random();
+            const px = this.pos.x + dx * t;
+            const py = this.pos.y + dy * t;
+
+            // Use explosion system for particle effects (cyan/green repair color)
+            if (typeof this.currentSystem.addExplosion === 'function') {
+                this.currentSystem.addExplosion(px, py, 3, [100, 255, 200]);
+            }
+        }
+    }
+
+    /**
+     * Visual effects during reconstruction operations
+     * @param {Object} planet - The planet where reconstruction is happening
+     */
+    spawnConstructionEffects(planet) {
+        // Spawn effects occasionally
+        if (Math.random() > 0.2) return;
+
+        if (!this.currentSystem) return;
+
+        // Spawn particles in a ring around the repair tender
+        const angle = Math.random() * TWO_PI;
+        const radius = this.size * 1.5;
+        const px = this.pos.x + Math.cos(angle) * radius;
+        const py = this.pos.y + Math.sin(angle) * radius;
+
+        // Yellow/orange construction particles
+        if (typeof this.currentSystem.addExplosion === 'function') {
+            this.currentSystem.addExplosion(px, py, 4, [255, 200, 100]);
+        }
+    }
 }
 
 /**

@@ -16,7 +16,8 @@ const AI_ROLE = {
     BOUNTY_HUNTER: 'BOUNTY_HUNTER',
     GUARD: 'Guard',
     COMBAT: 'Combat',  // Military, imperial, and separatist combat ships
-    MINER: 'Miner'  // Mining ships that target asteroids
+    MINER: 'Miner',  // Mining ships that target asteroids
+    REPAIR: 'Repair'  // Field repair tenders that maintain space objects
 };
 
 // -------------------------

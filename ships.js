@@ -1127,8 +1127,8 @@ const SHIP_DEFINITIONS = {
     "FieldRepairTender": {
         name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 2.8, baseThrust: 0.04, baseTurnRate: 0.03491,
-        baseHull: 220, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
-        armament: ["Mini-Turret", "Barrier Field"],
+        baseHull: 420, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
+        armament: ["Barrier Field"],
         costCategory: "Medium", description: "Slow, sturdy support vessel equipped for field repairs and resupply operations.",
         vertexLayers: [
             {
@@ -1136,9 +1136,9 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 200, 190]
             }
         ],
-        typicalCargo: ["Medicine", "Machinery", "Adv Components", "Metals"],
+        typicalCargo: ["Metals"],
         price: 38500,
-        aiRoles: ["HAULER", "TRANSPORT"],
+        aiRoles: ["REPAIR"],
         techLevel: 3
     },
     "VanguardCruiser": {

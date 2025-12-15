@@ -18,15 +18,17 @@ const FACTION_COLORS = {
  * Used primarily for minimap ship indicators when faction is not specified
  */
 const ROLE_COLORS = {
-    PIRATE: [220, 20, 20],          // Red
-    POLICE: [30, 144, 255],         // Blue (DodgerBlue)
-    HAULER: [255, 215, 0],          // Yellow (Gold)
-    TRANSPORT: [204, 119, 34],      // Ochre
-    MINER: [204, 119, 34],          // Ochre (same as transport - peaceful)
-    ALIEN: [50, 205, 50],           // Green (matches ALIEN faction color)
-    BOUNTY_HUNTER: [255, 140, 0],   // Bright orange (distinct from pirate red)
-    GUARD: [150, 100, 255],         // Purple-blue (distinct from police blue)
-    COMBAT: [255, 100, 100],        // Light red
+    POLICE: [30, 144, 255],     // Dodger Blue
+    HAULER: [255, 215, 0],      // Gold
+    PIRATE: [220, 20, 20],      // Crimson Red
+    ALIEN: [0, 255, 150],       // Alien Green
+    BOUNTY_HUNTER: [255, 165, 0], // Orange
+    TRANSPORT: [100, 180, 255], // Light Blue
+    MILITARY: [80, 160, 80],    // Military Green
+    IMPERIAL: [200, 50, 50],    // Imperial Red
+    SEPARATIST: [50, 80, 200],  // Separatist Blue
+    MINER: [180, 140, 100],     // Bronze/Copper
+    REPAIR: [100, 255, 200]     // Cyan/Green repair color
 };
 
 /**

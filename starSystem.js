@@ -25,6 +25,7 @@ const JUMP_ZONE_CONFIG = {
 
 // === Spawn Configuration ===
 const SPAWN_CONFIG = {
+    SPAWN_INTERVAL_MS: 5000,       // Combined NPC + repair tender spawn interval
     ENEMY_SPAWN_INTERVAL: 5000,    // ms
     ASTEROID_SPAWN_INTERVAL: 3000, // ms
     MAX_ENEMIES_BASE: 15,          // Normal peace-time limit
@@ -87,7 +88,8 @@ const buildShipRoleArrays = () => {
         IMPERIAL_SHIPS: [],
         SEPARATIST_SHIPS: [],
         COMBAT_SHIPS: [],
-        MINER_SHIPS: []
+        MINER_SHIPS: [],
+        REPAIR_SHIPS: []
     };
 
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -120,7 +122,8 @@ const {
     IMPERIAL_SHIPS,
     SEPARATIST_SHIPS,
     COMBAT_SHIPS,
-    MINER_SHIPS
+    MINER_SHIPS,
+    REPAIR_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -138,6 +141,8 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("IMPERIAL_SHIPS:", IMPERIAL_SHIPS);
     console.log("SEPARATIST_SHIPS:", SEPARATIST_SHIPS);
     console.log("COMBAT_SHIPS:", COMBAT_SHIPS);
+    console.log("MINER_SHIPS:", MINER_SHIPS);
+    console.log("REPAIR_SHIPS:", REPAIR_SHIPS);
 }
 
 /**
@@ -298,6 +303,7 @@ class StarSystem {
         this.asteroidSpawnTimer = 0;
         this.asteroidSpawnInterval = SPAWN_CONFIG.ASTEROID_SPAWN_INTERVAL;
         this.maxTotalAsteroids = SPAWN_CONFIG.MAX_ASTEROIDS;
+        this._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000; // NPC + repair tender spawn timer
         this.despawnRadius = SPAWN_CONFIG.DEFAULT_DESPAWN_RADIUS;
 
         // === Jump Zone Properties ===
@@ -600,11 +606,12 @@ class StarSystem {
         }
         // --- End Jump Zone Calculation ---
 
-        // --- Spawn Space Objects for Planets and Jump Gate ---
+        // Spawn space objects for planets now (after asteroids and planets)
         try {
             this.spawnSpaceObjectsForPlanets();
-            console.log(`         Space objects spawned`);
-        } catch (e) { console.error("Error spawning space objects:", e); }
+        } catch (e) {
+            console.error(`!!! ERROR during spawnSpaceObjectsForPlanets():`, e);
+        }
 
         // --- Generate Nebulae ---
         try {
@@ -955,7 +962,13 @@ class StarSystem {
     enterSystem(player) {
         this.discover();
         this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+        // Reset timers when entering
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
+
+        // Initialize spawn timer if not set (prevents NaN)
+        if (typeof this._spawnTimer !== 'number' || isNaN(this._spawnTimer)) {
+            this._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000;
+        }
 
         // Note: Do NOT clear spaceObjects array - these are static decorative elements
         // that should persist across visits and are created during initStaticElements
@@ -1023,6 +1036,10 @@ class StarSystem {
                 for (let i = 0; i < 3; i++) {
                     try { this.trySpawnNPC(); } catch (e) { }
                 }
+
+                // Also check if we need to spawn a repair tender
+                try { this.spawnRepairTender(); } catch (e) { }
+
                 for (let i = 0; i < 8; i++) {
                     try { this.trySpawnAsteroid(); } catch (e) { }
                 }
@@ -2401,10 +2418,23 @@ class StarSystem {
      * @private
      */
     _updateSpawnTimers() {
-        this.enemySpawnTimer += deltaTime;
-        if (this.enemySpawnTimer >= this.enemySpawnInterval) {
-            this.trySpawnNPC();
-            this.enemySpawnTimer = 0;
+        // Decrement spawn timer
+        this._spawnTimer -= deltaTime;
+        if (this._spawnTimer <= 0) {
+            // Try to spawn an NPC
+            if (this.shouldSpawnNPCs) {
+                this.trySpawnNPC();
+            }
+
+            // Check if repair tender is needed
+            try {
+                this.spawnRepairTender();
+            } catch (e) {
+                console.error('Error in repair tender spawn:', e);
+            }
+
+            // Reset timer
+            this._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS;
         }
 
         this.asteroidSpawnTimer += deltaTime;
@@ -4789,6 +4819,10 @@ class StarSystem {
             data.techLevel,
             data.securityLevel
         );
+
+        // Initialize spawn timer (critical for saved games)
+        sys._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000;
+
         sys.visited = data.visited;
         sys.economyType = data.economyType;
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
@@ -5318,6 +5352,93 @@ class StarSystem {
         const finalCount = this.spaceObjects.length;
         const spawned = finalCount - initialCount;
         console.log(`         >>> spawnSpaceObjectsForPlanets END: spawned ${spawned} objects (total now ${finalCount})`);
+    }
+
+    /**
+     * Ensures exactly one FieldRepairTender exists in the system
+     * Only spawns if there are damaged space objects or planets needing reconstruction
+     */
+    spawnRepairTender() {
+        // Check if repair tender already exists
+        const existingTender = this.enemies.find(e =>
+            e.role === AI_ROLE.REPAIR && !e.destroyed
+        );
+
+        if (existingTender) {
+            return; // Already have one
+        }
+
+        // Check if there's any damage or reconstruction needed
+        const hasDamagedObjects = this.spaceObjects && this.spaceObjects.some(obj => {
+            if (!obj || obj.destroyed) return false;
+            // Space objects use 'health' for damage tracking, not 'hull'
+            if (typeof obj.health !== 'number' || typeof obj.maxHealth !== 'number') return false;
+            if (obj.maxHealth <= 0) return false;
+            return obj.health < obj.maxHealth; // Damaged if health < max
+        });
+
+        // Check if any planets need reconstruction
+        const needsReconstruction = this.planets && this.planets.some(planet => {
+            if (!planet || !planet.pos) return false;
+
+            // Skip sun
+            const distFromCenter = dist(planet.pos.x, planet.pos.y, 0, 0);
+            if (distFromCenter < 100) return false;
+            if (!planet.orbitRadius || planet.orbitRadius <= 0) return false;
+
+            // Check if any space objects are associated with this planet
+            const objectsNearPlanet = this.spaceObjects.filter(obj => {
+                if (!obj || obj.destroyed || !obj.pos) return false;
+                const distToPlanet = dist(obj.pos.x, obj.pos.y, planet.pos.x, planet.pos.y);
+                const maxDist = Math.max(planet.orbitRadius * 0.3, 500); // Define a reasonable radius around the planet
+                return distToPlanet < maxDist;
+            });
+
+            // A planet needs reconstruction if it has no associated space objects (excluding the sun)
+            return objectsNearPlanet.length === 0;
+        });
+
+        // Only spawn if there's work to do
+        if (!hasDamagedObjects && !needsReconstruction) {
+            return; // No damage, no need for repair tender
+        }
+
+        // Check if we have repair ships available
+        if (!REPAIR_SHIPS || REPAIR_SHIPS.length === 0) {
+            console.warn('No REPAIR_SHIPS available for spawning');
+            return;
+        }
+
+        // Spawn near station if available, otherwise near player
+        let spawnX, spawnY;
+
+        if (this.station?.pos) {
+            const angle = random(TWO_PI);
+            const dist = 200 + random(100);
+            spawnX = this.station.pos.x + cos(angle) * dist;
+            spawnY = this.station.pos.y + sin(angle) * dist;
+        } else if (this.player?.pos) {
+            const angle = random(TWO_PI);
+            const dist = this._getDiagonalDistance() + random(500, 1000);
+            spawnX = this.player.pos.x + cos(angle) * dist;
+            spawnY = this.player.pos.y + sin(angle) * dist;
+        } else {
+            // No good reference, spawn at random location
+            spawnX = random(-2000, 2000);
+            spawnY = random(-2000, 2000);
+        }
+
+        try {
+            const shipType = random(REPAIR_SHIPS);
+            const repairTender = new Enemy(spawnX, spawnY, this.player, shipType, AI_ROLE.REPAIR);
+            repairTender.calculateRadianProperties();
+            repairTender.initializeColors();
+
+            this.addEnemy(repairTender);
+            console.log(`Spawned ${shipType} (REPAIR) - responding to damage/reconstruction needs`);
+        } catch (e) {
+            console.error('Error spawning repair tender:', e);
+        }
     }
 
     /**

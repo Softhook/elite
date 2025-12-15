@@ -3782,6 +3782,11 @@ class SpaceObject {
         this.bobPhase = Math.random() * Math.PI * 2;
         this.bobAmp = Math.min(6, this.size * 0.06); // Precompute bob amplitude
         this.destroyed = false;
+        // Hull and shield properties for repair system
+        this.maxHull = this.collisionRadius * 2; // Scale hull to object size
+        this.hull = this.maxHull;
+        this.maxShield = this.collisionRadius * 1.5; // Shields slightly less than hull
+        this.shield = this.maxShield;
         this._drift = { x: (Math.random() - 0.5) * 0.06, y: (Math.random() - 0.5) * 0.06 };
         // Health properties (treat like a lightweight asteroid)
         this.maxHealth = Math.max(30, Math.floor(this.size * 1.8));
