@@ -1733,16 +1733,10 @@ const SHIP_DEFINITIONS = {
         armament: ["Disruptor", "Force Blaster"],
         costCategory: "N/A", description: "Wide, six-winged alien ship with layered fins.",
         vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 }],
-                fillColor: [60, 80, 90]
-            },
-            {
-                vertexData: [{ x: 0.2160, y: 0.1290 }, { x: 0.4795, y: 0.0000 }, { x: 0.2160, y: -0.1290 }],
-                fillColor: [250, 250, 255]
-            }
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.6 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.6 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.6 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.6 }], fillColor: [0, 255, 180] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
-
         typicalCargo: ["Metals", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "FractalRay": {
