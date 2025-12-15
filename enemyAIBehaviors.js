@@ -1709,8 +1709,14 @@ class EnemyAIBehaviors {
 
             if (!this.asteroidTarget) {
                 // No asteroids available - patrol to search for asteroids instead of idling
-                if (cargoAmount > 0) {
-                    // Have cargo but no asteroids - return to station
+                const cargoThreshold = 0.8; // Return to station when 80%+ full
+                const nearlyFull = cargoCapacity > 0 && cargoAmount >= cargoCapacity * cargoThreshold;
+
+                if (cargoAmount > 0 && nearlyFull) {
+                    // Cargo is mostly full and no nearby asteroids - return to station
+                    this.shouldReturnToStation = true;
+                } else if (cargoAmount > 0 && !system?.asteroids?.length) {
+                    // Have cargo but literally no asteroids in system - return to station
                     this.shouldReturnToStation = true;
                 } else {
                     // No cargo and no asteroids - patrol the system to search
@@ -1853,7 +1859,8 @@ class EnemyAIBehaviors {
             const distance = dist(this.pos.x, this.pos.y, asteroid.pos.x, asteroid.pos.y);
 
             // Apply individual miner preference to distance (gives each miner slight bias)
-            const adjustedDistance = distance + (asteroid._targetingCount || 0) * 800 + this._minerAsteroidPreference;
+            // Penalty for already-targeted asteroids is moderate (150) so miners still prefer nearby asteroids
+            const adjustedDistance = distance + (asteroid._targetingCount || 0) * 150 + this._minerAsteroidPreference;
 
             candidates.push({ asteroid, distance: adjustedDistance });
         }

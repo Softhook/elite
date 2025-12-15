@@ -45,6 +45,7 @@ class EnemyCargo {
             case AI_ROLE.POLICE:
             case AI_ROLE.GUARD:
             case AI_ROLE.BOUNTY_HUNTER:
+            case AI_ROLE.MINER:
                 startingLoad = 0;
                 break;
             default:
