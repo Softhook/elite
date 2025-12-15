@@ -2195,14 +2195,21 @@ class EnemyAIBehaviors {
             system.spaceObjects = [];
         }
 
-        // Check each planet to see if it has at least one alive space object
-        // Use planetIndex instead of distance because planets orbit but space objects are static
+        // Check each planet (skip sun at index 0)
         for (let i = 1; i < system.planets.length; i++) {
             const planet = system.planets[i];
             if (!planet || !planet.pos) continue;
 
-            // Skip the sun
-            if (i === 0) continue;
+            // Skip planets too close to the jump zone to avoid spawning objects there
+            if (system.jumpZoneCenter) {
+                const dx = planet.pos.x - system.jumpZoneCenter.x;
+                const dy = planet.pos.y - system.jumpZoneCenter.y;
+                const distToJumpZone = Math.sqrt(dx * dx + dy * dy);
+                const minDist = (system.jumpZoneRadius || 500) + 500;
+                if (distToJumpZone < minDist) {
+                    continue; // Skip this planet - too close to jump zone
+                }
+            }
 
             // Find alive space objects associated with this planet by planetIndex
             const aliveObjectsForPlanet = system.spaceObjects.filter(obj => {
@@ -2210,7 +2217,7 @@ class EnemyAIBehaviors {
                 // Check if object is actually alive (has health > 0)
                 if (typeof obj.health === 'number' && obj.health <= 0) return false;
 
-                // Match by planetIndex (more reliable than distance since planets orbit)
+                // Match by planetIndex
                 return obj.planetIndex === i;
             });
 
@@ -2278,8 +2285,31 @@ class EnemyAIBehaviors {
      */
     reconstructSpaceObjectAtPlanet(system, planet) {
         // The repair ship is positioned at the planet during reconstruction
-        // So we spawn the object at the repair ship's position, not planet.pos (which may be outdated)
+        // Spawn the object at the repair ship's position
         const spawnPos = { x: this.pos.x, y: this.pos.y };
+
+        console.log(`RECONSTRUCTION: Repair ship at (${Math.round(spawnPos.x)}, ${Math.round(spawnPos.y)})`);
+        console.log(`  Planet ${planet.name} at (${Math.round(planet.pos.x)}, ${Math.round(planet.pos.y)})`);
+        if (system.jumpZoneCenter) {
+            const dx = spawnPos.x - system.jumpZoneCenter.x;
+            const dy = spawnPos.y - system.jumpZoneCenter.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            console.log(`  Jump zone at (${Math.round(system.jumpZoneCenter.x)}, ${Math.round(system.jumpZoneCenter.y)}), dist: ${Math.round(d)}`);
+        }
+
+        // Validate spawn position - don't spawn at jump zone
+        if (system.jumpZoneCenter) {
+            const dx = spawnPos.x - system.jumpZoneCenter.x;
+            const dy = spawnPos.y - system.jumpZoneCenter.y;
+            const distFromJumpZone = Math.sqrt(dx * dx + dy * dy);
+
+            // If within jump zone radius + buffer, abort
+            const minDist = (system.jumpZoneRadius || 500) + 300;
+            if (distFromJumpZone < minDist) {
+                console.warn(`Repair ship too close to jump zone for reconstruction (dist: ${Math.round(distFromJumpZone)}), aborting`);
+                return;
+            }
+        }
 
         // Temporarily override planet position for spawning
         const originalPos = planet.pos;
