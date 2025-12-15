@@ -29,6 +29,7 @@ let addCircleButton;
 let addSquareButton;
 let addHexButton;
 let addStarButton;
+let addShieldButton;
 let addSkullButton;
 let undoButton;
 let combineShapesButton;
@@ -116,8 +117,8 @@ function setup() {
     addSquareButton = select('#addSquareButton');
     addHexButton = select('#addHexButton');
     addStarButton = select('#addStarButton');
-    // Prefer new shield button id, fall back to existing skull id for compatibility
-    addSkullButton = select('#addShieldButton') || select('#addSkullButton');
+    addShieldButton = select('#addShieldButton');
+    addSkullButton = select('#addSkullButton');
     fillColorPicker = select('#fillColorPicker');
 
     zoomInButton = select('#zoomInButton');
@@ -149,7 +150,8 @@ function setup() {
     if (addSquareButton) addSquareButton.mousePressed(addSquareShape); else console.error("Add Square button not found");
     if (addHexButton) addHexButton.mousePressed(addHexagonShape); else console.error("Add Hexagon button not found");
     if (addStarButton) addStarButton.mousePressed(addStarShape); else console.error("Add Star button not found");
-    if (addSkullButton) addSkullButton.mousePressed(addShieldShape); else console.error("Add Shield button not found");
+    if (addShieldButton) addShieldButton.mousePressed(addShieldShape); else console.error("Add Shield button not found");
+    if (addSkullButton) addSkullButton.mousePressed(addSkullShape); else console.error("Add Skull button not found");
     if (addVertexButton) addVertexButton.mousePressed(toggleAddVertexMode); else console.error("Add Vertex button not found");
     if (zoomInButton) zoomInButton.mousePressed(zoomIn); else console.error("Zoom In button not found");
     if (zoomOutButton) zoomOutButton.mousePressed(zoomOut); else console.error("Zoom Out button not found");
@@ -1486,26 +1488,133 @@ function addStarShape() {
 function addShieldShape() {
     if (!isEditable()) return;
     saveStateForUndo();
-    const startIndex = shapes.length;
-    // Reuse the skull's external vertex outline but do not add any holes (no negative space)
-    const outer = [
-        { x: -0.30, y: -0.18 },
-        { x: -0.18, y: -0.34 },
-        { x: 0.18, y: -0.34 },
-        { x: 0.30, y: -0.18 },
-        { x: 0.22, y: -0.02 },
-        { x: 0.12, y: 0.18 },
-        { x: 0.00, y: 0.30 },
-        { x: -0.12, y: 0.18 },
-        { x: -0.22, y: -0.02 }
+
+    // Simple shield shape
+    const shield = [
+        { x: -0.20, y: -0.25 },  // top-left
+        { x: 0.20, y: -0.25 },   // top-right
+        { x: 0.22, y: 0.00 },    // right middle
+        { x: 0.12, y: 0.20 },    // right bottom
+        { x: 0.00, y: 0.28 },    // bottom point
+        { x: -0.12, y: 0.20 },   // left bottom
+        { x: -0.22, y: 0.00 },   // left middle
     ];
 
-    // Add as a single solid polygon (no holes)
-    shapes.push({ vertexData: outer, fillColor: [0, 0, 0] });
-    selectedShapeIndices = [startIndex]; // select the shield shape
+    shapes.push({ vertexData: shield, fillColor: [100, 120, 180] });
+    selectedShapeIndices = [shapes.length - 1];
     selectedVertexIndices = [];
-    if (currentShipKey === null || currentShipKey === 'Select a Ship...') { currentShipKey = '--- New Blank ---'; currentShipDef = null; }
-    updateUIControls(); updateColorPickersFromSelection();
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') {
+        currentShipKey = '--- New Blank ---';
+        currentShipDef = null;
+    }
+    updateUIControls();
+    updateColorPickersFromSelection();
+}
+
+function addSkullShape() {
+    if (!isEditable()) return;
+    saveStateForUndo();
+    const startIndex = shapes.length;
+
+    // ANGULAR SKULL AND CROSSBONES LOGO
+    // Multi-layer design: bones -> skull -> jaw -> eyes (black) -> nose (black)
+
+    // === LAYER 1 & 2: CROSSED BONES (background) ===
+    // Bone 1: Diagonal from bottom-left to top-right
+    const bone1 = [
+        { x: -0.35, y: 0.25 },   // bottom-left end (wider)
+        { x: -0.30, y: 0.20 },   // inner bottom-left
+        { x: 0.30, y: -0.20 },   // inner top-right
+        { x: 0.35, y: -0.25 },   // top-right end (wider)
+        { x: 0.30, y: -0.28 },   // top-right narrow point
+        { x: -0.30, y: 0.28 },   // bottom-left narrow point
+    ];
+
+    // Bone 2: Diagonal from bottom-right to top-left
+    const bone2 = [
+        { x: 0.35, y: 0.25 },    // bottom-right end (wider)
+        { x: 0.30, y: 0.20 },    // inner bottom-right
+        { x: -0.30, y: -0.20 },  // inner top-left
+        { x: -0.35, y: -0.25 },  // top-left end (wider)
+        { x: -0.30, y: -0.28 },  // top-left narrow point
+        { x: 0.30, y: 0.28 },    // bottom-right narrow point
+    ];
+
+    // === LAYER 3: MAIN SKULL OUTLINE (angular pentagon-like head) ===
+    const skullOutline = [
+        { x: -0.20, y: -0.25 },  // top-left corner
+        { x: 0.20, y: -0.25 },   // top-right corner
+        { x: 0.25, y: -0.05 },   // right temple
+        { x: 0.20, y: 0.10 },    // right cheek
+        { x: 0.10, y: 0.15 },    // right jaw
+        { x: -0.10, y: 0.15 },   // left jaw
+        { x: -0.20, y: 0.10 },   // left cheek
+        { x: -0.25, y: -0.05 },  // left temple
+    ];
+
+    // === LAYER 4: JAW WITH ANGULAR TEETH ===
+    const jaw = [
+        { x: -0.15, y: 0.15 },   // left jaw connection
+        { x: -0.12, y: 0.20 },   // tooth 1 left
+        { x: -0.08, y: 0.18 },   // tooth 1 valley
+        { x: -0.04, y: 0.20 },   // tooth 2 left
+        { x: 0.00, y: 0.18 },    // tooth 2 valley (center)
+        { x: 0.04, y: 0.20 },    // tooth 3 right
+        { x: 0.08, y: 0.18 },    // tooth 3 valley
+        { x: 0.12, y: 0.20 },    // tooth 4 right
+        { x: 0.15, y: 0.15 },    // right jaw connection
+        { x: 0.08, y: 0.12 },    // inner jaw right
+        { x: -0.08, y: 0.12 },   // inner jaw left
+    ];
+
+    // === LAYER 5 & 6: EYE SOCKETS (black triangles) ===
+    // Left eye - triangular socket pointing down
+    const leftEye = [
+        { x: -0.14, y: -0.10 },  // top-left
+        { x: -0.08, y: -0.10 },  // top-right
+        { x: -0.11, y: 0.00 },   // bottom point
+    ];
+
+    // Right eye - triangular socket pointing down
+    const rightEye = [
+        { x: 0.08, y: -0.10 },   // top-left
+        { x: 0.14, y: -0.10 },   // top-right
+        { x: 0.11, y: 0.00 },    // bottom point
+    ];
+
+    // === LAYER 7: NOSE HOLE (inverted black triangle) ===
+    const nose = [
+        { x: -0.04, y: 0.04 },   // top-left
+        { x: 0.04, y: 0.04 },    // top-right
+        { x: 0.00, y: 0.10 },    // bottom point (inverted)
+    ];
+
+    // Add all layers to shapes array
+    shapes.push({ vertexData: bone1, fillColor: [180, 180, 180] });       // Bone 1 (gray)
+    shapes.push({ vertexData: bone2, fillColor: [180, 180, 180] });       // Bone 2 (gray)
+    shapes.push({ vertexData: skullOutline, fillColor: [230, 230, 230] }); // Skull (light gray/white)
+    shapes.push({ vertexData: jaw, fillColor: [230, 230, 230] });         // Jaw (same as skull)
+    shapes.push({ vertexData: leftEye, fillColor: [0, 0, 0] });           // Left eye (black)
+    shapes.push({ vertexData: rightEye, fillColor: [0, 0, 0] });          // Right eye (black)
+    shapes.push({ vertexData: nose, fillColor: [0, 0, 0] });              // Nose (black)
+
+    // Select all skull layers for easy manipulation
+    selectedShapeIndices = [
+        startIndex,     // bone 1
+        startIndex + 1, // bone 2
+        startIndex + 2, // skull
+        startIndex + 3, // jaw
+        startIndex + 4, // left eye
+        startIndex + 5, // right eye
+        startIndex + 6  // nose
+    ];
+    selectedVertexIndices = [];
+    if (currentShipKey === null || currentShipKey === 'Select a Ship...') {
+        currentShipKey = '--- New Blank ---';
+        currentShipDef = null;
+    }
+    updateUIControls();
+    updateColorPickersFromSelection();
 }
 
 function toggleAddVertexMode() {

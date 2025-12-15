@@ -902,8 +902,40 @@ const SHIP_DEFINITIONS = {
         baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
         costCategory: "Medium", description: "A common, modified fighter favored by pirates for its speed and bite.",
-        vertexData: [{ x: 1, y: 0 }, { x: -0.4, y: 0.5 }, { x: -0.8, y: 0.3 }, { x: -0.8, y: -0.3 }, { x: -0.4, y: -0.5 }],
-        fillColor: [80, 20, 20],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.4000, y: 0.5000 }, { x: -0.8000, y: 0.3000 }, { x: -0.8000, y: -0.3000 }, { x: -0.4000, y: -0.5000 }],
+                fillColor: [80, 20, 20]
+            },
+            {
+                vertexData: [{ x: -0.5840, y: -0.2296 }, { x: -0.5512, y: -0.1968 }, { x: -0.2888, y: 0.1968 }, { x: -0.2560, y: 0.2296 }, { x: -0.2363, y: 0.1968 }, { x: -0.6037, y: -0.1968 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.5840, y: 0.2296 }, { x: -0.5512, y: 0.1968 }, { x: -0.2888, y: -0.1968 }, { x: -0.2560, y: -0.2296 }, { x: -0.2363, y: -0.1968 }, { x: -0.6037, y: 0.1968 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.2560, y: -0.1312 }, { x: -0.2560, y: 0.1312 }, { x: -0.3872, y: 0.1640 }, { x: -0.4856, y: 0.1312 }, { x: -0.5184, y: 0.0656 }, { x: -0.5184, y: -0.0656 }, { x: -0.4856, y: -0.1312 }, { x: -0.3872, y: -0.1640 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.5184, y: -0.0984 }, { x: -0.5512, y: -0.0787 }, { x: -0.5381, y: -0.0525 }, { x: -0.5512, y: -0.0262 }, { x: -0.5381, y: -0.0000 }, { x: -0.5512, y: 0.0262 }, { x: -0.5381, y: 0.0525 }, { x: -0.5512, y: 0.0787 }, { x: -0.5184, y: 0.0984 }, { x: -0.4987, y: 0.0525 }, { x: -0.4987, y: -0.0525 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.3544, y: -0.0919 }, { x: -0.3544, y: -0.0525 }, { x: -0.4200, y: -0.0722 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3544, y: 0.0525 }, { x: -0.3544, y: 0.0919 }, { x: -0.4200, y: 0.0722 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4462, y: -0.0262 }, { x: -0.4462, y: 0.0262 }, { x: -0.4856, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
         typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
     },

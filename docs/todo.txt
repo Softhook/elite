@@ -1,37 +1,5 @@
 # Elite Game Development TODO
 
-## Testing Needed
-
-### AI - Space Object Avoidance (2025-12-14)
-- **Feature**: Ships now avoid asteroids, space objects, and other ships while moving
-- **Implementation**: `_avoidObstaclesAndAdjustTarget()` in enemyAIBehaviors.js (lines 1667-1798)
-- **Exception**: Local transports (AI_ROLE.TRANSPORT) only avoid asteroids and ships, NOT space objects (they can dock with stations/platforms)
-- **Test Cases**:
-  - [ ] Police ships path around asteroids when chasing pirates
-  - [ ] Combat ships avoid colliding with stations and platforms
-  - [ ] Ships don't crash into each other during combat
-  - [ ] Local transports CAN approach and dock with space objects (stations, platforms)
-  - [ ] Haulers avoid asteroids on their patrol routes
-  - [ ] Ships slow down when obstacle is very close (within 60 units)
-
-### AI - Target Selection Distance Penalty (2025-12-14)
-- **Issue**: Multiple ships (especially police) were traveling long distances to engage the same enemy, then circling without shooting
-- **Solution**: Strengthened distance penalty in targeting + distance-aware ally engagement penalty
-- **Changes**:
-  - Distance penalty multiplier: 0.08 → 0.15 (enemyConstants.js line 73)
-  - Distance penalty cap: 80 → 150 (enemyConstants.js line 74)
-  - Ally engagement penalty now scales with distance (enemyTargeting.js lines 621-656)
-    - Ships within 200 units: Reduced/zero ally penalty (can engage freely)
-    - Ships beyond 200 units: Full ally penalty (should find other targets)
-- **Test Cases**:
-  - [ ] Police ships don't all converge on a single distant pirate
-  - [ ] Ships that are already close engage instead of circling
-  - [ ] Distant ships prefer to find their own targets rather than joining a fight
-  - [ ] Multiple enemies in combat spread their targets naturally
-  - [ ] Ships already in close range combat (< 200u) continue fighting despite allies
-  - [ ] Watch large fleet battles for natural target distribution
-
-
 ## Bugs and Issues
 
 enemy Ship docking distance at stations should be the same as player docking distance. 
