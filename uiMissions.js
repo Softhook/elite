@@ -269,14 +269,18 @@ class UIMissions {
                 // Active mission - show Complete or Abandon
                 let canCompleteHere = false;
 
-                // Check delivery completion conditions
+                // Check delivery completion conditions (including smuggle missions)
                 if (typeof MISSION_TYPE !== 'undefined' &&
-                    (activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) &&
-                    currentSystem && currentStation &&
-                    activeMission.destinationSystem === currentSystem.name &&
-                    activeMission.destinationStation === currentStation.name &&
-                    player.hasCargo && player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity)) {
-                    canCompleteHere = true;
+                    (activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL)) {
+
+                    // For delivery missions, check if at destination with cargo
+                    const atRightSystem = currentSystem && activeMission.destinationSystem === currentSystem.name;
+                    const atRightStation = currentStation && activeMission.destinationStation === currentStation.name;
+                    const hasCargo = player.hasCargo && player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity);
+
+                    if (atRightSystem && atRightStation && hasCargo) {
+                        canCompleteHere = true;
+                    }
                 }
 
                 // Check bounty mission completion (can complete anywhere once target count met)

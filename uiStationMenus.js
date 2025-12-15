@@ -875,9 +875,43 @@ class UIStationMenus {
                 rect(pX + 40, itemY, pW - 80, 35, 3);
 
                 noStroke();
-                fill(220);
+
+                // Check for mission match
+                const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
+
+                if (isMissionItem) {
+                    fill(255, 200, 100);
+                } else {
+                    fill(220);
+                }
+
                 textAlign(LEFT, CENTER);
-                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
+
+                let labelText = `${item.name}: ${item.quantity}t`;
+                if (isMissionItem) {
+                    const req = player.activeMission.cargoQuantity || 0;
+                    const missionAmount = Math.min(item.quantity, req);
+                    const extraAmount = Math.max(0, item.quantity - req);
+
+                    if (extraAmount > 0) {
+                        labelText = `${item.name}: ${missionAmount} (Mission) + ${extraAmount} (Free)`;
+                    } else {
+                        labelText = `${item.name}: ${missionAmount} / ${req} (Mission)`;
+                    }
+                }
+
+                text(labelText, pX + 50, itemY + 17.5);
+
+                if (isMissionItem) {
+                    push();
+                    fill(200, 150, 0);
+                    rect(pX + 380, itemY + 8, 60, 18, 4); // Moved right
+                    fill(20);
+                    textSize(11);
+                    textAlign(CENTER, CENTER);
+                    text("MISSION", pX + 410, itemY + 18);
+                    pop();
+                }
 
                 const btnW = 95;
                 const btnH = 25;
@@ -919,9 +953,43 @@ class UIStationMenus {
                 rect(pX + 40, itemY, pW - 80, 35, 3);
 
                 noStroke();
-                fill(220);
+
+                // Check for mission match
+                const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
+
+                if (isMissionItem) {
+                    fill(255, 200, 100);
+                } else {
+                    fill(220);
+                }
+
                 textAlign(LEFT, CENTER);
-                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + 17.5);
+
+                let labelText = `${item.name}: ${item.quantity}t`;
+                if (isMissionItem) {
+                    const req = player.activeMission.cargoQuantity || 0;
+                    const missionAmount = Math.min(item.quantity, req);
+                    const extraAmount = Math.max(0, item.quantity - req);
+
+                    if (extraAmount > 0) {
+                        labelText = `${item.name}: ${missionAmount} (Mission) + ${extraAmount} (Free)`;
+                    } else {
+                        labelText = `${item.name}: ${missionAmount} / ${req} (Mission)`;
+                    }
+                }
+
+                text(labelText, pX + 50, itemY + 17.5);
+
+                if (isMissionItem) {
+                    push();
+                    fill(200, 150, 0);
+                    rect(pX + 380, itemY + 8, 60, 18, 4); // Moved right
+                    fill(20);
+                    textSize(11);
+                    textAlign(CENTER, CENTER);
+                    text("MISSION", pX + 410, itemY + 18);
+                    pop();
+                }
 
                 const btnW = 95;
                 const btnH = 25;
