@@ -2105,10 +2105,10 @@ class EnemyAIBehaviors {
      */
     static get REPAIR_CONFIG() {
         return {
-            REPAIR_RANGE: 60,              // Distance at which repair operations can occur
+            REPAIR_RANGE: 80,              // Distance at which repair operations can occur
             RECONSTRUCTION_RANGE: 100,      // Distance needed to reconstruct space objects
-            REPAIR_RATE: 8,                 // Health points restored per second
-            RECONSTRUCTION_TIME: 5.0,       // Seconds required to build a new space object
+            REPAIR_RATE: 4,                 // Health points restored per second
+            RECONSTRUCTION_TIME: 30.0,       // Seconds required to build a new space object
             JUMP_ZONE_BUFFER: 300,          // Minimum distance from jump zone for reconstruction
             EFFECT_SPAWN_CHANCE: {
                 repair: 0.3,                // Probability of spawning repair visual effects
@@ -2172,7 +2172,7 @@ class EnemyAIBehaviors {
             } else {
                 // Move towards damaged object
                 this.changeState(AI_STATE.PATROLLING);
-                this.performSafeRotationAndThrust(system, this.repairTarget.pos);
+                this.performRotationAndThrust(this.repairTarget.pos);
             }
 
             this.updatePhysics();
@@ -2201,7 +2201,7 @@ class EnemyAIBehaviors {
         } else {
             // Move towards station
             this.changeState(AI_STATE.PATROLLING);
-            this.performSafeRotationAndThrust(system, system.station.pos);
+            this.performRotationAndThrust(system.station.pos);
         }
 
         this.updatePhysics();
@@ -2299,7 +2299,7 @@ class EnemyAIBehaviors {
         } else {
             // Move towards planet
             this.changeState(AI_STATE.PATROLLING);
-            this.performSafeRotationAndThrust(system, planet.pos);
+            this.performRotationAndThrust(planet.pos);
             this._reconstructionTimer = null; // Reset if moved away
         }
     }
