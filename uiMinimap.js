@@ -295,33 +295,74 @@ class UIMinimap {
     _drawStation(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds) {
         if (!system.station?.pos) return;
 
-        push();
         const relX = system.station.pos.x - player.pos.x;
         const relY = system.station.pos.y - player.pos.y;
         const mapX = mapCenterX + relX * this.scale;
         const mapY = mapCenterY + relY * this.scale;
-        const iconHalfSize = 3;
 
-        let drawX = mapX;
-        let drawY = mapY;
-        const isStationOnScreen = isFullyWithinBounds(mapX, mapY, iconHalfSize, iconHalfSize);
+        // Draw station to scale using its actual size property (slightly smaller for better fit)
+        const stationSize = system.station.size || 1000;
+        const stationRadius = (stationSize * 0.45) * this.scale; // Reduced from 0.5 to make it smaller
+        const iconHalfSize = Math.max(3, stationRadius); // At least 3 pixels for visibility
 
-        noStroke();
-        if (!isStationOnScreen) {
-            const inset = iconHalfSize + 1;
-            drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
-            drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
+        // Check if station is fully outside the minimap bounds
+        const fullyOutside = (
+            mapX + iconHalfSize < mapLeft ||
+            mapX - iconHalfSize > mapRight ||
+            mapY + iconHalfSize < mapTop ||
+            mapY - iconHalfSize > mapBottom
+        );
 
-            if (mapX < mapLeft || mapX > mapRight || mapY < mapTop || mapY > mapBottom) {
-                fill(0, 100, 255);
-            } else {
-                fill(0, 0, 255);
-            }
+        if (fullyOutside) {
+            // Off-screen: draw small indicator at edge
+            push();
+            const inset = 4;
+            const drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
+            const drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
+
+            noStroke();
+            fill(0, 200, 255); // Light blue for consistency
+            // Small circle for off-screen indicator
+            ellipse(drawX, drawY, 6, 6);
+            pop();
         } else {
-            fill(0, 0, 255);
+            // On-screen or partially on-screen: use clipping like jump zone
+            const ctx = drawingContext;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(this.x, this.y, this.size, this.size);
+            ctx.clip();
+
+            push();
+            translate(mapX, mapY);
+            // Rotate at same speed as station
+            if (system.station.angle !== undefined) {
+                rotate(system.station.angle);
+            }
+
+            // Draw circle outline
+            noFill();
+            stroke(0, 200, 255);
+            strokeWeight(1.5);
+            const diameter = iconHalfSize * 2;
+            ellipse(0, 0, diameter, diameter);
+            // Draw cardinal cross (+ shape) to match station's 4 arms
+            // Station arms are at 0°, 90°, 180°, 270° (cardinal directions)
+            const crossSize = iconHalfSize; // Full radius for cardinal cross
+            stroke(0, 200, 255);
+            strokeWeight(1);
+            // Vertical and horizontal lines aligned with station arms
+            line(0, -crossSize, 0, crossSize);  // Vertical
+            line(-crossSize, 0, crossSize, 0);  // Horizontal
+
+            // Add a small filled center dot for visibility
+            noStroke();
+            fill(0, 200, 255);
+            ellipse(0, 0, 3, 3);
+            pop();
+
+            ctx.restore();
         }
-        rect(drawX - iconHalfSize, drawY - iconHalfSize, iconHalfSize * 2, iconHalfSize * 2);
-        pop();
     }
 
     _drawPlanets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
