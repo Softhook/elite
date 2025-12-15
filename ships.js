@@ -945,8 +945,40 @@ const SHIP_DEFINITIONS = {
         baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
         armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
         costCategory: "Medium-High", description: "A heavily armed pirate vessel designed for disabling and looting targets.",
-        vertexData: [{ x: 0.9, y: 0.3 }, { x: 0.2, y: 0.7 }, { x: -0.9, y: 0.7 }, { x: -0.9, y: -0.7 }, { x: 0.2, y: -0.7 }, { x: 0.9, y: -0.3 }],
-        fillColor: [50, 50, 50],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.3000 }, { x: 0.2000, y: 0.7000 }, { x: -0.9000, y: 0.7000 }, { x: -0.9000, y: -0.7000 }, { x: 0.2000, y: -0.7000 }, { x: 0.9000, y: -0.3000 }],
+                fillColor: [50, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.6918, y: -0.5124 }, { x: -0.6186, y: -0.4392 }, { x: -0.0330, y: 0.4392 }, { x: 0.0402, y: 0.5124 }, { x: 0.0842, y: 0.4392 }, { x: -0.7357, y: -0.4392 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6918, y: 0.5124 }, { x: -0.6186, y: 0.4392 }, { x: -0.0330, y: -0.4392 }, { x: 0.0402, y: -0.5124 }, { x: 0.0842, y: -0.4392 }, { x: -0.7357, y: 0.4392 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: 0.0402, y: -0.2928 }, { x: 0.0402, y: 0.2928 }, { x: -0.2526, y: 0.3660 }, { x: -0.4722, y: 0.2928 }, { x: -0.5454, y: 0.1464 }, { x: -0.5454, y: -0.1464 }, { x: -0.4722, y: -0.2928 }, { x: -0.2526, y: -0.3660 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.5454, y: -0.2196 }, { x: -0.6186, y: -0.1757 }, { x: -0.5893, y: -0.1171 }, { x: -0.6186, y: -0.0586 }, { x: -0.5893, y: -0.0000 }, { x: -0.6186, y: 0.0586 }, { x: -0.5893, y: 0.1171 }, { x: -0.6186, y: 0.1757 }, { x: -0.5454, y: 0.2196 }, { x: -0.5015, y: 0.1171 }, { x: -0.5015, y: -0.1171 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.1794, y: -0.2050 }, { x: -0.1794, y: -0.1171 }, { x: -0.3258, y: -0.1611 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.1794, y: 0.1171 }, { x: -0.1794, y: 0.2050 }, { x: -0.3258, y: 0.1611 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3844, y: -0.0586 }, { x: -0.3844, y: 0.0586 }, { x: -0.4722, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
         typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
         aiRoles: ["PIRATE"]
     },
