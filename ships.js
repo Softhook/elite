@@ -1125,8 +1125,8 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["HAULER"]
     },
     "FieldRepairTender": {
-        name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 55,
-        baseMaxSpeed: 2.8, baseThrust: 0.04, baseTurnRate: 0.03491,
+        name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 90,
+        baseMaxSpeed: 2, baseThrust: 0.04, baseTurnRate: 0.03491,
         baseHull: 420, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
         armament: ["Barrier Field"],
         costCategory: "Medium", description: "Slow, sturdy support vessel equipped for field repairs and resupply operations.",
