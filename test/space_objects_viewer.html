@@ -110,8 +110,8 @@
                 const isSpaceObject = obj._viewerBaseSize !== undefined;
 
                 if (isSpaceObject) {
-                    // Clamp to -20° to +60° (asymmetric, clockwise bias)
-                    newAngle = constrain(newAngle, -Math.PI / 9, Math.PI / 3);
+                    // Clamp to -10° to +60° (asymmetric, clockwise bias)
+                    newAngle = constrain(newAngle, -Math.PI * 10 / 180, Math.PI * 60 / 180);
                 }
 
                 obj.angle = newAngle;
@@ -204,7 +204,7 @@
             } else {
                 const obj = objects[focusedIndex];
                 const isSpaceObject = obj._viewerBaseSize !== undefined;
-                const rotationType = isSpaceObject ? 'constrained to -20° to +60°' : 'full 360°';
+                const rotationType = isSpaceObject ? 'constrained to -10° to +60°' : 'full 360°';
                 info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type} — Drag to rotate (${rotationType}). Arrows to navigate, Esc to exit.`;
             }
         }
@@ -271,7 +271,7 @@
                 text(`${focusedIndex + 1}/${objects.length} — ${obj.type}`, width / 2, height / 2 + obj.size * 0.65 + 10);
                 textSize(12);
                 const isSpaceObject = obj._viewerBaseSize !== undefined;
-                const rotationType = isSpaceObject ? '-20° to +60°' : '360°';
+                const rotationType = isSpaceObject ? '-10° to +60°' : '360°';
                 text(`← ↑ : prev   ↓ → : next   Esc : exit   Drag to rotate (${rotationType})`, width / 2, height - 36);
                 pop();
 

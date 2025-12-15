@@ -3873,10 +3873,11 @@ class SpaceObject {
         const dt = (typeof deltaTime === 'number') ? deltaTime : 16;
 
         // Use bobPhase to drive rotation oscillation
-        // Asymmetric range: -20° to +60° (clockwise bias)
+        // Asymmetric range: -10° to +60° (clockwise bias)
         const oscillationPhase = this.bobPhase * this.rotationSpeed * 100;
         const normalizedSin = (Math.sin(oscillationPhase) + 1) / 2; // 0 to 1
-        this.angle = normalizedSin * (Math.PI / 3 + Math.PI / 9) - Math.PI / 9; // -20° to +60°
+        // Map 0->1 to -10° to +60°: range is 70° total, offset by -10°
+        this.angle = normalizedSin * (Math.PI * 70 / 180) - (Math.PI * 10 / 180); // -10° to +60°
 
         this.bobPhase += 0.0015 * dt;
         if (this.pos && !this.destroyed) {
