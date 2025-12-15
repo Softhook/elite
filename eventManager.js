@@ -882,12 +882,17 @@ class EventManager {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
 
+                const durationMs = this._extendDurationMs(180000);
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(6, Math.round(random(12, 35))), { allowPartial: true });
-                this._notifyEvent(`${station.name}: Quarantine enforced (-${consumed} Food)`, 'purple');
-                this._addPersistentEvent(`QUARANTINE_${station.name}`, `${station.name}: Quarantine (Food Shortage)`, 'purple', this._extendDurationMs(180000));
+
+                // Disable all commodity trading at this station
+                station.quarantineExpires = millis() + durationMs;
+
+                this._notifyEvent(`${station.name}: Quarantine enforced (-${consumed} Food; trading suspended!)`, 'purple');
+                this._addPersistentEvent(`QUARANTINE_${station.name}`, `${station.name}: Quarantine (Trading Disabled)`, 'purple', durationMs);
 
                 if (station?.pos) {
-                    this._addEventMarkerSafely(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', this._extendDurationMs(180000));
+                    this._addEventMarkerSafely(`QUARANTINE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Quarantine`, 'purple', durationMs);
                 }
                 break;
             }
@@ -896,9 +901,15 @@ class EventManager {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
 
+                const durationMs = this._extendDurationMs(120000);
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(8, Math.round(random(15, 45))), { allowPartial: true });
-                this._notifyEvent(`${station.name}: Refugee influx (-${consumed} Food)`, 'brown');
-                this._addPersistentEvent(`REFUGEE_${station.name}`, `${station.name}: Refugee Influx (High Demand)`, 'brown', this._extendDurationMs(120000));
+
+                // Triple Food prices at this station
+                station.refugeeInfluxExpires = millis() + durationMs;
+                station.refugeeInfluxFoodPriceMultiplier = 3.0;
+
+                this._notifyEvent(`${station.name}: Refugee influx (-${consumed} Food; prices tripled!)`, 'brown');
+                this._addPersistentEvent(`REFUGEE_${station.name}`, `${station.name}: Refugee Influx (Food Prices ×3)`, 'brown', durationMs);
                 break;
             }
 
@@ -948,19 +959,20 @@ class EventManager {
                 const anchorVec = this.starSystem.jumpZoneCenter || this.player.pos;
                 const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(300, 700);
 
+                // Spawn bounty hunters that hunt pirates, not the player
                 for (let i = 0; i < spawnCount; i++) {
                     const angle = random(TWO_PI);
                     const dist = baseRadius + random(-200, 200);
                     const sx = anchorVec.x + cos(angle) * dist;
                     const sy = anchorVec.y + sin(angle) * dist;
                     this._spawnAdHocEnemy(sx, sy, AI_ROLE.BOUNTY_HUNTER, (enemy) => {
-                        enemy.currentState = AI_STATE.APPROACHING;
-                        enemy.target = this.player;
+                        enemy.currentState = AI_STATE.PATROLLING;
+                        // Bounty hunters will find and target pirates via their normal AI
                     });
                 }
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships inbound`, 'red');
+                this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships hunting pirates`, 'red');
                 this._addPersistentEvent('BOUNTY_INCREASE', 'NOTICE: High Bounty Payouts Active', 'red', this._extendDurationMs(180000));
                 break;
             }

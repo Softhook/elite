@@ -632,9 +632,9 @@ Solar flare damages player shields and spawns a solar storm.
 
 ### QUARANTINE
 
-Quarantine consumes Food supplies at a station.
+Quarantine disables all commodity trading at a station and consumes Food supplies.
 
-**Location:** [`eventManager.js:423`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L423)
+**Location:** [`eventManager.js:881`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L881)
 
 **Properties:**
 - **Probability:** `0.000006` per frame (very rare!)
@@ -643,19 +643,21 @@ Quarantine consumes Food supplies at a station.
 - **Warning Message:** "QUARANTINE: Contagion measures in effect." (purple)
 
 **Effects:**
+- Sets `station.quarantineExpires` to disable all commodity trading (3 minutes)
 - Consumes 12-35 units of Food from station market
 - Adds persistent event marker (3 minutes)
 - Creates HUD marker at station location
+- **CRITICAL:** Station market will reject all buy/sell transactions until quarantine expires
 
-**Related Systems:** `market.js` (Food commodity), `uiManager.js` (event markers)
+**Related Systems:** `market.js` (trading disabled check), `station.js` (quarantineExpires property), `uiManager.js` (event markers)
 
 ---
 
 ### REFUGEE_INFLUX
 
-Refugee influx consumes Food and strains station services.
+Refugee influx consumes Food and triples Food prices at the station.
 
-**Location:** [`eventManager.js:424`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L424)
+**Location:** [`eventManager.js:895`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L895)
 
 **Properties:**
 - **Probability:** `0.00001` per frame
@@ -665,17 +667,19 @@ Refugee influx consumes Food and strains station services.
 
 **Effects:**
 - Consumes 15-45 units of Food from station market
+- Sets `station.refugeeInfluxExpires` and `station.refugeeInfluxFoodPriceMultiplier = 3.0`
+- Food buy/sell prices tripled at this station (2 minutes)
 - Adds persistent event marker (2 minutes)
 
-**Related Systems:** `market.js` (Food commodity)
+**Related Systems:** `market.js` (Food commodity, price calculation), `station.js` (refugeeInfluxExpires property)
 
 ---
 
 ### BOUNTY_INCREASE
 
-Increased bounties attract bounty hunters to the jump zone.
+Increased bounties attract bounty hunters that patrol and hunt pirates.
 
-**Location:** [`eventManager.js:428`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L428)
+**Location:** [`eventManager.js:946`](file:///Users/softhook/Documents/GitHub/elite/eventManager.js#L946)
 
 **Properties:**
 - **Probability:** `0.000015` per frame
@@ -685,10 +689,11 @@ Increased bounties attract bounty hunters to the jump zone.
 
 **Effects:**
 - Spawns 4-9 bounty hunter ships around jump zone
-- Ships set to `AI_STATE.APPROACHING` targeting player
+- Ships set to `AI_STATE.PATROLLING` to hunt pirates via their normal AI
+- Bounty hunters will target any pirates they encounter
 - Adds persistent event message (3 minutes)
 
-**Related Systems:** `ships.js` (BOUNTY_HUNTER ships), `enemyStateMachine.js` (AI_STATE.APPROACHING)
+**Related Systems:** `ships.js` (BOUNTY_HUNTER ships), `enemyStateMachine.js` (AI_STATE.PATROLLING, bounty hunter targeting)
 
 ---
 

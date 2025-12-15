@@ -107,7 +107,7 @@ class Market {
         this.systemType = systemType;
         this.systemName = null; // Will be set by Station
         this._stockTrendAccumulator = 0;
-        
+
         // If Alien, no goods available - return early
         if (systemType === 'Alien') {
             this.commodities = [];
@@ -128,19 +128,19 @@ class Market {
     _initializeCommodities() {
         const definitions = [
             // Name, Base Buy, Base Sell, Player Stock, Legal Status
-            { name: 'Food',           baseBuy: 10,   baseSell: 8,    isLegal: true },
-            { name: 'Textiles',       baseBuy: 15,   baseSell: 12,   isLegal: true },
-            { name: 'Machinery',      baseBuy: 100,  baseSell: 90,   isLegal: true },
-            { name: 'Metals',         baseBuy: 50,   baseSell: 40,   isLegal: true },
-            { name: 'Minerals',       baseBuy: 40,   baseSell: 30,   isLegal: true },
-            { name: 'Chemicals',      baseBuy: 70,   baseSell: 60,   isLegal: true },
-            { name: 'Computers',      baseBuy: 250,  baseSell: 220,  isLegal: true },
-            { name: 'Medicine',       baseBuy: 150,  baseSell: 130,  isLegal: true },
-            { name: 'Adv Components', baseBuy: 400,  baseSell: 350,  isLegal: true },
-            { name: 'Luxury Goods',   baseBuy: 500,  baseSell: 450,  isLegal: true },
-            { name: 'Narcotics',      baseBuy: 800,  baseSell: 700,  isLegal: false },
-            { name: 'Weapons',        baseBuy: 1200, baseSell: 1000, isLegal: false },
-            { name: 'Slaves',         baseBuy: 1500, baseSell: 1300, isLegal: false },
+            { name: 'Food', baseBuy: 10, baseSell: 8, isLegal: true },
+            { name: 'Textiles', baseBuy: 15, baseSell: 12, isLegal: true },
+            { name: 'Machinery', baseBuy: 100, baseSell: 90, isLegal: true },
+            { name: 'Metals', baseBuy: 50, baseSell: 40, isLegal: true },
+            { name: 'Minerals', baseBuy: 40, baseSell: 30, isLegal: true },
+            { name: 'Chemicals', baseBuy: 70, baseSell: 60, isLegal: true },
+            { name: 'Computers', baseBuy: 250, baseSell: 220, isLegal: true },
+            { name: 'Medicine', baseBuy: 150, baseSell: 130, isLegal: true },
+            { name: 'Adv Components', baseBuy: 400, baseSell: 350, isLegal: true },
+            { name: 'Luxury Goods', baseBuy: 500, baseSell: 450, isLegal: true },
+            { name: 'Narcotics', baseBuy: 800, baseSell: 700, isLegal: false },
+            { name: 'Weapons', baseBuy: 1200, baseSell: 1000, isLegal: false },
+            { name: 'Slaves', baseBuy: 1500, baseSell: 1300, isLegal: false },
         ];
 
         this.commodities = definitions.map(def => {
@@ -258,171 +258,171 @@ class Market {
             if (MARKET_DEBUG) console.log(` -> Initializing commodities for economy type change from Alien to ${this.systemType}`);
             this._initializeCommodities();
         }
-        
+
         // Clear commodities if changing to Alien
         if (this.systemType === 'Alien') {
             this.commodities = [];
             if (MARKET_DEBUG) console.log(` -> Cleared commodities for Alien economy type`);
             return;
         }
-        
+
         // Skip if no commodities (shouldn't happen now, but safety check)
         if (!this.commodities || this.commodities.length === 0) return;
-        
+
         if (MARKET_DEBUG) console.log(` -> Updating prices for: ${this.systemType}`);
-        
+
         this.commodities.forEach(comm => {
             // Reset to base prices before applying adjustments
             comm.buyPrice = comm.baseBuy;
             comm.sellPrice = comm.baseSell;
-            
+
             // Apply system economy adjustments - increased differentiation for better trading
             switch (this.systemType) {
                 case 'Agricultural':
                     // Agricultural produces Food and Textiles cheaply, imports tech/machinery
-                    if (['Food', 'Textiles'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Food', 'Textiles'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Machinery', 'Chemicals', 'Medicine', 'Computers', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Industrial':
                     // Industrial produces Machinery, Metals, Chemicals; needs Food and Luxury goods
-                    if (['Machinery', 'Metals', 'Chemicals'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Machinery', 'Metals', 'Chemicals'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Food', 'Luxury Goods', 'Medicine'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Luxury Goods', 'Medicine'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
-                    if (['Computers', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= 1.4; 
-                        comm.sellPrice *= 1.25; 
+                    if (['Computers', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= 1.4;
+                        comm.sellPrice *= 1.25;
                     }
                     break;
                 case 'Mining':
                     // Mining produces Metals and Minerals cheaply; needs Food, Machinery, tech
-                    if (['Metals', 'Minerals'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Metals', 'Minerals'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Machinery', 'Medicine', 'Computers'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Military':
                     // Military produces Weapons and uses lots of tech; pays premium for consumables
-                    if (['Weapons', 'Machinery', 'Metals'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Weapons', 'Machinery', 'Metals'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Luxury Goods', 'Textiles', 'Food', 'Medicine'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Luxury Goods', 'Textiles', 'Food', 'Medicine'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Offworld':
                     // Offworld produces Luxury Goods, Adv Components, Computers; needs basics
-                    if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Luxury Goods', 'Computers', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Food', 'Textiles', 'Metals', 'Chemicals'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Textiles', 'Metals', 'Chemicals'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Alien':
                     // Alien tech is cheap, but they want basics at extreme prices
-                    if (['Luxury Goods', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= 0.4; 
-                        comm.sellPrice *= 0.5; 
+                    if (['Luxury Goods', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= 0.4;
+                        comm.sellPrice *= 0.5;
                     }
-                    if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) { 
-                        comm.buyPrice *= 2.5; 
-                        comm.sellPrice *= 2.0; 
+                    if (['Food', 'Textiles', 'Machinery', 'Medicine'].includes(comm.name)) {
+                        comm.buyPrice *= 2.5;
+                        comm.sellPrice *= 2.0;
                     }
                     break;
                 case 'Refinery':
                     // Refinery produces Metals and Chemicals from Minerals; needs raw materials
-                    if (['Metals', 'Chemicals'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Metals', 'Chemicals'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Minerals', 'Machinery', 'Food', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Minerals', 'Machinery', 'Food', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Post Human':
                     // Post Human produces high tech; needs raw materials and luxuries
-                    if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Computers', 'Medicine', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Metals', 'Chemicals', 'Minerals', 'Luxury Goods'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Tourism':
                     // Tourism consumes everything, produces little; pays premium for goods
-                    if (['Luxury Goods', 'Textiles'].includes(comm.name)) { 
-                        comm.buyPrice *= 0.7; 
-                        comm.sellPrice *= 0.8; 
+                    if (['Luxury Goods', 'Textiles'].includes(comm.name)) {
+                        comm.buyPrice *= 0.7;
+                        comm.sellPrice *= 0.8;
                     }
-                    if (['Food', 'Medicine'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Medicine'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) { 
-                        comm.buyPrice *= 2.0; 
-                        comm.sellPrice *= 1.7; 
+                    if (['Metals', 'Minerals', 'Chemicals', 'Machinery'].includes(comm.name)) {
+                        comm.buyPrice *= 2.0;
+                        comm.sellPrice *= 1.7;
                     }
                     break;
                 case 'Service':
                     // Service produces Food, Medicine, Textiles; needs tech and raw materials
-                    if (['Food', 'Medicine', 'Textiles'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Food', 'Medicine', 'Textiles'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Metals', 'Minerals', 'Chemicals', 'Computers', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Metals', 'Minerals', 'Chemicals', 'Computers', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Separatist':
                     // Separatist produces Weapons, Chemicals, Machinery; needs tech and luxuries
-                    if (['Weapons', 'Chemicals', 'Machinery'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Weapons', 'Chemicals', 'Machinery'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Luxury Goods', 'Computers', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Luxury Goods', 'Computers', 'Food', 'Medicine', 'Adv Components'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 case 'Imperial':
                     // Imperial produces Luxury Goods, Adv Components, Computers; needs basics
-                    if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) { 
-                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY; 
-                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL; 
+                    if (['Luxury Goods', 'Adv Components', 'Computers'].includes(comm.name)) {
+                        comm.buyPrice *= PRODUCTION_DISCOUNT_BUY;
+                        comm.sellPrice *= PRODUCTION_DISCOUNT_SELL;
                     }
-                    if (['Food', 'Textiles', 'Metals', 'Machinery', 'Medicine'].includes(comm.name)) { 
-                        comm.buyPrice *= IMPORT_PREMIUM_BUY; 
-                        comm.sellPrice *= IMPORT_PREMIUM_SELL; 
+                    if (['Food', 'Textiles', 'Metals', 'Machinery', 'Medicine'].includes(comm.name)) {
+                        comm.buyPrice *= IMPORT_PREMIUM_BUY;
+                        comm.sellPrice *= IMPORT_PREMIUM_SELL;
                     }
                     break;
                 default:
                     if (MARKET_DEBUG) console.warn(`Market: Unhandled economy type '${this.systemType}' - using base prices.`);
                     break;
             }
-            
+
             const baseStock = Math.max(1, comm.baseStock || 1);
             const currentStock = Math.max(0, Number.isFinite(comm.stock) ? comm.stock : baseStock);
             const stockRatio = currentStock / baseStock;
@@ -438,12 +438,12 @@ class Market {
             if (comm.sellPrice >= comm.buyPrice) {
                 comm.sellPrice = comm.buyPrice * SELL_RATIO_SAFETY;
             }
-            
+
             // Ensure prices are integers and never zero
             comm.buyPrice = Math.max(1, Math.floor(comm.buyPrice));
             comm.sellPrice = Math.max(1, Math.floor(comm.sellPrice));
         });
-        
+
         if (MARKET_DEBUG) console.log(` <- Prices updated.`);
     }
 
@@ -554,13 +554,23 @@ class Market {
             return false;
         }
 
+        // Check for quarantine - no trading allowed
+        const currentStation = player.currentSystem?.station;
+        if (currentStation?.quarantineExpires && millis() < currentStation.quarantineExpires) {
+            console.log("SELL FAILED: Station under quarantine");
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Trading suspended due to quarantine`, 'purple');
+            }
+            return false;
+        }
+
         // Essential checks
         if (!player) { console.error("SELL FAILED: Player missing"); return false; }
         if (quantity <= 0) { return false; }
 
         const comm = this._getCommodity(commodityName);
         if (!comm) { console.error(`SELL FAILED: ${commodityName} not found`); return false; }
-        
+
         // Check if this is a legal transaction
         const currentSystem = player.currentSystem;
         if (!comm.isLegal && currentSystem && currentSystem.securityLevel !== 'Anarchy') {
@@ -577,8 +587,14 @@ class Market {
             return false;
         }
 
+        // Calculate sell price with event modifiers
+        let sellPrice = comm.sellPrice;
+        if (commodityName === 'Food' && currentStation?.refugeeInfluxExpires && millis() < currentStation.refugeeInfluxExpires) {
+            sellPrice *= (currentStation.refugeeInfluxFoodPriceMultiplier || 3.0);
+        }
+
         // Perform transaction
-        const income = Math.floor(comm.sellPrice * quantity);
+        const income = Math.floor(sellPrice * quantity);
         player.addCredits(income);
         player.removeCargo(commodityName, quantity);
         this._applyStockChange(comm, quantity);
@@ -594,12 +610,12 @@ class Market {
         if (typeof saveGame === 'function') {
             saveGame();
         }
-        
+
         // Play sell confirm sound
         if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
             soundManager.playSound('sellConfirm');
         }
-        
+
         return true;
     }
 
@@ -609,7 +625,7 @@ class Market {
         if (!Array.isArray(this.commodities)) {
             return [];
         }
-        return this.commodities.map(c => ({...c}));
+        return this.commodities.map(c => ({ ...c }));
     }
 
     // --- updatePlayerCargo, buy, getPrices remain the same ---
@@ -638,6 +654,16 @@ class Market {
 
         if (!player) { console.error("BUY FAILED: Player object missing."); return false; }
 
+        // Check for quarantine - no trading allowed
+        const currentStation = player.currentSystem?.station;
+        if (currentStation?.quarantineExpires && millis() < currentStation.quarantineExpires) {
+            console.log("BUY FAILED: Station under quarantine");
+            if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
+                uiManager.addMessage(`Trading suspended due to quarantine`, 'purple');
+            }
+            return false;
+        }
+
         let requestedQuantity = Math.floor(quantity ?? 0);
         if (requestedQuantity <= 0) {
             if (MARKET_DEBUG) console.log("BUY FAILED: Quantity <= 0.");
@@ -649,7 +675,7 @@ class Market {
             console.error(`BUY FAILED: Commodity ${commodityName} not found in market.`);
             return false;
         }
-        
+
         const currentSystem = player.currentSystem;
         if (!comm.isLegal && currentSystem && currentSystem.securityLevel !== 'Anarchy') {
             if (MARKET_DEBUG) console.log(`BUY FAILED: Cannot buy illegal goods in non-Anarchy system.`);
@@ -686,21 +712,29 @@ class Market {
         }
 
         const cost = Math.floor(comm.buyPrice * requestedQuantity);
-        if (cost > player.credits) {
-            if (MARKET_DEBUG) console.log("BUY FAILED: Not enough credits!");
+        // Apply refugee influx price multiplier for Food
+        let finalBuyPrice = comm.buyPrice;
+        if (commodityName === 'Food' && currentStation?.refugeeInfluxExpires && millis() < currentStation.refugeeInfluxExpires) {
+            finalBuyPrice *= (currentStation.refugeeInfluxFoodPriceMultiplier || 3.0);
+        }
+        const finalCost = Math.floor(finalBuyPrice * requestedQuantity);
+
+        // Re-check credits with final cost
+        if (finalCost > player.credits) {
+            if (MARKET_DEBUG) console.log("BUY FAILED: Not enough credits after price adjustment!");
             if (typeof uiManager !== 'undefined' && typeof uiManager.addMessage === 'function') {
-                uiManager.addMessage(`Not enough credits to buy ${requestedQuantity} ${commodityName}.`, 'orange');
+                uiManager.addMessage(`Not enough credits to buy ${requestedQuantity} ${commodityName}${commodityName === 'Food' && finalBuyPrice !== comm.buyPrice ? ' (crisis pricing)' : ''}.`, 'orange');
             }
             return false;
         }
 
         if (MARKET_DEBUG) {
-            console.log(`Cost: ${cost}, Player Credits: ${player.credits}, Stock Before: ${comm.stock}`);
+            console.log(`Cost: ${finalCost}, Player Credits: ${player.credits}, Stock Before: ${comm.stock}`);
         }
 
-        const spendSuccess = player.spendCredits(cost);
+        const spendSuccess = player.spendCredits(finalCost);
         if (!spendSuccess) {
-            console.error(`BUY FAILED: player.spendCredits(${cost}) failed unexpectedly.`);
+            console.error(`BUY FAILED: player.spendCredits(${finalCost}) failed unexpectedly.`);
             return false;
         }
 
@@ -708,14 +742,14 @@ class Market {
         this._applyStockChange(comm, -requestedQuantity);
         this.updatePlayerCargo(player.cargo);
         this.updatePrices();
-        
+
         // Record the trade in player's personal record
         if (player.currentSystem?.station && typeof player.recordStationTrade === 'function') {
             player.recordStationTrade(player.currentSystem.station.name, player.currentSystem.name);
         }
 
         if (MARKET_DEBUG) {
-            console.log(`--- Market.buy SUCCESS: Bought ${requestedQuantity} ${commodityName} for ${cost} credits. Stock now ${comm.stock}. ---`);
+            console.log(`--- Market.buy SUCCESS: Bought ${requestedQuantity} ${commodityName} for ${finalCost} credits. Stock now ${comm.stock}. ---`);
         }
 
         if (typeof saveGame === 'function') {
