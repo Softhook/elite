@@ -1887,20 +1887,15 @@ class Player {
         let missionDataToSave = null;
         if (this.activeMission) {
             console.log(`SAVING DATA: Active Mission Title = ${this.activeMission.title}, Status = ${this.activeMission.status}`);
-            // Create a plain object copy for saving (prevents saving methods etc.)
-            missionDataToSave = { ...this.activeMission };
-            // Or be more explicit:
-            // missionDataToSave = {
-            //      id: this.activeMission.id, type: this.activeMission.type, title: this.activeMission.title,
-            //      description: this.activeMission.description, originSystem: this.activeMission.originSystem,
-            //      originStation: this.activeMission.originStation, destinationSystem: this.activeMission.destinationSystem,
-            //      destinationStation: this.activeMission.destinationStation, targetDesc: this.activeMission.targetDesc,
-            //      targetCount: this.activeMission.targetCount, cargoType: this.activeMission.cargoType,
-            //      cargoQuantity: this.activeMission.cargoQuantity, rewardCredits: this.activeMission.rewardCredits,
-            //      isIllegal: this.activeMission.isIllegal, requiredRep: this.activeMission.requiredRep,
-            //      timeLimit: this.activeMission.timeLimit, status: this.activeMission.status, // <= INCLUDE STATUS
-            //      progressCount: this.activeMission.progressCount // <= INCLUDE PROGRESS
-            // };
+            // Use Mission's toJSON method for proper serialization
+            // This excludes runtime references (_targetEnemyRef, _guardRefs) and saves IDs instead
+            if (typeof this.activeMission.toJSON === 'function') {
+                missionDataToSave = this.activeMission.toJSON();
+            } else {
+                // Fallback for older code, but this should not happen
+                console.warn('Mission missing toJSON method, using fallback serialization');
+                missionDataToSave = { ...this.activeMission };
+            }
         } else {
             console.log("SAVING DATA: No active mission.");
         }

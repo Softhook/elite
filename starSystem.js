@@ -4870,7 +4870,8 @@ class StarSystem {
             forceWaves: [], // Transient
             harpoons: this._serializeEntityArray(this.harpoons),
             explosions: this._serializeEntityArray(this.explosions),
-            staticElementsInitialized: this.staticElementsInitialized
+            staticElementsInitialized: this.staticElementsInitialized,
+            shouldSpawnNPCs: this.shouldSpawnNPCs // Preserve NPC spawning state
         };
     }
 
@@ -4933,6 +4934,9 @@ class StarSystem {
         sys.visited = data.visited;
         sys.economyType = data.economyType;
         sys.connectedSystemIndices = Array.isArray(data.connectedSystemIndices) ? [...data.connectedSystemIndices] : [];
+
+        // Restore NPC spawning state (defaults to true if not present for backward compatibility)
+        sys.shouldSpawnNPCs = data.shouldSpawnNPCs !== undefined ? data.shouldSpawnNPCs : true;
 
         // Restore planets
         sys.planets = this._deserializeEntityArray(data.planets, Planet);
