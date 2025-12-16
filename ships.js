@@ -933,7 +933,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "High", description: "The Harlequins' war trumpet—versatile, deadly, and painted in colors that hurt to look at directly. Those absurd wing configurations actually serve a tactical purpose: disorienting enemies before the 150-hull brick deletes them. Pilots who fly these either have excellent taste or absolutely none. No middle ground exists.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: -0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: -0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
                 fillColor: [150, 219, 0]
             },
             {
@@ -949,20 +949,20 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 0, 255]
             },
             {
-                vertexData: [{ x: -0.7410, y: 0.1815 }, { x: -0.6805, y: 0.1452 }, { x: -0.7047, y: 0.0968 }, { x: -0.6805, y: 0.0484 }, { x: -0.7047, y: -0.0000 }, { x: -0.6805, y: -0.0484 }, { x: -0.7047, y: -0.0968 }, { x: -0.6805, y: -0.1452 }, { x: -0.7410, y: -0.1815 }, { x: -0.7773, y: -0.0968 }, { x: -0.7773, y: 0.0968 }],
+                vertexData: [{ x: -0.7410, y: 0.1815 }, { x: -0.6805, y: 0.1452 }, { x: -0.7047, y: 0.0968 }, { x: -0.6805, y: 0.0484 }, { x: -0.7047, y: 0.0000 }, { x: -0.6805, y: -0.0484 }, { x: -0.7047, y: -0.0968 }, { x: -0.6805, y: -0.1452 }, { x: -0.7410, y: -0.1815 }, { x: -0.7773, y: -0.0968 }, { x: -0.7773, y: 0.0968 }],
                 fillColor: [255, 0, 255]
             },
             {
                 vertexData: [{ x: -0.3538, y: -0.1694 }, { x: -0.3538, y: -0.0968 }, { x: -0.4748, y: -0.1331 }],
-                fillColor: [0, 0, 0]
+                fillColor: [150, 219, 0]
             },
             {
                 vertexData: [{ x: -0.3538, y: 0.0968 }, { x: -0.3538, y: 0.1694 }, { x: -0.4748, y: 0.1331 }],
-                fillColor: [0, 0, 0]
+                fillColor: [150, 219, 0]
             },
             {
-                vertexData: [{ x: -0.5232, y: -0.0484 }, { x: -0.5232, y: 0.0484 }, { x: -0.5958, y: -0.0000 }],
-                fillColor: [0, 0, 0]
+                vertexData: [{ x: -0.5232, y: -0.0484 }, { x: -0.5232, y: 0.0484 }, { x: -0.5958, y: 0.0000 }],
+                fillColor: [150, 219, 0]
             },
             {
                 vertexData: [{ x: 0.5600, y: -0.3711 }, { x: 0.7511, y: 0.0000 }, { x: 0.5600, y: 0.3711 }],
