@@ -1135,8 +1135,12 @@ function loadGame(slotIndex) {
                     return false;
                 }
 
+
                 // 5. Link Player to the (now loaded) Current System
                 player.currentSystem = galaxy.getCurrentSystem();
+
+                // 6. Extract docking state early for use in bodyguard spawning and state restoration
+                const dockingState = savedData.dockingState;
 
                 if (player.currentSystem) {
                     player.currentSystem.player = player; // Link player object to the system instance
@@ -1176,9 +1180,8 @@ function loadGame(slotIndex) {
                     return false;
                 }
 
-                // 6. Restore docking state (stations and space objects) if present
+                // 7. Restore docking state (stations and space objects) if present
                 let restoredDockState = false;
-                const dockingState = savedData.dockingState;
                 if (gameStateManager && dockingState && player.currentSystem) {
                     // Attempt to restore space-object docking first
                     if (dockingState.state === "DOCKED_SPACE_OBJECT" && dockingState.spaceObjectId) {

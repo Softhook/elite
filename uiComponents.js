@@ -764,10 +764,14 @@ class UIComponents {
         push();
         translate(centerX, centerY);
 
-        // Time-based animation
+        // Time-based animation with realistic firing speed
         const time = (typeof millis === 'function' ? millis() : frameCount * 16) * 0.001;
         const pulse = 0.5 + 0.5 * Math.sin(time * 2);
-        const cycle = time % 2.0; // 2 second cycle
+
+        // Use the weapon's actual fire rate to determine cycle speed
+        // fireRate is in seconds, so we use it directly as the cycle duration
+        const fireRate = weaponDef.fireRate || 1.0;
+        const cycle = (time % fireRate) / fireRate; // Normalized 0-1 cycle based on actual fire rate
 
         // Draw based on weapon type
         const type = weaponDef.type;
@@ -784,7 +788,7 @@ class UIComponents {
         // Type-specific visualizations
         if (type === 'projectile' || baseType === 'projectile') {
             // Single projectile with trail
-            const firePhase = cycle * 0.5;
+            const firePhase = cycle;
             if (firePhase < 0.3) {
                 const x = firePhase * size * 1.2;
                 const trailLength = 40;
@@ -832,7 +836,7 @@ class UIComponents {
             // Parallel multi-shot
             const count = parseInt(type.match(/\d+/)?.[0]) || 2;
             const spacing = 20;
-            const firePhase = cycle * 0.5;
+            const firePhase = cycle;
 
             if (firePhase < 0.3) {
                 for (let i = 0; i < count; i++) {
@@ -856,7 +860,7 @@ class UIComponents {
             // Angled spread shots
             const count = parseInt(type.match(/\d+/)?.[0]) || 2;
             const spreadAngle = 0.3;
-            const firePhase = cycle * 0.5;
+            const firePhase = cycle;
 
             if (firePhase < 0.3) {
                 for (let i = 0; i < count; i++) {
@@ -882,7 +886,7 @@ class UIComponents {
             }
         } else if (type === 'missile') {
             // Missile with smoke trail
-            const firePhase = cycle * 0.4;
+            const firePhase = cycle;
             if (firePhase < 0.5) {
                 const x = firePhase * size * 1.0;
                 const wobble = Math.sin(firePhase * 20) * 3;
@@ -930,7 +934,7 @@ class UIComponents {
             line(0, 0, Math.cos(angle) * 30, Math.sin(angle) * 30);
 
             // Fire burst
-            const firePhase = cycle * 0.5;
+            const firePhase = cycle;
             if (firePhase < 0.2) {
                 const dist = firePhase * size * 0.6;
                 fill(weaponColor);
@@ -972,7 +976,7 @@ class UIComponents {
             noStroke();
         } else if (type === 'tangle' || type === 'harpoon') {
             // Tether/web effect
-            const firePhase = cycle * 0.4;
+            const firePhase = cycle;
             if (firePhase < 0.6) {
                 const dist = firePhase * size * 0.8;
 
@@ -1080,7 +1084,7 @@ class UIComponents {
             drawingContext.shadowBlur = 0;
         } else {
             // Default: simple projectile
-            const firePhase = cycle * 0.5;
+            const firePhase = cycle;
             if (firePhase < 0.3) {
                 const x = firePhase * size * 1.2;
                 fill(weaponColor);
