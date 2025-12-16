@@ -1412,18 +1412,56 @@ class UIStationMenus {
             return;
         }
 
-        // Layout: Left = 3D Preview, Right = Specs
-        const leftW = pW * 0.55;
-        const rightW = pW * 0.45;
-        const leftX = pX + 20;
-        const rightX = pX + leftW + 40;
-        const contentY = pY + headerHeight + 10;
-        const contentH = pH - headerHeight - 60;
+        // Layout constants
+        const LAYOUT = {
+            leftWidthRatio: 0.55,
+            rightWidthRatio: 0.45,
+            leftPadding: 20,
+            columnGap: 40,
+            topPadding: 10,
+            bottomPadding: 60,
+            previewSizeRatio: 0.6,
+            priceBottomOffset: 130,
+            buttonsBottomOffset: 80
+        };
 
-        // --- LEFT SIDE: 3D Ship Preview ---
+        // Calculate layout dimensions
+        const leftW = pW * LAYOUT.leftWidthRatio;
+        const rightW = pW * LAYOUT.rightWidthRatio;
+        const leftX = pX + LAYOUT.leftPadding;
+        const rightX = pX + leftW + LAYOUT.columnGap;
+        const contentY = pY + headerHeight + LAYOUT.topPadding;
+        const contentH = pH - headerHeight - LAYOUT.bottomPadding;
+
+        // Render ship preview (left side)
+        this._drawShipPreview(shipData, leftX, leftW, contentY, contentH, LAYOUT.previewSizeRatio);
+
+        // Render specifications (right side)
+        this._drawShipSpecifications(shipDef, rightX, rightW, contentY);
+
+        // Render price information
+        const priceY = pY + pH - LAYOUT.priceBottomOffset;
+        this._drawPriceInfo(shipData, player, rightX, rightW, priceY);
+
+        // Render action buttons
+        const btnY = pY + pH - LAYOUT.buttonsBottomOffset;
+        this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, pX, pW, btnY);
+    }
+
+    /**
+     * Draws the 3D ship preview section.
+     * @private
+     * @param {Object} shipData - Selected ship data
+     * @param {number} leftX - Left area X position
+     * @param {number} leftW - Left area width
+     * @param {number} contentY - Content area Y position
+     * @param {number} contentH - Content area height
+     * @param {number} sizeRatio - Preview size ratio
+     */
+    _drawShipPreview(shipData, leftX, leftW, contentY, contentH, sizeRatio) {
         const previewCenterX = leftX + leftW / 2;
         const previewCenterY = contentY + contentH / 2;
-        const previewSize = Math.min(leftW, contentH) * 0.6; // Reduced from 0.7 to 0.6
+        const previewSize = Math.min(leftW, contentH) * sizeRatio;
 
         // Ship name at top of preview area
         fill(180, 220, 255);
@@ -1432,100 +1470,144 @@ class UIStationMenus {
         textAlign(CENTER, TOP);
         text(shipData.shipName, previewCenterX, contentY + 10);
 
-        // Draw rotating ship (no background)
-        UIComponents.drawRotatingShip(shipDef, previewCenterX, previewCenterY, previewSize, 0.0008);
+        // Draw rotating ship
+        UIComponents.drawRotatingShip(shipData.shipDef, previewCenterX, previewCenterY, previewSize, 0.0008);
+    }
 
-        // --- RIGHT SIDE: Specifications ---
-        const specX = rightX;
+    /**
+     * Draws the ship specifications section.
+     * @private
+     * @param {Object} shipDef - Ship definition
+     * @param {number} specX - Specifications X position
+     * @param {number} rightW - Right area width
+     * @param {number} contentY - Content area Y position
+     */
+    _drawShipSpecifications(shipDef, specX, rightW, contentY) {
         let specY = contentY + 10;
         const lineH = 32;
 
-        // Ship Description
+        // Ship description
         fill(200, 200, 255);
         textSize(18);
         textAlign(LEFT, TOP);
-        text(shipDef.description || "No description available.", specX, specY, rightW - 20, 60); // Allow wrapping
-        specY += 65; // Increased space for description (was 50)
+        text(shipDef.description || "No description available.", specX, specY, rightW - 20, 60);
+        specY += 65;
 
-        // Ship role and category
+        // Ship role and category header
         fill(255, 200, 100);
         textSize(20);
-        textAlign(LEFT, TOP);
         text(`${shipDef.role} (${shipDef.sizeCategory})`, specX, specY);
-        specY += lineH * 1.2; // Little more space after header
+        specY += lineH * 1.2;
 
-        // Store starting Y for columns so they align
+        // Core stats in two columns
         const columnsStartY = specY;
+        this._drawShipStats(shipDef, specX, rightW, columnsStartY, lineH);
 
-        // Specs in two columns
+        // Weapons/armament section
+        specY = columnsStartY + (lineH * 0.9 * 3) + 15;
+        this._drawArmamentSection(shipDef, specX, specY, lineH);
+    }
+
+    /**
+     * Draws ship stats in two columns.
+     * @private
+     * @param {Object} shipDef - Ship definition
+     * @param {number} specX - Specifications X position
+     * @param {number} rightW - Right area width
+     * @param {number} startY - Starting Y position
+     * @param {number} lineH - Line height
+     */
+    _drawShipStats(shipDef, specX, rightW, startY, lineH) {
         fill(220);
         textSize(16);
+        textAlign(LEFT, TOP);
         const colW = rightW * 0.5;
-
-        // Column 1
-        text(`Hull: ${shipDef.baseHull}`, specX, specY);
-        specY += lineH * 0.9;
-        text(`Shield: ${shipDef.baseShield}`, specX, specY);
-        specY += lineH * 0.9;
-        text(`Cargo: ${shipDef.cargoCapacity}`, specX, specY);
-        specY += lineH * 0.9;
-
-        // Column 2
-        specY = columnsStartY; // Reset to correct start Y
         const col2X = specX + colW;
-        text(`Speed: ${shipDef.baseMaxSpeed.toFixed(1)}`, col2X, specY);
-        specY += lineH * 0.9;
-        text(`Thrust: ${shipDef.baseThrust.toFixed(2)}`, col2X, specY);
-        specY += lineH * 0.9;
-        text(`Turn: ${(shipDef.baseTurnRate * 100).toFixed(1)}`, col2X, specY);
 
-        // Weapons section
-        specY = columnsStartY + (lineH * 0.9 * 3) + 15; // Position below the 3 spec lines
+        // Column 1: Hull, Shield, Cargo
+        let col1Y = startY;
+        text(`Hull: ${shipDef.baseHull}`, specX, col1Y);
+        col1Y += lineH * 0.9;
+        text(`Shield: ${shipDef.baseShield}`, specX, col1Y);
+        col1Y += lineH * 0.9;
+        text(`Cargo: ${shipDef.cargoCapacity}`, specX, col1Y);
+
+        // Column 2: Speed, Thrust, Turn
+        let col2Y = startY;
+        text(`Speed: ${shipDef.baseMaxSpeed.toFixed(1)}`, col2X, col2Y);
+        col2Y += lineH * 0.9;
+        text(`Thrust: ${shipDef.baseThrust.toFixed(2)}`, col2X, col2Y);
+        col2Y += lineH * 0.9;
+        text(`Turn: ${(shipDef.baseTurnRate * 100).toFixed(1)}`, col2X, col2Y);
+    }
+
+    /**
+     * Draws the armament/weapons section.
+     * @private
+     * @param {Object} shipDef - Ship definition
+     * @param {number} specX - Specifications X position
+     * @param {number} startY - Starting Y position
+     * @param {number} lineH - Line height
+     */
+    _drawArmamentSection(shipDef, specX, startY, lineH) {
+        let y = startY;
+
+        // Section header
         fill(255, 200, 100);
         textSize(18);
-        text("Armament:", specX, specY);
-        specY += lineH * 0.8;
+        textAlign(LEFT, TOP);
+        text("Armament:", specX, y);
+        y += lineH * 0.8;
 
-        fill(200);
+        // Weapon list
         textSize(14);
         if (shipDef.armament && shipDef.armament.length > 0) {
-            for (let i = 0; i < Math.min(shipDef.armament.length, 4); i++) {
-                text(`• ${shipDef.armament[i]}`, specX + 10, specY);
-                specY += lineH * 0.6;
+            fill(200);
+            const maxVisible = 4;
+            for (let i = 0; i < Math.min(shipDef.armament.length, maxVisible); i++) {
+                text(`• ${shipDef.armament[i]}`, specX + 10, y);
+                y += lineH * 0.6;
             }
-            if (shipDef.armament.length > 4) {
-                text(`... +${shipDef.armament.length - 4} more`, specX + 10, specY);
-                specY += lineH * 0.6;
+            if (shipDef.armament.length > maxVisible) {
+                text(`... +${shipDef.armament.length - maxVisible} more`, specX + 10, y);
             }
         } else {
             fill(150);
-            text("None", specX + 10, specY);
-            specY += lineH * 0.6;
+            text("None", specX + 10, y);
         }
+    }
 
-        // Price section at bottom of right panel (moved higher to stay in bounds)
-        const priceY = pY + pH - 130;
+    /**
+     * Draws the price information section.
+     * @private
+     * @param {Object} shipData - Selected ship data
+     * @param {Player} player - Player object
+     * @param {number} x - X position
+     * @param {number} rightW - Right area width
+     * @param {number} y - Y position
+     */
+    _drawPriceInfo(shipData, player, x, rightW, y) {
         const finalPrice = shipData.price;
         const canAfford = shipData.canAfford;
 
+        // Price label
         fill(180, 220, 255);
         noStroke();
         textSize(15);
         textAlign(LEFT, TOP);
-        text("Price (after trade-in):", specX, priceY);
+        text("Price (after trade-in):", x, y);
 
-        // Price value - left aligned for better readability
-        textAlign(LEFT, TOP);
+        // Price value with color coding
         textSize(20);
         if (finalPrice > 0) {
             fill(canAfford ? [100, 255, 100] : [255, 150, 150]);
-            text(`${finalPrice} cr`, specX, priceY + 20);
+            text(`${finalPrice} cr`, x, y + 20);
         } else if (finalPrice < 0) {
             fill(100, 255, 150);
-            text(`+${-finalPrice} cr`, specX, priceY + 20);
+            text(`+${-finalPrice} cr`, x, y + 20);
         } else {
             fill(150, 255, 150);
-            text("EVEN SWAP", specX, priceY + 20);
+            text("EVEN SWAP", x, y + 20);
         }
 
         // Affordability warning
@@ -1534,42 +1616,48 @@ class UIStationMenus {
             textSize(12);
             textAlign(CENTER, TOP);
             const shortfall = finalPrice - player.credits;
-            text(`Need ${shortfall} more cr`, specX + rightW / 2, priceY + 22);
+            text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
         }
+    }
 
-        // --- BUTTONS at bottom ---
-        const btnY = pY + pH - 80;
-        const btnW = 120;
-        const btnH = 40;
-        const btnSpacing = 20;
+    /**
+     * Draws the action buttons (Buy/Back).
+     * @private
+     * @param {boolean} canAfford - Whether player can afford the ship
+     * @param {number} panelX - Panel X position
+     * @param {number} panelW - Panel width
+     * @param {number} y - Y position
+     * @returns {Object} Button areas {buy, back}
+     */
+    _drawActionButtons(canAfford, panelX, panelW, y) {
+        const BTN_WIDTH = 120;
+        const BTN_HEIGHT = 40;
+        const BTN_SPACING = 20;
+
+        const buyBtnX = panelX + panelW / 2 - BTN_WIDTH - BTN_SPACING / 2;
+        const backBtnX = panelX + panelW / 2 + BTN_SPACING / 2;
 
         // Buy button (disabled if can't afford)
-        const buyBtnX = pX + pW / 2 - btnW - btnSpacing / 2;
         let buyBtn = null;
         if (canAfford) {
-            buyBtn = UIComponents.drawButton(buyBtnX, btnY, btnW, btnH, "BUY", [0, 150, 0], [100, 255, 100]);
+            buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
         } else {
-            // Disabled buy button - still draw it but don't make it clickable
+            // Draw disabled button
             fill(40, 40, 40);
             stroke(80, 80, 80);
             strokeWeight(1);
-            rect(buyBtnX, btnY, btnW, btnH, 5);
+            rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
             fill(100);
             noStroke();
             textAlign(CENTER, CENTER);
             textSize(22);
-            text("BUY", buyBtnX + btnW / 2, btnY + btnH / 2);
+            text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
 
-        // Back button - always create this
-        const backBtnX = pX + pW / 2 + btnSpacing / 2;
-        const backBtn = UIComponents.drawButton(backBtnX, btnY, btnW, btnH, "BACK", [80, 80, 150], [150, 150, 255]);
+        // Back button
+        const backBtn = UIComponents.drawButton(backBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
 
-        // Store button areas
-        this.shipDetailButtons = {
-            buy: buyBtn,
-            back: backBtn
-        };
+        return { buy: buyBtn, back: backBtn };
     }
 
     /**
