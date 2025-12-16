@@ -1069,7 +1069,8 @@ class WeaponSystem {
 
 
     /** 
-     * Fire a turret weapon that auto-aims at the nearest target
+     * Fire a turret weapon that auto-aims at targets
+     * Prioritizes owner's locked target, then falls back to nearest enemy
      * @param {Object} owner - Entity firing the weapon
      * @param {Object} system - Current star system
      * @param {Object|number} target - Target object or fallback angle
@@ -1077,8 +1078,12 @@ class WeaponSystem {
     static fireTurret(owner, system, target) {
         if (!owner || !system) return;
 
-        // If target is not provided or invalid, find one
-        if (!target?.pos) {
+        // Priority 1: Use owner's locked target if valid
+        if (owner.target?.pos && !owner.target.isDestroyed?.()) {
+            target = owner.target;
+        }
+        // Priority 2: If no locked target, find nearest enemy
+        else if (!target?.pos) {
             target = this.findNearestTarget(owner, system);
         }
 
