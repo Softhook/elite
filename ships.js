@@ -13,7 +13,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 12,
         armament: ["Tangle Projector", "Pulse Laser"],
-        costCategory: "Low", description: "Standard Police.",
+        costCategory: "Low", description: "Standard Police patrol craft. Despite its modest 60-unit hull, officers swear by its surprising shield strength and nippy handling. The acronym officially stands for 'Advanced Cruiser: Astronomical Baseline' but everyone knows what it really means.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.7821, y: 0.0000 }, { x: 0.0321, y: 0.4929 }, { x: -0.7821, y: 0.6286 }, { x: -0.7179, y: 0.0000 }, { x: -0.7821, y: -0.6286 }, { x: 0.0321, y: -0.4929 }],
@@ -34,7 +34,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
-        costCategory: "Medium", description: "The legendary jack-of-all-trades.",
+        costCategory: "Medium", description: "The legendary jack-of-all-trades, master of staying employed. With 44 tons of cargo space and weapons for every occasion, it's been hauling goods and kicking ass for three centuries. If ships had résumés, the Cobra's would be 20 pages long.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
@@ -55,7 +55,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 30,
         armament: ["Pulse Laser"],
-        costCategory: "Low", description: "Affordable entry-level freighter or explorer.",
+        costCategory: "Low", description: "Affordable entry-level freighter beloved by broke cargo runners. Sure, it's slower than a hangover and handles like a drunk elephant, but that 30-ton hold pays bills. First-time pilots either love it or crash it within a week.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 }],
@@ -76,7 +76,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
         baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
         armament: ["Force Blaster", "Guardian Missile", "Barrier Field", "Advanced Mine"],
-        costCategory: "Very High", description: "A mobile fortress, the pinnacle of conventional design.",
+        costCategory: "Very High", description: "A mobile fortress that laughs at missile strikes with its 400-unit hull. Sure, it turns like a space station having a bad day, but when you're hauling 150 tons of cargo and enough firepower to level a moon, who needs agility? Peak engineering meets peak intimidation.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.8500, y: 0.3000 }, { x: -0.9500, y: 0.4000 }, { x: -1.1500, y: 0.2000 }, { x: -1.1500, y: -0.2000 }, { x: -0.9500, y: -0.4000 }, { x: 0.8500, y: -0.3000 }],
@@ -98,7 +98,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
         armament: ["Beam Laser", "Twin Pulse"],
-        costCategory: "Medium-High", description: "Iconic explorer with excellent visibility and jump range.",
+        costCategory: "Medium-High", description: "The poster child of deep-space exploration. That cockpit visibility isn't just for show—it's saved countless pilots from asteroid faceplants. Respectable cargo hold, decent guns, and shield recharge that'll make combat pilots jealous. Basically a camper van that shoots back.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 }],
@@ -119,7 +119,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: ["Quad Pulse", "Beam Laser", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Balanced heavy firepower
-        costCategory: "High", description: "Slow, heavily armed and armored gun platform.",
+        costCategory: "High", description: "A brick with delusions of grandeur and enough guns to make up for its personality. Maxes out at a glacial 4.8 speed but compensates with 320 hull and firepower that could tickle a small moon. Perfect for pilots who believe subtlety is for the weak.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9421, y: 0.0000 }, { x: 0.7579, y: 0.4000 }, { x: 0.0865, y: 0.5048 }, { x: 0.4546, y: 0.6548 }, { x: 0.2506, y: 0.8786 }, { x: -0.5596, y: 0.8810 }, { x: -0.9421, y: 0.6000 }, { x: -0.7690, y: 0.0000 }, { x: -0.9421, y: -0.6000 }, { x: -0.5596, y: -0.8810 }, { x: 0.2506, y: -0.8786 }, { x: 0.4546, y: -0.6548 }, { x: 0.0865, y: -0.5048 }, { x: 0.7579, y: -0.4000 }],
@@ -153,7 +153,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
         baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
         armament: ["Beam Laser", "V Spread"], // Explorer with some punch
-        costCategory: "Medium", description: "Utilitarian explorer known for good heat management.",
+        costCategory: "Medium", description: "The workaholic's explorer—all business, zero flash. Runs cooler than a politician's heart and efficient enough to make accountants weep with joy. Not sexy, but it gets you there and back without spontaneously combusting, which is honestly underrated.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.1500, y: 0.4000 }, { x: -0.5500, y: 0.9000 }, { x: -0.9500, y: 0.5000 }, { x: -0.8500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.5500, y: -0.9000 }, { x: 0.1500, y: -0.4000 }],
@@ -174,7 +174,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
         armament: ["Disruptor", "Twin Pulse", "Force Blaster", "Avenger Missile", "Harpoon Launcher", "Barrier Field"],
-        costCategory: "Low", description: "Standard Police.",
+        costCategory: "Low", description: "Military-grade intimidation on a budget. With 800 hull and shields that regenerate faster than excuses at a pilot review board, this floating weapons platform makes small fighters reconsider their career choices. Turns like a geriatric whale but nobody's noticed yet.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 }],
@@ -200,7 +200,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Military arsenal
-        costCategory: "High", description: "Federation military vessel. Tough hull, good firepower.",
+        costCategory: "High", description: "Federation's answer to the question 'what if we made it angry AND durable?' Boasts 400 hull units that shrug off punishment like a hockey enforcer. Not the fastest (5.0 max) but fast enough to catch most targets and ruin their day thoroughly.",
 
         vertexLayers: [
             {
@@ -226,7 +226,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
         armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"],
-        costCategory: "Very High", description: "Luxury high-performance combat ship.",
+        costCategory: "Very High", description: "The sports car of death—sleek, expensive, and completely impractical for groceries with only 24 cargo units. Hits 6.5 speed while recharging shields at 1.8x normal rate. Pilots either become legends or make very expensive craters. There is no middle ground.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 }],
@@ -255,7 +255,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Twin Pulse", "Kalibr Missile"], // Fast attack loadout
-        costCategory: "Medium", description: "Balanced space superiority fighter. Agile and well-armed.",
+        costCategory: "Medium", description: "Military academies use these as the gold standard for 'how fighters should work.' Nimble 7.0 speed, solid shields, and firepower that makes it clear you're not here to negotiate. The reliable choice when your life expectancy needs extending.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
@@ -272,7 +272,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Beam Laser", "Harpoon Launcher"], // Fast attack loadout
-        costCategory: "Medium", description: "Fast Stealth Ship.",
+        costCategory: "Medium", description: "Fast stealth ship favored by operatives with trust issues. That purple hull isn't for show—it's coated in sensor-scattering compounds that cost more than some stations. Quick as a rumor and twice as hard to verify. Perfect for jobs nobody admits ordering.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.7205, y: 0.0000 }, { x: 0.5929, y: 0.4300 }, { x: -0.6050, y: 0.6968 }, { x: -0.3295, y: 0.4865 }, { x: -0.5929, y: 0.4300 }, { x: -0.3295, y: 0.1830 }, { x: -0.7205, y: 0.0000 }, { x: -0.3295, y: -0.1830 }, { x: -0.5929, y: -0.4300 }, { x: -0.3295, y: -0.4865 }, { x: -0.6050, y: -0.6968 }, { x: 0.5929, y: -0.4300 }],
@@ -297,7 +297,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.09963,
         baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
         armament: ["Twin Pulse"],
-        costCategory: "Very Low", description: "Extremely fast and small, but fragile interceptor.",
+        costCategory: "Very Low", description: "Nicknamed 'coffin with an afterburner.' Blazes along at 9.5 speed with shields that couldn't stop harsh language. Only 30 hull means one good hit sends you home in a sandwich bag, but hey, you'll get there really fast!",
         vertexData: [{ x: 1.1, y: 0 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.8, y: -0.4 }],
         fillColor: [200, 60, 60],
         typicalCargo: [],
@@ -310,7 +310,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
         armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Advanced Mine"], // Military loadout
-        costCategory: "High", description: "Distinctive forward 'hammerhead' module, likely housing sensors or weapons.",
+        costCategory: "High", description: "That bizarre hammerhead design isn't a fashion statement—it's packed with military-grade sensors worth more than most starter ships. Combines 350 hull with the firepower to back up threats. Enemies mock the look right up until they're vaporized.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8795, y: 0.3500 }, { x: 0.5844, y: 0.4670 }, { x: 0.4207, y: 0.7285 }, { x: 0.1427, y: 0.8587 }, { x: -0.1705, y: 0.5488 }, { x: -0.9254, y: 0.4670 }, { x: -0.9252, y: 0.3625 }, { x: -0.5529, y: 0.1330 }, { x: -0.5529, y: -0.1330 }, { x: -0.9252, y: -0.3625 }, { x: -0.9295, y: -0.4650 }, { x: -0.1705, y: -0.5488 }, { x: 0.1427, y: -0.8587 }, { x: 0.4207, y: -0.7285 }, { x: 0.5885, y: -0.4650 }, { x: 0.8795, y: -0.3500 }, { x: 0.9295, y: 0.0000 }],
@@ -340,7 +340,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
         baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
         armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
-        costCategory: "Medium", description: "Adaptable, angular multi-purpose vessel.",
+        costCategory: "Medium", description: "The Swiss Army knife of space, if Swiss Army knives were angular and grumpy-looking. Hits the sweet spot between fighter and hauler with 60 cargo tons and enough weapons to discourage pirates. Not amazing at anything, competent at everything—exactly what you want when the galaxy hates you.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.4000, y: 0.5000 }, { x: -0.3000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.5103, y: 0.1697 }, { x: -0.5103, y: -0.1697 }, { x: -0.9000, y: -0.6000 }, { x: -0.3000, y: -0.8000 }, { x: 0.4000, y: -0.5000 }],
@@ -361,7 +361,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.04363,
         baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
         armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
-        costCategory: "Medium", description: "A Type-6 variant retrofitted for combat, can carry a fighter.",
+        costCategory: "Medium", description: "Someone looked at the peaceful Type-6 and said 'needs more violence.' The result is this frankenstein trader with guns welded onto every available hardpoint. Still hauls 50 tons but now bites back. Perfect for haulers tired of being everyone's favorite target.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8168, y: 0.0000 }, { x: 0.6865, y: 0.5114 }, { x: -0.0134, y: 0.6114 }, { x: -0.6135, y: 0.8114 }, { x: -0.8168, y: 0.5917 }, { x: -0.3705, y: 0.2745 }, { x: -0.6039, y: 0.1373 }, { x: -0.5974, y: -0.1373 }, { x: -0.3705, y: -0.2745 }, { x: -0.8168, y: -0.5917 }, { x: -0.6135, y: -0.8114 }, { x: -0.0134, y: -0.6114 }, { x: 0.6865, y: -0.5114 }],
@@ -382,7 +382,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.2, baseThrust: 0.15, baseTurnRate: 0.06632,
         baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
         armament: ["Pulse Laser"],
-        costCategory: "High", description: "Fighter popular with pirates.",
+        costCategory: "High", description: "Pirate darling with shields that regenerate like a sitcom villain. Small (30), fast (6.2), and with enough shield capacity to laugh off police shots while you line up your next heist. Insurance companies charge triple if they see this in your garage.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.5772, y: -0.0058 }, { x: 0.2343, y: 0.4129 }, { x: -0.5772, y: 0.4129 }, { x: -0.5772, y: -0.4129 }, { x: 0.2343, y: -0.4129 }],
@@ -428,7 +428,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.2, baseThrust: 0.11, baseTurnRate: 0.04014,
         baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
         armament: ["Mini-Turret"], // Combat focused Pirate
-        costCategory: "High", description: "Multi-role ship, popular with pirates.",
+        costCategory: "High", description: "The bigger, meaner sibling of the Mk I. With 82 cargo tons and questionable moral fiber built into the hull plating, it's become the ride of choice for pirates who've graduated from petty theft to organized crime. That cockpit design isn't stylish—it's menacing.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.5500, y: 0.5000 }, { x: -0.4500, y: 0.6000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.4500, y: -0.6000 }, { x: 0.5500, y: -0.5000 }],
@@ -473,7 +473,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
         armament: ["Mini-Turret", "Force Blaster", "Barrier Field"], // Defensive
-        costCategory: "Medium-High", description: "Extremely wide cargo ship, resembling a manta ray.",
+        costCategory: "Medium-High", description: "This absolute unit waddles through space hauling 300 tons like it's no big deal. Shaped like a manta ray that ate another manta ray. Slow as molasses (3.5 max) but with cargo capacity that makes hauler crews genuflect. Docking this beast requires prayer and skill in equal measure.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 }],
@@ -494,7 +494,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
         baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
         armament: [],
-        costCategory: "Very Low", description: "Slow, cheap, boxy short-range cargo shuttle.",
+        costCategory: "Very Low", description: "The space equivalent of a rusty pickup truck held together with duct tape and optimism. At 4200 credits it's cheaper than some bar tabs, and about as fast (3.8). Zero shields, 70 hull, and the aerodynamics of a filing cabinet. But it floats, mostly.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 }],
@@ -515,7 +515,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRate: 0.05061,
         baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
         armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
-        costCategory: "High", description: "Self-sufficient long-range vessel built for endurance.",
+        costCategory: "High", description: "Built for pilots who think 'civilization is overrated.' Stuffed with life support redundancies and shield generators (220 capacity plus 1.5 recharge). Can survive the void for months on end. Popular with hermits, researchers, and people with outstanding warrants in multiple systems.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
@@ -532,7 +532,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
         baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
         armament: [],
-        costCategory: "Medium", description: "Designed for exploration and detailed surface scanning.",
+        costCategory: "Medium", description: "For the pilot who wants to know what every rock in the galaxy is made of. Bristling with scanners worth more than the ship itself. Completely unarmed because apparently scientists think 'please don't shoot me' is an effective defense strategy. Spoiler: it's not.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2000 }, { x: -0.6000, y: 0.5000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.7000, y: -0.2000 }],
@@ -553,7 +553,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
         armament: ["Beam Laser"], // Mining lasers for asteroid destruction
-        costCategory: "Medium", description: "Dedicated mining ship with processing capabilities.",
+        costCategory: "Medium", description: "The space excavator nobody respects until they're filthy rich. Top speed of 2.5 means 'chase' isn't in its vocabulary, but that 40-ton hold fills up fast when you're atomizing asteroids. Runs on dreams of profit and the optimistic belief that those rocks contain something valuable.",
         vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
         fillColor: [180, 170, 160], // Industrial grey/brown
         typicalCargo: ["Minerals", "Metals"],
@@ -566,7 +566,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
         armament: ["Heavy Cannon", "V Punch", "Mini-Turret", "Kalibr Missile", "Heavy Tangle", "Barrier Field"], // Versatile heavy combat
-        costCategory: "High", description: "Versatile heavy multi-role. Good trader, capable fighter.",
+        costCategory: "High", description: "The Python is what happens when designers can't decide between cargo ship and gunboat, so they build both. Hauls 220 tons while mounting enough weapons to qualify as a small war. Expensive but worth every credit. The ultimate 'I refuse to choose' spaceship.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 }],
@@ -587,7 +587,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
         baseHull: 50, baseShield: 100, shieldRecharge: 1.8, cargoCapacity: 4, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
-        costCategory: "N/A", description: "Fast fighter incorporating alien technology of crystalline structures.",
+        costCategory: "N/A", description: "Fast alien fighter that looks like someone tried to build a ship out of broken glass and bad dreams. Incorporates crystalline technology nobody fully understands. Hits 8.5 speed while disrupting sensors. Military techs drool over captured specimens—until they realize reverse-engineering might take decades.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.1741, y: 0.0000 }, { x: 0.5245, y: 0.2433 }, { x: -0.1035, y: 0.1331 }, { x: -0.7045, y: 0.8065 }, { x: -1.1741, y: 0.4935 }, { x: -0.6173, y: 0.0000 }, { x: -1.1741, y: -0.4935 }, { x: -0.7045, y: -0.8065 }, { x: -0.1035, y: -0.1331 }, { x: 0.5245, y: -0.2433 }],
@@ -604,7 +604,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
         armament: ["Pulse Laser", "Guardian Missile"], // Starter weapon
-        costCategory: "N/A", description: "Cheap, agile starter ship.",
+        costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
         vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
         fillColor: [180, 100, 20],
         typicalCargo: ["Food"],
@@ -617,7 +617,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
         baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
         armament: ["Mini-Turret", "Force Blaster", "Halo"], // Defensive passenger ship
-        costCategory: "High", description: "Long, sleek vessel designed for passenger comfort.",
+        costCategory: "High", description: "Sleek luxury cruise liner that ferries pampered passengers between systems while they complain about the amenities. Shields that could stop a war, speed that puts many fighters to shame (5.5), and defensive weapons for pirates dumb enough to threaten the rich. Tickets cost more than most ships.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 }],
@@ -634,7 +634,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
         baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
-        costCategory: "Low-Medium", description: "Dedicated Lakon transport vessel. Boxy but efficient.",
+        costCategory: "Low-Medium", description: "Lakon Spaceways' answer to 'how square can we make it?' Ugly as sin but hauls 100 tons reliably. Paper-thin shields (60) mean pirates see you as a pinata full of credits. The pilot seat has indentations from decades of stressed-out traders gripping it during attacks.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8500, y: 0.3000 }, { x: 0.8500, y: 0.7000 }, { x: -0.6500, y: 0.8000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.6500, y: -0.8000 }, { x: 0.8500, y: -0.7000 }, { x: 0.8500, y: -0.3000 }],
@@ -655,7 +655,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
         baseHull: 550, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
-        costCategory: "High", description: "The quintessential Lakon heavy cargo hauler. Slow and massive.",
+        costCategory: "High", description: "The final boss of Lakon's trading fleet. Moves like continental drift (2.5 speed, 0.01396 turn rate) but packs 500 tons of pure profit potential. Turning this thing requires filing a flight plan three weeks in advance. Pirates either avoid it because it's too slow to be worth it, or it's too tough (550 hull).",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9104, y: 0.2000 }, { x: 0.7896, y: 0.8000 }, { x: -0.7104, y: 0.9000 }, { x: -0.9104, y: 0.8000 }, { x: -0.9104, y: -0.8000 }, { x: -0.7104, y: -0.9000 }, { x: 0.7896, y: -0.8000 }, { x: 0.9104, y: -0.2000 }],
@@ -677,7 +677,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"], // Fast fighter
-        costCategory: "Medium", description: "Fast, agile police and bounty hunter interceptor.",
+        costCategory: "Medium", description: "The cop car of space. Police and bounty hunters love its 7.5 speed and aggressive handling. Shields recharge fast enough to confuse targets who thought they scored a hit. If you hear 'Viper inbound' on comms and you're wanted, it's already too late. Start transmitting your last words.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
@@ -698,7 +698,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
         armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition", "Basic Mine"], // Aggressive fighter
-        costCategory: "Medium-High", description: "Agile heavy fighter with powerful hardpoints but power-hungry.",
+        costCategory: "Medium-High", description: "All power, minimal brains. Mounts two huge hardpoints that drain so much energy pilots joke about needing a second reactor. Nimble for a heavy fighter (9.6 turn rate!) and shields that shrug off small-arms fire. Power management is a full-time job. Worth it for the boom-boom sounds.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
@@ -719,7 +719,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster"], // All-out attack fighter
-        costCategory: "Low", description: "Aggressive, agile fighter with forward-swept wings.",
+        costCategory: "Low", description: "Named for the sound rookie pilots make when they realize how fragile it is ('wasp-ow'). Forward-swept wings look great on recruitment posters but don't stop railgun rounds. Fast, aggressive, disposable. Military brass loves these because they're cheap to replace. Pilots less enthusiastic.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 }],
@@ -740,7 +740,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster"], // All-out attack fighter
-        costCategory: "Low", description: "Agile fighter with forward-swept wings.",
+        costCategory: "Low", description: "Looks like someone tried to build a ship from nightmares and geometry. Those massive wings aren't aerodynamic (space doesn't care) but they do intimidate. Quick, mean, and surprisingly maneuverable. Named 'Bat' because it scares the hell out of people when it shows up on scanners.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.3537, y: 1.4732 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.5794, y: -1.4143 }, { x: 0.0000, y: -0.3081 }],
@@ -761,7 +761,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Basic Mine"], // All-out attack fighter
-        costCategory: "Low", description: "Agile fighter with forward-swept wings.",
+        costCategory: "Low", description: "Engineering team looked at the Vulture and said 'what if we made it weirder and more violent?' Those asymmetric wings violate every design aesthetic except 'terrifying.' Flies like an angry hornet on combat stims. Enemies don't know whether to shoot it or run from it. Smart ones run.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.7893, y: 0.0000 }, { x: -0.2224, y: 0.3805 }, { x: -0.2224, y: 1.0132 }, { x: -0.7107, y: 1.1822 }, { x: -0.4976, y: 0.3415 }, { x: -0.7893, y: 0.2472 }, { x: -0.7893, y: -0.2472 }, { x: -0.4976, y: -0.3415 }, { x: -0.7107, y: -1.1822 }, { x: -0.2224, y: -1.0132 }, { x: -0.2224, y: -0.3805 }, { x: 0.7893, y: 0.0000 }],
@@ -801,7 +801,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.04,
         baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
         armament: ["Mini-Turret"],
-        costCategory: "Medium", description: "A surprisingly capable Harlequin trader, often underestimated.",
+        costCategory: "Medium", description: "The Harlequins' trading flagship, painted like a circus tent and twice as loud. That garish yellow-and-pink striped hull is visible from three systems away. Somehow hauls 80 tons while maintaining the dignity of a drunk clown. Merchants hate it but can't deny it gets the job done profitably.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8000, y: 0.5000 }, { x: -0.8000, y: 0.5000 }, { x: -0.8000, y: -0.5000 }, { x: 0.8000, y: -0.5000 }],
@@ -868,7 +868,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.07,
         baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
         armament: ["Beam Laser"],
-        costCategory: "Medium", description: "A swift Harlequin scout, adept at slipping past blockades.",
+        costCategory: "Medium", description: "Purple diamond-shaped scout that moves like it's late for something important. Harlequins use these to slip past customs, military blockades, and good taste. Shield recharge of 1.6 means it can take a beating while escaping. Perfect for 'definitely legal' reconnaissance missions nobody talks about later.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: 0.0000, y: -0.7000 }],
@@ -887,7 +887,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.025,
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 250,
         armament: ["Twin Pulse", "Mini-Turret"],
-        costCategory: "Medium-High", description: "A surprisingly large and garish Harlequin cargo vessel.",
+        costCategory: "Medium-High", description: "When your cargo ship needs to haul 250 tons AND make every station traffic controller question their life choices. That cyan and yellow paintjob violates at least three interstellar design treaties. Slow as bureaucracy (3.0 max speed) but absurdly profitable if you can handle the embarrassment of flying it.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.4000 }, { x: 0.5000, y: 0.8000 }, { x: -0.2369, y: 0.9045 }, { x: -1.0000, y: 0.8000 }, { x: -0.9216, y: 0.0000 }, { x: -1.0000, y: -0.8000 }, { x: -0.2369, y: -0.9045 }, { x: 0.5000, y: -0.8000 }, { x: 1.0000, y: -0.4000 }],
@@ -930,7 +930,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
         armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition", "Barrier Field"],
-        costCategory: "High", description: "A versatile and deadly Harlequin ship, adaptable to many combat roles.",
+        costCategory: "High", description: "The Harlequins' war trumpet—versatile, deadly, and painted in colors that hurt to look at directly. Those absurd wing configurations actually serve a tactical purpose: disorienting enemies before the 150-hull brick deletes them. Pilots who fly these either have excellent taste or absolutely none. No middle ground exists.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: -0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: -0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
@@ -977,7 +977,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,
         baseHull: 40, baseShield: 0, shieldRecharge: 0.5, cargoCapacity: 15,
         armament: [],
-        costCategory: "Very Low", description: "A very basic, slow, and cheap short-range shuttle.",
+        costCategory: "Very Low", description: "A cube that aspires to fly but mostly just falls with style. Zero shields, 40 hull, and dreams too big for its 15-ton cargo bay. Used for ultra-short hops nobody else wants to do. Think of it as a space taxi driven by someone who failed pilot school. Twice.",
         vertexData: [{ x: 0.6, y: 0.6 }, { x: -0.6, y: 0.6 }, { x: -0.6, y: -0.6 }, { x: 0.6, y: -0.6 }],
         fillColor: [150, 150, 150],
         typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
@@ -988,7 +988,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.05, baseTurnRate: 0.045,
         baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
         armament: [],
-        costCategory: "Low", description: "Slightly more capable than a Hopper, used for inter-station deliveries.",
+        costCategory: "Low", description: "Slightly less terrible than the Hopper, which isn't saying much. Has shields (barely—10 capacity) and can actually accelerate without wheezing. Perfect for station-to-station milk runs. The 25-ton hold makes it just profitable enough that you won't starve. Probably.",
         vertexData: [{ x: 0.7, y: 0.4 }, { x: -0.7, y: 0.4 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.4 }, { x: 0.7, y: -0.4 }],
         fillColor: [130, 140, 150],
         typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
@@ -999,7 +999,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.8, baseThrust: 0.06, baseTurnRate: 0.04,
         baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
         armament: [],
-        costCategory: "Low", description: "A common sight carrying goods within a star system.",
+        costCategory: "Low", description: "The workhorse everyone depends on but nobody respects. Hauls 40 tons at a glacial 3.8 speed with shields that might stop a determined sneeze (20). Operators joke that its best feature is 'it exists and it's cheap.' Station mechanics charge extra for working on these out of pity.",
         vertexData: [{ x: 0.8, y: 0.5 }, { x: 0.6, y: 0.7 }, { x: -0.8, y: 0.7 }, { x: -0.8, y: -0.7 }, { x: 0.6, y: -0.7 }, { x: 0.8, y: -0.5 }],
         fillColor: [160, 150, 140],
         typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
@@ -1010,7 +1010,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 3.0, baseThrust: 0.045, baseTurnRate: 0.03,
         baseHull: 120, baseShield: 30, shieldRecharge: 0.5, cargoCapacity: 120,
         armament: [],
-        costCategory: "Low-Medium", description: "Slow but spacious, for bulk local transport. Little more than an engine strapped to containers.",
+        costCategory: "Low-Medium", description: "An engine, a cockpit, and 120 tons of cargo containers held together by hope and prayers to whatever gods tolerate shoddy engineering. Maxes out at 3.0 speed, which is generous considering it's basically a cargo mountain with thrusters. Pilots either love its capacity or hate everything else about it.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.6000 }, { x: 0.8000, y: 0.8000 }, { x: -0.8000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.8000, y: -0.8000 }, { x: 0.8000, y: -0.8000 }, { x: 1.0000, y: -0.6000 }],
@@ -1029,7 +1029,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
         baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
-        costCategory: "Medium", description: "A common, modified fighter favored by pirates for its speed and bite.",
+        costCategory: "Medium", description: "Pirates looked at budget fighters and said 'how do we make this scary?' Answer: paint it blood-red, add illegal weapons, remove the safety limiters. Hits 7.2 speed and sports enough firepower to make merchants cry. Common, cheap, effective—the AK-47 of pirate craft.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.4000, y: 0.5000 }, { x: -0.8000, y: 0.3000 }, { x: -0.8000, y: -0.3000 }, { x: -0.4000, y: -0.5000 }],
@@ -1072,7 +1072,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
         baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
         armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
-        costCategory: "Medium-High", description: "A heavily armed pirate vessel designed for disabling and looting targets.",
+        costCategory: "Medium-High", description: "Purpose-built pirate boarding craft with hull thick enough (150) to ram targets if negotiations fail. Cargo hold sized specifically to haul stolen goods (50 tons). Those harpoon launchers aren't decorative—they're for grabbing fleeing merchants. Flying one near a station gets you shot first, questions never.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.3000 }, { x: 0.2000, y: 0.7000 }, { x: -0.9000, y: 0.7000 }, { x: -0.9000, y: -0.7000 }, { x: 0.2000, y: -0.7000 }, { x: 0.9000, y: -0.3000 }],
@@ -1119,7 +1119,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
         baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
         armament: ["Multi-Cannon", "Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
-        costCategory: "High", description: "A formidable pirate capital ship, often a captured and modified freighter or military vessel.",
+        costCategory: "High", description: "The pirate flagship—300 hull of intimidation and poor life choices. Usually a captured military vessel with enough welded-on weapons to make it unrecognizable. Slow (4.0) but terrifying. When sensors flag one of these, merchant convoys scatter like startled fish. Smart move.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.1000 }, { x: 0.5000, y: 0.6000 }, { x: -0.5000, y: 0.8000 }, { x: -1.0000, y: 0.4000 }, { x: -1.0000, y: -0.4000 }, { x: -0.5000, y: -0.8000 }, { x: 0.5000, y: -0.6000 }, { x: 1.0000, y: -0.1000 }],
@@ -1162,7 +1162,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.8, baseThrust: 0.13, baseTurnRate: 0.065,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.1, cargoCapacity: 30,
         armament: ["Pulse Laser", "Mini-Turret"],
-        costCategory: "Medium", description: "A swift pirate ship designed for quick raids on unsuspecting haulers.",
+        costCategory: "Medium", description: "The 'hit and run' special—fast enough (6.8) to catch laden haulers, spacious enough (30 cargo) to make the chase worthwhile. Painted in rust-brown camouflage that fools absolutely nobody. Police hate these because by the time they arrive, the Brigand is three systems away spending your credits.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8000, y: 0.0000 }, { x: 0.2000, y: 0.4000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: 0.2000, y: -0.4000 }],
@@ -1205,7 +1205,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.075,
         baseHull: 100, baseShield: 150, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
-        costCategory: "Medium-High", description: "An upgraded pirate interceptor, bristling with stolen tech.",
+        costCategory: "Medium-High", description: "The MkI's angrier, better-armed cousin with extra stolen tech bolted to every hardpoint. That suspicious purple paint job screams 'I have warrants in 47 systems.' Shield recharge of 1.5 and 7.0 speed makes it frustratingly hard to catch. Bounty hunters mark these as 'high-value, low-fun' targets.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.5000 }, { x: -1.0000, y: 0.5000 }, { x: -0.8000, y: 0.0000 }, { x: -1.0000, y: -0.5000 }, { x: -0.3000, y: -0.5000 }],
@@ -1248,7 +1248,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.5, baseThrust: 0.14, baseTurnRate: 0.07,
         baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
         armament: ["Multi-Cannon", "Burst Blaster"],
-        costCategory: "Medium", description: "Core fighter of Separatist cells, rugged and reliable.",
+        costCategory: "Medium", description: "Separatist standard issue fighter—rugged, reliable, and painted in revolutionary red. Not flashy but effective, like the pilots who fly them. That 90 hull means it survives battles that would atomize cheaper ships. Preferred by the kind of people who use words like 'liberation' and 'regime change' unironically.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }],
@@ -1267,7 +1267,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
         baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
-        costCategory: "Medium-High", description: "A heavily armed Separatist gunship, designed to break blockades.",
+        costCategory: "Medium-High", description: "Built specifically to break military blockades and ruin admirals' days. That 250 hull isn't for show—it's for absorbing fire while returning tenfold hurt. Separatist engineers crammed every available space with guns and armor. Subtlety died so this gunship could live. Nobody mourns subtlety.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 }],
@@ -1294,7 +1294,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05,
         baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
         armament: ["Beam Laser", "Mini-Turret"],
-        costCategory: "Medium", description: "Separatist vessel for deep space operations and hit-and-run attacks.",
+        costCategory: "Medium", description: "For when your revolution needs supplies from sketchy contacts six jumps away. Balanced stats (120 hull, 150 shields, 40 cargo) make it good at everything, great at nothing—exactly what you want when every system might be hostile. The ship equivalent of a good poker face.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.2000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.2000, y: -0.7000 }, { x: 0.3000, y: -0.3000 }],
@@ -1313,7 +1313,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
         baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
         armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
-        costCategory: "High", description: "Lead ship in Separatist fleets, heavily armed and armored.",
+        costCategory: "High", description: "The Separatist movement's pride and propaganda centerpiece. Bristles with 400 hull and enough weaponry to make empires nervous. When one of these shows up, it's not a raid—it's a statement. Usually reads: 'your government is illegitimate and we brought receipts (in missile form).'",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.2000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 }, { x: 1.0000, y: -0.2000 }],
@@ -1332,7 +1332,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
         baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
         armament: ["Pulse Laser"],
-        costCategory: "Low", description: "A small, expendable fighter used by Separatist militias.",
+        costCategory: "Low", description: "The Separatist militia's sacrificial lamb. Tiny (20), fast (7.5), and piloted by people with more conviction than sense. Massively outgunned in every fight but they keep coming anyway. Military analysts call them 'target practice.' Separatists call them 'heroes.' Both are correct.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
@@ -1351,7 +1351,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
         baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
         armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile", "Barrier Field"],
-        costCategory: "Very High", description: "A heavily fortified Separatist ship, slow but incredibly tough.",
+        costCategory: "Very High", description: "A flying fortress that moves at the speed of continental drift (2.5 max) but Laughs at conventional weapons with 700 hull and 500 shields. Separatists park these over contested systems and dare anyone to do something about it. Usually, nobody does. Smart. Attacking this is choosing career-end ing violence.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.7000 }, { x: 0.7000, y: 1.0000 }, { x: -0.7000, y: 1.0000 }, { x: -1.0000, y: 0.7000 }, { x: -1.0000, y: -0.7000 }, { x: -0.7000, y: -1.0000 }, { x: 0.7000, y: -1.0000 }, { x: 1.0000, y: -0.7000 }],
@@ -1379,7 +1379,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
         baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
         armament: ["Pulse Laser", "Disruptor"],
-        costCategory: "Medium-High", description: "Separatist ship with basic stealth capabilities, used for infiltration and sabotage.",
+        costCategory: "Medium-High", description: "Painted matte black because Separatist stealth operatives watched too many spy holos. Actually does have basic sensor-dampening tech, but it's temperamental. Fast enough (6.0) to slip past patrols when the stealth works. When it doesn't, that 50 hull won't save you. High risk, high reward, high stupidity.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.4000 }, { x: -0.8000, y: 0.1000 }, { x: -0.8000, y: -0.1000 }, { x: -0.3000, y: -0.4000 }],
@@ -1398,7 +1398,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.035,
         baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"],
-        costCategory: "Medium", description: "A Separatist transport designed to get vital supplies through hostile territory.",
+        costCategory: "Medium", description: "Armored supply runner built like a tank with cargo doors. Hauls 100 tons of revolution-sustaining goods through military zones while absorbing fire with 180 hull. Not fast, not pretty, but essential. Loses one of these and your rebellion starves. Pilots get commendations posthumously or drinks at the cantina. No middle ground.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.6000 }, { x: 0.7000, y: 0.8000 }, { x: -0.7000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.7000, y: -0.8000 }, { x: 0.7000, y: -0.8000 }, { x: 0.9000, y: -0.6000 }],
@@ -1421,7 +1421,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 2, baseThrust: 0.04, baseTurnRate: 0.03491,
         baseHull: 420, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
         armament: ["Barrier Field"],
-        costCategory: "Medium", description: "Slow, sturdy support vessel equipped for field repairs and resupply operations.",
+        costCategory: "Medium", description: "Lumbering repair tender with 420 hull because when you're fixing battle-damaged stations, you need to survive the crossfire. Moves at 2.0 speed, slower than some asteroids. Crews joke it's so slow enemies just ignore it. Equipped with industrial tools that double as improvised weapons. Has used them. Apologetically.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0349, y: 0.0340 }, { x: 0.8349, y: 0.5340 }, { x: 0.2349, y: 0.8340 }, { x: -0.6651, y: 0.7340 }, { x: -1.0349, y: 0.1572 }, { x: -0.9032, y: -0.2882 }, { x: -0.1422, y: 0.0072 }, { x: -0.0464, y: -0.1491 }, { x: -0.3288, y: -0.5737 }, { x: -0.2188, y: -0.7642 }, { x: 0.5021, y: -0.8340 }, { x: 0.6700, y: -0.5581 }, { x: 0.3358, y: -0.4722 }, { x: 0.4977, y: -0.1766 }, { x: 0.8438, y: -0.2974 }],
@@ -1442,7 +1442,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.018,
         baseHull: 380, baseShield: 320, shieldRecharge: 1.3, cargoCapacity: 60,
         armament: ["Sniper Rail", "Railgun Turret", "Force Blaster", "Kalibr Missile", "Harpoon Launcher", "Barrier Field"],
-        costCategory: "Very High", description: "A swift capital-class cruiser with cutting-edge weapons. Excellent speed but sluggish handling.",
+        costCategory: "Very High", description: "Fast-attack cruiser that breaks every expectation by hitting 6.5 speed despite its size. Military R&D dumped unlimited funds into making something big move like a fighter. Succeeded brilliantly. Handles like a drunk shopping cart but enemies rarely live long enough to notice. Engineering triumph meets elegant overkill.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.2500 }, { x: 0.3000, y: 0.4000 }, { x: -0.6000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.1000, y: 0.0000 }, { x: -1.0000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.3000, y: -0.4000 }, { x: 0.8000, y: -0.2500 }],
@@ -1468,7 +1468,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
         armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
-        costCategory: "High", description: "Elegant and fast Imperial ship, good shield charging.",
+        costCategory: "High", description: "Imperial elegance meets cargo logistics. Gleaming white hull that screams 'I'm better than you' while hauling 180 tons faster (7.0 speed) than ships half its size. Shields recharge at 1.4x because imperials believe vulnerabilities are for peasants. Docking fees are double just because it exists.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
@@ -1493,7 +1493,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
         baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
         armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
-        costCategory: "Medium", description: "Fast, sleek Imperial ship with good shields for its size.",
+        costCategory: "Medium", description: "Imperial's answer to 'what if we made the courier fast AND pretentious?' Hits 7.8 speed while looking down its nose at peasant ships. Shields regenerate at 1.7x because average is for commoners. Only 12 cargo tons because luxury goods don't need much space. Style over substance, but what style!",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
@@ -1514,7 +1514,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
         baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
         armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
-        costCategory: "Medium-High", description: "A common Imperial patrol ship, faster than the ACAB, well-shielded.",
+        costCategory: "Medium-High", description: "Imperial system patrol—faster than police cruisers, prettier than military warships, and more condescending than both combined. That 200-shield capacity and 5.8 speed combo makes pirates rethink carreer choices. Gold trim is non-optional. Serves as both intimidation and target practice for rebels.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.5000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.7000 }, { x: 0.5000, y: -0.4000 }],
@@ -1533,7 +1533,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
         baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
         armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster", "Heavy Tangle", "Halo"],
-        costCategory: "High", description: "An Imperial warship known for its powerful shields and broadside capability.",
+        costCategory: "High", description: "Imperial heavy hitter designed for 'peacekeeping' (read: subjugation). That pristine white hull with 350 hull and 400 shields broadcasts 'mess around and find out' in six languages. Slow to turn but broadside firepower compensates by erasing problems. Rebels hate it. Imperials love everything about it.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8444, y: 0.0813 }, { x: 0.3896, y: 0.3191 }, { x: -0.3614, y: 0.3732 }, { x: -0.5719, y: 0.6322 }, { x: -0.8444, y: 0.5000 }, { x: -0.8444, y: -0.5000 }, { x: -0.5719, y: -0.6322 }, { x: -0.3614, y: -0.3732 }, { x: 0.3896, y: -0.3191 }, { x: 0.8444, y: -0.0813 }],
@@ -1553,7 +1553,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
         baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
         armament: ["Twin Pulse", "Sniper Rail"],
-        costCategory: "Medium", description: "A high-speed Imperial interceptor designed for surgical strikes.",
+        costCategory: "Medium", description: "Built specifically to catch things that run. Insane 8.2 speed means 'escape' isn't in the target's vocabulary. Mounts precision weapons because Imperials believe overkill is gauche. Used for surgical strikes, high-value assassinations, and reminding everyone why the Empire is still in charge. Terrifyingly effective.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.3000 }, { x: -1.0000, y: 0.1000 }, { x: -1.0000, y: -0.1000 }, { x: -0.5000, y: -0.3000 }],
@@ -1572,7 +1572,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
         baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
         armament: ["Quad Pulse", "Railgun Turret", "Beam Laser", "Heavy Tangle", "Barrier Field"],
-        costCategory: "High", description: "A heavily armed Imperial vessel used for enforcing blockades and punitive actions.",
+        costCategory: "High", description: "The Imperial hammer for when diplomacy has conclusively failed. Square, brutal, and packing 280 hull plus 320 shields. That geometric design isn't artistic—it's optimal for mounting weapons on every surface. Enforces blockades by existing near them. Rebels call these 'nope ships' and avoid accordingly.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.5000 }, { x: 0.5000, y: 0.9000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.5000 }, { x: -0.9000, y: -0.5000 }, { x: -0.5000, y: -0.9000 }, { x: 0.5000, y: -0.9000 }, { x: 0.9000, y: -0.5000 }],
@@ -1599,7 +1599,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.0, baseThrust: 0.08, baseTurnRate: 0.03,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
         armament: ["Mini-Turret", "Pulse Laser"],
-        costCategory: "High", description: "An unarmed or lightly armed Imperial ship for diplomatic missions, fast and well-shielded.",
+        costCategory: "High", description: "Diplomatic transport that's more armed than some destroyers. Shields at 250 because ambassadors refuse to die looking undignified. Speed of 6.0 means it arrives fashionably not-late. The white-and-gold paint scheme costs more than small ships. Attacking one is declaring war while insulting interior design taste.",
 
         vertexLayers: [
             {
@@ -1619,7 +1619,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 5.2, baseThrust: 0.095, baseTurnRate: 0.04,
         baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
         armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
-        costCategory: "High", description: "A dedicated Imperial corvette for long-duration border patrols and customs enforcement.",
+        costCategory: "High", description: "Long-duration patrol corvette designed for border regions where backup is measured in weeks. That 300 hull and 350 shields keeps it alive until reinforcements maybe arrive. Crews serve six-month deployments wondering if headquarters remembers they exist. Spoiler: headquarters does not remember.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.3000 }, { x: 0.4000, y: 0.6000 }, { x: -0.4000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.4000, y: -0.8000 }, { x: 0.4000, y: -0.6000 }, { x: 1.0000, y: -0.3000 }],
@@ -1638,7 +1638,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 7.8, baseThrust: 0.18, baseTurnRate: 0.092,
         baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
         armament: ["Twin Pulse", "Beam Laser"],
-        costCategory: "Medium", description: "An upgraded version of the classic Eagle, exclusive to Imperial pilots. Even faster and better shielded.",
+        costCategory: "Medium", description: "Imperial version of the classic Eagle—same idea, more arrogant execution. Faster (7.8), better shielded (140), and painted in colors that scream 'elite pilot aboard.' Only 6 cargo tons because carrying freight is for the help. Exclusively assigned to pilots with more swagger than sense. Both metrics measured high.",
 
         vertexLayers: [
             {
@@ -1677,7 +1677,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
         baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
-        costCategory: "N/A", description: "Hostile alien vessel. Highly dangerous.",
+        costCategory: "N/A", description: "Hostile alien murder-flower from the void that considers humanity a fascinating pest problem. Hits 8.0 speed while regenerating shields faster than you can damage them. Conventional weapons bounce off its incomprehensible hull. Intelligence suggests talking doesn't work. Intelligence is correct. Run or die. Preferably run then die anyway.",
         vertexData: [], // Not editable via vertex data in this setup
         typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
         price: 999999,

@@ -1501,12 +1501,29 @@ class UIStationMenus {
         let specY = contentY + 10;
         const lineH = 32;
 
-        // Ship description
+        // Ship description with dynamic height calculation
         fill(200, 200, 255);
         textSize(18);
         textAlign(LEFT, TOP);
-        text(shipDef.description || "No description available.", specX, specY, rightW - 20, 60);
-        specY += 65;
+
+        // Calculate how many lines the description will need
+        const descriptionText = shipDef.description || "No description available.";
+        const maxDescWidth = rightW - 40; // Extra padding to prevent touching right edge
+
+        // Use textLeading to get line spacing, default to textSize * 1.25 if not set
+        const leading = textLeading() || 18 * 1.25;
+
+        // Draw the description with proper wrapping
+        text(descriptionText, specX, specY, maxDescWidth);
+
+        // Calculate actual height used by description
+        // Estimate lines based on character width (rough approximation)
+        const avgCharWidth = textWidth('M') * 0.6; // Average character width
+        const charsPerLine = Math.floor(maxDescWidth / avgCharWidth);
+        const estimatedLines = Math.ceil(descriptionText.length / charsPerLine);
+        const descriptionHeight = estimatedLines * leading + 10; // Add small padding
+
+        specY += descriptionHeight + 15; // Move down by actual description height + spacing
 
         // Ship role and category header
         fill(255, 200, 100);
