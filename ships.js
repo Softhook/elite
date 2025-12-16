@@ -59,11 +59,11 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 }],
-                fillColor: [160, 160, 140]
+                fillColor: [160, 160, 140],
             },
             {
-                vertexData: [{ x: 0.3000, y: -0.1600 }, { x: 0.4800, y: -0.1200 }, { x: 0.4800, y: 0.2400 }, { x: 0.3000, y: 0.2800 }],
-                fillColor: [209, 209, 255]
+                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: -0.1500, y: 0.2598 }, { x: -0.1500, y: -0.2598 }],
+                fillColor: [101, 171, 236],
             }
         ],
         typicalCargo: ["Food", "Textiles", "Minerals"],
@@ -519,19 +519,7 @@ const SHIP_DEFINITIONS = {
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
-                fillColor: [200, 200, 190]
-            },
-            {
-                vertexData: [{ x: 0.4472, y: 0.0000 }, { x: 0.4420, y: -0.0040 }, { x: 0.4105, y: -0.0450 }, { x: 0.3907, y: -0.0928 }, { x: 0.3840, y: -0.1440 }, { x: 0.3907, y: -0.1952 }, { x: 0.4105, y: -0.2430 }, { x: 0.4420, y: -0.2840 }, { x: 0.4830, y: -0.3155 }, { x: 0.5308, y: -0.3353 }, { x: 0.5820, y: -0.3420 }, { x: 0.6332, y: -0.3353 }, { x: 0.6810, y: -0.3155 }, { x: 0.7220, y: -0.2840 }, { x: 0.7535, y: -0.2430 }, { x: 0.7733, y: -0.1952 }, { x: 0.7800, y: -0.1440 }, { x: 0.7733, y: -0.0928 }, { x: 0.7535, y: -0.0450 }, { x: 0.7220, y: -0.0040 }, { x: 0.7168, y: 0.0000 }, { x: 0.7220, y: 0.0040 }, { x: 0.7535, y: 0.0450 }, { x: 0.7733, y: 0.0928 }, { x: 0.7800, y: 0.1440 }, { x: 0.7733, y: 0.1952 }, { x: 0.7535, y: 0.2430 }, { x: 0.7220, y: 0.2840 }, { x: 0.6810, y: 0.3155 }, { x: 0.6332, y: 0.3353 }, { x: 0.5820, y: 0.3420 }, { x: 0.5308, y: 0.3353 }, { x: 0.4830, y: 0.3155 }, { x: 0.4420, y: 0.2840 }, { x: 0.4105, y: 0.2430 }, { x: 0.3907, y: 0.1952 }, { x: 0.3840, y: 0.1440 }, { x: 0.3907, y: 0.0928 }, { x: 0.4105, y: 0.0450 }, { x: 0.4420, y: 0.0040 }],
-                fillColor: [163, 163, 240]
-            },
-            {
-                vertexData: [{ x: -0.7799, y: -0.2050 }, { x: -0.3593, y: -0.1501 }, { x: -0.7241, y: -0.3373 }],
-                fillColor: [150, 150, 180]
-            },
-            {
-                vertexData: [{ x: -0.7799, y: 0.2050 }, { x: -0.3593, y: 0.1501 }, { x: -0.7241, y: 0.3373 }],
-                fillColor: [150, 150, 180]
+                fillColor: [200, 200, 190],
             }
         ],
         typicalCargo: ["Minerals", "Food", "Medicine"],
@@ -1001,16 +989,8 @@ const SHIP_DEFINITIONS = {
         baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
         armament: [],
         costCategory: "Low", description: "Slightly less terrible than the Hopper, which isn't saying much. Has shields (barely—10 capacity) and can actually accelerate without wheezing. Perfect for station-to-station milk runs. The 25-ton hold makes it just profitable enough that you won't starve. Probably.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.7000, y: 0.4000 }, { x: -0.7000, y: 0.4000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.4000 }, { x: 0.7000, y: -0.4000 }],
-                fillColor: [130, 140, 150]
-            },
-            {
-                vertexData: [{ x: 0.4400, y: -0.2200 }, { x: 0.5800, y: -0.2200 }, { x: 0.5800, y: 0.2200 }, { x: 0.4400, y: 0.2200 }],
-                fillColor: [170, 170, 218]
-            }
-        ],
+        vertexData: [{ x: 0.7, y: 0.4 }, { x: -0.7, y: 0.4 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.4 }, { x: 0.7, y: -0.4 }],
+        fillColor: [130, 140, 150],
         typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
         aiRoles: ["TRANSPORT", "HAULER"]
     },
@@ -1020,16 +1000,8 @@ const SHIP_DEFINITIONS = {
         baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
         armament: [],
         costCategory: "Low", description: "The workhorse everyone depends on but nobody respects. Hauls 40 tons at a glacial 3.8 speed with shields that might stop a determined sneeze (20). Operators joke that its best feature is 'it exists and it's cheap.' Station mechanics charge extra for working on these out of pity.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8000, y: 0.5000 }, { x: 0.6000, y: 0.7000 }, { x: -0.8000, y: 0.7000 }, { x: -0.8000, y: -0.7000 }, { x: 0.6000, y: -0.7000 }, { x: 0.8000, y: -0.5000 }],
-                fillColor: [160, 150, 140]
-            },
-            {
-                vertexData: [{ x: 0.5000, y: -0.2200 }, { x: 0.6200, y: -0.2200 }, { x: 0.6200, y: 0.2200 }, { x: 0.5000, y: 0.2200 }],
-                fillColor: [171, 171, 247]
-            }
-        ],
+        vertexData: [{ x: 0.8, y: 0.5 }, { x: 0.6, y: 0.7 }, { x: -0.8, y: 0.7 }, { x: -0.8, y: -0.7 }, { x: 0.6, y: -0.7 }, { x: 0.8, y: -0.5 }],
+        fillColor: [160, 150, 140],
         typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
         aiRoles: ["TRANSPORT"]
     },
@@ -1344,16 +1316,12 @@ const SHIP_DEFINITIONS = {
         costCategory: "High", description: "The Separatist movement's pride and propaganda centerpiece. Bristles with 400 hull and enough weaponry to make empires nervous. When one of these shows up, it's not a raid—it's a statement. Usually reads: 'your government is illegitimate and we brought receipts (in missile form).'",
         vertexLayers: [
             {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.2500 }, { x: 0.3000, y: 0.4000 }, { x: -0.6000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.1000, y: 0.0000 }, { x: -1.0000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.3000, y: -0.4000 }, { x: 0.8000, y: -0.2500 }],
-                fillColor: [70, 80, 100]
+                vertexData: [{ x: 1.0000, y: 0.2000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 }, { x: 1.0000, y: -0.2000 }],
+                fillColor: [50, 30, 30]
             },
             {
-                vertexData: [{ x: 0.8719, y: 0.0125 }, { x: 0.5719, y: 0.1225 }, { x: -0.0881, y: 0.1225 }, { x: -0.0881, y: -0.0975 }, { x: 0.5719, y: -0.0975 }],
-                fillColor: [120, 180, 220]
-            },
-            {
-                vertexData: [{ x: -0.5275, y: 0.2180 }, { x: -0.6875, y: 0.2980 }, { x: -0.8475, y: 0.1780 }, { x: -0.8475, y: -0.1820 }, { x: -0.6875, y: -0.3020 }, { x: -0.5275, y: -0.2220 }, { x: -0.3849, y: -0.1507 }, { x: -0.2829, y: -0.2096 }, { x: -0.0924, y: -0.0996 }, { x: -0.0924, y: 0.1204 }, { x: -0.2829, y: 0.2304 }, { x: -0.4080, y: 0.1582 }],
-                fillColor: [70, 69, 79]
+                vertexData: [{ x: -0.3477, y: 0.0000 }, { x: -0.4577, y: 0.1905 }, { x: -0.6777, y: 0.1905 }, { x: -0.7877, y: 0.0000 }, { x: -0.6777, y: -0.1905 }, { x: -0.4577, y: -0.1905 }],
+                fillColor: [186, 8, 34]
             }
         ],
         typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
